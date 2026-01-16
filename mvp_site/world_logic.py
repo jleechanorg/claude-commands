@@ -100,6 +100,7 @@ def is_mock_services_mode() -> bool:
         "on",
     }
 
+
 try:
     firebase_admin.get_app()
 except ValueError:
@@ -1302,12 +1303,14 @@ def _load_campaign_and_continue_story(
         f"🔄 _load_campaign_and_continue_story: user_id={user_id}, campaign_id={campaign_id}, "
         f"llm_input={llm_input[:100]}..., mode={mode}"
     )
-    
+
     campaign_data, story_context = firestore_service.get_campaign_by_id(
         user_id, campaign_id
     )
     if not campaign_data:
-        logging_util.warning(f"⚠️ Campaign not found: user_id={user_id}, campaign_id={campaign_id}")
+        logging_util.warning(
+            f"⚠️ Campaign not found: user_id={user_id}, campaign_id={campaign_id}"
+        )
         return None, [], None
 
     story_context = story_context or []
@@ -1329,15 +1332,15 @@ def _load_campaign_and_continue_story(
                 f"📖 story_context[-1]: actor={last_entry.get('actor')}, "
                 f"text={str(last_entry.get('text', ''))[:100]}..."
             )
-    
+
     selected_prompts = campaign_data.get("selected_prompts", [])
     use_default_world = campaign_data.get("use_default_world", False)
-    
+
     logging_util.debug(
         f"🚀 Calling continue_story with llm_input={llm_input[:100]}..., "
         f"story_context_length={len(story_context)}"
     )
-    
+
     llm_response_obj = llm_service.continue_story(
         llm_input,
         mode,
@@ -1348,14 +1351,19 @@ def _load_campaign_and_continue_story(
         user_id,
         include_raw_llm_payloads,
     )
-    
+
     # Log response preview (DEBUG level to avoid log noise)
     if llm_response_obj:
-        narrative_preview = getattr(llm_response_obj, 'narrative_text', '')[:200] if hasattr(llm_response_obj, 'narrative_text') else 'N/A'
+        narrative_text = getattr(llm_response_obj, "narrative_text", None)
+        if narrative_text is None:
+            narrative_text = getattr(llm_response_obj, "text", None)
+        narrative_preview = (
+            "N/A" if narrative_text is None else str(narrative_text)[:200]
+        )
         logging_util.debug(
             f"✅ LLM response received: narrative_preview={narrative_preview}..."
         )
-    
+
     return campaign_data, story_context, llm_response_obj
 
 
@@ -1588,7 +1596,9 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
             character_dict["name"] = character_str.split(",")[0].strip()
 
         # Extract class (look for "Level X Class" or "**Class:** Level X Class" pattern)
-        class_match = re.search(r"\*\*class:\*\*\s*level\s+(\d+)\s+(\w+)", full_text, re.IGNORECASE)
+        class_match = re.search(
+            r"\*\*class:\*\*\s*level\s+(\d+)\s+(\w+)", full_text, re.IGNORECASE
+        )
         if not class_match:
             class_match = re.search(r"level\s+(\d+)\s+(\w+)", full_text, re.IGNORECASE)
         if class_match:
@@ -1610,7 +1620,9 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
             character_dict["race"] = race_name.capitalize()
 
         # Extract background if mentioned
-        background_match = re.search(r"\*\*background:\*\*\s*([^\n*]+)", full_text, re.IGNORECASE)
+        background_match = re.search(
+            r"\*\*background:\*\*\s*([^\n*]+)", full_text, re.IGNORECASE
+        )
         if background_match:
             bg_name = background_match.group(1).strip()
             # Remove markdown formatting
@@ -1619,9 +1631,17 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
 
         # Extract stats if mentioned (Str X, Con Y, Cha Z pattern)
         # Look for "**Stats:** Str X, Con Y, Cha Z" or "Stats: Str X, Con Y, Cha Z"
-        stats_match = re.search(r"\*\*stats?:\*\*\s*(?:str|strength)\s+(\d+)[,\s|]+(?:con|constitution)\s+(\d+)[,\s|]+(?:cha|charisma)\s+(\d+)", full_text, re.IGNORECASE)
+        stats_match = re.search(
+            r"\*\*stats?:\*\*\s*(?:str|strength)\s+(\d+)[,\s|]+(?:con|constitution)\s+(\d+)[,\s|]+(?:cha|charisma)\s+(\d+)",
+            full_text,
+            re.IGNORECASE,
+        )
         if not stats_match:
-            stats_match = re.search(r"stats?[:\s]+(?:str|strength)\s+(\d+)[,\s|]+(?:con|constitution)\s+(\d+)[,\s|]+(?:cha|charisma)\s+(\d+)", full_text, re.IGNORECASE)
+            stats_match = re.search(
+                r"stats?[:\s]+(?:str|strength)\s+(\d+)[,\s|]+(?:con|constitution)\s+(\d+)[,\s|]+(?:cha|charisma)\s+(\d+)",
+                full_text,
+                re.IGNORECASE,
+            )
         if stats_match:
             character_dict["base_attributes"] = {
                 "strength": int(stats_match.group(1)),
@@ -1768,7 +1788,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
             logging_util.info("Parsing god_mode_data string format into god_mode dict")
             god_mode = _parse_god_mode_data_string(god_mode_data)
             if god_mode:
-                logging_util.info(f"Parsed god_mode_data: character={god_mode.get('character', {}).get('name', 'Unknown')}")
+                logging_util.info(
+                    f"Parsed god_mode_data: character={god_mode.get('character', {}).get('name', 'Unknown')}"
+                )
                 # Extract character/setting/description from parsed god_mode for prompt building
                 if not character and god_mode.get("character", {}).get("name"):
                     character = god_mode["character"]["name"]
@@ -1795,6 +1817,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         if not character or not setting:
             # Parse prompt to extract character/setting (format: "Character: X | Setting: Y")
             import re
+
             char_match = re.search(r"Character:\s*([^|]+)", prompt)
             setting_match = re.search(r"Setting:\s*([^|]+)", prompt)
             if char_match:
@@ -1808,7 +1831,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         # Frontend sends character/setting/description as separate fields, not god_mode_data string
         # This also handles randomly generated values from _build_campaign_prompt
         if not god_mode and (character or setting or description):
-            logging_util.info("Building god_mode dict from separate character/setting/description fields")
+            logging_util.info(
+                "Building god_mode dict from separate character/setting/description fields"
+            )
             god_mode = {}
             if setting:
                 god_mode["setting"] = setting
@@ -1829,7 +1854,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                     character_dict = character
                 if character_dict:
                     god_mode["character"] = character_dict
-                    logging_util.info(f"Built god_mode from separate fields: character={character_dict.get('name', 'Unknown')}")
+                    logging_util.info(
+                        f"Built god_mode from separate fields: character={character_dict.get('name', 'Unknown')}"
+                    )
 
         # Always use D&D system
         attribute_system = constants.ATTRIBUTE_SYSTEM_DND
@@ -1873,28 +1900,28 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                         "Spellbook",
                         "Component pouch",
                         "Quarterstaff",
-                        "Scholar's pack"
+                        "Scholar's pack",
                     ],
                     "fighter": [
                         "Chain mail",
                         "Longsword",
                         "Shield",
                         "Dungeoneer's pack",
-                        "Javelin (2)"
+                        "Javelin (2)",
                     ],
                     "rogue": [
                         "Leather armor",
                         "Shortsword (2)",
                         "Dagger",
                         "Thieves' tools",
-                        "Burglar's pack"
+                        "Burglar's pack",
                     ],
                     "cleric": [
                         "Chain mail",
                         "Mace",
                         "Shield",
                         "Holy symbol",
-                        "Priest's pack"
+                        "Priest's pack",
                     ],
                 }
 
@@ -1907,24 +1934,35 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
 
                 # Add background-specific items
                 if "sage" in background:
-                    equipment.extend(["Ink (1 ounce bottle)", "Quill", "Small knife", "Letter from dead colleague"])
+                    equipment.extend(
+                        [
+                            "Ink (1 ounce bottle)",
+                            "Quill",
+                            "Small knife",
+                            "Letter from dead colleague",
+                        ]
+                    )
                 elif "soldier" in background:
-                    equipment.extend(["Insignia of rank", "Trophy from fallen enemy", "Dice set"])
+                    equipment.extend(
+                        ["Insignia of rank", "Trophy from fallen enemy", "Dice set"]
+                    )
                 elif "criminal" in background:
                     equipment.extend(["Crowbar", "Dark common clothes", "Pouch (15gp)"])
 
                 # Add basic adventuring gear
-                equipment.extend([
-                    "Backpack",
-                    "Bedroll",
-                    "Mess kit",
-                    "Tinderbox",
-                    "Torch (10)",
-                    "Rations (10 days)",
-                    "Waterskin",
-                    "Rope (50 feet)",
-                    "Coin pouch (10gp)"
-                ])
+                equipment.extend(
+                    [
+                        "Backpack",
+                        "Bedroll",
+                        "Mess kit",
+                        "Tinderbox",
+                        "Torch (10)",
+                        "Rations (10 days)",
+                        "Waterskin",
+                        "Rope (50 feet)",
+                        "Coin pouch (10gp)",
+                    ]
+                )
 
                 # Initialize inventory in player_character_data
                 if equipment and "inventory" not in player_character_data:
@@ -1937,7 +1975,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                 if player_name:
                     entity_tracking = {
                         "active_entities": [player_name],
-                        "present_entities": []
+                        "present_entities": [],
                     }
                     logging_util.info(
                         f"✅ Added '{player_name}' to active_entities (God Mode character)"
@@ -1954,7 +1992,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                 for name, npc in companions_dict.items():
                     if isinstance(npc, dict):
                         npc_copy = npc.copy()
-                        npc_copy["relationship"] = "companion"  # Required for companion detection
+                        npc_copy["relationship"] = (
+                            "companion"  # Required for companion detection
+                        )
                         npc_data_from_god_mode[name] = npc_copy
                 logging_util.info(
                     f"🎭 GOD MODE: Found {len(npc_data_from_god_mode)} companions in god_mode: {list(npc_data_from_god_mode.keys())}"
@@ -2000,21 +2040,34 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
 
         # DEBUG LOGGING: Track why placeholder might be shown
         logging_util.info("🔍 CHARACTER CREATION DECISION:")
-        logging_util.info(f"  character_creation_in_progress: {initial_game_state['custom_campaign_state']['character_creation_in_progress']}")
+        logging_util.info(
+            f"  character_creation_in_progress: {initial_game_state['custom_campaign_state']['character_creation_in_progress']}"
+        )
         logging_util.info(f"  god_mode exists: {god_mode is not None}")
         logging_util.info(f"  god_mode type: {type(god_mode)}")
         logging_util.info(f"  god_mode value: {god_mode}")
         if god_mode:
-            logging_util.info(f"  god_mode.get('character'): {god_mode.get('character')}")
-            logging_util.info(f"  character is dict: {isinstance(god_mode.get('character'), dict) if god_mode.get('character') else False}")
+            logging_util.info(
+                f"  god_mode.get('character'): {god_mode.get('character')}"
+            )
+            logging_util.info(
+                f"  character is dict: {isinstance(god_mode.get('character'), dict) if god_mode.get('character') else False}"
+            )
         logging_util.info(f"  is_god_mode_with_character: {is_god_mode_with_character}")
 
-        if initial_game_state["custom_campaign_state"]["character_creation_in_progress"] and not is_god_mode_with_character:
+        if (
+            initial_game_state["custom_campaign_state"][
+                "character_creation_in_progress"
+            ]
+            and not is_god_mode_with_character
+        ):
             # Empty character creation - skip opening story, let user build character in Turn 1
             logging_util.info(
                 "Skipping opening story generation - empty character creation mode active"
             )
-            opening_story_text = "[Character Creation Mode - Story begins after character is complete]"
+            opening_story_text = (
+                "[Character Creation Mode - Story begins after character is complete]"
+            )
             # Keep Firestore structured field payload shape consistent, even when
             # we skip opening story generation.
             opening_story_structured_fields = {
@@ -2048,7 +2101,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                     generate_companions,
                     use_default_world,
                     use_character_creation_agent=is_god_mode_with_character,  # Use CharacterCreationAgent for God Mode with character
-                    initial_npc_data=npc_data_from_god_mode if npc_data_from_god_mode else None,  # Pass companions from god_mode
+                    initial_npc_data=npc_data_from_god_mode
+                    if npc_data_from_god_mode
+                    else None,  # Pass companions from god_mode
                 )
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during campaign creation: {e}")
@@ -2058,7 +2113,9 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
             opening_story_text = opening_story_response.narrative_text
 
             # Extract structured fields
-            fields = structured_fields_utils.extract_structured_fields(opening_story_response)
+            fields = structured_fields_utils.extract_structured_fields(
+                opening_story_response
+            )
 
             # Ensure planning_block is a dict (prevent string "empty" values from extraction)
             if constants.FIELD_PLANNING_BLOCK in fields:
@@ -2184,6 +2241,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             return {KEY_ERROR: "Campaign ID is required"}
         if user_input is None:
             return {KEY_ERROR: "User input is required"}
+        if not isinstance(user_input, str):
+            return {KEY_ERROR: "User input must be a string"}
 
         # Preserve raw input for Firestore + temporal correction prompts
         original_user_input = user_input
@@ -2221,9 +2280,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Handle debug mode commands (only when applicable; avoids unnecessary
         # thread scheduling overhead for normal gameplay).
         user_input_stripped = user_input.strip()
-        if (
-            user_input_stripped == "GOD_ASK_STATE"
-            or user_input_stripped.startswith(("GOD_MODE_SET:", "GOD_MODE_UPDATE_STATE:"))
+        if user_input_stripped == "GOD_ASK_STATE" or user_input_stripped.startswith(
+            ("GOD_MODE_SET:", "GOD_MODE_UPDATE_STATE:")
         ):
             debug_response = await asyncio.to_thread(
                 _handle_debug_mode_command,
@@ -2555,7 +2613,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         is_completed = bool(custom_state.get("character_creation_completed")) or (
             stage == "complete"
         )
-        flag_cleared = not bool(custom_state.get("character_creation_in_progress", True))
+        flag_cleared = not bool(
+            custom_state.get("character_creation_in_progress", True)
+        )
 
         logging_util.debug(
             f"🔍 Entity tracking check: was_creating={was_creating}, is_completed={is_completed}, flag_cleared={flag_cleared}"
@@ -2712,7 +2772,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Combine all system warnings (including any from rewards followup)
         rewards_corrections = prevention_extras.get("rewards_corrections", [])
         extra_warnings = prevention_extras.get("system_warnings", [])
-        
+
         # Extract server-generated system_warnings from LLM response debug_info
         # SECURITY: Only read _server_system_warnings (server-controlled) to prevent LLM spoofing
         # LLM-provided system_warnings in debug_info are ignored for security
@@ -2725,9 +2785,13 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     server_warnings = debug_info.get("_server_system_warnings", [])
                     if isinstance(server_warnings, list):
                         server_system_warnings = server_warnings
-        
+
         system_warnings = (
-            all_corrections + rewards_corrections + post_combat_warnings + extra_warnings + server_system_warnings
+            all_corrections
+            + rewards_corrections
+            + post_combat_warnings
+            + extra_warnings
+            + server_system_warnings
         )
 
         # Deduplicate warnings while preserving order
@@ -2865,9 +2929,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                         # But if it's behavioral like "Level affects calculations", allow it
                         pattern_idx = rule_lower.find(pattern)
                         if pattern_idx != -1:
-                            after_pattern = rule_lower[pattern_idx + len(pattern):].strip()
+                            after_pattern = rule_lower[
+                                pattern_idx + len(pattern) :
+                            ].strip()
                             # If followed by a number or "=", it's a state value
-                            if after_pattern and (after_pattern[0].isdigit() or after_pattern.startswith('=')):
+                            if after_pattern and (
+                                after_pattern[0].isdigit()
+                                or after_pattern.startswith("=")
+                            ):
                                 return True
 
                 # Check for one-time events (with additional context check)
@@ -2879,14 +2948,30 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                             # Get context from original rule to preserve capitalization for proper noun detection
                             # We find the pattern in rule_lower but apply the same offset to original rule
                             # This is safe since rule_lower has same length as rule
-                            after_pattern_orig = rule[rule.lower().find(pattern) + len(pattern):].strip()
+                            after_pattern_orig = rule[
+                                rule.lower().find(pattern) + len(pattern) :
+                            ].strip()
                             if after_pattern_orig:
-                                behavioral_indicators = ["should", "grant", "affect", "provide", "give", "drop", "always"]
-                                is_behavioral = any(indicator in after_pattern_orig.lower() for indicator in behavioral_indicators)
+                                behavioral_indicators = [
+                                    "should",
+                                    "grant",
+                                    "affect",
+                                    "provide",
+                                    "give",
+                                    "drop",
+                                    "always",
+                                ]
+                                is_behavioral = any(
+                                    indicator in after_pattern_orig.lower()
+                                    for indicator in behavioral_indicators
+                                )
                                 if not is_behavioral:
                                     # Check if it looks like a one-time event (specific entity/event)
                                     after_lower = after_pattern_orig.lower()
-                                    if after_lower.startswith(("the ", "a ", "an ")) or after_pattern_orig[0].isupper():
+                                    if (
+                                        after_lower.startswith(("the ", "a ", "an "))
+                                        or after_pattern_orig[0].isupper()
+                                    ):
                                         return True
 
                 # Check for formatting instructions (with context validation)
@@ -2895,16 +2980,38 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     if pattern in rule_lower:
                         pattern_idx = rule_lower.find(pattern)
                         if pattern_idx != -1:
-                            after_pattern = rule_lower[pattern_idx + len(pattern):].strip()
+                            after_pattern = rule_lower[
+                                pattern_idx + len(pattern) :
+                            ].strip()
                             # Formatting patterns are usually about display/headers, not game mechanics
                             # If followed by formatting keywords, reject; otherwise allow behavioral rules
-                            formatting_keywords = ["in header", "in title", "in display", "as text", "as string"]
-                            is_formatting = any(keyword in after_pattern for keyword in formatting_keywords)
+                            formatting_keywords = [
+                                "in header",
+                                "in title",
+                                "in display",
+                                "as text",
+                                "as string",
+                            ]
+                            is_formatting = any(
+                                keyword in after_pattern
+                                for keyword in formatting_keywords
+                            )
                             if is_formatting:
                                 return True
                             # If it's about game mechanics (bonus, damage, effect), allow it
-                            behavioral_keywords = ["bonus", "damage", "effect", "grant", "provide", "apply", "affect"]
-                            if any(keyword in after_pattern for keyword in behavioral_keywords):
+                            behavioral_keywords = [
+                                "bonus",
+                                "damage",
+                                "effect",
+                                "grant",
+                                "provide",
+                                "apply",
+                                "affect",
+                            ]
+                            if any(
+                                keyword in after_pattern
+                                for keyword in behavioral_keywords
+                            ):
                                 continue  # Don't reject - it's a behavioral rule
                             # If pattern is "format" alone without context, be more conservative
                             if pattern == "format" and len(after_pattern) < 10:
@@ -3088,8 +3195,13 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 f"type={type(final_narrative)}, has_structured_response={llm_response_obj.structured_response is not None}"
             )
             # Fallback to structured response narrative if available
-            if llm_response_obj.structured_response and hasattr(llm_response_obj.structured_response, "narrative"):
-                final_narrative = llm_response_obj.structured_response.narrative or "[Error: Empty narrative from LLM]"
+            if llm_response_obj.structured_response and hasattr(
+                llm_response_obj.structured_response, "narrative"
+            ):
+                final_narrative = (
+                    llm_response_obj.structured_response.narrative
+                    or "[Error: Empty narrative from LLM]"
+                )
             else:
                 final_narrative = "[Error: Empty narrative from LLM]"
 
@@ -3339,9 +3451,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 updated_game_state_dict, story_id_update
             )
             # Validate the final state before persisting
-            final_game_state_dict = validate_game_state_updates(
-                final_game_state_dict
-            )
+            final_game_state_dict = validate_game_state_updates(final_game_state_dict)
 
             await asyncio.to_thread(
                 _update_campaign_game_state,
@@ -3393,11 +3503,14 @@ async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, 
             return {KEY_ERROR: "Campaign ID is required"}
 
         # Fetch campaign metadata/story and game state concurrently (blocking I/O).
-        (campaign_data, story), (
-            game_state,
-            was_cleaned,
-            num_cleaned,
-            user_settings,
+        (
+            (campaign_data, story),
+            (
+                game_state,
+                was_cleaned,
+                num_cleaned,
+                user_settings,
+            ),
         ) = await asyncio.gather(
             asyncio.to_thread(
                 firestore_service.get_campaign_by_id, user_id, campaign_id
@@ -3428,9 +3541,7 @@ async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, 
         game_state_dict = game_state.to_dict()
 
         # Get debug mode from user settings and apply to game state (blocking I/O)
-        debug_mode = (
-            user_settings.get("debug_mode", False) if user_settings else False
-        )
+        debug_mode = user_settings.get("debug_mode", False) if user_settings else False
         game_state_dict["debug_mode"] = debug_mode
 
         result = {
@@ -3656,7 +3767,12 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
         # Include total count only on first page (when start_after is None)
         include_total = start_after is None
         campaigns, next_cursor, total_count = await asyncio.to_thread(
-            firestore_service.get_campaigns_for_user, user_id, limit, sort_by, start_after, include_total
+            firestore_service.get_campaigns_for_user,
+            user_id,
+            limit,
+            sort_by,
+            start_after,
+            include_total,
         )
 
         # Clean JSON artifacts from campaign text fields
@@ -3900,7 +4016,9 @@ def apply_automatic_combat_cleanup(
     # Check if we have combatants data to potentially clean up
     combatants = temp_game_state.combat_state.get("combatants", {})
     if not combatants:
-        logging_util.debug("COMBAT CLEANUP CHECK: No combatants found, skipping cleanup")
+        logging_util.debug(
+            "COMBAT CLEANUP CHECK: No combatants found, skipping cleanup"
+        )
         return updated_state_dict
 
     # CRITICAL FIX: Always attempt cleanup if combatants exist

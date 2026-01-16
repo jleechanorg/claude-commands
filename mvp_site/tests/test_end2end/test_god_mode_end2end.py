@@ -16,6 +16,7 @@ import os
 os.environ["TESTING_AUTH_BYPASS"] = "true"
 
 import unittest
+from typing import Any
 from unittest.mock import patch
 
 from mvp_site import main
@@ -175,9 +176,9 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify response
-        assert (
-            response.status_code == 200
-        ), f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
         data = json.loads(response.data)
 
         # Verify god_mode_response is present in the response
@@ -217,9 +218,9 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify request succeeded
-        assert (
-            response.status_code == 200
-        ), f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
 
         # Verify Gemini was called
         assert mock_gemini_generate.call_count >= 1, "LLM should be called"
@@ -285,15 +286,15 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify response - should still work due to .upper() in detection
-        assert (
-            response.status_code == 200
-        ), f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
         data = json.loads(response.data)
 
         # Verify god_mode_response is present
-        assert (
-            "god_mode_response" in data
-        ), "god_mode_response should be present for lowercase prefix"
+        assert "god_mode_response" in data, (
+            "god_mode_response should be present for lowercase prefix"
+        )
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
@@ -325,9 +326,9 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify response
-        assert (
-            response.status_code == 200
-        ), f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
         data = json.loads(response.data)
 
         # Verify narrative is present (story mode)
@@ -335,9 +336,9 @@ class TestGodModeEnd2End(unittest.TestCase):
 
         # god_mode_response should be empty or missing for regular input
         god_mode_resp = data.get("god_mode_response", "")
-        assert (
-            not god_mode_resp or god_mode_resp == ""
-        ), "god_mode_response should be empty for regular input"
+        assert not god_mode_resp or god_mode_resp == "", (
+            "god_mode_response should be empty for regular input"
+        )
 
     @patch("mvp_site.firestore_service.get_db")
     @patch(
@@ -367,9 +368,9 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify response
-        assert (
-            response.status_code == 200
-        ), f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
         data = json.loads(response.data)
 
         # Verify game_state is returned with updates
@@ -418,15 +419,15 @@ class TestGodModeEnd2End(unittest.TestCase):
         )
 
         # Verify response succeeded
-        assert (
-            response.status_code == 200
-        ), f"Expected 200, got {response.status_code}: {response.data}"
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.data}"
+        )
 
         # Verify god_mode_response is in the response (stronger validation)
         data = json.loads(response.data)
-        assert (
-            "god_mode_response" in data
-        ), f"Response should contain god_mode_response field. Keys: {data.keys()}"
+        assert "god_mode_response" in data, (
+            f"Response should contain god_mode_response field. Keys: {data.keys()}"
+        )
 
         # Verify Gemini was called
         assert mock_gemini_generate.call_count >= 1, "LLM should be called"
@@ -465,9 +466,7 @@ class TestGodModeEnd2End(unittest.TestCase):
             )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch(
-        "mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools"
-    )
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools")
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
@@ -476,11 +475,11 @@ class TestGodModeEnd2End(unittest.TestCase):
     ):
         """
         Test that two consecutive god mode commands are both processed correctly.
-        
+
         This test verifies that the caching bug fix works correctly - when two
         god mode commands are sent sequentially, both should be processed and
         responded to correctly, not just the first one.
-        
+
         Patches both Gemini entrypoints to be resilient to dispatch changes.
         """
         # Set up fake Firestore
@@ -492,10 +491,12 @@ class TestGodModeEnd2End(unittest.TestCase):
 
         # Track calls to verify both commands are processed
         call_count = {"count": 0}
+        call_history: list[dict[str, Any]] = []
 
         def mock_gemini_side_effect(*args, **kwargs):
             """Mock Gemini to return different responses based on call count."""
             call_count["count"] += 1
+            call_history.append(kwargs)
 
             if call_count["count"] == 1:
                 # First command: Set HP to 50
@@ -507,7 +508,9 @@ class TestGodModeEnd2End(unittest.TestCase):
                             "narrative": "",
                             "entities_mentioned": [],
                             "location_confirmed": "Tavern",
-                            "state_updates": {"player_character_data": {"hp_current": 50}},
+                            "state_updates": {
+                                "player_character_data": {"hp_current": 50}
+                            },
                             "planning_block": {
                                 "thinking": "The user wants to modify HP.",
                                 "choices": {
@@ -521,7 +524,7 @@ class TestGodModeEnd2End(unittest.TestCase):
                         }
                     )
                 )
-            elif call_count["count"] == 2:
+            if call_count["count"] == 2:
                 # Second command: Set gold to 200
                 return FakeLLMResponse(
                     json.dumps(
@@ -545,16 +548,15 @@ class TestGodModeEnd2End(unittest.TestCase):
                         }
                     )
                 )
-            else:
-                return FakeLLMResponse(
-                    json.dumps(
-                        {
-                            "god_mode_response": f"Unexpected call #{call_count['count']}",
-                            "narrative": "",
-                            "state_updates": {},
-                        }
-                    )
+            return FakeLLMResponse(
+                json.dumps(
+                    {
+                        "god_mode_response": f"Unexpected call #{call_count['count']}",
+                        "narrative": "",
+                        "state_updates": {},
+                    }
                 )
+            )
 
         # Patch both entrypoints to handle dispatch changes
         mock_gemini_code_exec.side_effect = mock_gemini_side_effect
@@ -616,43 +618,32 @@ class TestGodModeEnd2End(unittest.TestCase):
             assert gold == 200, f"Gold should be 200 after second command, got {gold}"
 
         # Verify both LLM calls were made (check both entrypoints)
-        total_calls = mock_gemini_code_exec.call_count + mock_gemini_native_tools.call_count
-        assert (
-            total_calls >= 2
-        ), f"Expected at least 2 LLM calls, got code_exec={mock_gemini_code_exec.call_count}, native_tools={mock_gemini_native_tools.call_count}"
+        total_calls = (
+            mock_gemini_code_exec.call_count + mock_gemini_native_tools.call_count
+        )
+        assert total_calls >= 2, (
+            f"Expected at least 2 LLM calls, got code_exec={mock_gemini_code_exec.call_count}, native_tools={mock_gemini_native_tools.call_count}"
+        )
 
         # Tighten assertions: Verify the second call received the second command
         # by inspecting prompt_contents directly instead of string concatenation
         # NOTE: We check both mocks separately since concatenation order doesn't reflect
         # chronological call order. The second POST request will call one of these mocks,
         # and that call should contain the second command.
-        code_exec_calls = mock_gemini_code_exec.call_args_list
-        native_tools_calls = mock_gemini_native_tools.call_args_list
-        
-        # Check the last call from each mock - one of them should be the second command
-        second_call_found = False
-        for call_list in [code_exec_calls, native_tools_calls]:
-            if len(call_list) > 0:
-                last_call = call_list[-1]
-                prompt_contents = last_call.kwargs.get("prompt_contents", [])
-                prompt_text = " ".join(str(p) for p in prompt_contents)
-                # Check if this last call contains the second command
-                if "gold" in prompt_text.lower() or "200" in prompt_text:
-                    # Verify it's NOT the first command
-                    if not (("hp" in prompt_text.lower() and "50" in prompt_text) and 
-                            ("gold" not in prompt_text.lower() and "200" not in prompt_text)):
-                        second_call_found = True
-                        break
-        
-        assert second_call_found, (
-            f"Second LLM call should contain 'gold' or '200' in prompt_contents. "
-            f"Checked {len(code_exec_calls)} code_exec calls and {len(native_tools_calls)} native_tools calls."
+        assert len(call_history) >= 2, (
+            f"Expected at least 2 LLM calls, got {len(call_history)}."
+        )
+        second_call = call_history[1]
+        prompt_contents = second_call.get("prompt_contents", [])
+        prompt_text = " ".join(str(p) for p in prompt_contents)
+        prompt_text_lower = prompt_text.lower()
+        assert "gold" in prompt_text_lower or "200" in prompt_text, (
+            "Second LLM call should contain 'gold' or '200' in prompt_contents. "
+            f"Prompt contents (first 1000 chars): {prompt_text[:1000]}"
         )
 
     @patch("mvp_site.firestore_service.get_db")
-    @patch(
-        "mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools"
-    )
+    @patch("mvp_site.llm_providers.gemini_provider.generate_content_with_native_tools")
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
@@ -661,10 +652,10 @@ class TestGodModeEnd2End(unittest.TestCase):
     ):
         """
         Test that story_context is reloaded from Firestore for each command.
-        
+
         This verifies that the caching bug is fixed by ensuring story_context
         includes the previous command's entry when processing the second command.
-        
+
         Patches both Gemini entrypoints to be resilient to dispatch changes.
         """
         # Set up fake Firestore
@@ -679,12 +670,13 @@ class TestGodModeEnd2End(unittest.TestCase):
         def mock_gemini_side_effect(*args, **kwargs):
             """Mock Gemini to track story_context in each call."""
             call_count["count"] += 1
-            
+
             # Extract story_history from prompt_contents to verify it's being reloaded
             # The story_history should grow with each command
             prompt_contents = kwargs.get("prompt_contents", [])
             prompt_text = " ".join(str(p) for p in prompt_contents)
-            
+            prompt_text_lower = prompt_text.lower()
+
             if call_count["count"] == 1:
                 # First call: story_context should be empty or minimal
                 # (no previous commands yet)
@@ -697,10 +689,10 @@ class TestGodModeEnd2End(unittest.TestCase):
                         }
                     )
                 )
-            elif call_count["count"] == 2:
+            if call_count["count"] == 2:
                 # Second call: story_context should include the first command
                 # Verify that the first command's text is in the prompt_contents
-                if "GOD MODE: Set HP" in prompt_text or "Set HP" in prompt_text:
+                if "set hp" in prompt_text_lower:
                     # Good - story_context includes first command
                     pass
                 else:
@@ -709,7 +701,7 @@ class TestGodModeEnd2End(unittest.TestCase):
                         f"Second call should include first command in story_context. "
                         f"Prompt contents (first 1000 chars): {prompt_text[:1000]}"
                     )
-                
+
                 return FakeLLMResponse(
                     json.dumps(
                         {
@@ -719,16 +711,15 @@ class TestGodModeEnd2End(unittest.TestCase):
                         }
                     )
                 )
-            else:
-                return FakeLLMResponse(
-                    json.dumps(
-                        {
-                            "god_mode_response": f"Call #{call_count['count']}",
-                            "narrative": "",
-                            "state_updates": {},
-                        }
-                    )
+            return FakeLLMResponse(
+                json.dumps(
+                    {
+                        "god_mode_response": f"Call #{call_count['count']}",
+                        "narrative": "",
+                        "state_updates": {},
+                    }
                 )
+            )
 
         # Patch both entrypoints
         mock_gemini_code_exec.side_effect = mock_gemini_side_effect
@@ -755,10 +746,12 @@ class TestGodModeEnd2End(unittest.TestCase):
         assert response2.status_code == 200
 
         # Verify both calls were made (check both entrypoints)
-        total_calls = mock_gemini_code_exec.call_count + mock_gemini_native_tools.call_count
-        assert (
-            total_calls >= 2
-        ), f"Expected at least 2 calls, got code_exec={mock_gemini_code_exec.call_count}, native_tools={mock_gemini_native_tools.call_count}"
+        total_calls = (
+            mock_gemini_code_exec.call_count + mock_gemini_native_tools.call_count
+        )
+        assert total_calls >= 2, (
+            f"Expected at least 2 calls, got code_exec={mock_gemini_code_exec.call_count}, native_tools={mock_gemini_native_tools.call_count}"
+        )
 
 
 class TestGodModePromptSelection(unittest.TestCase):
@@ -784,24 +777,24 @@ class TestGodModePromptSelection(unittest.TestCase):
 
         for user_input, expected in test_cases:
             is_god_mode = user_input.strip().upper().startswith("GOD MODE:")
-            assert (
-                is_god_mode == expected
-            ), f"Failed for '{user_input}': expected {expected}, got {is_god_mode}"
+            assert is_god_mode == expected, (
+                f"Failed for '{user_input}': expected {expected}, got {is_god_mode}"
+            )
 
     def test_prompt_builder_has_god_mode_method(self):
         """Test that PromptBuilder has build_god_mode_instructions method."""
         from mvp_site.agent_prompts import PromptBuilder
 
         builder = PromptBuilder(None)
-        assert hasattr(
-            builder, "build_god_mode_instructions"
-        ), "PromptBuilder should have build_god_mode_instructions method"
+        assert hasattr(builder, "build_god_mode_instructions"), (
+            "PromptBuilder should have build_god_mode_instructions method"
+        )
 
         # Call the method and verify it returns a list
         instructions = builder.build_god_mode_instructions()
-        assert isinstance(
-            instructions, list
-        ), "build_god_mode_instructions should return a list"
+        assert isinstance(instructions, list), (
+            "build_god_mode_instructions should return a list"
+        )
         assert len(instructions) > 0, "God mode instructions should not be empty"
 
     def test_god_mode_instructions_contain_required_prompts(self):
@@ -816,9 +809,9 @@ class TestGodModePromptSelection(unittest.TestCase):
 
         # God mode should include master directive content
         # (we check for content that should be in master_directive)
-        assert (
-            len(all_instructions) > 1000
-        ), "God mode instructions should include substantial content"
+        assert len(all_instructions) > 1000, (
+            "God mode instructions should include substantial content"
+        )
 
         # God mode should include game state schema information
         assert (
