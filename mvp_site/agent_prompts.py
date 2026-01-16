@@ -4,7 +4,6 @@ Prompt building utilities for agent-based system instructions.
 This module centralizes ALL prompt manipulation code for the application:
 - System instruction loading and caching
 - Continuation prompt building
-- Reprompt message construction
 - Temporal correction prompts
 - Static prompt parts generation
 - Current turn prompt formatting
@@ -18,7 +17,7 @@ import os
 import re
 from typing import TYPE_CHECKING, Any
 
-from mvp_site import constants, dice_integrity, logging_util
+from mvp_site import constants, logging_util
 from mvp_site.file_cache import read_file_cached
 from mvp_site.game_state import GameState
 from mvp_site.memory_utils import format_memories_for_prompt, select_memories_by_budget
@@ -815,7 +814,7 @@ class PromptBuilder:
     def _extract_companions_from_state(self, state: dict[str, Any] | None) -> dict[str, Any] | None:
         """
         Extract companions from game state, checking both game_state.companions and npc_data.
-        
+
         Returns a dict of companions if found, None otherwise.
         Handles malformed data (non-dict companions) by falling back to npc_data scan.
         """
@@ -845,7 +844,7 @@ class PromptBuilder:
             name: npc for name, npc in npc_data.items()
             if isinstance(npc, dict) and npc.get("relationship") == "companion"
         }
-        
+
         if companions:
             logging_util.info(
                 f"🎭 _extract_companions_from_state: Found companions in npc_data: {list(companions.keys())}"
@@ -854,7 +853,7 @@ class PromptBuilder:
             logging_util.info(
                 f"🎭 _extract_companions_from_state: No companions found in npc_data (keys: {list(npc_data.keys())})"
             )
-        
+
         return companions if companions else None
 
     def build_companion_instruction(self) -> str:
@@ -1382,96 +1381,6 @@ class PromptBuilder:
 # =============================================================================
 # These functions are centralized here from llm_service.py and world_logic.py
 # to ensure all prompt manipulation code lives in one module.
-
-
-def build_reprompt_for_missing_fields(
-    original_response_text: str,
-    missing_fields: list[str],
-    tool_results: list[dict[str, Any]] | None = None,
-    dice_roll_strategy: str | None = None,
-) -> str:
-    """Build a reprompt message to request missing fields from the LLM.
-
-    When the LLM response is missing required fields (planning_block, session_header,
-    dice_rolls, etc.), this function constructs a clear reprompt message explaining
-    what's missing and how to provide it.
-
-    Args:
-        original_response_text: The original response from the LLM
-        missing_fields: List of missing field names
-        tool_results: Optional list of tool execution results to include
-            in the reprompt. This preserves dice roll provenance when
-            reprompting after malformed JSON in Phase 2.
-        dice_roll_strategy: Strategy to determine available dice remediation
-            (code_execution only vs tool_requests only)
-
-    Returns:
-        Reprompt message asking for the missing fields
-    """
-    if not missing_fields:
-        return (
-            "Your response was evaluated for required JSON fields, but none were "
-            "identified as missing. Please ensure your response conforms to the "
-            "expected schema."
-        )
-
-    fields_str = " and ".join(missing_fields)
-
-    requested_lines: list[str] = []
-    if "planning_block" in missing_fields:
-        requested_lines.append(
-            "- planning_block: An object with 'thinking' (your GM reasoning) and 'choices' (2-4 player options, each with 'text', 'description', 'risk_level')"
-        )
-    if "session_header" in missing_fields:
-        requested_lines.append(
-            "- session_header: A brief session context string (e.g., 'Session 3: The Quest Continues')"
-        )
-    if "dice_rolls" in missing_fields:
-        requested_lines.append(
-            "- dice_rolls: A non-empty list of dice roll strings for this turn. In combat actions, you MUST include the rolls and results."
-        )
-    if "social_hp_challenge" in missing_fields:
-        requested_lines.append(
-            "- social_hp_challenge: An object with npc_name, npc_tier, objective, request_severity, social_hp, social_hp_max, successes, successes_needed, status, resistance_shown, skill_used, roll_result, roll_dc, social_hp_damage"
-        )
-    if "dice_integrity" in missing_fields:
-        requested_lines.extend(
-            dice_integrity.build_dice_integrity_reprompt_lines(dice_roll_strategy)
-        )
-
-    requested_block = "\n".join(requested_lines)
-
-    # Build tool results context if available (preserves dice provenance)
-    tool_results_context = ""
-    if tool_results:
-        tool_lines: list[str] = []
-        for tr in tool_results:
-            if not isinstance(tr, dict):
-                continue
-            tool_name = tr.get("tool", "unknown")
-            result = tr.get("result", {})
-            if isinstance(result, dict):
-                total = result.get("total", result.get("result"))
-                purpose = tr.get("args", {}).get("purpose", "")
-                tool_lines.append(
-                    f"  - {tool_name}: {total}" + (f" ({purpose})" if purpose else "")
-                )
-            else:
-                tool_lines.append(f"  - {tool_name}: {result}")
-        if tool_lines:
-            tool_results_context = (
-                "\n\nIMPORTANT - Tool results from prior execution (use these EXACT values, do NOT fabricate):\n"
-                + "\n".join(tool_lines)
-                + "\n"
-            )
-
-    return (
-        f"Your response is missing the required {fields_str} field(s). "
-        f"Please provide the complete JSON response including:\n{requested_block}\n\n"
-        f"Keep the narrative and other fields from your previous response. "
-        f"{tool_results_context}"
-        f"Here is your previous response for reference:\n{original_response_text[:2000]}"
-    )
 
 
 def get_static_prompt_parts(

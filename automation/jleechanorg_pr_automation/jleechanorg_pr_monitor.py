@@ -18,12 +18,17 @@ import time
 import traceback
 import urllib.request
 from collections import Counter
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
+
+# Threshold for detecting stale queued comments (hours)
+# Comments older than this threshold without a completion marker are considered stale
+# and allow re-running the fix-comment agent (handles cases where agent failed silently)
+STALE_QUEUE_THRESHOLD_HOURS = 1.0
 
 from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
@@ -67,20 +72,20 @@ from .orchestrated_pr_runner import (
 from .utils import json_manager, setup_logging
 
 
-def _parse_fixpr_agent_chain(value: str) -> str:
-    """Parse comma-separated CLI chain for --fixpr-agent (e.g., 'gemini,codex')."""
+def _parse_cli_agent_chain(value: str) -> str:
+    """Parse comma-separated CLI chain for --cli-agent (e.g., 'gemini,cursor')."""
     if not isinstance(value, str) or not value.strip():
-        raise argparse.ArgumentTypeError("--fixpr-agent must be a non-empty string")
+        raise argparse.ArgumentTypeError("--cli-agent must be a non-empty string")
 
     parts = [part.strip().lower() for part in value.split(",")]
     chain = [part for part in parts if part]
     if not chain:
-        raise argparse.ArgumentTypeError("--fixpr-agent chain is empty")
+        raise argparse.ArgumentTypeError("--cli-agent chain is empty")
 
     invalid = [cli for cli in chain if cli not in CLI_PROFILES]
     if invalid:
         raise argparse.ArgumentTypeError(
-            f"Invalid --fixpr-agent CLI(s): {invalid}. Must be subset of {list(CLI_PROFILES.keys())}"
+            f"Invalid --cli-agent CLI(s): {invalid}. Must be subset of {list(CLI_PROFILES.keys())}"
         )
 
     # De-duplicate while preserving order
@@ -1477,7 +1482,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             str(pr_number),
             "--target-repo",
             repo_full,
-            "--fixpr-agent",
+            "--cli-agent",
             agent_cli,
         ]
         try:
@@ -1696,13 +1701,27 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         # NOTE: Only check for queued markers if NO completion marker exists.
         # If completion marker exists, any queued marker is stale and should be ignored
         # (allows legitimate reprocessing when completion marker + unaddressed comments exist)
-        if not has_completion_marker and head_sha and self._has_fix_comment_queued_for_commit(comments, head_sha):
-            self.logger.info(
-                "⏭️ Skipping PR #%s - fix-comment run already queued for commit %s",
-                pr_number,
-                head_sha[:8],
-            )
-            return "skipped"
+        if not has_completion_marker and head_sha:
+            queued_info = self._get_fix_comment_queued_info(comments, head_sha)
+            if queued_info:
+                # Check if queued comment is stale (older than threshold with no completion)
+                # This handles cases where agent failed silently and never posted completion marker
+                queued_age_hours = queued_info.get("age_hours", 0)
+                if queued_age_hours > STALE_QUEUE_THRESHOLD_HOURS:
+                    self.logger.warning(
+                        "⚠️ PR #%s has stale queued comment (%.1f hours old, no completion) - allowing re-run",
+                        pr_number,
+                        queued_age_hours,
+                    )
+                    # Allow re-run - agent likely failed
+                else:
+                    self.logger.info(
+                        "⏭️ Skipping PR #%s - fix-comment run already queued for commit %s (%.1f hours ago)",
+                        pr_number,
+                        head_sha[:8],
+                        queued_age_hours,
+                    )
+                    return "skipped"
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
@@ -2148,8 +2167,16 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         This prevents duplicate agent dispatches during the window between when
         a fix-comment run is queued and when the completion marker is posted.
         """
+        return self._get_fix_comment_queued_info(comments, head_sha) is not None
+
+    def _get_fix_comment_queued_info(self, comments: list[dict], head_sha: str) -> dict | None:
+        """Get info about queued fix-comment comment for a commit, including age.
+        
+        Returns dict with 'age_hours' and 'created_at' if found, None otherwise.
+        This allows checking if a queued comment is stale (agent failed silently).
+        """
         if not head_sha:
-            return False
+            return None
 
         for comment in comments:
             body = comment.get("body", "")
@@ -2159,9 +2186,28 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 # Verify this is from automation user (not a bot echo)
                 author = self._get_comment_author_login(comment)
                 if author == self.automation_username:
-                    return True
+                    # GitHub API returns timestamps in camelCase (createdAt)
+                    created_at_str = comment.get("createdAt") or comment.get("created_at", "")
+                    if created_at_str:
+                        try:
+                            # Normalize ISO 8601 timestamp: replace 'Z' with '+00:00' for consistent parsing
+                            # (defensive normalization - Python 3.11+ supports 'Z' directly, but this ensures compatibility)
+                            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                            # Ensure timezone-aware datetime (handle edge case where fromisoformat returns naive)
+                            if created_at.tzinfo is None:
+                                created_at = created_at.replace(tzinfo=timezone.utc)
+                            now = datetime.now(timezone.utc)
+                            age_hours = (now - created_at).total_seconds() / 3600
+                            return {
+                                "age_hours": age_hours,
+                                "created_at": created_at_str,
+                            }
+                        except (ValueError, AttributeError, TypeError):
+                            # If we can't parse date or compare (naive vs aware), assume it's recent (conservative)
+                            return {"age_hours": 0.0, "created_at": created_at_str}
+                    return {"age_hours": 0.0, "created_at": ""}
 
-        return False
+        return None
 
     def _is_head_commit_from_codex(
         self, commit_details: dict[str, str | None] | None
@@ -3201,10 +3247,12 @@ def main():
     parser.add_argument("--target-repo",
                         help="Repository for target PR (required with --target-pr)")
     parser.add_argument(
-        "--fixpr-agent",
-        type=_parse_fixpr_agent_chain,
+        "--cli-agent",
+        "--fixpr-agent",  # Backwards compatibility alias
+        dest="cli_agent",
+        type=_parse_cli_agent_chain,
         default="claude",
-        help="AI CLI (or comma-separated chain) for --fixpr mode (default: claude). Example: gemini,codex",
+        help="AI CLI chain for --fixpr and --fix-comment modes (default: claude). Example: gemini,cursor",
     )
     parser.add_argument(
         "--model",
@@ -3276,7 +3324,7 @@ def main():
         success = monitor.run_fix_comment_review_watcher(
             args.target_pr,
             args.target_repo,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
         )
         sys.exit(0 if success else 1)
 
@@ -3340,7 +3388,7 @@ def main():
                 args.target_pr,
                 args.target_repo,
                 fixpr=True,
-                agent_cli=args.fixpr_agent,
+                agent_cli=args.cli_agent,
                 model=args.model,
             )
             sys.exit(0 if success else 1)
@@ -3350,7 +3398,7 @@ def main():
             max_prs=args.max_prs,
             cutoff_hours=args.cutoff_hours,
             fixpr=True,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
             model=args.model,
         )
         return
@@ -3363,7 +3411,7 @@ def main():
                 args.target_pr,
                 args.target_repo,
                 fix_comment=True,
-                agent_cli=args.fixpr_agent,
+                agent_cli=args.cli_agent,
                 model=args.model,
             )
             sys.exit(0 if success else 1)
@@ -3385,7 +3433,7 @@ def main():
             max_prs=args.max_prs,
             cutoff_hours=args.cutoff_hours,
             fix_comment=True,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
             model=args.model,
         )
         return

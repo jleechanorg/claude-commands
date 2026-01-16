@@ -107,7 +107,9 @@ class ImportValidator(ast.NodeVisitor):
             'mvp_site.firestore_service', 'mvp_site.llm_service',
             'mvp_site.structured_fields_utils', 'mvp_site.custom_types',
             'mvp_site.debug_hybrid_system', 'mvp_site.game_state',
-            'mvp_site.prompt_utils'
+            'mvp_site.prompt_utils',
+            # Copilot modules that need sys.path manipulation
+            'per_comment_cache'
         }
 
     def _is_allowed_conditional_import(self, node: Union[ast.Import, ast.ImportFrom]) -> bool:
