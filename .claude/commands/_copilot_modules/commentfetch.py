@@ -25,13 +25,17 @@ from .base import CopilotCommandBase
 class CommentFetch(CopilotCommandBase):
     """Fetch all comments from a GitHub PR."""
 
-    def __init__(self, pr_number: str):
+    def __init__(self, pr_number: str, repo: str = None):
         """Initialize comment fetcher.
 
         Args:
             pr_number: GitHub PR number
+            repo: Optional repository override (format: owner/repo). If not provided, uses current repo.
         """
         super().__init__(pr_number)
+        # Override repo if provided (for cross-repo PR fetching)
+        if repo:
+            self.repo = repo
         self.comments = []
 
         # Get current branch for file path
