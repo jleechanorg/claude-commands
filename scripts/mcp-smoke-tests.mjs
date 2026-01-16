@@ -521,31 +521,54 @@ async function updateUserSettings(userId, provider) {
     throw new Error(`Unhandled provider in settings update: ${provider}`);
   }
 
-  const url = `${serverBaseUrl}/api/settings`;
-  const settingsUrl = `${settingsBaseUrl}/api/settings`;
-  logStep(`Updating settings for ${provider} via ${url}`);
+  // Check if we're testing against MCP-only server (localhost) or full Flask app
+  const isLocalMCPOnly = normalizedBaseUrl.includes('127.0.0.1') || normalizedBaseUrl.includes('localhost');
+  
+  if (isLocalMCPOnly) {
+    // Use MCP tool for local MCP-only server
+    logStep(`Updating settings for ${provider} via MCP tool (local server)`);
+    const payload = await callRpc(
+      'tools/call',
+      {
+        name: 'update_user_settings',
+        arguments: {
+          user_id: userId,
+          settings: settingsPayload,
+        }
+      }
+    );
 
-  const headers = {
-    'Content-Type': 'application/json',
-  };
-
-  const token = await getBearerToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    if (payload?.error) {
+      throw new Error(`update_user_settings returned error: ${JSON.stringify(payload.error)}`);
+    }
   } else {
-    headers['X-Test-Bypass-Auth'] = 'true';
-    headers['X-Test-User-ID'] = userId;
-  }
+    // Use REST API for full Flask app (Cloud Run deployments)
+    const url = `${serverBaseUrl}/api/settings`;
+    const settingsUrl = `${settingsBaseUrl}/api/settings`;
+    logStep(`Updating settings for ${provider} via ${url}`);
 
-  await fetchJson(
-    settingsUrl,
-    {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(settingsPayload),
-    },
-    `Update settings (${provider})`,
-  );
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const token = await getBearerToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    } else {
+      headers['X-Test-Bypass-Auth'] = 'true';
+      headers['X-Test-User-ID'] = userId;
+    }
+
+    await fetchJson(
+      settingsUrl,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(settingsPayload),
+      },
+      `Update settings (${provider})`,
+    );
+  }
 }
 
 async function checkToolsList() {
@@ -711,6 +734,47 @@ async function testCampaignCreationWithDefaultWorld(userId, providerLabel = 'gem
   return result;
 }
 
+async function completeCharacterCreation(userId, campaignId, providerLabel = 'gemini') {
+  logStep(`Completing character creation for campaign ${campaignId} (${providerLabel})`);
+
+  // Send a confirmation action to complete character creation and enter story mode
+  const payload = await callRpc(
+    'tools/call',
+    {
+      name: 'process_action',
+      arguments: {
+        user_id: userId,
+        campaign_id: campaignId,
+        user_input: 'I confirm my character and am ready to begin the adventure.',
+        debug_mode: true
+      }
+    }
+  );
+
+  if (payload?.error) {
+    throw new Error(`Character creation completion returned error: ${JSON.stringify(payload.error)}`);
+  }
+
+  const result = payload?.result;
+  if (!result?.narrative) {
+    throw new Error(`Character creation completion missing narrative: ${JSON.stringify(result)}`);
+  }
+
+  // Check if character creation is complete
+  const debugInfo = result.debug_info || {};
+  const agentName = debugInfo.agent_name || 'unknown';
+
+  logInfo(`✅ Character creation completed (agent: ${agentName})`);
+  addLogEntry({
+    kind: 'character-creation-complete',
+    campaign_id: campaignId,
+    agent_name: agentName,
+    provider: providerLabel,
+  });
+
+  return result;
+}
+
 async function testGameplayAction(userId, campaignId, contextLabel = 'campaign', providerLabel = 'gemini') {
   logStep(`Testing gameplay action via process_action tool (${contextLabel}, ${providerLabel})`);
 
@@ -741,20 +805,11 @@ async function testGameplayAction(userId, campaignId, contextLabel = 'campaign',
   // If no dice rolls are returned, the LLM is not using tool_requests properly - this is a REGRESSION
   const diceRolls = result.dice_rolls ?? [];
   if (diceRolls.length === 0) {
-    const errorMsg = `Combat action returned 0 dice rolls. ` +
+    const errorMsg = `REGRESSION: Combat action returned 0 dice rolls. ` +
       `The test action explicitly requested "Roll my attack" but LLM did not use tool_requests. ` +
       `Check that system prompts include tool_requests examples and enforce dice for ALL combat.`;
-    // Cerebras (Qwen) has known issues with tool_requests compliance - warn instead of fail
-    // Other providers (Gemini, OpenRouter Grok) should fully support tool_requests
-    const isKnownNonCompliant = providerLabel === 'cerebras';
-    if (isKnownNonCompliant) {
-      logInfo(`⚠️  KNOWN LIMITATION (${providerLabel}): ${errorMsg}`);
-      logInfo(`   ℹ️  Qwen models on Cerebras may not reliably use tool_requests. This is a model limitation, not a code bug.`);
-      // Don't fail - just warn and continue
-    } else {
-      logInfo(`❌ REGRESSION: ${errorMsg}`);
-      throw new Error(`REGRESSION: ${errorMsg}`);
-    }
+    logInfo(`❌ ${errorMsg}`);
+    throw new Error(errorMsg);
   } else {
     // Validate dice roll format - should show pre-rolled dice values used by LLM
     // Expected format: "Perception: 1d20+3 = 15+3 = 18 vs DC 15 (Success)"
@@ -878,12 +933,23 @@ async function main() {
           provider,
         );
 
+        // Test 3c: Complete character creation (god_mode leaves character_creation_in_progress=true)
+        // Send a confirmation to exit character creation mode before testing combat
+        if (campaign.campaign_id) {
+          await completeCharacterCreation(userId, campaign.campaign_id, provider);
+        }
+
         // Test 4: Gameplay action (only if we got a real campaign ID)
         if (campaign.campaign_id) {
           await testGameplayAction(userId, campaign.campaign_id, 'basic campaign', provider);
         }
 
-        // Test 4b: Gameplay with defaultWorld campaign (verifies campaign can progress)
+        // Test 4b: Complete character creation for defaultWorld campaign
+        if (defaultWorldCampaign.campaign_id) {
+          await completeCharacterCreation(userId, defaultWorldCampaign.campaign_id, provider);
+        }
+
+        // Test 4c: Gameplay with defaultWorld campaign (verifies campaign can progress)
         if (defaultWorldCampaign.campaign_id) {
           await testGameplayAction(
             userId,
