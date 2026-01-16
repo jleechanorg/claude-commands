@@ -2069,41 +2069,50 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             self.logger.warning("⚠️ Invalid PR number: %s", pr_number)
             return None
 
-        cmd = [
-            "gh",
-            "api",
-            "graphql",
-            "-f",
-            f"query={self._HEAD_COMMIT_DETAILS_QUERY}",
-            "-f",
-            f"owner={owner}",
-            "-f",
-            f"name={name}",
-            "-F",
-            f"prNumber={pr_number}",
-        ]
-
-        try:
-            result = AutomationUtils.execute_subprocess_with_timeout(cmd, timeout=30)
-        except subprocess.CalledProcessError as exc:
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
             self.logger.debug(
-                "⚠️ Failed to fetch head commit details for %s#%s: %s",
+                "⚠️ No GitHub token available for fetching head commit details: %s#%s",
                 repo_full_name,
                 pr_number,
-                exc.stderr or exc,
             )
             return None
-        except Exception as exc:
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+        }
+
+        variables = {
+            "owner": owner,
+            "name": name,
+            "prNumber": pr_number,
+        }
+
+        payload = {
+            "query": self._HEAD_COMMIT_DETAILS_QUERY,
+            "variables": variables,
+        }
+
+        try:
+            response = requests.post(
+                "https://api.github.com/graphql",
+                json=payload,
+                headers=headers,
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except requests.exceptions.RequestException as exc:
             self.logger.debug(
-                "⚠️ Error executing head commit lookup for %s#%s: %s",
+                "⚠️ Failed to fetch head commit details for %s#%s: %s",
                 repo_full_name,
                 pr_number,
                 exc,
             )
             return None
-
-        try:
-            data = json.loads(result.stdout or "{}")
         except json.JSONDecodeError as exc:
             self.logger.debug(
                 "⚠️ Failed to decode commit details for %s#%s: %s",
