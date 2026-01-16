@@ -76,6 +76,10 @@ def setup_divine_conditions(
                 "Slew Tiamat's Avatar",
             ],
             "worshippers": 10000,  # Initial worshipper base
+            # Clear character creation state to allow upgrade agent selection
+            "character_creation_in_progress": False,
+            "character_creation_completed": True,
+            "character_creation_stage": "complete",
         },
     }
 
@@ -145,6 +149,10 @@ def setup_sovereign_conditions(
                 "The Mantle of Eternity",
                 "The Crown of Many Worlds",
             ],
+            # Clear character creation state to allow upgrade agent selection
+            "character_creation_in_progress": False,
+            "character_creation_completed": True,
+            "character_creation_stage": "complete",
         },
     }
 
