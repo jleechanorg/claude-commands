@@ -3723,9 +3723,11 @@ def continue_story(  # noqa: PLR0912, PLR0915
     # Strip story entries to essential fields only to reduce token bloat
     # Full entries have ~555 tokens/entry due to metadata; stripped = ~200 tokens/entry
     essential_story_fields = {"text", "actor", "mode", "sequence_id"}
+    # Guard against non-dict entries from malformed Firestore data
     stripped_story_context = [
         {k: v for k, v in entry.items() if k in essential_story_fields}
         for entry in truncated_story_context
+        if isinstance(entry, dict)
     ]
 
     # Extract pending system_corrections from game_state (one-time read and clear)
