@@ -53,7 +53,7 @@ When the user enters Think Mode, the character pauses to consider their options.
 - Roll 1d20 + Intelligence modifier (for tactical/logical plans)
 - OR 1d20 + Wisdom modifier (for intuitive/social plans)
 - Use whichever stat is MORE RELEVANT to the question asked
-- Include this roll in the `dice_rolls` field (NOTE: Think Mode uses a special dice format for planning checks - this is different from story mode which uses `action_resolution.mechanics.rolls`)
+- Include this roll in `action_resolution.mechanics.rolls` (same as story mode - single source of truth for all dice)
 - Compare to DC to determine SUCCESS or FAILURE
 
 ### Step 3: Determine Plan Quality
@@ -192,19 +192,24 @@ Always respond with valid JSON using this structure:
 {
     "session_header": "[SESSION_HEADER]\nTimestamp: ...\nLocation: ...\nStatus: ...",
     "narrative": "You pause to consider your options... the roll falls short, and your thoughts snag on the same flawed assumption, so you need time before you can revisit this.",
-    "dice_rolls": [
-        {
-            "type": "Intelligence Check (Planning)",
-            "roll": "1d20+2",
-            "result": 10,
-            "dc": 12,
-            "dc_category": "Requires Some Thought",
-            "dc_reasoning": "Tactical assessment of a straightforward ambush situation",
-            "success": false,
-            "margin": -2,
-            "outcome": "Failed by 2 - Incomplete analysis"
+    "action_resolution": {
+        "mechanics": {
+            "type": "planning_check",
+            "rolls": [
+                {
+                    "notation": "1d20+2",
+                    "result": 10,
+                    "dc": 12,
+                    "success": false,
+                    "purpose": "Intelligence Check (Planning)",
+                    "dc_category": "Requires Some Thought",
+                    "dc_reasoning": "Tactical assessment of a straightforward ambush situation",
+                    "margin": -2,
+                    "outcome": "Failed by 2 - Incomplete analysis"
+                }
+            ]
         }
-    ],
+    },
     "planning_block": {
         "plan_quality": {
             "stat_used": "Intelligence",
@@ -267,17 +272,21 @@ Always respond with valid JSON using this structure:
 
 ## Required Fields
 
-**⚠️ IMPORTANT: Think Mode Dice Format**
-Think Mode uses a SPECIAL `dice_rolls` format for planning checks (shown below). This is different from story mode, which uses `action_resolution.mechanics.rolls`. The Think Mode format includes additional fields like `dc_category`, `dc_reasoning`, and `margin` that are specific to planning quality assessment.
+**Dice Rolls:** Think Mode uses the same `action_resolution.mechanics.rolls` format as story mode (single source of truth). Planning checks include extra fields for quality assessment.
 
 - `session_header`: (string) **OPTIONAL** - Current character status for reference
 - `narrative`: (string) **REQUIRED** - Must include DC explanation AND stat influence message (see Steps 5-6)
-- `dice_rolls`: (array) **REQUIRED** - The INT or WIS check with DC, success/failure, and margin (Think Mode special format)
-- `dice_rolls[].dc`: (integer) **REQUIRED** - The DC chosen for this planning check
-- `dice_rolls[].dc_category`: (string) **REQUIRED** - Category name (e.g., "Complicated Planning")
-- `dice_rolls[].dc_reasoning`: (string) **REQUIRED** - Why this DC was chosen
-- `dice_rolls[].success`: (boolean) **REQUIRED** - Whether the roll met or beat the DC
-- `dice_rolls[].margin`: (integer) **REQUIRED** - How much above/below DC (positive = success, negative = failure)
+- `action_resolution`: (object) **REQUIRED** - Contains the planning check mechanics
+- `action_resolution.mechanics.type`: (string) **REQUIRED** - Must be `"planning_check"`
+- `action_resolution.mechanics.rolls`: (array) **REQUIRED** - The INT or WIS check with DC, success/failure
+- `action_resolution.mechanics.rolls[].notation`: (string) **REQUIRED** - Dice notation (e.g., "1d20+2")
+- `action_resolution.mechanics.rolls[].result`: (integer) **REQUIRED** - Roll result
+- `action_resolution.mechanics.rolls[].dc`: (integer) **REQUIRED** - The DC chosen for this planning check
+- `action_resolution.mechanics.rolls[].success`: (boolean) **REQUIRED** - Whether the roll met or beat the DC
+- `action_resolution.mechanics.rolls[].purpose`: (string) **REQUIRED** - e.g., "Intelligence Check (Planning)"
+- `action_resolution.mechanics.rolls[].dc_category`: (string) **REQUIRED** - Category name (e.g., "Complicated Planning")
+- `action_resolution.mechanics.rolls[].dc_reasoning`: (string) **REQUIRED** - Why this DC was chosen
+- `action_resolution.mechanics.rolls[].margin`: (integer) **REQUIRED** - How much above/below DC (positive = success, negative = failure)
 - `planning_block`: (object) **REQUIRED** - Deep strategic analysis (see structure above)
 - `planning_block.plan_quality`: (object) **REQUIRED** - Shows stat used, roll result, DC, and quality tier
 - `planning_block.plan_quality.dc`: (integer) **REQUIRED** - DC for this planning check
