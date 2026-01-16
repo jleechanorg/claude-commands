@@ -49,7 +49,7 @@ def parse_arguments() -> Tuple[str, str, str]:
     if len(sys.argv) != 4:
         print("❌ ERROR: Missing required arguments")
         print("Usage: python3 commentreply.py <owner> <repo> <pr_number>")
-        print("Example: python3 commentreply.py jleechanorg worldarchitect.ai 1510")
+        print("Example: python3 commentreply.py jleechanorg your-project.com 1510")
         sys.exit(1)
 
     return sys.argv[1], sys.argv[2], sys.argv[3]
