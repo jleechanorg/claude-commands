@@ -551,8 +551,8 @@ def run_multiverse_ascension_test(
     campaign_name = f"Multiverse Ascension Test {datetime.now().strftime('%H%M%S')}"
 
     try:
-        settings_for_model(client, model_id)
-        update_user_settings(client, user_id=user_id, model_id=model_id)
+        model_settings = settings_for_model(model_id)
+        update_user_settings(client, user_id=user_id, settings=model_settings)
 
         # ================================================================
         # STAGE 1: CREATE CAMPAIGN
