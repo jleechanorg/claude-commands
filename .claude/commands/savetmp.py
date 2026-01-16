@@ -330,7 +330,7 @@ def _looks_like_absolute_path(value: str) -> bool:
         return False
     if value.startswith("~"):
         return True
-    if re.match(r"^[A-Za-z]:\\\\", value):
+    if re.match(r"^[A-Za-z]:\\", value):
         return True
     return Path(value).is_absolute()
 
