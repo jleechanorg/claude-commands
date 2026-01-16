@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-Sanctuary Mode Lifecycle Test (Optimized)
+Sanctuary Mode Lifecycle Test (Autonomous)
 
 Single comprehensive test that validates the complete sanctuary lifecycle:
-1. Activation (autonomous or prompted)
+1. Activation (autonomous - LLM detects completion from context, not keywords)
 2. Protection (blocks lethal events)
 3. Natural expiration
 
-Uses minor scale (3 turns) for fastest execution.
+The test uses neutral post-victory actions (e.g., "I search the body") to trigger
+sanctuary activation. The LLM should autonomously recognize quest completion from
+context (boss defeated + post-victory action) without requiring explicit keywords
+like "quest complete" or "mission finished".
 
 Evidence standards: .claude/skills/evidence-standards.md
 """
@@ -54,18 +57,16 @@ def get_current_turn(game_state: dict) -> int:
 
 
 def test_sanctuary_lifecycle(
-    client: MCPClient, user_id: str, request_responses: list, autonomous: bool = False
+    client: MCPClient, user_id: str, request_responses: list
 ) -> dict:
     """
     Test complete sanctuary lifecycle: activation → protection → expiration.
 
-    Uses minor scale (3 turns) for fastest execution.
-
-    Args:
-        autonomous: If True, use neutral action after boss defeat (no explicit completion).
-                   If False, use explicit completion language.
+    Uses AUTONOMOUS activation - neutral post-victory action triggers sanctuary.
+    The LLM should recognize quest completion from context (boss defeated + neutral action)
+    without requiring explicit keywords like "quest complete".
     """
-    print("📋 Testing sanctuary lifecycle (activation → protection → expiration)...")
+    print("📋 Testing sanctuary lifecycle (autonomous activation → protection → expiration)...")
 
     # Create campaign
     campaign_id = create_campaign(
@@ -136,17 +137,12 @@ def test_sanctuary_lifecycle(
     )
     client.clear_captures()
 
-    # PHASE 1: ACTIVATION
-    print("   Phase 1: Testing activation...")
-    if autonomous:
-        # Autonomous: neutral action (no completion keywords)
-        activation_input = "I search Klarg's body for valuables."
-        trigger_source = "autonomous"
-    else:
-        # Prompted: explicit completion (faster, more reliable)
-        # Use more explicit language to ensure activation
-        activation_input = "The quest is finished. I have successfully completed the Cragmaw Hideout mission. This is a MINOR scale quest completion."
-        trigger_source = "prompted"
+    # PHASE 1: ACTIVATION (Autonomous)
+    print("   Phase 1: Testing autonomous activation...")
+    # Autonomous: neutral action (no completion keywords)
+    # LLM should detect completion from context: boss defeated + post-victory action
+    activation_input = "I search Klarg's body for valuables."
+    trigger_source = "autonomous"
 
     activation_response = process_action(
         client,
@@ -336,8 +332,8 @@ def test_sanctuary_lifecycle(
     }
 
 
-def run_tests(server_url: str, autonomous: bool = False) -> tuple[list, list]:
-    """Run sanctuary lifecycle test."""
+def run_tests(server_url: str) -> tuple[list, list]:
+    """Run sanctuary lifecycle test (autonomous activation mode)."""
     client = MCPClient(server_url)
     user_id = f"test-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
 
@@ -351,22 +347,19 @@ def run_tests(server_url: str, autonomous: bool = False) -> tuple[list, list]:
     results = []
     request_responses = []
 
-    # Run lifecycle test
-    result = test_sanctuary_lifecycle(client, user_id, request_responses, autonomous=autonomous)
+    # Run lifecycle test (autonomous activation)
+    result = test_sanctuary_lifecycle(client, user_id, request_responses)
     results.append(result)
 
     return results, request_responses
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Test sanctuary lifecycle with autonomous activation (LLM detects completion from context)"
+    )
     parser.add_argument("--work-name", default=WORK_NAME)
     parser.add_argument("--server", help="Optional: use existing server URL")
-    parser.add_argument(
-        "--autonomous",
-        action="store_true",
-        help="Use autonomous activation (neutral action, no completion keywords)",
-    )
     args = parser.parse_args()
 
     local_server = None
@@ -383,10 +376,9 @@ def main():
             client.wait_healthy(timeout_s=30.0)
             print(f"✅ Server ready at {server_url}")
 
-        mode = "autonomous" if args.autonomous else "prompted"
-        print(f"🧪 Running sanctuary lifecycle test ({mode} activation mode)...")
+        print("🧪 Running sanctuary lifecycle test (autonomous activation mode)...")
 
-        results, request_responses = run_tests(server_url, autonomous=args.autonomous)
+        results, request_responses = run_tests(server_url)
 
         # Save evidence
         evidence_dir = get_evidence_dir(args.work_name)

@@ -311,7 +311,20 @@ Base 20% + (Success_Streak × 10%), capped at 75%
 
 ## Sanctuary Mode
 
-After completing a mission or arc, grant the player sanctuary (protection from life-ending events) scaled to the achievement.
+Grant the player sanctuary (protection from life-ending events) when you **autonomously detect** mission/arc completion. Do NOT rely on keyword matching - use contextual evaluation.
+
+### Autonomous Completion Detection
+
+**Evaluate these signals to determine if a quest/mission was completed:**
+
+1. **Combat Resolution:** Check `combat_state.combat_history` - was a boss/named enemy recently defeated?
+2. **Threat Assessment:** Are major hostiles eliminated from the current location?
+3. **Player Behavior:** Is the player taking post-victory actions? (looting, searching, resting, leaving area)
+4. **Narrative Arc:** Has the story tension resolved? Is the player transitioning to a new phase?
+
+**CRITICAL:** When a boss is defeated and the player takes ANY follow-up action (including neutral actions like "I search the body" or "I look around"), this signals completion. Activate sanctuary automatically.
+
+**Example:** Player defeats Klarg → next turn says "I search Klarg's body for valuables" → Activate sanctuary (boss defeated + post-victory action = completion detected)
 
 ### Duration by Arc Scale
 

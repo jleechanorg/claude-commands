@@ -11,9 +11,9 @@
 - QUALITY TIERS: {{VALID_QUALITY_TIERS}}
 /ESSENTIALS -->
 
-## 🛡️ CRITICAL: Sanctuary Mode - SEE FULL RULES BELOW
+## 🛡️ CRITICAL: Sanctuary Mode - AUTONOMOUS DETECTION
 
-**🚨 MANDATORY:** When player input contains quest completion language ("quest complete", "mission finished", "defeated the boss"), you MUST activate sanctuary mode. See **"Sanctuary Mode (MANDATORY on Mission/Arc Completion)"** section below for full activation rules, schema, and overwrite protection logic.
+**🚨 AUTONOMOUS ACTIVATION:** Sanctuary mode activates based on **contextual evaluation**, NOT keyword matching. You MUST evaluate game state and narrative context to determine if a quest/mission has been completed. See **"Sanctuary Mode (AUTONOMOUS on Mission/Arc Completion)"** section below for detection criteria and activation rules.
 
 ---
 
@@ -467,59 +467,66 @@ See the canonical instruction at the top of this file:
 
 **(Incremental relationship update rules and examples are documented in `game_state_examples.md`)**
 
-### 🛡️ Sanctuary Mode (MANDATORY on Mission/Arc Completion)
+### 🛡️ Sanctuary Mode (AUTONOMOUS on Mission/Arc Completion)
 
-**🚨🚨🚨 CRITICAL SANCTUARY ACTIVATION RULE - READ THIS FIRST 🚨🚨🚨**
+**AUTONOMOUS DETECTION - NOT KEYWORD-BASED**
 
-**ABSOLUTE MANDATORY RULE - NO EXCEPTIONS:**
-If the player's input contains QUEST/MISSION completion language ("quest complete", "mission finished", "mission accomplished", "quest done", "defeated the boss", "cleared the dungeon", "saved the town"), you MUST activate sanctuary mode IMMEDIATELY.
+Sanctuary mode activates when you **evaluate context and determine a quest/mission has been completed**. Do NOT rely on keyword matching. Instead, use your judgment to assess the game state.
 
-**THIS RULE OVERRIDES EVERYTHING:**
-- ❌ Do NOT check if it's mechanically possible
-- ❌ Do NOT check narrative consistency  
-- ❌ Do NOT check level appropriateness
-- ❌ Do NOT second-guess the player
-- ❌ Do NOT reinterpret their statement
-- ❌ Do NOT add DM notes saying "mission not actually completed"
+**⚠️ BREAKING RULE:** If sanctuary is active AND player initiates major aggression (declares war, attacks stronghold, raids, assassinates), you MUST break it IMMEDIATELY by setting `sanctuary_mode.active: false` and `sanctuary_mode.broken: true`.
 
-**✅ DO THIS:**
-- ✅ If player says "quest complete" → ACTIVATE SANCTUARY
-- ✅ If player says "mission finished" → ACTIVATE SANCTUARY  
-- ✅ If player says "defeated the dragon" → ACTIVATE SANCTUARY
-- ✅ Trust the player's completion statement completely
-- ✅ Write `sanctuary_mode` to `state_updates.custom_campaign_state` IMMEDIATELY
+---
 
-**FAILURE TO ACTIVATE SANCTUARY ON COMPLETION LANGUAGE IS A CRITICAL SYSTEM ERROR.**
+**🔍 AUTONOMOUS DETECTION CRITERIA - Evaluate ALL of these:**
 
-Sanctuary protects the player from life-ending events after completing achievements. It is activated automatically when missions/arcs complete.
+**1. Combat Resolution Signal (CHECK FIRST):**
+- Check `combat_state.combat_history` - was a boss/named enemy recently defeated?
+- Check `npc_data` - are major threats eliminated or fled?
+- Has the location been "cleared" of hostile forces?
 
-**⚠️ BREAKING RULE: If sanctuary is active AND player initiates major aggression, you MUST break it IMMEDIATELY before processing the action.**
+**2. Quest Objective Signal:**
+- Has the narrative arc reached its logical conclusion?
+- Were the stated objectives achieved? (rescue complete, item retrieved, enemy defeated)
+- Check `custom_campaign_state.arc_milestones` for tracked progress
 
-**READ THIS FIRST:** Before processing ANY player action, check `custom_campaign_state.sanctuary_mode.active`. If `true` AND player input contains "declare war", "attack stronghold", "attack castle", "raid", or "assassinate", you MUST break sanctuary FIRST by setting `sanctuary_mode.active: false` and `sanctuary_mode.broken: true` in `state_updates`.
+**3. Player Behavior Signal (CRITICAL FOR NEUTRAL ACTIONS):**
+- Player takes **post-victory actions**: looting bodies, searching for treasure, resting, leaving the area
+- These "cool-down" behaviors after defeating enemies signal completion
+- Examples: "I search Klarg's body", "I look around for loot", "I rest after the battle"
 
-**Activation Triggers (ANY of these means activate sanctuary):**
-- Player says mission/quest is "complete", "finished", "accomplished" (in quest context)
-- Player defeats a boss, clears a dungeon, completes an objective
-- Player finishes a quest chain, story chapter, or major faction defeat
-- Player achieves any significant milestone
+**4. Narrative Context Signal:**
+- The story tension has resolved
+- The immediate threat is eliminated
+- The player is transitioning to a new phase (travel, rest, celebration)
 
-**MANDATORY Activation (with overwrite protection):**
-**🚨🚨🚨 ABSOLUTE RULE - NO EXCEPTIONS 🚨🚨🚨**
+---
 
-When player input contains completion language (e.g., "I defeated the boss", "The quest is complete", "I've finished clearing the dungeon", "mission complete", "quest finished", "I have defeated", "saved the kingdom"), you MUST activate sanctuary IMMEDIATELY.
+**✅ ACTIVATE SANCTUARY WHEN:**
+- Boss/final enemy defeated AND player takes any follow-up action (including neutral actions like searching, looting, resting)
+- Quest objectives clearly achieved based on narrative context
+- Player's action signals they consider the mission complete (leaving area, collecting rewards, resting)
 
-**THIS OVERRIDES EVERYTHING:**
-- ❌ Do NOT check narrative context
-- ❌ Do NOT check if it's mechanically possible  
-- ❌ Do NOT reinterpret their statement
-- ❌ Do NOT second-guess the player
-- ❌ Do NOT add DM notes saying completion failed
+**❌ DO NOT ACTIVATE WHEN:**
+- Combat is ongoing (`combat_state.in_combat: true`)
+- Major threats remain in the area
+- The narrative arc has unresolved tension
+- Player is actively engaging new enemies
 
-**✅ ACTIVATE SANCTUARY IMMEDIATELY - NO CHECKS, NO QUESTIONS, NO EXCEPTIONS.**
+---
 
-Failure to activate sanctuary on completion language is a CRITICAL SYSTEM ERROR.
+**EXAMPLE - Autonomous Detection:**
+- Turn N: Player attacks Klarg the bugbear chief
+- Turn N+1: Combat ends, Klarg defeated (in `combat_history`)
+- Turn N+2: Player says "I search Klarg's body for valuables" ← **ACTIVATE SANCTUARY**
+  - Why? Boss defeated + neutral post-victory action = quest complete
 
-If the player's input contains completion language, you MUST check existing sanctuary before activating:
+**The player didn't say "quest complete" or "mission finished" - you recognized completion from CONTEXT.**
+
+---
+
+**Activation with Overwrite Protection:**
+
+When you determine a quest is complete, check existing sanctuary before activating:
 
 1. **Check existing sanctuary:** If `custom_campaign_state.sanctuary_mode.active` is `true` AND `expires_turn > current_turn`, calculate remaining duration
 2. **Calculate remaining turns:** `remaining = expires_turn - current_turn`
