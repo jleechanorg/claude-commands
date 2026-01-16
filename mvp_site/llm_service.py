@@ -120,7 +120,12 @@ from mvp_site.llm_providers import (
     gemini_provider,
     openrouter_provider,
 )
-from mvp_site.llm_request import LLMRequest, LLMRequestError
+from mvp_site.llm_request import (
+    MAX_PAYLOAD_SIZE,
+    LLMRequest,
+    LLMRequestError,
+    PayloadTooLargeError,
+)
 from mvp_site.llm_response import LLMResponse
 
 # Memory utilities now imported via agent_prompts (centralized prompt manipulation)
@@ -1339,19 +1344,49 @@ def _call_llm_api_with_llm_request(
 
     logging_util.debug(f"JSON validation passed with {len(json_data)} fields")
 
-    # Re-validate payload size (~1.8KB overhead, negligible vs 10MB limit)
-    gemini_request._validate_payload_size(json_data)
+    # Add priority instruction as JSON field when user_action exists
+    # This guides the LLM to focus on current user action over story_history AND game_state
+    # while preserving the JSON contract (per CLAUDE.md "JSON Schema Over Text Instructions")
+    user_action = json_data.get("user_action")
+    if user_action and str(user_action).strip():
+        # Add priority instruction directly to JSON structure (not text wrapping)
+        # This preserves the JSON contract while guiding LLM behavior
+        json_data["priority_instruction"] = (
+            "CRITICAL: Respond to user_action field, NOT story_history or game_state entries. "
+            "story_history and game_state are context only. Focus exclusively on current user_action."
+        )
+        json_data["message_type"] = "story_continuation"
+
+        # Log user_action for debugging (DEBUG level to avoid PII leaks)
+        logging_util.debug(
+            "USER_ACTION preview: %s...",
+            str(user_action)[:200],
+        )
 
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
+    # Uses indent=2 for readability (matches origin/main format)
     # Uses centralized json_default_serializer from mvp_site.serialization
     json_string = json.dumps(json_data, indent=2, default=json_default_serializer)
+
+    prompt_size_bytes = len(json_string.encode("utf-8"))
+    if prompt_size_bytes > MAX_PAYLOAD_SIZE:
+        raise PayloadTooLargeError(
+            f"Prompt payload too large: {prompt_size_bytes} bytes exceeds limit of {MAX_PAYLOAD_SIZE} bytes"
+        )
+
+    # Safe user_action access for logging (handles None/empty string for initial story)
+    user_action_preview = (
+        (gemini_request.user_action or "")[:100]
+        if gemini_request.user_action
+        else "initial_story"
+    )
 
     # Send the structured JSON as string to the API
     return _call_llm_api(
         [json_string],  # Send JSON as formatted string
         model_name,
-        f"LLMRequest: {gemini_request.user_action[:100]}...",  # Logging
+        f"LLMRequest: {user_action_preview}...",  # Logging
         system_instruction_text,
         provider_name,
     )
@@ -3688,9 +3723,11 @@ def continue_story(  # noqa: PLR0912, PLR0915
     # Strip story entries to essential fields only to reduce token bloat
     # Full entries have ~555 tokens/entry due to metadata; stripped = ~200 tokens/entry
     essential_story_fields = {"text", "actor", "mode", "sequence_id"}
+    # Guard against non-dict entries from malformed Firestore data
     stripped_story_context = [
         {k: v for k, v in entry.items() if k in essential_story_fields}
         for entry in truncated_story_context
+        if isinstance(entry, dict)
     ]
 
     # Extract pending system_corrections from game_state (one-time read and clear)
@@ -3704,6 +3741,20 @@ def continue_story(  # noqa: PLR0912, PLR0915
             f"{pending_system_corrections}"
         )
 
+    # Log what we're passing to LLMRequest (DEBUG level to avoid log noise)
+    logging_util.debug(
+        f"📝 Building LLMRequest: user_action={user_input[:200]}..., "
+        f"story_history_length={len(stripped_story_context)}"
+    )
+    if stripped_story_context:
+        last_story_entry = stripped_story_context[-1]
+        # Guard against non-dict entries from malformed Firestore data
+        if isinstance(last_story_entry, dict):
+            logging_util.debug(
+                f"📝 Last story_history entry: actor={last_story_entry.get('actor')}, "
+                f"text={str(last_story_entry.get('text', ''))[:100]}..."
+            )
+    
     gemini_request = LLMRequest.build_story_continuation(
         user_action=user_input,
         user_id=str(user_id_from_state),
@@ -3721,6 +3772,12 @@ def continue_story(  # noqa: PLR0912, PLR0915
         selected_prompts=selected_prompts or [],
         use_default_world=use_default_world,
         system_corrections=pending_system_corrections,
+    )
+    
+    # Log what was actually set in the request (DEBUG level to avoid log noise)
+    logging_util.debug(
+        f"📝 LLMRequest created: user_action={gemini_request.user_action[:200] if gemini_request.user_action else 'None'}..., "
+        f"story_history_length={len(gemini_request.story_history) if gemini_request.story_history else 0}"
     )
 
     # DEBUG: Log full LLMRequest payload size breakdown
