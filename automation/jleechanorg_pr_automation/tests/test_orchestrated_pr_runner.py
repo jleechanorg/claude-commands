@@ -3,6 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 # Ensure repository root is importable
 ROOT = Path(__file__).resolve().parents[3]
@@ -10,6 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import pytest
+import requests
 
 import automation.jleechanorg_pr_automation.orchestrated_pr_runner as runner
 
@@ -792,3 +794,290 @@ def test_dispatch_agent_for_pr_rejects_invalid_model(monkeypatch, tmp_path):
     )
     
     assert not success, "Should reject invalid model name with special characters"
+
+
+# Tests for Python GitHub API functions (post_pr_comment_python, cleanup_pending_reviews_python, get_github_token)
+
+
+def test_get_github_token_from_env(monkeypatch):
+    """Test get_github_token retrieves token from GITHUB_TOKEN env var."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token-123")
+    monkeypatch.setattr(runner, "subprocess", Mock())
+    token = runner.get_github_token()
+    assert token == "test-token-123"
+
+
+def test_get_github_token_from_gh_cli(monkeypatch):
+    """Test get_github_token falls back to gh CLI when env var not set."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    
+    mock_result = SimpleNamespace(returncode=0, stdout="gh-token-456\n", stderr="")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_, **__: mock_result
+    )
+    
+    token = runner.get_github_token()
+    assert token == "gh-token-456"
+
+
+def test_get_github_token_gh_cli_failure(monkeypatch):
+    """Test get_github_token returns None when gh CLI fails."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    
+    mock_result = SimpleNamespace(returncode=1, stdout="", stderr="error")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_, **__: mock_result
+    )
+    
+    token = runner.get_github_token()
+    assert token is None
+
+
+def test_get_github_token_gh_cli_timeout(monkeypatch):
+    """Test get_github_token handles gh CLI timeout gracefully."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    
+    def mock_run(*args, **kwargs):
+        raise subprocess.TimeoutExpired("gh", 5)
+    
+    monkeypatch.setattr(subprocess, "run", mock_run)
+    
+    token = runner.get_github_token()
+    assert token is None
+
+
+def test_post_pr_comment_python_success(monkeypatch):
+    """Test post_pr_comment_python successfully posts a comment."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    
+    mock_response = Mock()
+    mock_response.status_code = 201
+    mock_response.raise_for_status = Mock()
+    
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", return_value=mock_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+            result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
+            
+            assert result is True
+            mock_log.assert_any_call("✅ Posted comment to owner/repo#123")
+
+
+def test_post_pr_comment_python_reply(monkeypatch):
+    """Test post_pr_comment_python posts a threaded reply when in_reply_to is provided."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    
+    mock_response = Mock()
+    mock_response.status_code = 201
+    mock_response.raise_for_status = Mock()
+    
+    post_calls = []
+    
+    def mock_post(url, json=None, headers=None, timeout=None):
+        post_calls.append({"url": url, "json": json, "headers": headers})
+        return mock_response
+    
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", side_effect=mock_post):
+        result = runner.post_pr_comment_python("owner/repo", 123, "Reply comment", in_reply_to=456)
+        
+        assert result is True
+        assert len(post_calls) == 1
+        assert "pulls/123/comments" in post_calls[0]["url"]
+        assert post_calls[0]["json"]["in_reply_to"] == 456
+        assert post_calls[0]["json"]["body"] == "Reply comment"
+
+
+def test_post_pr_comment_python_no_token(monkeypatch):
+    """Test post_pr_comment_python returns False when no token is available."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(
+        runner,
+        "get_github_token",
+        lambda: None
+    )
+    
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+        result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
+        
+        assert result is False
+        mock_log.assert_any_call("⚠️ No GitHub token available for posting comment")
+
+
+def test_post_pr_comment_python_api_error(monkeypatch):
+    """Test post_pr_comment_python handles API errors gracefully."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    
+    mock_response = Mock()
+    mock_response.raise_for_status.side_effect = requests.HTTPError("API Error")
+    
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", return_value=mock_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+            result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
+            
+            assert result is False
+            mock_log.assert_any_call("⚠️ Failed to post comment: API Error")
+
+
+def test_cleanup_pending_reviews_python_success(monkeypatch):
+    """Test cleanup_pending_reviews_python successfully deletes pending reviews."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    
+    # Mock reviews response
+    reviews_response = [
+        {
+            "id": 1001,
+            "state": "PENDING",
+            "user": {"login": "automation-user"},
+        },
+        {
+            "id": 1002,
+            "state": "APPROVED",
+            "user": {"login": "automation-user"},
+        },
+        {
+            "id": 1003,
+            "state": "PENDING",
+            "user": {"login": "other-user"},
+        },
+        {
+            "id": 1004,
+            "state": "PENDING",
+            "user": {"login": "automation-user"},
+        },
+    ]
+    
+    mock_get_response = Mock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = reviews_response
+    mock_get_response.raise_for_status = Mock()
+    
+    mock_delete_response = Mock()
+    mock_delete_response.status_code = 204
+    
+    get_calls = []
+    delete_calls = []
+    
+    def mock_get(url, headers=None, timeout=None):
+        get_calls.append({"url": url, "headers": headers})
+        return mock_get_response
+    
+    def mock_delete(url, headers=None, timeout=None):
+        delete_calls.append({"url": url, "headers": headers})
+        return mock_delete_response
+    
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.delete", side_effect=mock_delete):
+            with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+                runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
+                
+                # Should fetch reviews once
+                assert len(get_calls) == 1
+                assert "pulls/123/reviews" in get_calls[0]["url"]
+                
+                # Should delete only pending reviews from automation-user (1001 and 1004)
+                assert len(delete_calls) == 2
+                assert "reviews/1001" in delete_calls[0]["url"] or "reviews/1001" in delete_calls[1]["url"]
+                assert "reviews/1004" in delete_calls[0]["url"] or "reviews/1004" in delete_calls[1]["url"]
+                
+                mock_log.assert_any_call("✅ Deleted pending review 1001 for owner/repo#123")
+                mock_log.assert_any_call("✅ Deleted pending review 1004 for owner/repo#123")
+
+
+def test_cleanup_pending_reviews_python_no_pending(monkeypatch):
+    """Test cleanup_pending_reviews_python handles no pending reviews gracefully."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    
+    # Mock reviews response with no pending reviews from automation user
+    reviews_response = [
+        {
+            "id": 1001,
+            "state": "APPROVED",
+            "user": {"login": "automation-user"},
+        },
+        {
+            "id": 1002,
+            "state": "PENDING",
+            "user": {"login": "other-user"},
+        },
+    ]
+    
+    mock_get_response = Mock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = reviews_response
+    mock_get_response.raise_for_status = Mock()
+    
+    delete_calls = []
+    
+    def mock_get(url, headers=None, timeout=None):
+        return mock_get_response
+    
+    def mock_delete(url, headers=None, timeout=None):
+        delete_calls.append(url)
+        return Mock(status_code=204)
+    
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.delete", side_effect=mock_delete):
+            runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
+            
+            # Should not delete anything
+            assert len(delete_calls) == 0
+
+
+def test_cleanup_pending_reviews_python_no_token(monkeypatch):
+    """Test cleanup_pending_reviews_python handles missing token gracefully."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(
+        runner,
+        "get_github_token",
+        lambda: None
+    )
+    
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+        runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
+        
+        mock_log.assert_any_call("⚠️ No GitHub token available for cleanup")
+
+
+def test_cleanup_pending_reviews_python_api_error(monkeypatch):
+    """Test cleanup_pending_reviews_python handles API errors gracefully."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    
+    mock_response = Mock()
+    mock_response.raise_for_status.side_effect = requests.HTTPError("API Error")
+    
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+            runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
+            
+            mock_log.assert_any_call("Error cleaning up pending reviews: API Error")
+
+
+def test_cleanup_pending_reviews_python_delete_failure(monkeypatch):
+    """Test cleanup_pending_reviews_python handles delete failures gracefully."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    
+    reviews_response = [
+        {
+            "id": 1001,
+            "state": "PENDING",
+            "user": {"login": "automation-user"},
+        },
+    ]
+    
+    mock_get_response = Mock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = reviews_response
+    mock_get_response.raise_for_status = Mock()
+    
+    mock_delete_response = Mock()
+    mock_delete_response.status_code = 500  # Server error
+    
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_get_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.delete", return_value=mock_delete_response):
+            with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+                runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
+                
+                mock_log.assert_any_call("⚠️ Failed to delete review 1001: 500")

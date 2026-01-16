@@ -748,6 +748,9 @@ def dispatch_agent_for_pr(
             return False
         normalized_model = raw_model
 
+    # Get automation user for cleanup instructions (before building task description)
+    automation_user = get_automation_user()
+
     task_description = (
         f"FIXPR TASK (SELF-CONTAINED): Update PR #{pr_number} in {repo_full} (branch {branch}). "
         "Goal: resolve merge conflicts and failing checks. Also review and address any reviewer feedback that is blocking CI or mergeability. "
@@ -821,7 +824,6 @@ def dispatch_agent_for_pr(
 
     # Agent is responsible for cleaning up pending reviews after posting comments
     # No background monitor script needed - eliminates macOS permission prompts
-    automation_user = get_automation_user()
     if automation_user:
         log(f"✅ Agent will handle pending review cleanup for PR #{pr_number} (user: {automation_user})")
     else:
