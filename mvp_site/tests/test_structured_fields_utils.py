@@ -179,6 +179,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
 
         # Verify all constants are used as keys
         # Note: world_events is only included when state_updates.world_events exists
+        # action_resolution and outcome_resolution are always included (even if empty) for audit trail
         expected_keys = {
             constants.FIELD_SESSION_HEADER,
             constants.FIELD_PLANNING_BLOCK,
@@ -188,6 +189,8 @@ class TestStructuredFieldsUtils(unittest.TestCase):
             constants.FIELD_DEBUG_INFO,
             constants.FIELD_GOD_MODE_RESPONSE,
             constants.FIELD_DIRECTIVES,
+            "action_resolution",
+            "outcome_resolution",
         }
         assert set(result.keys()) == expected_keys
 
@@ -337,3 +340,118 @@ Next Objective: Investigate the glowing altar"""
         # world_events should NOT be in result if not present in state_updates
         assert "world_events" not in result
         assert constants.FIELD_STATE_UPDATES not in result
+
+    def test_regression_dice_rolls_extracted_from_action_resolution_mechanics(self):
+        """Test that dice_rolls are extracted from action_resolution.mechanics.rolls.
+
+        Bug: When LLM correctly places dice rolls in action_resolution.mechanics.rolls
+        (as per game_state_instruction.md:236 which says "DO NOT populate dice_rolls
+        directly"), the extract_structured_fields function should extract them to
+        populate the dice_rolls field for Firestore storage.
+
+        Previously, dice_rolls was only read directly from the LLM response, resulting
+        in empty [] even when action_resolution.mechanics.rolls had data.
+        """
+        # This matches the real Firestore data where LLM correctly puts dice in action_resolution
+        action_resolution_data = {
+            "interpreted_as": "Deception check",
+            "audit_flags": [],
+            "narrative_outcome": "Success",
+            "mechanics": {
+                "rolls": [
+                    {
+                        "success": True,
+                        "result": 32,
+                        "notation": "1d20+19",
+                        "purpose": "Deception (The Absolute's Harvest)",
+                        "dc": 15,
+                    }
+                ],
+                "type": "skill_check",
+            },
+            "reinterpreted": False,
+            "player_input": "some input",
+        }
+
+        mock_structured_response = Mock(spec=NarrativeResponse)
+        mock_structured_response.session_header = "Turn 1"
+        mock_structured_response.planning_block = {"choices": {"1": "option"}}
+        mock_structured_response.dice_rolls = []  # LLM correctly leaves this empty
+        mock_structured_response.dice_audit_events = []
+        mock_structured_response.resources = "HP: 49/49"
+        mock_structured_response.debug_info = {}
+        mock_structured_response.god_mode_response = ""
+        mock_structured_response.action_resolution = action_resolution_data
+        mock_structured_response.outcome_resolution = {}
+
+        mock_gemini_response = Mock(spec=LLMResponse)
+        mock_gemini_response.structured_response = mock_structured_response
+
+        result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
+
+        # Key assertion: dice_rolls should be EXTRACTED from action_resolution.mechanics.rolls
+        # Format matches extract_dice_rolls_from_action_resolution output
+        assert result[constants.FIELD_DICE_ROLLS] == [
+            "1d20+19 = 32 vs DC 15 - Success (Deception (The Absolute's Harvest))"
+        ], f"Expected dice_rolls to be extracted from action_resolution.mechanics.rolls, got: {result[constants.FIELD_DICE_ROLLS]}"
+
+    def test_regression_dice_rolls_preserved_when_llm_provides_directly(self):
+        """Test backward compatibility: if LLM provides dice_rolls directly, preserve them.
+
+        Some older prompts may still have the LLM populate dice_rolls directly.
+        This test ensures backward compatibility.
+        """
+        mock_structured_response = Mock(spec=NarrativeResponse)
+        mock_structured_response.session_header = "Turn 1"
+        mock_structured_response.planning_block = {}
+        mock_structured_response.dice_rolls = ["Attack: d20+5 = 18"]  # LLM provided directly
+        mock_structured_response.dice_audit_events = []
+        mock_structured_response.resources = {}
+        mock_structured_response.debug_info = {}
+        mock_structured_response.god_mode_response = ""
+        mock_structured_response.action_resolution = {}  # Empty action_resolution
+        mock_structured_response.outcome_resolution = {}
+
+        mock_gemini_response = Mock(spec=LLMResponse)
+        mock_gemini_response.structured_response = mock_structured_response
+
+        result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
+
+        # dice_rolls should be preserved from LLM response when action_resolution is empty
+        assert result[constants.FIELD_DICE_ROLLS] == ["Attack: d20+5 = 18"]
+
+    def test_regression_action_resolution_rolls_override_empty_dice_rolls(self):
+        """Test that action_resolution.mechanics.rolls OVERRIDES empty dice_rolls.
+
+        This is the single-source-of-truth principle: if action_resolution has rolls,
+        they should be used even if dice_rolls is empty.
+        """
+        action_resolution_data = {
+            "mechanics": {
+                "rolls": [
+                    {"notation": "1d20+5", "result": 17, "dc": 18, "success": False, "purpose": "Attack"},
+                    {"notation": "1d8+3", "result": 8, "purpose": "Damage"},
+                ],
+            },
+        }
+
+        mock_structured_response = Mock(spec=NarrativeResponse)
+        mock_structured_response.session_header = ""
+        mock_structured_response.planning_block = {}
+        mock_structured_response.dice_rolls = []  # Empty as per instruction
+        mock_structured_response.dice_audit_events = []
+        mock_structured_response.resources = {}
+        mock_structured_response.debug_info = {}
+        mock_structured_response.god_mode_response = ""
+        mock_structured_response.action_resolution = action_resolution_data
+        mock_structured_response.outcome_resolution = {}
+
+        mock_gemini_response = Mock(spec=LLMResponse)
+        mock_gemini_response.structured_response = mock_structured_response
+
+        result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
+
+        # Should have 2 extracted dice rolls
+        assert len(result[constants.FIELD_DICE_ROLLS]) == 2
+        assert "1d20+5 = 17 vs DC 18 - Failure (Attack)" in result[constants.FIELD_DICE_ROLLS]
+        assert "1d8+3 = 8 (Damage)" in result[constants.FIELD_DICE_ROLLS]

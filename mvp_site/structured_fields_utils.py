@@ -73,6 +73,7 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
         # Even if empty, these fields should be present in Firestore for consistency
         # The helper functions return empty dict {} if not present, which is fine to persist
         from mvp_site.action_resolution_utils import (
+            extract_dice_rolls_from_action_resolution,
             get_action_resolution,
             get_outcome_resolution,
         )
@@ -82,6 +83,16 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
         
         outcome_resolution = get_outcome_resolution(sr)
         structured_fields["outcome_resolution"] = outcome_resolution  # Always include, even if {}
+
+        # Extract dice_rolls from action_resolution.mechanics.rolls (single source of truth)
+        # Per game_state_instruction.md:236, LLM should NOT populate dice_rolls directly;
+        # instead, dice should be in action_resolution.mechanics.rolls and extracted here.
+        # This ensures Firestore storage has formatted dice_rolls even when LLM correctly
+        # leaves dice_rolls empty and puts data in action_resolution.
+        if action_resolution:
+            extracted_rolls = extract_dice_rolls_from_action_resolution(action_resolution)
+            if extracted_rolls:
+                structured_fields[constants.FIELD_DICE_ROLLS] = extracted_rolls
 
         # Store a filtered subset of state_updates needed for Living World UI
         # This keeps storage small while still surfacing relevant debug data
