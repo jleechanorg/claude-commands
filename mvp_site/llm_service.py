@@ -1345,15 +1345,15 @@ def _call_llm_api_with_llm_request(
     logging_util.debug(f"JSON validation passed with {len(json_data)} fields")
 
     # Add priority instruction as JSON field when user_action exists
-    # This guides the LLM to focus on current user action over historical context
+    # This guides the LLM to focus on current user action over story_history AND game_state
     # while preserving the JSON contract (per CLAUDE.md "JSON Schema Over Text Instructions")
     user_action = json_data.get("user_action")
     if user_action and str(user_action).strip():
         # Add priority instruction directly to JSON structure (not text wrapping)
         # This preserves the JSON contract while guiding LLM behavior
         json_data["priority_instruction"] = (
-            "CRITICAL: Respond to user_action field, NOT story_history entries. "
-            "story_history is context only. Focus exclusively on current user_action."
+            "CRITICAL: Respond to user_action field, NOT story_history or game_state entries. "
+            "story_history and game_state are context only. Focus exclusively on current user_action."
         )
         json_data["message_type"] = "story_continuation"
 
