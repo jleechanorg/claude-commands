@@ -285,7 +285,7 @@ This is an automated notification from the WorldArchitect.AI automation system."
             os.rename(temp_path, file_path)
             temp_path = None  # Successful, don't clean up
 
-        except (OSError, TypeError) as e:  # TypeError raised for non-serializable objects
+        except (OSError, json.JSONEncodeError) as e:
             # Clean up temp file on error
             if temp_path and os.path.exists(temp_path):
                 try:
