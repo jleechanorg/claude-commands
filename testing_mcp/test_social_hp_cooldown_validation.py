@@ -21,14 +21,17 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 
-# Add lib to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root to path for testing_mcp.lib imports
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
-from lib import evidence_utils
-from lib.campaign_utils import create_campaign, get_campaign_state, process_action, ensure_game_state_seed
-from lib.mcp_client import MCPClient
-from lib.model_utils import settings_for_model, update_user_settings
-from lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
+# Import from testing_mcp.lib (canonical shared utilities)
+from testing_mcp.lib import evidence_utils
+from testing_mcp.lib.campaign_utils import create_campaign, get_campaign_state, process_action, ensure_game_state_seed
+from testing_mcp.lib.mcp_client import MCPClient
+from testing_mcp.lib.model_utils import settings_for_model, update_user_settings
+from testing_mcp.lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
 
 def _extract_social_hp_challenge(response: dict[str, Any]) -> dict[str, Any] | None:
     """Extract social_hp_challenge from multiple possible response shapes."""
