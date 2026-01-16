@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import glob
 import json
+import logging
 import os
 import re
 import shlex
@@ -18,11 +19,20 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .cli_validation import (
+    CLI_VALIDATION_TEST_PROMPT,
+    CLI_VALIDATION_TIMEOUT_SECONDS,
+    OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS,
+    validate_cli_two_phase,
+)
+
 from .a2a_integration import TaskPool, get_a2a_status
 from .a2a_monitor import get_monitor
 from .constants import (
     AGENT_SESSION_TIMEOUT_SECONDS,
     DEFAULT_MAX_CONCURRENT_AGENTS,
+    RUNTIME_CLI_TIMEOUT_SECONDS,
+    RUNTIME_OAUTH_CLI_TIMEOUT_SECONDS,
     TIMESTAMP_MODULO,
 )
 
@@ -32,6 +42,9 @@ A2A_AVAILABLE = True
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
 # Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
+
+# CLI validation constants imported from centralized validation library
+# CLI_VALIDATION_TEST_PROMPT, CLI_VALIDATION_TIMEOUT_SECONDS, OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS
 
 CLI_PROFILES = {
     "claude": {
@@ -712,101 +725,78 @@ class TaskDispatcher:
 
     def _validate_cli_availability(self, cli_name: str, cli_path: str, agent_name: str, model: str | None = None) -> bool:
         """
-        Pre-flight validation: Test if CLI can actually work (API connectivity/quota check).
-        Returns True if CLI is available and working, False if quota/rate limit detected.
+        Pre-flight validation: Two-phase validation using centralized validation library.
+        Phase 1: --help check (cheap sanity check)
+        Phase 2: Execution test (2+2) with file output
+        
+        Returns True if CLI is available and working, False if quota/rate limit detected or execution fails.
         Timeouts are treated as "unknown" and return True (will rely on runtime fallback).
         """
         try:
             profile = CLI_PROFILES.get(cli_name, {})
-            
-            # For Gemini, check quota/rate limit by attempting a simple test
-            if cli_name == "gemini":
-                # Test with a minimal prompt to check quota/connectivity
-                # Use provided model or fall back to default GEMINI_MODEL
-                test_model = model if model and model != "sonnet" else GEMINI_MODEL
-                test_prompt = "Say 'ok' if you can read this."
-                try:
-                    result = subprocess.run(
-                        [cli_path, "-m", test_model, "--yolo"],
-                        input=test_prompt,
-                        capture_output=True,
-                        text=True,
-                        timeout=5,  # Shorter timeout - if slow, assume available (runtime fallback will catch errors)
-                        env={k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
-                    )
-                    output = result.stdout + result.stderr
-                    # Check for quota/rate limit errors - these are definitive failures
-                    if any(phrase in output.lower() for phrase in [
-                        "exhausted your capacity",
-                        "exhausted your daily quota",
-                        "rate limit",
-                        "quota exceeded",
-                        "resource_exhausted"
-                    ]):
-                        print(f"   ⚠️ Gemini CLI quota/rate limit detected during validation for {agent_name}")
-                        return False
-                    # Require exit code 0 for success - non-zero indicates failure
-                    if result.returncode == 0:
-                        return True
-                    # Non-zero exit code indicates failure (auth error, invalid model, network issues, etc.)
-                    print(f"   ⚠️ Gemini CLI validation failed for {agent_name}: exit code {result.returncode}")
-                    return False
-                except subprocess.TimeoutExpired:
-                    # Timeout = slow but might work - let runtime fallback handle actual errors
-                    print(f"   ⚠️ Gemini CLI validation timed out for {agent_name} (will try anyway, runtime fallback will catch errors)")
-                    return True
-                except Exception as e:
-                    # Other errors = unknown, assume available (runtime fallback will catch)
-                    print(f"   ⚠️ Gemini CLI validation error for {agent_name}: {e} (will try anyway)")
-                    return True
-            
-            # For Codex, test basic connectivity
-            elif cli_name == "codex":
-                try:
-                    # Codex exec --yolo with empty input should at least show help or version
-                    result = subprocess.run(
-                        [cli_path, "exec", "--yolo"],
-                        input="",
-                        capture_output=True,
-                        text=True,
-                        timeout=3,  # Shorter timeout
-                        env={k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
-                    )
-                    output = (result.stdout or "") + (result.stderr or "")
-                    # Prefer successful exit code for validation
-                    if result.returncode == 0:
-                        return True
-                    # Check for recognizable help/version output as fallback success indicator
-                    if re.search(r"\bUsage:\s*codex\b", output, re.IGNORECASE) or re.search(
-                        r"\bcodex\b.*\bversion\b", output, re.IGNORECASE
-                    ):
-                        return True
-                    # Non-zero exit code without recognizable output indicates failure
-                    print(f"   ⚠️ Codex CLI validation failed for {agent_name}: exit code {result.returncode}")
-                    return False
-                except subprocess.TimeoutExpired:
-                    # Timeout = slow but might work
-                    print(f"   ⚠️ Codex CLI validation timed out for {agent_name} (will try anyway)")
-                    return True
-                except Exception as e:
-                    # Other errors = unknown, assume available
-                    print(f"   ⚠️ Codex CLI validation error for {agent_name}: {e} (will try anyway)")
-                    return True
-            
-            # For Claude/Cursor, assume available if binary exists (OAuth-based, harder to validate)
-            # These CLIs use OAuth and may require interactive auth, so we can't easily test
-            elif cli_name in ["claude", "cursor"]:
-                # Just verify binary is executable
-                if os.access(cli_path, os.X_OK):
-                    return True
-                return False
+            env = {k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
 
-            # Unknown CLI type - log warning but assume available (runtime fallback will catch failures)
-            # This allows new CLIs to be added without breaking validation
-            print(f"   ⚠️ Unknown CLI type '{cli_name}' for {agent_name} - assuming available (runtime fallback will catch failures)")
-            return True
+            # Determine help args and execution cmd based on CLI type
+            help_args = []
+            execution_cmd = []
+            execution_timeout = CLI_VALIDATION_TIMEOUT_SECONDS
+            skip_help = False
+
+            if cli_name == "gemini":
+                help_args = ["--help"]
+                test_model = model if model and model != "sonnet" else GEMINI_MODEL
+                execution_cmd = ["-m", test_model, "--yolo"]
+            elif cli_name == "codex":
+                help_args = ["exec", "--help"]
+                execution_cmd = ["exec", "--yolo"]
+            elif cli_name == "claude":
+                # OAuth CLI - check executable first, then use prompt file for execution
+                if not os.access(cli_path, os.X_OK):
+                    print(f"   ⚠️ Claude CLI binary not executable: {cli_path} (agent {agent_name})")
+                    return False
+                help_args = ["--help"]
+                test_model = model if model else "sonnet"
+                # For Claude, we need to create a prompt file (handled in execution phase)
+                # Use a special marker to indicate prompt file needed
+                execution_cmd = ["--model", test_model, "-p", "@PROMPT_FILE", "--output-format", "text"]
+                execution_timeout = OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS
+                skip_help = True  # Skip help for OAuth CLIs (may require auth)
+            elif cli_name == "cursor":
+                # OAuth CLI - check executable first, then use prompt file for execution
+                if not os.access(cli_path, os.X_OK):
+                    print(f"   ⚠️ Cursor CLI binary not executable: {cli_path} (agent {agent_name})")
+                    return False
+                help_args = ["--help"]
+                # Use CURSOR_MODEL when model is "sonnet" or None to match runtime command_template
+                test_model = model if model and model != "sonnet" else CURSOR_MODEL
+                # For Cursor, we need to create a prompt file (handled in execution phase)
+                execution_cmd = ["-f", "-p", "@PROMPT_FILE", "--model", test_model, "--output-format", "text"]
+                execution_timeout = OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS
+                skip_help = True  # Skip help for OAuth CLIs (may require auth)
+            else:
+                # Unknown CLI type - assume available
+                print(f"   ⚠️ Unknown CLI type '{cli_name}' for {agent_name} - assuming available (runtime fallback will catch failures)")
+                return True
+
+            # Use centralized two-phase validation
+            result = validate_cli_two_phase(
+                cli_name=cli_name,
+                cli_path=cli_path,
+                help_args=help_args,
+                execution_cmd=execution_cmd,
+                env=env,
+                execution_timeout=execution_timeout,
+                retain_output=False,  # Clean up temp dirs after validation
+                skip_help=skip_help,
+                agent_name=agent_name,
+            )
+
+            return result.success
         except Exception as e:
-            # Unknown errors = assume available (runtime fallback will catch actual failures)
+            # DESIGN DECISION: Unknown exceptions are treated as "available" (return True) to allow runtime fallback.
+            # Rationale: Preflight validation should catch definitive failures (quota, binary not found),
+            # not block on unexpected errors that might be transient or environment-specific.
+            # Tradeoff: Real breakage could be masked, but runtime will catch actual failures and fallback to next CLI.
             print(f"   ⚠️ CLI validation failed for {cli_name} (agent {agent_name}): {e} (will try anyway)")
             return True
 
@@ -1417,9 +1407,13 @@ Complete the task, then use /pr to create a new pull request."""
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
 
             # Pre-flight validation: Test if CLI can actually work (API connectivity/quota check)
+            # Validate ALL CLIs in chain to ensure fallback options are ready
             print(f"🔍 Starting pre-flight validation for {agent_name} (CLI chain: {', '.join(cli_chain)}, model: {model})")
+            validated_clis = []  # List of (cli_name, cli_path) tuples that passed validation
             validated_cli = None
             validated_path = None
+            
+            # Validate all CLIs in the chain
             for candidate_cli in cli_chain:
                 candidate_path = self._resolve_cli_binary(candidate_cli)
                 if not candidate_path:
@@ -1428,14 +1422,16 @@ Complete the task, then use /pr to create a new pull request."""
                 
                 print(f"   🧪 Validating {CLI_PROFILES[candidate_cli]['display_name']} CLI at {candidate_path} (model: {model})...")
                 if self._validate_cli_availability(candidate_cli, candidate_path, agent_name, model=model):
-                    validated_cli = candidate_cli
-                    validated_path = candidate_path
+                    validated_clis.append((candidate_cli, candidate_path))
                     print(f"   ✅ {CLI_PROFILES[candidate_cli]['display_name']} CLI validation passed for {agent_name}")
-                    break
+                    # Use first validated CLI as primary, but keep others as fallbacks
+                    if not validated_cli:
+                        validated_cli = candidate_cli
+                        validated_path = candidate_path
                 else:
-                    print(f"   ❌ CLI '{candidate_cli}' failed pre-flight validation, trying next in chain")
+                    print(f"   ❌ CLI '{candidate_cli}' failed pre-flight validation")
             
-            # If validation failed for all CLIs in chain, try fallback CLIs
+            # If no CLIs in chain passed validation, try fallback CLIs
             # Prefer Codex for fallback (most reliable), then others
             if not validated_cli:
                 print(f"⚠️ All CLIs in chain failed validation for {agent_name}, attempting fallback")
@@ -1443,17 +1439,26 @@ Complete the task, then use /pr to create a new pull request."""
                 fallback_priority = ["codex", "claude", "cursor", "gemini"]
                 for fallback_cli in fallback_priority:
                     if fallback_cli in cli_chain:
-                        continue
+                        continue  # Already tried in chain
                     fallback_path = self._resolve_cli_binary(fallback_cli)
                     if fallback_path:
                         print(f"   🔄 Trying fallback: {CLI_PROFILES[fallback_cli]['display_name']} CLI at {fallback_path}...")
                         if self._validate_cli_availability(fallback_cli, fallback_path, agent_name, model=model):
+                            validated_clis.append((fallback_cli, fallback_path))
                             validated_cli = fallback_cli
                             validated_path = fallback_path
                             print(f"   ✅ Fallback to {CLI_PROFILES[fallback_cli]['display_name']} CLI validated for {agent_name}")
                             break
                         else:
                             print(f"   ❌ Fallback {CLI_PROFILES[fallback_cli]['display_name']} CLI validation failed")
+            
+            # Log validation summary
+            if validated_clis:
+                print(f"   📊 Validation summary: {len(validated_clis)} CLI(s) passed validation:")
+                for cli_name, cli_path in validated_clis:
+                    print(f"      ✅ {CLI_PROFILES[cli_name]['display_name']} ({cli_path})")
+                if len(validated_clis) > 1:
+                    print(f"   💡 Using {CLI_PROFILES[validated_cli]['display_name']} as primary, {len(validated_clis) - 1} fallback(s) available")
             
             if not validated_cli or not validated_path:
                 print(f"❌ No available CLI passed pre-flight validation for {agent_name} - agent creation aborted")
@@ -1792,6 +1797,13 @@ Agent Configuration:
                 )
 
                 attempt_display_name = attempt_profile.get("display_name", attempt_cli)
+                
+                # Determine timeout based on CLI type (OAuth CLIs need longer timeout for interactive auth)
+                # OAuth CLIs: claude, cursor
+                if attempt_cli in ["claude", "cursor"]:
+                    attempt_timeout_seconds = RUNTIME_OAUTH_CLI_TIMEOUT_SECONDS
+                else:
+                    attempt_timeout_seconds = RUNTIME_CLI_TIMEOUT_SECONDS
 
                 attempt_blocks += f"""
 if [ $RESULT_WRITTEN -eq 0 ]; then
@@ -1806,6 +1818,7 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
 
     echo "[$(date)] 🔁 Attempt $ATTEMPT_NUM: {attempt_display_name}" | tee -a {log_file_quoted}
     echo "[$(date)] Executing: {attempt_execution_line}" | tee -a {log_file_quoted}
+    echo "[$(date)] Timeout: {attempt_timeout_seconds}s" | tee -a {log_file_quoted}
 
     LOG_START_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo 0)
 
@@ -1813,8 +1826,16 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
     {github_token_export}
     {attempt_env_unset_commands}
 
-    {attempt_execution_line} 2>&1 | tee -a {log_file_quoted}
+    # Wrap execution with timeout to prevent hangs and allow prompt fallback
+    # Exit code 124 = timeout, which should trigger fallback to next CLI
+    timeout {attempt_timeout_seconds} bash -c '{attempt_execution_line}' 2>&1 | tee -a {log_file_quoted}
     ATTEMPT_EXIT=${{PIPESTATUS[0]}}
+    
+    # Handle timeout exit code (124) - treat as failure to trigger fallback
+    if [ $ATTEMPT_EXIT -eq 124 ]; then
+        echo "[$(date)] ⏱️  CLI execution timed out after {attempt_timeout_seconds}s (will try fallback)" | tee -a {log_file_quoted}
+        ATTEMPT_EXIT=1  # Treat timeout as failure to trigger fallback
+    fi
 
     LOG_END_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo "$LOG_START_LINE")
 

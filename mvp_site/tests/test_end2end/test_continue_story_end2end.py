@@ -154,13 +154,13 @@ class TestContinueStoryEnd2End(unittest.TestCase):
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
-    def test_time_anomaly_warns_without_reprompt(
+    def test_time_anomaly_warns_single_call(
         self, mock_gemini_generate, mock_get_db
     ):
-        """Temporal anomaly detection works correctly without reprompts.
-        
-        NOTE: Reprompts are disabled to prevent server crashes. This test verifies
-        that temporal anomaly detection still works correctly in a single LLM call.
+        """Temporal anomaly detection works correctly in a single LLM call.
+
+        Verifies that backward time jumps in LLM responses trigger the temporal
+        anomaly warning without requiring multiple API calls.
         """
         fake_firestore = FakeFirestoreClient()
         mock_get_db.return_value = fake_firestore
@@ -195,7 +195,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             }
         )
 
-        # Response: includes dice_rolls but moves time backward (no reprompt expected)
+        # Response: includes dice_rolls but moves time backward
         backward_world_time = {
             "year": 999,
             "month": 1,
@@ -248,11 +248,10 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         assert (
             "TEMPORAL ANOMALY DETECTED" in god_mode_response
         ), f"Expected temporal anomaly warning, got: {god_mode_response}"
-        # NOTE: Dice Retry Notice may not appear since reprompts are disabled
-        # The temporal anomaly detection should still work
+        # Temporal anomaly detection should work in a single LLM call
         assert (
             mock_gemini_generate.call_count == 1
-        ), "Reprompts are disabled - should only have 1 LLM call"
+        ), "Should complete in a single LLM call"
 
     @patch("mvp_site.firestore_service.get_db")
     def test_continue_story_campaign_not_found(self, mock_get_db):
