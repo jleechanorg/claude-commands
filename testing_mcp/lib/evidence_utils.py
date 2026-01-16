@@ -1073,14 +1073,29 @@ the raw narrative validation missed. See `errors` in individual scenario files.
     files["_iteration"] = Path(str(iteration_num))  # Type-compatible placeholder
     files["_run_id"] = Path(run_id)  # Type-compatible placeholder
 
-    print(f"📦 Evidence bundle created: {actual_evidence_dir}")
-    print(f"   Run ID: {run_id}")
-    print(f"   Iteration: {iteration_num}")
+    print("\n" + "=" * 80)
+    print("📦 EVIDENCE BUNDLE CREATED")
+    print("=" * 80)
+    print(f"📁 Evidence Directory:")
+    print(f"   {actual_evidence_dir}")
+    print(f"\n📋 Bundle Metadata:")
+    print(f"   Run ID:        {run_id}")
+    print(f"   Iteration:     {iteration_num}")
     print(f"   Bundle Version: {EVIDENCE_FORMAT_VERSION}")
 
     # Download test campaigns for inspection to evidence_dir/campaigns
     campaign_dir = download_test_campaigns(results, evidence_dir=actual_evidence_dir)
     if campaign_dir:
         files["_campaign_dir"] = campaign_dir
+
+    # Final summary
+    print("\n" + "=" * 80)
+    print("✅ TEST EVIDENCE SUMMARY")
+    print("=" * 80)
+    print(f"📁 Evidence Location:  {actual_evidence_dir}")
+    if campaign_dir:
+        print(f"📥 Campaigns Location: {campaign_dir}")
+    print(f"🔗 Latest Symlink:     {actual_evidence_dir.parent / 'latest'}")
+    print("=" * 80 + "\n")
 
     return files
