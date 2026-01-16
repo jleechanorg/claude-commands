@@ -603,6 +603,62 @@ def test_divine_ascension_via_level_25(
         })
 
         # ================================================================
+        # STAGE 3.5: Collect Rewards (Trigger RewardsAgent)
+        # ================================================================
+        print("\n💰 STAGE 3.5: Collecting rewards (triggers RewardsAgent)...")
+        print("-" * 40)
+
+        # This action triggers the RewardsAgent to process XP from combat_summary
+        rewards_input = (
+            "I stand victorious over the dragon's corpse! "
+            "I collect the rewards of my triumph and absorb the experience from this legendary battle!"
+        )
+        print(f"Input: {rewards_input[:60]}...")
+
+        rewards_response = process_action(
+            client,
+            user_id=user_id,
+            campaign_id=campaign_id,
+            user_input=rewards_input,
+        )
+
+        # Check agent used - should be RewardsAgent
+        rewards_agent = rewards_response.get("agent_used", "unknown")
+        print(f"   Agent used: {rewards_agent}")
+
+        evidence["interactions"].append({
+            "stage": "3.5_rewards",
+            "action": "collect_rewards",
+            "input": rewards_input,
+            "response": rewards_response,
+            "agent_used": rewards_agent,
+        })
+
+        # Check XP after rewards processing
+        post_rewards_xp = get_player_xp(client, user_id, campaign_id)
+        post_rewards_level = get_player_level(client, user_id, campaign_id)
+        print(f"   Post-rewards XP: {post_rewards_xp}")
+        print(f"   Post-rewards Level: {post_rewards_level}")
+
+        evidence["xp_history"].append({
+            "stage": "post_rewards",
+            "xp": post_rewards_xp,
+        })
+        evidence["level_history"].append({
+            "stage": "post_rewards",
+            "level": post_rewards_level,
+        })
+
+        evidence["lifecycle_stages"].append({
+            "stage": "3.5",
+            "name": "rewards_collection",
+            "status": "success",
+            "agent_used": rewards_agent,
+            "xp_after": post_rewards_xp,
+            "level_after": post_rewards_level,
+        })
+
+        # ================================================================
         # STAGE 4: Verify Level-Up and Trigger Ascension
         # ================================================================
         print("\n🌟 STAGE 4: Checking for level-up and ascension trigger...")
