@@ -113,7 +113,6 @@ Action resolution ONLY triggers on **CURRENT-ACTION declarations** (present-tens
   → Interpret as attempt → Resolve with Sleight of Hand check → Audit in action_resolution → Narrate actual result
 
 **RESPONSES** (use these or similar):
-- Item not owned: "You reach for it but realize you don't have one."
 - Outcome declaration: Interpret as attempt, resolve via mechanics, document in action_resolution JSON
 - Anachronistic: "That doesn't exist in this world. What would you like to do instead?"
 - Godlike power: "You're an adventurer, not a god. How would you approach this with your actual abilities?"
