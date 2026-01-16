@@ -18,10 +18,13 @@ Class Hierarchy:
 Agent Selection Priority (used by get_agent_for_input):
 1. GodModeAgent: Administrative commands (highest priority)
 2. Character creation completion override (transition to StoryModeAgent)
-3. CharacterCreationAgent: Character creation & level-up (creation focus)
-4. PlanningAgent: Strategic planning (think mode)
-5. CampaignUpgradeAgent: Ascension ceremonies (divine/sovereign)
-6. Semantic intent classification (info/combat/rewards/creation/upgrade)
+3. CampaignUpgradeAgent: Ascension ceremonies (divine/sovereign) - STATE-BASED
+4. CharacterCreationAgent: Character creation & level-up (creation focus) - STATE-BASED
+5. PlanningAgent: Strategic planning (think mode) - EXPLICIT OVERRIDE
+6. Semantic Intent Classifier (PRIMARY BRAIN): Routes based on semantic analysis of user input
+   - Uses FastEmbed (BAAI/bge-small-en-v1.5) to classify intent
+   - Can route to: CombatAgent, RewardsAgent, InfoAgent, CharacterCreationAgent, CampaignUpgradeAgent, PlanningAgent
+   - Falls back to StoryModeAgent if no match
 7. API explicit mode override (if provided)
 8. StoryModeAgent: Default narrative storytelling
 
@@ -1551,9 +1554,9 @@ def get_agent_for_input(
     Priority:
     1. GodModeAgent (Manual override)
     2. Character Creation Completion Override
-    3. CharacterCreationAgent (State-based - when char creation is active)
-    4. PlanningAgent (Explicit override - "THINK:" prefix or mode="think")
-    5. CampaignUpgradeAgent (State-based - when upgrade is available)
+    3. CampaignUpgradeAgent (State-based - when upgrade is available - takes precedence over character creation)
+    4. CharacterCreationAgent (State-based - when char creation is active)
+    5. PlanningAgent (Explicit override - "THINK:" prefix or mode="think")
     6. Semantic Intent Classification (PRIMARY BRAIN)
        - CombatAgent: Routes on semantic intent (can initiate combat if not active)
        - RewardsAgent: Routes on semantic intent (can check for missed rewards)
@@ -1585,30 +1588,34 @@ def get_agent_for_input(
                 custom_state["character_creation_stage"] = "complete"
                 return StoryModeAgent(game_state)
 
-    # 3. State-based Context (Character Creation only - Combat/Rewards handled via semantic classifier)
+    # 3. State-based: Campaign upgrade ceremonies (divine/multiverse ascension)
+    # This check happens BEFORE character creation since upgrades are more important
+    # and should take precedence when available
+    # NOTE: If state doesn't match, semantic classifier (Priority 5) can still route here
+    if CampaignUpgradeAgent.matches_game_state(game_state):
+        logging_util.info("⬆️ CAMPAIGN_UPGRADE_AVAILABLE (STATE-BASED): Using CampaignUpgradeAgent (bypassing classifier)")
+        return CampaignUpgradeAgent(game_state)
+
+    # 4. State-based Context (Character Creation only - Combat/Rewards handled via semantic classifier)
     if CharacterCreationAgent.matches_game_state(game_state):
         logging_util.info("🎭 CHARACTER_CREATION_ACTIVE: Using CharacterCreationAgent")
         return CharacterCreationAgent(game_state)
 
-    # 4. Explicit Overrides (THINK: prefix or API mode params)
+    # 5. Explicit Overrides (THINK: prefix or API mode params)
     if PlanningAgent.matches_input(user_input, mode):
         logging_util.info("🧠 THINK_MODE_DETECTED: Using PlanningAgent (Explicit Override)")
         return PlanningAgent(game_state)
 
-    # 4.5. State-based: Campaign upgrade ceremonies (divine/multiverse ascension)
-    # This check happens BEFORE semantic classification since it's state-based
-    if CampaignUpgradeAgent.matches_game_state(game_state):
-        logging_util.info("⬆️ CAMPAIGN_UPGRADE_AVAILABLE: Using CampaignUpgradeAgent")
-        return CampaignUpgradeAgent(game_state)
-
     # 5. Semantic Intent Classification (PRIMARY BRAIN)
+    # This classifier uses FastEmbed to semantically route user input to the appropriate agent
+    # It runs when state-based checks don't match, allowing semantic routing even without state flags
     intent_mode = constants.MODE_CHARACTER
     confidence = 0.0
     start_time = time.time()
     try:
         intent_mode, confidence = intent_classifier.classify_intent(user_input)
         elapsed_time = time.time() - start_time
-        logging_util.info(f"🧠 CLASSIFIER: classify_intent() call completed in {elapsed_time*1000:.2f}ms")
+        logging_util.info(f"🧠 CLASSIFIER: classify_intent() -> {intent_mode} (confidence: {confidence:.2f}) in {elapsed_time*1000:.2f}ms")
     except Exception as e:
         elapsed_time = time.time() - start_time
         logging_util.warning(f"🧠 CLASSIFIER: Error during classification: {e}. Defaulting to MODE_CHARACTER. (took {elapsed_time*1000:.2f}ms)")
@@ -1662,15 +1669,16 @@ def get_agent_for_input(
         return CharacterCreationAgent(game_state)
 
     if intent_mode == constants.MODE_CAMPAIGN_UPGRADE:
-        # Route to CampaignUpgradeAgent based on semantic intent
+        # Route to CampaignUpgradeAgent based on semantic intent (classifier detected ascension intent)
         # Agent can handle upgrade ceremonies and guide players toward ascension
+        # NOTE: This allows semantic routing even when state doesn't indicate upgrade is available
         if CampaignUpgradeAgent.matches_game_state(game_state):
             logging_util.info(
-                f"⬆️ SEMANTIC_INTENT_CAMPAIGN_UPGRADE: ({confidence:.2f}) -> CampaignUpgradeAgent (upgrade available)"
+                f"⬆️ SEMANTIC_INTENT_CAMPAIGN_UPGRADE (CLASSIFIER): ({confidence:.2f}) -> CampaignUpgradeAgent (upgrade available + semantic match)"
             )
         else:
             logging_util.info(
-                f"⬆️ SEMANTIC_INTENT_CAMPAIGN_UPGRADE: ({confidence:.2f}) -> CampaignUpgradeAgent (guiding toward ascension)"
+                f"⬆️ SEMANTIC_INTENT_CAMPAIGN_UPGRADE (CLASSIFIER): ({confidence:.2f}) -> CampaignUpgradeAgent (semantic routing - guiding toward ascension)"
             )
         return CampaignUpgradeAgent(game_state)
 

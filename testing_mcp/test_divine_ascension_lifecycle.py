@@ -348,6 +348,19 @@ def run_divine_ascension_test(
         print("\n🌟 STAGE 4: Triggering divine ascension...")
         print("-" * 40)
 
+        # Verify game state before triggering ascension
+        pre_ascension_state = get_campaign_state(
+            client, user_id=user_id, campaign_id=campaign_id
+        )
+        pre_ascension_game_state = pre_ascension_state.get("game_state", {})
+        pre_ascension_custom = pre_ascension_game_state.get("custom_campaign_state", {})
+        pre_ascension_pc = pre_ascension_game_state.get("player_character_data", {})
+        
+        print(f"   Pre-ascension check:")
+        print(f"     Campaign Tier: {pre_ascension_custom.get('campaign_tier', 'N/A')}")
+        print(f"     Divine Potential: {pre_ascension_custom.get('divine_potential', 'N/A')}")
+        print(f"     Level: {pre_ascension_pc.get('level', 'N/A')}")
+        
         # Use semantic routing phrase to trigger CampaignUpgradeAgent
         ascension_input = (
             "I wanna be a god! I have proven my worth through countless trials. "
@@ -364,7 +377,8 @@ def run_divine_ascension_test(
         )
 
         # Check if agent selection indicates CampaignUpgradeAgent
-        agent_used = ascension_response.get("agent_used", "unknown")
+        # Support both agent_used (new) and agent_mode (fallback)
+        agent_used = ascension_response.get("agent_used") or ascension_response.get("agent_mode", "unknown")
         print(f"✅ Ascension action processed (Agent: {agent_used})")
 
         evidence["interactions"].append({
