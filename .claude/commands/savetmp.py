@@ -330,7 +330,7 @@ def _looks_like_absolute_path(value: str) -> bool:
         return False
     if value.startswith("~"):
         return True
-    if re.match(r"^[A-Za-z]:\\\\", value):
+    if re.match(r"^[A-Za-z]:\\", value):
         return True
     return Path(value).is_absolute()
 
@@ -609,18 +609,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     reserved_targets: Set[Path] = set()
     for artifact in args.artifacts:
         src_path = Path(artifact).expanduser().resolve()
-        # Clean existing checksums from source if --clean-checksums is set
-        if args.clean_checksums and src_path.exists():
-            if src_path.is_dir():
-                for sha_file in list(src_path.rglob("*.sha256")):
-                    try:
-                        sha_file.unlink()
-                    except OSError:
-                        pass  # Ignore if can't delete
-            elif src_path.suffix == ".sha256":
-                continue  # Skip .sha256 files entirely in clean mode
+        # Skip .sha256 files entirely in clean mode (don't copy them)
+        if args.clean_checksums and src_path.suffix == ".sha256":
+            continue
         dest_path = _copy_artifact(src_path, artifacts_dir, timestamp, reserved_targets)
         if dest_path:
+            # In clean mode, remove existing checksums from DESTINATION after copying
+            # (never mutate the source path - per original design)
+            if args.clean_checksums:
+                if dest_path.is_dir():
+                    for sha_file in list(dest_path.rglob("*.sha256")):
+                        try:
+                            sha_file.unlink()
+                        except OSError:
+                            pass  # Ignore if can't delete
             copied_artifacts.append(
                 {"source": str(src_path), "destination": str(dest_path)}
             )

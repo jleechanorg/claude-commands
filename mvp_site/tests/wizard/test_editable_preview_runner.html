@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campaign Wizard Editable Preview Tests</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f8f9fa;
+    }
+    .header {
+      background: linear-gradient(135deg, #6f42c1, #4c2c8a);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .panel {
+      background: white;
+      padding: 18px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    .btn {
+      background: #6f42c1;
+      color: white;
+      border: 0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+    .result {
+      padding: 10px 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      border-left: 4px solid #ddd;
+    }
+    .pass { background: #d4edda; border-left-color: #28a745; color: #155724; }
+    .fail { background: #f8d7da; border-left-color: #dc3545; color: #721c24; }
+    .muted { color: #6c757d; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🧪 Campaign Wizard Editable Preview Tests</h1>
+    <p class="muted" style="color: rgba(255,255,255,0.85); margin: 0;">Click-to-edit, click-outside-to-save, Escape-to-cancel</p>
+  </div>
+
+  <div class="panel">
+    <button id="runTests" class="btn">Run Tests</button>
+    <button id="clearResults" class="btn" style="background:#6c757d;">Clear</button>
+  </div>
+
+  <div class="panel" id="resultsPanel" style="display:none;">
+    <h3>Results</h3>
+    <div id="summary" class="muted"></div>
+    <div id="results"></div>
+  </div>
+
+  <div id="test-fixture" style="display:none;">
+    <div id="outside-click-target">outside</div>
+    <form id="new-campaign-form">
+      <input id="campaign-title" value="Initial Title" />
+      <textarea id="campaign-prompt">Initial prompt</textarea>
+      <input type="checkbox" id="generate-companions" checked />
+    </form>
+  </div>
+
+  <script>
+    window.interfaceManager = { isModernMode: () => true };
+  </script>
+  <script src="../../frontend_v1/js/campaign-wizard.js"></script>
+  <script src="test_campaign_wizard_editable_preview.js"></script>
+  <script>
+    const runBtn = document.getElementById('runTests');
+    const clearBtn = document.getElementById('clearResults');
+    const resultsPanel = document.getElementById('resultsPanel');
+    const summary = document.getElementById('summary');
+    const results = document.getElementById('results');
+
+    function render(tester) {
+      resultsPanel.style.display = 'block';
+      results.innerHTML = '';
+
+      const passed = tester.testResults.filter(r => r.status === 'PASS').length;
+      const failed = tester.testResults.filter(r => r.status === 'FAIL').length;
+      const total = tester.testResults.length;
+
+      summary.textContent = `Total: ${total} | Passed: ${passed} | Failed: ${failed}`;
+
+      tester.testResults.forEach((r) => {
+        const div = document.createElement('div');
+        div.className = `result ${r.status === 'PASS' ? 'pass' : 'fail'}`;
+        div.innerHTML = `<div><strong>${r.status}</strong> — ${r.name}</div><div class="muted">${r.details || ''}</div>`;
+        results.appendChild(div);
+      });
+    }
+
+    runBtn.addEventListener('click', () => {
+      runBtn.disabled = true;
+      try {
+        const tester = new CampaignWizardEditablePreviewTests();
+        tester.run();
+        render(tester);
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      resultsPanel.style.display = 'none';
+      summary.textContent = '';
+      results.innerHTML = '';
+    });
+  </script>
+</body>
+</html>
+

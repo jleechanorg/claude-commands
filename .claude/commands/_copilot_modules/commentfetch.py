@@ -14,24 +14,31 @@ Based on copilot_comment_fetch.py from PR #796 but adapted for modular architect
 import sys
 import argparse
 import json
+import os
+import re
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 from .base import CopilotCommandBase
+from .per_comment_cache import PerCommentCache
 
 
 class CommentFetch(CopilotCommandBase):
     """Fetch all comments from a GitHub PR."""
 
-    def __init__(self, pr_number: str):
+    def __init__(self, pr_number: str, repo: str = None):
         """Initialize comment fetcher.
 
         Args:
             pr_number: GitHub PR number
+            repo: Optional repository override (format: owner/repo). If not provided, uses current repo.
         """
         super().__init__(pr_number)
+        # Override repo if provided (for cross-repo PR fetching)
+        if repo:
+            self.repo = repo
         self.comments = []
 
         # Get current branch for file path
@@ -39,14 +46,31 @@ class CommentFetch(CopilotCommandBase):
             result = subprocess.run(['git', 'branch', '--show-current'],
                                   capture_output=True, text=True, check=True)
             branch_name = result.stdout.strip()
-            # Sanitize branch name for filesystem safety
-            self.branch_name = self._sanitize_branch_name(branch_name) if branch_name else "unknown-branch"
+            # Sanitize branch name for filesystem safety - match shell's tr -cd '[:alnum:]._-'
+            # Remove any character that is NOT alphanumeric, dot, underscore, or dash
+            sanitized_branch = re.sub(r'[^a-zA-Z0-9._-]', '', branch_name) if branch_name else ""
+            self.branch_name = sanitized_branch or "unknown-branch"
         except subprocess.CalledProcessError:
             # Use consistent fallback with base class
             self.branch_name = "unknown-branch"
 
-        # Set output file path using sanitized branch name
-        self.output_file = Path(f"/tmp/{self.branch_name}/comments.json")
+        # Extract repo name from directory name to match shell scripts (basename of git root)
+        try:
+            git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).strip().decode('utf-8')
+            repo_name = os.path.basename(git_root)
+        except Exception:
+            # Fallback to splitting repo string if git command fails
+            repo_name = self.repo.split('/')[-1] if '/' in self.repo else self.repo
+
+        # Sanitize repo name to match shell's tr -cd '[:alnum:]._-' (filesystem-safe)
+        sanitized_repo = re.sub(r'[^a-zA-Z0-9._-]', '', repo_name) if repo_name else ""
+        self.repo_name = sanitized_repo or "unknown-repo"
+
+        # Set cache directory and initialize per-comment cache
+        self.cache_dir = Path(f"/tmp/{self.repo_name}/{self.branch_name}")
+        self.output_file = self.cache_dir / "comments.json"  # Keep for backward compatibility
+        self.cache_metadata_file = self.cache_dir / "cache_metadata.json"
+        self.per_comment_cache = PerCommentCache(self.cache_dir)
 
     def _get_inline_comments(self) -> List[Dict[str, Any]]:
         """Fetch inline code review comments."""
@@ -202,6 +226,46 @@ class CommentFetch(CopilotCommandBase):
             self.log(f"Could not fetch Copilot comments: {e}")
 
         return []
+
+    def _save_cache_metadata(self, comment_count: int, fetched_at: str) -> None:
+        """Save cache metadata to track freshness.
+
+        Args:
+            comment_count: Number of comments in cache
+            fetched_at: Timestamp when comments were fetched
+        """
+        # Get TTL from env var or default to 300 seconds (5 minutes)
+        try:
+            ttl = int(os.environ.get("COPILOT_CACHE_TTL_SECONDS", 300))
+        except (TypeError, ValueError):
+            ttl = 300
+            self.log("Invalid COPILOT_CACHE_TTL_SECONDS value; using default 300s")
+        
+        # Get PR head SHA to invalidate cache on PR updates
+        try:
+            result = subprocess.run(
+                ['gh', 'pr', 'view', self.pr_number, '--json', 'headRefOid', '--jq', '.headRefOid'],
+                capture_output=True, text=True, check=True
+            )
+            pr_head_sha = result.stdout.strip()
+        except Exception:
+            pr_head_sha = "unknown"
+        
+        metadata = {
+            "last_fetch_timestamp": fetched_at,
+            "comment_count": comment_count,
+            "pr_number": self.pr_number,
+            "cache_ttl_seconds": ttl,
+            "repo": self.repo,
+            "pr_head_sha": pr_head_sha
+        }
+
+        try:
+            with open(self.cache_metadata_file, 'w') as f:
+                json.dump(metadata, f, indent=2)
+            self.log(f"Cache metadata saved to {self.cache_metadata_file}")
+        except Exception as e:
+            self.log_error(f"Failed to save cache metadata: {e}")
 
     def _requires_response(self, comment: Dict[str, Any]) -> bool:
         """Filter out meta-comments to prevent recursive processing.
@@ -612,13 +676,24 @@ class CommentFetch(CopilotCommandBase):
         }
 
         # Create directory if it doesn't exist
-        self.output_file.parent.mkdir(parents=True, exist_ok=True)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save to file (always replace)
+        # Save using per-comment cache structure (new format)
+        self.per_comment_cache.save_comments(
+            self.comments,
+            self.pr_number,
+            data["fetched_at"],
+            ci_status or {'overall_state': 'UNKNOWN', 'error': 'CI status not fetched'}
+        )
+        self.log(f"Comments saved to per-comment cache: {self.per_comment_cache.comments_dir}")
+
+        # Also save legacy format for backward compatibility during migration
         with open(self.output_file, 'w') as f:
             json.dump(data, f, indent=2)
+        self.log(f"Legacy format saved to {self.output_file}")
 
-        self.log(f"Comments saved to {self.output_file}")
+        # Save cache metadata
+        self._save_cache_metadata(len(self.comments), data["fetched_at"])
 
         # Prepare result with CI status summary
         ci_summary = ""

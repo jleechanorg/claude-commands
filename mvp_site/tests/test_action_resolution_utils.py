@@ -1,212 +1,389 @@
-"""Tests for action_resolution_utils helper functions.
+"""Tests for action_resolution_utils helper functions."""
 
-Tests cover:
-- get_action_resolution() fallback logic
-- get_outcome_resolution() backward compat accessor
-- add_action_resolution_to_response() API response builder
-"""
-
-import os
-import sys
 import unittest
-from unittest.mock import MagicMock
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mvp_site.action_resolution_utils import (
-    add_action_resolution_to_response,
+    extract_dice_rolls_from_action_resolution,
+    extract_dice_audit_events_from_action_resolution,
     get_action_resolution,
     get_outcome_resolution,
+    add_action_resolution_to_response,
 )
 
 
-class TestActionResolutionUtils(unittest.TestCase):
-    """Test action_resolution_utils helper functions"""
+class TestExtractDiceRollsFromActionResolution(unittest.TestCase):
+    """Test extract_dice_rolls_from_action_resolution function"""
 
-    def test_get_action_resolution_with_action_resolution(self):
-        """Test get_action_resolution returns action_resolution when present"""
-        mock_response = MagicMock()
-        mock_response.action_resolution = {"player_input": "I attack", "interpreted_as": "attack"}
-        mock_response.outcome_resolution = {"player_input": "legacy", "interpreted_as": "legacy"}
+    def test_extract_single_roll(self):
+        """Test extraction of single dice roll"""
+        action_resolution = {
+            "mechanics": {
+                "rolls": [
+                    {
+                        "purpose": "Attack",
+                        "notation": "1d20+5",
+                        "result": 17,
+                        "dc": None,
+                        "success": None,
+                    }
+                ]
+            }
+        }
+        result = extract_dice_rolls_from_action_resolution(action_resolution)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], "1d20+5 = 17 (Attack)")
 
-        result = get_action_resolution(mock_response)
-        self.assertEqual(result["player_input"], "I attack")
-        self.assertEqual(result["interpreted_as"], "attack")
+    def test_extract_roll_with_dc_and_success(self):
+        """Test extraction of roll with DC and success"""
+        action_resolution = {
+            "mechanics": {
+                "rolls": [
+                    {
+                        "purpose": "Stealth (Soul Siphon Deception)",
+                        "notation": "1d20+149",
+                        "result": 164,
+                        "dc": 45,
+                        "success": True,
+                    }
+                ]
+            }
+        }
+        result = extract_dice_rolls_from_action_resolution(action_resolution)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(
+            result[0], "1d20+149 = 164 vs DC 45 - Success (Stealth (Soul Siphon Deception))"
+        )
 
-    def test_get_action_resolution_falls_back_to_outcome_resolution(self):
-        """Test get_action_resolution falls back to outcome_resolution when action_resolution missing"""
-        mock_response = MagicMock()
-        del mock_response.action_resolution  # Remove action_resolution
-        mock_response.outcome_resolution = {"player_input": "The king agrees", "interpreted_as": "persuasion"}
+    def test_extract_roll_with_dc_and_failure(self):
+        """Test extraction of roll with DC and failure"""
+        action_resolution = {
+            "mechanics": {
+                "rolls": [
+                    {
+                        "purpose": "Persuasion",
+                        "notation": "1d20+5",
+                        "result": 12,
+                        "dc": 18,
+                        "success": False,
+                    }
+                ]
+            }
+        }
+        result = extract_dice_rolls_from_action_resolution(action_resolution)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], "1d20+5 = 12 vs DC 18 - Failure (Persuasion)")
 
-        result = get_action_resolution(mock_response)
-        self.assertEqual(result["player_input"], "The king agrees")
-        self.assertEqual(result["interpreted_as"], "persuasion")
+    def test_extract_multiple_rolls(self):
+        """Test extraction of multiple dice rolls"""
+        action_resolution = {
+            "mechanics": {
+                "rolls": [
+                    {
+                        "purpose": "Parallel Logic Coordination",
+                        "notation": "1d20+42",
+                        "result": 56,
+                        "dc": 25,
+                        "success": True,
+                    },
+                    {
+                        "purpose": "Stealth (Soul Siphon Deception)",
+                        "notation": "1d20+149",
+                        "result": 164,
+                        "dc": 45,
+                        "success": True,
+                    },
+                ]
+            }
+        }
+        result = extract_dice_rolls_from_action_resolution(action_resolution)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(
+            result[0], "1d20+42 = 56 vs DC 25 - Success (Parallel Logic Coordination)"
+        )
+        self.assertEqual(
+            result[1], "1d20+149 = 164 vs DC 45 - Success (Stealth (Soul Siphon Deception))"
+        )
 
-    def test_get_action_resolution_returns_empty_dict_when_neither_present(self):
-        """Test get_action_resolution returns empty dict when neither field present"""
-        mock_response = MagicMock()
-        del mock_response.action_resolution
-        del mock_response.outcome_resolution
+    def test_extract_empty_rolls(self):
+        """Test extraction with empty rolls array"""
+        action_resolution = {"mechanics": {"rolls": []}}
+        result = extract_dice_rolls_from_action_resolution(action_resolution)
+        self.assertEqual(result, [])
 
-        result = get_action_resolution(mock_response)
-        self.assertEqual(result, {})
+    def test_extract_no_mechanics(self):
+        """Test extraction with no mechanics field"""
+        action_resolution = {}
+        result = extract_dice_rolls_from_action_resolution(action_resolution)
+        self.assertEqual(result, [])
 
-    def test_get_action_resolution_handles_none_action_resolution(self):
-        """Test get_action_resolution handles None action_resolution by falling back"""
-        mock_response = MagicMock()
-        mock_response.action_resolution = None
-        mock_response.outcome_resolution = {"player_input": "fallback", "interpreted_as": "fallback"}
+    def test_extract_no_rolls_field(self):
+        """Test extraction with no rolls field"""
+        action_resolution = {"mechanics": {}}
+        result = extract_dice_rolls_from_action_resolution(action_resolution)
+        self.assertEqual(result, [])
 
-        result = get_action_resolution(mock_response)
-        self.assertEqual(result["player_input"], "fallback")
+    def test_extract_invalid_roll_format(self):
+        """Test extraction handles invalid roll format gracefully"""
+        action_resolution = {
+            "mechanics": {
+                "rolls": [
+                    {"purpose": "Attack"},  # Missing notation and result
+                    "not a dict",  # Invalid type
+                ]
+            }
+        }
+        result = extract_dice_rolls_from_action_resolution(action_resolution)
+        self.assertEqual(result, [])
 
-    def test_get_action_resolution_handles_empty_dict_action_resolution(self):
-        """Test get_action_resolution preserves empty dict {} as present (not None)"""
-        mock_response = MagicMock()
-        mock_response.action_resolution = {}  # Empty dict is considered present
-        mock_response.outcome_resolution = {"player_input": "should not use", "interpreted_as": "should not use"}
+    def test_extract_roll_without_purpose(self):
+        """Test extraction of roll without purpose"""
+        action_resolution = {
+            "mechanics": {
+                "rolls": [
+                    {
+                        "notation": "1d20+5",
+                        "result": 17,
+                        "dc": None,
+                        "success": None,
+                    }
+                ]
+            }
+        }
+        result = extract_dice_rolls_from_action_resolution(action_resolution)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], "1d20+5 = 17")
 
-        result = get_action_resolution(mock_response)
-        self.assertEqual(result, {})  # Should return empty dict, not fallback
 
-    def test_get_action_resolution_handles_none_structured_response(self):
-        """Test get_action_resolution handles None structured_response"""
-        result = get_action_resolution(None)
-        self.assertEqual(result, {})
+class TestExtractDiceAuditEventsFromActionResolution(unittest.TestCase):
+    """Test extract_dice_audit_events_from_action_resolution function"""
 
-    def test_get_outcome_resolution_with_outcome_resolution(self):
-        """Test get_outcome_resolution returns outcome_resolution when present"""
-        mock_response = MagicMock()
-        mock_response.outcome_resolution = {"player_input": "The king agrees", "interpreted_as": "persuasion"}
+    def test_extract_string_audit_events(self):
+        """Test extraction of string audit events"""
+        action_resolution = {
+            "mechanics": {
+                "audit_events": [
+                    "Rolled 1d20+5 = 17",
+                    "Rolled 1d8+3 = 8",
+                ]
+            }
+        }
+        result = extract_dice_audit_events_from_action_resolution(action_resolution)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0], "Rolled 1d20+5 = 17")
+        self.assertEqual(result[1], "Rolled 1d8+3 = 8")
 
-        result = get_outcome_resolution(mock_response)
-        self.assertEqual(result["player_input"], "The king agrees")
-        self.assertEqual(result["interpreted_as"], "persuasion")
+    def test_extract_dict_audit_events(self):
+        """Test extraction of dict audit events (converted to string)"""
+        action_resolution = {
+            "mechanics": {
+                "audit_events": [
+                    {"type": "attack_roll", "result": 17},
+                    {"type": "damage_roll", "result": 8},
+                ]
+            }
+        }
+        result = extract_dice_audit_events_from_action_resolution(action_resolution)
+        self.assertEqual(len(result), 2)
+        self.assertIsInstance(result[0], str)
+        self.assertIsInstance(result[1], str)
 
-    def test_get_outcome_resolution_returns_empty_dict_when_missing(self):
-        """Test get_outcome_resolution returns empty dict when outcome_resolution missing"""
-        mock_response = MagicMock()
-        del mock_response.outcome_resolution
+    def test_extract_empty_audit_events(self):
+        """Test extraction with empty audit_events array"""
+        action_resolution = {"mechanics": {"audit_events": []}}
+        result = extract_dice_audit_events_from_action_resolution(action_resolution)
+        self.assertEqual(result, [])
 
-        result = get_outcome_resolution(mock_response)
-        self.assertEqual(result, {})
+    def test_extract_no_mechanics(self):
+        """Test extraction with no mechanics field"""
+        action_resolution = {}
+        result = extract_dice_audit_events_from_action_resolution(action_resolution)
+        self.assertEqual(result, [])
 
-    def test_get_outcome_resolution_handles_none_outcome_resolution(self):
-        """Test get_outcome_resolution handles None outcome_resolution"""
-        mock_response = MagicMock()
-        mock_response.outcome_resolution = None
 
-        result = get_outcome_resolution(mock_response)
-        self.assertEqual(result, {})
+class TestAddActionResolutionToResponse(unittest.TestCase):
+    """Test add_action_resolution_to_response function"""
 
-    def test_get_outcome_resolution_handles_none_structured_response(self):
-        """Test get_outcome_resolution handles None structured_response"""
-        result = get_outcome_resolution(None)
-        self.assertEqual(result, {})
+    def test_extracts_dice_rolls_from_action_resolution(self):
+        """Test that dice_rolls are extracted from action_resolution"""
+        class MockResponse:
+            def __init__(self):
+                self.action_resolution = {
+                    "mechanics": {
+                        "rolls": [
+                            {
+                                "purpose": "Attack",
+                                "notation": "1d20+5",
+                                "result": 17,
+                                "dc": 18,
+                                "success": False,
+                            }
+                        ]
+                    }
+                }
 
-    def test_add_action_resolution_to_response_with_action_resolution(self):
-        """Test add_action_resolution_to_response adds action_resolution to unified_response"""
-        mock_response = MagicMock()
-        mock_response.action_resolution = {"player_input": "I attack", "interpreted_as": "attack"}
-        del mock_response.outcome_resolution
-
+        mock_response = MockResponse()
         unified_response = {}
+        
         add_action_resolution_to_response(mock_response, unified_response)
+        
+        # Should have extracted dice_rolls
+        self.assertIn("dice_rolls", unified_response)
+        self.assertEqual(len(unified_response["dice_rolls"]), 1)
+        self.assertEqual(
+            unified_response["dice_rolls"][0], "1d20+5 = 17 vs DC 18 - Failure (Attack)"
+        )
 
-        self.assertIn("action_resolution", unified_response)
-        self.assertEqual(unified_response["action_resolution"]["player_input"], "I attack")
-        self.assertNotIn("outcome_resolution", unified_response)
+    def test_overrides_existing_dice_rolls_with_extracted_rolls(self):
+        """Test that extracted dice_rolls override existing ones when extraction yields data"""
+        class MockResponse:
+            def __init__(self):
+                self.action_resolution = {
+                    "mechanics": {
+                        "rolls": [
+                            {
+                                "purpose": "Attack",
+                                "notation": "1d20+5",
+                                "result": 17,
+                            }
+                        ]
+                    }
+                }
+                self.dice_rolls = ["Existing roll"]
 
-    def test_add_action_resolution_to_response_with_outcome_resolution(self):
-        """Test add_action_resolution_to_response adds outcome_resolution to unified_response"""
-        mock_response = MagicMock()
-        del mock_response.action_resolution
-        mock_response.outcome_resolution = {"player_input": "The king agrees", "interpreted_as": "persuasion"}
-
-        unified_response = {}
+        mock_response = MockResponse()
+        unified_response = {"dice_rolls": ["Existing roll"]}
+        
         add_action_resolution_to_response(mock_response, unified_response)
+        
+        # Should prefer extracted rolls (single source of truth)
+        self.assertIn("dice_rolls", unified_response)
+        # Extracted rolls should override existing ones
+        self.assertEqual(
+            unified_response["dice_rolls"][0], "1d20+5 = 17 (Attack)"
+        )
 
-        self.assertIn("outcome_resolution", unified_response)
-        self.assertEqual(unified_response["outcome_resolution"]["player_input"], "The king agrees")
-        self.assertNotIn("action_resolution", unified_response)
+    def test_extracts_dice_audit_events(self):
+        """Test that dice_audit_events are extracted from action_resolution"""
+        class MockResponse:
+            def __init__(self):
+                self.action_resolution = {
+                    "mechanics": {
+                        "audit_events": ["Event 1", "Event 2"]
+                    }
+                }
 
-    def test_add_action_resolution_to_response_with_both_fields(self):
-        """Test add_action_resolution_to_response adds both fields when both present"""
-        mock_response = MagicMock()
-        mock_response.action_resolution = {"player_input": "I attack", "interpreted_as": "attack"}
-        mock_response.outcome_resolution = {"player_input": "legacy", "interpreted_as": "legacy"}
-
+        mock_response = MockResponse()
         unified_response = {}
+        
         add_action_resolution_to_response(mock_response, unified_response)
+        
+        # Should have extracted dice_audit_events
+        self.assertIn("dice_audit_events", unified_response)
+        self.assertEqual(len(unified_response["dice_audit_events"]), 2)
+        self.assertEqual(unified_response["dice_audit_events"][0], "Event 1")
 
-        self.assertIn("action_resolution", unified_response)
-        self.assertIn("outcome_resolution", unified_response)
-        self.assertEqual(unified_response["action_resolution"]["player_input"], "I attack")
-        self.assertEqual(unified_response["outcome_resolution"]["player_input"], "legacy")
+    def test_no_action_resolution_no_extraction(self):
+        """Test that nothing is extracted if action_resolution is missing"""
+        class MockResponse:
+            pass
 
-    def test_add_action_resolution_to_response_handles_none_values(self):
-        """Test add_action_resolution_to_response skips None values"""
-        mock_response = MagicMock()
-        mock_response.action_resolution = None
-        mock_response.outcome_resolution = None
-
+        mock_response = MockResponse()
         unified_response = {}
+        
         add_action_resolution_to_response(mock_response, unified_response)
+        
+        # Should not have dice_rolls or dice_audit_events
+        self.assertNotIn("dice_rolls", unified_response)
+        self.assertNotIn("dice_audit_events", unified_response)
 
-        self.assertNotIn("action_resolution", unified_response)
-        self.assertNotIn("outcome_resolution", unified_response)
+    def test_bug_fix_missing_dice_rolls_extracted_from_action_resolution(self):
+        """Test bug fix: Dice rolls in action_resolution.mechanics.rolls are extracted to dice_rolls
+        
+        This test verifies the fix for the bug where dice rolls existed in 
+        action_resolution.mechanics.rolls but were missing from dice_rolls field,
+        causing dice rolls to not display in the UI.
+        
+        Scenario: LLM populated action_resolution.mechanics.rolls correctly but
+        forgot to populate dice_rolls directly. The backend should automatically
+        extract and populate dice_rolls for UI display.
+        """
+        class MockResponse:
+            def __init__(self):
+                # LLM correctly populated action_resolution.mechanics.rolls
+                self.action_resolution = {
+                    "mechanics": {
+                        "rolls": [
+                            {
+                                "purpose": "Stealth (Soul Siphon Deception)",
+                                "notation": "1d20+149",
+                                "result": 164,
+                                "dc": 45,
+                                "success": True,
+                            },
+                            {
+                                "purpose": "Attack",
+                                "notation": "1d20+5",
+                                "result": 17,
+                                "dc": None,
+                                "success": None,
+                            }
+                        ]
+                    }
+                }
+                # But forgot to populate dice_rolls (the bug scenario)
 
-    def test_add_action_resolution_to_response_type_coercion(self):
-        """Test add_action_resolution_to_response coerces non-dict to empty dict"""
-        mock_response = MagicMock()
-        mock_response.action_resolution = "not a dict"  # Invalid type
-        mock_response.outcome_resolution = ["not a dict"]  # Invalid type
-
-        unified_response = {}
+        mock_response = MockResponse()
+        unified_response = {}  # dice_rolls is missing
+        
         add_action_resolution_to_response(mock_response, unified_response)
+        
+        # Bug fix: Should automatically extract dice_rolls from action_resolution.mechanics.rolls
+        self.assertIn("dice_rolls", unified_response, 
+                     "dice_rolls should be extracted from action_resolution.mechanics.rolls")
+        self.assertEqual(len(unified_response["dice_rolls"]), 2,
+                        "Should extract both dice rolls")
+        self.assertEqual(
+            unified_response["dice_rolls"][0], 
+            "1d20+149 = 164 vs DC 45 - Success (Stealth (Soul Siphon Deception))",
+            "First roll should be extracted correctly"
+        )
+        self.assertEqual(
+            unified_response["dice_rolls"][1],
+            "1d20+5 = 17 (Attack)",
+            "Second roll should be extracted correctly"
+        )
 
-        # Should coerce to empty dict
-        self.assertIn("action_resolution", unified_response)
-        self.assertIn("outcome_resolution", unified_response)
-        self.assertEqual(unified_response["action_resolution"], {})
-        self.assertEqual(unified_response["outcome_resolution"], {})
+    def test_bug_fix_empty_dice_rolls_overridden_by_extraction(self):
+        """Test bug fix: Empty dice_rolls is overridden when action_resolution has rolls
+        
+        Scenario: dice_rolls exists but is empty [], while action_resolution.mechanics.rolls
+        has actual rolls. The extraction should populate dice_rolls with the extracted rolls.
+        """
+        class MockResponse:
+            def __init__(self):
+                self.action_resolution = {
+                    "mechanics": {
+                        "rolls": [
+                            {
+                                "purpose": "Persuasion",
+                                "notation": "1d20+5",
+                                "result": 12,
+                                "dc": 18,
+                                "success": False,
+                            }
+                        ]
+                    }
+                }
 
-    def test_add_action_resolution_to_response_handles_empty_dict(self):
-        """Test add_action_resolution_to_response includes empty dict {} as valid"""
-        mock_response = MagicMock()
-        mock_response.action_resolution = {}  # Empty dict is valid
-        del mock_response.outcome_resolution
-
-        unified_response = {}
+        mock_response = MockResponse()
+        unified_response = {"dice_rolls": []}  # Empty dice_rolls (bug scenario)
+        
         add_action_resolution_to_response(mock_response, unified_response)
-
-        self.assertIn("action_resolution", unified_response)
-        self.assertEqual(unified_response["action_resolution"], {})
-
-    def test_add_action_resolution_to_response_handles_none_structured_response(self):
-        """Test add_action_resolution_to_response handles None structured_response"""
-        unified_response = {}
-        add_action_resolution_to_response(None, unified_response)
-
-        self.assertNotIn("action_resolution", unified_response)
-        self.assertNotIn("outcome_resolution", unified_response)
-
-    def test_add_action_resolution_to_response_handles_missing_hasattr(self):
-        """Test add_action_resolution_to_response handles objects without hasattr support"""
-        # Create object that doesn't support hasattr (edge case)
-        class NoHasattr:
-            def __getattr__(self, name):
-                raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-
-        mock_response = NoHasattr()
-        unified_response = {}
-        add_action_resolution_to_response(mock_response, unified_response)
-
-        # Should handle gracefully without crashing
-        self.assertNotIn("action_resolution", unified_response)
-        self.assertNotIn("outcome_resolution", unified_response)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        
+        # Should extract and populate dice_rolls even though it was empty
+        self.assertIn("dice_rolls", unified_response)
+        self.assertEqual(len(unified_response["dice_rolls"]), 1)
+        self.assertEqual(
+            unified_response["dice_rolls"][0],
+            "1d20+5 = 12 vs DC 18 - Failure (Persuasion)"
+        )

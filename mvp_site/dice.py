@@ -77,7 +77,7 @@ def log_code_exec_fabrication_violation() -> None:
     logging_util.warning(
         logging_util.with_campaign(
             "🎲 CODE_EXEC_FABRICATION: Code was executed but random.randint() not found - "
-            "dice values are fabricated. Will trigger reprompt to enforce real RNG execution."
+            "dice values are fabricated. Flagged for user warning."
         )
     )
 
@@ -87,7 +87,7 @@ def log_narrative_dice_fabrication_violation() -> None:
     logging_util.warning(
         logging_util.with_campaign(
             "🎲 NARRATIVE_DICE_FABRICATION: Dice patterns found in narrative without tool evidence. "
-            "Will trigger reprompt to enforce real dice."
+            "Flagged for user warning."
         )
     )
 

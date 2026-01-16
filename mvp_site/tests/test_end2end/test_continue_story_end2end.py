@@ -154,10 +154,14 @@ class TestContinueStoryEnd2End(unittest.TestCase):
     @patch(
         "mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution"
     )
-    def test_time_anomaly_includes_dice_retry_notice(
+    def test_time_anomaly_warns_single_call(
         self, mock_gemini_generate, mock_get_db
     ):
-        """Temporal anomaly warning should mention dice retry when reprompt occurs."""
+        """Temporal anomaly detection works correctly in a single LLM call.
+
+        Verifies that backward time jumps in LLM responses trigger the temporal
+        anomaly warning without requiring multiple API calls.
+        """
         fake_firestore = FakeFirestoreClient()
         mock_get_db.return_value = fake_firestore
 
@@ -191,22 +195,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             }
         )
 
-        # First response: missing dice_rolls (forces reprompt due to combat input)
-        first_response = {
-            "narrative": "You swing at the goblin.",
-            "entities_mentioned": ["Goblin"],
-            "location_confirmed": "Bridge",
-            "session_header": "Session 1: The Bridge",
-            "planning_block": {
-                "thinking": "Combat requires a roll.",
-                "choices": {},
-            },
-            "dice_rolls": [],
-            "dice_audit_events": [],
-            "state_updates": {"world_data": {"world_time": old_world_time}},
-        }
-
-        # Second response: includes dice_rolls but moves time backward
+        # Response: includes dice_rolls but moves time backward
         backward_world_time = {
             "year": 999,
             "month": 1,
@@ -215,7 +204,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             "minute": 0,
             "second": 0,
         }
-        second_response = {
+        response_data = {
             "narrative": "Your blade strikes true.",
             "entities_mentioned": ["Goblin"],
             "location_confirmed": "Bridge",
@@ -229,10 +218,10 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             "state_updates": {"world_data": {"world_time": backward_world_time}},
         }
 
-        second_fake_response = FakeLLMResponse(json.dumps(second_response))
+        fake_response = FakeLLMResponse(json.dumps(response_data))
         # Provide code_execution evidence to satisfy Gemini code-exec dice integrity checks.
         # Must include actual random.randint() call to pass RNG verification.
-        second_fake_response.parts[0].executable_code = type(
+        fake_response.parts[0].executable_code = type(
             "ExecutableCode",
             (),
             {
@@ -241,10 +230,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             },
         )()
 
-        mock_gemini_generate.side_effect = [
-            FakeLLMResponse(json.dumps(first_response)),
-            second_fake_response,
-        ]
+        mock_gemini_generate.side_effect = [fake_response]
 
         response = self.client.post(
             f"/api/campaigns/{campaign_id}/interaction",
@@ -262,12 +248,10 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         assert (
             "TEMPORAL ANOMALY DETECTED" in god_mode_response
         ), f"Expected temporal anomaly warning, got: {god_mode_response}"
+        # Temporal anomaly detection should work in a single LLM call
         assert (
-            "Dice Retry Notice" in god_mode_response
-        ), "Expected dice retry notice to appear under temporal anomaly warning"
-        assert (
-            mock_gemini_generate.call_count == 2
-        ), "Reprompt should trigger a second LLM call for dice retry"
+            mock_gemini_generate.call_count == 1
+        ), "Should complete in a single LLM call"
 
     @patch("mvp_site.firestore_service.get_db")
     def test_continue_story_campaign_not_found(self, mock_get_db):

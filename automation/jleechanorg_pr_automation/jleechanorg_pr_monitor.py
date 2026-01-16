@@ -18,12 +18,19 @@ import time
 import traceback
 import urllib.request
 from collections import Counter
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
+
+import requests
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
+
+# Threshold for detecting stale queued comments (hours)
+# Comments older than this threshold without a completion marker are considered stale
+# and allow re-running the fix-comment agent (handles cases where agent failed silently)
+STALE_QUEUE_THRESHOLD_HOURS = 1.0
 
 from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
@@ -62,25 +69,26 @@ from .orchestrated_pr_runner import (
     dispatch_agent_for_pr,
     dispatch_agent_for_pr_with_task,
     ensure_base_clone,
+    get_github_token,
     has_failing_checks,
 )
 from .utils import json_manager, setup_logging
 
 
-def _parse_fixpr_agent_chain(value: str) -> str:
-    """Parse comma-separated CLI chain for --fixpr-agent (e.g., 'gemini,codex')."""
+def _parse_cli_agent_chain(value: str) -> str:
+    """Parse comma-separated CLI chain for --cli-agent (e.g., 'gemini,cursor')."""
     if not isinstance(value, str) or not value.strip():
-        raise argparse.ArgumentTypeError("--fixpr-agent must be a non-empty string")
+        raise argparse.ArgumentTypeError("--cli-agent must be a non-empty string")
 
     parts = [part.strip().lower() for part in value.split(",")]
     chain = [part for part in parts if part]
     if not chain:
-        raise argparse.ArgumentTypeError("--fixpr-agent chain is empty")
+        raise argparse.ArgumentTypeError("--cli-agent chain is empty")
 
     invalid = [cli for cli in chain if cli not in CLI_PROFILES]
     if invalid:
         raise argparse.ArgumentTypeError(
-            f"Invalid --fixpr-agent CLI(s): {invalid}. Must be subset of {list(CLI_PROFILES.keys())}"
+            f"Invalid --cli-agent CLI(s): {invalid}. Must be subset of {list(CLI_PROFILES.keys())}"
         )
 
     # De-duplicate while preserving order
@@ -622,25 +630,42 @@ class JleechanorgPRMonitor:
         cursor: str | None = None
         recent_prs: list[dict] = []
 
-        while True:
-            gh_api_cmd = [
-                "gh",
-                "api",
-                "graphql",
-                "-f",
-                f"query={graphql_query}",
-                "-f",
-                f"searchQuery={search_query}",
-            ]
-            if cursor:
-                gh_api_cmd.extend(["-f", f"cursor={cursor}"])
+        # Get GitHub token for API calls (avoids bash/subprocess)
+        token = get_github_token()
+        if not token:
+            raise RuntimeError("No GitHub token available for GraphQL API calls")
 
-            api_result = AutomationUtils.execute_subprocess_with_timeout(gh_api_cmd, timeout=60, check=False)
-            if api_result.returncode != 0:
-                raise RuntimeError(f"GraphQL search failed: {api_result.stderr.strip()}")
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+        }
+
+        while True:
+            # Use Python requests instead of gh CLI to avoid bash prompts
+            variables = {
+                "searchQuery": search_query,
+            }
+            if cursor:
+                variables["cursor"] = cursor
+
+            payload = {
+                "query": graphql_query,
+                "variables": variables,
+            }
 
             try:
-                api_data = json.loads(api_result.stdout)
+                response = requests.post(
+                    "https://api.github.com/graphql",
+                    json=payload,
+                    headers=headers,
+                    timeout=60,
+                )
+                response.raise_for_status()
+                api_data = response.json()
+            except requests.exceptions.RequestException as e:
+                self.logger.error(f"❌ GraphQL API request failed: {e}")
+                raise RuntimeError(f"GraphQL search failed: {e}")
             except json.JSONDecodeError as exc:
                 self.logger.error("❌ Failed to parse GraphQL response: %s", exc)
                 raise
@@ -978,17 +1003,46 @@ class JleechanorgPRMonitor:
 
 
     def _are_tests_passing(self, repository: str, pr_number: int) -> bool:
-        """Check if tests are passing on the PR"""
+        """Check if tests are passing on the PR using Python requests (avoids bash prompts)"""
         try:
-            # Get PR status checks
-            result = AutomationUtils.execute_subprocess_with_timeout([
-                "gh", "pr", "view", str(pr_number),
-                "--repo", repository,
-                "--json", "statusCheckRollup"
-            ], timeout=30)
+            # Use Python requests instead of gh CLI to avoid bash prompts
+            token = get_github_token()
+            if not token:
+                self.logger.warning(f"⚠️ No GitHub token available for checking test status: {repository}#{pr_number}")
+                return False
 
-            pr_status = json.loads(result.stdout or "{}")
-            status_checks = pr_status.get("statusCheckRollup", [])
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github.v3+json",
+            }
+
+            # Fetch PR status checks using GitHub REST API
+            url = f"https://api.github.com/repos/{repository}/pulls/{pr_number}"
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+                response.raise_for_status()
+                pr_status = response.json()
+            except requests.exceptions.RequestException as e:
+                self.logger.warning(f"⚠️ Failed to fetch PR status for {repository}#{pr_number}: {e}")
+                return False
+
+            # Extract status checks from PR data
+            # GitHub REST API doesn't include statusCheckRollup directly, need to fetch checks separately
+            checks_url = f"https://api.github.com/repos/{repository}/commits/{pr_status.get('head', {}).get('sha', '')}/check-runs"
+            try:
+                checks_response = requests.get(checks_url, headers=headers, timeout=30, params={"per_page": 100})
+                checks_response.raise_for_status()
+                checks_data = checks_response.json()
+                status_checks = checks_data.get("check_runs", [])
+            except requests.exceptions.RequestException:
+                # Fallback: try statuses endpoint
+                statuses_url = f"https://api.github.com/repos/{repository}/commits/{pr_status.get('head', {}).get('sha', '')}/statuses"
+                try:
+                    statuses_response = requests.get(statuses_url, headers=headers, timeout=30)
+                    statuses_response.raise_for_status()
+                    status_checks = statuses_response.json()
+                except requests.exceptions.RequestException:
+                    status_checks = []
 
             # If no status checks are configured, assume tests are failing
             if not status_checks:
@@ -996,9 +1050,27 @@ class JleechanorgPRMonitor:
                 return False
 
             # Check if all status checks are successful
+            # Handle both check_runs format (check-runs API) and statuses format (statuses API)
             for check in status_checks:
-                if check.get("state") not in ["SUCCESS", "NEUTRAL"]:
-                    self.logger.debug(f"❌ Status check failed: {check.get('name')} - {check.get('state')}")
+                # Check-runs API format: conclusion field
+                conclusion = (check.get("conclusion") or "").upper()
+                state = (check.get("state") or "").upper()
+                # Statuses API format: state field
+                status_state = (check.get("state") or "").upper() if "status" not in check else None
+                
+                # Determine if check is passing
+                is_passing = False
+                if conclusion:
+                    is_passing = conclusion in ["SUCCESS", "NEUTRAL"]
+                elif state:
+                    is_passing = state in ["SUCCESS", "NEUTRAL"]
+                elif status_state:
+                    is_passing = status_state in ["SUCCESS", "NEUTRAL"]
+
+                
+                if not is_passing:
+                    check_name = check.get("name") or check.get("context") or "unknown"
+                    self.logger.debug(f"❌ Status check failed: {check_name} - conclusion={conclusion}, state={state}")
                     return False
 
             self.logger.debug(f"✅ All {len(status_checks)} status checks passing for PR #{pr_number}")
@@ -1247,21 +1319,48 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         repo_full: str,
         pr_number: int,
     ) -> tuple[dict, str | None, list[dict], list[str]]:
-        view_cmd = [
-            "gh",
-            "pr",
-            "view",
-            str(pr_number),
-            "--repo",
-            repo_full,
-            "--json",
-            "title,headRefName,headRefOid,author,comments,commits",
-        ]
-        result = AutomationUtils.execute_subprocess_with_timeout(view_cmd, timeout=30, check=False)
-        if result.returncode != 0:
-            raise RuntimeError(result.stderr or f"gh pr view failed for {repo_full}#{pr_number}")
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
+            raise RuntimeError(f"No GitHub token available for PR view: {repo_full}#{pr_number}")
 
-        pr_data = json.loads(result.stdout or "{}")
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+
+        # Fetch PR data using GitHub REST API
+        url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}"
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+            pr_data = response.json()
+            # Normalize fields to match GraphQL expectations
+            pr_data["headRefName"] = pr_data.get("head", {}).get("ref")
+            pr_data["author"] = pr_data.get("user", {})
+            pr_data["headRefOid"] = pr_data.get("head", {}).get("sha")
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"Failed to fetch PR data for {repo_full}#{pr_number}: {e}")
+
+        # Fetch comments separately (REST API doesn't include comments in PR endpoint)
+        comments_url = f"https://api.github.com/repos/{repo_full}/issues/{pr_number}/comments"
+        try:
+            comments_response = requests.get(comments_url, headers=headers, timeout=30, params={"per_page": 100})
+            comments_response.raise_for_status()
+            pr_data["comments"] = comments_response.json()
+        except requests.exceptions.RequestException:
+            # Comments are optional, continue without them
+            pr_data["comments"] = []
+
+        # Fetch commits separately
+        commits_url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}/commits"
+        try:
+            commits_response = requests.get(commits_url, headers=headers, timeout=30, params={"per_page": 100})
+            commits_response.raise_for_status()
+            pr_data["commits"] = commits_response.json()
+        except requests.exceptions.RequestException:
+            # Commits are optional, continue without them
+            pr_data["commits"] = []
         head_sha = pr_data.get("headRefOid")
 
         comments_data = pr_data.get("comments", [])
@@ -1284,7 +1383,14 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         for node in commit_nodes:
             # Handle both nested 'commit' node structure and flat structure
             commit_obj = node.get("commit") if isinstance(node, dict) and "commit" in node else node
-            headline = commit_obj.get("messageHeadline") if isinstance(commit_obj, dict) else None
+            if not isinstance(commit_obj, dict):
+                continue
+                
+            headline = commit_obj.get("messageHeadline")
+            if not headline and "message" in commit_obj:
+                # REST API returns full message; headline is first line
+                headline = commit_obj["message"].split("\n")[0]
+                
             if headline:
                 headlines.append(headline)
 
@@ -1477,7 +1583,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             str(pr_number),
             "--target-repo",
             repo_full,
-            "--fixpr-agent",
+            "--cli-agent",
             agent_cli,
         ]
         try:
@@ -1696,13 +1802,27 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         # NOTE: Only check for queued markers if NO completion marker exists.
         # If completion marker exists, any queued marker is stale and should be ignored
         # (allows legitimate reprocessing when completion marker + unaddressed comments exist)
-        if not has_completion_marker and head_sha and self._has_fix_comment_queued_for_commit(comments, head_sha):
-            self.logger.info(
-                "⏭️ Skipping PR #%s - fix-comment run already queued for commit %s",
-                pr_number,
-                head_sha[:8],
-            )
-            return "skipped"
+        if not has_completion_marker and head_sha:
+            queued_info = self._get_fix_comment_queued_info(comments, head_sha)
+            if queued_info:
+                # Check if queued comment is stale (older than threshold with no completion)
+                # This handles cases where agent failed silently and never posted completion marker
+                queued_age_hours = queued_info.get("age_hours", 0)
+                if queued_age_hours > STALE_QUEUE_THRESHOLD_HOURS:
+                    self.logger.warning(
+                        "⚠️ PR #%s has stale queued comment (%.1f hours old, no completion) - allowing re-run",
+                        pr_number,
+                        queued_age_hours,
+                    )
+                    # Allow re-run - agent likely failed
+                else:
+                    self.logger.info(
+                        "⏭️ Skipping PR #%s - fix-comment run already queued for commit %s (%.1f hours ago)",
+                        pr_number,
+                        head_sha[:8],
+                        queued_age_hours,
+                    )
+                    return "skipped"
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
@@ -1859,71 +1979,62 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             return "failed"
 
     def _get_pr_comment_state(self, repo_full_name: str, pr_number: int) -> tuple[str | None, list[dict] | None]:
-        """Fetch PR comment data needed for Codex comment gating.
+        """Fetch PR comment data needed for Codex comment gating using Python requests (avoids bash prompts).
         
         Returns:
             Tuple of (head_sha, comments). If API call fails, returns (None, None) to
             distinguish from "no comments" case (None, []). Callers should check for
             None comments and treat as "unknown" rather than skipping.
         """
-        view_cmd = [
-            "gh",
-            "pr",
-            "view",
-            str(pr_number),
-            "--repo",
-            repo_full_name,
-            "--json",
-            "headRefOid,comments",
-        ]
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
+            self.logger.warning(f"⚠️ No GitHub token available for fetching PR comment state: {repo_full_name}#{pr_number}")
+            return None, None
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
 
         try:
-            result = AutomationUtils.execute_subprocess_with_timeout(
-                view_cmd,
-                timeout=30,
-                check=False
-            )
-            # Check return code to distinguish API failures from empty results
-            if result.returncode != 0:
-                error_message = result.stderr.strip() if result.stderr else f"Exit code {result.returncode}"
+            # Fetch PR data using GitHub REST API
+            pr_url = f"https://api.github.com/repos/{repo_full_name}/pulls/{pr_number}"
+            try:
+                pr_response = requests.get(pr_url, headers=headers, timeout=30)
+                pr_response.raise_for_status()
+                pr_data = pr_response.json()
+                head_sha = pr_data.get("head", {}).get("sha")  # REST API uses head.sha, not headRefOid
+            except requests.exceptions.RequestException as e:
                 self.logger.warning(
-                    f"⚠️ Failed to fetch PR comment state for PR #{pr_number}: {error_message}"
+                    f"⚠️ Failed to fetch PR data for PR #{pr_number}: {e}"
                 )
-                # Return sentinel value to indicate API failure (distinct from "no comments")
-                # Caller should treat this as "unknown" rather than "no comments"
                 return None, None
 
-            pr_data = json.loads(result.stdout or "{}")
-            head_sha = pr_data.get("headRefOid")
-
-            # Handle different comment structures from GitHub API
-            comments_data = pr_data.get("comments", [])
-            if isinstance(comments_data, dict):
-                comments = comments_data.get("nodes", [])
-            elif isinstance(comments_data, list):
-                comments = comments_data
-            else:
-                comments = []
+            # Fetch comments separately (REST API doesn't include comments in PR endpoint)
+            comments_url = f"https://api.github.com/repos/{repo_full_name}/issues/{pr_number}/comments"
+            try:
+                comments_response = requests.get(comments_url, headers=headers, timeout=30, params={"per_page": 100})
+                comments_response.raise_for_status()
+                comments = comments_response.json()
+            except requests.exceptions.RequestException as e:
+                self.logger.warning(
+                    f"⚠️ Failed to fetch PR comments for PR #{pr_number}: {e}"
+                )
+                # Return None comments to indicate API failure
+                return head_sha, None
 
             # Ensure comments are sorted by creation time (oldest first)
-            # GitHub API should return them sorted, but let's be explicit
             comments.sort(
-                key=lambda c: (c.get("createdAt") or c.get("updatedAt") or "")
+                key=lambda c: (c.get("created_at") or c.get("updated_at") or "")
             )
 
             return head_sha, comments
-        except subprocess.CalledProcessError as e:
-            error_message = e.stderr.strip() if e.stderr else str(e)
+        except Exception as e:
             self.logger.warning(
-                f"⚠️ Failed to fetch PR comment state for PR #{pr_number}: {error_message}"
+                f"⚠️ Unexpected error fetching PR comment state for PR #{pr_number}: {e}"
             )
             # Return sentinel value to indicate API failure
-            return None, None
-        except json.JSONDecodeError as e:
-            self.logger.warning(
-                f"⚠️ Failed to parse PR comment state for PR #{pr_number}: {e}"
-            )
-            # Return sentinel value to indicate parse failure
             return None, None
 
     def _get_head_commit_details(
@@ -1958,41 +2069,50 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             self.logger.warning("⚠️ Invalid PR number: %s", pr_number)
             return None
 
-        cmd = [
-            "gh",
-            "api",
-            "graphql",
-            "-f",
-            f"query={self._HEAD_COMMIT_DETAILS_QUERY}",
-            "-f",
-            f"owner={owner}",
-            "-f",
-            f"name={name}",
-            "-F",
-            f"prNumber={pr_number}",
-        ]
-
-        try:
-            result = AutomationUtils.execute_subprocess_with_timeout(cmd, timeout=30)
-        except subprocess.CalledProcessError as exc:
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
             self.logger.debug(
-                "⚠️ Failed to fetch head commit details for %s#%s: %s",
+                "⚠️ No GitHub token available for fetching head commit details: %s#%s",
                 repo_full_name,
                 pr_number,
-                exc.stderr or exc,
             )
             return None
-        except Exception as exc:
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+        }
+
+        variables = {
+            "owner": owner,
+            "name": name,
+            "prNumber": pr_number,
+        }
+
+        payload = {
+            "query": self._HEAD_COMMIT_DETAILS_QUERY,
+            "variables": variables,
+        }
+
+        try:
+            response = requests.post(
+                "https://api.github.com/graphql",
+                json=payload,
+                headers=headers,
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except requests.exceptions.RequestException as exc:
             self.logger.debug(
-                "⚠️ Error executing head commit lookup for %s#%s: %s",
+                "⚠️ Failed to fetch head commit details for %s#%s: %s",
                 repo_full_name,
                 pr_number,
                 exc,
             )
             return None
-
-        try:
-            data = json.loads(result.stdout or "{}")
         except json.JSONDecodeError as exc:
             self.logger.debug(
                 "⚠️ Failed to decode commit details for %s#%s: %s",
@@ -2148,8 +2268,16 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         This prevents duplicate agent dispatches during the window between when
         a fix-comment run is queued and when the completion marker is posted.
         """
+        return self._get_fix_comment_queued_info(comments, head_sha) is not None
+
+    def _get_fix_comment_queued_info(self, comments: list[dict], head_sha: str) -> dict | None:
+        """Get info about queued fix-comment comment for a commit, including age.
+        
+        Returns dict with 'age_hours' and 'created_at' if found, None otherwise.
+        This allows checking if a queued comment is stale (agent failed silently).
+        """
         if not head_sha:
-            return False
+            return None
 
         for comment in comments:
             body = comment.get("body", "")
@@ -2159,9 +2287,28 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 # Verify this is from automation user (not a bot echo)
                 author = self._get_comment_author_login(comment)
                 if author == self.automation_username:
-                    return True
+                    # GitHub API returns timestamps in camelCase (createdAt)
+                    created_at_str = comment.get("createdAt") or comment.get("created_at", "")
+                    if created_at_str:
+                        try:
+                            # Normalize ISO 8601 timestamp: replace 'Z' with '+00:00' for consistent parsing
+                            # (defensive normalization - Python 3.11+ supports 'Z' directly, but this ensures compatibility)
+                            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                            # Ensure timezone-aware datetime (handle edge case where fromisoformat returns naive)
+                            if created_at.tzinfo is None:
+                                created_at = created_at.replace(tzinfo=timezone.utc)
+                            now = datetime.now(timezone.utc)
+                            age_hours = (now - created_at).total_seconds() / 3600
+                            return {
+                                "age_hours": age_hours,
+                                "created_at": created_at_str,
+                            }
+                        except (ValueError, AttributeError, TypeError):
+                            # If we can't parse date or compare (naive vs aware), assume it's recent (conservative)
+                            return {"age_hours": 0.0, "created_at": created_at_str}
+                    return {"age_hours": 0.0, "created_at": ""}
 
-        return False
+        return None
 
     def _is_head_commit_from_codex(
         self, commit_details: dict[str, str | None] | None
@@ -2684,12 +2831,31 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
             # Process PR with guaranteed cleanup
             try:
-                # Get PR details using gh CLI
-                result = AutomationUtils.execute_subprocess_with_timeout(
-                    ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "title,headRefName,baseRefName,url,author,headRefOid,mergeable"],
-                    timeout=30
-                )
-                pr_data = json.loads(result.stdout or "{}")
+                # Get PR details using Python requests (avoids bash prompts)
+                token = get_github_token()
+                if not token:
+                    self.logger.error(f"❌ No GitHub token available for fetching PR data: {repo_full}#{pr_number}")
+                    return False
+
+                headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github.v3+json",
+                }
+
+                pr_url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}"
+                try:
+                    pr_response = requests.get(pr_url, headers=headers, timeout=30)
+                    pr_response.raise_for_status()
+                    pr_data = pr_response.json()
+                    
+                    # Normalize field names to match GraphQL format expected by callers
+                    pr_data["headRefName"] = pr_data.get("head", {}).get("ref")
+                    pr_data["baseRefName"] = pr_data.get("base", {}).get("ref")
+                    pr_data["headRefOid"] = pr_data.get("head", {}).get("sha")
+                    pr_data["author"] = pr_data.get("user", {})
+                except requests.exceptions.RequestException as e:
+                    self.logger.error(f"❌ Failed to fetch PR data for #{pr_number}: {e}")
+                    return False
 
                 if not pr_data or "title" not in pr_data:
                     self.logger.error(f"❌ Failed to fetch PR data for #{pr_number} - empty or invalid response")
@@ -3201,10 +3367,12 @@ def main():
     parser.add_argument("--target-repo",
                         help="Repository for target PR (required with --target-pr)")
     parser.add_argument(
-        "--fixpr-agent",
-        type=_parse_fixpr_agent_chain,
+        "--cli-agent",
+        "--fixpr-agent",  # Backwards compatibility alias
+        dest="cli_agent",
+        type=_parse_cli_agent_chain,
         default="claude",
-        help="AI CLI (or comma-separated chain) for --fixpr mode (default: claude). Example: gemini,codex",
+        help="AI CLI chain for --fixpr and --fix-comment modes (default: claude). Example: gemini,cursor",
     )
     parser.add_argument(
         "--model",
@@ -3276,7 +3444,7 @@ def main():
         success = monitor.run_fix_comment_review_watcher(
             args.target_pr,
             args.target_repo,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
         )
         sys.exit(0 if success else 1)
 
@@ -3340,7 +3508,7 @@ def main():
                 args.target_pr,
                 args.target_repo,
                 fixpr=True,
-                agent_cli=args.fixpr_agent,
+                agent_cli=args.cli_agent,
                 model=args.model,
             )
             sys.exit(0 if success else 1)
@@ -3350,7 +3518,7 @@ def main():
             max_prs=args.max_prs,
             cutoff_hours=args.cutoff_hours,
             fixpr=True,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
             model=args.model,
         )
         return
@@ -3363,7 +3531,7 @@ def main():
                 args.target_pr,
                 args.target_repo,
                 fix_comment=True,
-                agent_cli=args.fixpr_agent,
+                agent_cli=args.cli_agent,
                 model=args.model,
             )
             sys.exit(0 if success else 1)
@@ -3385,7 +3553,7 @@ def main():
             max_prs=args.max_prs,
             cutoff_hours=args.cutoff_hours,
             fix_comment=True,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
             model=args.model,
         )
         return

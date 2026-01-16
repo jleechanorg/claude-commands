@@ -199,7 +199,7 @@ run_and_capture "cron_workflow2_fixpr" "$VENV_DIR/bin/jleechanorg-pr-monitor" \
   --no-act \
   --fixpr \
   --max-prs 5 \
-  --fixpr-agent gemini \
+  --cli-agent gemini \
   --pr-automation-limit "$PR_AUTOMATION_LIMIT" \
   --fix-comment-limit "$FIX_COMMENT_LIMIT" \
   --fixpr-limit "$FIXPR_LIMIT"
@@ -232,7 +232,7 @@ run_and_capture "target_pr_fix_comment_no_act" "$VENV_DIR/bin/jleechanorg-pr-mon
   --fix-comment \
   --target-pr "$TARGET_PR" \
   --target-repo "$TARGET_REPO" \
-  --fixpr-agent gemini \
+  --cli-agent gemini \
   --pr-automation-limit "$PR_AUTOMATION_LIMIT" \
   --fix-comment-limit "$FIX_COMMENT_LIMIT" \
   --fixpr-limit "$FIXPR_LIMIT"
@@ -245,7 +245,7 @@ run_and_capture "target_pr_fixpr_no_act" "$VENV_DIR/bin/jleechanorg-pr-monitor" 
   --fixpr \
   --target-pr "$TARGET_PR" \
   --target-repo "$TARGET_REPO" \
-  --fixpr-agent gemini \
+  --cli-agent gemini \
   --pr-automation-limit "$PR_AUTOMATION_LIMIT" \
   --fix-comment-limit "$FIX_COMMENT_LIMIT" \
   --fixpr-limit "$FIXPR_LIMIT"

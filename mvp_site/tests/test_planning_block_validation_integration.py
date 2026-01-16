@@ -47,6 +47,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
     ):
         """When no planning block is present, return response unchanged and log warning."""
         response_text = "Normal story response without planning block"
+        self.structured_response.debug_info = {}
 
         result = _validate_and_enforce_planning_block(
             response_text,
@@ -57,6 +58,11 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             "⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block. "
             "The LLM should have generated this - no fallback will be used."
         )
+        # Verify server warning is added to _server_system_warnings (not system_warnings to prevent LLM spoofing)
+        assert "_server_system_warnings" in self.structured_response.debug_info
+        server_warnings = self.structured_response.debug_info["_server_system_warnings"]
+        assert isinstance(server_warnings, list)
+        assert "Missing required planning block" in server_warnings
         assert result == response_text
 
     @patch("mvp_site.llm_service.logging_util", autospec=True)

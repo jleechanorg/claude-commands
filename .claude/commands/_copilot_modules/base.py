@@ -17,6 +17,7 @@ import sys
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
@@ -66,9 +67,10 @@ class CopilotCommandBase(ABC):
                         return "/".join(url.split("/")[-2:])
             except subprocess.CalledProcessError:
                 pass
+            # Default fallback - use worldarchitect.ai as default repo
             return os.environ.get(
                 "DEFAULT_REPO", "jleechanorg/worldarchitect.ai"
-            )  # Default fallback
+            )
 
     def _get_current_branch(self) -> str:
         """Get current git branch for branch-specific file naming."""
@@ -195,12 +197,15 @@ class CopilotCommandBase(ABC):
 
         try:
             # Try different locations for the script
+            # Use Path.home() for cross-platform home directory detection
+            home_dir = Path.home()
+            project_name = os.environ.get("PROJECT_NAME", "worldarchitect.ai")
             script_locations = [
                 script_path,
                 f"./{script_path}",
                 f"../../{script_path}",
                 f"../../../{script_path}",
-                f"/home/jleechan/projects/worldarchitect.ai/worktree_human2/{script_path}",
+                str(home_dir / "projects" / project_name / "worktree_human2" / script_path),
             ]
 
             result = None

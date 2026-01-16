@@ -43,7 +43,7 @@ def test_model_call_surfaces_provider_overload_without_retry():
         patch("mvp_site.llm_service._log_token_count"),
         patch("mvp_site.llm_service._get_safe_output_token_limit", return_value=100),
         patch(
-            "mvp_site.llm_service.gemini_provider.generate_json_mode_content",
+            "mvp_site.llm_service.gemini_provider.generate_content_with_native_tools",
             side_effect=overload_error,
         ) as mock_generate,
         pytest.raises(llm_service.LLMRequestError) as exc_info,
@@ -67,7 +67,7 @@ def test_model_call_surfaces_rate_limit_without_retry():
         patch("mvp_site.llm_service._log_token_count"),
         patch("mvp_site.llm_service._get_safe_output_token_limit", return_value=100),
         patch(
-            "mvp_site.llm_service.gemini_provider.generate_json_mode_content",
+            "mvp_site.llm_service.gemini_provider.generate_content_with_native_tools",
             side_effect=rate_limit_error,
         ) as mock_generate,
         pytest.raises(llm_service.LLMRequestError) as exc_info,

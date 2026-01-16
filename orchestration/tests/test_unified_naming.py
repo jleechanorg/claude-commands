@@ -72,7 +72,10 @@ class TestUnifiedNaming(unittest.TestCase):
             with patch("os.makedirs"):
                 with patch("os.path.exists", return_value=True):
                     # Mock shutil.which to ensure claude is found in CI
-                    with patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"):
+                    with (
+                        patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+                        patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+                    ):
                         result = self.dispatcher.create_dynamic_agent(agent_spec)
 
         # Agent name should be updated to match workspace name

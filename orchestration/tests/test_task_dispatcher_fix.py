@@ -140,6 +140,7 @@ class TestTaskDispatcherFix(unittest.TestCase):
             patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
             patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
             patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
             patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -179,6 +180,7 @@ class TestTaskDispatcherFix(unittest.TestCase):
             patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
             patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
             patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
         ):
             mock_worktree.return_value = ("/tmp/test", MagicMock(returncode=0))
             mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
@@ -228,6 +230,7 @@ class TestTaskDispatcherFix(unittest.TestCase):
             patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
             patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
             patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
         ):
             mock_worktree.return_value = ("/tmp/test", MagicMock(returncode=0))
             mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")

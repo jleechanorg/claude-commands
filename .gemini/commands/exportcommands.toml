@@ -578,12 +578,12 @@ for file in .claude/commands/*.md .claude/commands/*.py; do
 
     # Apply content transformations - completely remove project-specific references
     sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
-    sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
+    sed -i 's|worldarchitect\\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
     sed -i 's|jleechan|${USER}|g' "staging/commands/$(basename "$file")"
     sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/commands/$(basename "$file")"
 
     # Remove any remaining project-specific path references
-    sed -i 's|/home/${USER}/projects/worldarchitect\.ai/[^/]*||g' "staging/commands/$(basename "$file")"
+    sed -i 's|/home/${USER}/projects/worldarchitect\\.ai/[^/]*||g' "staging/commands/$(basename "$file")"
 done
 ```
 - Export filtered command definitions with proper categorization
@@ -613,12 +613,12 @@ for script in claude_command_scripts/*.sh claude_command_scripts/*.py; do
 
         # Apply transformations - completely remove project-specific references
         sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/scripts/$script_name"
-        sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/scripts/$script_name"
-        sed -i 's|/home/${USER}/projects/worldarchitect\.ai/[^/]*||g' "staging/scripts/$script_name"
+        sed -i 's|worldarchitect\\.ai|your-project.com|g' "staging/scripts/$script_name"
+        sed -i 's|/home/${USER}/projects/worldarchitect\\.ai/[^/]*||g' "staging/scripts/$script_name"
         sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/scripts/$script_name"
 
         # Add dependency header
-        sed -i '1i\#!/bin/bash\n# ⚠️ REQUIRES PROJECT ADAPTATION\n# This script contains project-specific paths and may need modification\n' "staging/scripts/$script_name"
+        sed -i '1i\\#!/bin/bash\n# ⚠️ REQUIRES PROJECT ADAPTATION\n# This script contains project-specific paths and may need modification\n' "staging/scripts/$script_name"
     fi
 done
 ```
@@ -649,7 +649,7 @@ else
     shopt -s nullglob
 
     # Export hook scripts with filtering (including nested subdirectories)
-    find .claude/hooks -type f \( -name "*.sh" -o -name "*.py" -o -name "*.md" \) -print0 | while IFS= read -r -d '' hook_file; do
+    find .claude/hooks -type f \\( -name "*.sh" -o -name "*.py" -o -name "*.md" \\) -print0 | while IFS= read -r -d '' hook_file; do
         hook_name=$(basename "$hook_file")
         relative_path="${hook_file#.claude/hooks/}"
 
@@ -740,7 +740,7 @@ else
     shopt -s nullglob
 
     # Export agent configuration files with filtering
-    find .claude/agents -type f \( -name "*.md" -o -name "*.py" -o -name "*.json" \) -print0 | while IFS= read -r -d '' agent_file; do
+    find .claude/agents -type f \\( -name "*.md" -o -name "*.py" -o -name "*.json" \\) -print0 | while IFS= read -r -d '' agent_file; do
         agent_name=$(basename "$agent_file")
         relative_path="${agent_file#.claude/agents/}"
 
@@ -804,7 +804,7 @@ mkdir -p staging/infrastructure-scripts
 
 # Dynamically discover valuable root-level scripts to export
 
-mapfile -t ROOT_SCRIPTS < <(ls -1 *.sh 2>/dev/null | grep -E '^(claude_|start-claude-bot|integrate|resolve_conflicts|sync_branch|setup-github-runner|test_server_manager)\.sh$')
+mapfile -t ROOT_SCRIPTS < <(ls -1 *.sh 2>/dev/null | grep -E '^(claude_|start-claude-bot|integrate|resolve_conflicts|sync_branch|setup-github-runner|test_server_manager)\\.sh$')
 
 for script_name in "${ROOT_SCRIPTS[@]}"; do
     if [[ -f "$script_name" ]]; then

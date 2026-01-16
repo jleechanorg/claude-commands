@@ -29,6 +29,7 @@ import { handleAsyncError, showErrorToast, showSuccessToast, LoadingState } from
 import type { InteractionRequest, InteractionResponse } from '../services/api.types'
 import { formatDiceRolls, DiceRoll, formatDiceRoll } from '../utils/diceUtils'
 import { DiceRollDisplay } from './DiceRollDisplay'
+import { createSystemWarningEntries } from '../utils/systemWarnings'
 
 interface GameViewProps {
   campaign: Campaign
@@ -256,7 +257,8 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           dice_rolls: aiResponse.dice_rolls
         }
 
-        setStory(prev => [...prev, aiEntry])
+        const warningEntries = createSystemWarningEntries(aiResponse.system_warnings)
+        setStory(prev => [...prev, aiEntry, ...warningEntries])
         setRetryCount(0)
         setLastFailedInput('')
 
@@ -398,7 +400,8 @@ export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameView
           dice_rolls: aiResponse.dice_rolls
         }
 
-        setStory(prev => [...prev, aiEntry])
+        const warningEntries = createSystemWarningEntries(aiResponse.system_warnings)
+        setStory(prev => [...prev, aiEntry, ...warningEntries])
         setRetryCount(0)
         setLastFailedInput('')
         setAiError(null)

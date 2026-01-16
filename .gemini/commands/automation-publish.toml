@@ -1,0 +1,192 @@
+description = "Automation Package Publishing Command"
+
+prompt = """
+---
+description: Automation Package Publishing Command - Bump version, publish to PyPI, install locally, and rerun workflows
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Version Bump
+
+**Action Steps:**
+1. Read current version from `automation/pyproject.toml`
+2. Increment patch version (e.g., `0.2.55` → `0.2.56`)
+3. Update version in `automation/pyproject.toml`
+4. Commit version bump: `git add automation/pyproject.toml && git commit -m "chore: Bump version to X.Y.Z"`
+
+### Phase 2: Build Package
+
+**Action Steps:**
+1. Navigate to `automation/` directory
+2. Clean previous builds: `rm -rf dist/ build/ *.egg-info`
+3. Build package: `python3 -m build`
+4. Verify build artifacts exist: `ls -lh dist/`
+
+### Phase 3: Publish to PyPI
+
+**Action Steps:**
+1. Upload to PyPI: `python3 -m twine upload --repository pypi dist/jleechanorg_pr_automation-*`
+2. Verify upload success (check for PyPI URL in output)
+3. Wait 5-10 seconds for PyPI propagation
+
+### Phase 4: Install Locally
+
+**Action Steps:**
+1. Install/upgrade package: `pip install --upgrade jleechanorg-pr-automation==X.Y.Z`
+2. Verify installation: `jleechanorg-pr-monitor --version` (or check `pip show jleechanorg-pr-automation`)
+
+### Phase 5: Push and Rerun Workflows
+
+**Action Steps:**
+1. Get current branch name: `git branch --show-current`
+2. Get current PR number (if on PR branch): `gh pr view --json number --jq '.number'` or detect from branch name
+3. Push version bump commit: `git push origin <branch-name>`
+4. Rerun fixpr workflow on current PR:
+   - `jleechanorg-pr-monitor --fixpr --max-prs 1 --fixpr-agent gemini,codex --model gemini-3-flash-preview`
+   - Or if targeting specific PR: `jleechanorg-pr-monitor --fixpr --max-prs 1 --target-pr <PR_NUMBER> --fixpr-agent gemini,codex --model gemini-3-flash-preview`
+
+## 📋 REFERENCE DOCUMENTATION
+
+# Automation Package Publishing Command
+
+**Purpose**: Automate the complete workflow for publishing the `jleechanorg-pr-automation` package:
+1. Bump version number
+2. Build Python package
+3. Publish to PyPI
+4. Install locally
+5. Push changes and rerun workflows
+
+**Usage**: `/automation-publish` - Executes all steps automatically
+
+**Type**: LLM-orchestrated command (uses existing tools and git commands)
+
+## 🚨 COMMAND OVERVIEW
+
+The `/automation-publish` command automates the complete package publishing workflow:
+
+1. **Version Bump**: Increments patch version in `automation/pyproject.toml`
+2. **Build**: Creates distribution packages (wheel and source)
+3. **Publish**: Uploads to PyPI using twine
+4. **Install**: Upgrades local installation
+5. **Deploy**: Pushes changes and triggers fixpr workflow
+
+## 🛠️ IMPLEMENTATION DETAILS
+
+### Version Bumping
+
+- Reads current version from `automation/pyproject.toml` (`version = "X.Y.Z"`)
+- Increments patch version (Z component)
+- Updates file and commits change
+
+### Build Process
+
+- Uses `python3 -m build` (requires `build` package)
+- Creates both wheel (`.whl`) and source (`.tar.gz`) distributions
+- Outputs to `automation/dist/` directory
+
+### PyPI Publishing
+
+- Uses `python3 -m twine upload --repository pypi`
+- Requires `PYPI_TOKEN` environment variable or configured credentials
+- Uploads both wheel and source distributions
+
+### Local Installation
+
+- Uses `pip install --upgrade jleechanorg-pr-automation==X.Y.Z`
+- Verifies installation by checking package version
+
+### Workflow Triggering
+
+- Detects current branch and PR context
+- Pushes version bump commit
+- Runs fixpr workflow to verify package works correctly
+
+## 🔍 EXAMPLE EXECUTION
+
+```console
+/automation-publish
+
+🚀 Starting automation package publishing workflow
+📍 Current branch: fix/fix-comment-checkpoint-order
+📦 Current version: 0.2.55
+
+[Phase 1: Version Bump]
+✅ Read current version: 0.2.55
+✅ Incremented to: 0.2.56
+✅ Updated automation/pyproject.toml
+✅ Committed: "chore: Bump version to 0.2.56"
+
+[Phase 2: Build Package]
+✅ Cleaned previous builds
+✅ Built package: jleechanorg_pr_automation-0.2.56-py3-none-any.whl
+✅ Built source: jleechanorg_pr_automation-0.2.56.tar.gz
+
+[Phase 3: Publish to PyPI]
+✅ Uploaded to PyPI: https://pypi.org/project/jleechanorg-pr-automation/0.2.56/
+⏳ Waiting for PyPI propagation...
+
+[Phase 4: Install Locally]
+✅ Installed jleechanorg-pr-automation==0.2.56
+✅ Verified installation
+
+[Phase 5: Push and Rerun Workflows]
+✅ Pushed to origin/fix/fix-comment-checkpoint-order
+✅ Triggered fixpr workflow on PR #3516
+✅ Workflow queued successfully
+
+🎉 Publishing workflow complete!
+📦 Version: 0.2.56
+🔗 PyPI: https://pypi.org/project/jleechanorg-pr-automation/0.2.56/
+```
+
+## 🎯 SUCCESS CRITERIA
+
+**Command succeeds when:**
+- Version bumped and committed
+- Package built successfully
+- Published to PyPI
+- Installed locally
+- Changes pushed to remote
+- Workflow triggered successfully
+
+**Command fails if:**
+- Version file not found or invalid
+- Build fails (missing dependencies, syntax errors)
+- PyPI upload fails (authentication, network issues)
+- Local installation fails
+- Git push fails (conflicts, permissions)
+- Workflow trigger fails
+
+## 🔧 PREREQUISITES
+
+- `python3` with `build` and `twine` packages installed
+- `PYPI_TOKEN` environment variable set (or configured credentials)
+- Git repository with `automation/pyproject.toml`
+- Current branch is a PR branch (for workflow triggering)
+- `gh` CLI installed and authenticated (for PR detection)
+
+## 🚨 IMPORTANT NOTES
+
+1. **Always commit** before running to preserve state
+2. **Check PyPI** after upload to verify package is available
+3. **Wait for propagation** (5-10 seconds) before installing
+4. **Verify installation** by checking version or running command
+5. **Monitor workflow** to ensure fixpr completes successfully
+6. **Version format** must follow semantic versioning (X.Y.Z)
+
+## 📚 INTEGRATION WITH OTHER COMMANDS
+
+- **Uses**: Git commands, pip, twine, build tools
+- **Compatible with**: `/pushl`, `/fixpr`, `/pr`
+- **Enhances**: Package release workflow automation
+
+This command embodies the principle: "Automate repetitive release workflows while ensuring quality and verification at each step."
+
+"""

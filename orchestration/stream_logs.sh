@@ -12,6 +12,13 @@ main() {
 
     SESSION_NAME="$1"
 
+    # Security: Validate SESSION_NAME to prevent path traversal
+    # Only allow alphanumeric, dots, underscores, and hyphens
+    if [[ ! "$SESSION_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || [[ "$SESSION_NAME" == *".."* ]]; then
+        echo "Error: Invalid session name. Only alphanumeric characters, dots, underscores, and hyphens are allowed."
+        return 1
+    fi
+
     echo "Streaming tmux session: $SESSION_NAME"
     echo "Press Ctrl+C to stop"
     echo "=========================================="
@@ -104,8 +111,14 @@ main() {
         fi
     }
 
-    # Get log file path
-    LOG_FILE="/tmp/orchestration_logs/${SESSION_NAME}.log"
+    # Get log file path - sanitize SESSION_NAME to prevent path traversal
+    # Remove any path traversal characters (/, ..) from session name
+    # First remove .. sequences, then remove slashes, then sanitize other special chars
+    SANITIZED_SESSION=$(echo "$SESSION_NAME" | sed 's/\.\.//g' | sed 's/\///g' | sed 's/[^a-zA-Z0-9_-]/-/g')
+    if [ -z "$SANITIZED_SESSION" ]; then
+        SANITIZED_SESSION="unknown-session"
+    fi
+    LOG_FILE="/tmp/orchestration_logs/${SANITIZED_SESSION}.log"
 
     if [ -f "$LOG_FILE" ]; then
         echo "Tailing log file: $LOG_FILE"

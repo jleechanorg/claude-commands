@@ -90,6 +90,7 @@ export interface StoryEntry {
   resources?: string;
   rewards_box?: RewardsBox;
   god_mode_response?: string;
+  system_warnings?: string[];
   user_scene_number?: number;
 }
 
@@ -132,6 +133,7 @@ export interface InteractionResponse {
   resources?: string;
   rewards_box?: RewardsBox;
   god_mode_response?: string;
+  system_warnings?: string[];
   user_scene_number?: number;
   error?: string;
 }

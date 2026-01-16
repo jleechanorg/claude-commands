@@ -948,21 +948,30 @@ def get_db() -> firestore.Client:
     except ValueError:
         try:
             logging_util.info("Firebase not initialized - attempting to initialize now")
+
+            # Import the service account loader
+            from mvp_site.service_account_loader import get_service_account_credentials
+
             # WORLDAI_* vars take precedence for WorldArchitect.AI repo-specific config
             worldai_creds_path = os.getenv("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS")
-            if worldai_creds_path:
-                worldai_creds_path = os.path.expanduser(worldai_creds_path)
-                if os.path.exists(worldai_creds_path):
-                    logging_util.info(
-                        f"Using WORLDAI credentials from {worldai_creds_path}"
-                    )
-                    firebase_admin.initialize_app(
-                        credentials.Certificate(worldai_creds_path)
-                    )
-                else:
-                    firebase_admin.initialize_app()
-            else:
+
+            # Try loading credentials (file first, then env vars fallback)
+            try:
+                creds_dict = get_service_account_credentials(
+                    file_path=worldai_creds_path,
+                    fallback_to_env=True,
+                    require_env_vars=False
+                )
+                logging_util.info("Successfully loaded service account credentials")
+                firebase_admin.initialize_app(credentials.Certificate(creds_dict))
+            except Exception as creds_error:
+                # Fallback to default credentials (for GCP environments)
+                logging_util.warning(
+                    f"Failed to load explicit credentials: {creds_error}. "
+                    "Attempting default application credentials."
+                )
                 firebase_admin.initialize_app()
+
         except Exception as init_error:
             logging_util.error(f"Failed to initialize Firebase: {init_error}")
             raise ValueError(

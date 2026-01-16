@@ -61,7 +61,7 @@ def test_log_dice_fabrication_detected():
 def test_log_code_exec_fabrication_violation():
     expected = logging_util.with_campaign(
         "🎲 CODE_EXEC_FABRICATION: Code was executed but random.randint() not found - "
-        "dice values are fabricated. Will trigger reprompt to enforce real RNG execution."
+        "dice values are fabricated. Flagged for user warning."
     )
     with patch("mvp_site.dice.logging_util.warning") as warning:
         dice.log_code_exec_fabrication_violation()
@@ -71,7 +71,7 @@ def test_log_code_exec_fabrication_violation():
 def test_log_narrative_dice_fabrication_violation():
     expected = logging_util.with_campaign(
         "🎲 NARRATIVE_DICE_FABRICATION: Dice patterns found in narrative without tool evidence. "
-        "Will trigger reprompt to enforce real dice."
+        "Flagged for user warning."
     )
     with patch("mvp_site.dice.logging_util.warning") as warning:
         dice.log_narrative_dice_fabrication_violation()

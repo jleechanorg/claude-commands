@@ -16,7 +16,7 @@ credentials for the environment you want to query (production vs staging).
 ## Options
 
 - `--days N` - Number of days to look back (default: 14)
-- `--exclude "pattern"` - Glob pattern for emails to exclude (e.g., "jleechan*")
+- `--exclude "pattern"` - Glob pattern for emails to exclude (e.g., "$USER*")
 - `--email user@example.com` - Only include campaigns from this email
 - `--top N` - Number of top results to show (default: 10)
 - `-v, --verbose` - Print progress messages
@@ -26,12 +26,12 @@ credentials for the environment you want to query (production vs staging).
 
 ### Top 10 non-internal campaigns (last 2 weeks)
 ```bash
-python scripts/top_campaigns.py --days 14 --exclude "jleechan*" --top 10 -v
+python scripts/top_campaigns.py --days 14 --exclude "$USER*" --top 10 -v
 ```
 
 ### All campaigns for a specific user
 ```bash
-python scripts/top_campaigns.py --email kevinzsalleh@gmail.com --top 50
+python scripts/top_campaigns.py --email user@example.com --top 50
 ```
 
 ### Top 20 from last month (no exclusions)

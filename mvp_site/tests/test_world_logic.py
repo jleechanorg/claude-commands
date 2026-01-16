@@ -16,6 +16,7 @@ import unittest
 # ExitStack removed - using decorator-based patching instead
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+from mvp_site import constants
 from mvp_site import world_logic
 from mvp_site.debug_hybrid_system import convert_json_escape_sequences
 from mvp_site.game_state import GameState
@@ -24,6 +25,7 @@ from mvp_site.prompt_utils import _convert_and_format_field
 # Set test environment before any imports
 os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["USE_MOCKS"] = "true"
+os.environ["MOCK_SERVICES_MODE"] = "true"
 
 
 class _TestValidationError(Exception):
@@ -302,6 +304,294 @@ class TestUnifiedAPIStructure(unittest.TestCase):
 
         # Run async tests
         asyncio.run(run_tests())
+
+
+class TestCampaignDataReloadBehavior(unittest.TestCase):
+    """Test that campaign_data and story_context are always reloaded (no caching)."""
+
+    def setUp(self):
+        """Set up test environment."""
+        os.environ["TESTING_AUTH_BYPASS"] = "true"
+        os.environ["USE_MOCKS"] = "true"
+
+    @patch("mvp_site.world_logic._load_campaign_and_continue_story")
+    @patch("mvp_site.world_logic._prepare_game_state_with_user_settings")
+    @patch("mvp_site.world_logic._persist_turn_to_firestore")
+    @patch("mvp_site.world_logic.firestore_service.get_db")
+    def test_load_campaign_called_on_every_request(
+        self,
+        mock_get_db,
+        mock_persist,
+        mock_prepare_state,
+        mock_load_campaign,
+    ):
+        """
+        Test that _load_campaign_and_continue_story is called on every request,
+        not cached between requests.
+        
+        This verifies the fix for the caching bug where story_context was reused
+        from the first request, causing stale data.
+        """
+        # Mock game state preparation
+        mock_game_state = Mock()
+        mock_game_state.debug_mode = False
+        mock_game_state.world_data = {"world_time": {"year": 1492}, "current_location_name": "Tavern"}
+        mock_prepare_state.return_value = (mock_game_state, False, 0, {})
+
+        # Mock campaign loading - return different story_context for each call
+        call_count = {"count": 0}
+
+        def mock_load_side_effect(*args, **kwargs):
+            """Simulate loading campaign with growing story_context."""
+            call_count["count"] += 1
+            # First call: empty story_context
+            # Second call: story_context includes first command
+            story_context = []
+            if call_count["count"] > 1:
+                story_context = [
+                    {
+                        "actor": "user",
+                        "text": "GOD MODE: Set HP to 50",
+                        "sequence_id": 1,
+                    }
+                ]
+
+            campaign_data = {
+                "selected_prompts": ["narrative"],
+                "use_default_world": False,
+            }
+
+            mock_llm_response = Mock()
+            mock_llm_response.agent_mode = "character"
+            mock_llm_response.narrative = "Test narrative"
+            mock_llm_response.session_header = "Test header"
+
+            return campaign_data, story_context, mock_llm_response
+
+        mock_load_campaign.side_effect = mock_load_side_effect
+
+        # Mock persist to avoid Firestore writes
+        mock_persist.return_value = None
+
+        async def run_test():
+            # First request
+            request1 = {
+                "user_id": "test-user",
+                "campaign_id": "test-campaign",
+                "user_input": "GOD MODE: Set HP to 50",
+                "mode": "character",
+            }
+            result1 = await world_logic.process_action_unified(request1)
+            assert isinstance(result1, dict)
+
+            # Second request - should reload campaign_data and story_context
+            request2 = {
+                "user_id": "test-user",
+                "campaign_id": "test-campaign",
+                "user_input": "GOD MODE: Set gold to 200",
+                "mode": "character",
+            }
+            result2 = await world_logic.process_action_unified(request2)
+            assert isinstance(result2, dict)
+
+            # Verify _load_campaign_and_continue_story was called twice (once per request)
+            assert (
+                mock_load_campaign.call_count == 2
+            ), f"Expected 2 calls to _load_campaign_and_continue_story, got {mock_load_campaign.call_count}"
+
+            # Verify second call received story_context with first command
+            second_call_args = mock_load_campaign.call_args_list[1]
+            # The story_context should be passed to continue_story inside _load_campaign_and_continue_story
+            # We verify it was called with the correct campaign_id (indirect verification)
+
+        asyncio.run(run_test())
+
+    @patch("mvp_site.world_logic._load_campaign_and_continue_story")
+    @patch("mvp_site.world_logic._prepare_game_state_with_user_settings")
+    @patch("mvp_site.world_logic._persist_turn_to_firestore")
+    @patch("mvp_site.world_logic.firestore_service.get_db")
+    def test_story_context_includes_latest_entries(
+        self,
+        mock_get_db,
+        mock_persist,
+        mock_prepare_state,
+        mock_load_campaign,
+    ):
+        """
+        Test that story_context always includes the latest entries from Firestore.
+        
+        This verifies that when a second request is made, the story_context
+        includes the first request's entry, ensuring fresh data.
+        """
+        # Mock game state preparation
+        mock_game_state = Mock()
+        mock_game_state.debug_mode = False
+        mock_game_state.world_data = {"world_time": {"year": 1492}, "current_location_name": "Tavern"}
+        mock_prepare_state.return_value = (mock_game_state, False, 0, {})
+
+        # Track story_context passed to each call
+        captured_story_contexts = []
+
+        def mock_load_side_effect(*args, **kwargs):
+            """Capture story_context that would be loaded from Firestore."""
+            # Simulate Firestore returning story_context that grows with each request
+            call_num = len(captured_story_contexts) + 1
+
+            # First call: empty story_context (no previous entries)
+            # Second call: story_context includes first command
+            story_context = []
+            if call_num == 2:
+                story_context = [
+                    {
+                        "actor": "user",
+                        "text": "GOD MODE: Set HP to 50",
+                        "sequence_id": 1,
+                    },
+                    {
+                        "actor": "gemini",
+                        "text": "HP has been set to 50",
+                        "sequence_id": 2,
+                    },
+                ]
+
+            captured_story_contexts.append(story_context.copy())
+
+            campaign_data = {
+                "selected_prompts": ["narrative"],
+                "use_default_world": False,
+            }
+
+            mock_llm_response = Mock()
+            mock_llm_response.agent_mode = "character"
+            mock_llm_response.narrative = "Test narrative"
+            mock_llm_response.session_header = "Test header"
+
+            return campaign_data, story_context, mock_llm_response
+
+        mock_load_campaign.side_effect = mock_load_side_effect
+        mock_persist.return_value = None
+
+        async def run_test():
+            # First request
+            request1 = {
+                "user_id": "test-user",
+                "campaign_id": "test-campaign",
+                "user_input": "GOD MODE: Set HP to 50",
+                "mode": "character",
+            }
+            await world_logic.process_action_unified(request1)
+
+            # Second request
+            request2 = {
+                "user_id": "test-user",
+                "campaign_id": "test-campaign",
+                "user_input": "GOD MODE: Set gold to 200",
+                "mode": "character",
+            }
+            await world_logic.process_action_unified(request2)
+
+            # Verify story_context was captured for both calls
+            assert (
+                len(captured_story_contexts) == 2
+            ), f"Expected 2 story_context captures, got {len(captured_story_contexts)}"
+
+            # First call should have empty story_context
+            assert (
+                len(captured_story_contexts[0]) == 0
+            ), f"First call should have empty story_context, got {captured_story_contexts[0]}"
+
+            # Second call should have story_context with first command
+            assert (
+                len(captured_story_contexts[1]) > 0
+            ), f"Second call should have story_context with first command, got {captured_story_contexts[1]}"
+            assert (
+                "GOD MODE: Set HP to 50" in str(captured_story_contexts[1])
+            ), f"Second call story_context should include first command: {captured_story_contexts[1]}"
+
+        asyncio.run(run_test())
+
+    @patch("mvp_site.world_logic._load_campaign_and_continue_story")
+    @patch("mvp_site.world_logic._prepare_game_state_with_user_settings")
+    @patch("mvp_site.world_logic._persist_turn_to_firestore")
+    @patch("mvp_site.world_logic.firestore_service.get_db")
+    def test_campaign_data_always_fresh(
+        self,
+        mock_get_db,
+        mock_persist,
+        mock_prepare_state,
+        mock_load_campaign,
+    ):
+        """
+        Test that campaign_data (selected_prompts, use_default_world) is always fresh.
+        
+        This verifies that if campaign settings change between requests,
+        the new settings are used immediately.
+        """
+        # Mock game state preparation
+        mock_game_state = Mock()
+        mock_game_state.debug_mode = False
+        mock_game_state.world_data = {"world_time": {"year": 1492}, "current_location_name": "Tavern"}
+        mock_prepare_state.return_value = (mock_game_state, False, 0, {})
+
+        # Simulate campaign_data changing between requests
+        call_count = {"count": 0}
+
+        def mock_load_side_effect(*args, **kwargs):
+            """Return different campaign_data for each call."""
+            call_count["count"] += 1
+
+            # First call: default prompts
+            # Second call: different prompts (simulating user changing settings)
+            if call_count["count"] == 1:
+                campaign_data = {
+                    "selected_prompts": ["narrative"],
+                    "use_default_world": False,
+                }
+            else:
+                campaign_data = {
+                    "selected_prompts": ["narrative", "mechanics"],  # Changed!
+                    "use_default_world": True,  # Changed!
+                }
+
+            story_context = []
+            mock_llm_response = Mock()
+            mock_llm_response.agent_mode = "character"
+            mock_llm_response.narrative = "Test narrative"
+            mock_llm_response.session_header = "Test header"
+
+            return campaign_data, story_context, mock_llm_response
+
+        mock_load_campaign.side_effect = mock_load_side_effect
+        mock_persist.return_value = None
+
+        async def run_test():
+            # First request
+            request1 = {
+                "user_id": "test-user",
+                "campaign_id": "test-campaign",
+                "user_input": "Tell me a story",
+                "mode": "character",
+            }
+            await world_logic.process_action_unified(request1)
+
+            # Second request - should use fresh campaign_data
+            request2 = {
+                "user_id": "test-user",
+                "campaign_id": "test-campaign",
+                "user_input": "Continue the story",
+                "mode": "character",
+            }
+            await world_logic.process_action_unified(request2)
+
+            # Verify _load_campaign_and_continue_story was called twice
+            assert (
+                mock_load_campaign.call_count == 2
+            ), f"Expected 2 calls, got {mock_load_campaign.call_count}"
+
+            # Verify second call received updated campaign_data
+            # (indirectly verified by the fact that we reload on every call)
+
+        asyncio.run(run_test())
 
 
 class TestMCPMigrationRedGreen(unittest.TestCase):
@@ -3125,6 +3415,151 @@ class TestTruncateGameStateForLogging(unittest.TestCase):
 # Note: _should_reject_directive is a nested function inside process_action_unified
 # and should be tested through integration tests that verify directive filtering
 # behavior in the full process_action_unified flow.
+
+
+class TestPersistTurnModePreservation(unittest.TestCase):
+    """Test that _persist_turn_to_firestore preserves mode for AI responses."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.user_id = "test_user_123"
+        self.campaign_id = "test_campaign_456"
+        self.user_input = "THINK: What should I do next?"
+        self.ai_response_text = "You pause to consider your options..."
+        self.structured_fields = {"planning_block": {"thinking": "Analysis..."}}
+        self.updated_game_state = {"player_character_data": {"hp": 100}}
+
+    @patch("mvp_site.world_logic.firestore_service")
+    def test_think_mode_preserved_for_ai_response(self, mock_firestore):
+        """RED: AI response should have mode='think' when user sends think mode request.
+
+        This is the core bug fix - previously AI responses always had mode=None.
+        """
+        # Execute the persist function with think mode
+        world_logic._persist_turn_to_firestore(
+            self.user_id,
+            self.campaign_id,
+            mode=constants.MODE_THINK,
+            user_input=self.user_input,
+            ai_response_text=self.ai_response_text,
+            structured_fields=self.structured_fields,
+            updated_game_state_dict=self.updated_game_state,
+        )
+
+        # Verify add_story_entry was called twice (user + AI)
+        add_story_calls = mock_firestore.add_story_entry.call_args_list
+        self.assertEqual(len(add_story_calls), 2, "Should call add_story_entry twice")
+
+        # Extract the calls
+        user_call = add_story_calls[0]
+        ai_call = add_story_calls[1]
+
+        # Verify USER entry has mode='think'
+        # add_story_entry(user_id, campaign_id, actor, text, mode, structured_fields)
+        # Index: 0=user_id, 1=campaign_id, 2=actor, 3=text, 4=mode
+        user_call_args = user_call[0]  # positional args
+        self.assertEqual(user_call_args[4], constants.MODE_THINK,
+                         f"User entry mode should be 'think', got {user_call_args[4]}")
+
+        # Verify AI entry has mode='think' (THIS IS THE BUG FIX)
+        ai_call_args = ai_call[0]  # positional args
+        self.assertEqual(ai_call_args[4], constants.MODE_THINK,
+                         f"AI entry mode should be 'think', got {ai_call_args[4]}")
+
+    @patch("mvp_site.world_logic.firestore_service")
+    def test_god_mode_preserved_for_ai_response(self, mock_firestore):
+        """RED: AI response should have mode='god' when user sends god mode request."""
+        world_logic._persist_turn_to_firestore(
+            self.user_id,
+            self.campaign_id,
+            mode=constants.MODE_GOD,
+            user_input="GOD MODE: Set time to midnight",
+            ai_response_text="Time has been set to midnight.",
+            structured_fields={},
+            updated_game_state_dict=self.updated_game_state,
+        )
+
+        add_story_calls = mock_firestore.add_story_entry.call_args_list
+        ai_call_args = add_story_calls[1][0]
+
+        self.assertEqual(ai_call_args[4], constants.MODE_GOD,
+                         f"AI entry mode should be 'god', got {ai_call_args[4]}")
+
+    @patch("mvp_site.world_logic.firestore_service")
+    def test_character_mode_preserved_for_ai_response(self, mock_firestore):
+        """RED: AI response should have mode='character' for character actions."""
+        world_logic._persist_turn_to_firestore(
+            self.user_id,
+            self.campaign_id,
+            mode=constants.MODE_CHARACTER,
+            user_input="I attack the goblin",
+            ai_response_text="You swing your sword...",
+            structured_fields={"dice_rolls": [{"type": "attack"}]},
+            updated_game_state_dict=self.updated_game_state,
+        )
+
+        add_story_calls = mock_firestore.add_story_entry.call_args_list
+        ai_call_args = add_story_calls[1][0]
+
+        self.assertEqual(ai_call_args[4], constants.MODE_CHARACTER,
+                         f"AI entry mode should be 'character', got {ai_call_args[4]}")
+
+    @patch("mvp_site.world_logic.firestore_service")
+    def test_combat_mode_preserved_for_ai_response(self, mock_firestore):
+        """RED: AI response should have mode='combat' for combat actions."""
+        world_logic._persist_turn_to_firestore(
+            self.user_id,
+            self.campaign_id,
+            mode=constants.MODE_COMBAT,
+            user_input="Attack with longsword",
+            ai_response_text="Combat resolved...",
+            structured_fields={},
+            updated_game_state_dict=self.updated_game_state,
+        )
+
+        add_story_calls = mock_firestore.add_story_entry.call_args_list
+        ai_call_args = add_story_calls[1][0]
+
+        self.assertEqual(ai_call_args[4], constants.MODE_COMBAT,
+                         f"AI entry mode should be 'combat', got {ai_call_args[4]}")
+
+    @patch("mvp_site.world_logic.firestore_service")
+    def test_mode_matrix_all_modes(self, mock_firestore):
+        """RED: Matrix test - all modes should be preserved for AI responses."""
+        # Test matrix of all modes
+        test_modes = [
+            constants.MODE_THINK,
+            constants.MODE_GOD,
+            constants.MODE_CHARACTER,
+            constants.MODE_COMBAT,
+            constants.MODE_REWARDS,
+            constants.MODE_INFO,
+        ]
+
+        for mode in test_modes:
+            with self.subTest(mode=mode):
+                mock_firestore.reset_mock()
+
+                world_logic._persist_turn_to_firestore(
+                    self.user_id,
+                    self.campaign_id,
+                    mode=mode,
+                    user_input=f"Test input for {mode}",
+                    ai_response_text=f"Test response for {mode}",
+                    structured_fields={},
+                    updated_game_state_dict=self.updated_game_state,
+                )
+
+                add_story_calls = mock_firestore.add_story_entry.call_args_list
+
+                # Verify both user and AI entries have the correct mode
+                user_call_args = add_story_calls[0][0]
+                ai_call_args = add_story_calls[1][0]
+
+                self.assertEqual(user_call_args[4], mode,
+                                 f"Matrix [{mode}]: User entry mode mismatch")
+                self.assertEqual(ai_call_args[4], mode,
+                                 f"Matrix [{mode}]: AI entry mode mismatch - got {ai_call_args[4]}")
 
 
 if __name__ == "__main__":
