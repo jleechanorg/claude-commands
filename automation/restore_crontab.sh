@@ -117,7 +117,7 @@ PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin
 
 # Workflow 2: Orchestrated PR fixes - Every 30 minutes
 # Autonomously fixes merge conflicts and failing CI checks using Gemini agents
-*/30 * * * * jleechanorg-pr-monitor --fixpr --max-prs 5 --fixpr-agent gemini >> __LOG_DIR__/jleechanorg_pr_monitor.log 2>&1
+*/30 * * * * jleechanorg-pr-monitor --fixpr --max-prs 5 --fixpr-agent gemini --model gemini-3-auto >> __LOG_DIR__/jleechanorg_pr_monitor.log 2>&1
 
 # Claude conversations backup - Every 4 hours
 # Backs up Claude Code conversations to Dropbox

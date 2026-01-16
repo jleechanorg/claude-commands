@@ -8,9 +8,12 @@ Validates that model parameter is correctly passed through the automation pipeli
 import argparse
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
+from jleechanorg_pr_automation.jleechanorg_pr_monitor import (
+    JleechanorgPRMonitor,
+    _normalize_model,
+)
 
 
 class TestModelParameter(unittest.TestCase):
@@ -18,7 +21,7 @@ class TestModelParameter(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.monitor = JleechanorgPRMonitor()
+        self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
 
     def test_process_single_pr_accepts_model_parameter(self):
         """Test that process_single_pr_by_number accepts model parameter."""
@@ -76,7 +79,7 @@ class TestModelParameter(unittest.TestCase):
 
     def test_model_parameter_passed_to_dispatcher(self):
         """Test that model parameter is passed through to dispatcher."""
-        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr_with_task') as mock_dispatch,              patch.object(self.monitor, '_post_fix_comment_queued') as mock_queued,              patch.object(self.monitor, '_start_fix_comment_review_watcher') as mock_watcher,              patch.object(self.monitor, '_get_pr_comment_state', return_value=(None, [])):
+        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir'),              patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr_with_task') as mock_dispatch,              patch.object(self.monitor, '_post_fix_comment_queued') as mock_queued,              patch.object(self.monitor, '_start_fix_comment_review_watcher') as mock_watcher,              patch.object(self.monitor, '_get_pr_comment_state', return_value=(None, [])),              patch.object(self.monitor, '_has_unaddressed_comments', return_value=True):
             
             mock_dispatch.return_value = True
             mock_queued.return_value = True
@@ -211,9 +214,10 @@ class TestModelParameter(unittest.TestCase):
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher"), \
-             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True) as mock_dispatch:
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True) as mock_dispatch, \
+             patch.object(monitor, "safety_manager") as mock_safety:
 
-            monitor.safety_manager.fixpr_limit = 10
+            mock_safety.fixpr_limit = 10
             result = monitor._process_pr_fixpr(
                 repository="test/repo",
                 pr_number=123,
@@ -224,6 +228,90 @@ class TestModelParameter(unittest.TestCase):
 
         self.assertEqual(result, "posted")
         self.assertEqual(mock_dispatch.call_args[1].get("model"), "sonnet")
+
+
+    def test_normalize_model_none_returns_none(self):
+        """Test that _normalize_model returns None for None input."""
+        result = _normalize_model(None)
+        self.assertIsNone(result)
+
+    def test_normalize_model_empty_string_returns_none(self):
+        """Test that _normalize_model returns None for empty string."""
+        result = _normalize_model("")
+        self.assertIsNone(result)
+        
+        result = _normalize_model("   ")
+        self.assertIsNone(result)
+
+    def test_normalize_model_valid_names(self):
+        """Test that _normalize_model accepts valid model names."""
+        valid_models = [
+            "sonnet",
+            "opus",
+            "haiku",
+            "gemini-3-pro-preview",
+            "gemini-3-auto",
+            "composer-1",
+            "model_name",
+            "model.name",
+            "model_name_123",
+            "a",
+            "123",
+        ]
+        
+        for model in valid_models:
+            with self.subTest(model=model):
+                result = _normalize_model(model)
+                self.assertEqual(result, model.strip())
+                
+                # Test with whitespace
+                result = _normalize_model(f"  {model}  ")
+                self.assertEqual(result, model)
+
+    def test_normalize_model_invalid_names_raises_error(self):
+        """Test that _normalize_model rejects invalid model names."""
+        invalid_models = [
+            "model with spaces",
+            "model@invalid",
+            "model#invalid",
+            "model$invalid",
+            "model%invalid",
+            "model&invalid",
+            "model*invalid",
+            "model+invalid",
+            "model=invalid",
+            "model[invalid",
+            "model]invalid",
+            "model{invalid",
+            "model}invalid",
+            "model|invalid",
+            "model\\invalid",
+            "model/invalid",
+            "model<invalid",
+            "model>invalid",
+            "model,invalid",
+            "model;invalid",
+            "model:invalid",
+            "model'invalid",
+            'model"invalid',
+            "model`invalid",
+            "model~invalid",
+            "model!invalid",
+            "model?invalid",
+        ]
+        
+        for model in invalid_models:
+            with self.subTest(model=model):
+                with self.assertRaises(argparse.ArgumentTypeError):
+                    _normalize_model(model)
+
+    def test_normalize_model_strips_whitespace(self):
+        """Test that _normalize_model strips whitespace from valid names."""
+        result = _normalize_model("  sonnet  ")
+        self.assertEqual(result, "sonnet")
+        
+        result = _normalize_model("\tgemini-3-auto\n")
+        self.assertEqual(result, "gemini-3-auto")
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 # Set PATH to include necessary binaries
-PATH=$HOME/.pyenv/shims:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+PATH=/Users/jleechan/.pyenv/shims:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 # Authentication / secrets:
 # - Do NOT put tokens directly in crontab (it tends to become long-lived plaintext).
@@ -9,20 +9,20 @@ PATH=$HOME/.pyenv/shims:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr
 # GITHUB_TOKEN=YOUR_GITHUB_TOKEN_HERE
 
 # Run PR monitoring (comment-only mode) every 4 hours
-0 */4 * * * jleechanorg-pr-monitor >> $HOME/Library/Logs/project-automation/jleechanorg_pr_monitor.log 2>&1
+0 */4 * * * jleechanorg-pr-monitor >> $HOME/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log 2>&1
 
 # Run fix-comment workflow with Gemini (fallback to Codex) every hour at :45
-45 * * * * jleechanorg-pr-monitor --fix-comment --fixpr-agent gemini,codex --max-prs 3 >> $HOME/Library/Logs/project-automation/gemini_fix_comment.log 2>&1
+45 * * * * jleechanorg-pr-monitor --fix-comment --fixpr-agent gemini,codex --model gemini-3-auto --max-prs 3 >> $HOME/Library/Logs/worldarchitect-automation/gemini_fix_comment.log 2>&1
 
 # Run Codex automation (first 50 tasks) every hour, 15 minutes after PR monitor
-15 * * * * jleechanorg-pr-monitor --codex-update >> $HOME/Library/Logs/project-automation/codex_automation.log 2>&1
+15 * * * * jleechanorg-pr-monitor --codex-update >> $HOME/Library/Logs/worldarchitect-automation/codex_automation.log 2>&1
 
 # Run orchestrated PR fixes (conflicts + failing checks) every 30 minutes - ACTIVE
 # Uses PyPI-installed binary directly (no wrapper needed after v0.1.8 with orchestration dependency)
-*/30 * * * * jleechanorg-pr-monitor --fixpr --max-prs 20 --fixpr-agent gemini,codex >> $HOME/Library/Logs/project-automation/jleechanorg_pr_monitor.log 2>&1
+*/30 * * * * jleechanorg-pr-monitor --fixpr --max-prs 20 --fixpr-agent gemini,codex --model gemini-3-auto >> $HOME/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log 2>&1
 
 # Backup Claude conversations to Dropbox every 4 hours
-0 */4 * * * "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox" 2>&1
+0 */4 * * * "/Users/jleechan/.local/bin/claude_backup_cron.sh" "/Users/jleechan/Library/CloudStorage/Dropbox" 2>&1
 
 # AI Universe daily user activity report - NOW RUNS VIA GITHUB ACTIONS
 # See: .github/workflows/daily-user-report.yml in ai_universe repo

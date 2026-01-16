@@ -13,7 +13,7 @@ class TestGraphQLErrorHandling(unittest.TestCase):
     """Validate robust error handling for GraphQL API failures."""
 
     def setUp(self) -> None:
-        self.monitor = JleechanorgPRMonitor()
+        self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
 
     @patch("jleechanorg_pr_automation.automation_utils.AutomationUtils.execute_subprocess_with_timeout")
     def test_handles_api_timeout(self, mock_exec) -> None:

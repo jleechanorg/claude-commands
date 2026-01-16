@@ -20,7 +20,14 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
+# Import unified logging (mvp_site.logging_util)
+try:
+    from mvp_site import logging_util
+except ImportError:
+    # Fallback to standard logging if mvp_site not in path
+    import logging as logging_util  # type: ignore
 
 # Pre-compile regex for performance
 _SANITIZE_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
@@ -88,17 +95,16 @@ def _run_git_commands_parallel(
 
 def _resolve_repo_info(
     skip_git: bool = False,
-) -> Tuple[str, str, Optional[Dict[str, Optional[str]]]]:
+    pr_mode: bool = False,
+) -> Tuple[str, str, Optional[Dict[str, Union[Optional[str], List[str]]]]]:
     """Return (repo_name, branch_name, git_provenance) with sensible fallbacks.
 
-    Git provenance follows evidence-standards.md requirements.
-    If skip_git=True, returns simplified info without running git commands.
+    Args:
+        skip_git: If True, skip git commands and return minimal info.
+        pr_mode: If True, force using origin/main as base ref.
 
-    Edge Cases:
-    - origin/main missing: base_ref is None, changed_files is empty (warning printed).
-    - HEAD == origin/main: changed_files is empty (no changes).
-    - Detached HEAD: branch="detached".
-    - Shallow clones: fallback mechanics apply, might result in empty changed_files.
+    Returns:
+        Tuple of (repo_name, branch_name, git_provenance)
     """
     if skip_git:
         # Fast path: no git commands, use simple defaults
@@ -123,31 +129,53 @@ def _resolve_repo_info(
     else:
         repo_name = Path.cwd().name
 
-    if not branch:
+    if not branch or branch == "HEAD":
         branch = "detached"
 
-    # Determine a base ref for changed files
-    # Prefer origin/main to capture full branch diff, fall back to upstream for nonstandard repos
-    # This ensures changed_files shows all changes relative to main branch
-    base_ref = results.get("origin_main") or results.get("upstream")
-    
-    # Resolve base_ref to SHA if possible to allow accurate comparison with head_commit
-    base_ref_sha = None
-    if base_ref:
-        base_ref_sha = _run_git_command(["rev-parse", base_ref])
+    # Determine a base ref for changed files with fallbacks.
+    #
+    # Auto-detect PR branches conservatively:
+    # - Branch is not main/master
+    # - Branch has an upstream tracking ref that matches the local branch name
+    #
+    # This avoids treating purely-local scratch branches as PRs while still producing
+    # a useful diff base for pushed branches.
+    upstream_ref = results.get("upstream") or ""
+    tracks_remote_branch = bool(branch) and bool(upstream_ref) and upstream_ref.endswith(
+        f"/{branch}"
+    )
+    is_pr_branch = bool(branch) and branch not in ("main", "master") and tracks_remote_branch
 
+    # In PR mode (explicit or auto-detected), always use origin/main to capture full PR diff
+    if pr_mode or is_pr_branch:
+        base_ref = results.get("origin_main")
+    else:
+        base_ref = results.get("upstream") or results.get("origin_main")
     changed_files_output: Optional[str] = None
 
     if not base_ref:
-        print("⚠️  No base ref found (origin/main or upstream) - changed_files will be empty", file=sys.stderr)
-    elif base_ref_sha and results.get("head_commit") and base_ref_sha == results.get("head_commit"):
-        # HEAD is at base ref, no changes to report (only if SHA resolution succeeded)
+        logging_util.warning(
+            "No base ref found (origin/main or upstream) - changed_files will be empty. "
+            "This may indicate a git configuration issue or detached HEAD state."
+        )
+    elif base_ref == results.get("head_commit"):
+        # HEAD is at base ref, no changes to report
         changed_files_output = ""
     else:
         # Try three-dot first (commits unique to HEAD)
         changed_files_output = _run_git_command(
             ["diff", "--name-only", f"{base_ref}...HEAD"], timeout=10
         )
+
+        # Log the result of the three-dot diff attempt
+        if changed_files_output is None:
+            logging_util.debug(f"Three-dot diff failed for base={base_ref}, trying two-dot fallback")
+        elif changed_files_output == "":
+            logging_util.debug(f"Three-dot diff succeeded but found no changes (base={base_ref})")
+        else:
+            num_files = len(changed_files_output.strip().splitlines())
+            logging_util.debug(f"Three-dot diff succeeded: {num_files} files changed (base={str(base_ref)[:8]})")
+
         # If command failed (None) or returned empty string (no changes found by 3-dot),
         # try two-dot (all differences) just in case, though 3-dot is standard for PRs.
         # Note: _run_git_command returns None for failures, empty string for "no changes"
@@ -155,20 +183,33 @@ def _resolve_repo_info(
             two_dot_output = _run_git_command(
                 ["diff", "--name-only", f"{base_ref}..HEAD"], timeout=10
             )
+
+            # Log the result of the two-dot diff attempt
+            if two_dot_output is None:
+                if changed_files_output is None:
+                    logging_util.warning(
+                        f"Both git diff strategies failed for base={base_ref}. "
+                        f"Possible causes: network issues, git corruption, or invalid ref. "
+                        f"changed_files will be empty."
+                    )
+                else:
+                    logging_util.debug(f"Two-dot fallback failed, keeping 3-dot result (empty).")
+            elif two_dot_output == "":
+                logging_util.debug(f"Two-dot diff succeeded but found no changes (base={base_ref})")
+            else:
+                num_files = len(two_dot_output.strip().splitlines())
+                logging_util.debug(f"Two-dot diff succeeded: {num_files} files changed (base={str(base_ref)[:8]})")
+
             # Use two-dot output if three-dot failed or was empty, but only if two-dot succeeded
             if two_dot_output is not None:
                 changed_files_output = two_dot_output
-
-        # Warn if both git diff attempts failed (result is still None)
-        if changed_files_output is None:
-            print(f"⚠️  Git diff commands failed for base_ref={base_ref} - changed_files will be empty", file=sys.stderr)
 
     # Build git provenance per evidence-standards.md
     git_provenance = {
         "head_commit": results.get("head_commit"),
         "origin_main_commit": results.get("origin_main"),
         "branch": branch,
-        "changed_files": changed_files_output.split("\n")
+        "changed_files": changed_files_output.splitlines()
         if changed_files_output
         else [],
     }
@@ -181,7 +222,7 @@ def _read_optional_file(path: Optional[str]) -> Optional[str]:
         return None
     expanded = Path(path).expanduser()
     if not expanded.exists():
-        print(f"⚠️  Skipping missing file referenced at {expanded}", file=sys.stderr)
+        logging_util.warning(f"Skipping missing file referenced at {expanded}")
         return None
     return expanded.read_text(encoding="utf-8")
 
@@ -244,7 +285,7 @@ def _copy_artifact(
     src: Path, dest_dir: Path, timestamp: str, reserved: Set[Path]
 ) -> Optional[Path]:
     if not src.exists():
-        print(f"⚠️  Artifact not found: {src}", file=sys.stderr)
+        logging_util.warning(f"Artifact not found: {src}")
         return None
 
     target = _unique_target_path(dest_dir, src, timestamp, reserved)
@@ -289,7 +330,7 @@ def _looks_like_absolute_path(value: str) -> bool:
         return False
     if value.startswith("~"):
         return True
-    if re.match(r"^[A-Za-z]:\\", value):
+    if re.match(r"^[A-Za-z]:\\\\", value):
         return True
     return Path(value).is_absolute()
 
@@ -494,6 +535,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip git commands for faster execution. Uses /tmp/evidence/local/<work>/ path.",
     )
     parser.add_argument(
+        "--pr-mode",
+        action="store_true",
+        help="Force PR diff mode (use origin/main as base ref for changed_files).",
+    )
+    parser.add_argument(
         "--clean-checksums",
         action="store_true",
         help="Remove existing .sha256 files from artifacts before packaging to prevent checksum layering.",
@@ -517,14 +563,15 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # Run git resolution (skip for speed if --skip-git)
     repo_name, branch, git_provenance = _resolve_repo_info(
-        skip_git=args.skip_git
+        skip_git=args.skip_git,
+        pr_mode=args.pr_mode,
     )
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     try:
         work_name = _sanitize_work_name(args.work_name)
     except ValueError as exc:
-        print(f"❌ Invalid work name: {exc}", file=sys.stderr)
+        logging_util.error(f"Invalid work name: {exc}")
         return 1
 
     base_dir = Path("/tmp") / repo_name / branch / work_name
@@ -562,19 +609,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     reserved_targets: Set[Path] = set()
     for artifact in args.artifacts:
         src_path = Path(artifact).expanduser().resolve()
-        # In clean mode, never mutate the source path. We'll clean the copied artifact.
-        if args.clean_checksums and src_path.suffix == ".sha256":
-            continue  # Skip copying standalone .sha256 files
-        
-        dest_path = _copy_artifact(src_path, artifacts_dir, timestamp, reserved_targets)
-        if dest_path:
-            if args.clean_checksums and dest_path.is_dir():
-                for sha_file in list(dest_path.rglob("*.sha256")):
+        # Clean existing checksums from source if --clean-checksums is set
+        if args.clean_checksums and src_path.exists():
+            if src_path.is_dir():
+                for sha_file in list(src_path.rglob("*.sha256")):
                     try:
                         sha_file.unlink()
                     except OSError:
-                        pass
-            
+                        pass  # Ignore if can't delete
+            elif src_path.suffix == ".sha256":
+                continue  # Skip .sha256 files entirely in clean mode
+        dest_path = _copy_artifact(src_path, artifacts_dir, timestamp, reserved_targets)
+        if dest_path:
             copied_artifacts.append(
                 {"source": str(src_path), "destination": str(dest_path)}
             )

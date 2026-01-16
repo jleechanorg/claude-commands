@@ -16,7 +16,6 @@ To install Claude Commands in Claude Code CLI, first register the marketplace:
 
 ```bash
 /plugin marketplace add jleechanorg/claude-commands
-# Note: If you have forked this repository, use your own username instead of jleechanorg
 ```
 
 Then browse available commands with `/plugin` and install:
@@ -58,11 +57,11 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 - **Infrastructure**: `/scaffold` - Repository setup and development environment
 - **Testing**: `/test`, `/tdd`, `/testuif` - Comprehensive testing workflows
 
-**43 Hooks** for Claude Code automation and workflow optimization
+**46 Hooks** for Claude Code automation and workflow optimization
 
 **19 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**34 Skills** providing shared knowledge references and capabilities
+**50 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 
@@ -220,10 +219,10 @@ See bottom of README for complete version history.
 ### Latest Release: v1.1.0 (2025-12-30)
 
 **Export Statistics**:
-- **197 Commands**: Complete workflow orchestration system
-- **43 Hooks**: Claude Code automation and workflow hooks
+- **201 Commands**: Complete workflow orchestration system
+- **46 Hooks**: Claude Code automation and workflow hooks
 - **19 Scripts**: Development and automation tools
-- **34 Skills**: Shared knowledge references
+- **50 Skills**: Shared knowledge references
 
 **Recent Changes**:
 - Script allowlist expansion (12 additional development scripts)

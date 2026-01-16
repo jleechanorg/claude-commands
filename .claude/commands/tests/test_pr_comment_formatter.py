@@ -8,12 +8,13 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest.mock import call, patch
 
 # Add scripts directory to path for pr_comment_formatter module
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'scripts'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "scripts"))
 
 # Add commands directory to path for commentreply module
-commands_dir = os.path.join(os.path.dirname(__file__), '..')
+commands_dir = os.path.join(os.path.dirname(__file__), "..")
 sys.path.insert(0, commands_dir)
 
 from pr_comment_formatter import (  # noqa: E402
@@ -24,6 +25,7 @@ from pr_comment_formatter import (  # noqa: E402
     TaskItem,
     UserComment,
 )
+import commentreply  # noqa: E402
 
 # Import commentreply validate_comment_data - handle missing gracefully in logic
 
@@ -356,7 +358,9 @@ class TestCommentValidationRegression(unittest.TestCase):
 
         # Add the correct path to commentreply module
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        commands_dir = os.path.dirname(script_dir)  # Go up one level from tests/ to commands/
+        commands_dir = os.path.dirname(
+            script_dir
+        )  # Go up one level from tests/ to commands/
         sys.path.insert(0, commands_dir)
 
         # Import the validation function we're testing - handle missing gracefully
@@ -372,7 +376,7 @@ class TestCommentValidationRegression(unittest.TestCase):
             "body": "Should we have this and the md file and the py file? How do all 3 work together?",
             "author": "jleechan2015",  # CommentFetch format
             "created_at": "2025-09-03T03:04:13Z",
-            "requires_response": True
+            "requires_response": True,
         }
 
         # 🔴 RED: This should PASS with the fix (before fix it would fail)
@@ -386,7 +390,7 @@ class TestCommentValidationRegression(unittest.TestCase):
             "body": "Test comment with user field",
             "user": {"login": "testuser"},  # Original expected format
             "created_at": "2025-09-03T03:04:13Z",
-            "requires_response": True
+            "requires_response": True,
         }
 
         result = validate_comment_data(comment_with_user_field)
@@ -398,7 +402,7 @@ class TestCommentValidationRegression(unittest.TestCase):
             "type": "inline",
             "body": "Test comment without author info",
             "created_at": "2025-09-03T03:04:13Z",
-            "requires_response": True
+            "requires_response": True,
             # No author or user field
         }
 
@@ -417,7 +421,9 @@ class TestCommentValidationRegression(unittest.TestCase):
 
         # Add the correct path to commentreply module
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        commands_dir = os.path.dirname(script_dir)  # Go up one level from tests/ to commands/
+        commands_dir = os.path.dirname(
+            script_dir
+        )  # Go up one level from tests/ to commands/
         sys.path.insert(0, commands_dir)
 
         # Test data structures
@@ -425,13 +431,13 @@ class TestCommentValidationRegression(unittest.TestCase):
             "id": 123456,
             "author": "testuser1",
             "body": "Test comment",
-            "user": None  # This is what commentfetch outputs
+            "user": None,  # This is what commentfetch outputs
         }
 
         comment_with_user = {
             "id": 123457,
             "user": {"login": "testuser2"},
-            "body": "Test comment"
+            "body": "Test comment",
             # No author field
         }
 
@@ -444,15 +450,80 @@ class TestCommentValidationRegression(unittest.TestCase):
             return comment.get("author", "unknown")
 
         author1 = extract_author(comment_with_author)
-        self.assertEqual(author1, "testuser1", "Should extract author from author field")
+        self.assertEqual(
+            author1, "testuser1", "Should extract author from author field"
+        )
 
         author2 = extract_author(comment_with_user)
-        self.assertEqual(author2, "testuser2", "Should extract author from user.login field")
+        self.assertEqual(
+            author2, "testuser2", "Should extract author from user.login field"
+        )
 
         # Test fallback to unknown
         empty_comment = {"id": 123458, "body": "test"}
         author3 = extract_author(empty_comment)
-        self.assertEqual(author3, "unknown", "Should fallback to unknown when no author info")
+        self.assertEqual(
+            author3, "unknown", "Should fallback to unknown when no author info"
+        )
+
+
+class TestDismissPendingReviews(unittest.TestCase):
+    """Tests for dismiss_pending_reviews behavior."""
+
+    def test_dismiss_pending_reviews_no_fetch(self):
+        """Return early if review fetch fails."""
+        with patch.object(
+            commentreply, "run_command", return_value=(False, "", "boom")
+        ) as mock_run:
+            commentreply.dismiss_pending_reviews("octo", "repo", "42", "octocat")
+
+        mock_run.assert_called_once()
+
+    def test_dismiss_pending_reviews_deletes_pending(self):
+        """Delete only pending reviews when found."""
+        reviews = [
+            {"id": 11, "state": "PENDING", "user": {"login": "octocat"}},
+            {"id": 12, "state": "APPROVED", "user": {"login": "octocat"}},
+            {"id": 13, "state": "PENDING", "user": {"login": "octocat"}},
+            {"id": 14, "state": "PENDING", "user": {"login": "other-user"}},
+        ]
+        reviews_output = "\n".join(json.dumps(review) for review in reviews)
+        side_effect = [
+            (True, reviews_output, ""),
+            (True, "", ""),
+            (True, "", ""),
+        ]
+        with patch.object(
+            commentreply, "run_command", side_effect=side_effect
+        ) as mock_run:
+            commentreply.dismiss_pending_reviews("octo", "repo", "42", "octocat")
+
+        self.assertEqual(mock_run.call_count, 3)
+        delete_calls = [
+            call(
+                [
+                    "gh",
+                    "api",
+                    "repos/octo/repo/pulls/42/reviews/11",
+                    "-X",
+                    "DELETE",
+                ],
+                description="delete pending review #11",
+                timeout=30,
+            ),
+            call(
+                [
+                    "gh",
+                    "api",
+                    "repos/octo/repo/pulls/42/reviews/13",
+                    "-X",
+                    "DELETE",
+                ],
+                description="delete pending review #13",
+                timeout=30,
+            ),
+        ]
+        mock_run.assert_has_calls(delete_calls, any_order=False)
 
 
 if __name__ == "__main__":
