@@ -463,15 +463,21 @@ done
         # Using a fixed path allows macOS to recognize it as the same app
         script_path = f"/tmp/pending_review_monitor_{pr_number}.sh"
         script_path_obj = Path(script_path)
-        
-        # Remove existing script if it exists (from previous run)
-        if script_path_obj.exists():
-            script_path_obj.unlink()
 
-        # Write script content
-        with script_path_obj.open("w", encoding="utf-8") as f:
+        # Use atomic file creation with O_EXCL to prevent TOCTOU race conditions
+        # This ensures no symlink attack can occur between check and open
+        def create_script_atomically() -> int:
+            """Create script file atomically, removing stale file if needed."""
+            try:
+                return os.open(script_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o700)
+            except FileExistsError:
+                os.unlink(script_path)
+                return os.open(script_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o700)
+
+        # Write script content using secure fd-based approach
+        script_fd = create_script_atomically()
+        with os.fdopen(script_fd, "w", encoding="utf-8") as f:
             f.write(monitor_script)
-        script_path_obj.chmod(0o700)
 
         env = {
             **os.environ,
