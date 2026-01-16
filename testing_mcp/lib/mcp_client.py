@@ -48,7 +48,7 @@ class MCPClient:
         self,
         base_url: str,
         *,
-        timeout_s: float = 60.0,
+        timeout_s: float = 600.0,  # Increased to 10 minutes for LLM processing
         capture_requests: bool = True,
     ) -> None:
         self._base_url = base_url.rstrip("/")

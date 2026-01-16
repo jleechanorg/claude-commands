@@ -14,6 +14,9 @@ analysis_report.txt
 inline_comments.json
 issue_comments.json
 reviews.json
+pr_inline_comments.json
+pr_issue_comments.json
+pr_reviews.json
 comments.json
 status_checks.json
 
