@@ -75,6 +75,38 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
         # Extract action_resolution and outcome_resolution for audit trail persistence.
         # Always include even if empty for Firestore consistency.
         action_resolution = get_action_resolution(sr)
+
+        # Think Mode compatibility: If action_resolution is empty but dice_rolls contains structured data,
+        # canonicalize it into action_resolution format.
+        # This handles Think Mode which currently writes to dice_rolls directly.
+        raw_rolls = structured_fields.get(constants.FIELD_DICE_ROLLS, [])
+        if not action_resolution and isinstance(raw_rolls, list) and raw_rolls and isinstance(raw_rolls[0], dict):
+            converted_rolls = []
+            for roll in raw_rolls:
+                # Map Think Mode fields to action_resolution schema
+                # roll -> notation, type -> purpose
+                if isinstance(roll, dict):
+                    converted_rolls.append({
+                        "notation": roll.get("roll"),
+                        "result": roll.get("result"),
+                        "dc": roll.get("dc"),
+                        "success": roll.get("success"),
+                        "purpose": roll.get("type"),
+                        # Preserve Think Mode specific fields
+                        "dc_category": roll.get("dc_category"),
+                        "dc_reasoning": roll.get("dc_reasoning"),
+                        "margin": roll.get("margin"),
+                        "outcome": roll.get("outcome")
+                    })
+            
+            if converted_rolls:
+                action_resolution = {
+                    "mechanics": {
+                        "rolls": converted_rolls,
+                        "type": "planning_check"
+                    }
+                }
+
         structured_fields["action_resolution"] = action_resolution  # Always include, even if {}
 
         outcome_resolution = get_outcome_resolution(sr)

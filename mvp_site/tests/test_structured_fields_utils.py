@@ -50,6 +50,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         self.mock_structured_response.debug_info = self.sample_structured_data[
             "debug_info"
         ]
+        self.mock_structured_response.directives = {}
 
     def test_extract_structured_fields_with_full_data(self):
         """Test extraction with complete structured response data."""
@@ -91,6 +92,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         mock_structured_response.dice_rolls = []
         mock_structured_response.resources = ""
         mock_structured_response.debug_info = {}
+        mock_structured_response.directives = {}
 
         mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
@@ -147,6 +149,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         mock_structured_response.dice_rolls = None
         mock_structured_response.resources = None
         mock_structured_response.debug_info = None
+        mock_structured_response.directives = None
 
         mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
@@ -160,6 +163,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         assert result[constants.FIELD_DICE_ROLLS] == []
         assert result[constants.FIELD_RESOURCES] == {}
         assert result[constants.FIELD_DEBUG_INFO] == {}
+        assert result[constants.FIELD_DIRECTIVES] == {}
 
     def test_extract_structured_fields_constants_mapping(self):
         """Test that function uses correct constants for field names."""
@@ -170,6 +174,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         mock_structured_response.dice_rolls = ["Test roll"]
         mock_structured_response.resources = "Test resources"
         mock_structured_response.debug_info = {"test": "data"}
+        mock_structured_response.directives = {}
 
         mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
@@ -217,6 +222,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         ]
         mock_structured_response.resources = "HP: 30/30, SP: 15/20"
         mock_structured_response.debug_info = complex_debug_info
+        mock_structured_response.directives = {}
 
         mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
@@ -266,6 +272,7 @@ Next Objective: Investigate the glowing altar"""
             "location": "temple_chamber",
             "trap_disarmed": True,
         }
+        mock_structured_response.directives = {}
 
         mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
@@ -303,6 +310,7 @@ Next Objective: Investigate the glowing altar"""
         mock_structured_response.debug_info = {}
         mock_structured_response.god_mode_response = ""
         mock_structured_response.state_updates = state_updates
+        mock_structured_response.directives = {}
 
         mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
@@ -331,6 +339,7 @@ Next Objective: Investigate the glowing altar"""
         mock_structured_response.debug_info = {}
         mock_structured_response.god_mode_response = ""
         mock_structured_response.state_updates = state_updates
+        mock_structured_response.directives = {}
 
         mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
@@ -383,6 +392,7 @@ Next Objective: Investigate the glowing altar"""
         mock_structured_response.god_mode_response = ""
         mock_structured_response.action_resolution = action_resolution_data
         mock_structured_response.outcome_resolution = {}
+        mock_structured_response.directives = {}
 
         mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
@@ -411,6 +421,7 @@ Next Objective: Investigate the glowing altar"""
         mock_structured_response.god_mode_response = ""
         mock_structured_response.action_resolution = {}  # Empty action_resolution
         mock_structured_response.outcome_resolution = {}
+        mock_structured_response.directives = {}
 
         mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
@@ -445,6 +456,7 @@ Next Objective: Investigate the glowing altar"""
         mock_structured_response.god_mode_response = ""
         mock_structured_response.action_resolution = action_resolution_data
         mock_structured_response.outcome_resolution = {}
+        mock_structured_response.directives = {}
 
         mock_gemini_response = Mock(spec=LLMResponse)
         mock_gemini_response.structured_response = mock_structured_response
@@ -455,3 +467,57 @@ Next Objective: Investigate the glowing altar"""
         assert len(result[constants.FIELD_DICE_ROLLS]) == 2
         assert "1d20+5 = 17 vs DC 18 - Failure (Attack)" in result[constants.FIELD_DICE_ROLLS]
         assert "1d8+3 = 8 (Damage)" in result[constants.FIELD_DICE_ROLLS]
+
+    def test_think_mode_dice_rolls_canonicalization(self):
+        """Test that Think Mode structured dice_rolls are converted to action_resolution."""
+        # Think Mode provides dice_rolls as a list of dicts, not strings
+        think_mode_rolls = [
+            {
+                "type": "Intelligence Check (Planning)",
+                "roll": "1d20+2",
+                "result": 10,
+                "dc": 12,
+                "dc_category": "Requires Some Thought",
+                "dc_reasoning": "Tactical assessment",
+                "success": False,
+                "margin": -2,
+                "outcome": "Failed by 2"
+            }
+        ]
+
+        mock_structured_response = Mock(spec=NarrativeResponse)
+        mock_structured_response.session_header = "Turn 1 (Thinking)"
+        mock_structured_response.planning_block = {}
+        mock_structured_response.dice_rolls = think_mode_rolls
+        mock_structured_response.dice_audit_events = []
+        mock_structured_response.resources = {}
+        mock_structured_response.debug_info = {}
+        mock_structured_response.god_mode_response = ""
+        mock_structured_response.action_resolution = {}  # Empty, so should use dice_rolls
+        mock_structured_response.outcome_resolution = {}
+        mock_structured_response.directives = {}
+
+        mock_gemini_response = Mock(spec=LLMResponse)
+        mock_gemini_response.structured_response = mock_structured_response
+
+        result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
+
+        # 1. Check that dice_rolls was converted to formatted string (via extract logic)
+        # Expected format: "1d20+2 = 10 vs DC 12 - Failure (Intelligence Check (Planning))"
+        assert len(result[constants.FIELD_DICE_ROLLS]) == 1
+        expected_str = "1d20+2 = 10 vs DC 12 - Failure (Intelligence Check (Planning))"
+        assert result[constants.FIELD_DICE_ROLLS][0] == expected_str
+
+        # 2. Check that action_resolution was populated
+        ar = result["action_resolution"]
+        assert ar["mechanics"]["type"] == "planning_check"
+        rolls = ar["mechanics"]["rolls"]
+        assert len(rolls) == 1
+        assert rolls[0]["notation"] == "1d20+2"
+        assert rolls[0]["result"] == 10
+        assert rolls[0]["dc"] == 12
+        assert rolls[0]["success"] is False
+        assert rolls[0]["purpose"] == "Intelligence Check (Planning)"
+        # Check preserved extra fields
+        assert rolls[0]["dc_category"] == "Requires Some Thought"
+        assert rolls[0]["outcome"] == "Failed by 2"
