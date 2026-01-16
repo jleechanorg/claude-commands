@@ -359,10 +359,10 @@ class JleechanorgPRMonitor:
                 self.logger.debug(f"👤 Discovered current GitHub user: {user}")
                 return user
         except Exception as e:
-            self.logger.warning(f"⚠️ Failed to discover GitHub user: {e}")
+            self.logger.debug(f"⚠️ Failed to discover GitHub user: {e}")
 
         # Fallback (should ideally not happen in real usage, but safe default)
-        self.logger.warning("⚠️ Could not resolve automation username, defaulting to 'unknown'")
+        self.logger.info("ℹ️ Could not resolve automation username, defaulting to 'unknown'")
         return "unknown"
 
     def _record_processed_pr(self, repo_name: str, branch_name: str, pr_number: int, commit_sha: str) -> None:
@@ -1898,6 +1898,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         # If PR has issues, reprocess even if commit was already processed
         is_conflicting = False
         is_failing = False
+        status_unknown = False
 
         try:
             # Fetch mergeable status
@@ -1913,26 +1914,35 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             # Check for failing checks
             is_failing = has_failing_checks(repo_full, pr_number)
         except Exception as e:
-            self.logger.warning(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
-            # Continue with skip check if status check fails
+            # Treat status as unknown; do NOT assume the PR is clean.
+            self.logger.debug(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
+            status_unknown = True
 
-        # FIRST check if there are any issues to fix (conflicts or failing checks)
-        # If PR is clean (no conflicts, no failing checks), skip fixpr entirely
+        # FIRST: If status is definitively clean (no conflicts/failing) → skip.
+        # If status is unknown due to API failure, DO NOT treat as clean — continue.
         if not (is_conflicting or is_failing):
-            self.logger.info(
-                "⏭️ Skipping PR #%s - no conflicts or failing checks to fix",
-                pr_number,
-            )
-            return "skipped"
+            if not status_unknown:
+                self.logger.info("⏭️ Skipping PR #%s - no conflicts or failing checks to fix", pr_number)
+                return "skipped"
+            else:
+                self.logger.info("ℹ️ PR #%s status unknown (API failure) — proceeding conservatively", pr_number)
 
-        # PR has issues - check if we already processed this commit
+        # If issues are detected, allow reprocessing even if the commit was already processed.
+        # If status is unknown (no issues detected), fall back to history gating to avoid duplicates.
         if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
-            self.logger.info(
-                "⏭️ Skipping PR #%s - already processed commit %s for fixpr",
-                pr_number,
-                head_sha[:8],
-            )
-            return "skipped"
+            if is_conflicting or is_failing:
+                self.logger.info(
+                    "🔁 Reprocessing PR #%s - commit %s already processed but issues persist",
+                    pr_number,
+                    head_sha[:8],
+                )
+            else:
+                self.logger.info(
+                    "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
+                    pr_number,
+                    head_sha[:8],
+                )
+                return "skipped"
 
         # Log that we're processing due to issues
         self.logger.info(

@@ -350,5 +350,89 @@ class TestFixprSkipsCleanPRs(unittest.TestCase):
         mock_dispatch_agent.assert_called_once()
 
 
+class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
+    def setUp(self):
+        from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
+        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager'):
+            self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
+            self.monitor.safety_manager.fixpr_limit = 10
+            self.monitor.logger = MagicMock()
+
+    def _base_pr(self):
+        return {
+            "number": 123,
+            "title": "Test PR",
+            "headRefName": "feature/test",
+            "repository": "test/repo",
+            "repositoryFullName": "test/repo",
+            "headRefOid": "abc12345",
+        }
+
+    def test_fixpr_status_unknown_processes_when_new_commit(self):
+        pr = self._base_pr()
+        
+        # Patch dependencies
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", side_effect=RuntimeError("boom")):
+            # gh pr view failure
+            from types import SimpleNamespace
+            mock_subprocess_result = SimpleNamespace(returncode=1, stdout="", stderr="fail")
+            with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_subprocess_result):
+                # History says NOT processed → should proceed
+                with patch.object(self.monitor, "_should_skip_pr", return_value=False):
+                    with patch.object(self.monitor, "_get_pr_comment_state", return_value=("abc12345", [])):
+                        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"):
+                            with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"):
+                                with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher"):
+                                    with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True) as mock_dispatch:
+                                        with patch.object(self.monitor, "_post_fixpr_queued", return_value=True):
+                                            with patch.object(self.monitor, "_record_processed_pr"):
+                                                with patch.object(self.monitor, "_cleanup_pending_reviews"):
+                                                    with patch.object(self.monitor, "_count_workflow_comments", return_value=0):
+                                                        res = self.monitor._process_pr_fixpr("test/repo", 123, pr, agent_cli="claude", model="sonnet")
+                                                        
+        self.assertEqual(res, "posted")
+        mock_dispatch.assert_called_once()
+
+    def test_fixpr_status_unknown_skips_when_already_processed(self):
+        pr = self._base_pr()
+        
+        # Unknown status path again (e.g. failing checks throws exception)
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", side_effect=Exception("API Fail")):
+            from types import SimpleNamespace
+            # gh pr view failure
+            mock_subprocess_result = SimpleNamespace(returncode=1, stdout="", stderr="fail")
+            with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_subprocess_result):
+                with patch.object(self.monitor, "_get_pr_comment_state", return_value=("abc12345", [])):
+                    # History says processed → should skip because status is unknown (cannot confirm issues exist)
+                    with patch.object(self.monitor, "_should_skip_pr", return_value=True):
+                        with patch.object(self.monitor, "_count_workflow_comments", return_value=0):
+                             res = self.monitor._process_pr_fixpr("test/repo", 123, pr, agent_cli="claude", model=None)
+        
+        self.assertEqual(res, "skipped")
+
+    def test_fixpr_reprocess_when_issues_persist_even_if_processed(self):
+        pr = self._base_pr()
+        
+        # Issues present (e.g., failing checks)
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=True):
+            from types import SimpleNamespace
+            mock_subprocess_result = SimpleNamespace(returncode=0, stdout='{"mergeable":"MERGEABLE"}', stderr="")
+            with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_subprocess_result):
+                # Even if history says processed, we should reprocess because has_failing_checks is True
+                with patch.object(self.monitor, "_should_skip_pr", return_value=True):
+                    with patch.object(self.monitor, "_get_pr_comment_state", return_value=("abc12345", [])):
+                        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"):
+                            with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"):
+                                with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher"):
+                                    with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True):
+                                        with patch.object(self.monitor, "_post_fixpr_queued", return_value=True):
+                                            with patch.object(self.monitor, "_record_processed_pr"):
+                                                with patch.object(self.monitor, "_cleanup_pending_reviews"):
+                                                    with patch.object(self.monitor, "_count_workflow_comments", return_value=0):
+                                                        res = self.monitor._process_pr_fixpr("test/repo", 123, pr, agent_cli="claude", model=None)
+        
+        self.assertEqual(res, "posted")
+
+
 if __name__ == "__main__":
     unittest.main()

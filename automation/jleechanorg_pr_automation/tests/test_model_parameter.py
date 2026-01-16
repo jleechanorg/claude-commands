@@ -208,7 +208,9 @@ class TestModelParameter(unittest.TestCase):
             "headRefOid": "abc123",
         }
 
-        with patch.object(monitor, "_get_pr_comment_state", return_value=(None, [])), \
+        # Mock has_failing_checks to ensure PR is not skipped as "clean"
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=True), \
+             patch.object(monitor, "_get_pr_comment_state", return_value=(None, [])), \
              patch.object(monitor, "_should_skip_pr", return_value=False), \
              patch.object(monitor, "_post_fixpr_queued", return_value=True), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"), \
@@ -226,8 +228,8 @@ class TestModelParameter(unittest.TestCase):
                 model="sonnet",
             )
 
-        self.assertEqual(result, "posted")
-        self.assertEqual(mock_dispatch.call_args[1].get("model"), "sonnet")
+            self.assertEqual(result, "posted")
+            self.assertEqual(mock_dispatch.call_args[1].get("model"), "sonnet")
 
 
     def test_normalize_model_none_returns_none(self):
