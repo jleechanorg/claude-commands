@@ -318,20 +318,50 @@ def query_recent_prs(cutoff_hours: int) -> list[dict]:
 
 
 def has_failing_checks(repo_full: str, pr_number: int) -> bool:
-    """Return True if PR has any failing checks."""
+    """Return True if PR has any failing checks. Uses Python requests instead of gh CLI to avoid bash prompts."""
     try:
-        # Use statusCheckRollup from pr view for authoritative check status
-        # This includes conclusion field which indicates final result
-        result = run_cmd(
-            ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "statusCheckRollup"],
-            check=False,
-            timeout=API_TIMEOUT,
-        )
-        if result.returncode != 0:
-            log(f"Failed to fetch PR status for {repo_full}#{pr_number}: {result.stderr.strip()}")
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
+            log(f"⚠️ No GitHub token available for checking PR checks: {repo_full}#{pr_number}")
             return False
-        pr_data = json.loads(result.stdout or "{}")
-        checks = pr_data.get("statusCheckRollup", [])
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+
+        # Fetch PR data to get head SHA
+        pr_url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}"
+        try:
+            pr_response = requests.get(pr_url, headers=headers, timeout=API_TIMEOUT)
+            pr_response.raise_for_status()
+            pr_data = pr_response.json()
+            head_sha = pr_data.get("head", {}).get("sha")
+            if not head_sha:
+                log(f"⚠️ Could not get head SHA for {repo_full}#{pr_number}")
+                return False
+        except requests.exceptions.RequestException as e:
+            log(f"Failed to fetch PR data for {repo_full}#{pr_number}: {e}")
+            return False
+
+        # Fetch check runs for the head commit
+        checks_url = f"https://api.github.com/repos/{repo_full}/commits/{head_sha}/check-runs"
+        try:
+            checks_response = requests.get(checks_url, headers=headers, timeout=API_TIMEOUT, params={"per_page": 100})
+            checks_response.raise_for_status()
+            checks_data = checks_response.json()
+            checks = checks_data.get("check_runs", [])
+        except requests.exceptions.RequestException:
+            # Fallback: try statuses endpoint
+            statuses_url = f"https://api.github.com/repos/{repo_full}/commits/{head_sha}/statuses"
+            try:
+                statuses_response = requests.get(statuses_url, headers=headers, timeout=API_TIMEOUT)
+                statuses_response.raise_for_status()
+                checks = statuses_response.json()
+            except requests.exceptions.RequestException:
+                checks = []
+
         if not checks:
             return False
         
@@ -340,8 +370,14 @@ def has_failing_checks(repo_full: str, pr_number: int) -> bool:
         failing_conclusions = {"FAILURE", "FAILED", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"}
         failing_states = {"FAILED", "FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"}
         for check in checks:
+            # Check-runs API format: conclusion field
             conclusion = (check.get("conclusion") or "").upper()
             state = (check.get("state") or "").upper()
+            # Statuses API format: state field (lowercase)
+            if not conclusion and not state:
+                status_state = (check.get("state") or "").upper()
+                if status_state in failing_states:
+                    return True
             # Conclusion is authoritative - if check completed with failure, it's failing
             if conclusion in failing_conclusions:
                 return True

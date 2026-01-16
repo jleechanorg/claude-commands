@@ -1003,17 +1003,51 @@ class JleechanorgPRMonitor:
 
 
     def _are_tests_passing(self, repository: str, pr_number: int) -> bool:
-        """Check if tests are passing on the PR"""
+        """Check if tests are passing on the PR using Python requests (avoids bash prompts)"""
         try:
-            # Get PR status checks
-            result = AutomationUtils.execute_subprocess_with_timeout([
-                "gh", "pr", "view", str(pr_number),
-                "--repo", repository,
-                "--json", "statusCheckRollup"
-            ], timeout=30)
+            # Use Python requests instead of gh CLI to avoid bash prompts
+            token = get_github_token()
+            if not token:
+                self.logger.warning(f"⚠️ No GitHub token available for checking test status: {repository}#{pr_number}")
+                return False
 
-            pr_status = json.loads(result.stdout or "{}")
-            status_checks = pr_status.get("statusCheckRollup", [])
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github.v3+json",
+            }
+
+            # Fetch PR status checks using GitHub REST API
+            url = f"https://api.github.com/repos/{repository}/pulls/{pr_number}"
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+                response.raise_for_status()
+                pr_status = response.json()
+            except requests.exceptions.RequestException as e:
+                self.logger.warning(f"⚠️ Failed to fetch PR status for {repository}#{pr_number}: {e}")
+                return False
+
+            # Extract status checks from PR data
+            # GitHub REST API doesn't include statusCheckRollup directly, need to fetch checks separately
+            checks_url = f"https://api.github.com/repos/{repository}/commits/{pr_status.get('head', {}).get('sha', '')}/check-runs"
+            try:
+                checks_response = requests.get(checks_url, headers=headers, timeout=30, params={"per_page": 100})
+                checks_response.raise_for_status()
+                checks_data = checks_response.json()
+                status_checks = checks_data.get("check_runs", [])
+            except requests.exceptions.RequestException:
+                # Fallback: try statuses endpoint
+                statuses_url = f"https://api.github.com/repos/{repository}/commits/{pr_status.get('head', {}).get('sha', '')}/statuses"
+                try:
+                    statuses_response = requests.get(statuses_url, headers=headers, timeout=30)
+                    statuses_response.raise_for_status()
+                    status_checks = statuses_response.json()
+                except requests.exceptions.RequestException:
+                    status_checks = []
+
+            # If no status checks are configured, assume tests are failing
+            if not status_checks:
+                self.logger.debug(f"⚠️ No status checks configured for PR #{pr_number}, assuming failing")
+                return False
 
             # If no status checks are configured, assume tests are failing
             if not status_checks:
@@ -1021,9 +1055,26 @@ class JleechanorgPRMonitor:
                 return False
 
             # Check if all status checks are successful
+            # Handle both check_runs format (check-runs API) and statuses format (statuses API)
             for check in status_checks:
-                if check.get("state") not in ["SUCCESS", "NEUTRAL"]:
-                    self.logger.debug(f"❌ Status check failed: {check.get('name')} - {check.get('state')}")
+                # Check-runs API format: conclusion field
+                conclusion = check.get("conclusion")
+                state = check.get("state")
+                # Statuses API format: state field
+                status_state = check.get("state") if "status" not in check else None
+                
+                # Determine if check is passing
+                is_passing = False
+                if conclusion:
+                    is_passing = conclusion in ["SUCCESS", "NEUTRAL", None]  # None means in progress
+                elif state:
+                    is_passing = state in ["SUCCESS", "NEUTRAL"]
+                elif status_state:
+                    is_passing = status_state in ["success", "neutral"]
+                
+                if not is_passing:
+                    check_name = check.get("name") or check.get("context") or "unknown"
+                    self.logger.debug(f"❌ Status check failed: {check_name} - conclusion={conclusion}, state={state}")
                     return False
 
             self.logger.debug(f"✅ All {len(status_checks)} status checks passing for PR #{pr_number}")
