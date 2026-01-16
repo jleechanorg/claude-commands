@@ -11,6 +11,7 @@ All CLIs use consistent validation logic with CLI-specific adaptations.
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 import shutil
@@ -18,6 +19,8 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 # Test prompt used for CLI validation (simple math question to verify CLI can execute and write output)
 CLI_VALIDATION_TEST_PROMPT = "What is 2+2? Write only the number."
@@ -326,8 +329,7 @@ def validate_cli_execution(
                 shutil.rmtree(validation_dir)
             except Exception as cleanup_error:
                 # Log but don't fail validation
-                import logging
-                logging.debug(f"Cleanup error during CLI validation for {cli_name}: {cleanup_error}")
+                logger.debug(f"Cleanup error during CLI validation for {cli_name}: {cleanup_error}")
 
 
 def validate_cli_two_phase(

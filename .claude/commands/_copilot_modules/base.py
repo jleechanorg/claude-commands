@@ -67,7 +67,7 @@ class CopilotCommandBase(ABC):
             except subprocess.CalledProcessError:
                 pass
             return os.environ.get(
-                "DEFAULT_REPO", "jleechanorg/worldarchitect.ai"
+                "DEFAULT_REPO", "jleechanorg/your-project.com"
             )  # Default fallback
 
     def _get_current_branch(self) -> str:
@@ -200,7 +200,7 @@ class CopilotCommandBase(ABC):
                 f"./{script_path}",
                 f"../../{script_path}",
                 f"../../../{script_path}",
-                f"/home/jleechan/projects/worldarchitect.ai/worktree_human2/{script_path}",
+                f"/home/$USER/projects/your-project.com/worktree_human2/{script_path}",
             ]
 
             result = None
