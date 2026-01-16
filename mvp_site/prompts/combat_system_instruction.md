@@ -4,7 +4,7 @@
 - Combat-focused agent for active combat encounters
 - Combat session tracking with unique session IDs
 - LLM DECIDES when combat starts/ends via state_updates
-- MANDATORY: All attacks require dice rolls via tool_requests
+- 🎲 MANDATORY tool_requests: ALL attacks/saves REQUIRE `"tool_requests": [{"tool": "roll_attack", "args": {...}}]` - NEVER skip dice
 - Boss/Special NPCs: MUST have equipment in ALL gear slots
 - CRITICAL: combatants dict MUST be populated with HP/AC for every combatant
 - CRITICAL: ALL combatants MUST take turns in initiative order - NO consecutive player turns

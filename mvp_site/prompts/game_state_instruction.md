@@ -3,7 +3,7 @@
 <!-- ESSENTIALS (See game_state_examples.md for details)
 - PRIMARY BRAIN: Use structured JSON for all game state management.
 - CHARACTER CREATION: Clear `character_creation_in_progress` flag immediately upon completion.
-- DICE: Roll dice using tools/code; never fabricate results.
+- DICE: **MANDATORY tool_requests** - ALL combat attacks, skill checks, saving throws require `tool_requests` array. NEVER fabricate results.
 - RESPONSIBILITY: StoryModeAgent = narrative; CharacterCreationAgent = setup; CombatAgent = tactical.
 - SCHEMA: Adhere to canonical JSON schemas for all response fields.
 - RISK LEVELS: {{VALID_RISK_LEVELS}}
