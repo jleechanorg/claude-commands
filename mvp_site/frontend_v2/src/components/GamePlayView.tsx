@@ -250,29 +250,37 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
         return
       }
 
-      const campaignData = await apiService.getCampaign(campaignId)
-      if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
-        setStory(convertBackendStoryToEntries(campaignData.story))
-      } else {
-        // Clean up optimistic entry and restore input on empty data (consistent with error handling)
-        // Log for investigation: API succeeded but returned empty story data
-        console.warn(
-          `[GamePlayView] API succeeded but returned empty story data. campaignId=${campaignId}, inputLength=${inputText.length}`
-        )
-        setPlayerInput(inputText)
-        setStory(prev => prev.filter(entry => entry.id !== optimisticId))
-        showErrorToast('Story update returned empty data. Please reload and try again.', { context: 'Game' })
+      // sendInteraction succeeded - action is saved server-side
+      // Wrap getCampaign in its own try-catch to handle reload failures separately
+      try {
+        const campaignData = await apiService.getCampaign(campaignId)
+        if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
+          setStory(convertBackendStoryToEntries(campaignData.story))
+        } else {
+          // Story reload returned empty - action was saved but can't display
+          // DON'T restore input (would cause duplicate) - just show warning
+          console.warn(
+            `[GamePlayView] Action saved but story reload returned empty. campaignId=${campaignId}`
+          )
+          showErrorToast('Action saved. Please refresh to see the full story.', { context: 'Game' })
+        }
+      } catch (reloadError) {
+        // getCampaign failed but sendInteraction succeeded
+        // DON'T restore input - that would cause duplicate submissions
+        // DON'T remove optimistic entry - action was saved, entry is valid representation
+        console.warn('Story reload failed after successful action:', reloadError)
+        showErrorToast('Action saved. Please refresh to see the AI response.', { context: 'Game' })
       }
     } catch (error) {
-      console.error('Failed to get AI response:', error)
+      // sendInteraction failed - safe to restore input and remove optimistic entry
+      console.error('Failed to send action:', error)
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while processing your action.'
       showErrorToast(errorMessage, { context: 'Game' })
       setPlayerInput(inputText)
       setStory(prev => prev.filter(entry => entry.id !== optimisticId))
-      // On error, reload story to ensure consistency (but only if we have valid data)
+      // Try to reload story to ensure consistency
       try {
         const campaignData = await apiService.getCampaign(campaignId)
-        // CRITICAL: Only update story if we have non-empty data to prevent clearing user's story
         if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
           setStory(convertBackendStoryToEntries(campaignData.story))
         }
