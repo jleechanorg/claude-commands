@@ -254,7 +254,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - Proof directories in `/tmp` should be retained for at least 7 days for verification
 - **Cleanup Safety**: Always run with `--dry-run` / `-print` first to preview what will be deleted
   - Example: `find /tmp -name "*_clonefix_*" -type d -mtime +30 -print` (preview only)
-  - After confirming, run the destructive command: `find /tmp -name "*_clonefix_*" -type d -mtime +30 -exec rm -rf {} \;`
+  - After confirming, run the destructive command: `find /tmp -name "*_clonefix_*" -type d -mtime +30 -exec rm -rf {} \\;`
   - Alternative: Use `-delete` instead of `-exec rm` for atomic operation
 - Note: `/tmp` is typically world-readable; avoid storing sensitive credentials in proof artifacts
 

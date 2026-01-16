@@ -59,29 +59,32 @@ class TestLLMResponseValidation(unittest.TestCase):
         assert isinstance(structured, NarrativeResponse)
         assert structured.narrative == "The wizard enters the room cautiously."
 
-    def test_invalid_json_recovery(self):
-        """Test that malformed JSON triggers proper error handling."""
-        # Test completely malformed JSON
+    def test_invalid_json_returns_error_response(self):
+        """Test that malformed JSON returns error response (no recovery per PR #3458)."""
+        # Test completely malformed JSON - recovery was intentionally removed
         malformed_json = (
             '{"narrative": "The story begins...", "entities_mentioned": ["hero"'
         )
 
         parsed_text, structured = parse_structured_response(malformed_json)
 
-        # Should recover partial data or fall back
+        # Should return error response (no partial recovery per PR #3458)
         assert isinstance(structured, NarrativeResponse)
-        # The robust parser should recover what it can
-        assert "story" in parsed_text.lower()
+        # Returns error message, not recovered content
+        assert "Invalid JSON response" in parsed_text or "error" in parsed_text.lower()
 
         # Test JSON with syntax errors
         syntax_error_json = '{"narrative": "Test", "entities_mentioned": ["a", "b",], "location": "here"}'
 
         parsed_text, structured = parse_structured_response(syntax_error_json)
         assert isinstance(structured, NarrativeResponse)
+        # Should return error response for syntax errors too
+        assert "Invalid JSON response" in parsed_text or "error" in parsed_text.lower()
 
-    def test_partial_json_handling(self):
-        """Test handling of truncated JSON responses."""
+    def test_truncated_json_returns_error_response(self):
+        """Test that truncated JSON returns error response (no recovery per PR #3458)."""
         # Simulate truncated response (common with token limits)
+        # Per PR #3458, truncated JSON no longer attempts partial recovery
         truncated_json = """{
             "narrative": "The adventurer walks through the ancient forest, noticing strange markings on the trees. As they examine the symbols more closely, they realize these are warnings about",
             "entities_mentioned": ["adventurer", "forest", "trees", "symbols"],
@@ -90,13 +93,10 @@ class TestLLMResponseValidation(unittest.TestCase):
 
         parsed_text, structured = parse_structured_response(truncated_json)
 
-        # Should recover partial narrative
+        # Should return error response (no partial recovery per PR #3458)
         assert isinstance(structured, NarrativeResponse)
-        assert "adventurer walks through" in parsed_text
-        assert "ancient forest" in parsed_text
-        # Entities should be recovered if possible
-        if structured.entities_mentioned:
-            assert "adventurer" in structured.entities_mentioned
+        # Returns error message, not recovered content
+        assert "Invalid JSON response" in parsed_text or "error" in parsed_text.lower()
 
     def test_dice_audit_events_parsing(self):
         """dice_audit_events should parse as list[dict] and ignore invalid items."""

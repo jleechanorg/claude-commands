@@ -730,9 +730,7 @@ def create_app() -> Flask:
 
     # Check for repo-specific service account credentials
     worldai_creds_path = os.getenv("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS")
-    if worldai_creds_path:
-        # Expand ~ to full path
-        worldai_creds_path = os.path.expanduser(worldai_creds_path)
+    worldai_creds_path = os.path.expanduser(worldai_creds_path) if worldai_creds_path else None
 
     try:
         firebase_admin.get_app()
@@ -741,12 +739,27 @@ def create_app() -> Flask:
             logging_util.info(
                 f"Initializing Firebase with projectId={firebase_project_id}"
             )
-        if worldai_creds_path and os.path.exists(worldai_creds_path):
-            logging_util.info(f"Using WORLDAI credentials from {worldai_creds_path}")
-            firebase_admin.initialize_app(
-                credentials.Certificate(worldai_creds_path), firebase_options or None
+
+        # Import the service account loader
+        from mvp_site.service_account_loader import get_service_account_credentials
+
+        # Try loading credentials (file first, then env vars fallback)
+        try:
+            creds_dict = get_service_account_credentials(
+                file_path=worldai_creds_path,
+                fallback_to_env=True,
+                require_env_vars=False
             )
-        else:
+            logging_util.info("Successfully loaded service account credentials")
+            firebase_admin.initialize_app(
+                credentials.Certificate(creds_dict), firebase_options or None
+            )
+        except Exception as creds_error:
+            # Fallback to default credentials (for GCP environments)
+            logging_util.warning(
+                f"Failed to load explicit credentials: {creds_error}. "
+                "Attempting default application credentials."
+            )
             firebase_admin.initialize_app(
                 credentials.ApplicationDefault(), firebase_options or None
             )

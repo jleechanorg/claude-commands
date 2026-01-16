@@ -1,15 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { formatDiceRoll, DiceRoll } from '../utils/diceUtils'
+import { DiceRoll } from '../utils/diceUtils'
 import { DiceRollDisplay } from './DiceRollDisplay'
 import { Textarea } from './ui/textarea'
 import { ScrollArea } from './ui/scroll-area'
 import { apiService } from '../services/api.service'
+import { createSystemWarningEntries } from '../utils/systemWarnings'
+import { showErrorToast } from '../utils/errorHandling'
+import type { StoryEntry as BackendStoryEntry } from '../services/api.types'
 import {
   ArrowLeft,
   Send,
-  User,
   Crown,
   Settings,
   RefreshCw,
@@ -17,10 +19,7 @@ import {
   Share,
   Volume2,
   VolumeX,
-  Sparkles,
-  Heart,
-  Shield,
-  Swords
+  Sparkles
 } from 'lucide-react'
 
 
@@ -30,7 +29,7 @@ interface GamePlayViewProps {
   campaignId?: string
 }
 
-interface StoryEntry {
+interface GameStoryEntry {
   id: string
   type: 'narration' | 'action' | 'dialogue' | 'system' | 'choices'
   content: string
@@ -42,21 +41,72 @@ interface StoryEntry {
   narrative?: string
 }
 
+interface BackendStoryEntryWithSequence extends BackendStoryEntry {
+  sequence_id?: number
+}
+
+/**
+ * Convert backend story entries to frontend StoryEntry format.
+ * Centralized to ensure consistent type determination across all reload paths.
+ * Also extracts system_warnings from story entries and creates warning entries.
+ */
+function convertBackendStoryToEntries(
+  backendStory: BackendStoryEntryWithSequence[]
+): GameStoryEntry[] {
+  const entries: GameStoryEntry[] = []
+
+  for (const [index, entry] of backendStory.entries()) {
+    const entryId = entry.sequence_id ?? entry.user_scene_number ?? index
+
+    // Add the main story entry
+    entries.push({
+      id: `story-${entryId}`,
+      // Consistent type determination: god mode = narration, user actor = action, others = narration
+      type: entry.mode === 'god'
+        ? 'narration'
+        : (entry.actor === 'user' ? 'action' : 'narration') as 'narration' | 'action',
+      // Prioritize god_mode_response for god mode entries, then narrative, then text
+      content: entry.god_mode_response || entry.narrative || entry.text || '',
+      timestamp: entry.timestamp || new Date().toISOString(),
+      author: entry.actor === 'user'
+        ? 'player'
+        : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system',
+      // Preserve dice_rolls and other structured fields
+      dice_rolls: entry.dice_rolls
+    })
+
+    // Extract system_warnings from AI responses and create warning entries
+    if (entry.system_warnings && Array.isArray(entry.system_warnings) && entry.system_warnings.length > 0) {
+      const warningEntries = createSystemWarningEntries(entry.system_warnings)
+      // Use entry-specific ID to avoid duplicates on reload
+      for (const warningEntry of warningEntries) {
+        entries.push({
+          ...warningEntry,
+          id: `warnings-${entryId}`
+        })
+      }
+    }
+  }
+
+  return entries
+}
+
 export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayViewProps) {
   console.log('🎯 GAMEPLAYVIEW received campaignTitle:', campaignTitle)
   console.log('🎯 GAMEPLAYVIEW received campaignId:', campaignId)
 
-  const [story, setStory] = useState<StoryEntry[]>([])
+  const [story, setStory] = useState<GameStoryEntry[]>([])
 
   const [playerInput, setPlayerInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
-  const [mode, setMode] = useState<'god'>('god')
+  const mode: 'god' = 'god'
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const initialStoryCreatedRef = useRef(false)
+  const submitInFlightRef = useRef(false)
 
   // Load existing campaign data when component mounts (like V1 does)
   useEffect(() => {
@@ -81,18 +131,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
           if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
             console.log('🎯 GAMEPLAYVIEW found existing story entries:', campaignData.story.length)
 
-            const convertedStory = campaignData.story.map((entry: any, index: number) => ({
-              id: `story-${index}`,
-              type: entry.mode === 'god' ? 'narration' : 'action' as 'narration' | 'action',
-              // Prioritize god_mode_response for god mode entries, then narrative, then text
-              content: entry.god_mode_response || entry.narrative || entry.text || '',
-              timestamp: entry.timestamp || new Date().toISOString(),
-              author: entry.actor === 'user' ? 'player' : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system',
-              // Preserve dice_rolls and other structured fields
-              dice_rolls: entry.dice_rolls
-            }))
-
-            setStory(convertedStory)
+            setStory(convertBackendStoryToEntries(campaignData.story))
             setIsInitializing(false)
             return // Exit early if we successfully loaded existing story
           }
@@ -104,7 +143,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
         console.log('🎯 GAMEPLAYVIEW creating initial content for new campaign')
         const welcomeMessage = `Welcome to ${campaignTitle}! Your adventure begins now...`
 
-        const initialStory: StoryEntry = {
+        const initialStory: GameStoryEntry = {
           id: '1',
           type: 'system',
           content: welcomeMessage,
@@ -121,7 +160,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
 
         if (response.success && (response.god_mode_response || response.narrative || response.response)) {
           const content = response.god_mode_response || response.narrative || response.response || ''
-          const aiStory: StoryEntry = {
+          const aiStory: GameStoryEntry = {
             id: `init-${Date.now()}`,
             type: 'narration',
             content: content,
@@ -130,12 +169,13 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
             dice_rolls: response.dice_rolls
           }
 
-          setStory(prev => [...prev, aiStory])
+          const warningEntries = createSystemWarningEntries(response.system_warnings)
+          setStory(prev => [...prev, aiStory, ...warningEntries])
         }
       } catch (error) {
         console.error('Failed to load campaign or generate initial content:', error)
         // Fall back to a generic message without hardcoded character names
-        const fallbackStory: StoryEntry = {
+        const fallbackStory: GameStoryEntry = {
           id: `fallback-${Date.now()}`,
           type: 'narration',
           content: 'Your adventure is about to begin. The world awaits your first move...',
@@ -161,65 +201,95 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
   }, [story])
 
   const handleSubmit = async () => {
-    if (!playerInput.trim() || isLoading) return
+    const trimmedInput = playerInput.trim()
+    if (!trimmedInput || isLoading || submitInFlightRef.current) return
+    if (!campaignId) {
+      showErrorToast('No campaign selected. Please select a campaign first.', { context: 'Game' })
+      return
+    }
+    submitInFlightRef.current = true
 
-    const userAction: StoryEntry = {
-      id: Date.now().toString(),
+    // Store input before clearing
+    const inputText = trimmedInput
+
+    // Optimistically render the user's action immediately for responsiveness.
+    // Canonical story still comes from Firestore reload after the request completes.
+    const optimisticId = `local-user-${Date.now()}`
+    const optimisticUserAction: GameStoryEntry = {
+      id: optimisticId,
       type: 'action',
-      content: playerInput,
+      content: inputText,
       timestamp: new Date().toISOString(),
       author: 'player'
     }
+    setStory(prev => [...prev, optimisticUserAction])
 
-    setStory(prev => [...prev, userAction])
     setPlayerInput('')
     setIsLoading(true)
 
     // Generate real AI response
     try {
-      const response = await apiService.sendInteraction(campaignId || '', {
-        input: playerInput,
+      const response = await apiService.sendInteraction(campaignId, {
+        input: inputText,
         mode: mode
       })
 
-      if (response.success && (response.god_mode_response || response.narrative || response.response)) {
-        const content = response.god_mode_response || response.narrative || response.response || 'The AI ponders your action...'
-        const aiResponse: StoryEntry = {
-          id: (Date.now() + 1).toString(),
-          type: 'narration',
-          content: content,
-          timestamp: new Date().toISOString(),
-          author: 'ai',
-          dice_rolls: response.dice_rolls
+      if (!response.success) {
+        const errorMessage = response.error || 'Failed to process your action. Please try again.'
+        showErrorToast(errorMessage, { context: 'Game' })
+        setPlayerInput(inputText)
+        setStory(prev => prev.filter(entry => entry.id !== optimisticId))
+        try {
+          const campaignData = await apiService.getCampaign(campaignId)
+          if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
+            setStory(convertBackendStoryToEntries(campaignData.story))
+          }
+        } catch (reloadError) {
+          console.warn('Failed to reload story after unsuccessful response:', reloadError)
         }
+        return
+      }
 
-        setStory(prev => [...prev, aiResponse])
-      } else {
-        // Fallback response
-        const aiResponse: StoryEntry = {
-          id: (Date.now() + 1).toString(),
-          type: 'narration',
-          content: 'Your action ripples through the world, creating new possibilities...',
-          timestamp: new Date().toISOString(),
-          author: 'ai'
+      // sendInteraction succeeded - action is saved server-side
+      // Wrap getCampaign in its own try-catch to handle reload failures separately
+      try {
+        const campaignData = await apiService.getCampaign(campaignId)
+        if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
+          setStory(convertBackendStoryToEntries(campaignData.story))
+        } else {
+          // Story reload returned empty - action was saved but can't display
+          // DON'T restore input (would cause duplicate) - just show warning
+          console.warn(
+            `[GamePlayView] Action saved but story reload returned empty. campaignId=${campaignId}`
+          )
+          showErrorToast('Action saved. Please refresh to see the full story.', { context: 'Game' })
         }
-
-        setStory(prev => [...prev, aiResponse])
+      } catch (reloadError) {
+        // getCampaign failed but sendInteraction succeeded
+        // DON'T restore input - that would cause duplicate submissions
+        // DON'T remove optimistic entry - action was saved, entry is valid representation
+        console.warn('Story reload failed after successful action:', reloadError)
+        showErrorToast('Action saved. Please refresh to see the AI response.', { context: 'Game' })
       }
     } catch (error) {
-      console.error('Failed to get AI response:', error)
-      // Error fallback response
-      const aiResponse: StoryEntry = {
-        id: (Date.now() + 1).toString(),
-        type: 'narration',
-        content: 'The world seems to pause, waiting for the next moment to unfold...',
-        timestamp: new Date().toISOString(),
-        author: 'ai'
+      // sendInteraction failed - safe to restore input and remove optimistic entry
+      console.error('Failed to send action:', error)
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while processing your action.'
+      showErrorToast(errorMessage, { context: 'Game' })
+      setPlayerInput(inputText)
+      setStory(prev => prev.filter(entry => entry.id !== optimisticId))
+      // Try to reload story to ensure consistency
+      try {
+        const campaignData = await apiService.getCampaign(campaignId)
+        if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
+          setStory(convertBackendStoryToEntries(campaignData.story))
+        }
+      } catch (reloadError) {
+        console.warn('Failed to reload story after error:', reloadError)
       }
-
-      setStory(prev => [...prev, aiResponse])
     } finally {
       setIsLoading(false)
+      submitInFlightRef.current = false
     }
   }
 
@@ -231,7 +301,7 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
 
 
 
-  const renderStoryEntry = (entry: StoryEntry) => {
+  const renderStoryEntry = (entry: GameStoryEntry) => {
     if (entry.type === 'choices' && entry.choices) {
       return (
         <div key={entry.id} className="mb-6">

@@ -76,8 +76,9 @@ class TestCollisionBugFix(unittest.TestCase):
                             with patch("builtins.open", create=True):
                                 # This should NOT fail - collision should be resolved
                                 # Mock shutil.which to ensure claude is found in CI
-                                with patch(
-                                    "orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"
+                                with (
+                                    patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+                                    patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
                                 ):
                                     result = self.dispatcher.create_dynamic_agent(agent_spec)
                                 debug_info = f"create_dynamic_agent result={result}"
@@ -103,10 +104,11 @@ class TestCollisionBugFix(unittest.TestCase):
                     with patch("os.makedirs"):
                         with patch("os.path.exists", return_value=True):
                             with patch("builtins.open", create=True):
-                                self.dispatcher.create_dynamic_agent(agent_spec)
+                                with patch.object(self.dispatcher, "_validate_cli_availability", return_value=True):
+                                    self.dispatcher.create_dynamic_agent(agent_spec)
 
-                                # Cleanup should be called with the final name (tmux-pr5678), not original
-                                mock_cleanup.assert_called_once_with("tmux-pr5678")
+                                    # Cleanup should be called with the final name (tmux-pr5678), not original
+                                    mock_cleanup.assert_called_once_with("tmux-pr5678")
 
     def test_workspace_alignment_prevents_confusion(self):
         """Test that agent name aligns with workspace name to prevent confusion"""
@@ -130,13 +132,14 @@ class TestCollisionBugFix(unittest.TestCase):
                 with patch("os.makedirs"):
                     with patch("os.path.exists", return_value=True):
                         with patch("builtins.open", create=True):
-                            # Capture the tmux command to verify agent name
-                            result = self.dispatcher.create_dynamic_agent(agent_spec)
-                            self.assertTrue(result)
+                            with patch.object(self.dispatcher, "_validate_cli_availability", return_value=True):
+                                # Capture the tmux command to verify agent name
+                                result = self.dispatcher.create_dynamic_agent(agent_spec)
+                                self.assertTrue(result)
 
-                            # Check that tmux session was created with workspace name
-                            tmux_calls = [call for call in mock_run.call_args_list if "tmux" in str(call)]
-                            self.assertTrue(any("custom-docs-workspace" in str(call) for call in tmux_calls))
+                                # Check that tmux session was created with workspace name
+                                tmux_calls = [call for call in mock_run.call_args_list if "tmux" in str(call)]
+                                self.assertTrue(any("custom-docs-workspace" in str(call) for call in tmux_calls))
 
     def test_no_workspace_config_uses_original_behavior(self):
         """Test that agents without workspace config use original behavior"""
@@ -165,15 +168,16 @@ class TestCollisionBugFix(unittest.TestCase):
                     with patch("os.makedirs"):
                         with patch("os.path.exists", return_value=True):
                             with patch("builtins.open", create=True):
-                                result = self.dispatcher.create_dynamic_agent(agent_spec)
-                                self.assertTrue(result)
+                                with patch.object(self.dispatcher, "_validate_cli_availability", return_value=True):
+                                    result = self.dispatcher.create_dynamic_agent(agent_spec)
+                                    self.assertTrue(result)
 
-                                # Cleanup should use original name
-                                debug_info = f"original_name={original_name}, mock_calls={mock_cleanup.call_args_list}"
-                                try:
-                                    mock_cleanup.assert_called_once_with(original_name)
-                                except AssertionError as e:
-                                    self.fail(f"FAIL DEBUG: {debug_info}. Original error: {e}")
+                                    # Cleanup should use original name
+                                    debug_info = f"original_name={original_name}, mock_calls={mock_cleanup.call_args_list}"
+                                    try:
+                                        mock_cleanup.assert_called_once_with(original_name)
+                                    except AssertionError as e:
+                                        self.fail(f"FAIL DEBUG: {debug_info}. Original error: {e}")
 
 
 if __name__ == "__main__":

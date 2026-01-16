@@ -18,7 +18,7 @@ import time
 import traceback
 import urllib.request
 from collections import Counter
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -67,20 +67,20 @@ from .orchestrated_pr_runner import (
 from .utils import json_manager, setup_logging
 
 
-def _parse_fixpr_agent_chain(value: str) -> str:
-    """Parse comma-separated CLI chain for --fixpr-agent (e.g., 'gemini,codex')."""
+def _parse_cli_agent_chain(value: str) -> str:
+    """Parse comma-separated CLI chain for --cli-agent (e.g., 'gemini,cursor')."""
     if not isinstance(value, str) or not value.strip():
-        raise argparse.ArgumentTypeError("--fixpr-agent must be a non-empty string")
+        raise argparse.ArgumentTypeError("--cli-agent must be a non-empty string")
 
     parts = [part.strip().lower() for part in value.split(",")]
     chain = [part for part in parts if part]
     if not chain:
-        raise argparse.ArgumentTypeError("--fixpr-agent chain is empty")
+        raise argparse.ArgumentTypeError("--cli-agent chain is empty")
 
     invalid = [cli for cli in chain if cli not in CLI_PROFILES]
     if invalid:
         raise argparse.ArgumentTypeError(
-            f"Invalid --fixpr-agent CLI(s): {invalid}. Must be subset of {list(CLI_PROFILES.keys())}"
+            f"Invalid --cli-agent CLI(s): {invalid}. Must be subset of {list(CLI_PROFILES.keys())}"
         )
 
     # De-duplicate while preserving order
@@ -1479,7 +1479,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             str(pr_number),
             "--target-repo",
             repo_full,
-            "--fixpr-agent",
+            "--cli-agent",
             agent_cli,
         ]
         try:
@@ -2191,15 +2191,19 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     )
                     if created_at_str:
                         try:
+                            # Normalize ISO 8601 timestamp: replace 'Z' with '+00:00' for consistent parsing
                             created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
-                            now = datetime.now(UTC)
+                            # Ensure timezone-aware datetime (handle edge case where fromisoformat returns naive)
+                            if created_at.tzinfo is None:
+                                created_at = created_at.replace(tzinfo=timezone.utc)
+                            now = datetime.now(timezone.utc)
                             age_hours = (now - created_at).total_seconds() / 3600
                             return {
                                 "age_hours": age_hours,
                                 "created_at": created_at_str,
                             }
-                        except (ValueError, AttributeError):
-                            # If we can't parse date, assume it's recent (conservative)
+                        except (ValueError, AttributeError, TypeError):
+                            # If we can't parse date or compare (naive vs aware), assume it's recent (conservative)
                             return {"age_hours": 0.0, "created_at": created_at_str}
                     return {"age_hours": 0.0, "created_at": ""}
 
@@ -3243,10 +3247,12 @@ def main():
     parser.add_argument("--target-repo",
                         help="Repository for target PR (required with --target-pr)")
     parser.add_argument(
-        "--fixpr-agent",
-        type=_parse_fixpr_agent_chain,
+        "--cli-agent",
+        "--fixpr-agent",  # Backwards compatibility alias
+        dest="cli_agent",
+        type=_parse_cli_agent_chain,
         default="claude",
-        help="AI CLI (or comma-separated chain) for --fixpr mode (default: claude). Example: gemini,codex",
+        help="AI CLI chain for --fixpr and --fix-comment modes (default: claude). Example: gemini,cursor",
     )
     parser.add_argument(
         "--model",
@@ -3318,7 +3324,7 @@ def main():
         success = monitor.run_fix_comment_review_watcher(
             args.target_pr,
             args.target_repo,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
         )
         sys.exit(0 if success else 1)
 
@@ -3382,7 +3388,7 @@ def main():
                 args.target_pr,
                 args.target_repo,
                 fixpr=True,
-                agent_cli=args.fixpr_agent,
+                agent_cli=args.cli_agent,
                 model=args.model,
             )
             sys.exit(0 if success else 1)
@@ -3392,7 +3398,7 @@ def main():
             max_prs=args.max_prs,
             cutoff_hours=args.cutoff_hours,
             fixpr=True,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
             model=args.model,
         )
         return
@@ -3405,7 +3411,7 @@ def main():
                 args.target_pr,
                 args.target_repo,
                 fix_comment=True,
-                agent_cli=args.fixpr_agent,
+                agent_cli=args.cli_agent,
                 model=args.model,
             )
             sys.exit(0 if success else 1)
@@ -3427,7 +3433,7 @@ def main():
             max_prs=args.max_prs,
             cutoff_hours=args.cutoff_hours,
             fix_comment=True,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
             model=args.model,
         )
         return

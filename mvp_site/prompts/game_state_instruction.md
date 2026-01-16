@@ -11,6 +11,12 @@
 - QUALITY TIERS: {{VALID_QUALITY_TIERS}}
 /ESSENTIALS -->
 
+## 🛡️ CRITICAL: Sanctuary Mode - AUTONOMOUS DETECTION
+
+**🚨 AUTONOMOUS ACTIVATION:** Sanctuary mode activates based on **contextual evaluation**, NOT keyword matching. You MUST evaluate game state and narrative context to determine if a quest/mission has been completed. See **"Sanctuary Mode (AUTONOMOUS on Mission/Arc Completion)"** section below for detection criteria and activation rules.
+
+---
+
 ## 🎭 CRITICAL: Character Creation Flag - CLEAR IT NOW
 
 **IF YOU SEE `custom_campaign_state.character_creation_in_progress` ANYWHERE IN YOUR INPUT, IT MUST BE FALSE IN YOUR OUTPUT.**
@@ -236,6 +242,7 @@ The following schemas are injected from the backend to ensure consistency betwee
   - The engine converts this into structured `world_time` for temporal enforcement and session headers.
   - Use the active campaign calendar/era (Forgotten Realms DR, modern Gregorian, or the custom setting).
   - Let the backend format the session header time for you—do not invent a new calendar mid-session.
+  - Include `custom_campaign_state.sanctuary_mode` when activating sanctuary (see Sanctuary Mode section for full schema and activation rules).
 - `entities_mentioned`: (array) **MUST list ALL entity names referenced in your narrative.** Empty array [] if none.
 - `equipment_list`: (array, **optional**) **POPULATE WHEN player asks about equipment/inventory/gear:**
   - Each item: `{"slot": "head", "name": "Helm of Telepathy", "stats": "30ft telepathy, Detect Thoughts 1/day"}`
@@ -459,6 +466,195 @@ See the canonical instruction at the top of this file:
 **"🎭 CRITICAL: Character Creation Flag - CLEAR IT NOW"**.
 
 **(Incremental relationship update rules and examples are documented in `game_state_examples.md`)**
+
+### 🛡️ Sanctuary Mode (AUTONOMOUS on Mission/Arc Completion)
+
+**AUTONOMOUS DETECTION - NOT KEYWORD-BASED**
+
+Sanctuary mode activates when you **evaluate context and determine a quest/mission has been completed**. Do NOT rely on keyword matching. Instead, use your judgment to assess the game state.
+
+**⚠️ BREAKING RULE:** If sanctuary is active AND player initiates major aggression (declares war, attacks stronghold, raids, assassinates), you MUST break it IMMEDIATELY by setting `sanctuary_mode.active: false` and `sanctuary_mode.broken: true`.
+
+---
+
+**🔍 AUTONOMOUS DETECTION CRITERIA - Evaluate ALL of these:**
+
+**1. Combat Resolution Signal (CHECK FIRST):**
+- Check `combat_state.combat_history` - was a boss/named enemy recently defeated?
+- Check `npc_data` - are major threats eliminated or fled?
+- Has the location been "cleared" of hostile forces?
+
+**2. Quest Objective Signal:**
+- Has the narrative arc reached its logical conclusion?
+- Were the stated objectives achieved? (rescue complete, item retrieved, enemy defeated)
+- Check `custom_campaign_state.arc_milestones` for tracked progress
+
+**3. Player Behavior Signal (CRITICAL FOR NEUTRAL ACTIONS):**
+- Player takes **post-victory actions**: looting bodies, searching for treasure, resting, leaving the area
+- These "cool-down" behaviors after defeating enemies signal completion
+- Examples: "I search Klarg's body", "I look around for loot", "I rest after the battle"
+
+**4. Narrative Context Signal:**
+- The story tension has resolved
+- The immediate threat is eliminated
+- The player is transitioning to a new phase (travel, rest, celebration)
+
+---
+
+**✅ ACTIVATE SANCTUARY WHEN:**
+- Boss/final enemy defeated AND player takes any follow-up action (including neutral actions like searching, looting, resting)
+- Quest objectives clearly achieved based on narrative context
+- Player's action signals they consider the mission complete (leaving area, collecting rewards, resting)
+
+**❌ DO NOT ACTIVATE WHEN:**
+- Combat is ongoing (`combat_state.in_combat: true`)
+- Major threats remain in the area
+- The narrative arc has unresolved tension
+- Player is actively engaging new enemies
+
+---
+
+**EXAMPLE - Autonomous Detection:**
+- Turn N: Player attacks Klarg the bugbear chief
+- Turn N+1: Combat ends, Klarg defeated (in `combat_history`)
+- Turn N+2: Player says "I search Klarg's body for valuables" ← **ACTIVATE SANCTUARY**
+  - Why? Boss defeated + neutral post-victory action = quest complete
+
+**The player didn't say "quest complete" or "mission finished" - you recognized completion from CONTEXT.**
+
+---
+
+**Activation with Overwrite Protection:**
+
+When you determine a quest is complete, check existing sanctuary before activating:
+
+1. **Check existing sanctuary:** If `custom_campaign_state.sanctuary_mode.active` is `true` AND `expires_turn > current_turn`, calculate remaining duration
+2. **Calculate remaining turns:** `remaining = expires_turn - current_turn`
+3. **Determine new duration** based on scale (INFER from narrative context, not player's words):
+   - **Medium mission** (5 turns): Side quests, clearing dungeons, minor faction victories, goblin caves
+   - **Major arc** (10 turns): Quest chain finales, story chapter endings, major faction defeats
+   - **Epic campaign arc** (20 turns): Campaign climaxes, BBEG defeats, world-changing events, defeating ancient dragons
+   - **Inference examples:**
+     * "defeated the ancient dragon" → Epic (campaign climax, BBEG defeat)
+     * "cleared the goblin cave" → Medium (side quest, dungeon cleared)
+     * "completed the quest chain" → Major (quest chain finale)
+4. **🚨 CRITICAL OVERWRITE PROTECTION:** Only activate if new duration > remaining. If existing sanctuary has more time remaining, DO NOT overwrite it. Skip activation completely - do NOT write sanctuary_mode to state_updates at all. The existing sanctuary continues unchanged.
+5. **If activating (new duration > remaining):** Write to `state_updates.custom_campaign_state.sanctuary_mode` in your response. This is MANDATORY - you MUST include sanctuary_mode in state_updates when completion language is detected AND new duration > remaining. If new duration <= remaining, do NOT write sanctuary_mode (preserve existing).
+
+**Example:** Player completes Epic arc (20 turns) at turn 8 → sanctuary expires turn 28. At turn 18 (10 turns remaining), player completes Medium mission (5 turns). Do NOT overwrite - keep Epic sanctuary until turn 28.
+
+**EXAMPLE - Player says "I defeated the goblin chief. The mission is complete."**
+Your response MUST include:
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "sanctuary_mode": {
+        "active": true,
+        "activated_turn": <current_turn>,
+        "expires_turn": <current_turn + 5>,
+        "arc": "Clear the goblin cave",
+        "scale": "medium"
+      }
+    }
+  },
+  "narrative": "...",
+  "player_notification": "A sense of calm settles over the realm..."
+}
+```
+
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "sanctuary_mode": {
+        "active": true,
+        "activated_turn": <current_turn>,
+        "expires_turn": <current_turn + duration>,
+        "arc": "<completed arc/mission name>",
+        "scale": "medium|major|epic"
+      }
+    }
+  }
+}
+```
+
+**Duration by Scale:**
+- **Medium mission** (side quest, minor victory): 5 turns
+- **Major arc** (quest chain finale, chapter end): 10 turns  
+- **Epic campaign arc** (campaign climax, BBEG defeat): 20 turns
+
+**Sanctuary Rules:**
+- **BLOCKS:** Lethal ambushes, assassination attempts, major faction attacks, life-threatening complications
+- **ALLOWS:** Companion conversations, planning, shopping, training, peaceful exploration, minor non-lethal complications
+- **BREAKS ON:** Player-initiated major aggression (attacks on major factions, declarations of war, assassination attempts, stronghold raids)
+- **NOTIFIES:** Include a `player_notification` field with activation message (e.g., "A sense of calm settles over the realm...")
+
+**Check Before Processing Actions:**
+**FIRST CHECK:** Before processing ANY player action, check if `custom_campaign_state.sanctuary_mode.active` is `true`. If it is, and the player's input contains major aggression language (see breaking triggers below), you MUST break sanctuary BEFORE processing the action.
+
+**Check Before Generating Events:**
+Always check `custom_campaign_state.sanctuary_mode.active` before generating complications or world events. If `active: true` and `current_turn < expires_turn`, do NOT generate lethal threats.
+
+**Breaking Sanctuary (MANDATORY - CHECK FIRST):**
+**🚨 CHECK THIS BEFORE PROCESSING THE ACTION:** If `custom_campaign_state.sanctuary_mode.active` is `true`, and the player's input contains ANY major aggression language, you MUST break sanctuary FIRST, then process the action.
+
+**Major Aggression Triggers (ANY of these breaks sanctuary - check player input for these phrases):**
+- "declare war" or "declaring war"
+- "attack the stronghold" or "attack his stronghold" or "attack the castle"
+- "raid" (when targeting major factions/bases)
+- "assassinate" or "assassination"
+- "attack [major faction/lord/noble]"
+- Any explicit declaration of hostile intent toward major powers
+
+**MANDATORY Breaking Process:**
+1. **Check sanctuary status** in `custom_campaign_state.sanctuary_mode.active`
+2. **Check player input** for major aggression language (see triggers above)
+3. **IF BOTH ARE TRUE:** Break sanctuary FIRST by writing to `state_updates.custom_campaign_state.sanctuary_mode` with `active: false` and `broken: true`
+4. **THEN** process the action normally
+
+**This is NOT optional. Breaking happens BEFORE action processing, not after.**
+
+**EXAMPLE - Player says "I declare war on the local lord and attack his stronghold!"**
+Your response MUST include:
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "sanctuary_mode": {
+        "active": false,
+        "broken": true,
+        "broken_turn": <current_turn>,
+        "broken_reason": "Player declared war and attacked stronghold"
+      }
+    }
+  },
+  "narrative": "...",
+  "player_notification": "Your aggressive actions have shattered the peace..."
+}
+```
+
+**Expiration:**
+When `current_turn >= expires_turn` and sanctuary is still active, set `active: false` and `expired: true` with a notification.
+
+**EXAMPLE - Sanctuary expires at turn 50:**
+Your response MUST include:
+```json
+{
+  "state_updates": {
+    "custom_campaign_state": {
+      "sanctuary_mode": {
+        "active": false,
+        "expired": true,
+        "expired_turn": <current_turn>,
+        "arc": "<arc name>",
+        "original_scale": "medium|major|epic"
+      }
+    }
+  },
+  "player_notification": "The sanctuary granted by <arc name> has expired. The realm returns to its natural state..."
+}
+```
 
 ## Input Schema
 
