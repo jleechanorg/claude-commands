@@ -536,39 +536,19 @@ def run_multiverse_ascension_test(
         campaign_id = create_campaign(
             client,
             user_id=user_id,
-            name=campaign_name,
-            character_data={
-                "name": "Aetherion",
-                "class": "Divine Champion",
-                "race": "Ascended Human",
-                "level": 30,
-                "alignment": "Lawful Neutral",
-                "attributes": {
-                    "strength": 28,
-                    "dexterity": 24,
-                    "constitution": 28,
-                    "intelligence": 22,
-                    "wisdom": 26,
-                    "charisma": 30,
-                },
-                "description": (
-                    "Once a mortal hero, now a divine being seeking to ascend beyond godhood "
-                    "to sovereign control of the multiverse."
-                ),
-                "backstory": (
-                    "Aetherion has conquered planes and challenged gods. Now seeks the Sovereign "
-                    "Protocol to rule all realities."
-                ),
-            },
-            world_data={
-                "setting": "Cosmic Nexus",
-                "theme": "multiversal ascension",
-                "tone": "epic",
-                "description": (
-                    "The Cosmic Nexus stands at the crossroads of infinite realities. "
-                    "Here, gods may petition for Sovereign Protocol - control over the entire multiverse."
-                ),
-            },
+            title=campaign_name,
+            character=(
+                "Aetherion, Divine Champion (Ascended Human), level 30, Lawful Neutral. "
+                "Attributes: STR 28, DEX 24, CON 28, INT 22, WIS 26, CHA 30. "
+                "Once a mortal hero, now a divine being seeking to ascend beyond godhood "
+                "to sovereign control of the multiverse. "
+                "Backstory: Aetherion has conquered planes and challenged gods. "
+                "Now seeks the Sovereign Protocol to rule all realities."
+            ),
+            setting=(
+                "Cosmic Nexus, a multiversal ascension epic at the crossroads of infinite "
+                "realities where gods petition for the Sovereign Protocol."
+            ),
         )
 
         print(f"✅ Campaign created: {campaign_id}")
