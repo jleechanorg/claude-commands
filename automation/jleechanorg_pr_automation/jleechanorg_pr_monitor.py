@@ -154,6 +154,8 @@ class JleechanorgPRMonitor:
     CODEX_COMMIT_MESSAGE_MARKER = "[codex-automation-commit]"
     CODEX_BOT_IDENTIFIER = "codex"
     FIX_COMMENT_COMPLETION_MARKER = "Fix-comment automation complete"
+    # Allow re-run if queued marker exceeds this threshold without completion.
+    FIX_COMMENT_QUEUED_TIMEOUT_HOURS = 1.0
     # GitHub short SHAs display with a minimum of 7 characters, while full SHAs are 40 characters.
     CODEX_COMMIT_SHA_LENGTH_RANGE: tuple[int, int] = (7, 40)
     CODEX_SUMMARY_COMMIT_PATTERNS = [
@@ -1699,10 +1701,10 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if not has_completion_marker and head_sha:
             queued_info = self._get_fix_comment_queued_info(comments, head_sha)
             if queued_info:
-                # Check if queued comment is stale (older than 1 hour with no completion)
+                # Check if queued comment is stale (older than timeout threshold with no completion)
                 # This handles cases where agent failed silently and never posted completion marker
                 queued_age_hours = queued_info.get("age_hours", 0)
-                if queued_age_hours > 1.0:
+                if queued_age_hours > self.FIX_COMMENT_QUEUED_TIMEOUT_HOURS:
                     self.logger.warning(
                         "⚠️ PR #%s has stale queued comment (%.1f hours old, no completion) - allowing re-run",
                         pr_number,
@@ -2173,8 +2175,6 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if not head_sha:
             return None
 
-        from datetime import datetime, timezone
-
         for comment in comments:
             body = comment.get("body", "")
             # Check for queued run marker (FIX_COMMENT_RUN_MARKER_PREFIX)
@@ -2183,11 +2183,16 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 # Verify this is from automation user (not a bot echo)
                 author = self._get_comment_author_login(comment)
                 if author == self.automation_username:
-                    created_at_str = comment.get("created_at", "")
+                    created_at_str = (
+                        comment.get("createdAt")
+                        or comment.get("updatedAt")
+                        or comment.get("created_at")
+                        or ""
+                    )
                     if created_at_str:
                         try:
                             created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
-                            now = datetime.now(timezone.utc)
+                            now = datetime.now(UTC)
                             age_hours = (now - created_at).total_seconds() / 3600
                             return {
                                 "age_hours": age_hours,

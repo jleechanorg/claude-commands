@@ -1,8 +1,19 @@
 import unittest
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Generic, TypeVar
 from unittest.mock import Mock, patch
 
-from _pytest.capture import CaptureFixture
-from _pytest.monkeypatch import MonkeyPatch
+_CaptureT = TypeVar("_CaptureT")
+
+if TYPE_CHECKING:
+    from _pytest.capture import CaptureFixture
+    from _pytest.monkeypatch import MonkeyPatch
+else:
+    class CaptureFixture(Generic[_CaptureT]):
+        """Runtime placeholder for pytest capture fixture typing."""
+
+    class MonkeyPatch:
+        """Runtime placeholder for pytest monkeypatch fixture typing."""
 from automation.jleechanorg_pr_automation import jleechanorg_pr_monitor as mon
 
 FAILED_PR_NUMBER = 2
@@ -723,6 +734,24 @@ class TestRaceConditionFix(unittest.TestCase):
         result = self.monitor._has_fix_comment_queued_for_commit(comments, None)  # noqa: SLF001
         self.assertFalse(result, "Should return False when head_sha is None")
 
+    def test_get_fix_comment_queued_info_marks_stale_with_created_at(self):
+        """Queued comments older than one hour should be marked as stale."""
+        created_at = (datetime.now(UTC) - timedelta(hours=2, minutes=5)).isoformat()
+        comments = [
+            {
+                "body": (
+                    "[AI automation - gemini] Fix-comment run queued for this PR.\n\n"
+                    f"<!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->"
+                ),
+                "author": {"login": "test-automation-user"},
+                "createdAt": created_at,
+            }
+        ]
+
+        info = self.monitor._get_fix_comment_queued_info(comments, self.head_sha)  # noqa: SLF001
+        self.assertIsNotNone(info)
+        self.assertGreater(info["age_hours"], self.monitor.FIX_COMMENT_QUEUED_TIMEOUT_HOURS)
+
     @patch.object(mon.JleechanorgPRMonitor, "_get_pr_comment_state")
     @patch.object(mon.JleechanorgPRMonitor, "_count_workflow_comments", return_value=0)
     @patch.object(mon.JleechanorgPRMonitor, "_has_unaddressed_comments", return_value=True)
@@ -746,6 +775,8 @@ class TestRaceConditionFix(unittest.TestCase):
     ):
         """Test that agent dispatch is skipped when queued comment exists (no completion marker)."""
         # Setup: queued comment exists for this commit, but NO completion marker
+        fixed_now = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
+        created_at = (fixed_now - timedelta(minutes=30)).isoformat()
         comments = [
             {
                 "body": (
@@ -753,6 +784,7 @@ class TestRaceConditionFix(unittest.TestCase):
                     f"<!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->"
                 ),
                 "author": {"login": "test-automation-user"},
+                "createdAt": created_at,
             }
         ]
 
@@ -765,17 +797,95 @@ class TestRaceConditionFix(unittest.TestCase):
         # Mock _get_pr_comment_state to return comments
         mock_get_state.return_value = (self.head_sha, comments)
 
-        result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
-            "test-org/test-repo",
-            123,
-            pr_data,
-            agent_cli="gemini",
+        expected_age = (
+            (fixed_now - datetime.fromisoformat(created_at)).total_seconds() / 3600
         )
+        with patch.object(mon, "datetime") as mock_datetime, self.assertLogs(
+            mon.__name__,
+            level="INFO",
+        ) as log:
+            mock_datetime.fromisoformat = datetime.fromisoformat
+            mock_datetime.now.side_effect = lambda tz=None: fixed_now
+            result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
+                "test-org/test-repo",
+                123,
+                pr_data,
+                agent_cli="gemini",
+            )
 
         # Should skip without dispatching agent (queued marker exists, no completion marker)
         self.assertEqual(result, "skipped")
         mock_dispatch.assert_not_called()
         mock_post_queued.assert_not_called()
+        self.assertTrue(
+            any(f"{expected_age:.1f} hours ago" in entry for entry in log.output)
+        )
+
+    @patch.object(mon.JleechanorgPRMonitor, "_get_pr_comment_state")
+    @patch.object(mon.JleechanorgPRMonitor, "_count_workflow_comments", return_value=0)
+    @patch.object(mon.JleechanorgPRMonitor, "_has_unaddressed_comments", return_value=True)
+    @patch.object(mon.JleechanorgPRMonitor, "_has_fix_comment_comment_for_commit", return_value=False)
+    @patch.object(mon.JleechanorgPRMonitor, "_should_skip_pr", return_value=False)
+    @patch.object(mon.JleechanorgPRMonitor, "_cleanup_pending_reviews")
+    @patch.object(mon.JleechanorgPRMonitor, "dispatch_fix_comment_agent", return_value=True)
+    @patch.object(mon.JleechanorgPRMonitor, "_post_fix_comment_queued", return_value=True)
+    @patch.object(mon.JleechanorgPRMonitor, "_start_fix_comment_review_watcher", return_value=True)
+    def test_process_pr_fix_comment_dispatches_when_stale_queued_comment_exists(
+        self,
+        mock_watcher,
+        mock_post_queued,
+        mock_dispatch,
+        mock_cleanup,
+        mock_skip_pr,
+        mock_has_completion,
+        mock_has_unaddressed,
+        mock_count,
+        mock_get_state,
+    ):
+        """Test that stale queued comments allow reprocessing without completion marker."""
+        fixed_now = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
+        created_at = (fixed_now - timedelta(hours=2, minutes=15)).isoformat()
+        comments = [
+            {
+                "body": (
+                    "[AI automation - gemini] Fix-comment run queued for this PR.\n\n"
+                    f"<!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->"
+                ),
+                "author": {"login": "test-automation-user"},
+                "createdAt": created_at,
+            }
+        ]
+
+        pr_data = {
+            "title": "Test PR",
+            "headRefName": "test-branch",
+            "headRefOid": self.head_sha,
+        }
+
+        mock_get_state.return_value = (self.head_sha, comments)
+
+        expected_age = (
+            (fixed_now - datetime.fromisoformat(created_at)).total_seconds() / 3600
+        )
+        with patch.object(mon, "datetime") as mock_datetime, self.assertLogs(
+            mon.__name__,
+            level="WARNING",
+        ) as log:
+            mock_datetime.fromisoformat = datetime.fromisoformat
+            mock_datetime.now.side_effect = lambda tz=None: fixed_now
+            result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
+                "test-org/test-repo",
+                123,
+                pr_data,
+                agent_cli="gemini",
+            )
+
+        self.assertEqual(result, "posted")
+        mock_dispatch.assert_called_once()
+        mock_post_queued.assert_called_once()
+        self.assertTrue(
+            any(f"{expected_age:.1f} hours old" in entry for entry in log.output)
+        )
 
     @patch.object(mon.JleechanorgPRMonitor, "_get_pr_comment_state")
     @patch.object(mon.JleechanorgPRMonitor, "_count_workflow_comments", return_value=0)
