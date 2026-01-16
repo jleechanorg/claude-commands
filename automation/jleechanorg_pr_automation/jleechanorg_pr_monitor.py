@@ -711,7 +711,9 @@ class JleechanorgPRMonitor:
             self.logger.info("📭 No recent open PRs discovered")
             return []
 
-        recent_prs.sort(key=lambda x: x.get("updated_datetime", datetime.min), reverse=True)
+        # Use timezone-aware minimum datetime for safe comparison with aware datetimes
+        datetime_min_utc = datetime.min.replace(tzinfo=UTC)
+        recent_prs.sort(key=lambda x: x.get("updated_datetime", datetime_min_utc), reverse=True)
 
         repo_counter = Counter(pr.get("repository") for pr in recent_prs if pr.get("repository"))
         for repo_name, count in repo_counter.items():
@@ -943,7 +945,7 @@ class JleechanorgPRMonitor:
                 "--body", comment_body
             ]
 
-            result = AutomationUtils.execute_subprocess_with_timeout(
+            AutomationUtils.execute_subprocess_with_timeout(
                 comment_cmd,
                 timeout=30,
                 retry_attempts=5,

@@ -20,6 +20,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable
+from dataclasses import asdict
 from typing import Any
 
 # Use absolute imports with package name for __main__ compatibility
@@ -207,7 +208,6 @@ class A2AAgentWrapper:
         Perform actual task execution based on agent type
         This is a simplified implementation - real agents would have more complex logic
         """
-        task["task_id"]
         description = task["description"]
 
         result = {
@@ -292,7 +292,6 @@ class A2AAgentWrapper:
         to_agent: str,
         message_type: str,
         payload: dict[str, Any],
-        reply_to: str = None,
     ) -> bool:
         """Send message to another agent"""
         return self.a2a_client.send_message(to_agent, message_type, payload)
@@ -303,8 +302,6 @@ class A2AAgentWrapper:
 
     def discover_agents(self) -> list[dict[str, Any]]:
         """Discover other available agents"""
-        from dataclasses import asdict
-
         agents = self.a2a_client.discover_agents()
         return [asdict(agent) for agent in agents]
 
@@ -322,8 +319,6 @@ class A2AAgentWrapper:
 
     def get_agent_info(self) -> dict[str, Any]:
         """Get current agent information"""
-        from dataclasses import asdict
-
         return asdict(self.a2a_client.agent_info)
 
 

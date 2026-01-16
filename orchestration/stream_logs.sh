@@ -12,6 +12,13 @@ main() {
 
     SESSION_NAME="$1"
 
+    # Security: Validate SESSION_NAME to prevent path traversal
+    # Only allow alphanumeric, dots, underscores, and hyphens
+    if [[ ! "$SESSION_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || [[ "$SESSION_NAME" == *".."* ]]; then
+        echo "Error: Invalid session name. Only alphanumeric characters, dots, underscores, and hyphens are allowed."
+        return 1
+    fi
+
     echo "Streaming tmux session: $SESSION_NAME"
     echo "Press Ctrl+C to stop"
     echo "=========================================="
