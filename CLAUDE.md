@@ -333,7 +333,7 @@ MCP_SERVER_URL="https://..." MCP_TEST_MODE=real node scripts/mcp-smoke-tests.mjs
 ## Git Workflow
 
 - Main = Truth | All changes via PRs | Fresh branches from main
-- Push: `git push -u origin HEAD:branch-name` (branch-name = feature/topic branch from main)
+- Push: `git push -u origin branch-name` (branch-name = feature/topic branch from main)
 - `GITHUB_TOKEN` env var | GitHub Actions: SHA-pinned versions only
 - ❌ FORBIDDEN: Merging any branch directly to main without a PR
 
