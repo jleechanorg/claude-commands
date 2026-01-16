@@ -533,22 +533,26 @@ def run_multiverse_ascension_test(
         # STAGE 1: CREATE CAMPAIGN
         # ================================================================
         print("\n🌌 STAGE 1: Creating divine campaign...")
+        # Convert character_data dict to string description
+        character_desc = (
+            "Aetherion, Divine Champion (Ascended Human), Level 30, Lawful Neutral. "
+            "Once a mortal hero, now a divine being seeking to ascend beyond godhood "
+            "to sovereign control of the multiverse. Aetherion has conquered planes and "
+            "challenged gods. Now seeks the Sovereign Protocol to rule all realities. "
+            "Attributes: STR 28, DEX 24, CON 28, INT 22, WIS 26, CHA 30."
+        )
+        # Convert world_data dict to string setting description
+        setting_desc = (
+            "Cosmic Nexus - The crossroads of infinite realities where gods may petition "
+            "for Sovereign Protocol - control over the entire multiverse. Theme: multiversal ascension. "
+            "Tone: epic."
+        )
         campaign_id = create_campaign(
             client,
             user_id=user_id,
             title=campaign_name,
-            character=(
-                "Aetherion, Divine Champion (Ascended Human), level 30, Lawful Neutral. "
-                "Attributes: STR 28, DEX 24, CON 28, INT 22, WIS 26, CHA 30. "
-                "Once a mortal hero, now a divine being seeking to ascend beyond godhood "
-                "to sovereign control of the multiverse. "
-                "Backstory: Aetherion has conquered planes and challenged gods. "
-                "Now seeks the Sovereign Protocol to rule all realities."
-            ),
-            setting=(
-                "Cosmic Nexus, a multiversal ascension epic at the crossroads of infinite "
-                "realities where gods petition for the Sovereign Protocol."
-            ),
+            character=character_desc,
+            setting=setting_desc,
         )
 
         print(f"✅ Campaign created: {campaign_id}")

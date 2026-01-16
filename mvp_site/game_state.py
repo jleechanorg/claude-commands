@@ -1861,9 +1861,11 @@ class GameState:
 
         # Check level threshold (coerce to int to handle string values)
         # Level may be at top-level (normalized) or in experience dict
-        level_raw = self.player_character_data.get("level", None)
+        # Guard against non-dict player_character_data (Firestore can persist nulls)
+        pc_data = self.player_character_data if isinstance(self.player_character_data, dict) else {}
+        level_raw = pc_data.get("level", None)
         if level_raw is None:
-            experience = self.player_character_data.get("experience", {})
+            experience = pc_data.get("experience", {})
             level_raw = experience.get("level", 1) if isinstance(experience, dict) else 1
         try:
             level = int(level_raw) if level_raw else 1
@@ -1967,9 +1969,11 @@ class GameState:
             Character level (defaults to 1 if not found or invalid)
         """
         # Level may be at top-level (normalized) or in experience dict
-        level_raw = self.player_character_data.get("level", None)
+        # Guard against non-dict player_character_data (Firestore can persist nulls)
+        pc_data = self.player_character_data if isinstance(self.player_character_data, dict) else {}
+        level_raw = pc_data.get("level", None)
         if level_raw is None:
-            experience = self.player_character_data.get("experience", {})
+            experience = pc_data.get("experience", {})
             level_raw = experience.get("level", 1) if isinstance(experience, dict) else 1
         try:
             level = int(level_raw) if level_raw else 1

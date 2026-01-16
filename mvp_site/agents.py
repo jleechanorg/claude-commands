@@ -1426,7 +1426,7 @@ class CampaignUpgradeAgent(BaseAgent):
         """Initialize the CampaignUpgradeAgent with game state."""
         super().__init__(game_state)
         self._upgrade_type: str | None = None
-        if game_state:
+        if game_state is not None:
             self._upgrade_type = game_state.get_pending_upgrade_type()
 
     def build_system_instructions(
