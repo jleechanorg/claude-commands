@@ -106,11 +106,12 @@ class CopilotCommandBase(ABC):
         Returns:
             Parsed JSON response (list for paginated, dict/object for single page)
         """
-        try:
-            # Check if --paginate is in command
-            is_paginated = '--paginate' in command
+        # Check if --paginate is in command (before modification)
+        is_paginated = '--paginate' in command
+        original_has_jq = '--jq' in command
 
-            if is_paginated and '--jq' not in command:
+        try:
+            if is_paginated and not original_has_jq:
                 # Add --jq to flatten paginated results
                 # Find where --paginate is and insert --jq after it
                 paginate_idx = command.index('--paginate')
@@ -121,8 +122,9 @@ class CopilotCommandBase(ABC):
             if not result.stdout.strip():
                 return [] if is_paginated else {}
 
-            # For paginated with --jq, output is JSONL (one JSON object per line)
-            if is_paginated and '--jq' in command:
+            # For paginated with INJECTED --jq, output is JSONL (one JSON object per line)
+            # We only use special parsing if WE added the --jq flag
+            if is_paginated and not original_has_jq:
                 items = []
                 for line in result.stdout.strip().split('\n'):
                     if line.strip():
@@ -132,15 +134,15 @@ class CopilotCommandBase(ABC):
                             continue
                 return items
 
-            # Single JSON object/array
+            # Single JSON object/array OR user-provided --jq output
             return json.loads(result.stdout)
 
         except subprocess.CalledProcessError as e:
             self.log_error(f"GitHub CLI error: {e.stderr}")
-            return [] if '--paginate' in command else {}
+            return [] if is_paginated else {}
         except json.JSONDecodeError as e:
             self.log_error(f"JSON parsing error: {e}")
-            return [] if '--paginate' in command else {}
+            return [] if is_paginated else {}
 
     # JSON file operations removed - using stateless approach
 

@@ -922,6 +922,7 @@ def main():
     )
     actor_login = (actor_login or "").strip() or os.environ.get("GITHUB_ACTOR", "")
     # Process ALL comments (not just top-level) to achieve 100% reply rate
+    # Intentional: Support nested conversations by replying to replies if necessary
     all_targets = all_comments
     total_targets = 0
     already_replied = 0
