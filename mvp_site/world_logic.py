@@ -1262,10 +1262,27 @@ def _persist_turn_to_firestore(
 
     This reduces asyncio.to_thread() scheduling overhead in hot paths while
     keeping all Firestore I/O off the event loop.
+
+    Includes core_memories and world_events in story entries for traceability
+    (LW-uz5, LW-5lk: persist full game_state to story entries so Living World
+    can access critical plot facts even after story truncation).
     """
     firestore_service.update_campaign_game_state(
         user_id, campaign_id, updated_game_state_dict
     )
+
+    # Extract critical game_state fields for story entry traceability
+    # These fields are essential for Living World updates after story truncation
+    game_state_fields = {}
+    if "core_memories" in updated_game_state_dict:
+        game_state_fields["core_memories"] = updated_game_state_dict["core_memories"]
+    if "world_events" in updated_game_state_dict:
+        game_state_fields["world_events"] = updated_game_state_dict["world_events"]
+
+    # Merge game_state fields into structured_fields for AI response entry
+    # This ensures story entries include full state for traceability
+    enriched_structured_fields = {**structured_fields, **game_state_fields}
+
     firestore_service.add_story_entry(
         user_id,
         campaign_id,
@@ -1279,7 +1296,7 @@ def _persist_turn_to_firestore(
         constants.ACTOR_GEMINI,
         ai_response_text,
         None,  # mode
-        structured_fields,  # structured_fields
+        enriched_structured_fields,  # structured_fields with game_state fields
     )
 
 
