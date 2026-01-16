@@ -777,6 +777,38 @@ class TestRaceConditionFix(unittest.TestCase):
         self.assertAlmostEqual(info["age_hours"], expected_age, places=2)
         self.assertEqual(info["created_at"], newer_created_at)
 
+    def test_get_fix_comment_queued_info_treats_newer_unparseable_as_recent(self):
+        """Treat newer unparseable timestamps as recent to avoid duplicate dispatch."""
+        fixed_now = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
+        older_created_at = (fixed_now - timedelta(hours=3)).isoformat()
+        comments = [
+            {
+                "body": (
+                    "[AI automation - gemini] Fix-comment run queued for this PR.\n\n"
+                    f"<!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->"
+                ),
+                "author": {"login": "test-automation-user"},
+                "createdAt": older_created_at,
+            },
+            {
+                "body": (
+                    "[AI automation - gemini] Fix-comment run queued for this PR.\n\n"
+                    f"<!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->"
+                ),
+                "author": {"login": "test-automation-user"},
+                "createdAt": "not-a-date",
+            },
+        ]
+
+        with patch.object(mon, "datetime") as mock_datetime:
+            mock_datetime.fromisoformat = datetime.fromisoformat
+            mock_datetime.now.side_effect = lambda tz=None: fixed_now
+            info = self.monitor._get_fix_comment_queued_info(comments, self.head_sha)  # noqa: SLF001
+
+        self.assertIsNotNone(info)
+        self.assertEqual(info["age_hours"], 0.0)
+        self.assertEqual(info["created_at"], "")
+
     @patch.object(mon.JleechanorgPRMonitor, "_get_pr_comment_state")
     @patch.object(mon.JleechanorgPRMonitor, "_count_workflow_comments", return_value=0)
     @patch.object(mon.JleechanorgPRMonitor, "_has_unaddressed_comments", return_value=True)

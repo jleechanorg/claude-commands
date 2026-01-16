@@ -2177,9 +2177,11 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         latest_created_at = None
         latest_created_at_str = ""
+        latest_parseable_index = None
+        latest_unparseable_index = None
         found_unparseable = False
 
-        for comment in comments:
+        for index, comment in enumerate(comments):
             body = comment.get("body", "")
             # Check for queued run marker (FIX_COMMENT_RUN_MARKER_PREFIX)
             marker_sha = self._extract_fix_comment_run_marker(body)
@@ -2194,6 +2196,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     )
                     if not created_at_str:
                         found_unparseable = True
+                        latest_unparseable_index = index
                         continue
 
                     try:
@@ -2204,13 +2207,24 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                             created_at = created_at.replace(tzinfo=UTC)
                     except (ValueError, AttributeError, TypeError):
                         found_unparseable = True
+                        latest_unparseable_index = index
                         continue
 
                     if latest_created_at is None or created_at > latest_created_at:
                         latest_created_at = created_at
                         latest_created_at_str = created_at_str
+                        latest_parseable_index = index
 
         if latest_created_at is not None:
+            if (
+                found_unparseable
+                and latest_unparseable_index is not None
+                and (
+                    latest_parseable_index is None
+                    or latest_unparseable_index > latest_parseable_index
+                )
+            ):
+                return {"age_hours": 0.0, "created_at": ""}
             age_hours = (datetime.now(UTC) - latest_created_at).total_seconds() / 3600
             return {
                 "age_hours": age_hours,
