@@ -30,10 +30,13 @@ Run with evidence capture:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import sys
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
@@ -44,7 +47,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 # We import directly from submodules to avoid lib/__init__.py import cascade
 try:
     # Import directly to avoid __init__.py cascade
-    import importlib.util
     _lib_path = Path(__file__).parent / "lib"
 
     def _load_module(name):
@@ -107,9 +109,6 @@ except (ImportError, Exception) as e:
     LIB_AVAILABLE = False
 
     # Minimal MCPClient implementation for standalone mode
-    import urllib.request
-    import urllib.error
-
     class MCPClient:
         def __init__(self, base_url: str, timeout: int = 120):
             self.base_url = base_url.rstrip("/")
