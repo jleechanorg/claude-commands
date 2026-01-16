@@ -28,7 +28,7 @@ execution_mode: immediate
 2. **Analyze technical issues** raised in each comment
 3. **Implement actual fixes** using Edit/MultiEdit tools when code changes needed
 4. **Generate technical responses** addressing specific points raised
-5. **Write reply JSON file** to `/tmp/{branch_name}/replies.json` with structure:
+5. **Write reply JSON file** to `/tmp/{repo_name}/{branch_name}/replies.json` with structure:
    ```json
    {
      "replies": [
@@ -85,7 +85,7 @@ graph TD
     B --> C["Claude analyzes technical issues"]
     C --> D["Claude implements fixes"]
     D --> E["Claude generates responses"]
-    E --> F["Claude writes /tmp/branch/replies.json"]
+    E --> F["Claude writes /tmp/repo/branch/replies.json"]
     F --> G["Python reads replies.json"]
     G --> H["Python posts with GitHub API threading"]
     H --> I["Verify coverage"]
@@ -106,7 +106,7 @@ graph TD
 
 # MUST run /commentfetch first in session to populate comment data
 
-# Load comments from: /tmp/{branch_name}/comments.json
+# Load comments from: /tmp/{repo_name}/{branch_name}/comments.json
 
 ```
 
@@ -150,7 +150,7 @@ GitHub provides two methods for posting replies to PR review comments:
 - Removed undefined `${branch_name}` variable reference
 - Aligned documentation to match actual 3-parameter script signature
 - Python script derives branch automatically via `git branch --show-current`
-- Loads responses from `/tmp/<branch>/responses.json` internally
+- Loads responses from `/tmp/<repo>/<branch>/responses.json` internally
 
 ```bash
 
@@ -300,9 +300,9 @@ Before processing any comments:
 
 ### Data Flow Details
 
-1. **Input**: `/tmp/{branch}/comments.json` (from commentfetch)
+1. **Input**: `/tmp/{repo}/{branch}/comments.json` (from commentfetch)
 2. **Processing**: Claude analyzes and fixes issues in codebase
-3. **Output**: `/tmp/{branch}/replies.json` (structured reply data)
+3. **Output**: `/tmp/{repo}/{branch}/replies.json` (structured reply data)
 4. **Posting**: Python script reads replies.json and posts via GitHub API
 
 ## 📊 SUCCESS CRITERIA

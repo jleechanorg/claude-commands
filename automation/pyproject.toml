@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jleechanorg-pr-automation"
-version = "0.2.66"
+version = "0.2.70"
 description = "GitHub PR automation system with safety limits and actionable counting"
 authors = [
     { name = "jleechan", email = "jlee@jleechan.org" },

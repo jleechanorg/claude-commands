@@ -145,8 +145,9 @@ fetch.execute()
 
 # 3. Use structured JSON output from commentfetch
 
-BRANCH_NAME=$(git branch --show-current)
-COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
+BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
+REPO_NAME=$(basename "$(git rev-parse --show-toplevel)" | tr -cd '[:alnum:]._-')
+COMMENTS_FILE="/tmp/$REPO_NAME/$BRANCH_NAME/comments.json"
 
 if [ ! -f "$COMMENTS_FILE" ]; then
   echo "🚨 CRITICAL: COPILOT EXECUTION HALTED" >&2

@@ -81,20 +81,19 @@ def _log_json_parse_error(
                 f"Content hash: {content_hash} "
                 f"(Set LOG_JSON_ERRORS_FULL=true to log full content)"
             )
+    # No position available - log hash or truncated content
+    elif log_full_content:
+        logger_func(
+            f"{base_msg} "
+            f"Full JSON content (first 2000 chars): {json_content[:2000]} "
+            f"[Content hash: {content_hash}]"
+        )
     else:
-        # No position available - log hash or truncated content
-        if log_full_content:
-            logger_func(
-                f"{base_msg} "
-                f"Full JSON content (first 2000 chars): {json_content[:2000]} "
-                f"[Content hash: {content_hash}]"
-            )
-        else:
-            logger_func(
-                f"{base_msg} "
-                f"Content hash: {content_hash} "
-                f"(Set LOG_JSON_ERRORS_FULL=true to log full content)"
-            )
+        logger_func(
+            f"{base_msg} "
+            f"Content hash: {content_hash} "
+            f"(Set LOG_JSON_ERRORS_FULL=true to log full content)"
+        )
 
     # Log recovery message if requested
     if include_recovery_message:
@@ -1788,7 +1787,7 @@ class NarrativeResponse:
         self.social_hp_challenge = self._validate_social_hp_challenge(
             kwargs.pop("social_hp_challenge", None)
         )
-        
+
         # Action Resolution & Backward Compatibility
         # ------------------------------------------
         # We accept both action_resolution (new) and outcome_resolution (legacy).
@@ -2420,22 +2419,21 @@ class NarrativeResponse:
         if action_resolution is None:
             # Check for strict enforcement mode (future: enable after transition period)
             strict_mode = os.getenv("ENFORCE_ACTION_RESOLUTION_STRICT", "false").lower() == "true"
-            
+
             if strict_mode:
                 raise ValueError(
                     "action_resolution is REQUIRED for all player actions per system prompts. "
                     "LLM must include action_resolution with reinterpreted flag and mechanics. "
                     "Missing action_resolution violates audit trail requirements."
                 )
-            else:
-                # Transition period: Warning only, allow {} fallback
-                logging_util.warning(
-                    "action_resolution is missing from LLM response. "
-                    "This field is REQUIRED for all player actions per system prompts. "
-                    "LLM should include action_resolution with reinterpreted flag and mechanics. "
-                    "Using empty dict as fallback. "
-                    "Future: Set ENFORCE_ACTION_RESOLUTION_STRICT=true for strict enforcement."
-                )
+            # Transition period: Warning only, allow {} fallback
+            logging_util.warning(
+                "action_resolution is missing from LLM response. "
+                "This field is REQUIRED for all player actions per system prompts. "
+                "LLM should include action_resolution with reinterpreted flag and mechanics. "
+                "Using empty dict as fallback. "
+                "Future: Set ENFORCE_ACTION_RESOLUTION_STRICT=true for strict enforcement."
+            )
             return {}
 
         if not isinstance(action_resolution, dict):
@@ -2449,11 +2447,11 @@ class NarrativeResponse:
         # Schema is defined in game_state_instruction.md
         # Required fields: trigger, player_intent, original_input, resolution_type, mechanics, audit_flags
         validated = copy.deepcopy(action_resolution)
-        
+
         # Ensure reinterpreted field defaults to False if not provided
         if "reinterpreted" not in validated:
             validated["reinterpreted"] = False
-        
+
         # Validate required fields exist (warn but don't fail - downstream code may handle gracefully)
         required_fields = [
             "trigger",
@@ -2470,9 +2468,7 @@ class NarrativeResponse:
                 "Schema defined in game_state_instruction.md"
             )
         # Ensure audit_flags is a list (coerce non-list values, but preserve None/empty as empty list)
-        if "audit_flags" not in validated:
-            validated["audit_flags"] = []
-        elif validated["audit_flags"] is None:
+        if "audit_flags" not in validated or validated["audit_flags"] is None:
             validated["audit_flags"] = []
         elif not isinstance(validated["audit_flags"], list):
             # Coerce single values to list, but filter out falsy non-None values (0, "", False)
@@ -2927,7 +2923,7 @@ class NarrativeResponse:
         # Normalize if either dice_rolls or dice_audit_events exist
         if not self.dice_rolls and not self.dice_audit_events:
             return {}
-        
+
         return {
             "player_input": None,  # Unknown from legacy
             "interpreted_as": "action",
@@ -3212,6 +3208,44 @@ def parse_structured_response(
                 json_content = content
                 logging_util.info("Extracted JSON from generic code block")
 
+    # Strategy: Handle code execution artifacts
+    # When Gemini uses code execution, response may start with whitespace or code output
+    # before the JSON. Find the first { (JSON object) to locate the actual JSON start.
+    # We prefer { over [ because the response should be a JSON object, not an array.
+    stripped = json_content.strip()
+    if not stripped.startswith("{"):
+        # Look for JSON object start character (prefer { over [)
+        json_start = -1
+        brace_pos = json_content.find("{")
+        bracket_pos = json_content.find("[")
+
+        # If array comes first, find the { that comes after the array closes
+        if bracket_pos >= 0 and (brace_pos < 0 or bracket_pos < brace_pos):
+            # Find the closing bracket for the array
+            bracket_end = json_content.find("]", bracket_pos)
+            if bracket_end >= 0:
+                # Look for { after the array closes
+                brace_after_array = json_content.find("{", bracket_end + 1)
+                if brace_after_array >= 0:
+                    json_start = brace_after_array
+                else:
+                    # No { after array, use array start as fallback
+                    json_start = bracket_pos
+            else:
+                # Array not closed, use array start as fallback
+                json_start = bracket_pos
+        elif brace_pos >= 0:
+            # { comes first or no array, use brace position
+            json_start = brace_pos
+        elif bracket_pos >= 0:
+            # Only array exists, use it
+            json_start = bracket_pos
+
+        if json_start > 0:
+            cleaned_json = json_content[json_start:].strip()
+            logging_util.info(f"Removed code execution prefix ({json_start} chars) before JSON")
+            json_content = cleaned_json
+
     # Parse JSON using standard json.loads()
     # Recovery logic: Handle various JSON errors with multiple recovery strategies
     recovery_attempted = False
@@ -3222,7 +3256,7 @@ def parse_structured_response(
     except json.JSONDecodeError as e:
         error_msg = str(e)
         error_pos = getattr(e, "pos", None)
-        
+
         # Strategy 1: Handle "Extra data" errors (valid JSON + trailing text)
         if "Extra data" in error_msg and error_pos is not None:
             recovery_attempted = True
@@ -3230,7 +3264,7 @@ def parse_structured_response(
             try:
                 # Extract JSON up to the error position and strip trailing whitespace
                 valid_json = json_content[:error_pos].rstrip()
-                
+
                 # Try parsing the truncated JSON
                 parsed_data = json.loads(valid_json)
                 extra_data_length = len(json_content) - error_pos
@@ -3239,21 +3273,21 @@ def parse_structured_response(
                     f"(truncated at position {error_pos}, {extra_data_length} chars of extra data ignored). "
                     f"Original error: {error_msg}"
                 )
-            except (json.JSONDecodeError, ValueError) as recovery_error:
+            except (json.JSONDecodeError, ValueError):
                 parsed_data = None
                 # Keep recovery_strategy set to track which strategy was attempted
-        
+
         # Strategy 2: Handle "Expecting value" errors (common with truncated/malformed responses)
         if parsed_data is None and "Expecting value" in error_msg:
             recovery_attempted = True
             recovery_strategy = "expecting_value_recovery"
-            
+
             # Try to find the last complete JSON object/array
             # Look for the last closing brace/bracket
             last_brace = json_content.rfind("}")
             last_bracket = json_content.rfind("]")
             last_valid_pos = max(last_brace, last_bracket)
-            
+
             if last_valid_pos > 0:
                 try:
                     # Try parsing from start to last valid position
@@ -3264,28 +3298,28 @@ def parse_structured_response(
                         f"by truncating at last valid brace/bracket (position {last_valid_pos}). "
                         f"Original error: {error_msg}"
                     )
-                except (json.JSONDecodeError, ValueError) as recovery_error:
+                except (json.JSONDecodeError, ValueError):
                     parsed_data = None
                     # Keep recovery_strategy set to track which strategy was attempted
-        
+
         # Strategy 3: Try stripping common prefixes/suffixes that might cause issues
         if parsed_data is None and error_pos is not None:
             recovery_attempted = True
             recovery_strategy = "prefix_suffix_stripping"
-            
+
             # Try removing leading/trailing whitespace and common markdown artifacts
             cleaned_json = json_content.strip()
-            
+
             # Remove common markdown code block artifacts if present
             if cleaned_json.startswith("```"):
                 # Find the first newline after ```
                 first_newline = cleaned_json.find("\n")
                 if first_newline > 0:
                     cleaned_json = cleaned_json[first_newline + 1:]
-            
+
             if cleaned_json.endswith("```"):
                 cleaned_json = cleaned_json[:-3].rstrip()
-            
+
             # Try parsing cleaned JSON
             try:
                 parsed_data = json.loads(cleaned_json)
@@ -3296,7 +3330,7 @@ def parse_structured_response(
             except (json.JSONDecodeError, ValueError):
                 parsed_data = None
                 # Keep recovery_strategy set to track which strategy was attempted
-        
+
         # If all recovery strategies failed, log the error
         if parsed_data is None:
             if recovery_attempted:
@@ -3428,7 +3462,7 @@ def parse_structured_response(
         error_detail = "No recovery attempted - error type not recoverable."
     else:
         error_detail = None  # Recovery succeeded, parsed_data should be set
-    
+
     if parsed_data is None:
         logging_util.error(
             f"Failed to parse JSON response - returning error message. {error_detail}"
