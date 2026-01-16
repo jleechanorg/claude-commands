@@ -5,6 +5,7 @@ for recent PRs. Workspaces live under /tmp/{repo}/{branch}.
 """
 
 import argparse
+import fcntl
 import json
 import os
 import re
@@ -464,33 +465,67 @@ done
             log(f"Invalid pr_number (must be numeric): {pr_number}")
             return None
 
-        # Use a semi-fixed path: base name for macOS permission recognition + PID for concurrency
+        # Use a FIXED script path per PR to avoid macOS permission prompts
         # macOS treats each unique script path as a separate "app" and asks permission repeatedly
-        # Using a consistent base pattern helps macOS recognize it, while PID prevents races
-        # when the same PR is processed by multiple concurrent processes
-        script_path = f"/tmp/pending_review_monitor_{pr_num_str}_{os.getpid()}.sh"
+        # Using a fixed path allows macOS to recognize it as the same app
+        script_path = f"/tmp/pending_review_monitor_{pr_num_str}.sh"
         script_path_obj = Path(script_path)
+        lock_path = Path(f"{script_path}.lock")
 
-        # Use atomic file creation with O_EXCL to prevent TOCTOU race conditions
-        # O_NOFOLLOW prevents symlink attacks on retry
-        def create_script_atomically() -> int:
-            """Create script file atomically, removing stale file if needed."""
+        # Use file locking to prevent concurrent access when multiple processes
+        # try to start a monitor for the same PR simultaneously
+        lock_fd = None
+        try:
+            # Create lock file if it doesn't exist
+            lock_path.parent.mkdir(parents=True, exist_ok=True)
+            lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_WRONLY, 0o644)
+            # Acquire exclusive lock (non-blocking)
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                # Another process is already handling this PR's monitor
+                log(f"Monitor for PR #{pr_number} already being created by another process")
+                os.close(lock_fd)
+                return None
+
+            # Check if monitor script already exists and if the process is still running
+            if script_path_obj.exists():
+                # Try to read PID from script's shebang or check if process is running
+                # For simplicity, we'll remove stale script if it exists
+                # The script itself has cleanup logic via trap, so this is safe
+                try:
+                    script_path_obj.unlink()
+                except OSError:
+                    pass  # File may have been removed by another process
+
+            # Use atomic file creation with O_EXCL to prevent TOCTOU race conditions
+            # O_NOFOLLOW prevents symlink attacks
             flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
-            # Add O_NOFOLLOW if available (prevents symlink attacks)
             if hasattr(os, "O_NOFOLLOW"):
                 flags |= os.O_NOFOLLOW
             try:
-                return os.open(script_path, flags, 0o700)
+                script_fd = os.open(str(script_path_obj), flags, 0o700)
             except FileExistsError:
-                # Stale file from crashed previous run with same PID (rare but possible)
-                # Use unlink with the Path object which won't follow symlinks
-                script_path_obj.unlink(missing_ok=True)
-                return os.open(script_path, flags, 0o700)
+                # Race condition: another process created it between unlink and open
+                log(f"Monitor script for PR #{pr_number} was created by another process")
+                return None
 
-        # Write script content using secure fd-based approach
-        script_fd = create_script_atomically()
-        with os.fdopen(script_fd, "w", encoding="utf-8") as f:
-            f.write(monitor_script)
+            # Write script content using secure fd-based approach
+            with os.fdopen(script_fd, "w", encoding="utf-8") as f:
+                f.write(monitor_script)
+        finally:
+            # Release lock
+            if lock_fd is not None:
+                try:
+                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                    os.close(lock_fd)
+                except OSError:
+                    pass
+                # Clean up lock file
+                try:
+                    lock_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
         env = {
             **os.environ,
