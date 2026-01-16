@@ -16,7 +16,7 @@ Matrix Coverage:
 
 import os
 import unittest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import patch
 
 # Set test environment before imports
 os.environ["TESTING_AUTH_BYPASS"] = "true"
