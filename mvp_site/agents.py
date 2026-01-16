@@ -530,11 +530,19 @@ class StoryModeAgent(BaseAgent):
             campaign_tier = self.game_state.get_campaign_tier()
 
             if campaign_tier == constants.CAMPAIGN_TIER_DIVINE:
-                parts.append(_load_instruction_file(constants.PROMPT_TYPE_DIVINE_SYSTEM))
-                logging_util.debug("📿 DIVINE_TIER: Including Divine Leverage system prompt")
+                divine_system = _load_instruction_file(constants.PROMPT_TYPE_DIVINE_SYSTEM)
+                if divine_system:
+                    parts.append(divine_system)
+                    logging_util.debug("📿 DIVINE_TIER: Including Divine Leverage system prompt")
+                else:
+                    logging_util.warning("📿 DIVINE_TIER: Divine system prompt missing/empty")
             elif campaign_tier == constants.CAMPAIGN_TIER_SOVEREIGN:
-                parts.append(_load_instruction_file(constants.PROMPT_TYPE_SOVEREIGN_SYSTEM))
-                logging_util.debug("🌌 SOVEREIGN_TIER: Including Sovereign Protocol system prompt")
+                sovereign_system = _load_instruction_file(constants.PROMPT_TYPE_SOVEREIGN_SYSTEM)
+                if sovereign_system:
+                    parts.append(sovereign_system)
+                    logging_util.debug("🌌 SOVEREIGN_TIER: Including Sovereign Protocol system prompt")
+                else:
+                    logging_util.warning("🌌 SOVEREIGN_TIER: Sovereign system prompt missing/empty")
 
         # Add continuation-specific reminders for story continuation
         if include_continuation_reminder:
@@ -1459,8 +1467,11 @@ class CampaignUpgradeAgent(BaseAgent):
 
         builder = self._prompt_builder
 
-        # Start with core instructions (includes master directive, game state)
-        parts: list[str] = builder.build_core_system_instructions()
+        # Use build_from_order() with REQUIRED_PROMPT_ORDER to load all required prompts
+        # This ensures DND_SRD and MECHANICS are included (matching CombatAgent's pattern)
+        parts: list[str] = builder.build_from_order(
+            self.REQUIRED_PROMPT_ORDER, include_debug=True
+        )
 
         # Add the appropriate ascension ceremony prompt
         if self._upgrade_type == "multiverse":

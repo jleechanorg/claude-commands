@@ -315,7 +315,15 @@ class GameState:
             )
 
         # Campaign tier progression (mortal → divine → sovereign)
-        if "campaign_tier" not in self.custom_campaign_state:
+        # Normalize campaign_tier: validate against allowed tiers and default on invalid values
+        # Firestore can store null or invalid values, which would break get_campaign_tier()
+        allowed_tiers = {
+            constants.CAMPAIGN_TIER_MORTAL,
+            constants.CAMPAIGN_TIER_DIVINE,
+            constants.CAMPAIGN_TIER_SOVEREIGN,
+        }
+        campaign_tier = self.custom_campaign_state.get("campaign_tier")
+        if campaign_tier not in allowed_tiers:
             self.custom_campaign_state["campaign_tier"] = (
                 constants.CAMPAIGN_TIER_MORTAL
             )
