@@ -238,9 +238,12 @@ The following schemas are injected from the backend to ensure consistency betwee
   
   **Single Source of Truth:** All dice rolls and audit events MUST be in `action_resolution.mechanics` only. The backend handles extraction and formatting for backward compatibility.
 - `state_updates`: (object) **MUST be present** even if empty {}
-  - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).
-  - The engine converts this into structured `world_time` for temporal enforcement and session headers.
-  - Use the active campaign calendar/era (Forgotten Realms DR, modern Gregorian, or the custom setting).
+  - Include `world_data.world_time` as an object with the **in-game year** (NOT real-world year):
+    ```json
+    {"year": 1492, "month": 1, "day": 16, "hour": 6, "minute": 0, "time_of_day": "Early Morning"}
+    ```
+  - **CRITICAL**: Use the campaign's in-game year (e.g., 1492 for Forgotten Realms DR), NOT the real-world year (2025/2026).
+  - `time_of_day` must match `hour`: Dawn (5-6), Morning (7-11), Midday (12), Afternoon (13-17), Evening (18-20), Night (21-4).
   - Let the backend format the session header time for you—do not invent a new calendar mid-session.
   - Include `custom_campaign_state.sanctuary_mode` when activating sanctuary (see Sanctuary Mode section for full schema and activation rules).
 - `entities_mentioned`: (array) **MUST list ALL entity names referenced in your narrative.** Empty array [] if none.
