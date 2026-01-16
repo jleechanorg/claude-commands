@@ -5,9 +5,12 @@
 
 set -euo pipefail
 
+# Setup logging - use dynamic project root detection (matching PreToolUse.sh)
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "/tmp")
+PROJECT_NAME=$(basename "$PROJECT_ROOT" 2>/dev/null || echo "unknown-project")
 BRANCH=$(git branch --show-current 2>/dev/null || echo 'unknown')
-LOG_FILE="${1:-/tmp/your-project.com/$BRANCH/hook_modifications.log}"
-WARNINGS_LOG_FILE="/tmp/your-project.com/$BRANCH/session_warnings.log"
+LOG_FILE="${1:-/tmp/${PROJECT_NAME}/${BRANCH}/hook_modifications.log}"
+WARNINGS_LOG_FILE="/tmp/${PROJECT_NAME}/${BRANCH}/session_warnings.log"
 
 if [ ! -f "$LOG_FILE" ]; then
   echo "No log file found at $LOG_FILE"
@@ -42,7 +45,7 @@ STATS=$(jq -s '
       .read_lines_saved += ($item.original_lines - $item.modified_lines) |
       if $item.session_id then
         # Initialize session object if it doesn't exist
-        if (.sessions[$item.session_id] | length) == 0 then
+        if (.sessions[$item.session_id] == null) then
           .sessions[$item.session_id] = {read_count: 0, read_saved: 0, diff_count: 0}
         else . end |
         .sessions[$item.session_id].read_count += 1 |
@@ -52,7 +55,7 @@ STATS=$(jq -s '
       .diff_count += 1 |
       if $item.session_id then
         # Initialize session object if it doesn't exist
-        if (.sessions[$item.session_id] | length) == 0 then
+        if (.sessions[$item.session_id] == null) then
           .sessions[$item.session_id] = {read_count: 0, read_saved: 0, diff_count: 0}
         else . end |
         .sessions[$item.session_id].diff_count += 1

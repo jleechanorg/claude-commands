@@ -113,7 +113,8 @@ main() {
 
     # Get log file path - sanitize SESSION_NAME to prevent path traversal
     # Remove any path traversal characters (/, ..) from session name
-    SANITIZED_SESSION=$(echo "$SESSION_NAME" | sed 's/[\/\.\.]//g' | sed 's/[^a-zA-Z0-9_-]/-/g')
+    # First remove .. sequences, then remove slashes, then sanitize other special chars
+    SANITIZED_SESSION=$(echo "$SESSION_NAME" | sed 's/\.\.//g' | sed 's/\///g' | sed 's/[^a-zA-Z0-9_-]/-/g')
     if [ -z "$SANITIZED_SESSION" ]; then
         SANITIZED_SESSION="unknown-session"
     fi
