@@ -48,13 +48,18 @@ interface BackendStoryEntryWithSequence extends BackendStoryEntry {
 /**
  * Convert backend story entries to frontend StoryEntry format.
  * Centralized to ensure consistent type determination across all reload paths.
+ * Also extracts system_warnings from story entries and creates warning entries.
  */
 function convertBackendStoryToEntries(
   backendStory: BackendStoryEntryWithSequence[]
 ): GameStoryEntry[] {
-  return backendStory.map((entry, index) => {
+  const entries: GameStoryEntry[] = []
+
+  for (const [index, entry] of backendStory.entries()) {
     const entryId = entry.sequence_id ?? entry.user_scene_number ?? index
-    return {
+
+    // Add the main story entry
+    entries.push({
       id: `story-${entryId}`,
       // Consistent type determination: god mode = narration, user actor = action, others = narration
       type: entry.mode === 'god'
@@ -68,8 +73,22 @@ function convertBackendStoryToEntries(
         : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system',
       // Preserve dice_rolls and other structured fields
       dice_rolls: entry.dice_rolls
+    })
+
+    // Extract system_warnings from AI responses and create warning entries
+    if (entry.system_warnings && Array.isArray(entry.system_warnings) && entry.system_warnings.length > 0) {
+      const warningEntries = createSystemWarningEntries(entry.system_warnings)
+      // Use entry-specific ID to avoid duplicates on reload
+      for (const warningEntry of warningEntries) {
+        entries.push({
+          ...warningEntry,
+          id: `warnings-${entryId}`
+        })
+      }
     }
-  })
+  }
+
+  return entries
 }
 
 export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayViewProps) {
