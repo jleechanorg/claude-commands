@@ -311,12 +311,12 @@ class TestPromptAPIEndpoint(unittest.TestCase):
         assert dispatcher.task_description is not None, "Task description should be set"
         prompt = dispatcher.task_description
 
-        # Should contain correct endpoint: /comments with in_reply_to parameter
-        assert "/pulls/123/comments" in prompt, "Prompt should contain /comments endpoint"
+        # Should contain correct endpoint: /comments with in_reply_to parameter (Python requests syntax)
+        assert "/pulls/123/comments" in prompt or "pulls/123/comments" in prompt, "Prompt should contain /comments endpoint"
         assert "in_reply_to" in prompt, "Prompt should contain in_reply_to parameter"
-        assert "-F in_reply_to" in prompt, "Prompt should use -F flag for numeric parameter"
-        assert "-f body" in prompt, "Prompt should use -f flag for string parameter"
-
+        # Should use Python requests syntax, not gh CLI flags
+        assert "post_pr_comment_python" in prompt or "requests.post" in prompt or "requests.get" in prompt, "Prompt should use Python requests, not gh CLI"
+        
         # Should NOT contain incorrect endpoint
         assert "/comments/{comment_id}/replies" not in prompt, "Prompt should NOT contain incorrect /replies endpoint"
 
