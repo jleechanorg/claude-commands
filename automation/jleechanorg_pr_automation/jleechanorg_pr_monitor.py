@@ -25,6 +25,11 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+# Threshold for detecting stale queued comments (hours)
+# Comments older than this threshold without a completion marker are considered stale
+# and allow re-running the fix-comment agent (handles cases where agent failed silently)
+STALE_QUEUE_THRESHOLD_HOURS = 1.0
+
 from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
 from .automation_safety_manager import AutomationSafetyManager
@@ -154,8 +159,6 @@ class JleechanorgPRMonitor:
     CODEX_COMMIT_MESSAGE_MARKER = "[codex-automation-commit]"
     CODEX_BOT_IDENTIFIER = "codex"
     FIX_COMMENT_COMPLETION_MARKER = "Fix-comment automation complete"
-    # Allow re-run if queued marker exceeds this threshold without completion.
-    FIX_COMMENT_QUEUED_TIMEOUT_HOURS = 1.0
     # GitHub short SHAs display with a minimum of 7 characters, while full SHAs are 40 characters.
     CODEX_COMMIT_SHA_LENGTH_RANGE: tuple[int, int] = (7, 40)
     CODEX_SUMMARY_COMMIT_PATTERNS = [
@@ -1701,10 +1704,10 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if not has_completion_marker and head_sha:
             queued_info = self._get_fix_comment_queued_info(comments, head_sha)
             if queued_info:
-                # Check if queued comment is stale (older than timeout threshold with no completion)
+                # Check if queued comment is stale (older than threshold with no completion)
                 # This handles cases where agent failed silently and never posted completion marker
                 queued_age_hours = queued_info.get("age_hours", 0)
-                if queued_age_hours > self.FIX_COMMENT_QUEUED_TIMEOUT_HOURS:
+                if queued_age_hours > STALE_QUEUE_THRESHOLD_HOURS:
                     self.logger.warning(
                         "⚠️ PR #%s has stale queued comment (%.1f hours old, no completion) - allowing re-run",
                         pr_number,
@@ -2175,13 +2178,8 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if not head_sha:
             return None
 
-        latest_created_at = None
-        latest_created_at_str = ""
-        latest_parseable_index = None
-        latest_unparseable_index = None
-        found_unparseable = False
-
-        for index, comment in enumerate(comments):
+        # Iterate in reverse to find the NEWEST queued comment first
+        for comment in reversed(comments):
             body = comment.get("body", "")
             # Check for queued run marker (FIX_COMMENT_RUN_MARKER_PREFIX)
             marker_sha = self._extract_fix_comment_run_marker(body)
@@ -2189,50 +2187,26 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 # Verify this is from automation user (not a bot echo)
                 author = self._get_comment_author_login(comment)
                 if author == self.automation_username:
-                    created_at_str = (
-                        comment.get("createdAt")
-                        or comment.get("created_at")
-                        or ""
-                    )
-                    if not created_at_str:
-                        found_unparseable = True
-                        latest_unparseable_index = index
-                        continue
-
-                    try:
-                        # Normalize ISO 8601 timestamp: replace 'Z' with '+00:00' for consistent parsing
-                        created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
-                        # Ensure timezone-aware datetime (handle edge case where fromisoformat returns naive)
-                        if created_at.tzinfo is None:
-                            created_at = created_at.replace(tzinfo=UTC)
-                    except (ValueError, AttributeError, TypeError):
-                        found_unparseable = True
-                        latest_unparseable_index = index
-                        continue
-
-                    if latest_created_at is None or created_at > latest_created_at:
-                        latest_created_at = created_at
-                        latest_created_at_str = created_at_str
-                        latest_parseable_index = index
-
-        if latest_created_at is not None:
-            if (
-                found_unparseable
-                and latest_unparseable_index is not None
-                and (
-                    latest_parseable_index is None
-                    or latest_unparseable_index > latest_parseable_index
-                )
-            ):
-                return {"age_hours": 0.0, "created_at": ""}
-            age_hours = (datetime.now(UTC) - latest_created_at).total_seconds() / 3600
-            return {
-                "age_hours": age_hours,
-                "created_at": latest_created_at_str,
-            }
-
-        if found_unparseable:
-            return {"age_hours": 0.0, "created_at": ""}
+                    # GitHub API returns timestamps in camelCase (createdAt)
+                    created_at_str = comment.get("createdAt") or comment.get("created_at", "")
+                    if created_at_str:
+                        try:
+                            # Normalize ISO 8601 timestamp: replace 'Z' with '+00:00' for consistent parsing
+                            # (defensive normalization - Python 3.11+ supports 'Z' directly, but this ensures compatibility)
+                            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                            # Ensure timezone-aware datetime (handle edge case where fromisoformat returns naive)
+                            if created_at.tzinfo is None:
+                                created_at = created_at.replace(tzinfo=UTC)
+                            now = datetime.now(UTC)
+                            age_hours = (now - created_at).total_seconds() / 3600
+                            return {
+                                "age_hours": age_hours,
+                                "created_at": created_at_str,
+                            }
+                        except (ValueError, AttributeError, TypeError):
+                            # If we can't parse date or compare (naive vs aware), assume it's recent (conservative)
+                            return {"age_hours": 0.0, "created_at": created_at_str}
+                    return {"age_hours": 0.0, "created_at": ""}
 
         return None
 
