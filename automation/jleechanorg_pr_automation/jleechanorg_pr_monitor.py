@@ -1972,71 +1972,62 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             return "failed"
 
     def _get_pr_comment_state(self, repo_full_name: str, pr_number: int) -> tuple[str | None, list[dict] | None]:
-        """Fetch PR comment data needed for Codex comment gating.
+        """Fetch PR comment data needed for Codex comment gating using Python requests (avoids bash prompts).
         
         Returns:
             Tuple of (head_sha, comments). If API call fails, returns (None, None) to
             distinguish from "no comments" case (None, []). Callers should check for
             None comments and treat as "unknown" rather than skipping.
         """
-        view_cmd = [
-            "gh",
-            "pr",
-            "view",
-            str(pr_number),
-            "--repo",
-            repo_full_name,
-            "--json",
-            "headRefOid,comments",
-        ]
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
+            self.logger.warning(f"⚠️ No GitHub token available for fetching PR comment state: {repo_full_name}#{pr_number}")
+            return None, None
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
 
         try:
-            result = AutomationUtils.execute_subprocess_with_timeout(
-                view_cmd,
-                timeout=30,
-                check=False
-            )
-            # Check return code to distinguish API failures from empty results
-            if result.returncode != 0:
-                error_message = result.stderr.strip() if result.stderr else f"Exit code {result.returncode}"
+            # Fetch PR data using GitHub REST API
+            pr_url = f"https://api.github.com/repos/{repo_full_name}/pulls/{pr_number}"
+            try:
+                pr_response = requests.get(pr_url, headers=headers, timeout=30)
+                pr_response.raise_for_status()
+                pr_data = pr_response.json()
+                head_sha = pr_data.get("head", {}).get("sha")  # REST API uses head.sha, not headRefOid
+            except requests.exceptions.RequestException as e:
                 self.logger.warning(
-                    f"⚠️ Failed to fetch PR comment state for PR #{pr_number}: {error_message}"
+                    f"⚠️ Failed to fetch PR data for PR #{pr_number}: {e}"
                 )
-                # Return sentinel value to indicate API failure (distinct from "no comments")
-                # Caller should treat this as "unknown" rather than "no comments"
                 return None, None
 
-            pr_data = json.loads(result.stdout or "{}")
-            head_sha = pr_data.get("headRefOid")
-
-            # Handle different comment structures from GitHub API
-            comments_data = pr_data.get("comments", [])
-            if isinstance(comments_data, dict):
-                comments = comments_data.get("nodes", [])
-            elif isinstance(comments_data, list):
-                comments = comments_data
-            else:
-                comments = []
+            # Fetch comments separately (REST API doesn't include comments in PR endpoint)
+            comments_url = f"https://api.github.com/repos/{repo_full_name}/issues/{pr_number}/comments"
+            try:
+                comments_response = requests.get(comments_url, headers=headers, timeout=30, params={"per_page": 100})
+                comments_response.raise_for_status()
+                comments = comments_response.json()
+            except requests.exceptions.RequestException as e:
+                self.logger.warning(
+                    f"⚠️ Failed to fetch PR comments for PR #{pr_number}: {e}"
+                )
+                # Return None comments to indicate API failure
+                return head_sha, None
 
             # Ensure comments are sorted by creation time (oldest first)
-            # GitHub API should return them sorted, but let's be explicit
             comments.sort(
-                key=lambda c: (c.get("createdAt") or c.get("updatedAt") or "")
+                key=lambda c: (c.get("created_at") or c.get("updated_at") or "")
             )
 
             return head_sha, comments
-        except subprocess.CalledProcessError as e:
-            error_message = e.stderr.strip() if e.stderr else str(e)
+        except Exception as e:
             self.logger.warning(
-                f"⚠️ Failed to fetch PR comment state for PR #{pr_number}: {error_message}"
+                f"⚠️ Unexpected error fetching PR comment state for PR #{pr_number}: {e}"
             )
             # Return sentinel value to indicate API failure
-            return None, None
-        except json.JSONDecodeError as e:
-            self.logger.warning(
-                f"⚠️ Failed to parse PR comment state for PR #{pr_number}: {e}"
-            )
-            # Return sentinel value to indicate parse failure
             return None, None
 
     def _get_head_commit_details(
@@ -2824,12 +2815,31 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
             # Process PR with guaranteed cleanup
             try:
-                # Get PR details using gh CLI
-                result = AutomationUtils.execute_subprocess_with_timeout(
-                    ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "title,headRefName,baseRefName,url,author,headRefOid,mergeable"],
-                    timeout=30
-                )
-                pr_data = json.loads(result.stdout or "{}")
+                # Get PR details using Python requests (avoids bash prompts)
+                token = get_github_token()
+                if not token:
+                    self.logger.error(f"❌ No GitHub token available for fetching PR data: {repo_full}#{pr_number}")
+                    return False
+
+                headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github.v3+json",
+                }
+
+                pr_url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}"
+                try:
+                    pr_response = requests.get(pr_url, headers=headers, timeout=30)
+                    pr_response.raise_for_status()
+                    pr_data = pr_response.json()
+                    
+                    # Normalize field names to match GraphQL format expected by callers
+                    pr_data["headRefName"] = pr_data.get("head", {}).get("ref")
+                    pr_data["baseRefName"] = pr_data.get("base", {}).get("ref")
+                    pr_data["headRefOid"] = pr_data.get("head", {}).get("sha")
+                    pr_data["author"] = pr_data.get("user", {})
+                except requests.exceptions.RequestException as e:
+                    self.logger.error(f"❌ Failed to fetch PR data for #{pr_number}: {e}")
+                    return False
 
                 if not pr_data or "title" not in pr_data:
                     self.logger.error(f"❌ Failed to fetch PR data for #{pr_number} - empty or invalid response")
