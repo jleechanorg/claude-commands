@@ -10,6 +10,7 @@ from _post_fixpr_queued, matching the behavior of _process_pr_fix_comment.
 """
 
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock, patch, MagicMock, call
 
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
@@ -28,6 +29,7 @@ class TestFixprReturnValue(unittest.TestCase):
         # Mock logger to avoid logging issues
         self.monitor.logger = MagicMock()
 
+    # Patch decorators apply bottom-to-top; parameter order follows that application order.
     @patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks')
     @patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout')
     @patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr')
@@ -352,7 +354,6 @@ class TestFixprSkipsCleanPRs(unittest.TestCase):
 
 class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
     def setUp(self):
-        from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
         with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager'):
             self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
             self.monitor.safety_manager.fixpr_limit = 10
@@ -374,7 +375,6 @@ class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
         # Patch dependencies
         with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", side_effect=RuntimeError("boom")):
             # gh pr view failure
-            from types import SimpleNamespace
             mock_subprocess_result = SimpleNamespace(returncode=1, stdout="", stderr="fail")
             with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_subprocess_result):
                 # History says NOT processed → should proceed
@@ -398,7 +398,6 @@ class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
         
         # Unknown status path again (e.g. failing checks throws exception)
         with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", side_effect=Exception("API Fail")):
-            from types import SimpleNamespace
             # gh pr view failure
             mock_subprocess_result = SimpleNamespace(returncode=1, stdout="", stderr="fail")
             with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_subprocess_result):
@@ -415,7 +414,6 @@ class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
         
         # Issues present (e.g., failing checks)
         with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=True):
-            from types import SimpleNamespace
             mock_subprocess_result = SimpleNamespace(returncode=0, stdout='{"mergeable":"MERGEABLE"}', stderr="")
             with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_subprocess_result):
                 # Even if history says processed, we should reprocess because has_failing_checks is True

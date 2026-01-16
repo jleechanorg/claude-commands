@@ -1914,7 +1914,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             # Check for failing checks
             is_failing = has_failing_checks(repo_full, pr_number)
         except Exception as e:
-            # Treat status as unknown; do NOT assume the PR is clean.
+            # Treat status as unknown; leave defaults and do NOT assume the PR is clean.
             self.logger.debug(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
             status_unknown = True
 
