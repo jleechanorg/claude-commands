@@ -224,7 +224,11 @@ def _load_credentials_from_env() -> dict[str, Any]:
     # Check required environment variables
     project_id = os.environ.get("GOOGLE_PROJECT_ID")
     client_email = os.environ.get("GOOGLE_CLIENT_EMAIL")
-    private_key = os.environ.get("GOOGLE_PRIVATE_KEY")
+    private_key_raw = os.environ.get("GOOGLE_PRIVATE_KEY")
+    
+    # Convert escaped \n sequences to actual newlines for PEM parsing
+    # Environment variables store \n as literal two-character strings, but PEM keys require actual newlines
+    private_key = private_key_raw.replace('\\n', '\n') if private_key_raw else None
 
     # Validate required fields
     missing_vars = []

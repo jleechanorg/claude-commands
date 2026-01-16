@@ -107,8 +107,7 @@ except ValueError:
         from mvp_site.service_account_loader import get_service_account_credentials
 
         worldai_creds_path = os.getenv("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS")
-        if worldai_creds_path:
-            worldai_creds_path = os.path.expanduser(worldai_creds_path)
+        worldai_creds_path = os.path.expanduser(worldai_creds_path) if worldai_creds_path else None
 
         # Try loading credentials (file first, then env vars fallback)
         try:
