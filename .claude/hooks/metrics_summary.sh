@@ -45,7 +45,7 @@ STATS=$(jq -s '
       .read_lines_saved += ($item.original_lines - $item.modified_lines) |
       if $item.session_id then
         # Initialize session object if it doesn't exist
-        if (.sessions[$item.session_id] | length) == 0 then
+        if (.sessions[$item.session_id] == null) then
           .sessions[$item.session_id] = {read_count: 0, read_saved: 0, diff_count: 0}
         else . end |
         .sessions[$item.session_id].read_count += 1 |
@@ -55,7 +55,7 @@ STATS=$(jq -s '
       .diff_count += 1 |
       if $item.session_id then
         # Initialize session object if it doesn't exist
-        if (.sessions[$item.session_id] | length) == 0 then
+        if (.sessions[$item.session_id] == null) then
           .sessions[$item.session_id] = {read_count: 0, read_saved: 0, diff_count: 0}
         else . end |
         .sessions[$item.session_id].diff_count += 1
