@@ -3229,8 +3229,9 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         # Calculate user_scene_number: count of AI responses (includes GOD mode)
         # This is different from player_turn which skips GOD mode
+        # Guard against non-dict entries from malformed Firestore data
         user_scene_number = (
-            sum(1 for entry in story_context if entry.get("actor") == "gemini") + 1
+            sum(1 for entry in story_context if isinstance(entry, dict) and entry.get("actor") == "gemini") + 1
         )
 
         # Extract structured fields from LLM response (critical missing fields)
