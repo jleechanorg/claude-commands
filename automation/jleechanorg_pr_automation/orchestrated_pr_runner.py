@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import requests
+
 from orchestration import task_dispatcher
 from orchestration.task_dispatcher import TaskDispatcher
 
@@ -59,6 +61,120 @@ def display_log_viewing_command(session_name: str) -> None:
 class PendingReviewMonitor:
     process: subprocess.Popen
     script_path: Path
+
+
+def get_github_token() -> Optional[str]:
+    """Get GitHub token from environment or gh CLI config."""
+    # Try environment first
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        return token
+    
+    # Try gh CLI config as fallback
+    try:
+        result = subprocess.run(
+            ["gh", "auth", "token"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except Exception:
+        pass
+    
+    return None
+
+
+def post_pr_comment_python(repo_full: str, pr_number: int, body: str, in_reply_to: Optional[int] = None) -> bool:
+    """Post a comment to a PR using Python GitHub API (avoids bash/macOS permission prompts).
+    
+    Args:
+        repo_full: Repository in format "owner/repo"
+        pr_number: PR number
+        body: Comment body text
+        in_reply_to: Optional comment ID to reply to (creates threaded reply)
+    
+    Returns:
+        True if comment was posted successfully, False otherwise
+    """
+    token = get_github_token()
+    if not token:
+        log("⚠️ No GitHub token available for posting comment")
+        return False
+    
+    try:
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+        
+        if in_reply_to:
+            # Reply to inline review comment
+            url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}/comments"
+            data = {
+                "body": body,
+                "in_reply_to": in_reply_to
+            }
+        else:
+            # General PR comment (issue comment endpoint)
+            url = f"https://api.github.com/repos/{repo_full}/issues/{pr_number}/comments"
+            data = {"body": body}
+        
+        response = requests.post(url, json=data, headers=headers, timeout=30)
+        response.raise_for_status()
+        log(f"✅ Posted comment to {repo_full}#{pr_number}")
+        return True
+    except Exception as e:
+        log(f"⚠️ Failed to post comment: {e}")
+        return False
+
+
+def cleanup_pending_reviews_python(repo_full: str, pr_number: int, automation_user: str) -> None:
+    """Clean up pending reviews using Python GitHub API (avoids bash/macOS permission prompts).
+    
+    This function can be called by agents to clean up pending reviews without
+    triggering macOS permission dialogs from bash scripts.
+    """
+    token = get_github_token()
+    if not token:
+        log("⚠️ No GitHub token available for cleanup")
+        return
+    
+    try:
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+        
+        # Get all reviews
+        url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}/reviews"
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        reviews = response.json()
+        
+        # Find pending reviews from automation user
+        pending_reviews = [
+            r for r in reviews 
+            if r.get("state") == "PENDING" and r.get("user", {}).get("login") == automation_user
+        ]
+        
+        if not pending_reviews:
+            return
+        
+        # Delete each pending review
+        for review in pending_reviews:
+            review_id = review.get("id")
+            if review_id:
+                delete_url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}/reviews/{review_id}"
+                delete_response = requests.delete(delete_url, headers=headers, timeout=30)
+                if delete_response.status_code == 204:
+                    log(f"✅ Deleted pending review {review_id} for {repo_full}#{pr_number}")
+                else:
+                    log(f"⚠️ Failed to delete review {review_id}: {delete_response.status_code}")
+    except Exception as e:
+        log(f"Error cleaning up pending reviews: {e}")
 
 
 
@@ -650,12 +766,17 @@ def dispatch_agent_for_pr(
         "   ⚠️ THESE TOOLS ARE DISABLED AND WILL NOT WORK - DO NOT ATTEMPT TO USE THEM:\n"
         "   - `create_pending_pull_request_review` MCP tool (DISABLED - will fail if called)\n"
         "   - `add_comment_to_pending_review` MCP tool (DISABLED - will fail if called)\n\n"
-        "   ✅ CORRECT METHOD - Reply to inline review comments (ONLY USE THIS):\n"
-        f"   `gh api /repos/{repo_full}/pulls/{pr_number}/comments -f body='...' -F in_reply_to={{comment_id}}`\n"
-        "   This `/comments` endpoint with `in_reply_to` creates a threaded reply WITHOUT starting a review.\n"
-        "   ⚠️ Use `-f` for body (string) and `-F` for in_reply_to (numeric comment ID).\n\n"
-        "   ✅ CORRECT METHOD - General PR comments (not line-specific):\n"
-        f"   `gh pr comment {pr_number} --body '...'` or `gh api /repos/{repo_full}/issues/{pr_number}/comments -f body='...'`\n\n"
+        "   ✅✅✅ PREFERRED METHOD - Python (NO bash, NO macOS permission prompts):\n"
+        f"   ```python\n"
+        f"   from automation.jleechanorg_pr_automation.orchestrated_pr_runner import post_pr_comment_python\n"
+        f"   # General PR comment:\n"
+        f"   post_pr_comment_python('{repo_full}', {pr_number}, 'Your comment text')\n"
+        f"   # Reply to inline review comment:\n"
+        f"   post_pr_comment_python('{repo_full}', {pr_number}, 'Your reply', in_reply_to=comment_id)\n"
+        f"   ```\n\n"
+        "   ✅ FALLBACK METHOD - Bash (may trigger macOS permission prompts):\n"
+        f"   - Reply to inline: `gh api /repos/{repo_full}/pulls/{pr_number}/comments -f body='...' -F in_reply_to={{comment_id}}`\n"
+        f"   - General comment: `gh pr comment {pr_number} --body '...'`\n\n"
         "   ❌ FORBIDDEN - These ALWAYS create pending reviews (NEVER USE - TOOLS ARE DISABLED):\n"
         "   - `create_pending_pull_request_review` MCP tool (FORBIDDEN - DISABLED - creates pending review)\n"
         "   - `add_comment_to_pending_review` MCP tool (FORBIDDEN - DISABLED - adds to pending review)\n"
@@ -664,9 +785,13 @@ def dispatch_agent_for_pr(
         "   ✅ ALLOWED - Verification and Cleanup:\n"
         "   - `GET /repos/.../pulls/.../reviews` (ALLOWED - used to check for pending reviews)\n"
         "   - `DELETE /repos/.../pulls/.../reviews/{review_id}` (ALLOWED - used to clean up pending reviews)\n\n"
-        "   ⚠️ VERIFICATION: After replying, verify NO pending review was created:\n"
-        f"   `gh api /repos/{repo_full}/pulls/{pr_number}/reviews --jq '.[] | select(.state==\"PENDING\")'`\n"
-        "   If any pending reviews exist from your user, DELETE THEM IMMEDIATELY.\n\n"
+        "   ⚠️ VERIFICATION & CLEANUP: After posting ANY comment, you MUST check for and delete pending reviews.\n"
+        f"   PREFERRED METHOD (Python - NO bash, NO macOS permission prompts):\n"
+        f"   ```python\n"
+        f"   from automation.jleechanorg_pr_automation.orchestrated_pr_runner import cleanup_pending_reviews_python\n"
+        f"   cleanup_pending_reviews_python('{repo_full}', {pr_number}, '{automation_user or 'YOUR_USERNAME'}')\n"
+        f"   ```\n"
+        "   This cleanup is MANDATORY - pending reviews block PR merges and must be deleted immediately.\n\n"
         "If /fixpr is unavailable, follow these steps explicitly (fallback for all CLIs including Claude):\n"
         f"1) gh pr checkout {pr_number}\n"
         "2) git status && git branch --show-current\n"
@@ -694,21 +819,13 @@ def dispatch_agent_for_pr(
         "   ⚠️⚠️⚠️ USE ONLY THE ALLOWED METHODS LISTED ABOVE. ANY ATTEMPT TO CREATE A PENDING REVIEW WILL RESULT IN IMMEDIATE TERMINATION.\n"
     )
 
-    # Start background monitor to immediately delete any pending reviews created during execution
+    # Agent is responsible for cleaning up pending reviews after posting comments
+    # No background monitor script needed - eliminates macOS permission prompts
     automation_user = get_automation_user()
-    
-    monitor = None
     if automation_user:
-        monitor = _start_pending_review_monitor(
-            repo_full,
-            pr_number,
-            automation_user,
-            f"/tmp/orchestration_logs/pr-{workspace_name}.log",
-        )
-        if monitor:
-            log(f"✅ Started pending review monitor (PID: {monitor.process.pid}) for PR #{pr_number} (user: {automation_user})")
+        log(f"✅ Agent will handle pending review cleanup for PR #{pr_number} (user: {automation_user})")
     else:
-        log("⚠️ GITHUB_ACTOR/AUTOMATION_USERNAME not set and gh CLI detection failed; skipping pending review monitor")
+        log("⚠️ GITHUB_ACTOR/AUTOMATION_USERNAME not set; agent cleanup instructions may be incomplete")
 
     agent_specs = dispatcher.analyze_task_and_create_agents(task_description, forced_cli=agent_cli)
     success = False
@@ -734,25 +851,7 @@ def dispatch_agent_for_pr(
             success = True
         else:
             log(f"Failed to spawn agent for {repo_full}#{pr_number}")
-            # Monitor cleanup happens after the dispatch loop finishes.
-
-    if monitor and not success:
-        try:
-            if monitor.process.poll() is None:
-                monitor.process.terminate()
-                log("Stopped pending review monitor after agent dispatch failure")
-        except Exception as exc:
-            log(f"Failed to cleanup pending review monitor: {exc}")
-        finally:
-            if monitor and monitor.script_path.exists():
-                try:
-                    monitor.script_path.unlink()
-                except Exception as cleanup_exc:
-                    log(f"Failed to cleanup monitor script file after failure: {cleanup_exc}")
-    elif monitor and success:
-        log(
-            "Leaving pending review monitor running with timeout protection to cover agent execution"
-        )
+            # No monitor cleanup needed - agent handles pending review cleanup directly
 
     return success
 
