@@ -19,6 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
+from .logging_utils import setup_logging  # noqa: F401
+
 
 class SafeJSONManager:
     """Thread-safe and cross-process safe JSON file operations with file locking"""
@@ -120,37 +122,6 @@ class SafeJSONManager:
 json_manager = SafeJSONManager()
 
 
-def setup_logging(name: str, level: int = logging.INFO,
-                 log_file: Optional[str] = None) -> logging.Logger:
-    """Standardized logging setup for automation components"""
-    logger = logging.getLogger(name)
-
-    # Avoid duplicate handlers
-    if logger.handlers:
-        return logger
-
-    logger.setLevel(level)
-
-    # Create formatter
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    # File handler if specified
-    if log_file:
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-    return logger
-
-
 def get_env_config(prefix: str = "AUTOMATION_") -> Dict[str, str]:
     """Get all environment variables with specified prefix"""
     config = {}
@@ -202,18 +173,36 @@ def coerce_positive_int(value: Any, *, default: int) -> int:
 
 
 def get_automation_limits_with_overrides(overrides: Optional[Mapping[str, Any]] = None) -> Dict[str, int]:
-    """Internal helper to keep defaults centralized and overrides explicit."""
+    """Internal helper to keep defaults centralized and overrides explicit.
+
+    New limit structure:
+    - pr_limit: 50 total attempts across ALL workflows for a PR
+    - workflow limits: 10 attempts per workflow (counts ALL attempts, not just failures)
+    """
+    # Global PR limit: 50 total attempts across all workflows
+    pr_limit_default = 50
+    pr_limit = coerce_positive_int(os.getenv("AUTOMATION_PR_LIMIT"), default=pr_limit_default)
+
+    # Per-workflow limit: 10 attempts per workflow
+    workflow_limit_default = 10
+
     defaults: Dict[str, int] = {
-        # Attempt/run limits
-        "pr_limit": 10,
-        "global_limit": 50,
+        # Global PR limit: counts ALL attempts across ALL workflows
+        "pr_limit": pr_limit,
+        "global_limit": coerce_positive_int(os.getenv("AUTOMATION_GLOBAL_LIMIT"), default=100),
         "approval_hours": 24,
         "subprocess_timeout": 300,
-        # Workflow-specific *comment* limits (per PR)
-        "pr_automation_limit": 10,
-        "fix_comment_limit": 10,
-        "codex_update_limit": 10,
-        "fixpr_limit": 10,
+        # Workflow-specific limits: 10 attempts per workflow (counts ALL attempts)
+        "pr_automation_limit": coerce_positive_int(
+            os.getenv("AUTOMATION_PR_AUTOMATION_LIMIT"), default=workflow_limit_default
+        ),
+        "fix_comment_limit": coerce_positive_int(
+            os.getenv("AUTOMATION_FIX_COMMENT_LIMIT"), default=workflow_limit_default
+        ),
+        "codex_update_limit": coerce_positive_int(
+            os.getenv("AUTOMATION_CODEX_UPDATE_LIMIT"), default=workflow_limit_default
+        ),
+        "fixpr_limit": coerce_positive_int(os.getenv("AUTOMATION_FIXPR_LIMIT"), default=workflow_limit_default),
     }
 
     if not overrides:

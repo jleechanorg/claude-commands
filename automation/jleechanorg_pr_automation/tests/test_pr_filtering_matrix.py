@@ -21,7 +21,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
     def setUp(self):
         """Set up test environment"""
         self.temp_dir = tempfile.mkdtemp()
-        self.monitor = JleechanorgPRMonitor()
+        self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
         self.monitor.history_storage_path = self.temp_dir
 
     def tearDown(self):
@@ -510,6 +510,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
         with patch.object(self.monitor, "_get_pr_comment_state", return_value=("abc123", [])), \
              patch.object(self.monitor, "_should_skip_pr", return_value=False), \
              patch.object(self.monitor, "_has_fix_comment_comment_for_commit", return_value=False), \
+             patch.object(self.monitor, "_has_unaddressed_comments", return_value=True), \
              patch.object(self.monitor, "dispatch_fix_comment_agent", return_value=True), \
              patch.object(self.monitor, "_post_fix_comment_queued", return_value=True), \
              patch.object(self.monitor, "_start_fix_comment_review_watcher", return_value=True) as mock_start:

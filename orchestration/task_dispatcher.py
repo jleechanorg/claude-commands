@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import glob
 import json
+import logging
 import os
 import re
 import shlex
@@ -18,20 +19,32 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .cli_validation import (
+    CLI_VALIDATION_TEST_PROMPT,
+    CLI_VALIDATION_TIMEOUT_SECONDS,
+    OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS,
+    validate_cli_two_phase,
+)
+
 from .a2a_integration import TaskPool, get_a2a_status
 from .a2a_monitor import get_monitor
 from .constants import (
     AGENT_SESSION_TIMEOUT_SECONDS,
     DEFAULT_MAX_CONCURRENT_AGENTS,
+    RUNTIME_CLI_TIMEOUT_SECONDS,
+    RUNTIME_OAUTH_CLI_TIMEOUT_SECONDS,
     TIMESTAMP_MODULO,
 )
 
 A2A_AVAILABLE = True
 
-# Default Gemini model uses GEMINI_MODEL when set; otherwise gemini-3-pro-preview.
+# Default Gemini model can be overridden via GEMINI_MODEL; default to gemini-3-pro-preview (Gemini 3 Pro)
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
 # Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
+
+# CLI validation constants imported from centralized validation library
+# CLI_VALIDATION_TEST_PROMPT, CLI_VALIDATION_TIMEOUT_SECONDS, OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS
 
 CLI_PROFILES = {
     "claude": {
@@ -84,10 +97,10 @@ CLI_PROFILES = {
         "conversation_dir": None,
         "continue_flag": "",
         "restart_env": "GEMINI_RESTART",
-        # Stick to configured GEMINI_MODEL (default gemini-3-pro-preview) unless overridden
+        # Model can be overridden via agent_spec["model"] (defaults to GEMINI_MODEL)
         # YOLO mode enabled to allow file access outside workspace (user directive)
         # NOTE: Prompt must come via stdin (not -p flag which is deprecated and only appends to stdin)
-        "command_template": f"{{binary}} -m {GEMINI_MODEL} --yolo",
+        "command_template": "{binary} -m {model} --yolo",
         "stdin_template": "{prompt_file}",
         "quote_prompt": False,
         # Unset GEMINI_API_KEY to force OAuth authentication (higher quotas than API key)
@@ -272,6 +285,12 @@ class TaskDispatcher:
 
             if total_count > 0:
                 print(f"📊 Found {active_count} actively working agent(s) (limit: {MAX_CONCURRENT_AGENTS})")
+                if active_count > 0:
+                    for agent in sorted(active_agents):
+                        print(f"   • {agent}")
+                    # Compute script path relative to module directory
+                    script_path = Path(__file__).resolve().parent / "stream_logs.sh"
+                    print(f"📺 View agent logs: {script_path} <agent_name>")
                 if idle_count > 0:
                     print(f"   Plus {idle_count} idle agent(s) (completed but monitoring)")
 
@@ -703,6 +722,83 @@ class TaskDispatcher:
             cli_path = self._ensure_mock_cli_binary(cli_name) or ""
 
         return cli_path or None
+
+    def _validate_cli_availability(self, cli_name: str, cli_path: str, agent_name: str, model: str | None = None) -> bool:
+        """
+        Pre-flight validation: Two-phase validation using centralized validation library.
+        Phase 1: --help check (cheap sanity check)
+        Phase 2: Execution test (2+2) with file output
+        
+        Returns True if CLI is available and working, False if quota/rate limit detected or execution fails.
+        Timeouts are treated as "unknown" and return True (will rely on runtime fallback).
+        """
+        try:
+            profile = CLI_PROFILES.get(cli_name, {})
+            env = {k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
+
+            # Determine help args and execution cmd based on CLI type
+            help_args = []
+            execution_cmd = []
+            execution_timeout = CLI_VALIDATION_TIMEOUT_SECONDS
+            skip_help = False
+
+            if cli_name == "gemini":
+                help_args = ["--help"]
+                test_model = model if model and model != "sonnet" else GEMINI_MODEL
+                execution_cmd = ["-m", test_model, "--yolo"]
+            elif cli_name == "codex":
+                help_args = ["exec", "--help"]
+                execution_cmd = ["exec", "--yolo"]
+            elif cli_name == "claude":
+                # OAuth CLI - check executable first, then use prompt file for execution
+                if not os.access(cli_path, os.X_OK):
+                    print(f"   ⚠️ Claude CLI binary not executable: {cli_path} (agent {agent_name})")
+                    return False
+                help_args = ["--help"]
+                test_model = model if model else "sonnet"
+                # For Claude, we need to create a prompt file (handled in execution phase)
+                # Use a special marker to indicate prompt file needed
+                execution_cmd = ["--model", test_model, "-p", "@PROMPT_FILE", "--output-format", "text"]
+                execution_timeout = OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS
+                skip_help = True  # Skip help for OAuth CLIs (may require auth)
+            elif cli_name == "cursor":
+                # OAuth CLI - check executable first, then use prompt file for execution
+                if not os.access(cli_path, os.X_OK):
+                    print(f"   ⚠️ Cursor CLI binary not executable: {cli_path} (agent {agent_name})")
+                    return False
+                help_args = ["--help"]
+                # Use CURSOR_MODEL when model is "sonnet" or None to match runtime command_template
+                test_model = model if model and model != "sonnet" else CURSOR_MODEL
+                # For Cursor, we need to create a prompt file (handled in execution phase)
+                execution_cmd = ["-f", "-p", "@PROMPT_FILE", "--model", test_model, "--output-format", "text"]
+                execution_timeout = OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS
+                skip_help = True  # Skip help for OAuth CLIs (may require auth)
+            else:
+                # Unknown CLI type - assume available
+                print(f"   ⚠️ Unknown CLI type '{cli_name}' for {agent_name} - assuming available (runtime fallback will catch failures)")
+                return True
+
+            # Use centralized two-phase validation
+            result = validate_cli_two_phase(
+                cli_name=cli_name,
+                cli_path=cli_path,
+                help_args=help_args,
+                execution_cmd=execution_cmd,
+                env=env,
+                execution_timeout=execution_timeout,
+                retain_output=False,  # Clean up temp dirs after validation
+                skip_help=skip_help,
+                agent_name=agent_name,
+            )
+
+            return result.success
+        except Exception as e:
+            # DESIGN DECISION: Unknown exceptions are treated as "available" (return True) to allow runtime fallback.
+            # Rationale: Preflight validation should catch definitive failures (quota, binary not found),
+            # not block on unexpected errors that might be transient or environment-specific.
+            # Tradeoff: Real breakage could be masked, but runtime will catch actual failures and fallback to next CLI.
+            print(f"   ⚠️ CLI validation failed for {cli_name} (agent {agent_name}): {e} (will try anyway)")
+            return True
 
     def _find_recent_pr(self) -> str | None:
         """Try to find a recent PR from current branch or user."""
@@ -1168,7 +1264,7 @@ Complete the task, then use /pr to create a new pull request."""
 
         # Sanitize model to prevent injection
         raw_model = str(model)
-        if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
+        if not re.fullmatch(r"[A-Za-z0-9_.\-]+", raw_model):
             print(f"❌ Invalid model name requested: {raw_model!r}")
             return False
         model = raw_model
@@ -1262,6 +1358,12 @@ Complete the task, then use /pr to create a new pull request."""
                     cli_path = candidate_path
                     break
 
+            # Set CLI-specific default model when using the Claude default ('sonnet')
+            if model == "sonnet" and agent_cli == "gemini":
+                model = GEMINI_MODEL
+            elif model == "sonnet" and agent_cli == "cursor":
+                model = CURSOR_MODEL
+
             # Persist chain for downstream script-generation
             agent_spec["cli"] = agent_cli
             if len(cli_chain) > 1:
@@ -1303,6 +1405,88 @@ Complete the task, then use /pr to create a new pull request."""
                     return False
 
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
+
+            # Pre-flight validation: Test if CLI can actually work (API connectivity/quota check)
+            # Validate ALL CLIs in chain to ensure fallback options are ready
+            print(f"🔍 Starting pre-flight validation for {agent_name} (CLI chain: {', '.join(cli_chain)}, model: {model})")
+            validated_clis = []  # List of (cli_name, cli_path) tuples that passed validation
+            validated_cli = None
+            validated_path = None
+            
+            # Validate all CLIs in the chain
+            for candidate_cli in cli_chain:
+                candidate_path = self._resolve_cli_binary(candidate_cli)
+                if not candidate_path:
+                    print(f"⚠️ CLI '{candidate_cli}' binary not found, skipping validation")
+                    continue
+                
+                print(f"   🧪 Validating {CLI_PROFILES[candidate_cli]['display_name']} CLI at {candidate_path} (model: {model})...")
+                if self._validate_cli_availability(candidate_cli, candidate_path, agent_name, model=model):
+                    validated_clis.append((candidate_cli, candidate_path))
+                    print(f"   ✅ {CLI_PROFILES[candidate_cli]['display_name']} CLI validation passed for {agent_name}")
+                    # Use first validated CLI as primary, but keep others as fallbacks
+                    if not validated_cli:
+                        validated_cli = candidate_cli
+                        validated_path = candidate_path
+                else:
+                    print(f"   ❌ CLI '{candidate_cli}' failed pre-flight validation")
+            
+            # If no CLIs in chain passed validation, try fallback CLIs
+            # Prefer Codex for fallback (most reliable), then others
+            if not validated_cli:
+                print(f"⚠️ All CLIs in chain failed validation for {agent_name}, attempting fallback")
+                # Prioritize Codex for fallback (most reliable for automation)
+                fallback_priority = ["codex", "claude", "cursor", "gemini"]
+                for fallback_cli in fallback_priority:
+                    if fallback_cli in cli_chain:
+                        continue  # Already tried in chain
+                    fallback_path = self._resolve_cli_binary(fallback_cli)
+                    if fallback_path:
+                        print(f"   🔄 Trying fallback: {CLI_PROFILES[fallback_cli]['display_name']} CLI at {fallback_path}...")
+                        if self._validate_cli_availability(fallback_cli, fallback_path, agent_name, model=model):
+                            validated_clis.append((fallback_cli, fallback_path))
+                            validated_cli = fallback_cli
+                            validated_path = fallback_path
+                            print(f"   ✅ Fallback to {CLI_PROFILES[fallback_cli]['display_name']} CLI validated for {agent_name}")
+                            break
+                        else:
+                            print(f"   ❌ Fallback {CLI_PROFILES[fallback_cli]['display_name']} CLI validation failed")
+            
+            # Log validation summary
+            if validated_clis:
+                print(f"   📊 Validation summary: {len(validated_clis)} CLI(s) passed validation:")
+                for cli_name, cli_path in validated_clis:
+                    print(f"      ✅ {CLI_PROFILES[cli_name]['display_name']} ({cli_path})")
+                if len(validated_clis) > 1:
+                    print(f"   💡 Using {CLI_PROFILES[validated_cli]['display_name']} as primary, {len(validated_clis) - 1} fallback(s) available")
+            
+            if not validated_cli or not validated_path:
+                print(f"❌ No available CLI passed pre-flight validation for {agent_name} - agent creation aborted")
+                return False
+            
+            print(f"✅ Pre-flight validation complete for {agent_name}: using {CLI_PROFILES[validated_cli]['display_name']} CLI")
+            
+            # Update agent_cli to use validated CLI
+            if validated_cli != agent_cli:
+                print(f"🔄 Switching to validated CLI: {CLI_PROFILES[validated_cli]['display_name']}")
+                agent_cli = validated_cli
+                cli_profile = CLI_PROFILES[agent_cli]
+                agent_spec["cli"] = agent_cli
+                # Update cli_chain to prioritize validated CLI
+                agent_spec["cli_chain"] = [validated_cli] + [c for c in cli_chain if c != validated_cli]
+                # Update model to match the new CLI (if using default 'sonnet')
+                if model == "sonnet" and agent_cli == "gemini":
+                    model = GEMINI_MODEL
+                elif model == "sonnet" and agent_cli == "cursor":
+                    model = CURSOR_MODEL
+                elif model == GEMINI_MODEL and agent_cli != "gemini":
+                    # If switching away from Gemini, reset to sonnet default
+                    model = "sonnet"
+                elif model == CURSOR_MODEL and agent_cli != "cursor":
+                    # If switching away from Cursor, reset to sonnet default
+                    model = "sonnet"
+                # Update model in agent_spec for downstream use
+                agent_spec["model"] = model
 
             # Create worktree for agent using new location logic
             try:
@@ -1510,6 +1694,13 @@ Agent Configuration:
             prompt_file_quoted = shlex.quote(prompt_file)
 
             prompt_env_export = f"export ORCHESTRATION_PROMPT_FILE={prompt_file_quoted}"
+            
+            # Export GITHUB_TOKEN for cursor-agent authentication if available
+            github_token = os.environ.get("GITHUB_TOKEN")
+            github_token_export = ""
+            if github_token:
+                github_token_quoted = shlex.quote(github_token)
+                github_token_export = f"export GITHUB_TOKEN={github_token_quoted}"
 
             agent_name_quoted = shlex.quote(agent_name)
             agent_dir_quoted = shlex.quote(agent_dir)
@@ -1606,6 +1797,13 @@ Agent Configuration:
                 )
 
                 attempt_display_name = attempt_profile.get("display_name", attempt_cli)
+                
+                # Determine timeout based on CLI type (OAuth CLIs need longer timeout for interactive auth)
+                # OAuth CLIs: claude, cursor
+                if attempt_cli in ["claude", "cursor"]:
+                    attempt_timeout_seconds = RUNTIME_OAUTH_CLI_TIMEOUT_SECONDS
+                else:
+                    attempt_timeout_seconds = RUNTIME_CLI_TIMEOUT_SECONDS
 
                 attempt_blocks += f"""
 if [ $RESULT_WRITTEN -eq 0 ]; then
@@ -1620,14 +1818,24 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
 
     echo "[$(date)] 🔁 Attempt $ATTEMPT_NUM: {attempt_display_name}" | tee -a {log_file_quoted}
     echo "[$(date)] Executing: {attempt_execution_line}" | tee -a {log_file_quoted}
+    echo "[$(date)] Timeout: {attempt_timeout_seconds}s" | tee -a {log_file_quoted}
 
     LOG_START_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo 0)
 
     {prompt_env_export}
+    {github_token_export}
     {attempt_env_unset_commands}
 
-    {attempt_execution_line} 2>&1 | tee -a {log_file_quoted}
+    # Wrap execution with timeout to prevent hangs and allow prompt fallback
+    # Exit code 124 = timeout, which should trigger fallback to next CLI
+    timeout {attempt_timeout_seconds} bash -c '{attempt_execution_line}' 2>&1 | tee -a {log_file_quoted}
     ATTEMPT_EXIT=${{PIPESTATUS[0]}}
+    
+    # Handle timeout exit code (124) - treat as failure to trigger fallback
+    if [ $ATTEMPT_EXIT -eq 124 ]; then
+        echo "[$(date)] ⏱️  CLI execution timed out after {attempt_timeout_seconds}s (will try fallback)" | tee -a {log_file_quoted}
+        ATTEMPT_EXIT=1  # Treat timeout as failure to trigger fallback
+    fi
 
     LOG_END_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo "$LOG_START_LINE")
 
@@ -1657,14 +1865,22 @@ fi
 """
 
             # Enhanced bash command with error handling and logging
+            # Ensure PATH includes common CLI locations for tmux sessions
+            path_setup = """
+# Ensure PATH includes common CLI binary locations
+export PATH="$HOME/.local/bin:$HOME/.nvm/versions/node/$(nvm version 2>/dev/null || echo 'v20.19.4')/bin:$PATH"
+"""
             bash_cmd = f"""
 # Signal handler to log interruptions
 trap 'echo "[$(date)] Agent interrupted with signal SIGINT" | tee -a {log_file_quoted}; exit 130' SIGINT
 trap 'echo "[$(date)] Agent terminated with signal SIGTERM" | tee -a {log_file_quoted}; exit 143' SIGTERM
 
+{path_setup}
+
 echo "[$(date)] Starting agent {agent_name_quoted}" | tee -a {log_file_quoted}
 echo "[$(date)] Working directory: {agent_dir_quoted}" | tee -a {log_file_quoted}
 echo "[$(date)] CLI chain: {cli_chain_str}" | tee -a {log_file_quoted}
+echo "[$(date)] PATH: $PATH" | tee -a {log_file_quoted}
 
 RESULT_WRITTEN=0
 RESULT_STATUS="failed"
@@ -1765,6 +1981,9 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             # Agent will register itself when it starts using A2AAgentWrapper
 
             print(f"✅ Created {agent_name} - Focus: {agent_focus}")
+            # Compute script path relative to module directory
+            script_path = Path(__file__).resolve().parent / "stream_logs.sh"
+            print(f"📺 View logs: {script_path} {agent_name}")
             return True
 
         except Exception as e:

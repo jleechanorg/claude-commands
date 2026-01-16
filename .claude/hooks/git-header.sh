@@ -78,9 +78,7 @@ get_repo_from_remote() {
             local owner="${BASH_REMATCH[1]}"
             local repo="${BASH_REMATCH[2]}"
             repo="${repo%.git}"
-            # Format consistent with HTTP/HTTPS output: domain/owner/repo
-            # For local proxy, we treat 'local' as the domain part
-            echo "local/${owner}/${repo}"
+            echo "${owner}/${repo}"
             return 0
         fi
 

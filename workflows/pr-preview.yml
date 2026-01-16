@@ -203,6 +203,7 @@ jobs:
           echo "mcp_url=$MCP_URL" >> "$GITHUB_OUTPUT"
 
       - name: Verify preview health
+        id: health_check
         if: ${{ success() && steps.deployment_info.outputs.health_url != '' }}
         env:
           HEALTH_URL: ${{ steps.deployment_info.outputs.health_url }}
@@ -214,11 +215,13 @@ jobs:
           for attempt in $(seq 1 10); do
             if curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" > /dev/null 2>&1; then
               echo "✅ Health endpoint responded on attempt ${attempt}"
+              echo "health_check_passed=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
 
             if curl --fail --silent --show-error --max-time 10 "$PREVIEW_URL" > /dev/null 2>&1; then
               echo "✅ Root endpoint responded on attempt ${attempt}"
+              echo "health_check_passed=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
 
@@ -227,6 +230,7 @@ jobs:
           done
 
           echo "❌ Health check failed after 10 attempts" >&2
+          echo "health_check_passed=false" >> "$GITHUB_OUTPUT"
           exit 1
 
       - name: Show pool status
@@ -237,7 +241,7 @@ jobs:
           .github/scripts/pr-server-pool.sh status
 
       - name: Post preview deployment comment
-        if: ${{ success() && github.event_name == 'pull_request' }}
+        if: ${{ success() && github.event_name == 'pull_request' && steps.deployment_info.outputs.service_url != '' }}
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         env:
           PREVIEW_URL: ${{ steps.deployment_info.outputs.service_url }}
@@ -252,64 +256,113 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           RUN_ID: ${{ github.run_id }}
           GITHUB_SERVER_URL: ${{ github.server_url }}
+          JOB_STATUS: ${{ job.status }}
+          HEALTH_CHECK_PASSED: ${{ steps.health_check.outputs.health_check_passed == 'true' }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const marker = '<!-- pr-preview-comment:mvp-site -->';
-            const prNumber = context.payload.pull_request.number;
-            const { owner, repo } = context.repo;
+            try {
+              // Validate required context
+              if (!context.payload || !context.payload.pull_request) {
+                core.setFailed('Missing pull_request context. Cannot post comment.');
+                return;
+              }
 
-            const workflowUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.RUN_ID}`;
-            const shortSha = process.env.COMMIT_SHA.slice(0, 7);
-            const commitUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/commit/${process.env.COMMIT_SHA}`;
-            const evictionMessage = process.env.EVICTION_MESSAGE;
-            const evictionLines =
-              evictionMessage && evictionMessage !== 'null'
-                ? ['', evictionMessage, '']
-                : [];
+              const prNumber = context.payload.pull_request.number;
+              if (!prNumber) {
+                core.setFailed('Missing PR number. Cannot post comment.');
+                return;
+              }
 
-            const commentLines = [
-              marker,
-              '',
-              '## ✅ Deployment Complete!',
-              '',
-              '**🎉 Your PR preview is ready!**',
-              '',
-              '### 🔗 Quick Access:',
-              '| Service | URL |',
-              '|---------|-----|',
-              `| 🌐 **Preview App** | [${process.env.PREVIEW_URL}](${process.env.PREVIEW_URL}) |`,
-              `| 🩺 **Health Check** | [${process.env.HEALTH_URL}](${process.env.HEALTH_URL}) |`,
-              `| 📡 **MCP Endpoint** | [${process.env.MCP_URL}](${process.env.MCP_URL}) |`,
-              '',
-              '> ℹ️ Use `/smoke` command to run MCP smoke tests against this preview.',
-              '',
-              '### 🔄 Completed Build Steps:',
-              '- ✅ Server pool assignment',
-              '- ✅ Docker image build',
-              '- ✅ Cloud Run deployment',
-              '- ✅ Health check verified',
-              '',
-              '### 📋 Deployment Details:',
-              `- **Commit:** [\`${shortSha}\`](${commitUrl})`,
-              `- **Service:** \`${process.env.SERVICE_NAME}\``,
-              `- **Server:** \`${process.env.ASSIGNED_SERVER}\``,
-              `- **Region:** \`${process.env.GCP_REGION}\``,
-              `- **Branch:** \`${process.env.BRANCH_NAME}\``,
-              `- **Workflow:** [View Details](${workflowUrl})`,
-              ...evictionLines,
-              '',
-              '🤖 *Auto-deployed via rotating server pool*',
-            ].filter(line => line !== null);
-            const commentBody = commentLines.join('\n');
+              const { owner, repo } = context.repo;
+              if (!owner || !repo) {
+                core.setFailed('Missing repo context. Cannot post comment.');
+                return;
+              }
 
-            // Always post a NEW comment for each deployment
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: prNumber,
-              body: commentBody,
-            });
+              // Validate required environment variables
+              if (!process.env.PREVIEW_URL) {
+                core.setFailed('Missing PREVIEW_URL. Cannot post comment.');
+                return;
+              }
+
+              const marker = '<!-- pr-preview-comment:mvp-site -->';
+              const workflowUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.RUN_ID}`;
+              const shortSha = process.env.COMMIT_SHA ? process.env.COMMIT_SHA.slice(0, 7) : 'unknown';
+              const commitUrl = process.env.COMMIT_SHA 
+                ? `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/commit/${process.env.COMMIT_SHA}`
+                : workflowUrl;
+              const evictionMessage = process.env.EVICTION_MESSAGE;
+              const evictionLines =
+                evictionMessage && evictionMessage !== 'null'
+                  ? ['', evictionMessage, '']
+                  : [];
+
+              const deploymentSuccess = process.env.JOB_STATUS === 'success';
+              const healthCheckPassed = process.env.HEALTH_CHECK_PASSED === 'true';
+              // If HEALTH_CHECK_PASSED is not set, the health check step didn't run (skipped)
+              const healthCheckStatus = process.env.HEALTH_URL 
+                ? (process.env.HEALTH_CHECK_PASSED === undefined || process.env.HEALTH_CHECK_PASSED === ''
+                  ? '⚠️ Health check skipped'
+                  : (healthCheckPassed ? '✅ Health check verified' : '❌ Health check failed'))
+                : '⚠️ Health check skipped';
+
+              const commentLines = [
+                marker,
+                '',
+                deploymentSuccess ? '## ✅ Deployment Complete!' : '## ⚠️ Deployment Completed with Warnings',
+                '',
+                deploymentSuccess 
+                  ? '**🎉 Your PR preview is ready!**'
+                  : '**⚠️ Deployment completed, but some checks may have failed.**',
+                '',
+                '### 🔗 Quick Access:',
+                '| Service | URL |',
+                '|---------|-----|',
+                `| 🌐 **Preview App** | [${process.env.PREVIEW_URL}](${process.env.PREVIEW_URL}) |`,
+                process.env.HEALTH_URL 
+                  ? `| 🩺 **Health Check** | [${process.env.HEALTH_URL}](${process.env.HEALTH_URL}) |`
+                  : '| 🩺 **Health Check** | Not available |',
+                process.env.MCP_URL 
+                  ? `| 📡 **MCP Endpoint** | [${process.env.MCP_URL}](${process.env.MCP_URL}) |`
+                  : '| 📡 **MCP Endpoint** | Not available |',
+                '',
+                '> ℹ️ Use `/smoke` command to run MCP smoke tests against this preview.',
+                '',
+                '### 🔄 Completed Build Steps:',
+                '- ✅ Server pool assignment',
+                '- ✅ Docker image build',
+                '- ✅ Cloud Run deployment',
+                `- ${healthCheckStatus}`,
+                '',
+                '### 📋 Deployment Details:',
+                `- **Commit:** [\`${shortSha}\`](${commitUrl})`,
+                `- **Service:** \`${process.env.SERVICE_NAME || 'unknown'}\``,
+                `- **Server:** \`${process.env.ASSIGNED_SERVER || 'unknown'}\``,
+                `- **Region:** \`${process.env.GCP_REGION || 'unknown'}\``,
+                `- **Branch:** \`${process.env.BRANCH_NAME || 'unknown'}\``,
+                `- **Workflow:** [View Details](${workflowUrl})`,
+                ...evictionLines,
+                '',
+                '🤖 *Auto-deployed via rotating server pool*',
+              ].filter(line => line !== null);
+              const commentBody = commentLines.join('\n');
+
+              // Always post a NEW comment for each deployment
+              const result = await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body: commentBody,
+              });
+
+              core.info(`✅ Successfully posted preview comment to PR #${prNumber} (comment ID: ${result.data.id})`);
+            } catch (error) {
+              core.error(`❌ Failed to post preview comment: ${error.message}`);
+              core.error(`Error details: ${JSON.stringify(error, null, 2)}`);
+              // Don't fail the workflow if comment posting fails
+              core.warning('Comment posting failed, but deployment may have succeeded');
+            }
 
       - name: Post deployment failure comment
         if: ${{ failure() && github.event_name == 'pull_request' }}

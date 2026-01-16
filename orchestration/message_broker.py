@@ -10,12 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-import logging
 from typing import Any
 
 from orchestration.core import AgentRegistration
-
-logger = logging.getLogger(__name__)
 
 
 class MessageType(Enum):
@@ -46,28 +43,28 @@ class MessageBroker:
         # Redis parameters ignored - file-based coordination only
         self.agent_registry: dict[str, AgentRegistration] = {}
         self.running = False
-        logger.info("📁 File-based MessageBroker initialized (Redis functionality removed)")
+        print("📁 File-based MessageBroker initialized (Redis functionality removed)")
 
     def start(self):
         """Start the message broker."""
         self.running = True
-        logger.info("📁 File-based message broker started")
+        print("📁 File-based message broker started")
 
     def stop(self):
         """Stop the message broker."""
         self.running = False
-        logger.info("📁 File-based message broker stopped")
+        print("📁 File-based message broker stopped")
 
     def register_agent(self, agent_id: str, agent_type: str, capabilities: list[str]):
         """Register an agent in the system (file-based tracking only)."""
         registration = AgentRegistration(agent_id, agent_type, capabilities)
 
         self.agent_registry[agent_id] = registration
-        logger.info(f"📁 Agent {agent_id} registered with type {agent_type} (file-based)")
+        print(f"📁 Agent {agent_id} registered with type {agent_type} (file-based)")
 
     def send_task(self, from_agent: str, to_agent: str, task_data: dict[str, Any]):
         """Send a task to another agent (no-op in file-based mode)."""
-        logger.info(f"📁 Task coordination via A2A files: {from_agent} -> {to_agent}")
+        print(f"📁 Task coordination via A2A files: {from_agent} -> {to_agent}")
 
     def get_task(self, agent_id: str) -> TaskMessage | None:
         """Get a task for an agent (no-op in file-based mode)."""
@@ -75,7 +72,7 @@ class MessageBroker:
 
     def send_result(self, from_agent: str, to_agent: str, result_data: dict[str, Any]):
         """Send task result back to requesting agent (no-op in file-based mode)."""
-        logger.info(f"📁 Result coordination via A2A files: {from_agent} -> {to_agent}")
+        print(f"📁 Result coordination via A2A files: {from_agent} -> {to_agent}")
 
     def heartbeat(self, agent_id: str, health_data: dict[str, Any] | None = None) -> bool:
         """Send heartbeat for an agent (file-based tracking only).
@@ -107,4 +104,4 @@ class MessageBroker:
 
         for agent_id in stale_agents:
             del self.agent_registry[agent_id]
-            logger.info(f"📁 Cleaned up stale agent: {agent_id}")
+            print(f"📁 Cleaned up stale agent: {agent_id}")

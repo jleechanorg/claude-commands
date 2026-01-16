@@ -17,7 +17,7 @@ import os
 import smtplib
 import sys
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Dict, Optional, Union
@@ -72,11 +72,13 @@ class AutomationSafetyManager:
         self.approval_file = os.path.join(data_dir, "manual_approval.json")
         self.config_file = os.path.join(data_dir, "automation_safety_config.json")
         self.inflight_file = os.path.join(data_dir, "pr_inflight.json")  # NEW: Persist inflight cache
+        self.pr_overrides_file = os.path.join(data_dir, "pr_limit_overrides.json")  # Per-PR limit overrides
 
         # In-memory counters for thread safety
         self._pr_attempts_cache = {}
         self._global_runs_cache = 0
         self._pr_inflight_cache: Dict[str, int] = {}
+        self._pr_overrides_cache: Dict[str, int] = {}  # Per-PR limit overrides (0 = unlimited)
 
         # Initialize files if they don't exist
         self._ensure_files_exist()
@@ -117,6 +119,9 @@ class AutomationSafetyManager:
 
         if not os.path.exists(self.inflight_file):
             self._write_json_file(self.inflight_file, {})
+
+        if not os.path.exists(self.pr_overrides_file):
+            self._write_json_file(self.pr_overrides_file, {})
 
     def _load_config_if_exists(self):
         """Load configuration from file if it exists, create default if not"""
@@ -175,6 +180,10 @@ class AutomationSafetyManager:
             # Load inflight cache
             inflight_data = self._read_json_file(self.inflight_file)
             self._pr_inflight_cache = {k: int(v) for k, v in inflight_data.items()}
+
+            # Load PR limit overrides
+            overrides_data = self._read_json_file(self.pr_overrides_file)
+            self._pr_overrides_cache = {k: int(v) for k, v in overrides_data.items()}
 
     def _sync_state_to_files(self):
         """Sync in-memory state to files"""
@@ -343,12 +352,13 @@ class AutomationSafetyManager:
         return data, total_runs, is_stale
 
     def can_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
-        """Check if PR can be processed (under failure limit).
+        """Check if PR can be processed (under attempt limit).
 
-        Only counts FAILURES against the limit, not successful attempts.
-        Blocks if either:
-        1. Total failures >= pr_limit, OR
-        2. Consecutive failures >= pr_limit
+        NEW BEHAVIOR: Counts attempts from TODAY only (daily cooldown, resets at midnight).
+        Supports per-PR limit overrides (0 = unlimited).
+
+        Blocks if:
+        1. Today's attempts >= effective_pr_limit (respects overrides)
         """
         with self.lock:
             raw_data = self._read_json_file(self.pr_attempts_file)
@@ -357,21 +367,23 @@ class AutomationSafetyManager:
             pr_key = self._make_pr_key(pr_number, repo, branch)
             attempts = list(self._pr_attempts_cache.get(pr_key, []))
 
-            # Count total failures (not total attempts - successful attempts don't count against limit)
-            total_failures = sum(1 for attempt in attempts if attempt.get("result") == "failure")
-            if total_failures >= self.pr_limit:
-                return False
+            # Get effective limit (checks for per-PR override)
+            effective_limit = self._get_effective_pr_limit(pr_number, repo, branch)
 
-            # Count consecutive failures from latest attempts
-            consecutive_failures = 0
-            for attempt in reversed(attempts):
-                if attempt.get("result") == "failure":
-                    consecutive_failures += 1
-                else:
-                    break
+            # Filter attempts to TODAY only (daily cooldown)
+            # Timestamps are stored in UTC, so compare against UTC date only
+            today_utc = datetime.now(timezone.utc).date().isoformat()
+            
+            today_attempts = [
+                attempt for attempt in attempts
+                if isinstance(attempt, dict) and attempt.get("timestamp", "").startswith(today_utc)
+            ]
 
-            # Also block if too many consecutive failures (earlier than total limit)
-            return consecutive_failures < self.pr_limit
+            # Count TODAY's attempts only
+            total_attempts = len(today_attempts)
+
+            # Check against effective limit
+            return total_attempts < effective_limit
 
     def try_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
         """Atomically reserve a processing slot for PR."""
@@ -406,18 +418,27 @@ class AutomationSafetyManager:
                 self._write_json_file(self.inflight_file, self._pr_inflight_cache)
 
     def get_pr_attempts(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
-        """Get count of consecutive failures for a specific PR."""
+        """Get count of attempts for a specific PR.
+
+        NEW BEHAVIOR: Counts attempts from TODAY only (daily cooldown).
+        """
         with self.lock:
+            raw_data = self._read_json_file(self.pr_attempts_file)
+            self._pr_attempts_cache = self._normalize_pr_attempt_keys(raw_data)
             pr_key = self._make_pr_key(pr_number, repo, branch)
             attempts = list(self._pr_attempts_cache.get(pr_key, []))
-
-            failure_count = 0
-            for attempt in reversed(attempts):
-                if attempt.get("result") == "failure":
-                    failure_count += 1
-                else:
-                    break
-            return failure_count
+            
+            # Filter to today's attempts only (daily cooldown)
+            # Timestamps are stored in UTC, so compare against UTC date only
+            today_utc = datetime.now(timezone.utc).date().isoformat()
+            
+            today_attempts = [
+                attempt for attempt in attempts
+                if isinstance(attempt, dict) and attempt.get("timestamp", "").startswith(today_utc)
+            ]
+            
+            # Return count of TODAY's attempts
+            return len(today_attempts)
 
     def get_pr_attempt_list(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
         """Get list of attempts for a specific PR (for detailed analysis)"""
@@ -436,7 +457,7 @@ class AutomationSafetyManager:
             # Create attempt record
             attempt_record = {
                 "result": result,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "pr_number": pr_number,
                 "repo": repo,
                 "branch": branch
@@ -547,7 +568,8 @@ class AutomationSafetyManager:
                 return False
 
             try:
-                approval_date = REAL_DATETIME.fromisoformat(approval_date_str)
+                # Use replace(tzinfo=None) for compatibility with datetime.now()
+                approval_date = REAL_DATETIME.fromisoformat(approval_date_str).replace(tzinfo=None)
             except (TypeError, ValueError):
                 return False
             expiry = approval_date + timedelta(hours=self.approval_hours)
@@ -559,13 +581,19 @@ class AutomationSafetyManager:
         notifications_sent = []
 
         with self.lock:
-            # Check for PR limits reached (only count failures)
+            # Check for PR limits reached (count ALL attempts)
             for pr_key, attempts in self._pr_attempts_cache.items():
-                total_failures = sum(1 for attempt in attempts if attempt.get("result") == "failure")
-                if total_failures >= self.pr_limit:
+                total_attempts = len(attempts)  # Count ALL attempts (success + failure)
+                effective_pr_limit = self.pr_limit
+                override = self._pr_overrides_cache.get(pr_key)
+                if override is not None:
+                    # 0 means unlimited
+                    effective_pr_limit = sys.maxsize if override == 0 else override
+
+                if total_attempts >= effective_pr_limit:
                     self._send_limit_notification(
-                        "PR Automation Failure Limit Reached",
-                        f"PR {pr_key} has reached the maximum failure limit of {self.pr_limit} failed attempts."
+                        "PR Automation Attempt Limit Reached",
+                        f"PR {pr_key} has reached the maximum limit of {effective_pr_limit} total attempts."
                     )
                     notifications_sent.append(f"PR {pr_key}")
 
@@ -610,9 +638,8 @@ class AutomationSafetyManager:
 
         if HAS_KEYRING:
             try:
-                service_name = os.environ.get("AUTOMATION_KEYRING_SERVICE", "project-automation")
-                username = keyring.get_password(service_name, "smtp_username")
-                password = keyring.get_password(service_name, "smtp_password")
+                username = keyring.get_password("worldarchitect-automation", "smtp_username")
+                password = keyring.get_password("worldarchitect-automation", "smtp_password")
             except Exception:
                 self.logger.debug("Keyring lookup failed for SMTP credentials", exc_info=True)
                 username = None
@@ -642,8 +669,7 @@ class AutomationSafetyManager:
             msg = MIMEMultipart()
             msg["From"] = from_email
             msg["To"] = to_email
-            project_name = os.environ.get("PROJECT_NAME", "Project")
-            msg["Subject"] = f"[{project_name} Automation] {subject}"
+            msg["Subject"] = f"[WorldArchitect Automation] {subject}"
 
             body = f"""
 {message}
@@ -651,13 +677,13 @@ class AutomationSafetyManager:
 Time: {datetime.now().isoformat()}
 System: PR Automation Safety Manager
 
-This is an automated notification from the automation system.
+This is an automated notification from the WorldArchitect.AI automation system.
 """
 
             msg.attach(MIMEText(body, "plain"))
 
-            # Connect and send email
-            server = smtplib.SMTP(smtp_server, smtp_port)
+            # Connect and send email with 30s timeout (consistent with automation_utils.py)
+            server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
             try:
                 server.ehlo()
                 server.starttls()
@@ -750,6 +776,131 @@ This is an automated notification from the automation system.
         except Exception:
             return False
 
+    def _get_effective_pr_limit(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> int:
+        """Get effective PR limit for a specific PR (returns override if set, else default).
+
+        Args:
+            pr_number: PR number
+            repo: Repository name
+            branch: Branch name
+
+        Returns:
+            Effective limit (0 means unlimited, returns sys.maxsize)
+        """
+        with self.lock:
+            # Reload PR override file to stay in sync with CLI updates from other processes.
+            overrides_data = self._read_json_file(self.pr_overrides_file)
+            self._pr_overrides_cache = {k: int(v) for k, v in overrides_data.items()}
+
+            pr_key = self._make_pr_key(pr_number, repo, branch)
+            override = self._pr_overrides_cache.get(pr_key)
+
+            if override is not None:
+                # 0 means unlimited
+                return sys.maxsize if override == 0 else override
+            else:
+                return self.pr_limit
+
+    def clear_pr_attempts(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
+        """Clear all attempts for a specific PR.
+
+        Args:
+            pr_number: PR number
+            repo: Repository name
+            branch: Branch name
+
+        Returns:
+            True if successful
+        """
+        with self.lock:
+            pr_key = self._make_pr_key(pr_number, repo, branch)
+
+            # Clear from cache
+            if pr_key in self._pr_attempts_cache:
+                del self._pr_attempts_cache[pr_key]
+
+            # Clear from inflight cache
+            if pr_key in self._pr_inflight_cache:
+                del self._pr_inflight_cache[pr_key]
+
+            # Persist to disk
+            self._write_json_file(self.pr_attempts_file, self._pr_attempts_cache)
+            self._write_json_file(self.inflight_file, self._pr_inflight_cache)
+
+            self.logger.info(f"✅ Cleared all attempts for PR {pr_key}")
+            return True
+
+    def set_pr_limit_override(self, pr_number: Union[int, str], limit: int, repo: str = None, branch: str = None) -> bool:
+        """Set custom limit for a specific PR (0 = unlimited).
+
+        Args:
+            pr_number: PR number
+            limit: Custom limit (0 = unlimited)
+            repo: Repository name
+            branch: Branch name
+
+        Returns:
+            True if successful
+        """
+        with self.lock:
+            pr_key = self._make_pr_key(pr_number, repo, branch)
+
+            # Validate limit
+            if limit < 0:
+                self.logger.error(f"❌ Invalid limit {limit} - must be >= 0")
+                return False
+
+            # Update cache
+            self._pr_overrides_cache[pr_key] = limit
+
+            # Persist to disk
+            self._write_json_file(self.pr_overrides_file, self._pr_overrides_cache)
+
+            if limit == 0:
+                self.logger.info(f"✅ Set unlimited attempts for PR {pr_key}")
+            else:
+                self.logger.info(f"✅ Set custom limit {limit} for PR {pr_key}")
+            return True
+
+    def clear_pr_limit_override(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
+        """Remove limit override for a specific PR, revert to default.
+
+        Args:
+            pr_number: PR number
+            repo: Repository name
+            branch: Branch name
+
+        Returns:
+            True if successful
+        """
+        with self.lock:
+            pr_key = self._make_pr_key(pr_number, repo, branch)
+
+            # Remove from cache
+            if pr_key in self._pr_overrides_cache:
+                del self._pr_overrides_cache[pr_key]
+
+            # Persist to disk
+            self._write_json_file(self.pr_overrides_file, self._pr_overrides_cache)
+
+            self.logger.info(f"✅ Cleared limit override for PR {pr_key}, reverted to default ({self.pr_limit})")
+            return True
+
+    def get_pr_limit_override(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> Optional[int]:
+        """Get current limit override for a specific PR.
+
+        Args:
+            pr_number: PR number
+            repo: Repository name
+            branch: Branch name
+
+        Returns:
+            Override value if set, None otherwise (0 = unlimited)
+        """
+        with self.lock:
+            pr_key = self._make_pr_key(pr_number, repo, branch)
+            return self._pr_overrides_cache.get(pr_key)
+
 
 def main():
     """CLI interface for safety manager"""
@@ -773,6 +924,16 @@ def main():
                         help="Grant manual override (emergency use only)")
     parser.add_argument("--status", action="store_true",
                         help="Show current status")
+
+    # PR limit override arguments
+    parser.add_argument("--clear-pr", type=int, metavar="PR_NUMBER",
+                        help="Clear all attempts for a specific PR")
+    parser.add_argument("--set-pr-limit", nargs=2, type=int, metavar=("PR_NUMBER", "LIMIT"),
+                        help="Set custom limit for a specific PR (0 = unlimited)")
+    parser.add_argument("--clear-pr-limit", type=int, metavar="PR_NUMBER",
+                        help="Remove limit override for a specific PR")
+    parser.add_argument("--get-pr-limit", type=int, metavar="PR_NUMBER",
+                        help="Get current limit override for a specific PR")
 
     args = parser.parse_args()
 
@@ -856,6 +1017,43 @@ def main():
                 print(f"  {display}: {count}/{manager.pr_limit} ({status})")
         else:
             print("No PR attempts recorded")
+
+    elif args.clear_pr:
+        manager.clear_pr_attempts(args.clear_pr, repo=args.repo, branch=args.branch)
+        repo_label = f" ({args.repo})" if args.repo else ""
+        branch_label = f" [{args.branch}]" if args.branch else ""
+        print(f"✅ Cleared all attempts for PR #{args.clear_pr}{repo_label}{branch_label}")
+
+    elif args.set_pr_limit:
+        pr_number, limit = args.set_pr_limit
+        repo_label = f" ({args.repo})" if args.repo else ""
+        branch_label = f" [{args.branch}]" if args.branch else ""
+        success = manager.set_pr_limit_override(pr_number, limit, repo=args.repo, branch=args.branch)
+        if not success:
+            print(f"❌ Failed to set PR limit override for PR #{pr_number}{repo_label}{branch_label}")
+            sys.exit(1)
+        if limit == 0:
+            print(f"✅ Set unlimited attempts for PR #{pr_number}{repo_label}{branch_label}")
+        else:
+            print(f"✅ Set custom limit {limit} for PR #{pr_number}{repo_label}{branch_label}")
+
+    elif args.clear_pr_limit:
+        manager.clear_pr_limit_override(args.clear_pr_limit, repo=args.repo, branch=args.branch)
+        repo_label = f" ({args.repo})" if args.repo else ""
+        branch_label = f" [{args.branch}]" if args.branch else ""
+        print(f"✅ Cleared limit override for PR #{args.clear_pr_limit}{repo_label}{branch_label}, reverted to default ({manager.pr_limit})")
+
+    elif args.get_pr_limit:
+        override = manager.get_pr_limit_override(args.get_pr_limit, repo=args.repo, branch=args.branch)
+        repo_label = f" ({args.repo})" if args.repo else ""
+        branch_label = f" [{args.branch}]" if args.branch else ""
+        if override is not None:
+            if override == 0:
+                print(f"PR #{args.get_pr_limit}{repo_label}{branch_label}: unlimited attempts (override)")
+            else:
+                print(f"PR #{args.get_pr_limit}{repo_label}{branch_label}: {override} attempts (override)")
+        else:
+            print(f"PR #{args.get_pr_limit}{repo_label}{branch_label}: {manager.pr_limit} attempts (default)")
 
     else:
         parser.print_help()

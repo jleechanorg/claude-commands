@@ -3,9 +3,11 @@
 Test-Driven Development for PR Automation Safety Limits
 
 RED Phase: All tests should FAIL initially
-- PR attempt limits (max 10 per PR)
+- PR attempt limits (max 50 per PR - counts ALL attempts, not just failures)
 - Global run limits (max 50 total)
 - Manual approval requirement
+
+NEW BEHAVIOR: Counts ALL attempts (success + failure) against the limit.
 """
 
 import json
@@ -45,7 +47,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         """Clean up test files"""
         shutil.rmtree(self.test_dir)
 
-    # Matrix 1: PR Attempt Limits (10 attempts per PR)
+    # Matrix 1: PR Attempt Limits (50 attempts per PR - counts ALL attempts)
     def test_pr_attempt_limit_1_should_allow(self):
         """RED: First attempt on PR #1001 should be allowed"""
         # This test will FAIL initially - no implementation exists
@@ -53,37 +55,48 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(self.automation_manager.get_pr_attempts(1001), 0)
 
-    def test_pr_attempt_limit_10_should_allow(self):
-        """RED: 10th attempt on PR #1001 should be allowed"""
-        # Set up 9 previous attempts
-        for _ in range(9):
-            self.automation_manager.record_pr_attempt(1001, "failure")
+    def test_pr_attempt_limit_49_should_allow(self):
+        """RED: 49th attempt on PR #1001 should be allowed"""
+        # Set up 48 previous attempts (mix of success and failure - all count)
+        for i in range(48):
+            result_type = "success" if i % 2 == 0 else "failure"
+            self.automation_manager.record_pr_attempt(1001, result_type)
 
         result = self.automation_manager.can_process_pr(1001)
         self.assertTrue(result)
-        self.assertEqual(self.automation_manager.get_pr_attempts(1001), 9)
+        self.assertEqual(self.automation_manager.get_pr_attempts(1001), 48)
 
-    def test_pr_attempt_limit_11_should_block(self):
-        """RED: 11th attempt on PR #1001 should be blocked"""
-        # Set up 10 previous attempts (max limit reached)
-        for _ in range(10):
-            self.automation_manager.record_pr_attempt(1001, "failure")
+    def test_pr_attempt_limit_50_should_block(self):
+        """RED: 50th attempt on PR #1001 should be blocked (at limit)"""
+        # Set up 50 previous attempts (max limit reached - mix of success and failure)
+        for i in range(50):
+            result_type = "success" if i % 2 == 0 else "failure"
+            self.automation_manager.record_pr_attempt(1001, result_type)
 
         result = self.automation_manager.can_process_pr(1001)
         self.assertFalse(result)
-        self.assertEqual(self.automation_manager.get_pr_attempts(1001), 10)
+        self.assertEqual(self.automation_manager.get_pr_attempts(1001), 50)
 
-    def test_pr_attempt_success_resets_counter(self):
-        """RED: Successful PR attempt should reset counter"""
-        # Set up 8 failures then 1 success
-        for _ in range(8):
+    def test_pr_attempt_all_attempts_count(self):
+        """NEW BEHAVIOR: All attempts (success + failure) count toward limit"""
+        # Record 25 successes
+        for _ in range(25):
+            self.automation_manager.record_pr_attempt(1001, "success")
+
+        # Record 24 failures
+        for _ in range(24):
             self.automation_manager.record_pr_attempt(1001, "failure")
-        self.automation_manager.record_pr_attempt(1001, "success")
 
-        # Counter should reset, allowing new attempts
+        # Total: 49 attempts - should still allow one more
         result = self.automation_manager.can_process_pr(1001)
         self.assertTrue(result)
-        self.assertEqual(self.automation_manager.get_pr_attempts(1001), 0)
+        self.assertEqual(self.automation_manager.get_pr_attempts(1001), 49)
+
+        # Record one more (50th) - should now be at limit
+        self.automation_manager.record_pr_attempt(1001, "success")
+        result = self.automation_manager.can_process_pr(1001)
+        self.assertFalse(result)
+        self.assertEqual(self.automation_manager.get_pr_attempts(1001), 50)
 
     # Matrix 2: Global Run Limits (50 total runs)
     def test_global_run_limit_1_should_allow(self):
@@ -155,10 +168,11 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     })
     @patch("smtplib.SMTP")
     def test_email_sent_when_pr_limit_reached(self, mock_smtp):
-        """RED: Email should be sent when PR reaches 10 attempts"""
-        # Set up 10 attempts to trigger notification
-        for _ in range(10):
-            self.automation_manager.record_pr_attempt(1001, "failure")
+        """RED: Email should be sent when PR reaches 50 attempts"""
+        # Set up 50 attempts to trigger notification (mix of success and failure)
+        for i in range(50):
+            result_type = "success" if i % 2 == 0 else "failure"
+            self.automation_manager.record_pr_attempt(1001, result_type)
 
         # Should trigger email
         self.automation_manager.check_and_notify_limits()
@@ -224,9 +238,9 @@ class TestAutomationSafetyLimits(unittest.TestCase):
             result = manager.try_process_pr(1001)
             results.append(result)
 
-        # Start 15 concurrent threads (more than limit of 10)
+        # Start 55 concurrent threads (more than limit of 50)
         threads = []
-        for _ in range(15):
+        for _ in range(55):
             t = threading.Thread(target=attempt_pr)
             threads.append(t)
             t.start()
@@ -235,9 +249,9 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         for t in threads:
             t.join()
 
-        # Should have exactly 10 successful attempts (limit)
+        # Should have exactly 50 successful attempts (limit)
         successful_attempts = sum(results)
-        self.assertEqual(successful_attempts, 10)
+        self.assertEqual(successful_attempts, 50)
 
     # Matrix 7: Configuration Management
     def test_limits_configurable_via_constructor_overrides(self):
@@ -258,9 +272,9 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         """RED: Should use default limits when no configuration provided"""
         manager = AutomationSafetyManager(self.test_dir)
 
-        # Should use defaults
-        self.assertEqual(manager.pr_limit, 10)
-        self.assertEqual(manager.global_limit, 50)
+        # Should use defaults (pr_limit updated to 50, global_limit to 100)
+        self.assertEqual(manager.pr_limit, 50)
+        self.assertEqual(manager.global_limit, 100)
 
     # Matrix 8: Daily Reset Functionality (50 runs per day)
     def test_daily_reset_first_run_of_day(self):
@@ -389,7 +403,11 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         """RED: This property will fail - no AutomationSafetyManager exists yet"""
         # This will fail until we implement the class in GREEN phase
         if not hasattr(self, "_automation_manager"):
-            self._automation_manager = AutomationSafetyManager(self.test_dir)
+            # Use custom limits to match test expectations (global_limit=50, pr_limit=50)
+            self._automation_manager = AutomationSafetyManager(
+                self.test_dir,
+                limits={"global_limit": 50, "pr_limit": 50}
+            )
         return self._automation_manager
 
 

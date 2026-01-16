@@ -53,7 +53,7 @@ This prevents "where does this data come from?" confusion.
 **✅ Examples** (Reference - show good patterns):
 ```markdown
 **Example Output:**
-```markdown
+```
 [SOCIAL SKILL CHALLENGE: Lady Ashwood]
 Objective: Access family archives
 Social HP: 5/5 | Status: RESISTING

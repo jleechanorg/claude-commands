@@ -33,10 +33,72 @@ CODEX_COMMIT_MARKER_PREFIX = "<!-- codex-automation-commit:"
 CODEX_COMMIT_MARKER_SUFFIX = "-->"
 FIX_COMMENT_MARKER_PREFIX = "<!-- fix-comment-automation-commit:"
 FIX_COMMENT_MARKER_SUFFIX = "-->"
-FIX_COMMENT_RUN_MARKER_PREFIX = "<!-- fix-comment-automation-run:"
+# Updated to match new format from build_automation_marker()
+FIX_COMMENT_RUN_MARKER_PREFIX = "<!-- fix-comment-run-automation-commit:"
 FIX_COMMENT_RUN_MARKER_SUFFIX = "-->"
-FIXPR_MARKER_PREFIX = "<!-- fixpr-automation-run:"
+# Updated to match new format from build_automation_marker()
+FIXPR_MARKER_PREFIX = "<!-- fixpr-run-automation-commit:"
 FIXPR_MARKER_SUFFIX = "-->"
+
+
+def build_automation_marker(workflow: str, agent: str, commit_sha: str) -> str:
+    """Build enhanced automation marker with workflow, agent, and commit info.
+
+    Args:
+        workflow: Workflow type (e.g., 'fix-comment-run', 'fixpr-run', 'codex')
+        agent: Agent/CLI name (e.g., 'gemini', 'codex', 'claude')
+        commit_sha: Git commit SHA
+
+    Returns:
+        HTML comment marker with format: <!-- workflow-automation-commit:agent:sha -->
+
+    Example:
+        >>> build_automation_marker('fix-comment-run', 'gemini', 'abc123')
+        '<!-- fix-comment-run-automation-commit:gemini:abc123-->'
+    """
+    return f"<!-- {workflow}-automation-commit:{agent}:{commit_sha}-->"
+
+
+def parse_automation_marker(marker: str) -> dict[str, str] | None:
+    """Parse automation marker to extract workflow, agent, and commit.
+
+    Args:
+        marker: Automation marker string
+
+    Returns:
+        Dict with 'workflow', 'agent', 'commit' keys, or None if invalid
+
+    Example:
+        >>> parse_automation_marker('<!-- fix-comment-automation-commit:gemini:abc123-->')
+        {'workflow': 'fix-comment', 'agent': 'gemini', 'commit': 'abc123'}
+    """
+    if not marker.startswith('<!--') or not marker.endswith('-->'):
+        return None
+
+    # Remove HTML comment markers (slice off "<!--" and "-->")
+    content = marker[4:-3].strip()
+
+    # Try new format first: workflow-automation-commit:agent:sha
+    if '-automation-commit:' in content and content.count(':') == 2:
+        parts = content.split(':')
+        workflow = parts[0].replace('-automation-commit', '')
+        return {
+            'workflow': workflow,
+            'agent': parts[1],
+            'commit': parts[2]
+        }
+
+    # Legacy format: workflow-automation-commit:sha (no agent)
+    if '-automation-commit:' in content and content.count(':') == 1:
+        parts = content.split(':')
+        workflow = parts[0].replace('-automation-commit', '')
+        return {
+            'workflow': workflow,
+            'agent': 'unknown',
+            'commit': parts[1]
+        }
+
+    return None
 
 
 def normalise_handle(assistant_handle: str | None) -> str:

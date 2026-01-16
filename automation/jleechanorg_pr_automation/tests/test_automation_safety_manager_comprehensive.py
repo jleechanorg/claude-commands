@@ -276,7 +276,7 @@ class TestPRLimits:
         assert len(attempts) == 1
 
         timestamp_str = attempts[0]["timestamp"]
-        timestamp = datetime.fromisoformat(timestamp_str)
+        timestamp = datetime.fromisoformat(timestamp_str).astimezone().replace(tzinfo=None)
         assert before_time <= timestamp <= after_time
 
     def test_get_pr_attempts_empty(self, manager):
@@ -376,7 +376,7 @@ class TestEmailNotifications:
         result = manager.send_notification("Test Subject", "Test message")
 
         assert result == True
-        mock_smtp.assert_called_once_with("smtp.example.com", 587)
+        mock_smtp.assert_called_once_with("smtp.example.com", 587, timeout=30)
         mock_server.starttls.assert_called_once()
         mock_server.login.assert_called_once_with("test@example.com", "password")
         mock_server.send_message.assert_called_once()

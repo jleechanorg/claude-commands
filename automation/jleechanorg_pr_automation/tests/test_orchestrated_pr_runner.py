@@ -160,12 +160,32 @@ def test_dispatch_agent_for_pr_injects_workspace(monkeypatch, tmp_path):
     assert captured_desc and "-automation-commit]" in captured_desc[0]
 
 
-def test_has_failing_checks_uses_state_only(monkeypatch):
-    fake_checks = [{"name": "ci", "state": "FAILED", "workflow": "ci.yml"}]
+def test_has_failing_checks_uses_conclusion_field(monkeypatch):
+    """Test that conclusion field is checked (authoritative checkpoint)."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "ci.yml"}
+        ]
+    }
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
+    )
+    assert runner.has_failing_checks("org/repo", 1) is True
+
+
+def test_has_failing_checks_uses_state_fallback(monkeypatch):
+    """Test that state field is used as fallback when conclusion is None."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "FAILED", "conclusion": None, "workflow": "ci.yml"}
+        ]
+    }
+    monkeypatch.setattr(
+        runner,
+        "run_cmd",
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is True
 
@@ -199,120 +219,197 @@ def test_kill_tmux_session_matches_variants(monkeypatch):
 # ========================================================
 
 
-def test_has_failing_checks_state_failure(monkeypatch):
-    """Test FAILURE state (variant of FAILED) triggers True."""
-    fake_checks = [{"name": "ci", "state": "FAILURE", "workflow": "ci.yml"}]
+def test_has_failing_checks_conclusion_failure(monkeypatch):
+    """Test FAILURE conclusion triggers True (authoritative checkpoint)."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "ci.yml"}
+        ]
+    }
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
+    )
+    assert runner.has_failing_checks("org/repo", 1) is True
+
+
+def test_has_failing_checks_state_failure_fallback(monkeypatch):
+    """Test FAILURE state triggers True when conclusion is None (check still running)."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "FAILURE", "conclusion": None, "workflow": "ci.yml"}
+        ]
+    }
+    monkeypatch.setattr(
+        runner,
+        "run_cmd",
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_state_cancelled(monkeypatch):
     """Test CANCELLED state triggers True."""
-    fake_checks = [{"name": "ci", "state": "CANCELLED", "workflow": "ci.yml"}]
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "CANCELLED", "workflow": "ci.yml"}
+        ]
+    }
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_state_timed_out(monkeypatch):
-    """Test TIMED_OUT state triggers True."""
-    fake_checks = [{"name": "ci", "state": "TIMED_OUT", "workflow": "ci.yml"}]
+    """Test TIMED_OUT conclusion triggers True."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "TIMED_OUT", "workflow": "ci.yml"}
+        ]
+    }
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_state_action_required(monkeypatch):
-    """Test ACTION_REQUIRED state triggers True."""
-    fake_checks = [{"name": "ci", "state": "ACTION_REQUIRED", "workflow": "ci.yml"}]
+    """Test ACTION_REQUIRED conclusion triggers True."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "ACTION_REQUIRED", "workflow": "ci.yml"}
+        ]
+    }
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is True
 
 
-def test_has_failing_checks_state_success(monkeypatch):
-    """Test SUCCESS state returns False."""
-    fake_checks = [{"name": "ci", "state": "SUCCESS", "workflow": "ci.yml"}]
+def test_has_failing_checks_conclusion_success(monkeypatch):
+    """Test SUCCESS conclusion returns False."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "ci.yml"}
+        ]
+    }
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is False
 
 
-def test_has_failing_checks_state_pending(monkeypatch):
-    """Test PENDING state returns False."""
-    fake_checks = [{"name": "ci", "state": "PENDING", "workflow": "ci.yml"}]
+def test_has_failing_checks_conclusion_neutral(monkeypatch):
+    """Test NEUTRAL conclusion returns False (not treated as failure)."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "NEUTRAL", "workflow": "ci.yml"}
+        ]
+    }
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
+    )
+    assert runner.has_failing_checks("org/repo", 1) is False
+
+
+def test_has_failing_checks_state_success_with_failure_conclusion(monkeypatch):
+    """Test that conclusion takes precedence over state."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "ci.yml"}
+        ]
+    }
+    monkeypatch.setattr(
+        runner,
+        "run_cmd",
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
+    )
+    assert runner.has_failing_checks("org/repo", 1) is True
+
+
+def test_has_failing_checks_state_pending(monkeypatch):
+    """Test PENDING state returns False."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "PENDING", "conclusion": None, "workflow": "ci.yml"}
+        ]
+    }
+    monkeypatch.setattr(
+        runner,
+        "run_cmd",
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is False
 
 
 def test_has_failing_checks_empty_state(monkeypatch):
-    """Test empty/None state returns False."""
-    fake_checks = [{"name": "ci", "state": "", "workflow": "ci.yml"}]
+    """Test empty/None conclusion returns False."""
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "", "workflow": "ci.yml"}
+        ]
+    }
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is False
 
 
 def test_has_failing_checks_multiple_all_pass(monkeypatch):
     """Test multiple checks all passing returns False."""
-    fake_checks = [
-        {"name": "ci", "state": "SUCCESS", "workflow": "ci.yml"},
-        {"name": "lint", "state": "SUCCESS", "workflow": "lint.yml"},
-        {"name": "test", "state": "SUCCESS", "workflow": "test.yml"},
-    ]
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "ci.yml"},
+            {"name": "lint", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "lint.yml"},
+            {"name": "test", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "test.yml"},
+        ]
+    }
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is False
 
 
 def test_has_failing_checks_multiple_mixed(monkeypatch):
     """Test multiple checks with one failing returns True."""
-    fake_checks = [
-        {"name": "ci", "state": "SUCCESS", "workflow": "ci.yml"},
-        {"name": "lint", "state": "FAILED", "workflow": "lint.yml"},
-        {"name": "test", "state": "SUCCESS", "workflow": "test.yml"},
-    ]
+    fake_pr_data = {
+        "statusCheckRollup": [
+            {"name": "ci", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "ci.yml"},
+            {"name": "lint", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "lint.yml"},
+            {"name": "test", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "test.yml"},
+        ]
+    }
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_empty_array(monkeypatch):
-    """Test empty checks array returns False."""
-    fake_checks = []
+    """Test empty statusCheckRollup array returns False."""
+    fake_pr_data = {"statusCheckRollup": []}
     monkeypatch.setattr(
         runner,
         "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_checks), stderr=""),
+        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
     )
     assert runner.has_failing_checks("org/repo", 1) is False
 
@@ -604,3 +701,94 @@ def test_multiple_repos_same_pr_number_no_collision(tmp_path, monkeypatch):
         f"Config1 should contain 'worldarchitect.ai': {config1}"
     assert "ai_universe_frontend" in config2["workspace_root"], \
         f"Config2 should contain 'ai_universe_frontend': {config2}"
+
+
+def test_dispatch_agent_for_pr_accepts_model_for_all_clis(monkeypatch, tmp_path):
+    """Test that model parameter is accepted for all CLIs, not just claude."""
+    runner.WORKSPACE_ROOT_BASE = tmp_path
+    
+    captured_model = None
+    
+    class FakeDispatcher:
+        def analyze_task_and_create_agents(self, task_description, forced_cli=None):
+            return [{"id": "agent-spec"}]
+        
+        def create_dynamic_agent(self, spec):
+            nonlocal captured_model
+            captured_model = spec.get("model")
+            return True
+    
+    monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
+    monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
+    
+    pr = {
+        "repo_full": "jleechanorg/test-repo",
+        "repo": "test-repo",
+        "number": 123,
+        "branch": "test-branch",
+    }
+    
+    # Test with gemini CLI
+    success = runner.dispatch_agent_for_pr(
+        FakeDispatcher(),
+        pr,
+        agent_cli="gemini",
+        model="gemini-3-auto"
+    )
+    
+    assert success, "Should succeed with gemini CLI and model parameter"
+    assert captured_model == "gemini-3-auto", f"Expected 'gemini-3-auto', got '{captured_model}'"
+    
+    # Test with codex CLI
+    captured_model = None
+    success = runner.dispatch_agent_for_pr(
+        FakeDispatcher(),
+        pr,
+        agent_cli="codex",
+        model="composer-1"
+    )
+    
+    assert success, "Should succeed with codex CLI and model parameter"
+    assert captured_model == "composer-1", f"Expected 'composer-1', got '{captured_model}'"
+
+
+def test_dispatch_agent_for_pr_rejects_invalid_model(monkeypatch, tmp_path):
+    """Test that invalid model names are rejected."""
+    runner.WORKSPACE_ROOT_BASE = tmp_path
+    
+    class FakeDispatcher:
+        def analyze_task_and_create_agents(self, task_description, forced_cli=None):
+            return [{"id": "agent-spec"}]
+        
+        def create_dynamic_agent(self, spec):
+            return True
+    
+    monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
+    monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
+    
+    pr = {
+        "repo_full": "jleechanorg/test-repo",
+        "repo": "test-repo",
+        "number": 123,
+        "branch": "test-branch",
+    }
+    
+    # Test with invalid model name (contains space)
+    success = runner.dispatch_agent_for_pr(
+        FakeDispatcher(),
+        pr,
+        agent_cli="gemini",
+        model="invalid model name"
+    )
+    
+    assert not success, "Should reject invalid model name with spaces"
+    
+    # Test with invalid model name (contains special characters)
+    success = runner.dispatch_agent_for_pr(
+        FakeDispatcher(),
+        pr,
+        agent_cli="gemini",
+        model="model@invalid"
+    )
+    
+    assert not success, "Should reject invalid model name with special characters"

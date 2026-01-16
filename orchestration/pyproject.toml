@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jleechanorg-orchestration"
-version = "0.1.21"
+version = "0.1.25"
 description = "AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system"
 authors = [
     { name = "jleechan", email = "jlee@jleechan.org" },
@@ -17,8 +17,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -37,7 +35,7 @@ keywords = [
     "terminal",
     "interactive",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = []
 
 [project.license]
@@ -81,12 +79,12 @@ orchestration = [
 [tool.black]
 line-length = 120
 target-version = [
-    "py39",
+    "py311",
 ]
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = [

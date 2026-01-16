@@ -10,7 +10,7 @@ from _post_fixpr_queued, matching the behavior of _process_pr_fix_comment.
 """
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, call
 
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 
@@ -22,7 +22,7 @@ class TestFixprReturnValue(unittest.TestCase):
         """Set up test environment with comprehensive mocking"""
         # Patch AutomationSafetyManager during JleechanorgPRMonitor initialization
         with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager'):
-            self.monitor = JleechanorgPRMonitor()
+            self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
             self.monitor.safety_manager.fixpr_limit = 10
 
         # Mock logger to avoid logging issues

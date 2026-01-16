@@ -15,22 +15,15 @@ import sys
 from pathlib import Path
 
 from .automation_safety_manager import AutomationSafetyManager
+from .logging_utils import setup_logging as _setup_logging
 
 
 def setup_logging() -> logging.Logger:
-    """Set up logging for automation wrapper"""
+    """Set up logging delegated to centralized logging_utils"""
     log_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation"
-    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "automation_safety.log"
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(log_dir / "automation_safety.log"),
-            logging.StreamHandler()
-        ]
-    )
-    return logging.getLogger(__name__)
+    return _setup_logging(__name__, log_file=str(log_file))
 
 
 def main() -> int:

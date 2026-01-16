@@ -134,19 +134,21 @@ export_component() {
         esac
 
         # Safer, metadata-preserving update with rsync or cp -a fallback
+        # NOTE: We intentionally do NOT use --delete to preserve:
+        #   - Plugin-installed commands (e.g., superpowers)
+        #   - Manually added symlinks or files
+        #   - Other tools that install to ~/.claude/
         if command -v rsync >/dev/null 2>&1; then
-            # Use rsync for atomic, permission-preserving updates
+            # Use rsync for atomic, permission-preserving updates (no --delete)
             if [ -d "$source_path" ]; then
                 mkdir -p "$target_path"
-                rsync -a --delete "$source_path/" "$target_path/"
+                rsync -a "$source_path/" "$target_path/"
             else
                 rsync -a "$source_path" "$target_path"
             fi
         else
-            # Fallback without rsync: preserve attributes with cp -a
-            if [ -e "$target_path" ]; then
-                rm -rf "$target_path"
-            fi
+            # Fallback without rsync: merge using cp -a (no deletion)
+            # This preserves existing files not in source (plugins, manual additions)
             if [ -d "$source_path" ]; then
                 mkdir -p "$target_path"
                 cp -a "$source_path/." "$target_path"
