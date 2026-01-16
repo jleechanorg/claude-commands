@@ -20,6 +20,18 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+# Import per-comment cache (add to path first, then import)
+_copilot_modules_path = str(Path(__file__).parent / "_copilot_modules")
+if _copilot_modules_path not in sys.path:
+    sys.path.insert(0, _copilot_modules_path)
+
+try:
+    from per_comment_cache import PerCommentCache
+    PER_COMMENT_CACHE_AVAILABLE = True
+except ImportError:
+    PER_COMMENT_CACHE_AVAILABLE = False
+    PerCommentCache = None
+
 
 def run_command(
     cmd: List[str],
@@ -55,19 +67,49 @@ def parse_arguments() -> Tuple[str, str, str]:
     return sys.argv[1], sys.argv[2], sys.argv[3]
 
 
+def sanitize_branch_name(branch: str) -> str:
+    """Sanitize branch name to match shell's tr -cd '[:alnum:]._-'.
+
+    Removes any character that is NOT alphanumeric, dot, underscore, or dash.
+    """
+    return re.sub(r'[^a-zA-Z0-9._-]', '', branch or "")
+
+
+def sanitize_repo_name(repo_name: str) -> str:
+    """Sanitize repo name for filesystem safety.
+
+    Uses the same allowlist as branch sanitization so cache paths cannot be
+    influenced by path separators or traversal sequences.
+    """
+    return re.sub(r'[^a-zA-Z0-9._-]', '', repo_name or "")
+
+def _is_relative_to(path: Path, base: Path) -> bool:
+    try:
+        path.relative_to(base)
+        return True
+    except ValueError:
+        return False
+
 def get_current_branch() -> str:
     """Get current git branch name for temp file path"""
     success, branch, _ = run_command(["git", "branch", "--show-current"])
     if success and branch.strip():
-        # Sanitize branch name to prevent path traversal
-        branch = branch.strip()
-        # Remove dangerous characters that could be used for path traversal
-        safe_branch = re.sub(r"[^a-zA-Z0-9_-]", "_", branch)
-        return safe_branch[:50]  # Limit length
-    return "unknown"
+        return sanitize_branch_name(branch.strip()) or "unknown-branch"
+    return "unknown-branch"
+
+def get_repo_name(fallback_repo: str) -> str:
+    """Get repo name from git root to match shell scripts, with fallback."""
+    success, git_root, _ = run_command(["git", "rev-parse", "--show-toplevel"])
+    if success and git_root.strip():
+        candidate = os.path.basename(git_root.strip())
+    else:
+        candidate = fallback_repo
+
+    sanitized = sanitize_repo_name(candidate)
+    return sanitized or "unknown-repo"
 
 
-def load_claude_responses(branch_name: str) -> Dict:
+def load_claude_responses(branch_name: str, repo_name: str) -> Dict:
     """
     Load Claude-generated responses from JSON file.
     In the modern workflow, Claude analyzes comments, implements fixes,
@@ -75,23 +117,29 @@ def load_claude_responses(branch_name: str) -> Dict:
 
     Args:
         branch_name: Current git branch name (sanitized)
+        repo_name: Repository name (sanitized)
 
     Returns:
         Dictionary containing responses data, empty dict if file not found
     """
-    # Ensure branch_name is safe and create secure path
-    safe_branch = re.sub(r"[^a-zA-Z0-9_-]", "_", branch_name)[:50]
-    responses_file = f"/tmp/{safe_branch}/responses.json"
+    safe_repo = sanitize_repo_name(repo_name) or "unknown-repo"
+    safe_branch = sanitize_branch_name(branch_name) or "unknown-branch"
 
-    # Verify the path doesn't contain traversal attempts
-    responses_path = Path(responses_file).resolve()
-    expected_prefix = Path(f"/tmp/{safe_branch}").resolve()
-    if not str(responses_path).startswith(str(expected_prefix)):
-        print(f"⚠️ SECURITY: Path traversal attempt blocked: {responses_file}")
+    base_dir = Path("/tmp").resolve()
+    responses_path = (base_dir / safe_repo / safe_branch / "responses.json").resolve()
+    expected_dir = (base_dir / safe_repo / safe_branch).resolve()
+
+    # Verify the resolved path stays within /tmp (symlink-safe) and matches expected dir
+    if (
+        not _is_relative_to(responses_path, base_dir)
+        or not _is_relative_to(expected_dir, base_dir)
+        or responses_path.parent != expected_dir
+    ):
+        print(f"⚠️ SECURITY: Path traversal/symlink escape blocked: {responses_path}")
         return {}
 
-    if not os.path.exists(responses_file):
-        print(f"⚠️  RESPONSES FILE NOT FOUND: {responses_file}")
+    if not responses_path.exists():
+        print(f"⚠️  RESPONSES FILE NOT FOUND: {responses_path}")
         print("⚠️  Claude should have generated responses.json after analyzing comments")
         return {}
 
@@ -100,16 +148,12 @@ def load_claude_responses(branch_name: str) -> Dict:
         if responses_path.exists():
             file_size = responses_path.stat().st_size
             if file_size > 10 * 1024 * 1024:  # 10MB limit
-                print(
-                    f"⚠️ SECURITY: File too large: {responses_file} ({file_size} bytes)"
-                )
+                print(f"⚠️ SECURITY: File too large: {responses_path} ({file_size} bytes)")
                 return {}
 
-        with open(responses_file, "r") as f:
+        with responses_path.open("r") as f:
             responses_data = json.load(f)
-        print(
-            f"📁 LOADED: {len(responses_data.get('responses', []))} responses from {responses_file}"
-        )
+        print(f"📁 LOADED: {len(responses_data.get('responses', []))} responses from {responses_path}")
         return responses_data
     except json.JSONDecodeError as e:
         print(f"❌ ERROR: Failed to parse responses JSON: {e}")
@@ -119,34 +163,49 @@ def load_claude_responses(branch_name: str) -> Dict:
         return {}
 
 
-def load_comments_with_staleness_check(
-    branch_name: str, owner: str, repo: str, pr_number: str
-) -> List[Dict]:
+def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, pr_number: str, repo_name: str) -> List[Dict]:
     """
     Load comment data with staleness detection and real-time fallback.
-
-    Args:
-        branch_name: Current git branch name (sanitized)
-        owner: Repository owner
         repo: Repository name
         pr_number: PR number
+        repo_name: Repository name (sanitized)
 
     Returns:
         List of comment dictionaries (fresh or cached)
     """
-    # Ensure branch_name is safe and create secure path
-    safe_branch = re.sub(r"[^a-zA-Z0-9_-]", "_", branch_name)[:50]
-    comments_file = f"/tmp/{safe_branch}/comments.json"
+    safe_repo = sanitize_repo_name(repo_name) or "unknown-repo"
+    safe_branch = sanitize_branch_name(branch_name) or "unknown-branch"
 
-    # Verify the path doesn't contain traversal attempts
-    comments_path = Path(comments_file).resolve()
-    expected_prefix = Path(f"/tmp/{safe_branch}").resolve()
-    if not str(comments_path).startswith(str(expected_prefix)):
-        print(f"⚠️ SECURITY: Path traversal attempt blocked: {comments_file}")
+    base_dir = Path("/tmp").resolve()
+    cache_dir = (base_dir / safe_repo / safe_branch).resolve()
+    comments_path = (cache_dir / "comments.json").resolve()
+    comments_index_path = (cache_dir / "comments_index.json").resolve()
+    comments_dir = (cache_dir / "comments").resolve()
+    
+    # Security check
+    if (
+        not _is_relative_to(cache_dir, base_dir)
+        or not _is_relative_to(comments_path, base_dir)
+    ):
+        print(f"⚠️ SECURITY: Path traversal/symlink escape blocked: {cache_dir}")
         sys.exit(1)
 
+    # Try loading from new per-comment cache structure first
+    if PER_COMMENT_CACHE_AVAILABLE and comments_index_path.exists() and comments_dir.exists():
+        try:
+            cache = PerCommentCache(cache_dir)
+            comments = cache.load_all_comments()
+            if comments:
+                print(f"📁 LOADED: {len(comments)} comments from per-comment cache")
+                return comments
+        except Exception as e:
+            print(f"⚠️ Failed to load from per-comment cache: {e}, falling back to legacy format")
+
+    # Fallback to legacy single-file format
+    comments_file = str(comments_path)
+
     # COPILOT: Always fetch fresh data - no cache for PR processing
-    if os.path.exists(comments_file):
+    if comments_path.exists():
         cache_age_minutes = (time.time() - os.path.getmtime(comments_file)) / 60
         print(
             f"🔄 COPILOT MODE: Ignoring {cache_age_minutes:.1f}min cache - fetching fresh comments"
@@ -157,7 +216,7 @@ def load_comments_with_staleness_check(
         fetch_fresh_comments(owner, repo, pr_number, comments_file)
 
     try:
-        with open(comments_file, "r") as f:
+        with comments_path.open("r") as f:
             comment_data = json.load(f)
         return comment_data.get("comments", [])
     except Exception as e:
@@ -843,10 +902,9 @@ def main():
     print(f"📋 PR NUMBER: #{pr_number}")
 
     # Step 2: Load comments with staleness detection and real-time fallback
+    repo_name = get_repo_name(repo)
     branch_name = get_current_branch()
-    all_comments = load_comments_with_staleness_check(
-        branch_name, owner, repo, pr_number
-    )
+    all_comments = load_comments_with_staleness_check(branch_name, owner, repo, pr_number, repo_name)
     print(f"📁 LOADED: {len(all_comments)} comments with staleness validation")
 
     if not all_comments:
@@ -873,7 +931,7 @@ def main():
     print(f"📝 COMMIT: Using commit {commit_hash} for all responses")
 
     # Step 3: Load Claude-generated responses
-    responses_data = load_claude_responses(branch_name)
+    responses_data = load_claude_responses(branch_name, repo_name)
 
     # Step 3.5: Delete pending reviews only if we need threaded replies (inline comments)
     # GitHub blocks threaded replies if there's a pending review from the same user
