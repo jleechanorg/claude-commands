@@ -911,6 +911,7 @@ def test_post_pr_comment_python_api_error(monkeypatch):
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     
     mock_response = Mock()
+    mock_response.status_code = 500
     mock_response.raise_for_status.side_effect = requests.HTTPError("API Error")
     
     with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", return_value=mock_response):
@@ -918,7 +919,8 @@ def test_post_pr_comment_python_api_error(monkeypatch):
             result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
             
             assert result is False
-            mock_log.assert_any_call("⚠️ Failed to post comment: API Error")
+            # Check for the new more specific error message
+            mock_log.assert_any_call("⚠️ HTTP error while posting comment to owner/repo#123 (status 500): API Error")
 
 
 def test_cleanup_pending_reviews_python_success(monkeypatch):
@@ -1046,13 +1048,15 @@ def test_cleanup_pending_reviews_python_api_error(monkeypatch):
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     
     mock_response = Mock()
+    mock_response.status_code = 500
     mock_response.raise_for_status.side_effect = requests.HTTPError("API Error")
     
     with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_response):
         with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
             runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
             
-            mock_log.assert_any_call("Error cleaning up pending reviews: API Error")
+            # Check for the new more specific error message
+            mock_log.assert_any_call("⚠️ HTTP error while cleaning up pending reviews for owner/repo#123 (status 500): API Error")
 
 
 def test_cleanup_pending_reviews_python_delete_failure(monkeypatch):
