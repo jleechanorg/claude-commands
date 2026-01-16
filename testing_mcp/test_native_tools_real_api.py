@@ -75,9 +75,36 @@ def main() -> int:
         "update_user_settings",
         {"user_id": user_id, "settings": {"debug_mode": True}},
     )
+    # Create campaign with god_mode to skip character creation and go straight to StoryModeAgent
+    # StoryModeAgent loads game_state_instruction.md which contains the tool_requests guidance fix
+    # CharacterCreationAgent doesn't load game_state_instruction.md and explicitly says "DO NOT roll dice"
     payload = client.tools_call(
         "create_campaign",
-        {"user_id": user_id, "title": "MCP Smoke Campaign"},
+        {
+            "user_id": user_id,
+            "title": "MCP Smoke Campaign",
+            "god_mode": {
+                "title": "MCP Smoke Campaign",
+                "setting": "A dungeon entrance",
+                "character": {
+                    "name": "Test Fighter",
+                    "race": "Human",
+                    "class": "Fighter",
+                    "level": 5,
+                    "hp_current": 50,
+                    "hp_max": 50,
+                    "armor_class": 18,
+                    "attributes": {
+                        "strength": 16,
+                        "dexterity": 14,
+                        "constitution": 15,
+                        "intelligence": 10,
+                        "wisdom": 12,
+                        "charisma": 8,
+                    },
+                },
+            },
+        },
     )
     campaign_id = payload.get("campaign_id") or payload.get("campaignId")
     if not isinstance(campaign_id, str) or not campaign_id:
@@ -85,8 +112,31 @@ def main() -> int:
         return 2
 
     print(f"✅ create_campaign ok: {campaign_id}")
+    
+    # Verify we're in story mode (god_mode campaigns should skip character creation)
+    state = client.tools_call(
+        "get_campaign_state",
+        {"user_id": user_id, "campaign_id": campaign_id},
+    )
+    creation_in_progress = state.get("custom_campaign_state", {}).get("character_creation_in_progress", True)
+    if creation_in_progress:
+        # If still in creation, complete it with a story action
+        completion_result = client.tools_call(
+            "process_action",
+            {
+                "user_id": user_id,
+                "campaign_id": campaign_id,
+                "user_input": "Yes, let's play",
+                "mode": "character",
+            },
+        )
+        debug_info = completion_result.get("debug_info", {})
+        if debug_info.get("agent_name") != "StoryModeAgent":
+            print(f"⚠️ Warning: Still using {debug_info.get('agent_name')} after completion attempt")
 
-    action = "I look around for threats and prepare for combat."
+    # Use explicit combat action that MUST trigger dice rolls
+    # This tests the tool_requests guidance from game_state_instruction.md
+    action = "I attack the goblin with my longsword. Roll to hit and damage."
     payload2 = client.tools_call(
         "process_action",
         {"user_id": user_id, "campaign_id": campaign_id, "user_input": action, "mode": "character"},
