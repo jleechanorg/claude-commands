@@ -349,17 +349,20 @@ def main() -> int:
                 print(f"⚠️ Failed to write request_responses.jsonl: {exc}")
 
         if local is not None:
-            if _evidence_dir and local.log_path.exists():
-                artifacts_dir = _evidence_dir / "artifacts"
-                artifacts_dir.mkdir(parents=True, exist_ok=True)
-                dest_log = artifacts_dir / "server.log"
-                shutil.copy2(local.log_path, dest_log)
-                # Generate checksum
-                content = dest_log.read_bytes()
-                sha256_hash = hashlib.sha256(content).hexdigest()
-                checksum_file = Path(str(dest_log) + ".sha256")
-                checksum_file.write_text(f"{sha256_hash}  {dest_log.name}\n")
-                print(f"📋 Server log saved to: {dest_log}")
+            try:
+                if _evidence_dir and local.log_path.exists():
+                    artifacts_dir = _evidence_dir / "artifacts"
+                    artifacts_dir.mkdir(parents=True, exist_ok=True)
+                    dest_log = artifacts_dir / "server.log"
+                    shutil.copy2(local.log_path, dest_log)
+                    # Generate checksum
+                    content = dest_log.read_bytes()
+                    sha256_hash = hashlib.sha256(content).hexdigest()
+                    checksum_file = Path(str(dest_log) + ".sha256")
+                    checksum_file.write_text(f"{sha256_hash}  {dest_log.name}\n")
+                    print(f"📋 Server log saved to: {dest_log}")
+            except Exception as e:
+                print(f"⚠️ Failed to save server log: {e}")
             local.stop()
 
 
