@@ -3211,6 +3211,22 @@ def parse_structured_response(
             if content.startswith("{") and content.endswith("}"):
                 json_content = content
                 logging_util.info("Extracted JSON from generic code block")
+    
+    # Strategy: Handle code execution artifacts
+    # When Gemini uses code execution, response may start with whitespace or code output
+    # before the JSON. Find the first { or [ to locate the actual JSON start.
+    if not json_content.strip().startswith(("{", "[")):
+        # Look for JSON start character
+        json_start = -1
+        for i, char in enumerate(json_content):
+            if char in ["{", "["]:
+                json_start = i
+                break
+        
+        if json_start > 0:
+            cleaned_json = json_content[json_start:].strip()
+            logging_util.info(f"Removed code execution prefix ({json_start} chars) before JSON")
+            json_content = cleaned_json
 
     # Parse JSON using standard json.loads()
     # Recovery logic: Handle various JSON errors with multiple recovery strategies
