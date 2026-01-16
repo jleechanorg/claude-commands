@@ -20,7 +20,9 @@ execution_mode: immediate
 **🚨 EXECUTE BEFORE ANY COMMENT PROCESSING:**
 
 **Action Steps:**
-1. **Fetch All Comments**: Execute `/commentfetch` to get complete comment list
+1. **Check Comment Cache**: Use the `is_cache_fresh()` function to check if cached comments exist and are fresh (< 5 minutes old)
+   - If cache is fresh: Skip `/commentfetch` and use cached data from `$COMMENTS_FILE`
+   - If cache is stale or missing: Execute `/commentfetch` to get complete comment list
 2. **Critical Bug Detection**: Scan ALL comments for critical keywords:
    - Security: "CRITICAL", "BUG", "SECURITY", "BLOCKER", "PRODUCTION", "VULNERABILITY"
    - Auth/Rate Limiting: "rate limit", "authentication", "authorization", "admin", "UID"
@@ -110,7 +112,7 @@ fi
 
 ### Phase 1 Playbook — Analysis & Categorization
 
-- **Status + Comment Fetch**: Execute `/gstatus` and `/commentfetch` immediately after Phase 0 to refresh state.
+- **Status + Comment Fetch**: Execute `/gstatus` immediately after Phase 0. Comments are already loaded from Phase 0 (either from cache or fresh fetch).
 - **Categorization Pipeline**:
   1. Sanitize each comment body.
   2. Pass sanitized text to `categorize_comment()` to obtain CRITICAL/BLOCKING/IMPORTANT/ROUTINE labels.
@@ -147,7 +149,7 @@ for entry in $PRIORITIZED_COMMENTS; do
 done
 ```
 
-- **Agent Coordination**: When delegation occurs, poll `/tmp/$BRANCH_NAME/agent_status.json` until it reports `"status": "completed"`. Only then fold the diff back into responses.json.
+- **Agent Coordination**: When delegation occurs, poll `/tmp/$REPO_NAME/$BRANCH_NAME/agent_status.json` until it reports `"status": "completed"`. Only then fold the diff back into responses.json.
 - **Response Assembly**: Populate every response with the new ACTION_ACCOUNTABILITY fields (`action_taken`, `files_modified`, `commit`, `verification`, etc.) as you implement each fix so evidence is fresh.
 
 ### Phase 3 Playbook — Verification & Completion
@@ -282,9 +284,40 @@ Ultra-fast PR processing using hybrid orchestration still needs reliable cleanup
 ```bash
 # CLEANUP FUNCTION: Define error recovery and cleanup mechanisms
 
+get_repo_name() {
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+    local repo_name=""
+
+    if [ -n "$repo_root" ]; then
+        repo_name=$(basename "$repo_root")
+    else
+        repo_name=$(basename "$(pwd)")
+    fi
+
+    repo_name=$(echo "$repo_name" | tr -cd '[:alnum:]._-')
+    echo "${repo_name:-unknown-repo}"
+}
+
+get_branch_name() {
+    local branch_name
+    branch_name=$(git branch --show-current 2>/dev/null || true)
+    branch_name=$(echo "$branch_name" | tr -cd '[:alnum:]._-')
+    echo "${branch_name:-unknown-branch}"
+}
+
 cleanup_temp_files() {
-    local branch_name=$(git branch --show-current | tr -cd '[:alnum:]._-')
-    local temp_dir="/tmp/$branch_name"
+    local repo_name
+    repo_name=$(get_repo_name)
+    local branch_name
+    branch_name=$(get_branch_name)
+    local temp_dir="/tmp/$repo_name/$branch_name"
+
+    # Safety: never allow cleanup to target /tmp itself
+    if [ "$temp_dir" = "/tmp" ] || [ "$temp_dir" = "/tmp/" ]; then
+        echo "⚠️  CLEANUP: Skipping unsafe temp_dir=$temp_dir"
+        return 0
+    fi
 
     if [ -d "$temp_dir" ]; then
         echo "🧹 CLEANUP: Removing temporary files from $temp_dir"
@@ -296,17 +329,113 @@ cleanup_temp_files() {
     # Additional cleanup operations as needed
 }
 
+# Cleanup old caches (older than 7 days)
+cleanup_old_caches() {
+    local repo_name
+    repo_name=$(get_repo_name)
+    local repo_cache_dir="/tmp/$repo_name"
+    
+    # Safety: never allow cleanup to target /tmp itself
+    if [ "$repo_cache_dir" = "/tmp" ] || [ "$repo_cache_dir" = "/tmp/" ]; then
+        echo "⚠️  CLEANUP: Skipping unsafe repo_cache_dir=$repo_cache_dir"
+        return 0
+    fi
+
+    if [ -d "$repo_cache_dir" ]; then
+        # Remove caches older than 7 days (within the repo-scoped directory only)
+        find "$repo_cache_dir" -mindepth 1 -type d -mtime +7 -exec rm -rf {} + 2>/dev/null || true
+    fi
+}
+
 # ERROR HANDLER: Trap errors for graceful cleanup
 
 trap 'cleanup_temp_files; echo "🚨 ERROR: Copilot workflow interrupted"; exit 1' ERR
+
+COPILOT_START_TIME=$(date +%s)
+
+# Initialize path variables with repo name
+
+REPO_NAME=$(get_repo_name)
+BRANCH_NAME=$(get_branch_name)
+CACHE_DIR="/tmp/$REPO_NAME/$BRANCH_NAME"
+CACHE_METADATA_FILE="$CACHE_DIR/cache_metadata.json"
+COMMENTS_FILE="$CACHE_DIR/comments.json"
+
+# Perform cleanup of old caches
+cleanup_old_caches
+
+# Function to check if cache is fresh
+
+is_cache_fresh() {
+    if [ ! -f "$CACHE_METADATA_FILE" ] || [ ! -f "$COMMENTS_FILE" ]; then
+        return 1  # Cache doesn't exist
+    fi
+
+    # Read cache metadata (jq errors fall back to safe defaults)
+    local last_fetch
+    last_fetch=$(jq -er '.last_fetch_timestamp // empty' "$CACHE_METADATA_FILE" 2>/dev/null || true)
+    local ttl_seconds
+    ttl_seconds=$(jq -er '.cache_ttl_seconds // 300' "$CACHE_METADATA_FILE" 2>/dev/null || echo 300)
+    local cached_pr_number
+    cached_pr_number=$(jq -er '.pr_number // "unknown"' "$CACHE_METADATA_FILE" 2>/dev/null || echo "unknown")
+    local cached_sha
+    cached_sha=$(jq -er '.pr_head_sha // "unknown"' "$CACHE_METADATA_FILE" 2>/dev/null || echo "unknown")
+
+    if [ -z "$last_fetch" ]; then
+        return 1  # Invalid metadata
+    fi
+
+    if ! [[ "$ttl_seconds" =~ ^[0-9]+$ ]]; then
+        ttl_seconds=300
+    fi
+
+    # Check PR number to avoid using cache for the wrong PR
+    local current_pr_number
+    current_pr_number=$(gh pr view --json number --jq '.number' 2>/dev/null || echo "unknown")
+    if [ "$cached_pr_number" != "unknown" ] && [ "$current_pr_number" != "unknown" ] && [ "$cached_pr_number" != "$current_pr_number" ]; then
+        echo "ℹ️  PR number mismatch (cached: $cached_pr_number, current: $current_pr_number), invalidating cache..."
+        return 1  # Force refresh
+    fi
+
+    # Check PR head SHA to invalidate on updates
+    local current_sha=$(gh pr view --json headRefOid --jq '.headRefOid' 2>/dev/null || echo "unknown")
+    if [ "$cached_sha" != "unknown" ] && [ "$current_sha" != "unknown" ] && [ "$cached_sha" != "$current_sha" ]; then
+        echo "ℹ️  PR state changed (SHA mismatch), invalidating cache..."
+        return 1  # Force refresh
+    fi
+
+    # Calculate cache age using Python for cross-platform date parsing (macOS/Linux compatible)
+    local fetch_epoch=$(python3 -c 'import sys, datetime as d; s=sys.argv[1]; s=s.replace("Z","+00:00"); print(int(d.datetime.fromisoformat(s).timestamp()))' "$last_fetch" 2>/dev/null || echo 0)
+    
+    if [ "$fetch_epoch" -eq 0 ]; then
+        return 1  # Date parsing failed
+    fi
+    
+    local current_epoch=$(date +%s)
+    local cache_age=$((current_epoch - fetch_epoch))
+
+    if [ "$cache_age" -lt "$ttl_seconds" ]; then
+        echo "ℹ️  Using cached comments (age: ${cache_age}s, TTL: ${ttl_seconds}s)"
+        return 0  # Cache is fresh
+    else
+        echo "ℹ️  Cache is stale (age: ${cache_age}s > TTL: ${ttl_seconds}s), refetching..."
+        return 1  # Cache is stale
+    fi
+}
+
+# Phase 0: Use cache freshness check before fetching comments
+if is_cache_fresh; then
+    echo "✅ Comment cache is fresh; skipping /commentfetch"
+else
+    echo "🚀 Cache missing or stale; invoking /commentfetch to refresh comments"
+    /commentfetch
+fi
 
 # Get comprehensive PR status first
 
 /gstatus
 
 # Initialize timing for performance tracking (silent unless exceeded)
-
-COPILOT_START_TIME=$(date +%s)
 ```
 
 ### Security Functions
@@ -369,11 +498,15 @@ Launch specialized agent for file modifications with structured coordination:
 **🚨 EXPLICIT SYNCHRONIZATION PROTOCOL**: Eliminates race conditions
 ```bash
 
-# Secure branch name and setup paths
+# Secure branch name and setup paths (using repo-scoped cache directory)
 
-BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
-AGENT_STATUS="/tmp/$BRANCH_NAME/agent_status.json"
-mkdir -p "/tmp/$BRANCH_NAME"
+REPO_NAME=$(get_repo_name)
+BRANCH_NAME=$(get_branch_name)
+CACHE_DIR="/tmp/$REPO_NAME/$BRANCH_NAME"
+
+# Ensure consistency across all cache operations
+AGENT_STATUS="$CACHE_DIR/agent_status.json"
+mkdir -p "$CACHE_DIR"
 
 # Agent execution with status tracking
 
@@ -428,8 +561,8 @@ fi
 
 # Read structured agent results from status file
 
-BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
-AGENT_STATUS="/tmp/$BRANCH_NAME/agent_status.json"
+# Note: AGENT_STATUS is already set earlier in the workflow
+# Using the centralized cache directory for consistency
 
 if [ -f "$AGENT_STATUS" ]; then
     # Parse structured agent results with error handling
@@ -457,6 +590,12 @@ fi
 
 **Response Generation with Action Protocol** (MANDATORY ORCHESTRATOR RESPONSIBILITY):
 ```bash
+# Ensure cache paths are defined for this block
+REPO_NAME=$(get_repo_name)
+BRANCH_NAME=$(get_branch_name)
+CACHE_DIR="/tmp/$REPO_NAME/$BRANCH_NAME"
+AGENT_STATUS="$CACHE_DIR/agent_status.json"
+
 echo "📝 Generating action-based responses.json with implementation accountability"
 
 # 🚨 NEW PROTOCOL: Action-based responses with files_modified, tests_added, commit, verification
@@ -472,7 +611,16 @@ echo "    Lines: $PR_LINES"
 # 2. IMPLEMENTED: JSON validation with jq -e (CodeRabbit suggestion)
 
 echo "  • Adding jq -e validation for all JSON files"
-for json_file in /tmp/$(git branch --show-current)/*.json; do
+# Ensure cache paths are defined for this block (self-contained)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+REPO_NAME=$(basename "$REPO_ROOT" | tr -cd '[:alnum:]._-')
+BRANCH_NAME=$(git branch --show-current 2>/dev/null | tr -cd '[:alnum:]._-')
+REPO_NAME=${REPO_NAME:-unknown-repo}
+BRANCH_NAME=${BRANCH_NAME:-unknown-branch}
+CACHE_DIR="/tmp/$REPO_NAME/$BRANCH_NAME"
+AGENT_STATUS="$CACHE_DIR/agent_status.json"
+
+for json_file in $CACHE_DIR/*.json; do
     if [ -f "$json_file" ]; then
         echo "    Validating: $json_file"
         jq -e . "$json_file" > /dev/null || {
@@ -486,7 +634,7 @@ done
 # 3. IMPLEMENTED: Fix agent status race condition (CodeRabbit concern)
 
 echo "  • Implementing proper agent status coordination (not immediate file creation)"
-AGENT_STATUS="/tmp/$(git branch --show-current)/agent_status.json"
+# Note: AGENT_STATUS is already set earlier using CACHE_DIR
 
 # Wait for agent completion instead of immediate file creation
 
@@ -498,7 +646,7 @@ echo "    ✅ Agent coordination: Proper status synchronization"
 
 # CRITICAL: Generate responses in commentreply.py expected format
 
-# Orchestrator writes: /tmp/$(git branch --show-current)/responses.json
+# Orchestrator writes to: $CACHE_DIR/responses.json
 
 # 🚨 ACTION RESPONSE PROTOCOL: Every comment gets detailed action report
 
@@ -535,19 +683,22 @@ categorize_comment() {
     echo "ROUTINE"
 }
 
-# INPUT SANITIZATION: Secure branch name validation to prevent path injection
+# INPUT SANITIZATION: Validate branch name (already sanitized earlier)
 
-BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
+REPO_NAME=$(get_repo_name)
+BRANCH_NAME=$(get_branch_name)
+CACHE_DIR="/tmp/$REPO_NAME/$BRANCH_NAME"
+COMMENTS_FILE="$CACHE_DIR/comments.json"
 if [ -z "$BRANCH_NAME" ]; then
     echo "❌ CRITICAL: Invalid or empty branch name"
     cleanup_temp_files
     return 1
 fi
 
-# SECURE PATH CONSTRUCTION: Use sanitized branch name
+# SECURE PATH CONSTRUCTION: Use repo-scoped cache directory
 
-COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
-export RESPONSES_FILE="/tmp/$BRANCH_NAME/responses.json"
+# Note: COMMENTS_FILE and CACHE_DIR are already set earlier in the workflow
+export RESPONSES_FILE="$CACHE_DIR/responses.json"
 
 # API RESPONSE VALIDATION: Verify comment data exists and is valid JSON (using jq -e)
 
@@ -827,7 +978,7 @@ if ! /commentcheck; then
     # Attempt recovery by re-running comment responses
     /commentreply || {
         echo "🚨 CRITICAL: Recovery failed - manual intervention required";
-        echo "📊 DIAGNOSTIC: Check /tmp/$(git branch --show-current | tr -cd '[:alnum:]_-')/responses.json format";
+        echo "📊 DIAGNOSTIC: Check $CACHE_DIR/responses.json format";
         echo "📊 DIAGNOSTIC: Verify GitHub API permissions and rate limits";
         exit 1;
     }
