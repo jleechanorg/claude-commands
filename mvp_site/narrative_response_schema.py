@@ -3214,14 +3214,36 @@ def parse_structured_response(
     
     # Strategy: Handle code execution artifacts
     # When Gemini uses code execution, response may start with whitespace or code output
-    # before the JSON. Find the first { or [ to locate the actual JSON start.
-    if not json_content.strip().startswith(("{", "[")):
-        # Look for JSON start character
+    # before the JSON. Find the first { (JSON object) to locate the actual JSON start.
+    # We prefer { over [ because the response should be a JSON object, not an array.
+    stripped = json_content.strip()
+    if not stripped.startswith("{"):
+        # Look for JSON object start character (prefer { over [)
         json_start = -1
-        for i, char in enumerate(json_content):
-            if char in ["{", "["]:
-                json_start = i
-                break
+        brace_pos = json_content.find("{")
+        bracket_pos = json_content.find("[")
+        
+        # If array comes first, find the { that comes after the array closes
+        if bracket_pos >= 0 and (brace_pos < 0 or bracket_pos < brace_pos):
+            # Find the closing bracket for the array
+            bracket_end = json_content.find("]", bracket_pos)
+            if bracket_end >= 0:
+                # Look for { after the array closes
+                brace_after_array = json_content.find("{", bracket_end + 1)
+                if brace_after_array >= 0:
+                    json_start = brace_after_array
+                else:
+                    # No { after array, use array start as fallback
+                    json_start = bracket_pos
+            else:
+                # Array not closed, use array start as fallback
+                json_start = bracket_pos
+        elif brace_pos >= 0:
+            # { comes first or no array, use brace position
+            json_start = brace_pos
+        elif bracket_pos >= 0:
+            # Only array exists, use it
+            json_start = bracket_pos
         
         if json_start > 0:
             cleaned_json = json_content[json_start:].strip()
