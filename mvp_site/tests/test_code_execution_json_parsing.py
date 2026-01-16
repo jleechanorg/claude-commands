@@ -7,7 +7,6 @@ responses from Gemini when code execution mode is used, which can include
 whitespace or code output before the actual JSON response.
 """
 
-import json
 import os
 import sys
 import unittest
@@ -16,7 +15,10 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from mvp_site.narrative_response_schema import NarrativeResponse, parse_structured_response
+from mvp_site.narrative_response_schema import (
+    NarrativeResponse,
+    parse_structured_response,
+)
 
 
 class TestCodeExecutionJSONParsing(unittest.TestCase):
@@ -121,7 +123,7 @@ class TestCodeExecutionJSONParsing(unittest.TestCase):
         """Test realistic production scenario based on GCP logs"""
         # Based on logs showing code execution with stdout containing valid JSON
         # but main response having artifacts before JSON
-        # Error: "Expecting value: line 1 column 2 (char 1)"
+        # Error details: "Expecting value: line 1 column 2 (char 1)"
         response_text = '\n\n{"narrative": "Execute All Simultaneously - Finalize the Morninglord\'s deletion.", "entities_mentioned": ["Morninglord"], "location_confirmed": "Celestial Plane"}'
 
         narrative, response = parse_structured_response(response_text)
