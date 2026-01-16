@@ -14,8 +14,11 @@ set -euo pipefail
 TOOL_REQUEST=$(cat)
 TOOL_NAME=$(echo "$TOOL_REQUEST" | jq -r '.name' 2>/dev/null || echo "unknown")
 
-# Setup logging
-LOG_FILE="/tmp/your-project.com/$(git branch --show-current 2>/dev/null || echo 'unknown')/hook_modifications.log"
+# Setup logging - use dynamic project root detection
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "/tmp")
+PROJECT_NAME=$(basename "$PROJECT_ROOT" 2>/dev/null || echo "unknown-project")
+BRANCH_NAME=$(git branch --show-current 2>/dev/null || echo 'unknown')
+LOG_FILE="/tmp/${PROJECT_NAME}/${BRANCH_NAME}/hook_modifications.log"
 mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
 
 # Identify Session ID (best effort)

@@ -111,8 +111,13 @@ main() {
         fi
     }
 
-    # Get log file path
-    LOG_FILE="/tmp/orchestration_logs/${SESSION_NAME}.log"
+    # Get log file path - sanitize SESSION_NAME to prevent path traversal
+    # Remove any path traversal characters (/, ..) from session name
+    SANITIZED_SESSION=$(echo "$SESSION_NAME" | sed 's/[\/\.\.]//g' | sed 's/[^a-zA-Z0-9_-]/-/g')
+    if [ -z "$SANITIZED_SESSION" ]; then
+        SANITIZED_SESSION="unknown-session"
+    fi
+    LOG_FILE="/tmp/orchestration_logs/${SANITIZED_SESSION}.log"
 
     if [ -f "$LOG_FILE" ]; then
         echo "Tailing log file: $LOG_FILE"

@@ -241,7 +241,15 @@ TIMESTAMP=$(date -Iseconds)
 
 # Create session directory for artifacts (cross-platform)
 # Note: Python scripts use tempfile.gettempdir() for platform compatibility
-SESSION_DIR="$(mktemp -d -t "pair_sessions_XXXXXX")/${SESSION_ID}"
+# Cross-platform mktemp: GNU (Linux) vs BSD (macOS) compatibility
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # GNU mktemp (Linux)
+    TEMP_BASE=$(mktemp -d)
+else
+    # BSD mktemp (macOS)
+    TEMP_BASE=$(mktemp -d -t "pair_sessions")
+fi
+SESSION_DIR="${TEMP_BASE}/${SESSION_ID}"
 mkdir -p "${SESSION_DIR}"
 
 echo "🎯 Pair Session: ${SESSION_ID}"
@@ -289,6 +297,9 @@ EOF
 ```bash
 # Create bead entry for this pair session
 BEAD_ID="${SESSION_ID}"
+
+# Ensure .beads directory exists before writing
+mkdir -p .beads
 
 # Write to beads tracking file
 echo "{\"id\":\"${BEAD_ID}\",\"title\":\"Pair Session: ${TASK_DESCRIPTION}\",\"description\":\"Dual-agent pair programming session for: ${TASK_DESCRIPTION}\",\"status\":\"in_progress\",\"priority\":1,\"issue_type\":\"task\",\"created_at\":\"${TIMESTAMP}\",\"updated_at\":\"${TIMESTAMP}\"}" >> .beads/beads.left.jsonl
@@ -579,8 +590,42 @@ tail -f "$(python3 -c 'import tempfile; print(tempfile.gettempdir())')/pair_sess
 # Update bead to completed
 python3 -c "
 import json
+import sys
+from pathlib import Path
+from datetime import datetime
+
 bead_id = '${SESSION_ID}'
-# Update .beads/beads.left.jsonl with completed status
+beads_file = Path('.beads/beads.left.jsonl')
+
+if beads_file.exists():
+    # Read existing beads
+    beads = []
+    with open(beads_file, 'r') as f:
+        for line in f:
+            if line.strip():
+                beads.append(json.loads(line))
+    
+    # Update matching bead
+    updated = False
+    for bead in beads:
+        if bead.get('id') == bead_id:
+            bead['status'] = 'completed'
+            bead['updated_at'] = datetime.now().isoformat()
+            updated = True
+            break
+    
+    if updated:
+        # Write back updated beads
+        with open(beads_file, 'w') as f:
+            for bead in beads:
+                f.write(json.dumps(bead) + '\n')
+        print(f'✅ Bead {bead_id} marked as completed')
+    else:
+        print(f'⚠️ Bead {bead_id} not found')
+        sys.exit(1)
+else:
+    print('⚠️ .beads/beads.left.jsonl not found')
+    sys.exit(1)
 "
 ```
 

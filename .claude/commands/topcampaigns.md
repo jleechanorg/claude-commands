@@ -31,7 +31,7 @@ python scripts/top_campaigns.py --days 14 --exclude "$USER*" --top 10 -v
 
 ### All campaigns for a specific user
 ```bash
-python scripts/top_campaigns.py --email kevinzsalleh@gmail.com --top 50
+python scripts/top_campaigns.py --email user@example.com --top 50
 ```
 
 ### Top 20 from last month (no exclusions)

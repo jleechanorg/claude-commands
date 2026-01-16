@@ -55,8 +55,9 @@ Which would you prefer?
 **MUST verify directory is ignored before creating worktree:**
 
 ```bash
-# Check if directory is ignored (respects local, global, and system gitignore)
-git check-ignore -q .worktrees 2>/dev/null || git check-ignore -q worktrees 2>/dev/null
+# Check if the specific directory being used is ignored (respects local, global, and system gitignore)
+# Use the actual $LOCATION variable value, not generic checks
+git check-ignore -q "$LOCATION" 2>/dev/null
 ```
 
 **If NOT ignored:**
