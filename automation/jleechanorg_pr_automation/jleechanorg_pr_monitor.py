@@ -1916,22 +1916,30 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             self.logger.warning(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
             # Continue with skip check if status check fails
 
-        # Only skip if PR has no issues (no conflicts, no failing checks)
-        # If PR has conflicts or failing checks, reprocess even if commit was already processed
-        if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
-            if not (is_conflicting or is_failing):
-                self.logger.info(
-                    "⏭️ Skipping PR #%s - already processed commit %s (no conflicts or failing checks)",
-                    pr_number,
-                    head_sha[:8],
-                )
-                return "skipped"
+        # FIRST check if there are any issues to fix (conflicts or failing checks)
+        # If PR is clean (no conflicts, no failing checks), skip fixpr entirely
+        if not (is_conflicting or is_failing):
             self.logger.info(
-                "🔄 Reprocessing PR #%s (commit %s) - has conflicts or failing checks",
+                "⏭️ Skipping PR #%s - no conflicts or failing checks to fix",
+                pr_number,
+            )
+            return "skipped"
+
+        # PR has issues - check if we already processed this commit
+        if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+            self.logger.info(
+                "⏭️ Skipping PR #%s - already processed commit %s for fixpr",
                 pr_number,
                 head_sha[:8],
             )
-                # Continue processing despite skip check
+            return "skipped"
+
+        # Log that we're processing due to issues
+        self.logger.info(
+            "🔧 Processing PR #%s - has %s",
+            pr_number,
+            "conflicts" if is_conflicting else "failing checks",
+        )
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
