@@ -22,6 +22,9 @@ from unittest.mock import patch
 os.environ["TESTING_AUTH_BYPASS"] = "true"
 os.environ["MOCK_SERVICES_MODE"] = "true"
 
+from mvp_site import constants
+from mvp_site.world_logic import _persist_turn_to_firestore
+
 
 class TestPersistTurnModePreservation(unittest.TestCase):
     """Test that _persist_turn_to_firestore preserves mode for AI responses."""
@@ -41,9 +44,6 @@ class TestPersistTurnModePreservation(unittest.TestCase):
 
         This is the core bug fix - previously AI responses always had mode=None.
         """
-        from mvp_site.world_logic import _persist_turn_to_firestore
-        from mvp_site import constants
-
         # Execute the persist function with think mode
         _persist_turn_to_firestore(
             self.user_id,
@@ -78,9 +78,6 @@ class TestPersistTurnModePreservation(unittest.TestCase):
     @patch("mvp_site.world_logic.firestore_service")
     def test_god_mode_preserved_for_ai_response(self, mock_firestore):
         """RED: AI response should have mode='god' when user sends god mode request."""
-        from mvp_site.world_logic import _persist_turn_to_firestore
-        from mvp_site import constants
-
         _persist_turn_to_firestore(
             self.user_id,
             self.campaign_id,
@@ -100,9 +97,6 @@ class TestPersistTurnModePreservation(unittest.TestCase):
     @patch("mvp_site.world_logic.firestore_service")
     def test_character_mode_preserved_for_ai_response(self, mock_firestore):
         """RED: AI response should have mode='character' for character actions."""
-        from mvp_site.world_logic import _persist_turn_to_firestore
-        from mvp_site import constants
-
         _persist_turn_to_firestore(
             self.user_id,
             self.campaign_id,
@@ -122,9 +116,6 @@ class TestPersistTurnModePreservation(unittest.TestCase):
     @patch("mvp_site.world_logic.firestore_service")
     def test_combat_mode_preserved_for_ai_response(self, mock_firestore):
         """RED: AI response should have mode='combat' for combat actions."""
-        from mvp_site.world_logic import _persist_turn_to_firestore
-        from mvp_site import constants
-
         _persist_turn_to_firestore(
             self.user_id,
             self.campaign_id,
@@ -144,9 +135,6 @@ class TestPersistTurnModePreservation(unittest.TestCase):
     @patch("mvp_site.world_logic.firestore_service")
     def test_mode_matrix_all_modes(self, mock_firestore):
         """RED: Matrix test - all modes should be preserved for AI responses."""
-        from mvp_site.world_logic import _persist_turn_to_firestore
-        from mvp_site import constants
-
         # Test matrix of all modes
         test_modes = [
             constants.MODE_THINK,
