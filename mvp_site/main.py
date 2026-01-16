@@ -730,9 +730,7 @@ def create_app() -> Flask:
 
     # Check for repo-specific service account credentials
     worldai_creds_path = os.getenv("WORLDAI_GOOGLE_APPLICATION_CREDENTIALS")
-    if worldai_creds_path:
-        # Expand ~ to full path
-        worldai_creds_path = os.path.expanduser(worldai_creds_path)
+    worldai_creds_path = os.path.expanduser(worldai_creds_path) if worldai_creds_path else None
 
     try:
         firebase_admin.get_app()

@@ -344,7 +344,10 @@ class TestServiceAccountLoader(unittest.TestCase):
         self.assertIn("GOOGLE_CLIENT_EMAIL", error_msg)
         self.assertIn("GOOGLE_PRIVATE_KEY", error_msg)
         # Should mention where to set them
-        self.assertIn(".env file", error_msg.lower() or "claude.ai" in error_msg.lower())
+        error_msg_lower = error_msg.lower()
+        self.assertTrue(
+            ".env file" in error_msg_lower or "claude.ai" in error_msg_lower
+        )
 
     def test_creds_dict_structure_matches_google_format(self):
         """Test that credentials dictionary matches Google service account JSON format."""
