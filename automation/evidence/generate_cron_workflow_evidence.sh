@@ -67,8 +67,14 @@ write_sha256() {
   local path="$1"
   local out="${path}.sha256"
   if [[ -f "$path" ]]; then
-    # Use python for consistent output format (hash + two spaces + filename only)
-    # sha256sum outputs absolute paths which breaks verification if moved
+    if command -v sha256sum >/dev/null 2>&1; then
+      sha256sum "$path" > "$out"
+      return 0
+    fi
+    if command -v shasum >/dev/null 2>&1; then
+      shasum -a 256 "$path" > "$out"
+      return 0
+    fi
     python3 - "$path" > "$out" <<'PY'
 import hashlib
 import pathlib
@@ -126,7 +132,7 @@ if [[ "$INSTALL_MODE" == "pypi" ]]; then
   "$VENV_DIR/bin/pip" install "${PIP_INSTALL_COMMON[@]}" "jleechanorg-orchestration==${ORCH_VERSION}" >/dev/null
   "$VENV_DIR/bin/pip" install "${PIP_INSTALL_COMMON[@]}" "jleechanorg-pr-automation[dev]==${AUTOMATION_VERSION}" >/dev/null
 else
-  "$VENV_DIR/bin/pip" install -e "${AUTOMATION_DIR}[dev]" >/dev/null
+  "$VENV_DIR/bin/pip" install -e "$AUTOMATION_DIR[dev]" >/dev/null
 fi
 
 run_and_capture "env_versions" "$VENV_DIR/bin/python" - <<'PY' || true

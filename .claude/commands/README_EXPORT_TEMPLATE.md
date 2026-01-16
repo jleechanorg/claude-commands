@@ -51,7 +51,7 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## 🎯 What's Included
 
-**~197 Commands** including powerful workflow orchestrators and cognitive tools:
+**195+ Commands** including powerful workflow orchestrators and cognitive tools:
 - **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step automation
 - **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
 - **Infrastructure**: `/scaffold` - Repository setup and development environment

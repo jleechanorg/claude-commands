@@ -92,6 +92,12 @@ jobs:
           else
             echo "Import validation script not found, skipping"
           fi
+      - name: Upload import validation results
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+        if: always()
+        with:
+          name: import-validation-results
+          path: scripts/validate_imports.log
 
   # Directory-based test execution
   test:
@@ -199,8 +205,8 @@ jobs:
         done
 
         if [ "$TOTAL_TESTS" -eq 0 ]; then
-          echo "⚠️ No tests found in specified directories, falling back to core tests"
-          ./run_tests.sh --parallel --exclude-integration --exclude-mcp
+          echo "⚠️ No tests found in specified directories, falling back to full test suite"
+          ./run_tests.sh --ci --parallel --exclude-integration --exclude-mcp
         else
           ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp
         fi

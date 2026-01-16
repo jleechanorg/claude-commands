@@ -55,7 +55,13 @@ def decide(marker_prefix: str, marker_suffix: str) -> Tuple[str, str]:
         if end_index == -1:
             continue
 
-        marker_sha = body[start_index:end_index].strip()
+        marker_content = body[start_index:end_index].strip()
+        # Handle new format: agent:sha -> extract just SHA (last part)
+        # Also handles old format: SHA (no colon)
+        if ":" in marker_content:
+            marker_sha = marker_content.rsplit(":", 1)[-1].strip()
+        else:
+            marker_sha = marker_content
         if marker_sha == head_sha:
             return "skip", head_sha
 
