@@ -118,7 +118,7 @@ def validate_sanctuary_mode(sanctuary: dict | None, expected_scale: str) -> dict
     duration = expires_turn - activated_turn
 
     expected_durations = {"medium": 5, "major": 10, "epic": 20}
-    expected_duration = expected_durations.get(expected_scale.lower(), 21)
+    expected_duration = expected_durations.get(expected_scale.lower(), 10)  # Default to major if unknown
 
     # Allow some tolerance (LLM might not be exact)
     validation["duration_correct"] = (
@@ -281,7 +281,7 @@ def main():
     {
         "active": true,
         "activated_turn": <current_turn>,
-        "expires_turn": <current_turn + 21>,
+        "expires_turn": <current_turn + 10>,
         "arc": "Village Defense Quest",
         "scale": "major"
     }

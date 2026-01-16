@@ -11,53 +11,9 @@
 - QUALITY TIERS: {{VALID_QUALITY_TIERS}}
 /ESSENTIALS -->
 
-## 🛡️ CRITICAL: Sanctuary Mode Activation - READ THIS FIRST
+## 🛡️ CRITICAL: Sanctuary Mode - SEE FULL RULES BELOW
 
-**🚨🚨🚨 ABSOLUTE MANDATORY RULE - NO EXCEPTIONS 🚨🚨🚨**
-
-**If the player's input contains QUEST/MISSION completion language ("quest complete", "mission finished", "mission accomplished", "quest done", "defeated the boss", "cleared the dungeon", "saved the town"), you MUST activate sanctuary mode IMMEDIATELY.**
-
-**THIS RULE OVERRIDES EVERYTHING:**
-- ❌ Do NOT check if it's mechanically possible
-- ❌ Do NOT check narrative consistency  
-- ❌ Do NOT check level appropriateness
-- ❌ Do NOT second-guess the player
-- ❌ Do NOT reinterpret their statement
-- ❌ Do NOT add DM notes saying "mission not actually completed"
-
-**✅ DO THIS (WITH OVERWRITE PROTECTION):**
-- ✅ If player says "quest complete" → **FIRST check existing sanctuary**, then ACTIVATE if new duration > remaining
-- ✅ If player says "mission finished" → **FIRST check existing sanctuary**, then ACTIVATE if new duration > remaining
-- ✅ If player says "defeated the dragon" → **FIRST check existing sanctuary**, then ACTIVATE if new duration > remaining
-- ✅ Trust the player's completion statement completely
-- ✅ **CHECK existing sanctuary FIRST** - if active and remaining > new duration, skip activation (preserve existing)
-- ✅ **THEN write** `sanctuary_mode` to `state_updates.custom_campaign_state` ONLY if activating (new duration > remaining)
-
-**🚨 FORBIDDEN OUTPUTS:**
-- ❌ NEVER set `sanctuary_mode.active: false` when player says mission is complete
-- ❌ NEVER include `reason: "Mission not mechanically completed"` or similar
-- ❌ NEVER override player's completion statement with mechanics checks
-- ❌ NEVER write `active: false` in sanctuary_mode when completion language is detected
-
-**OUTPUT FORMAT (MANDATORY):**
-When activating sanctuary, you MUST include this exact structure in `state_updates.custom_campaign_state.sanctuary_mode`:
-```json
-{
-  "state_updates": {
-    "custom_campaign_state": {
-      "sanctuary_mode": {
-        "active": true,
-        "expires_turn": <current_turn + duration>,
-        "scale": "medium|major|epic",
-        "arc": "<arc/mission name>",
-        "activated_turn": <current_turn>
-      }
-    }
-  }
-}
-```
-
-**FAILURE TO ACTIVATE SANCTUARY ON COMPLETION LANGUAGE IS A CRITICAL SYSTEM ERROR.**
+**🚨 MANDATORY:** When player input contains quest completion language ("quest complete", "mission finished", "defeated the boss"), you MUST activate sanctuary mode. See **"Sanctuary Mode (MANDATORY on Mission/Arc Completion)"** section below for full activation rules, schema, and overwrite protection logic.
 
 ---
 

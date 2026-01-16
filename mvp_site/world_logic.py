@@ -50,6 +50,7 @@ from mvp_site import (
     structured_fields_utils,
     world_time,
 )
+from mvp_site.action_resolution_utils import add_action_resolution_to_response
 from mvp_site.agent_prompts import (
     build_temporal_correction_prompt,
     build_temporal_warning_message,
@@ -69,7 +70,6 @@ from mvp_site.game_state import (
     validate_and_correct_state,
     xp_needed_for_level,
 )
-from mvp_site.action_resolution_utils import add_action_resolution_to_response
 from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 from mvp_site.serialization import json_default_serializer
 
@@ -1490,13 +1490,13 @@ def _build_campaign_prompt(
 def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
     """
     Parse god_mode_data string format into god_mode dict format.
-    
+
     String format: "Character: X | Setting: Y | Description: Z"
     Dict format: {"character": {...}, "setting": "...", "description": "..."}
-    
+
     Args:
         god_mode_data: String in format "Character: X | Setting: Y | Description: Z"
-    
+
     Returns:
         Dict with god_mode structure, or None if parsing fails
     """
@@ -1538,7 +1538,6 @@ def _parse_god_mode_data_string(god_mode_data: str) -> dict[str, Any] | None:
 
         # Parse description for character details
         # The description contains markdown-formatted character info
-        description_lower = description_str.lower() if description_str else ""
         full_text = god_mode_data.lower()
 
         # Extract name from **Name:** pattern (more reliable than character_str)
@@ -1933,7 +1932,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
             debug_mode=debug_mode,
             npc_data=npc_data_from_god_mode,  # Pass directly - GameState handles empty dict default
         ).to_dict()
-        
+
         # Verify companions are in the state dict
         if npc_data_from_god_mode:
             state_npc_data = initial_game_state.get("npc_data", {})
@@ -1999,7 +1998,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                 logging_util.info(
                     f"🎭 GOD MODE: Enabling generate_companions=True because {len(npc_data_from_god_mode)} companions found in god_mode"
                 )
-            
+
             try:
                 opening_story_response = await asyncio.to_thread(
                     llm_service.get_initial_story,
@@ -2178,8 +2177,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         user_input_stripped = user_input.strip()
         if (
             user_input_stripped == "GOD_ASK_STATE"
-            or user_input_stripped.startswith("GOD_MODE_SET:")
-            or user_input_stripped.startswith("GOD_MODE_UPDATE_STATE:")
+            or user_input_stripped.startswith(("GOD_MODE_SET:", "GOD_MODE_UPDATE_STATE:"))
         ):
             debug_response = await asyncio.to_thread(
                 _handle_debug_mode_command,
@@ -2190,11 +2188,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             )
             if debug_response:
                 return debug_response
-
-        campaign_data: dict[str, Any] | None = None
-        story_context: list[dict[str, Any]] = []
-        selected_prompts: list[str] = []
-        use_default_world = False
 
         # Extract current world_time and location for temporal validation
         # CRITICAL: world_data can be None or non-dict in existing saves - normalize to {} first
@@ -2219,39 +2212,36 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
 
         while temporal_correction_attempts <= MAX_TEMPORAL_CORRECTION_ATTEMPTS:
             try:
-                if campaign_data is None:
-                    (
-                        campaign_data,
-                        story_context,
-                        llm_response_obj,
-                    ) = await asyncio.to_thread(
-                        _load_campaign_and_continue_story,
-                        user_id,
-                        campaign_id,
-                        llm_input=llm_input,
-                        mode=mode,
-                        current_game_state=current_game_state,
-                        include_raw_llm_payloads=include_raw_llm_payloads,
-                    )
-                    if not campaign_data or llm_response_obj is None:
-                        return {
-                            KEY_ERROR: "Campaign not found",
-                            "status_code": 404,
-                        }
-                    selected_prompts = campaign_data.get("selected_prompts", [])
-                    use_default_world = campaign_data.get("use_default_world", False)
-                else:
-                    llm_response_obj = await asyncio.to_thread(
-                        llm_service.continue_story,
-                        llm_input,  # Use llm_input, NOT user_input
-                        mode,
-                        story_context,
-                        current_game_state,
-                        selected_prompts,
-                        use_default_world,
-                        user_id,  # Pass user_id to enable user model preference selection
-                        include_raw_llm_payloads,
-                    )
+                # Always reload campaign_data and story_context from Firestore for each request.
+                # This ensures:
+                # 1. story_context includes the latest story entries (including previous commands)
+                # 2. campaign_data reflects any changes (selected_prompts, use_default_world, etc.)
+                #
+                # No caching is needed because:
+                # - MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0 (loop only runs once per request)
+                # - Campaign data is just one document read (cheap)
+                # - Story context must be fresh (includes latest entries)
+                # - Caching adds complexity and risk of stale data bugs
+                (
+                    campaign_data,
+                    story_context,
+                    llm_response_obj,
+                ) = await asyncio.to_thread(
+                    _load_campaign_and_continue_story,
+                    user_id,
+                    campaign_id,
+                    llm_input=llm_input,
+                    mode=mode,
+                    current_game_state=current_game_state,
+                    include_raw_llm_payloads=include_raw_llm_payloads,
+                )
+                if not campaign_data or llm_response_obj is None:
+                    return {
+                        KEY_ERROR: "Campaign not found",
+                        "status_code": 404,
+                    }
+                selected_prompts = campaign_data.get("selected_prompts", [])
+                use_default_world = campaign_data.get("use_default_world", False)
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during story continuation: {e}")
                 status_code = getattr(e, "status_code", None) or 422
@@ -2329,6 +2319,20 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             current_game_state, llm_response_obj, mode
         )
 
+        # Surface critical LLM response-quality issues to users (and logs) without retries.
+        llm_metadata = getattr(llm_response_obj, "processing_metadata", {}) or {}
+        llm_missing_fields = llm_metadata.get("llm_missing_fields", [])
+        if isinstance(llm_missing_fields, list) and llm_missing_fields:
+            warnings_out = prevention_extras.setdefault("system_warnings", [])
+            if "dice_integrity" in llm_missing_fields:
+                warnings_out.append(
+                    "Dice integrity warning: dice output could not be verified. Consider retrying this action."
+                )
+            if "dice_rolls" in llm_missing_fields:
+                warnings_out.append(
+                    "Dice rolls missing for an action that required them. Consider retrying this action."
+                )
+
         # Allow LLMs to return a single timestamp string while we maintain the
         # structured world_time object expected by the engine.
         state_changes = _apply_timestamp_to_world_time(state_changes)
@@ -2350,12 +2354,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         if temporal_violation_detected and not is_god_mode:
             old_time_str = _format_world_time_for_prompt(old_world_time)
             new_time_str = _format_world_time_for_prompt(new_world_time)
-            dice_retry_llm_call = bool(
-                getattr(llm_response_obj, "processing_metadata", {}).get(
-                    "dice_retry_llm_call"
-                )
-            )
-
             # User-facing error message as god_mode_response
             god_mode_response = (
                 f"⚠️ **TEMPORAL ANOMALY DETECTED**\n\n"
@@ -2365,12 +2363,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 f"This may indicate the AI lost track of the story timeline. "
                 f"The response was accepted but timeline consistency may be affected."
             )
-            if dice_retry_llm_call:
-                god_mode_response += (
-                    "\n\n**Dice Retry Notice**\n"
-                    "A dice integrity retry triggered an additional model call before this response. "
-                    "If anything seems inconsistent, you can retry the action."
-                )
 
             prevention_extras["god_mode_response"] = god_mode_response
 
@@ -2539,24 +2531,23 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             # Story mode or other modes: ensure player is tracked if present.
             should_track_player = True
 
-        if should_track_player:
-            if player_name:
-                entity_tracking = updated_game_state_dict.get("entity_tracking")
-                if not isinstance(entity_tracking, dict):
-                    entity_tracking = {}
-                    updated_game_state_dict["entity_tracking"] = entity_tracking
+        if should_track_player and player_name:
+            entity_tracking = updated_game_state_dict.get("entity_tracking")
+            if not isinstance(entity_tracking, dict):
+                entity_tracking = {}
+                updated_game_state_dict["entity_tracking"] = entity_tracking
 
-                active_entities = entity_tracking.get("active_entities")
-                if not isinstance(active_entities, list):
-                    active_entities = []
-                    entity_tracking["active_entities"] = active_entities
+            active_entities = entity_tracking.get("active_entities")
+            if not isinstance(active_entities, list):
+                active_entities = []
+                entity_tracking["active_entities"] = active_entities
 
-                # Add player character if not already present
-                if player_name not in active_entities:
-                    active_entities.append(player_name)
-                    logging_util.info(
-                        f"✅ Added player character '{player_name}' to active_entities"
-                    )
+            # Add player character if not already present
+            if player_name not in active_entities:
+                active_entities.append(player_name)
+                logging_util.info(
+                    f"✅ Added player character '{player_name}' to active_entities"
+                )
 
         # Apply automatic combat cleanup (sync defeated enemies between combat_state and npc_data)
         # Named NPCs are preserved and marked dead for continuity, while generic enemies are deleted.
@@ -2675,8 +2666,22 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         # Combine all system warnings (including any from rewards followup)
         rewards_corrections = prevention_extras.get("rewards_corrections", [])
         extra_warnings = prevention_extras.get("system_warnings", [])
+        
+        # Extract server-generated system_warnings from LLM response debug_info
+        # SECURITY: Only read _server_system_warnings (server-controlled) to prevent LLM spoofing
+        # LLM-provided system_warnings in debug_info are ignored for security
+        server_system_warnings = []
+        if llm_response_obj and hasattr(llm_response_obj, "structured_response"):
+            structured_response = llm_response_obj.structured_response
+            if structured_response:
+                debug_info = getattr(structured_response, "debug_info", None)
+                if isinstance(debug_info, dict):
+                    server_warnings = debug_info.get("_server_system_warnings", [])
+                    if isinstance(server_warnings, list):
+                        server_system_warnings = server_warnings
+        
         system_warnings = (
-            all_corrections + rewards_corrections + post_combat_warnings + extra_warnings
+            all_corrections + rewards_corrections + post_combat_warnings + extra_warnings + server_system_warnings
         )
 
         # Deduplicate warnings while preserving order
@@ -2755,27 +2760,27 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             def _should_reject_directive(rule: str) -> bool:
                 """
                 Filter out directives that should not be saved.
-                
+
                 IMPORTANT: We only reject directives that are STATE VALUES or ONE-TIME EVENTS.
                 BEHAVIORAL RULES (like "always apply Guidance", "always use advantage") MUST be kept.
-                
+
                 Reject:
                 - State values that change: "Level is X", "HP is Y", "Gold is Z"
                 - One-time events: "You just killed X", "You defeated Y"
                 - Formatting: "Always include X in header" (handled by system prompts)
-                
+
                 Keep:
                 - Behavioral rules: "Always apply Guidance", "Always use Enhance Ability"
                 - Persistent mechanics: "Apply advantage to Stealth", "Always use Foresight"
                 - Ongoing effects: "Maintain X buff", "Track Y condition" (if behavioral)
                 """
                 rule_lower = rule.lower().strip()
-                
+
                 # AI sometimes prefixes directives with "Rule: "
                 # We strip it for matching against our patterns
                 if rule_lower.startswith("rule:"):
                     rule_lower = rule_lower[5:].strip()
-                
+
                 # Reject patterns: State values (numbers that change)
                 # These are specific values, not behavioral rules
                 state_value_patterns = [
@@ -2789,7 +2794,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     "base spell save dc is",  # Calculated value
                     "effective charisma is",  # Calculated value
                 ]
-                
+
                 # Reject patterns: One-time events (history, not ongoing rules)
                 # These patterns are more specific to catch actual one-time events,
                 # not behavioral rules like "Killed enemies should drop loot"
@@ -2799,13 +2804,13 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     "you just defeated",  # More specific than just "defeated"
                     "you just completed",  # More specific than just "completed"
                 ]
-                
+
                 # Reject patterns: Formatting instructions (system-level, not game rules)
                 formatting_patterns = [
                     "always include",  # "Always include XP in header"
                     "format",  # Formatting instructions
                 ]
-                
+
                 # Check for state value patterns (must be exact value, not behavioral)
                 # e.g., "Level is 42" is bad, but "Level affects X" might be OK
                 for pattern in state_value_patterns:
@@ -2818,7 +2823,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                             # If followed by a number or "=", it's a state value
                             if after_pattern and (after_pattern[0].isdigit() or after_pattern.startswith('=')):
                                 return True
-                
+
                 # Check for one-time events (with additional context check)
                 # Only reject if it's clearly a one-time event, not a behavioral rule
                 for pattern in one_time_patterns:
@@ -2837,7 +2842,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                                     after_lower = after_pattern_orig.lower()
                                     if after_lower.startswith(("the ", "a ", "an ")) or after_pattern_orig[0].isupper():
                                         return True
-                
+
                 # Check for formatting instructions (with context validation)
                 # Only reject if it's clearly formatting, not behavioral rules
                 for pattern in formatting_patterns:
@@ -2859,7 +2864,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                             if pattern == "format" and len(after_pattern) < 10:
                                 # Short "format" phrases are likely formatting instructions
                                 return True
-                
+
                 # Allow everything else (behavioral rules, persistent mechanics, etc.)
                 return False
 
@@ -2870,14 +2875,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 new_rule_clean = new_rule.strip()
                 if not new_rule_clean:
                     continue
-                
+
                 # Filter out problematic directives (server-side validation)
                 if _should_reject_directive(new_rule_clean):
                     logging_util.warning(
                         f"GOD MODE: Rejected problematic directive (should be in state_updates, not directives): {new_rule_clean[:100]}"
                     )
                     continue
-                
+
                 # Case-insensitive duplicate check
                 existing_rules_lower = [
                     (
@@ -3627,7 +3632,7 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
             result["has_more"] = True
         else:
             result["has_more"] = False
-        
+
         # Include total count if available (only on first page)
         if total_count is not None:
             result["total_count"] = total_count

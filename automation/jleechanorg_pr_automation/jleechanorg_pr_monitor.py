@@ -18,12 +18,17 @@ import time
 import traceback
 import urllib.request
 from collections import Counter
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
+
+# Threshold for detecting stale queued comments (hours)
+# Comments older than this threshold without a completion marker are considered stale
+# and allow re-running the fix-comment agent (handles cases where agent failed silently)
+STALE_QUEUE_THRESHOLD_HOURS = 1.0
 
 from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
@@ -1696,13 +1701,27 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         # NOTE: Only check for queued markers if NO completion marker exists.
         # If completion marker exists, any queued marker is stale and should be ignored
         # (allows legitimate reprocessing when completion marker + unaddressed comments exist)
-        if not has_completion_marker and head_sha and self._has_fix_comment_queued_for_commit(comments, head_sha):
-            self.logger.info(
-                "⏭️ Skipping PR #%s - fix-comment run already queued for commit %s",
-                pr_number,
-                head_sha[:8],
-            )
-            return "skipped"
+        if not has_completion_marker and head_sha:
+            queued_info = self._get_fix_comment_queued_info(comments, head_sha)
+            if queued_info:
+                # Check if queued comment is stale (older than threshold with no completion)
+                # This handles cases where agent failed silently and never posted completion marker
+                queued_age_hours = queued_info.get("age_hours", 0)
+                if queued_age_hours > STALE_QUEUE_THRESHOLD_HOURS:
+                    self.logger.warning(
+                        "⚠️ PR #%s has stale queued comment (%.1f hours old, no completion) - allowing re-run",
+                        pr_number,
+                        queued_age_hours,
+                    )
+                    # Allow re-run - agent likely failed
+                else:
+                    self.logger.info(
+                        "⏭️ Skipping PR #%s - fix-comment run already queued for commit %s (%.1f hours ago)",
+                        pr_number,
+                        head_sha[:8],
+                        queued_age_hours,
+                    )
+                    return "skipped"
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
@@ -2148,8 +2167,16 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         This prevents duplicate agent dispatches during the window between when
         a fix-comment run is queued and when the completion marker is posted.
         """
+        return self._get_fix_comment_queued_info(comments, head_sha) is not None
+
+    def _get_fix_comment_queued_info(self, comments: list[dict], head_sha: str) -> dict | None:
+        """Get info about queued fix-comment comment for a commit, including age.
+        
+        Returns dict with 'age_hours' and 'created_at' if found, None otherwise.
+        This allows checking if a queued comment is stale (agent failed silently).
+        """
         if not head_sha:
-            return False
+            return None
 
         for comment in comments:
             body = comment.get("body", "")
@@ -2159,9 +2186,28 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 # Verify this is from automation user (not a bot echo)
                 author = self._get_comment_author_login(comment)
                 if author == self.automation_username:
-                    return True
+                    # GitHub API returns timestamps in camelCase (createdAt)
+                    created_at_str = comment.get("createdAt") or comment.get("created_at", "")
+                    if created_at_str:
+                        try:
+                            # Normalize ISO 8601 timestamp: replace 'Z' with '+00:00' for consistent parsing
+                            # (defensive normalization - Python 3.11+ supports 'Z' directly, but this ensures compatibility)
+                            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                            # Ensure timezone-aware datetime (handle edge case where fromisoformat returns naive)
+                            if created_at.tzinfo is None:
+                                created_at = created_at.replace(tzinfo=timezone.utc)
+                            now = datetime.now(timezone.utc)
+                            age_hours = (now - created_at).total_seconds() / 3600
+                            return {
+                                "age_hours": age_hours,
+                                "created_at": created_at_str,
+                            }
+                        except (ValueError, AttributeError, TypeError):
+                            # If we can't parse date or compare (naive vs aware), assume it's recent (conservative)
+                            return {"age_hours": 0.0, "created_at": created_at_str}
+                    return {"age_hours": 0.0, "created_at": ""}
 
-        return False
+        return None
 
     def _is_head_commit_from_codex(
         self, commit_details: dict[str, str | None] | None
