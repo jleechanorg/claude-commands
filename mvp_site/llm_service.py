@@ -1344,9 +1344,6 @@ def _call_llm_api_with_llm_request(
 
     logging_util.debug(f"JSON validation passed with {len(json_data)} fields")
 
-    # Re-validate payload size (~1.8KB overhead, negligible vs 10MB limit)
-    gemini_request._validate_payload_size(json_data)
-
     # Add priority instruction as JSON field when user_action exists
     # This guides the LLM to focus on current user action over historical context
     # while preserving the JSON contract (per CLAUDE.md "JSON Schema Over Text Instructions")

@@ -236,6 +236,10 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
         setStory(convertBackendStoryToEntries(campaignData.story))
       } else {
         // Clean up optimistic entry and restore input on empty data (consistent with error handling)
+        // Log for investigation: API succeeded but returned empty story data
+        console.warn(
+          `[GamePlayView] API succeeded but returned empty story data. campaignId=${campaignId}, inputLength=${inputText.length}`
+        )
         setPlayerInput(inputText)
         setStory(prev => prev.filter(entry => entry.id !== optimisticId))
         showErrorToast('Story update returned empty data. Please reload and try again.', { context: 'Game' })

@@ -2105,6 +2105,12 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                     if npc_data_from_god_mode
                     else None,  # Pass companions from god_mode
                 )
+            except llm_service.PayloadTooLargeError as e:
+                logging_util.error(f"Payload too large during campaign creation: {e}")
+                return create_error_response(
+                    "Story context is too large. Please start a new campaign or reduce story history.",
+                    status_code=422,
+                )
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during campaign creation: {e}")
                 status_code = getattr(e, "status_code", None) or 422
@@ -2346,6 +2352,12 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                     }
                 selected_prompts = campaign_data.get("selected_prompts", [])
                 use_default_world = campaign_data.get("use_default_world", False)
+            except llm_service.PayloadTooLargeError as e:
+                logging_util.error(f"Payload too large during story continuation: {e}")
+                return create_error_response(
+                    "Story context is too large. Please start a new campaign or reduce story history.",
+                    status_code=422,
+                )
             except llm_service.LLMRequestError as e:
                 logging_util.error(f"LLM request failed during story continuation: {e}")
                 status_code = getattr(e, "status_code", None) or 422
