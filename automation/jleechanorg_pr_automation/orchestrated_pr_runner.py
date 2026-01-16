@@ -20,6 +20,11 @@ from pathlib import Path
 
 import requests
 
+try:
+    import yaml
+except ImportError:
+    yaml = None  # PyYAML is optional - only needed for reading gh config file
+
 from orchestration import task_dispatcher
 from orchestration.task_dispatcher import TaskDispatcher
 
@@ -57,7 +62,11 @@ def display_log_viewing_command(session_name: str) -> None:
 
 
 def get_github_token() -> Optional[str]:
-    """Get GitHub token from environment or gh CLI config."""
+    """Get GitHub token from environment or gh CLI config file (avoids bash/subprocess calls).
+    
+    Reads token directly from ~/.config/gh/hosts.yml to avoid macOS permission prompts
+    that occur when calling 'gh auth token' via subprocess.
+    """
     # Try environment first
     token = os.environ.get("GITHUB_TOKEN")
     if token:
@@ -66,25 +75,38 @@ def get_github_token() -> Optional[str]:
         if token and len(token) > 0:
             return token
     
-    # Try gh CLI config as fallback
+    # Try reading from gh CLI config file directly (avoids subprocess/bash calls)
     try:
-        result = subprocess.run(
-            ["gh", "auth", "token"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False
-        )
-        if result.returncode == 0:
-            token = result.stdout.strip()
-            # Basic validation: ensure token is non-empty
-            if token and len(token) > 0:
-                return token
-    except subprocess.TimeoutExpired:
-        log("⚠️ Timeout while retrieving GitHub token from gh CLI")
+        gh_config_path = Path.home() / ".config" / "gh" / "hosts.yml"
+        if gh_config_path.exists():
+            if yaml is None:
+                log("⚠️ PyYAML not available, cannot read gh config file")
+            else:
+                try:
+                    with open(gh_config_path, "r") as f:
+                        config = yaml.safe_load(f)
+                    # Extract token from config structure: github.com -> oauth_token
+                    if config and "github.com" in config:
+                        github_config = config["github.com"]
+                        # Try oauth_token at top level first
+                        token = github_config.get("oauth_token")
+                        if not token and "users" in github_config:
+                            # Try user-specific token
+                            users = github_config["users"]
+                            if users:
+                                # Get first user's token
+                                first_user = list(users.values())[0]
+                                token = first_user.get("oauth_token")
+                        
+                        if token:
+                            token = str(token).strip()
+                            if token and len(token) > 0:
+                                log("🔍 Retrieved GitHub token from gh CLI config file")
+                                return token
+                except Exception as e:
+                    log(f"⚠️ Failed to read GitHub token from gh config file: {e}")
     except Exception as e:
-        # If gh CLI is not available or fails, fall back to returning None.
-        log(f"⚠️ Failed to retrieve GitHub token via gh CLI: {e}")
+        log(f"⚠️ Error accessing gh config file: {e}")
     
     return None
 
