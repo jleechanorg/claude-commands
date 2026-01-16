@@ -70,22 +70,21 @@ These fixes ensure `/copilot` achieves true **100% comment coverage** as documen
 +
 +     Handles pagination by flattening results with --jq when --paginate is present.
 +     """
+      # Check if --paginate is in command (before modification)
+      is_paginated = '--paginate' in command
+      original_has_jq = '--jq' in command
+
       try:
-+         # Check if --paginate is in command
-+         is_paginated = '--paginate' in command
-+
-+         if is_paginated and '--jq' not in command:
-+             # Add --jq to flatten paginated results
-+             paginate_idx = command.index('--paginate')
-+             command = command[:paginate_idx+1] + ['--jq', '.[]'] + command[paginate_idx+1:]
-+
+          if is_paginated and not original_has_jq:
+              # Add --jq to flatten paginated results
+              paginate_idx = command.index('--paginate')
+              command = command[:paginate_idx+1] + ['--jq', '.[]'] + command[paginate_idx+1:]
+
           result = subprocess.run(command, capture_output=True, text=True, check=True)
--         if not result.stdout.strip():
--             return {}
--         return json.loads(result.stdout)
-+
-+         # For paginated with --jq, output is JSONL (one JSON object per line)
-+         if is_paginated and '--jq' in command:
+
+          # For paginated with INJECTED --jq, output is JSONL (one JSON object per line)
+          # We only use special parsing if WE added the --jq flag
+          if is_paginated and not original_has_jq:
 +             items = []
 +             for line in result.stdout.strip().split('\n'):
 +                 if line.strip():

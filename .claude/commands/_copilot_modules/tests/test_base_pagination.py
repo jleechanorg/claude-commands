@@ -210,6 +210,27 @@ class TestBasePagination(unittest.TestCase):
             self.assertEqual(result[100]["id"], 101)
             self.assertEqual(result[149]["id"], 150)
 
+    def test_paginated_with_user_jq_returns_list(self):
+        """Test that user-provided --jq with pagination works correctly even if it produces JSONL"""
+        # Simulate JSONL output which happens if user passes --jq '.[]'
+        jsonl_output = '{"id": 1}\n{"id": 2}\n'
+        mock_result = MagicMock()
+        mock_result.stdout = jsonl_output
+        mock_result.returncode = 0
+
+        with patch("subprocess.run", return_value=mock_result):
+            # Command has user-provided --jq
+            result = self.base.run_gh_command([
+                "gh", "api", "comments",
+                "--paginate", "--jq", ".[]"
+            ])
+
+            # Should successfully parse JSONL into list
+            self.assertIsInstance(result, list)
+            self.assertEqual(len(result), 2)
+            self.assertEqual(result[0]["id"], 1)
+            self.assertEqual(result[1]["id"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
