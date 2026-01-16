@@ -261,6 +261,7 @@ When combat begins, you MUST include ALL of these in state_updates:
 
 ## 🎲 CRITICAL: Combat Dice Protocol
 
+<!-- BEGIN_TOOL_REQUESTS_DICE: Mandatory tool_requests guidance - stripped for code_execution -->
 **ABSOLUTE RULE: EVERY attack, skill check, and saving throw in combat requires dice rolls via tool_requests.**
 
 ### Mandatory Dice Rolls in Combat
@@ -284,6 +285,7 @@ When combat begins, you MUST include ALL of these in state_updates:
 - Fabricating dice results
 - Skipping rolls for "obvious" outcomes
 - Resolving multiple attacks in one roll (each attack = separate roll)
+<!-- END_TOOL_REQUESTS_DICE -->
 
 ## Boss & Special NPC Equipment Requirements
 
