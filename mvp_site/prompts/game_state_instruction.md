@@ -1462,7 +1462,7 @@ world_data.npcs.man_tibbet.current_status = __DELETE__
 
 **Calendar:** Forgotten Realms = Harptos (1492 DR), Modern = Gregorian, Custom = specify
 
-**world_time object:** `{year, month, day, hour, minute, second, microsecond, time_of_day}`
+**state_updates.world_data.world_time object:** `{year, month, day, hour, minute, second, microsecond, time_of_day}`
 
 **Time-of-Day Mapping:** 0-4: Deep Night | 5-6: Dawn | 7-11: Morning | 12-13: Midday | 14-17: Afternoon | 18-19: Evening | 20-23: Night
 
@@ -1479,7 +1479,7 @@ world_data.npcs.man_tibbet.current_status = __DELETE__
 
 ### Core Rule: Time-Forward-Only
 
-Every response that updates `world_time` MUST result in a timestamp that is **strictly greater than** the previous timestamp. This prevents:
+Every response that updates `state_updates.world_data.world_time` MUST result in a timestamp that is **strictly greater than** the previous timestamp. This prevents:
 - Accidental time loops
 - Duplicate timestamps across turns
 - Narrative inconsistency from time jumps backward
@@ -1513,21 +1513,25 @@ When player uses think/plan/consider/strategize/options keywords and you generat
 | Quick action (look around, check item) | +10-30 seconds |
 | Scene transition | +5-15 minutes |
 
-If you omit `world_time`, the engine will keep the existing timeline unchanged. Always provide `world_data.timestamp_iso` so the session header and backward-time checks reflect your intended calendar and era.
+If you omit `state_updates.world_data.world_time`, the engine will keep the existing timeline unchanged. Always provide `world_data.timestamp_iso` so the session header and backward-time checks reflect your intended calendar and era.
 
 ### Updated World Time Object (with Microseconds)
 
 ```json
 {
-  "world_time": {
-    "year": 1492,
-    "month": "Mirtul",
-    "day": 10,
-    "hour": 14,
-    "minute": 30,
-    "second": 25,
-    "microsecond": 0,
-    "time_of_day": "Afternoon"
+  "state_updates": {
+    "world_data": {
+      "world_time": {
+        "year": 1492,
+        "month": "Mirtul",
+        "day": 10,
+        "hour": 14,
+        "minute": 30,
+        "second": 25,
+        "microsecond": 0,
+        "time_of_day": "Afternoon"
+      }
+    }
   }
 }
 ```
@@ -1537,7 +1541,7 @@ If you omit `world_time`, the engine will keep the existing timeline unchanged. 
 
 ### 🚨 MANDATORY TIME FIELDS (ALL REQUIRED)
 
-**CRITICAL: When updating world_time, ALL fields must be present. Partial updates are INVALID.**
+**CRITICAL: When updating state_updates.world_data.world_time, ALL fields must be present. Partial updates are INVALID.**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -1552,15 +1556,15 @@ If you omit `world_time`, the engine will keep the existing timeline unchanged. 
 
 **❌ INVALID (missing year/month/day):**
 ```json
-{"world_time": {"hour": 8, "minute": 15, "time_of_day": "Morning"}}
+{"state_updates": {"world_data": {"world_time": {"hour": 8, "minute": 15, "time_of_day": "Morning"}}}}
 ```
 
 **✅ VALID (all fields present):**
 ```json
-{"world_time": {"year": 3641, "month": "Mirtul", "day": 20, "hour": 8, "minute": 15, "second": 0, "microsecond": 0, "time_of_day": "Morning"}}
+{"state_updates": {"world_data": {"world_time": {"year": 3641, "month": "Mirtul", "day": 20, "hour": 8, "minute": 15, "second": 0, "microsecond": 0, "time_of_day": "Morning"}}}}
 ```
 
-**RULE: Copy all time fields from the current state, then modify only what changes.** Never generate partial time objects.
+**RULE: Copy all time fields from the current state, then modify only what changes.** Never generate partial time objects in `state_updates.world_data.world_time`.
 
 ### Backward Time Travel (GOD MODE ONLY)
 
@@ -1591,7 +1595,7 @@ Time can ONLY move backward when:
 
 ### Validation Rule
 
-Before outputting any `state_updates` containing `world_time`, mentally verify:
+Before outputting any `state_updates` containing `world_data.world_time`, mentally verify:
 1. Is the new timestamp > previous timestamp? ✅ Proceed
 2. Is the new timestamp ≤ previous timestamp?
    - Is this a GOD MODE time manipulation request? ✅ Proceed with warning in god_mode_response

@@ -17,12 +17,13 @@ Class Hierarchy:
 
 Agent Selection Priority (used by get_agent_for_input):
 1. GodModeAgent: Administrative commands (highest priority)
-2. CharacterCreationAgent: Character creation & level-up (creation focus)
-3. PlanningAgent: Strategic planning (think mode)
-4. InfoAgent: Equipment/inventory queries
-5. CombatAgent: Active combat encounters
-6. RewardsAgent: Reward processing after combat/encounters
-7. StoryModeAgent: Default narrative storytelling
+2. Character creation completion override (transition to StoryModeAgent)
+3. CharacterCreationAgent: Character creation & level-up (creation focus)
+4. PlanningAgent: Strategic planning (think mode)
+5. CampaignUpgradeAgent: Ascension ceremonies (divine/sovereign)
+6. Semantic intent classification (info/combat/rewards/creation/upgrade)
+7. API explicit mode override (if provided)
+8. StoryModeAgent: Default narrative storytelling
 
 Usage:
     from mvp_site.agents import (
@@ -1538,14 +1539,14 @@ def get_agent_for_input(
     2. Character Creation Completion Override
     3. CharacterCreationAgent (State-based - when char creation is active)
     4. PlanningAgent (Explicit override - "THINK:" prefix or mode="think")
-    4.5. CampaignUpgradeAgent (State-based - when upgrade is available)
-    5. Semantic Intent Classification (PRIMARY BRAIN)
+    5. CampaignUpgradeAgent (State-based - when upgrade is available)
+    6. Semantic Intent Classification (PRIMARY BRAIN)
        - CombatAgent: Routes on semantic intent (can initiate combat if not active)
        - RewardsAgent: Routes on semantic intent (can check for missed rewards)
        - CharacterCreationAgent: Routes on semantic intent (can initiate level-up/recreation)
        - CampaignUpgradeAgent: Routes on semantic intent (can guide toward ascension)
-    6. API Explicit Mode (Forced via UI/Param)
-    7. StoryModeAgent (Default)
+    7. API Explicit Mode (Forced via UI/Param)
+    8. StoryModeAgent (Default)
     """
     # 1. Safety Override: GOD MODE
     if GodModeAgent.matches_input(user_input, mode):
