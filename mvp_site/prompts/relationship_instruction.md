@@ -2,9 +2,27 @@
 
 **CRITICAL: Relationships are ACTIVE game mechanics, not passive flavor text.**
 
-**Schema:** See `game_state_instruction.md` → "NPC Data Input Structure" section for the JSON structure. Relationships are stored in `npc_data.<name>.relationships.player` with fields: `trust_level` (-10 to +10), `disposition` (hostile/antagonistic/neutral/friendly/allied), `history` (array), `debts` (array), `grievances` (array).
+## Relationship Tracking Protocol
 
-## Trust Level Scale (-10 to +10)
+**Every significant NPC MUST have a `relationships` object in state:**
+```json
+"npc_data": {
+  "Theron Blackwood": {
+    "string_id": "npc_theron_001",
+    "relationships": {
+      "player": {
+        "trust_level": 3,
+        "disposition": "friendly",
+        "history": ["saved his life in the goblin cave", "shared a drink at the tavern"],
+        "debts": ["owes player a favor"],
+        "grievances": []
+      }
+    }
+  }
+}
+```
+
+## Trust Level Mapping (-10 to +10)
 
 | Level | Disposition | NPC Behavior |
 |-------|-------------|--------------|

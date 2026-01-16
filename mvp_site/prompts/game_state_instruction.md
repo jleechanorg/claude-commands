@@ -901,6 +901,24 @@ If the math doesn't add up, fix it before outputting. The UI will display all th
   - Rogue/Bard: `["light armor"]`
   - Wizard/Sorcerer/Monk: `[]` (no armor proficiency)
 
+#### Saving Throw Proficiencies (`saving_throw_proficiencies`)
+**Source**: Class features
+- **Format**: Array of strings (capitalized)
+- **Examples**: `["Strength", "Constitution"]`, `["Dexterity", "Charisma"]`
+- **Class defaults**:
+  - Barbarian: `["Strength", "Constitution"]`
+  - Bard: `["Dexterity", "Charisma"]`
+  - Cleric: `["Wisdom", "Charisma"]`
+  - Druid: `["Intelligence", "Wisdom"]`
+  - Fighter: `["Strength", "Constitution"]`
+  - Monk: `["Strength", "Dexterity"]`
+  - Paladin: `["Wisdom", "Charisma"]`
+  - Ranger: `["Strength", "Dexterity"]`
+  - Rogue: `["Dexterity", "Intelligence"]`
+  - Sorcerer: `["Constitution", "Charisma"]`
+  - Warlock: `["Wisdom", "Charisma"]`
+  - Wizard: `["Intelligence", "Wisdom"]`
+
 #### Tool Proficiencies (`tool_proficiencies`)
 **Source**: Background, class, or racial features
 - **Format**: Array of strings

@@ -191,7 +191,7 @@ except (ImportError, Exception) as e:
     get_evidence_dir = lambda name: Path(f"/tmp/worldarchitect.ai/evidence/{name}")
     save_request_responses = lambda *args, **kwargs: None
 
-DEFAULT_MODEL = "gemini-2.5-flash-preview-05-20"
+DEFAULT_MODEL = "gemini-3-flash-preview"
 TEST_NAME = "prompt_optimization_real_api"
 
 
@@ -387,6 +387,11 @@ def extract_xp_updates(result: dict[str, Any]) -> int | None:
     """Extract XP awarded from state_updates."""
     state_updates = result.get("state_updates") or {}
     pc_data = state_updates.get("player_character_data") or {}
+    # Check proper schema path first
+    experience = pc_data.get("experience")
+    if isinstance(experience, dict):
+        return experience.get("current")
+    # Fallback to legacy field
     return pc_data.get("xp")
 
 
