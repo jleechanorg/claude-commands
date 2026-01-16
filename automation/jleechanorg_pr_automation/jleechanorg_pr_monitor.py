@@ -21,6 +21,8 @@ from collections import Counter
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
+import requests
+
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -67,6 +69,7 @@ from .orchestrated_pr_runner import (
     dispatch_agent_for_pr,
     dispatch_agent_for_pr_with_task,
     ensure_base_clone,
+    get_github_token,
     has_failing_checks,
 )
 from .utils import json_manager, setup_logging
@@ -627,25 +630,42 @@ class JleechanorgPRMonitor:
         cursor: str | None = None
         recent_prs: list[dict] = []
 
-        while True:
-            gh_api_cmd = [
-                "gh",
-                "api",
-                "graphql",
-                "-f",
-                f"query={graphql_query}",
-                "-f",
-                f"searchQuery={search_query}",
-            ]
-            if cursor:
-                gh_api_cmd.extend(["-f", f"cursor={cursor}"])
+        # Get GitHub token for API calls (avoids bash/subprocess)
+        token = get_github_token()
+        if not token:
+            raise RuntimeError("No GitHub token available for GraphQL API calls")
 
-            api_result = AutomationUtils.execute_subprocess_with_timeout(gh_api_cmd, timeout=60, check=False)
-            if api_result.returncode != 0:
-                raise RuntimeError(f"GraphQL search failed: {api_result.stderr.strip()}")
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+        }
+
+        while True:
+            # Use Python requests instead of gh CLI to avoid bash prompts
+            variables = {
+                "searchQuery": search_query,
+            }
+            if cursor:
+                variables["cursor"] = cursor
+
+            payload = {
+                "query": graphql_query,
+                "variables": variables,
+            }
 
             try:
-                api_data = json.loads(api_result.stdout)
+                response = requests.post(
+                    "https://api.github.com/graphql",
+                    json=payload,
+                    headers=headers,
+                    timeout=60,
+                )
+                response.raise_for_status()
+                api_data = response.json()
+            except requests.exceptions.RequestException as e:
+                self.logger.error(f"❌ GraphQL API request failed: {e}")
+                raise RuntimeError(f"GraphQL search failed: {e}")
             except json.JSONDecodeError as exc:
                 self.logger.error("❌ Failed to parse GraphQL response: %s", exc)
                 raise
@@ -1252,21 +1272,44 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         repo_full: str,
         pr_number: int,
     ) -> tuple[dict, str | None, list[dict], list[str]]:
-        view_cmd = [
-            "gh",
-            "pr",
-            "view",
-            str(pr_number),
-            "--repo",
-            repo_full,
-            "--json",
-            "title,headRefName,headRefOid,author,comments,commits",
-        ]
-        result = AutomationUtils.execute_subprocess_with_timeout(view_cmd, timeout=30, check=False)
-        if result.returncode != 0:
-            raise RuntimeError(result.stderr or f"gh pr view failed for {repo_full}#{pr_number}")
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
+            raise RuntimeError(f"No GitHub token available for PR view: {repo_full}#{pr_number}")
 
-        pr_data = json.loads(result.stdout or "{}")
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+
+        # Fetch PR data using GitHub REST API
+        url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}"
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+            pr_data = response.json()
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"Failed to fetch PR data for {repo_full}#{pr_number}: {e}")
+
+        # Fetch comments separately (REST API doesn't include comments in PR endpoint)
+        comments_url = f"https://api.github.com/repos/{repo_full}/issues/{pr_number}/comments"
+        try:
+            comments_response = requests.get(comments_url, headers=headers, timeout=30, params={"per_page": 100})
+            comments_response.raise_for_status()
+            pr_data["comments"] = comments_response.json()
+        except requests.exceptions.RequestException:
+            # Comments are optional, continue without them
+            pr_data["comments"] = []
+
+        # Fetch commits separately
+        commits_url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}/commits"
+        try:
+            commits_response = requests.get(commits_url, headers=headers, timeout=30, params={"per_page": 100})
+            commits_response.raise_for_status()
+            pr_data["commits"] = commits_response.json()
+        except requests.exceptions.RequestException:
+            # Commits are optional, continue without them
+            pr_data["commits"] = []
         head_sha = pr_data.get("headRefOid")
 
         comments_data = pr_data.get("comments", [])
