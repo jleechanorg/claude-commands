@@ -502,8 +502,9 @@ def write_with_checksum(filepath: Path, content: str) -> str:
 def download_test_campaigns(
     results: dict[str, Any],
     user_id: str | None = None,
+    evidence_dir: Path | None = None,
 ) -> Path | None:
-    """Download all test campaigns to ~/Downloads/test_campaign/.
+    """Download all test campaigns to /tmp/<repo>/<branch>/<test>/campaigns/.
 
     Extracts campaign_ids from results and downloads them using the
     download_campaign.py script from scripts/.
@@ -511,6 +512,8 @@ def download_test_campaigns(
     Args:
         results: Test results dict containing scenarios with campaign_ids.
         user_id: Firebase user ID. If None, extracts from first scenario.
+        evidence_dir: Evidence directory path. If provided, downloads to
+            evidence_dir/campaigns. If None, uses ~/Downloads/test_campaign.
 
     Returns:
         Path to download directory or None if no campaigns downloaded.
@@ -537,8 +540,11 @@ def download_test_campaigns(
         print("⚠️  No user_id found, skipping campaign download")
         return None
 
-    # Prepare download directory
-    download_dir = Path.home() / "Downloads" / "test_campaign"
+    # Prepare download directory - use evidence_dir/campaigns if provided
+    if evidence_dir:
+        download_dir = evidence_dir / "campaigns"
+    else:
+        download_dir = Path.home() / "Downloads" / "test_campaign"
     download_dir.mkdir(parents=True, exist_ok=True)
 
     # Download each campaign
@@ -1077,8 +1083,8 @@ the raw narrative validation missed. See `errors` in individual scenario files.
     print(f"   Iteration: {iteration_num}")
     print(f"   Bundle Version: {EVIDENCE_FORMAT_VERSION}")
 
-    # Download test campaigns for inspection
-    campaign_dir = download_test_campaigns(results)
+    # Download test campaigns for inspection to evidence_dir/campaigns
+    campaign_dir = download_test_campaigns(results, evidence_dir=actual_evidence_dir)
     if campaign_dir:
         files["_campaign_dir"] = campaign_dir
 
