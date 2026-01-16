@@ -3749,10 +3749,12 @@ def continue_story(  # noqa: PLR0912, PLR0915
     )
     if stripped_story_context:
         last_story_entry = stripped_story_context[-1]
-        logging_util.debug(
-            f"📝 Last story_history entry: actor={last_story_entry.get('actor')}, "
-            f"text={str(last_story_entry.get('text', ''))[:100]}..."
-        )
+        # Guard against non-dict entries from malformed Firestore data
+        if isinstance(last_story_entry, dict):
+            logging_util.debug(
+                f"📝 Last story_history entry: actor={last_story_entry.get('actor')}, "
+                f"text={str(last_story_entry.get('text', ''))[:100]}..."
+            )
     
     gemini_request = LLMRequest.build_story_continuation(
         user_action=user_input,

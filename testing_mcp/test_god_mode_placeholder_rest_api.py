@@ -18,6 +18,7 @@ import json
 import os
 import sys
 import time
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -255,7 +256,6 @@ def main():
 
     except Exception as e:
         log(f"❌ TEST ERROR: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
 

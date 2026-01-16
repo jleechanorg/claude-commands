@@ -235,6 +235,9 @@ export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayView
       if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
         setStory(convertBackendStoryToEntries(campaignData.story))
       } else {
+        // Clean up optimistic entry and restore input on empty data (consistent with error handling)
+        setPlayerInput(inputText)
+        setStory(prev => prev.filter(entry => entry.id !== optimisticId))
         showErrorToast('Story update returned empty data. Please reload and try again.', { context: 'Game' })
       }
     } catch (error) {
