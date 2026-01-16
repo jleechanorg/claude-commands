@@ -95,26 +95,52 @@ class CopilotCommandBase(ABC):
         sanitized = re.sub(r"^[.-]+", "", sanitized)
         return sanitized or "unknown-branch"
 
-    def run_gh_command(self, command: List[str]) -> Dict[str, Any]:
+    def run_gh_command(self, command: List[str]) -> Any:
         """Run GitHub CLI command and return parsed JSON.
+
+        Handles pagination by flattening results with --jq when --paginate is present.
 
         Args:
             command: Command list for subprocess
 
         Returns:
-            Parsed JSON response or empty dict on error
+            Parsed JSON response (list for paginated, dict/object for single page)
         """
         try:
+            # Check if --paginate is in command
+            is_paginated = '--paginate' in command
+
+            if is_paginated and '--jq' not in command:
+                # Add --jq to flatten paginated results
+                # Find where --paginate is and insert --jq after it
+                paginate_idx = command.index('--paginate')
+                # Use --jq '.[]' to flatten all pages into single array
+                command = command[:paginate_idx+1] + ['--jq', '.[]'] + command[paginate_idx+1:]
+
             result = subprocess.run(command, capture_output=True, text=True, check=True)
             if not result.stdout.strip():
-                return {}
+                return [] if is_paginated else {}
+
+            # For paginated with --jq, output is JSONL (one JSON object per line)
+            if is_paginated and '--jq' in command:
+                items = []
+                for line in result.stdout.strip().split('\n'):
+                    if line.strip():
+                        try:
+                            items.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            continue
+                return items
+
+            # Single JSON object/array
             return json.loads(result.stdout)
+
         except subprocess.CalledProcessError as e:
             self.log_error(f"GitHub CLI error: {e.stderr}")
-            return {}
+            return [] if '--paginate' in command else {}
         except json.JSONDecodeError as e:
             self.log_error(f"JSON parsing error: {e}")
-            return {}
+            return [] if '--paginate' in command else {}
 
     # JSON file operations removed - using stateless approach
 

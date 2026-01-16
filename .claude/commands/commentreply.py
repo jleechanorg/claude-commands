@@ -916,12 +916,13 @@ def main():
     processed_comments = []
     successful_replies = 0
 
-    # Determine current actor and limit to top-level comments
+    # Determine current actor and process all comments (including replies)
     ok_actor, actor_login, _ = run_command(
         ["gh", "api", "user", "-q", ".login"], description="current actor"
     )
     actor_login = (actor_login or "").strip() or os.environ.get("GITHUB_ACTOR", "")
-    top_level = [c for c in all_comments if not c.get("in_reply_to_id")]
+    # Process ALL comments (not just top-level) to achieve 100% reply rate
+    all_targets = all_comments
     total_targets = 0
     already_replied = 0
     missing_responses = 0
@@ -937,7 +938,7 @@ def main():
     # GitHub blocks threaded replies if there's a pending review from the same user
     should_cleanup_pending = False
     if actor_login:
-        for comment in top_level:
+        for comment in all_targets:
             if not validate_comment_data(comment):
                 continue
             user = comment.get("user", {})
@@ -985,10 +986,10 @@ def main():
             "\nℹ️ PRE-PROCESSING: No inline replies planned; skipping pending review deletion"
         )
 
-    for i, comment in enumerate(top_level, 1):
+    for i, comment in enumerate(all_targets, 1):
         # SECURITY: Validate each comment before processing
         if not validate_comment_data(comment):
-            print(f"[{i}/{len(top_level)}] ❌ SECURITY: Skipping invalid comment data")
+            print(f"[{i}/{len(all_targets)}] ❌ SECURITY: Skipping invalid comment data")
             continue
 
         comment_id = comment.get("id")
@@ -1003,7 +1004,7 @@ def main():
             "\n", " "
         )
 
-        print(f"\n[{i}/{len(top_level)}] Processing comment #{comment_id} by @{author}")
+        print(f"\n[{i}/{len(all_targets)}] Processing comment #{comment_id} by @{author}")
         print(f'   Content: "{body_snippet}..."')
 
         # Skip our own comments
