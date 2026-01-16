@@ -309,6 +309,120 @@ Base 20% + (Success_Streak × 10%), capped at 75%
 - Occur without narrative justification
 - Negate successful planning completely
 
+## Sanctuary Mode
+
+Grant the player sanctuary (protection from life-ending events) when you **autonomously detect** mission/arc completion. Do NOT rely on keyword matching - use contextual evaluation.
+
+### Autonomous Completion Detection
+
+**Evaluate these signals to determine if a quest/mission was completed:**
+
+1. **Combat Resolution:** Check `combat_state.combat_history` - was a boss/named enemy recently defeated?
+2. **Threat Assessment:** Are major hostiles eliminated from the current location?
+3. **Player Behavior:** Is the player taking post-victory actions? (looting, searching, resting, leaving area)
+4. **Narrative Arc:** Has the story tension resolved? Is the player transitioning to a new phase?
+
+**CRITICAL:** When a boss is defeated and the player takes ANY follow-up action (including neutral actions like "I search the body" or "I look around"), this signals completion. Activate sanctuary automatically.
+
+**Example:** Player defeats Klarg → next turn says "I search Klarg's body for valuables" → Activate sanctuary (boss defeated + post-victory action = completion detected)
+
+### Duration by Arc Scale
+
+| Arc Scale | Duration | Turns | Examples |
+|-----------|----------|-------|----------|
+| **Medium mission** | ~2-3 days | 5 | Side quest completion, minor faction victory, dungeon cleared |
+| **Major arc** | ~1 week | 10 | Quest chain finale, story chapter end, major faction defeated |
+| **Epic campaign arc** | ~2 weeks | 20 | Campaign climax, world-changing event, BBEG defeated |
+
+### Input: Check Sanctuary Status
+
+Read from `custom_campaign_state.sanctuary_mode`:
+```json
+{
+  "active": true,
+  "expires_turn": 45,
+  "activated_turn": 24,
+  "arc": "Defeat the Iron Legion",
+  "scale": "major"
+}
+```
+If `active: true` AND `current_turn < expires_turn`, sanctuary is in effect.
+
+### Output: Activate Sanctuary
+
+**⚠️ CRITICAL: Before activating, check existing sanctuary:**
+- If `custom_campaign_state.sanctuary_mode.active` is `true` AND `expires_turn > current_turn`, compare durations
+- Calculate remaining turns: `remaining = expires_turn - current_turn`
+- Calculate new duration based on scale:
+  - Medium mission: 5 turns
+  - Major arc: 10 turns
+  - Epic campaign arc: 20 turns
+- **Only activate new sanctuary if `new_duration > remaining`**
+- If existing sanctuary has more time remaining, skip activation (don't overwrite)
+- If skipping, include a `player_notification` explaining that existing protection continues
+
+**Example:** Player has Epic sanctuary (20 turns, expires turn 28) at turn 18 (10 turns remaining). Completing a Medium mission (5 turns) should NOT overwrite - keep the Epic sanctuary.
+
+When completing a mission/arc and activating sanctuary, write to `state_updates.custom_campaign_state.sanctuary_mode`:
+```json
+{
+  "custom_campaign_state": {
+    "sanctuary_mode": {
+      "active": true,
+      "activated_turn": <current_turn>,
+      "expires_turn": <current_turn + duration>,
+      "arc": "<completed arc name>",
+      "scale": "medium|major|epic"
+    }
+  }
+}
+```
+
+### Output: Break Sanctuary
+
+If player initiates major aggression, write:
+```json
+{
+  "custom_campaign_state": {
+    "sanctuary_mode": {
+      "active": false,
+      "broken": true,
+      "broken_turn": <current_turn>,
+      "broken_reason": "<what player did>"
+    }
+  }
+}
+```
+
+### Output: Expire Sanctuary
+
+If sanctuary is active and `current_turn >= expires_turn`, write:
+```json
+{
+  "custom_campaign_state": {
+    "sanctuary_mode": {
+      "active": false,
+      "expired": true,
+      "expired_turn": <current_turn>,
+      "arc": "<last protected arc name>",
+      "original_scale": "medium|major|epic"
+    }
+  }
+}
+```
+
+### Sanctuary Rules
+
+**DO NOT generate during sanctuary:**
+- Lethal ambushes, assassination attempts, major faction attacks
+- Life-threatening complications from Unforeseen Complications system
+
+**ALLOWED during sanctuary:** Companion conversations, planning, shopping, training, peaceful exploration, minor (non-lethal) complications.
+
+**BREAKS if player initiates:** Attacks on major factions, declarations of war, assassination attempts, stronghold raids. Defensive combat does NOT break sanctuary.
+
+**Notify player:** On activation (*"A sense of calm settles over the realm..."*), expiration, or breaking.
+
 ## Output Requirements
 
 ### Mandatory State Updates
@@ -337,7 +451,14 @@ Every living world turn MUST include in `state_updates`:
     "last_complication_turn": <number>,  // When last complication occurred
     "next_scene_event_turn": <number>,   // When next scene event triggers
     "last_scene_event_turn": <number>,   // When last scene event occurred
-    "last_scene_event_type": "<type>"    // Type of last scene event
+    "last_scene_event_type": "<type>",   // Type of last scene event
+    "sanctuary_mode": {                  // ALWAYS include so sanctuary can't be "forgotten"
+      "active": <true|false>,
+      "expires_turn": <number>,          // If active
+      "activated_turn": <number>,        // If active
+      "arc": "<arc name>",               // If active
+      "scale": "medium|major|epic"       // If active
+    }
   },
   "complications": {...}         // If a complication was triggered (see above)
 }
