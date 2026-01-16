@@ -31,6 +31,7 @@ from mvp_site.agent_prompts import PromptBuilder
 # Import from agents module (canonical location)
 from mvp_site.agents import (
     BaseAgent,
+    CampaignUpgradeAgent,
     CharacterCreationAgent,
     CombatAgent,
     GodModeAgent,
@@ -567,6 +568,279 @@ class TestRewardsAgent(unittest.TestCase):
 
         self.assertIsInstance(instructions, str)
         self.assertGreater(len(instructions), 0)
+
+
+class TestCampaignUpgradeAgent(unittest.TestCase):
+    """Test cases for CampaignUpgradeAgent class."""
+
+    def create_campaign_upgrade_game_state(
+        self,
+        divine_upgrade_available=False,
+        multiverse_upgrade_available=False,
+        campaign_tier="mortal",
+        divine_potential=0,
+        universe_control=0,
+        level=1,
+    ):
+        """Helper to create a mock GameState for campaign upgrade tests."""
+        mock_state = Mock()
+        mock_state.is_in_combat.return_value = False
+        mock_state.get_combat_state.return_value = {"in_combat": False}
+        mock_state.combat_state = {"in_combat": False}
+
+        # Mock campaign upgrade availability
+        mock_state.is_campaign_upgrade_available.return_value = (
+            divine_upgrade_available or multiverse_upgrade_available
+        )
+        mock_state.is_divine_upgrade_available.return_value = divine_upgrade_available
+        mock_state.is_multiverse_upgrade_available.return_value = multiverse_upgrade_available
+
+        # Mock get_pending_upgrade_type
+        if multiverse_upgrade_available:
+            mock_state.get_pending_upgrade_type.return_value = "multiverse"
+        elif divine_upgrade_available:
+            mock_state.get_pending_upgrade_type.return_value = "divine"
+        else:
+            mock_state.get_pending_upgrade_type.return_value = None
+
+        # Mock custom_campaign_state
+        mock_state.custom_campaign_state = {
+            "campaign_tier": campaign_tier,
+            "divine_potential": divine_potential,
+            "universe_control": universe_control,
+            "character_creation_completed": True,
+        }
+
+        # Mock player_character_data
+        mock_state.player_character_data = {
+            "name": "Test Character",
+            "class": "Fighter",
+            "level": level,
+        }
+
+        return mock_state
+
+    def test_campaign_upgrade_agent_creation(self):
+        """CampaignUpgradeAgent can be instantiated."""
+        agent = CampaignUpgradeAgent()
+        self.assertIsInstance(agent, BaseAgent)
+        self.assertIsInstance(agent, CampaignUpgradeAgent)
+
+    def test_campaign_upgrade_agent_with_game_state(self):
+        """CampaignUpgradeAgent accepts game_state parameter."""
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            divine_upgrade_available=True
+        )
+        agent = CampaignUpgradeAgent(game_state=mock_game_state)
+        self.assertEqual(agent.game_state, mock_game_state)
+        self.assertEqual(agent._upgrade_type, "divine")
+
+    def test_campaign_upgrade_agent_with_none_game_state(self):
+        """CampaignUpgradeAgent handles None game_state correctly."""
+        agent = CampaignUpgradeAgent(game_state=None)
+        self.assertIsNone(agent.game_state)
+        self.assertIsNone(agent._upgrade_type)
+
+    def test_campaign_upgrade_agent_required_prompts(self):
+        """CampaignUpgradeAgent has correct required prompts."""
+        expected_prompts = {
+            constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+            constants.PROMPT_TYPE_GAME_STATE,
+            constants.PROMPT_TYPE_PLANNING_PROTOCOL,
+            constants.PROMPT_TYPE_DND_SRD,
+            constants.PROMPT_TYPE_MECHANICS,
+        }
+        self.assertEqual(
+            CampaignUpgradeAgent.REQUIRED_PROMPTS, frozenset(expected_prompts)
+        )
+
+    def test_campaign_upgrade_agent_no_optional_prompts(self):
+        """CampaignUpgradeAgent has no optional prompts (ceremony prompts are dynamic)."""
+        self.assertEqual(CampaignUpgradeAgent.OPTIONAL_PROMPTS, frozenset())
+
+    def test_campaign_upgrade_agent_mode(self):
+        """CampaignUpgradeAgent has correct mode identifier."""
+        self.assertEqual(
+            CampaignUpgradeAgent.MODE, constants.MODE_CAMPAIGN_UPGRADE
+        )
+
+    def test_campaign_upgrade_agent_matches_input_always_false(self):
+        """CampaignUpgradeAgent.matches_input always returns False (state-driven)."""
+        test_inputs = [
+            "I want to upgrade",
+            "ascend to divinity",
+            "become a god",
+            "multiverse upgrade",
+        ]
+        for user_input in test_inputs:
+            self.assertFalse(
+                CampaignUpgradeAgent.matches_input(user_input),
+                f"CampaignUpgradeAgent.matches_input should always be False: {user_input}",
+            )
+
+    def test_campaign_upgrade_agent_matches_game_state_true_when_divine_available(self):
+        """CampaignUpgradeAgent.matches_game_state returns True when divine upgrade available."""
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            divine_upgrade_available=True
+        )
+        self.assertTrue(CampaignUpgradeAgent.matches_game_state(mock_game_state))
+
+    def test_campaign_upgrade_agent_matches_game_state_true_when_multiverse_available(self):
+        """CampaignUpgradeAgent.matches_game_state returns True when multiverse upgrade available."""
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            multiverse_upgrade_available=True
+        )
+        self.assertTrue(CampaignUpgradeAgent.matches_game_state(mock_game_state))
+
+    def test_campaign_upgrade_agent_matches_game_state_false_when_no_upgrade(self):
+        """CampaignUpgradeAgent.matches_game_state returns False when no upgrade available."""
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            divine_upgrade_available=False,
+            multiverse_upgrade_available=False,
+        )
+        self.assertFalse(CampaignUpgradeAgent.matches_game_state(mock_game_state))
+
+    def test_campaign_upgrade_agent_matches_game_state_false_when_none(self):
+        """CampaignUpgradeAgent.matches_game_state returns False when game_state is None."""
+        self.assertFalse(CampaignUpgradeAgent.matches_game_state(None))
+
+    def test_campaign_upgrade_agent_captures_divine_upgrade_type(self):
+        """CampaignUpgradeAgent captures divine upgrade type in __init__."""
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            divine_upgrade_available=True
+        )
+        agent = CampaignUpgradeAgent(game_state=mock_game_state)
+        self.assertEqual(agent._upgrade_type, "divine")
+
+    def test_campaign_upgrade_agent_captures_multiverse_upgrade_type(self):
+        """CampaignUpgradeAgent captures multiverse upgrade type in __init__."""
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            multiverse_upgrade_available=True
+        )
+        agent = CampaignUpgradeAgent(game_state=mock_game_state)
+        self.assertEqual(agent._upgrade_type, "multiverse")
+
+    def test_campaign_upgrade_agent_captures_none_when_no_upgrade(self):
+        """CampaignUpgradeAgent captures None upgrade type when no upgrade available."""
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            divine_upgrade_available=False,
+            multiverse_upgrade_available=False,
+        )
+        agent = CampaignUpgradeAgent(game_state=mock_game_state)
+        self.assertIsNone(agent._upgrade_type)
+
+    def test_campaign_upgrade_agent_multiverse_priority_over_divine(self):
+        """CampaignUpgradeAgent prioritizes multiverse over divine upgrade."""
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            divine_upgrade_available=True,
+            multiverse_upgrade_available=True,
+        )
+        agent = CampaignUpgradeAgent(game_state=mock_game_state)
+        # Multiverse should take priority
+        self.assertEqual(agent._upgrade_type, "multiverse")
+
+    @patch("mvp_site.agents._load_instruction_file")
+    @patch("mvp_site.agents.PromptBuilder")
+    def test_campaign_upgrade_agent_builds_instructions_divine(self, mock_builder_class, mock_load):
+        """CampaignUpgradeAgent.build_system_instructions includes divine ascension prompt."""
+        mock_load.return_value = "Test instruction content"
+        mock_builder = Mock()
+        mock_builder_class.return_value = mock_builder
+        mock_builder.build_from_order.return_value = ["core1", "core2"]
+        mock_builder.finalize_instructions.return_value = "finalized instructions"
+
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            divine_upgrade_available=True
+        )
+        agent = CampaignUpgradeAgent(game_state=mock_game_state)
+        instructions = agent.build_system_instructions()
+
+        self.assertIsInstance(instructions, str)
+        # Verify build_from_order was called with REQUIRED_PROMPT_ORDER
+        mock_builder.build_from_order.assert_called_once_with(
+            CampaignUpgradeAgent.REQUIRED_PROMPT_ORDER, include_debug=True
+        )
+        # Verify divine ascension prompt was loaded
+        mock_load.assert_any_call(constants.PROMPT_TYPE_DIVINE_ASCENSION)
+
+    @patch("mvp_site.agents._load_instruction_file")
+    @patch("mvp_site.agents.PromptBuilder")
+    def test_campaign_upgrade_agent_builds_instructions_multiverse(self, mock_builder_class, mock_load):
+        """CampaignUpgradeAgent.build_system_instructions includes sovereign ascension prompt."""
+        mock_load.return_value = "Test instruction content"
+        mock_builder = Mock()
+        mock_builder_class.return_value = mock_builder
+        mock_builder.build_from_order.return_value = ["core1", "core2"]
+        mock_builder.finalize_instructions.return_value = "finalized instructions"
+
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            multiverse_upgrade_available=True
+        )
+        agent = CampaignUpgradeAgent(game_state=mock_game_state)
+        instructions = agent.build_system_instructions()
+
+        self.assertIsInstance(instructions, str)
+        # Verify build_from_order was called with REQUIRED_PROMPT_ORDER
+        mock_builder.build_from_order.assert_called_once_with(
+            CampaignUpgradeAgent.REQUIRED_PROMPT_ORDER, include_debug=True
+        )
+        # Verify sovereign ascension prompt was loaded
+        mock_load.assert_any_call(constants.PROMPT_TYPE_SOVEREIGN_ASCENSION)
+
+    @patch("mvp_site.agents._load_instruction_file")
+    @patch("mvp_site.agents.PromptBuilder")
+    def test_campaign_upgrade_agent_builds_instructions_no_upgrade_type(self, mock_builder_class, mock_load):
+        """CampaignUpgradeAgent.build_system_instructions handles None upgrade type gracefully."""
+        mock_load.return_value = "Test instruction content"
+        mock_builder = Mock()
+        mock_builder_class.return_value = mock_builder
+        mock_builder.build_from_order.return_value = ["core1", "core2"]
+        mock_builder.finalize_instructions.return_value = "finalized instructions"
+
+        # Create agent with no upgrade available
+        mock_game_state = self.create_campaign_upgrade_game_state(
+            divine_upgrade_available=False,
+            multiverse_upgrade_available=False,
+        )
+        agent = CampaignUpgradeAgent(game_state=mock_game_state)
+        instructions = agent.build_system_instructions()
+
+        self.assertIsInstance(instructions, str)
+        # Should still build core instructions
+        mock_builder.build_from_order.assert_called_once_with(
+            CampaignUpgradeAgent.REQUIRED_PROMPT_ORDER, include_debug=True
+        )
+        # Should not load any ascension prompt (only core instructions)
+        # Note: build_from_order may call _load_instruction_file internally, so we check
+        # that divine/sovereign ascension prompts were NOT called
+        divine_calls = [call for call in mock_load.call_args_list if len(call[0]) > 0 and call[0][0] == constants.PROMPT_TYPE_DIVINE_ASCENSION]
+        sovereign_calls = [call for call in mock_load.call_args_list if len(call[0]) > 0 and call[0][0] == constants.PROMPT_TYPE_SOVEREIGN_ASCENSION]
+        self.assertEqual(len(divine_calls), 0, "Should not load divine ascension prompt when no upgrade")
+        self.assertEqual(len(sovereign_calls), 0, "Should not load sovereign ascension prompt when no upgrade")
+
+    def test_campaign_upgrade_agent_has_prompt_builder(self):
+        """CampaignUpgradeAgent provides access to its PromptBuilder."""
+        agent = CampaignUpgradeAgent()
+        from mvp_site.agent_prompts import PromptBuilder
+        self.assertIsInstance(agent.prompt_builder, PromptBuilder)
+
+    def test_campaign_upgrade_agent_get_all_prompts(self):
+        """CampaignUpgradeAgent.get_all_prompts returns required prompts only."""
+        agent = CampaignUpgradeAgent()
+        all_prompts = agent.get_all_prompts()
+        self.assertEqual(
+            all_prompts,
+            CampaignUpgradeAgent.REQUIRED_PROMPTS | CampaignUpgradeAgent.OPTIONAL_PROMPTS,
+        )
+        # OPTIONAL_PROMPTS is empty, so should equal REQUIRED_PROMPTS
+        self.assertEqual(all_prompts, CampaignUpgradeAgent.REQUIRED_PROMPTS)
+
+    def test_campaign_upgrade_agent_repr(self):
+        """CampaignUpgradeAgent has informative repr."""
+        agent = CampaignUpgradeAgent()
+        repr_str = repr(agent)
+        self.assertIn("CampaignUpgradeAgent", repr_str)
+        self.assertIn("mode=", repr_str)
 
 
 class TestCharacterCreationAgent(unittest.TestCase):
