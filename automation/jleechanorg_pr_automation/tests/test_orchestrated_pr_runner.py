@@ -910,12 +910,16 @@ def test_post_pr_comment_python_api_error(monkeypatch):
     """Test post_pr_comment_python handles API errors gracefully."""
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     
+    # Create a proper HTTPError with response attribute
     mock_response = Mock()
     mock_response.status_code = 500
-    mock_response.raise_for_status.side_effect = requests.HTTPError("API Error")
+    http_error = requests.HTTPError("API Error")
+    http_error.response = mock_response
     
     with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", return_value=mock_response):
         with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+            # Mock raise_for_status to raise the HTTPError
+            mock_response.raise_for_status = Mock(side_effect=http_error)
             result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
             
             assert result is False
@@ -1047,12 +1051,16 @@ def test_cleanup_pending_reviews_python_api_error(monkeypatch):
     """Test cleanup_pending_reviews_python handles API errors gracefully."""
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
     
+    # Create a proper HTTPError with response attribute
     mock_response = Mock()
     mock_response.status_code = 500
-    mock_response.raise_for_status.side_effect = requests.HTTPError("API Error")
+    http_error = requests.HTTPError("API Error")
+    http_error.response = mock_response
     
     with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_response):
         with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+            # Mock raise_for_status to raise the HTTPError
+            mock_response.raise_for_status = Mock(side_effect=http_error)
             runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
             
             # Check for the new more specific error message
