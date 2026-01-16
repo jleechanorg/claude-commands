@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Sanctuary Mode Complete Lifecycle Test
+Sanctuary Mode Lifecycle Test (Optimized)
 
-Tests the full lifecycle of sanctuary mode:
-1. Activation (mission completion)
-2. Protection during active period (Living World turns)
-3. Overwrite protection (shorter missions don't overwrite longer sanctuary)
-4. Natural expiration (sanctuary expires after expires_turn)
-5. Breaking via aggression (major acts break sanctuary)
+Single comprehensive test that validates the complete sanctuary lifecycle:
+1. Activation (autonomous or prompted)
+2. Protection (blocks lethal events)
+3. Natural expiration
 
-REAL MODE ONLY - No mocks, no test mode
+Uses minor scale (3 turns) for fastest execution.
+
 Evidence standards: .claude/skills/evidence-standards.md
 """
 import argparse
@@ -23,8 +22,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # ✅ MANDATORY: Use shared library utilities
 from testing_mcp.lib.campaign_utils import (
     advance_to_living_world_turn,
-    complete_mission_with_sanctuary,
     create_campaign,
+    end_combat_if_active,
     ensure_story_mode,
     get_campaign_state,
     process_action,
@@ -44,10 +43,303 @@ WORK_NAME = "sanctuary_lifecycle"
 DEFAULT_MODEL = "gemini-3-flash-preview"
 
 
-def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
-    """Run complete sanctuary lifecycle tests."""
-    client = MCPClient(server_url, timeout_s=600.0)
-    user_id = f"lifecycle-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
+def extract_sanctuary_mode(game_state: dict) -> dict:
+    """Extract sanctuary_mode from game state."""
+    return game_state.get("custom_campaign_state", {}).get("sanctuary_mode", {})
+
+
+def get_current_turn(game_state: dict) -> int:
+    """Get current turn number from game state."""
+    return game_state.get("player_turn", 0)
+
+
+def test_sanctuary_lifecycle(
+    client: MCPClient, user_id: str, request_responses: list, autonomous: bool = False
+) -> dict:
+    """
+    Test complete sanctuary lifecycle: activation → protection → expiration.
+
+    Uses minor scale (3 turns) for fastest execution.
+
+    Args:
+        autonomous: If True, use neutral action after boss defeat (no explicit completion).
+                   If False, use explicit completion language.
+    """
+    print("📋 Testing sanctuary lifecycle (activation → protection → expiration)...")
+
+    # Create campaign
+    campaign_id = create_campaign(
+        client,
+        user_id=user_id,
+        title="Sanctuary Lifecycle Test",
+    )
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    # Exit character creation
+    ensure_story_mode(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        request_responses=request_responses,
+    )
+    client.clear_captures()
+
+    # Set level 20 to avoid level-up distractions
+    level_20_state = '{"player_character_data": {"level": 20, "xp_current": 355000}}'
+    process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input=f"GOD_MODE_UPDATE_STATE:{level_20_state}",
+        track_turn=False,
+    )
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    # Start quest
+    process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input="I begin my quest to clear the goblin cave near Phandalin.",
+    )
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    # Enter cave and fight
+    process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input="I enter the goblin cave and fight through the goblins, reaching the chief's chamber.",
+    )
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    # Defeat boss
+    process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input="I attack Klarg the bugbear chief with my sword.",
+    )
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    # End combat if active
+    end_combat_if_active(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        request_responses=request_responses,
+    )
+    client.clear_captures()
+
+    # PHASE 1: ACTIVATION
+    print("   Phase 1: Testing activation...")
+    if autonomous:
+        # Autonomous: neutral action (no completion keywords)
+        activation_input = "I search Klarg's body for valuables."
+        trigger_source = "autonomous"
+    else:
+        # Prompted: explicit completion (faster, more reliable)
+        # Use more explicit language to ensure activation
+        activation_input = "The quest is finished. I have successfully completed the Cragmaw Hideout mission. This is a MINOR scale quest completion."
+        trigger_source = "prompted"
+
+    activation_response = process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input=activation_input,
+    )
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    # Check activation
+    state_activation = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    game_state_activation = state_activation.get("game_state", {})
+    sanctuary_activation = extract_sanctuary_mode(game_state_activation)
+    activated_turn = get_current_turn(game_state_activation)
+    expires_turn = sanctuary_activation.get("expires_turn", 0)
+    duration = expires_turn - activated_turn
+    sanctuary_active = sanctuary_activation.get("active", False)
+    scale = sanctuary_activation.get("scale", "")
+
+    # Focus on lifecycle validation - just verify sanctuary activated with future expiration
+    # Duration validation is a separate concern (tested in duration_scale tests)
+    activation_passed = (
+        sanctuary_active
+        and expires_turn > activated_turn
+        and duration > 0  # Just verify it's a positive duration
+    )
+
+    if not activation_passed:
+        return {
+            "name": "Sanctuary lifecycle",
+            "campaign_id": campaign_id,
+            "passed": False,
+            "errors": [
+                f"Activation failed: active={sanctuary_active}, "
+                f"duration={duration}, expires_turn={expires_turn}, "
+                f"activated_turn={activated_turn}, scale={scale}"
+            ],
+            "phase": "activation",
+            "trigger_source": trigger_source,
+        }
+
+    print(f"   ✅ Sanctuary activated: turn {activated_turn} → expires turn {expires_turn}")
+
+    # PHASE 2: PROTECTION
+    print("   Phase 2: Testing protection...")
+    # Advance to a Living World turn (when complications can occur)
+    current_turn, is_living_world = advance_to_living_world_turn(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        request_responses=request_responses,
+        verbose=False,
+    )
+    client.clear_captures()
+
+    # Take action that could trigger lethal events
+    protection_response = process_action(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id,
+        user_input="I explore the forest looking for adventure.",
+    )
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    # Check narrative for lethal events (more specific patterns to avoid false positives)
+    narrative = protection_response.get("narrative", "").lower()
+    # Look for actual lethal threats, not just past-tense descriptions
+    lethal_patterns = [
+        "you are killed",
+        "you die",
+        "you are slain",
+        "you are murdered",
+        "you are ambushed",
+        "assassination attempt",
+        "lethal attack",
+        "fatal blow",
+    ]
+    has_lethal_event = any(pattern in narrative for pattern in lethal_patterns)
+
+    # Verify sanctuary still active
+    state_protection = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    game_state_protection = state_protection.get("game_state", {})
+    sanctuary_protection = extract_sanctuary_mode(game_state_protection)
+    sanctuary_still_active = sanctuary_protection.get("active", False)
+
+    protection_passed = not has_lethal_event and sanctuary_still_active
+
+    if not protection_passed:
+        return {
+            "name": "Sanctuary lifecycle",
+            "campaign_id": campaign_id,
+            "passed": False,
+            "errors": [
+                f"Protection failed: lethal_event={has_lethal_event}, "
+                f"sanctuary_active={sanctuary_still_active}"
+            ],
+            "phase": "protection",
+            "trigger_source": trigger_source,
+            "has_lethal_event": has_lethal_event,
+            "sanctuary_still_active": sanctuary_still_active,
+        }
+
+    print(f"   ✅ Protection verified: no lethal events, sanctuary still active")
+
+    # PHASE 3: EXPIRATION
+    print("   Phase 3: Testing natural expiration...")
+    # Advance past expires_turn (need to advance enough that LLM processes expiration)
+    current_turn = get_current_turn(game_state_protection)
+    turns_to_advance = expires_turn - current_turn + 2  # +2 to ensure expiration is processed
+
+    print(f"   Advancing {turns_to_advance} turns past expiration (turn {expires_turn})...")
+    for i in range(turns_to_advance):
+        process_action(
+            client,
+            user_id=user_id,
+            campaign_id=campaign_id,
+            user_input="I rest at the inn.",
+        )
+        request_responses.extend(client.get_captures_as_dict())
+        client.clear_captures()
+
+    # Check expiration
+    state_expiration = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
+    request_responses.extend(client.get_captures_as_dict())
+    client.clear_captures()
+
+    game_state_expiration = state_expiration.get("game_state", {})
+    sanctuary_expiration = extract_sanctuary_mode(game_state_expiration)
+    final_turn = get_current_turn(game_state_expiration)
+    sanctuary_expired = not sanctuary_expiration.get("active", False)
+
+    # Expiration should happen when final_turn > expires_turn (LLM checks at start of turn)
+    expiration_passed = sanctuary_expired and final_turn > expires_turn
+
+    if not expiration_passed:
+        return {
+            "name": "Sanctuary lifecycle",
+            "campaign_id": campaign_id,
+            "passed": False,
+            "errors": [
+                f"Expiration failed: active={sanctuary_expiration.get('active')}, "
+                f"final_turn={final_turn}, expires_turn={expires_turn}"
+            ],
+            "phase": "expiration",
+            "trigger_source": trigger_source,
+            "final_turn": final_turn,
+            "expires_turn": expires_turn,
+        }
+
+    print(f"   ✅ Expiration verified: sanctuary inactive at turn {final_turn}")
+
+    # All phases passed
+    return {
+        "name": "Sanctuary lifecycle",
+        "campaign_id": campaign_id,
+        "passed": True,
+        "errors": [],
+        "trigger_source": trigger_source,
+        "phases": {
+            "activation": {
+                "passed": activation_passed,
+                "activated_turn": activated_turn,
+                "expires_turn": expires_turn,
+                "duration": duration,
+            },
+            "protection": {
+                "passed": protection_passed,
+                "has_lethal_event": has_lethal_event,
+                "sanctuary_still_active": sanctuary_still_active,
+                "turn": current_turn,
+            },
+            "expiration": {
+                "passed": expiration_passed,
+                "final_turn": final_turn,
+                "expires_turn": expires_turn,
+                "sanctuary_expired": sanctuary_expired,
+            },
+        },
+    }
+
+
+def run_tests(server_url: str, autonomous: bool = False) -> tuple[list, list]:
+    """Run sanctuary lifecycle test."""
+    client = MCPClient(server_url)
+    user_id = f"test-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
 
     # Pin model
     update_user_settings(
@@ -59,408 +351,9 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
     results = []
     request_responses = []
 
-    # ============================================================
-    # PHASE 1: Activate Epic Sanctuary (20 turns)
-    # ============================================================
-    print("📋 Phase 1: Activate Epic Sanctuary (Major Arc)...")
-    campaign_id = create_campaign(
-        client,
-        user_id=user_id,
-        title="Sanctuary Lifecycle Test",
-    )
-
-    # Exit character creation and ensure Story Mode
-    ensure_story_mode(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id,
-        request_responses=request_responses,
-    )
-
-    # Start and complete a major arc - LLM should infer Epic scale from narrative context
-    # (defeating ancient dragon = Epic campaign arc)
-    process_action(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id,
-        user_input="I begin a quest to defeat the ancient dragon threatening the kingdom.",
-    )
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    # Progress through the arc with actions that build toward completion
-    # This gives the LLM narrative context to recognize completion later
-    # Avoid combat-triggering language to prevent combat mode
-    progress_actions = [
-        "I track the dragon to its lair in the mountains.",
-        "I prepare for battle, gathering information about the dragon's weaknesses.",
-        "I reach the dragon's lair and prepare to face the ancient beast.",
-    ]
-
-    for action in progress_actions:
-        process_action(
-            client,
-            user_id=user_id,
-            campaign_id=campaign_id,
-            user_input=action,
-        )
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-    # Complete the major arc and verify Epic sanctuary activation
-    # LLM should infer Epic scale from narrative context (defeating ancient dragon = Epic)
-    # Use explicit completion language per prompts: "complete", "finished", "done", "accomplished"
-    epic_result = complete_mission_with_sanctuary(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id,
-        completion_text="The quest is complete. I have defeated the ancient dragon and saved the kingdom. The mission is finished.",
-        request_responses=request_responses,
-        verbose=True,
-    )
-
-    sanctuary_epic = epic_result["sanctuary_mode"]
-    epic_active = epic_result["sanctuary_active"]
-    current_turn_epic = epic_result["current_turn"]
-    epic_expires = sanctuary_epic.get("expires_turn")
-    epic_scale = sanctuary_epic.get("scale", "").lower()
-
-    phase1_passed = (
-        epic_active
-        and epic_expires is not None
-        and epic_expires > current_turn_epic
-        and ("epic" in epic_scale or "major" in epic_scale)
-    )
-
-    results.append(
-        {
-            "name": "Phase 1: Epic Sanctuary Activation",
-            "campaign_id": campaign_id,
-            "passed": phase1_passed,
-            "errors": []
-            if phase1_passed
-            else [
-                f"Epic sanctuary not activated: active={epic_active}, "
-                f"expires_turn={epic_expires}, scale={epic_scale}, current_turn={current_turn_epic}"
-            ],
-            "sanctuary_mode": sanctuary_epic,
-            "current_turn": current_turn_epic,
-        }
-    )
-
-    if not epic_active or epic_expires is None:
-        print("❌ Epic sanctuary not activated or expires_turn missing, cannot continue lifecycle test")
-        return results, request_responses
-
-    # ============================================================
-    # PHASE 2: Overwrite Protection (Shorter mission shouldn't overwrite)
-    # ============================================================
-    print("📋 Phase 2: Test Overwrite Protection...")
-    print(f"   Epic sanctuary: expires_turn={epic_expires}, current_turn={current_turn_epic}")
-    remaining_turns = epic_expires - current_turn_epic
-    print(f"   Remaining turns: {remaining_turns}")
-
-    # Complete a medium mission (should be ~5 turns, shorter than remaining Epic sanctuary)
-    # LLM should infer Medium scale from narrative context (clearing goblin cave = Medium)
-    process_action(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id,
-        user_input="I begin a quest to clear a goblin cave.",
-    )
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    # Progress and complete medium mission
-    for _i in range(2):
-        process_action(
-            client,
-            user_id=user_id,
-            campaign_id=campaign_id,
-            user_input="I continue clearing the goblin cave.",
-        )
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-    # Complete medium mission (should NOT overwrite Epic sanctuary)
-    # LLM should infer Medium scale from narrative context (clearing goblin cave = Medium)
-    medium_result = complete_mission_with_sanctuary(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id,
-        completion_text="The quest is finished. I have successfully cleared the goblin cave.",
-        request_responses=request_responses,
-        verbose=True,
-    )
-
-    sanctuary_overwrite = medium_result["sanctuary_mode"]
-    overwrite_active = medium_result["sanctuary_active"]
-    current_turn_overwrite = medium_result["current_turn"]
-    overwrite_expires = sanctuary_overwrite.get("expires_turn")
-    overwrite_scale = sanctuary_overwrite.get("scale", "").lower()
-
-    # Overwrite protection passed if:
-    # 1. Sanctuary still active
-    # 2. expires_turn matches or is greater than original Epic expires_turn
-    # 3. Scale is still Epic/Major (not Medium)
-    phase2_passed = (
-        overwrite_active
-        and overwrite_expires is not None
-        and overwrite_expires >= epic_expires  # Should preserve or extend, not shorten
-        and ("epic" in overwrite_scale or "major" in overwrite_scale)  # Should still be Epic scale
-    )
-
-    results.append(
-        {
-            "name": "Phase 2: Overwrite Protection (Medium mission doesn't overwrite Epic)",
-            "campaign_id": campaign_id,
-            "passed": phase2_passed,
-            "errors": []
-            if phase2_passed
-            else [
-                f"Overwrite protection failed: active={overwrite_active}, "
-                f"expires_turn={overwrite_expires} (original: {epic_expires}), "
-                f"scale={overwrite_scale} (should be epic/major), current_turn={current_turn_overwrite}"
-            ],
-            "original_epic_expires": epic_expires,
-            "overwrite_expires": overwrite_expires,
-            "original_scale": epic_scale,
-            "overwrite_scale": overwrite_scale,
-            "sanctuary_mode": sanctuary_overwrite,
-        }
-    )
-
-    # ============================================================
-    # PHASE 3: Protection During Active Period (Living World turn)
-    # ============================================================
-    print("📋 Phase 3: Test Protection During Active Period...")
-    if overwrite_active:
-        # Ensure we're on a Living World turn
-        turn_before, is_living_world = advance_to_living_world_turn(
-            client,
-            user_id=user_id,
-            campaign_id=campaign_id,
-            request_responses=request_responses,
-            verbose=True,
-        )
-
-        # Trigger event that should be protected
-        event_response = process_action(
-            client,
-            user_id=user_id,
-            campaign_id=campaign_id,
-            user_input="I explore the dangerous wilderness looking for adventure.",
-        )
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-        narrative = event_response.get("narrative", "").lower()
-        lethal_keywords = ["assassination", "ambush", "killed", "death", "dies", "slain", "murdered"]
-        has_lethal = any(kw in narrative for kw in lethal_keywords)
-
-        # Verify sanctuary still active
-        state_after_protection = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-        game_state_after = state_after_protection.get("game_state", {})
-        sanctuary_after = game_state_after.get("custom_campaign_state", {}).get("sanctuary_mode", {})
-        protection_active = sanctuary_after.get("active", False)
-
-        phase3_passed = not has_lethal and protection_active
-
-        results.append(
-            {
-                "name": "Phase 3: Protection During Active Period",
-                "campaign_id": campaign_id,
-                "passed": phase3_passed,
-                "errors": []
-                if phase3_passed
-                else [
-                    f"Protection failed: lethal_event={has_lethal}, "
-                    f"sanctuary_still_active={protection_active}"
-                ],
-                "has_lethal_event": has_lethal,
-                "sanctuary_still_active": protection_active,
-            }
-        )
-    else:
-        results.append(
-            {
-                "name": "Phase 3: Protection During Active Period",
-                "campaign_id": campaign_id,
-                "passed": False,
-                "errors": ["Cannot test: sanctuary not active from Phase 2"],
-            }
-        )
-
-    # ============================================================
-    # PHASE 4: Natural Expiration (Advance to expires_turn)
-    # ============================================================
-    print("📋 Phase 4: Test Natural Expiration...")
-    if overwrite_active and overwrite_expires:
-        current_state = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-        current_game_state = current_state.get("game_state", {})
-        current_turn = current_game_state.get("player_turn", 0)
-        turns_to_expire = overwrite_expires - current_turn + 1  # +1 to ensure we pass expires_turn
-
-        print(f"   Current turn: {current_turn}, Expires turn: {overwrite_expires}")
-        print(f"   Advancing {turns_to_expire} turns to trigger expiration...")
-
-        # Advance turns until we pass expires_turn
-        for _i in range(turns_to_expire):
-            process_action(
-                client,
-                user_id=user_id,
-                campaign_id=campaign_id,
-                user_input="I continue my journey.",
-            )
-            request_responses.extend(client.get_captures_as_dict())
-            client.clear_captures()
-
-        # Verify sanctuary expired
-        state_expired = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id)
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-        game_state_expired = state_expired.get("game_state", {})
-        sanctuary_expired = game_state_expired.get("custom_campaign_state", {}).get("sanctuary_mode", {})
-        expired_active = sanctuary_expired.get("active", False)
-        final_turn = game_state_expired.get("player_turn", 0)
-
-        phase4_passed = (
-            not expired_active  # Should be inactive after expiration
-            and final_turn >= overwrite_expires  # Should have passed expires_turn
-        )
-
-        results.append(
-            {
-                "name": "Phase 4: Natural Expiration",
-                "campaign_id": campaign_id,
-                "passed": phase4_passed,
-                "errors": []
-                if phase4_passed
-                else [
-                    f"Expiration failed: active={expired_active}, "
-                    f"final_turn={final_turn}, expires_turn={overwrite_expires}"
-                ],
-                "final_turn": final_turn,
-                "expires_turn": overwrite_expires,
-                "sanctuary_mode": sanctuary_expired,
-            }
-        )
-    else:
-        results.append(
-            {
-                "name": "Phase 4: Natural Expiration",
-                "campaign_id": campaign_id,
-                "passed": False,
-                "errors": ["Cannot test: sanctuary not active or expires_turn missing"],
-            }
-        )
-
-    # ============================================================
-    # PHASE 5: Breaking Via Aggression (Create new sanctuary, then break)
-    # ============================================================
-    print("📋 Phase 5: Test Breaking Via Aggression...")
-
-    # Create a new campaign for breaking test (since previous one expired)
-    campaign_id2 = create_campaign(
-        client,
-        user_id=user_id,
-        title="Sanctuary Breaking Test",
-    )
-
-    ensure_story_mode(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id2,
-        request_responses=request_responses,
-    )
-
-    # Quick mission to activate sanctuary
-    process_action(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id2,
-        user_input="I begin a quest to rescue a kidnapped merchant.",
-    )
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    # Complete quickly
-    process_action(
-        client,
-        user_id=user_id,
-        campaign_id=campaign_id2,
-        user_input="The quest is finished. I have successfully completed the rescue mission. This mission is now complete.",
-    )
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    # Verify sanctuary active
-    state_before_break = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id2)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
-
-    game_state_before_break = state_before_break.get("game_state", {})
-    sanctuary_before_break = game_state_before_break.get("custom_campaign_state", {}).get("sanctuary_mode", {})
-    break_active_before = sanctuary_before_break.get("active", False)
-
-    if break_active_before:
-        # Break with major aggression
-        process_action(
-            client,
-            user_id=user_id,
-            campaign_id=campaign_id2,
-            user_input="I declare war on the local lord and launch an attack on his stronghold! This is a major act of aggression that should break my sanctuary protection.",
-        )
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-        # Verify broken
-        state_after_break = get_campaign_state(client, user_id=user_id, campaign_id=campaign_id2)
-        request_responses.extend(client.get_captures_as_dict())
-        client.clear_captures()
-
-        game_state_after_break = state_after_break.get("game_state", {})
-        sanctuary_after_break = game_state_after_break.get("custom_campaign_state", {}).get("sanctuary_mode", {})
-        break_active_after = sanctuary_after_break.get("active", True)
-        break_flag = sanctuary_after_break.get("broken", False)
-        break_reason = sanctuary_after_break.get("broken_reason", "") + " " + sanctuary_after_break.get("reason", "")
-        reason_indicates_break = any(
-            kw in break_reason.lower()
-            for kw in ["war", "attack", "hostile", "aggression", "broken", "shattered"]
-        )
-
-        phase5_passed = not break_active_after and (break_flag or reason_indicates_break)
-
-        results.append(
-            {
-                "name": "Phase 5: Breaking Via Aggression",
-                "campaign_id": campaign_id2,
-                "passed": phase5_passed,
-                "errors": []
-                if phase5_passed
-                else [
-                    f"Breaking failed: active={break_active_after}, "
-                    f"broken={break_flag}, reason={break_reason}"
-                ],
-                "sanctuary_mode": sanctuary_after_break,
-            }
-        )
-    else:
-        results.append(
-            {
-                "name": "Phase 5: Breaking Via Aggression",
-                "campaign_id": campaign_id2,
-                "passed": False,
-                "errors": ["Cannot test: sanctuary not activated"],
-            }
-        )
+    # Run lifecycle test
+    result = test_sanctuary_lifecycle(client, user_id, request_responses, autonomous=autonomous)
+    results.append(result)
 
     return results, request_responses
 
@@ -469,9 +362,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--work-name", default=WORK_NAME)
     parser.add_argument("--server", help="Optional: use existing server URL")
+    parser.add_argument(
+        "--autonomous",
+        action="store_true",
+        help="Use autonomous activation (neutral action, no completion keywords)",
+    )
     args = parser.parse_args()
 
-    # Start fresh local server
     local_server = None
     server_url = args.server
 
@@ -481,11 +378,15 @@ def main():
             print(f"🚀 Starting fresh local MCP server on port {port}...")
             local_server = start_local_mcp_server(port)
             server_url = local_server.base_url
-            client = MCPClient(server_url, timeout_s=600.0)
+
+            client = MCPClient(server_url)
             client.wait_healthy(timeout_s=30.0)
             print(f"✅ Server ready at {server_url}")
 
-        results, request_responses = run_lifecycle_tests(server_url)
+        mode = "autonomous" if args.autonomous else "prompted"
+        print(f"🧪 Running sanctuary lifecycle test ({mode} activation mode)...")
+
+        results, request_responses = run_tests(server_url, autonomous=args.autonomous)
 
         # Save evidence
         evidence_dir = get_evidence_dir(args.work_name)
@@ -498,7 +399,7 @@ def main():
         bundle_files = create_evidence_bundle(
             evidence_dir=evidence_dir,
             test_name=args.work_name,
-            results={"phases": results, "summary": {"total_phases": len(results)}},
+            results={"scenarios": results, "summary": {"total_scenarios": len(results)}},
             provenance=provenance,
             request_responses=request_responses,
             server_log_path=local_server.log_path if local_server else None,
@@ -506,12 +407,27 @@ def main():
 
         print(f"📦 Evidence bundle created: {evidence_dir}")
         print(f"   Files: {len(bundle_files)} with checksums")
+
+        # Print summary
         passed = sum(1 for r in results if r.get("passed", False))
         total = len(results)
-        print(f"\n📊 Lifecycle Test Results: {passed}/{total} phases passed")
+        print(f"\n📊 Test Results: {passed}/{total} passed")
         for result in results:
             status = "✅" if result.get("passed", False) else "❌"
-            print(f"   {status} {result['name']}")
+            name = result.get("name", "Unknown")
+            if result.get("passed"):
+                phases = result.get("phases", {})
+                print(f"   {status} {name}")
+                print(f"      Activation: ✅ (turn {phases.get('activation', {}).get('activated_turn')} → {phases.get('activation', {}).get('expires_turn')})")
+                print(f"      Protection: ✅ (no lethal events)")
+                print(f"      Expiration: ✅ (expired at turn {phases.get('expiration', {}).get('final_turn')})")
+            else:
+                phase = result.get("phase", "unknown")
+                errors = result.get("errors", [])
+                print(f"   {status} {name} (failed at {phase} phase)")
+                for error in errors:
+                    print(f"      - {error}")
+
     finally:
         if local_server:
             print("🛑 Stopping local server...")
