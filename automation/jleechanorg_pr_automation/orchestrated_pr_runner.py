@@ -458,21 +458,34 @@ done
 """
     script_path_obj = None
     try:
-        # Use a FIXED script path per PR to avoid macOS permission prompts
+        # Validate pr_number to prevent path traversal attacks
+        pr_num_str = str(pr_number)
+        if not pr_num_str.isdigit():
+            log(f"Invalid pr_number (must be numeric): {pr_number}")
+            return None
+
+        # Use a semi-fixed path: base name for macOS permission recognition + PID for concurrency
         # macOS treats each unique script path as a separate "app" and asks permission repeatedly
-        # Using a fixed path allows macOS to recognize it as the same app
-        script_path = f"/tmp/pending_review_monitor_{pr_number}.sh"
+        # Using a consistent base pattern helps macOS recognize it, while PID prevents races
+        # when the same PR is processed by multiple concurrent processes
+        script_path = f"/tmp/pending_review_monitor_{pr_num_str}_{os.getpid()}.sh"
         script_path_obj = Path(script_path)
 
         # Use atomic file creation with O_EXCL to prevent TOCTOU race conditions
-        # This ensures no symlink attack can occur between check and open
+        # O_NOFOLLOW prevents symlink attacks on retry
         def create_script_atomically() -> int:
             """Create script file atomically, removing stale file if needed."""
+            flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+            # Add O_NOFOLLOW if available (prevents symlink attacks)
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
             try:
-                return os.open(script_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o700)
+                return os.open(script_path, flags, 0o700)
             except FileExistsError:
-                os.unlink(script_path)
-                return os.open(script_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o700)
+                # Stale file from crashed previous run with same PID (rare but possible)
+                # Use unlink with the Path object which won't follow symlinks
+                script_path_obj.unlink(missing_ok=True)
+                return os.open(script_path, flags, 0o700)
 
         # Write script content using secure fd-based approach
         script_fd = create_script_atomically()
