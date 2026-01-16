@@ -1181,3 +1181,27 @@ def test_cleanup_pending_reviews_python_delete_failure(monkeypatch):
                 runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
 
                 mock_log.assert_any_call("⚠️ Failed to delete review 1001: 500")
+
+def test_get_github_token_from_config_file_with_encoding(monkeypatch, tmp_path):
+    """Test get_github_token reads token with utf-8 encoding."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+
+    import yaml
+    config_data = {
+        "github.com": {
+            "oauth_token": "utf8-token-🚀"
+        }
+    }
+    # Write as utf-8
+    config_file.write_text(yaml.dump(config_data), encoding="utf-8")
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    # We can't easily verify encoding was used in open() without mocking open(),
+    # but we can verify it reads correctly.
+    token = runner.get_github_token()
+    assert token == "utf8-token-🚀"

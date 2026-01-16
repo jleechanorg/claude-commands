@@ -83,7 +83,7 @@ def get_github_token() -> Optional[str]:
                 log("⚠️ PyYAML not available, cannot read gh config file")
             else:
                 try:
-                    with open(gh_config_path, "r") as f:
+                    with open(gh_config_path, "r", encoding="utf-8") as f:
                         config = yaml.safe_load(f)
                     # Extract token from config structure: github.com -> oauth_token
                     if config and "github.com" in config:
@@ -95,7 +95,7 @@ def get_github_token() -> Optional[str]:
                             users = github_config["users"]
                             if users:
                                 # Get first user's token
-                                first_user = list(users.values())[0]
+                                first_user = next(iter(users.values()))
                                 token = first_user.get("oauth_token")
                         
                         if token:
@@ -705,7 +705,7 @@ def dispatch_agent_for_pr(
         f"   ```\n"
         "   This cleanup is MANDATORY - pending reviews block PR merges and must be deleted immediately.\n\n"
         "If /fixpr is unavailable, follow these steps explicitly (fallback for all CLIs including Claude):\n"
-        f"1) git checkout {pr_number} (or use git worktree if branch exists elsewhere)\n"
+        f"1) git checkout {branch} (or use git worktree if branch exists elsewhere)\n"
         "2) git status && git branch --show-current\n"
         "3) If checkout fails because the branch exists elsewhere, create worktree:\n"
         f"   git worktree add {workspace_root}/pr-{pr_number}-rerun {pr_number} && cd {workspace_root}/pr-{pr_number}-rerun\n"

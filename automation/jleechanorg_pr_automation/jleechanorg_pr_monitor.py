@@ -1049,28 +1049,24 @@ class JleechanorgPRMonitor:
                 self.logger.debug(f"⚠️ No status checks configured for PR #{pr_number}, assuming failing")
                 return False
 
-            # If no status checks are configured, assume tests are failing
-            if not status_checks:
-                self.logger.debug(f"⚠️ No status checks configured for PR #{pr_number}, assuming failing")
-                return False
-
             # Check if all status checks are successful
             # Handle both check_runs format (check-runs API) and statuses format (statuses API)
             for check in status_checks:
                 # Check-runs API format: conclusion field
-                conclusion = check.get("conclusion")
-                state = check.get("state")
+                conclusion = (check.get("conclusion") or "").upper()
+                state = (check.get("state") or "").upper()
                 # Statuses API format: state field
-                status_state = check.get("state") if "status" not in check else None
+                status_state = (check.get("state") or "").upper() if "status" not in check else None
                 
                 # Determine if check is passing
                 is_passing = False
                 if conclusion:
-                    is_passing = conclusion in ["SUCCESS", "NEUTRAL", None]  # None means in progress
+                    is_passing = conclusion in ["SUCCESS", "NEUTRAL"]
                 elif state:
                     is_passing = state in ["SUCCESS", "NEUTRAL"]
                 elif status_state:
-                    is_passing = status_state in ["success", "neutral"]
+                    is_passing = status_state in ["SUCCESS", "NEUTRAL"]
+
                 
                 if not is_passing:
                     check_name = check.get("name") or check.get("context") or "unknown"
@@ -1339,6 +1335,10 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
             pr_data = response.json()
+            # Normalize fields to match GraphQL expectations
+            pr_data["headRefName"] = pr_data.get("head", {}).get("ref")
+            pr_data["author"] = pr_data.get("user", {})
+            pr_data["headRefOid"] = pr_data.get("head", {}).get("sha")
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Failed to fetch PR data for {repo_full}#{pr_number}: {e}")
 
@@ -1383,7 +1383,14 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         for node in commit_nodes:
             # Handle both nested 'commit' node structure and flat structure
             commit_obj = node.get("commit") if isinstance(node, dict) and "commit" in node else node
-            headline = commit_obj.get("messageHeadline") if isinstance(commit_obj, dict) else None
+            if not isinstance(commit_obj, dict):
+                continue
+                
+            headline = commit_obj.get("messageHeadline")
+            if not headline and "message" in commit_obj:
+                # REST API returns full message; headline is first line
+                headline = commit_obj["message"].split("\n")[0]
+                
             if headline:
                 headlines.append(headline)
 
