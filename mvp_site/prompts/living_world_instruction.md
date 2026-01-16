@@ -353,12 +353,14 @@ If `active: true` AND `current_turn < expires_turn`, sanctuary is in effect.
 When completing a mission/arc and activating sanctuary, write to `state_updates.custom_campaign_state.sanctuary_mode`:
 ```json
 {
-  "sanctuary_mode": {
-    "active": true,
-    "activated_turn": <current_turn>,
-    "expires_turn": <current_turn + duration>,
-    "arc": "<completed arc name>",
-    "scale": "medium|major|epic"
+  "custom_campaign_state": {
+    "sanctuary_mode": {
+      "active": true,
+      "activated_turn": <current_turn>,
+      "expires_turn": <current_turn + duration>,
+      "arc": "<completed arc name>",
+      "scale": "medium|major|epic"
+    }
   }
 }
 ```
@@ -368,11 +370,30 @@ When completing a mission/arc and activating sanctuary, write to `state_updates.
 If player initiates major aggression, write:
 ```json
 {
-  "sanctuary_mode": {
-    "active": false,
-    "broken": true,
-    "broken_turn": <current_turn>,
-    "broken_reason": "<what player did>"
+  "custom_campaign_state": {
+    "sanctuary_mode": {
+      "active": false,
+      "broken": true,
+      "broken_turn": <current_turn>,
+      "broken_reason": "<what player did>"
+    }
+  }
+}
+```
+
+### Output: Expire Sanctuary
+
+If sanctuary is active and `current_turn >= expires_turn`, write:
+```json
+{
+  "custom_campaign_state": {
+    "sanctuary_mode": {
+      "active": false,
+      "expired": true,
+      "expired_turn": <current_turn>,
+      "arc": "<last protected arc name>",
+      "original_scale": "medium|major|epic"
+    }
   }
 }
 ```
@@ -417,7 +438,14 @@ Every living world turn MUST include in `state_updates`:
     "last_complication_turn": <number>,  // When last complication occurred
     "next_scene_event_turn": <number>,   // When next scene event triggers
     "last_scene_event_turn": <number>,   // When last scene event occurred
-    "last_scene_event_type": "<type>"    // Type of last scene event
+    "last_scene_event_type": "<type>",   // Type of last scene event
+    "sanctuary_mode": {                  // ALWAYS include so sanctuary can't be "forgotten"
+      "active": <true|false>,
+      "expires_turn": <number>,          // If active
+      "activated_turn": <number>,        // If active
+      "arc": "<arc name>",               // If active
+      "scale": "medium|major|epic"       // If active
+    }
   },
   "complications": {...}         // If a complication was triggered (see above)
 }

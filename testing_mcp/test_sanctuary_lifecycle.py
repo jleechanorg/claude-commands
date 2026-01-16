@@ -374,9 +374,12 @@ def run_lifecycle_tests(server_url: str) -> tuple[list, list]:
         title="Sanctuary Breaking Test",
     )
 
-    ensure_story_mode(client, user_id=user_id, campaign_id=campaign_id2)
-    request_responses.extend(client.get_captures_as_dict())
-    client.clear_captures()
+    ensure_story_mode(
+        client,
+        user_id=user_id,
+        campaign_id=campaign_id2,
+        request_responses=request_responses,
+    )
 
     # Quick mission to activate sanctuary
     process_action(

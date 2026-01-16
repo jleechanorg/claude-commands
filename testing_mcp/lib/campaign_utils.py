@@ -607,6 +607,7 @@ def end_combat_if_active(
             user_id=user_id,
             campaign_id=campaign_id,
             user_input="GOD MODE: All enemies are defeated. Combat ends.",
+            track_turn=False,
         )
         if request_responses is not None:
             request_responses.extend(client.get_captures_as_dict())
@@ -619,9 +620,16 @@ def end_combat_if_active(
         client.clear_captures()
 
         final_game_state = final_check.get("game_state", {})
-        still_in_combat_after_god = final_game_state.get("combat_state", {}).get("in_combat", False)
-        if still_in_combat_after_god and verbose:
-            print("   ⚠️  WARNING: Combat still active after God Mode - proceeding anyway")
+        still_in_combat_after_god = final_game_state.get("combat_state", {}).get(
+            "in_combat", False
+        )
+        if still_in_combat_after_god:
+            if verbose:
+                print(
+                    "   ⚠️  WARNING: Combat still active after God Mode - proceeding anyway"
+                )
+            return False
+        return True
 
     return True
 
