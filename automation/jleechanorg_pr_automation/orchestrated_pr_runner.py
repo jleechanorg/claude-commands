@@ -68,7 +68,10 @@ def get_github_token() -> Optional[str]:
     # Try environment first
     token = os.environ.get("GITHUB_TOKEN")
     if token:
-        return token
+        # Basic validation: ensure token is non-empty
+        token = token.strip()
+        if token and len(token) > 0:
+            return token
     
     # Try gh CLI config as fallback
     try:
@@ -79,10 +82,16 @@ def get_github_token() -> Optional[str]:
             timeout=5,
             check=False
         )
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-    except Exception:
-        pass
+        if result.returncode == 0:
+            token = result.stdout.strip()
+            # Basic validation: ensure token is non-empty
+            if token and len(token) > 0:
+                return token
+    except subprocess.TimeoutExpired:
+        log("⚠️ Timeout while retrieving GitHub token from gh CLI")
+    except Exception as e:
+        # If gh CLI is not available or fails, fall back to returning None.
+        log(f"⚠️ Failed to retrieve GitHub token via gh CLI: {e}")
     
     return None
 
@@ -106,7 +115,7 @@ def post_pr_comment_python(repo_full: str, pr_number: int, body: str, in_reply_t
     
     try:
         headers = {
-            "Authorization": f"token {token}",
+            "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
         }
         
@@ -126,8 +135,18 @@ def post_pr_comment_python(repo_full: str, pr_number: int, body: str, in_reply_t
         response.raise_for_status()
         log(f"✅ Posted comment to {repo_full}#{pr_number}")
         return True
+    except requests.exceptions.Timeout as e:
+        log(f"⚠️ Timeout while posting comment to {repo_full}#{pr_number}: {e}")
+        return False
+    except requests.exceptions.HTTPError as e:
+        status_code = e.response.status_code if hasattr(e, 'response') and e.response is not None else "unknown"
+        log(f"⚠️ HTTP error while posting comment to {repo_full}#{pr_number} (status {status_code}): {e}")
+        return False
+    except requests.exceptions.RequestException as e:
+        log(f"⚠️ Network/request error while posting comment to {repo_full}#{pr_number}: {e}")
+        return False
     except Exception as e:
-        log(f"⚠️ Failed to post comment: {e}")
+        log(f"⚠️ Unexpected error while posting comment to {repo_full}#{pr_number}: {e}")
         return False
 
 
@@ -144,7 +163,7 @@ def cleanup_pending_reviews_python(repo_full: str, pr_number: int, automation_us
     
     try:
         headers = {
-            "Authorization": f"token {token}",
+            "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
         }
         
@@ -173,8 +192,15 @@ def cleanup_pending_reviews_python(repo_full: str, pr_number: int, automation_us
                     log(f"✅ Deleted pending review {review_id} for {repo_full}#{pr_number}")
                 else:
                     log(f"⚠️ Failed to delete review {review_id}: {delete_response.status_code}")
+    except requests.exceptions.Timeout as e:
+        log(f"⚠️ Timeout while cleaning up pending reviews for {repo_full}#{pr_number}: {e}")
+    except requests.exceptions.HTTPError as e:
+        status_code = e.response.status_code if hasattr(e, 'response') and e.response is not None else "unknown"
+        log(f"⚠️ HTTP error while cleaning up pending reviews for {repo_full}#{pr_number} (status {status_code}): {e}")
+    except requests.exceptions.RequestException as e:
+        log(f"⚠️ Network/request error while cleaning up pending reviews for {repo_full}#{pr_number}: {e}")
     except Exception as e:
-        log(f"Error cleaning up pending reviews: {e}")
+        log(f"⚠️ Unexpected error while cleaning up pending reviews for {repo_full}#{pr_number}: {e}")
 
 
 
@@ -792,7 +818,8 @@ def dispatch_agent_for_pr(
         f"   PREFERRED METHOD (Python - NO bash, NO macOS permission prompts):\n"
         f"   ```python\n"
         f"   from automation.jleechanorg_pr_automation.orchestrated_pr_runner import cleanup_pending_reviews_python\n"
-        f"   cleanup_pending_reviews_python('{repo_full}', {pr_number}, '{automation_user or 'YOUR_USERNAME'}')\n"
+        f"   # Replace 'your-automation-username' with your actual GitHub username\n"
+        f"   cleanup_pending_reviews_python('{repo_full}', {pr_number}, 'your-automation-username')\n"
         f"   ```\n"
         "   This cleanup is MANDATORY - pending reviews block PR merges and must be deleted immediately.\n\n"
         "If /fixpr is unavailable, follow these steps explicitly (fallback for all CLIs including Claude):\n"
