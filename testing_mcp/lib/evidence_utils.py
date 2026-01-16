@@ -30,6 +30,7 @@ import pathlib
 import re
 import shutil
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
@@ -39,6 +40,10 @@ from typing import Any
 # re is already imported above, no need to import again
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+# Add project root to path for scripts imports (needed for lazy imports later)
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 # Evidence format versioning
 EVIDENCE_FORMAT_VERSION = "1.1.0"  # Current bundle format version
@@ -551,48 +556,38 @@ def download_test_campaigns(
     print(f"\n📥 Downloading {len(campaign_ids)} test campaigns...")
     success_count = 0
 
+    # Lazy import of export_campaign to avoid Firebase dependencies at module load time
+    from mvp_site.clock_skew_credentials import apply_clock_skew_patch
+    apply_clock_skew_patch()
+    from scripts.download_campaign import export_campaign
+
     for campaign_id in campaign_ids:
         try:
-            # Run download_campaign.py script
-            cmd = [
-                "python",
-                str(PROJECT_ROOT / "scripts" / "download_campaign.py"),
-                "--uid",
-                user_id,
-                "--campaign-id",
-                campaign_id,
-                "--output-dir",
-                str(download_dir),
-                "--format",
-                "txt",
-            ]
-
-            # Prepare environment variables
-            env = os.environ.copy()
-            env["WORLDAI_DEV_MODE"] = "true"
+            # Set environment variables for Firebase if needed
+            if "WORLDAI_DEV_MODE" not in os.environ:
+                os.environ["WORLDAI_DEV_MODE"] = "true"
 
             # Copy Firebase credentials if available
-            if "WORLDAI_GOOGLE_APPLICATION_CREDENTIALS" not in env:
-                if "GOOGLE_APPLICATION_CREDENTIALS" in env:
-                    env["WORLDAI_GOOGLE_APPLICATION_CREDENTIALS"] = env["GOOGLE_APPLICATION_CREDENTIALS"]
+            if "WORLDAI_GOOGLE_APPLICATION_CREDENTIALS" not in os.environ:
+                if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
+                    os.environ["WORLDAI_GOOGLE_APPLICATION_CREDENTIALS"] = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
 
-            result = subprocess.run(
-                cmd,
-                cwd=PROJECT_ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-                timeout=60,
+            # Call export_campaign directly (returns tuple[str, int] or None)
+            result = export_campaign(
+                user_id=user_id,
+                campaign_id=campaign_id,
+                output_dir=str(download_dir),
+                export_format="txt",
+                include_scenes=True,
             )
 
-            if result.returncode == 0:
-                print(f"  ✅ Downloaded campaign {campaign_id[:8]}...")
+            if result:
+                output_path, entry_count = result
+                print(f"  ✅ Downloaded campaign {campaign_id[:8]}... ({entry_count} entries)")
                 success_count += 1
             else:
-                print(f"  ❌ Failed to download {campaign_id[:8]}: {result.stderr[:100]}")
+                print(f"  ❌ Failed to download {campaign_id[:8]}: export returned None")
 
-        except subprocess.TimeoutExpired:
-            print(f"  ❌ Timeout downloading {campaign_id[:8]}")
         except Exception as e:
             print(f"  ❌ Error downloading {campaign_id[:8]}: {e}")
 
