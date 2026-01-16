@@ -1914,18 +1914,18 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             # Check for failing checks
             is_failing = has_failing_checks(repo_full, pr_number)
         except Exception as e:
-            # Treat status as unknown; leave defaults and do NOT assume the PR is clean.
-            self.logger.debug(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
+            self.logger.warning(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
+            # Mark status as unknown - don't treat API failures as "clean"
             status_unknown = True
 
-        # FIRST: If status is definitively clean (no conflicts/failing) → skip.
-        # If status is unknown due to API failure, DO NOT treat as clean — continue.
-        if not (is_conflicting or is_failing):
-            if not status_unknown:
-                self.logger.info("⏭️ Skipping PR #%s - no conflicts or failing checks to fix", pr_number)
-                return "skipped"
-            else:
-                self.logger.info("ℹ️ PR #%s status unknown (API failure) — proceeding conservatively", pr_number)
+        # FIRST check if there are any issues to fix (conflicts or failing checks)
+        # Only skip if PR is clean AND status is known (not unknown due to API failure)
+        if not status_unknown and not (is_conflicting or is_failing):
+            self.logger.info(
+                "⏭️ Skipping PR #%s - no conflicts or failing checks to fix",
+                pr_number,
+            )
+            return "skipped"
 
         # If issues are detected, allow reprocessing even if the commit was already processed.
         # If status is unknown (no issues detected), fall back to history gating to avoid duplicates.
@@ -1937,6 +1937,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     head_sha[:8],
                 )
             else:
+                # Status unknown but commit already processed - skip to avoid duplicates
                 self.logger.info(
                     "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
                     pr_number,
@@ -1944,12 +1945,22 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 )
                 return "skipped"
 
-        # Log that we're processing due to issues
-        self.logger.info(
-            "🔧 Processing PR #%s - has %s",
-            pr_number,
-            "conflicts" if is_conflicting else "failing checks",
-        )
+        # Log that we're processing due to issues or unknown status
+        if status_unknown:
+            self.logger.info(
+                "🔧 Processing PR #%s - status unknown (API failure), proceeding conservatively",
+                pr_number,
+            )
+        elif is_conflicting:
+            self.logger.info(
+                "🔧 Processing PR #%s - has conflicts",
+                pr_number,
+            )
+        else:
+            self.logger.info(
+                "🔧 Processing PR #%s - has failing checks",
+                pr_number,
+            )
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
