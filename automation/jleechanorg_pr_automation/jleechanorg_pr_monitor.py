@@ -2079,6 +2079,10 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 model=model
             )
 
+            # Post-dispatch cleanup for consistency with _process_pr_fix_comment
+            # Note: Agent runs async in tmux, so this is a secondary cleanup pass
+            self._cleanup_pending_reviews(repo_full, pr_number)
+
             if agent_success:
                 queued_posted = self._post_fixpr_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
                 # Record processing so we don't loop
