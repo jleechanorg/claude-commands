@@ -253,7 +253,8 @@ def update_test_imports(_test_module):
     Args:
         _test_module: The module name (typically __name__)
     """
-    # This is a placeholder for future import manipulation if needed
+    # Currently a no-op: reserved for future import manipulation functionality
+    # if test module migration requires dynamic import updates
 
 
 # ============================================================================
