@@ -297,8 +297,8 @@ Ready for worker assignment
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 
-    # Push branch
-    git push origin "HEAD:$branch_name"
+    # Push branch (use branch_name directly, not HEAD:branch_name, to properly set upstream tracking)
+    git push -u origin "$branch_name"
 
     # Create PR
     local pr_url

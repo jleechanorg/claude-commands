@@ -521,31 +521,54 @@ async function updateUserSettings(userId, provider) {
     throw new Error(`Unhandled provider in settings update: ${provider}`);
   }
 
-  const url = `${serverBaseUrl}/api/settings`;
-  const settingsUrl = `${settingsBaseUrl}/api/settings`;
-  logStep(`Updating settings for ${provider} via ${url}`);
+  // Check if we're testing against MCP-only server (localhost) or full Flask app
+  const isLocalMCPOnly = normalizedBaseUrl.includes('127.0.0.1') || normalizedBaseUrl.includes('localhost');
+  
+  if (isLocalMCPOnly) {
+    // Use MCP tool for local MCP-only server
+    logStep(`Updating settings for ${provider} via MCP tool (local server)`);
+    const payload = await callRpc(
+      'tools/call',
+      {
+        name: 'update_user_settings',
+        arguments: {
+          user_id: userId,
+          settings: settingsPayload,
+        }
+      }
+    );
 
-  const headers = {
-    'Content-Type': 'application/json',
-  };
-
-  const token = await getBearerToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    if (payload?.error) {
+      throw new Error(`update_user_settings returned error: ${JSON.stringify(payload.error)}`);
+    }
   } else {
-    headers['X-Test-Bypass-Auth'] = 'true';
-    headers['X-Test-User-ID'] = userId;
-  }
+    // Use REST API for full Flask app (Cloud Run deployments)
+    const url = `${serverBaseUrl}/api/settings`;
+    const settingsUrl = `${settingsBaseUrl}/api/settings`;
+    logStep(`Updating settings for ${provider} via ${url}`);
 
-  await fetchJson(
-    settingsUrl,
-    {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(settingsPayload),
-    },
-    `Update settings (${provider})`,
-  );
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    const token = await getBearerToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    } else {
+      headers['X-Test-Bypass-Auth'] = 'true';
+      headers['X-Test-User-ID'] = userId;
+    }
+
+    await fetchJson(
+      settingsUrl,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(settingsPayload),
+      },
+      `Update settings (${provider})`,
+    );
+  }
 }
 
 async function checkToolsList() {
@@ -577,6 +600,9 @@ async function checkToolsList() {
 async function testCampaignCreation(userId, providerLabel = 'gemini') {
   logStep(`Testing campaign creation via create_campaign tool (${providerLabel})`);
 
+  // Use god_mode to skip character creation and go straight to StoryModeAgent
+  // StoryModeAgent loads game_state_instruction.md which contains the tool_requests guidance fix
+  // CharacterCreationAgent doesn't load game_state_instruction.md and explicitly says "DO NOT roll dice"
   const payload = await callRpc(
     'tools/call',
     {
@@ -584,9 +610,27 @@ async function testCampaignCreation(userId, providerLabel = 'gemini') {
       arguments: {
         user_id: userId,
         title: 'Smoke Test Campaign',
-        character: 'Test Hero, Fighter',
-        setting: 'Test dungeon for smoke tests',
-        description: 'Automated MCP smoke test scenario',
+        god_mode: {
+          title: 'Smoke Test Campaign',
+          setting: 'A dungeon entrance',
+          character: {
+            name: 'Test Fighter',
+            race: 'Human',
+            class: 'Fighter',
+            level: 5,
+            hp_current: 50,
+            hp_max: 50,
+            armor_class: 18,
+            attributes: {
+              strength: 16,
+              dexterity: 14,
+              constitution: 15,
+              intelligence: 10,
+              wisdom: 12,
+              charisma: 8,
+            },
+          },
+        },
         selected_prompts: ['mechanicalPrecision'],
         custom_options: [],
         debug_mode: true
@@ -618,6 +662,8 @@ async function testCampaignCreation(userId, providerLabel = 'gemini') {
 async function testCampaignCreationWithDefaultWorld(userId, providerLabel = 'gemini') {
   logStep(`Testing campaign creation with defaultWorld enabled (${providerLabel})`);
 
+  // Use god_mode to skip character creation and go straight to StoryModeAgent
+  // StoryModeAgent loads game_state_instruction.md which contains the tool_requests guidance fix
   const payload = await callRpc(
     'tools/call',
     {
@@ -625,8 +671,27 @@ async function testCampaignCreationWithDefaultWorld(userId, providerLabel = 'gem
       arguments: {
         user_id: userId,
         title: 'Smoke Test Campaign - Default World',
-        character: '',
-        setting: 'World of Assiah. Caught between an oath to a ruthless tyrant and a vow to protect the innocent.',
+        god_mode: {
+          title: 'Smoke Test Campaign - Default World',
+          setting: 'World of Assiah. Caught between an oath to a ruthless tyrant and a vow to protect the innocent.',
+          character: {
+            name: 'Test Fighter',
+            race: 'Human',
+            class: 'Fighter',
+            level: 5,
+            hp_current: 50,
+            hp_max: 50,
+            armor_class: 18,
+            attributes: {
+              strength: 16,
+              dexterity: 14,
+              constitution: 15,
+              intelligence: 10,
+              wisdom: 12,
+              charisma: 8,
+            },
+          },
+        },
         selected_prompts: ['defaultWorld', 'mechanicalPrecision'],
         custom_options: ['defaultWorld'],
         debug_mode: true
@@ -664,6 +729,47 @@ async function testCampaignCreationWithDefaultWorld(userId, providerLabel = 'gem
     campaign_id: result.campaign_id,
     title: result.title,
     full_response: result
+  });
+
+  return result;
+}
+
+async function completeCharacterCreation(userId, campaignId, providerLabel = 'gemini') {
+  logStep(`Completing character creation for campaign ${campaignId} (${providerLabel})`);
+
+  // Send a confirmation action to complete character creation and enter story mode
+  const payload = await callRpc(
+    'tools/call',
+    {
+      name: 'process_action',
+      arguments: {
+        user_id: userId,
+        campaign_id: campaignId,
+        user_input: 'I confirm my character and am ready to begin the adventure.',
+        debug_mode: true
+      }
+    }
+  );
+
+  if (payload?.error) {
+    throw new Error(`Character creation completion returned error: ${JSON.stringify(payload.error)}`);
+  }
+
+  const result = payload?.result;
+  if (!result?.narrative) {
+    throw new Error(`Character creation completion missing narrative: ${JSON.stringify(result)}`);
+  }
+
+  // Check if character creation is complete
+  const debugInfo = result.debug_info || {};
+  const agentName = debugInfo.agent_name || 'unknown';
+
+  logInfo(`✅ Character creation completed (agent: ${agentName})`);
+  addLogEntry({
+    kind: 'character-creation-complete',
+    campaign_id: campaignId,
+    agent_name: agentName,
+    provider: providerLabel,
   });
 
   return result;
@@ -827,12 +933,23 @@ async function main() {
           provider,
         );
 
+        // Test 3c: Complete character creation (god_mode leaves character_creation_in_progress=true)
+        // Send a confirmation to exit character creation mode before testing combat
+        if (campaign.campaign_id) {
+          await completeCharacterCreation(userId, campaign.campaign_id, provider);
+        }
+
         // Test 4: Gameplay action (only if we got a real campaign ID)
         if (campaign.campaign_id) {
           await testGameplayAction(userId, campaign.campaign_id, 'basic campaign', provider);
         }
 
-        // Test 4b: Gameplay with defaultWorld campaign (verifies campaign can progress)
+        // Test 4b: Complete character creation for defaultWorld campaign
+        if (defaultWorldCampaign.campaign_id) {
+          await completeCharacterCreation(userId, defaultWorldCampaign.campaign_id, provider);
+        }
+
+        // Test 4c: Gameplay with defaultWorld campaign (verifies campaign can progress)
         if (defaultWorldCampaign.campaign_id) {
           await testGameplayAction(
             userId,

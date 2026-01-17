@@ -23,6 +23,8 @@ import requests
 from orchestration import task_dispatcher
 from orchestration.task_dispatcher import TaskDispatcher
 
+import yaml
+
 ORG = "jleechanorg"
 BASE_CLONE_ROOT = Path("/tmp/pr-orch-bases")
 WORKSPACE_ROOT_BASE = Path("/tmp")
@@ -57,7 +59,11 @@ def display_log_viewing_command(session_name: str) -> None:
 
 
 def get_github_token() -> Optional[str]:
-    """Get GitHub token from environment or gh CLI config."""
+    """Get GitHub token from environment or gh CLI config file (avoids bash/subprocess calls).
+    
+    Reads token directly from ~/.config/gh/hosts.yml to avoid macOS permission prompts
+    that occur when calling 'gh auth token' via subprocess.
+    """
     # Try environment first
     token = os.environ.get("GITHUB_TOKEN")
     if token:
@@ -66,25 +72,38 @@ def get_github_token() -> Optional[str]:
         if token and len(token) > 0:
             return token
     
-    # Try gh CLI config as fallback
+    # Try reading from gh CLI config file directly (avoids subprocess/bash calls)
     try:
-        result = subprocess.run(
-            ["gh", "auth", "token"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False
-        )
-        if result.returncode == 0:
-            token = result.stdout.strip()
-            # Basic validation: ensure token is non-empty
-            if token and len(token) > 0:
-                return token
-    except subprocess.TimeoutExpired:
-        log("⚠️ Timeout while retrieving GitHub token from gh CLI")
+        gh_config_path = Path.home() / ".config" / "gh" / "hosts.yml"
+        if gh_config_path.exists():
+            if yaml is None:
+                log("⚠️ PyYAML not available, cannot read gh config file")
+            else:
+                try:
+                    with open(gh_config_path, "r", encoding="utf-8") as f:
+                        config = yaml.safe_load(f)
+                    # Extract token from config structure: github.com -> oauth_token
+                    if config and "github.com" in config:
+                        github_config = config["github.com"]
+                        # Try oauth_token at top level first
+                        token = github_config.get("oauth_token")
+                        if not token and "users" in github_config:
+                            # Try user-specific token
+                            users = github_config["users"]
+                            if users:
+                                # Get first user's token
+                                first_user = next(iter(users.values()))
+                                token = first_user.get("oauth_token")
+                        
+                        if token:
+                            token = str(token).strip()
+                            if token and len(token) > 0:
+                                log("🔍 Retrieved GitHub token from gh CLI config file")
+                                return token
+                except Exception as e:
+                    log(f"⚠️ Failed to read GitHub token from gh config file: {e}")
     except Exception as e:
-        # If gh CLI is not available or fails, fall back to returning None.
-        log(f"⚠️ Failed to retrieve GitHub token via gh CLI: {e}")
+        log(f"⚠️ Error accessing gh config file: {e}")
     
     return None
 
@@ -296,20 +315,50 @@ def query_recent_prs(cutoff_hours: int) -> list[dict]:
 
 
 def has_failing_checks(repo_full: str, pr_number: int) -> bool:
-    """Return True if PR has any failing checks."""
+    """Return True if PR has any failing checks. Uses Python requests instead of gh CLI to avoid bash prompts."""
     try:
-        # Use statusCheckRollup from pr view for authoritative check status
-        # This includes conclusion field which indicates final result
-        result = run_cmd(
-            ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "statusCheckRollup"],
-            check=False,
-            timeout=API_TIMEOUT,
-        )
-        if result.returncode != 0:
-            log(f"Failed to fetch PR status for {repo_full}#{pr_number}: {result.stderr.strip()}")
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
+            log(f"⚠️ No GitHub token available for checking PR checks: {repo_full}#{pr_number}")
             return False
-        pr_data = json.loads(result.stdout or "{}")
-        checks = pr_data.get("statusCheckRollup", [])
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+
+        # Fetch PR data to get head SHA
+        pr_url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}"
+        try:
+            pr_response = requests.get(pr_url, headers=headers, timeout=API_TIMEOUT)
+            pr_response.raise_for_status()
+            pr_data = pr_response.json()
+            head_sha = pr_data.get("head", {}).get("sha")
+            if not head_sha:
+                log(f"⚠️ Could not get head SHA for {repo_full}#{pr_number}")
+                return False
+        except requests.exceptions.RequestException as e:
+            log(f"Failed to fetch PR data for {repo_full}#{pr_number}: {e}")
+            return False
+
+        # Fetch check runs for the head commit
+        checks_url = f"https://api.github.com/repos/{repo_full}/commits/{head_sha}/check-runs"
+        try:
+            checks_response = requests.get(checks_url, headers=headers, timeout=API_TIMEOUT, params={"per_page": 100})
+            checks_response.raise_for_status()
+            checks_data = checks_response.json()
+            checks = checks_data.get("check_runs", [])
+        except requests.exceptions.RequestException:
+            # Fallback: try statuses endpoint
+            statuses_url = f"https://api.github.com/repos/{repo_full}/commits/{head_sha}/statuses"
+            try:
+                statuses_response = requests.get(statuses_url, headers=headers, timeout=API_TIMEOUT)
+                statuses_response.raise_for_status()
+                checks = statuses_response.json()
+            except requests.exceptions.RequestException:
+                checks = []
+
         if not checks:
             return False
         
@@ -318,8 +367,14 @@ def has_failing_checks(repo_full: str, pr_number: int) -> bool:
         failing_conclusions = {"FAILURE", "FAILED", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"}
         failing_states = {"FAILED", "FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"}
         for check in checks:
+            # Check-runs API format: conclusion field
             conclusion = (check.get("conclusion") or "").upper()
             state = (check.get("state") or "").upper()
+            # Statuses API format: state field (lowercase)
+            if not conclusion and not state:
+                status_state = (check.get("state") or "").upper()
+                if status_state in failing_states:
+                    return True
             # Conclusion is authoritative - if check completed with failure, it's failing
             if conclusion in failing_conclusions:
                 return True
@@ -618,7 +673,7 @@ def dispatch_agent_for_pr(
         "   ⚠️ THESE TOOLS ARE DISABLED AND WILL NOT WORK - DO NOT ATTEMPT TO USE THEM:\n"
         "   - `create_pending_pull_request_review` MCP tool (DISABLED - will fail if called)\n"
         "   - `add_comment_to_pending_review` MCP tool (DISABLED - will fail if called)\n\n"
-        "   ✅✅✅ PREFERRED METHOD - Python (NO bash, NO macOS permission prompts):\n"
+        "   ✅✅✅ REQUIRED METHOD - Python (NO bash, NO macOS permission prompts):\n"
         f"   ```python\n"
         f"   from automation.jleechanorg_pr_automation.orchestrated_pr_runner import post_pr_comment_python\n"
         f"   # General PR comment:\n"
@@ -626,9 +681,10 @@ def dispatch_agent_for_pr(
         f"   # Reply to inline review comment:\n"
         f"   post_pr_comment_python('{repo_full}', {pr_number}, 'Your reply', in_reply_to=comment_id)\n"
         f"   ```\n\n"
-        "   ✅ FALLBACK METHOD - Bash (may trigger macOS permission prompts):\n"
-        f"   - Reply to inline: `gh api /repos/{repo_full}/pulls/{pr_number}/comments -f body='...' -F in_reply_to={{comment_id}}`\n"
-        f"   - General comment: `gh pr comment {pr_number} --body '...'`\n\n"
+        "   ❌ FORBIDDEN - Do NOT use bash/gh CLI commands (triggers macOS permission prompts):\n"
+        f"   - DO NOT use: `gh api /repos/{repo_full}/pulls/{pr_number}/comments`\n"
+        f"   - DO NOT use: `gh pr comment {pr_number} --body '...'`\n"
+        f"   - These commands trigger macOS permission dialogs - USE PYTHON FUNCTIONS INSTEAD\n\n"
         "   ❌ FORBIDDEN - These ALWAYS create pending reviews (NEVER USE - TOOLS ARE DISABLED):\n"
         "   - `create_pending_pull_request_review` MCP tool (FORBIDDEN - DISABLED - creates pending review)\n"
         "   - `add_comment_to_pending_review` MCP tool (FORBIDDEN - DISABLED - adds to pending review)\n"
@@ -646,19 +702,28 @@ def dispatch_agent_for_pr(
         f"   ```\n"
         "   This cleanup is MANDATORY - pending reviews block PR merges and must be deleted immediately.\n\n"
         "If /fixpr is unavailable, follow these steps explicitly (fallback for all CLIs including Claude):\n"
-        f"1) gh pr checkout {pr_number}\n"
+        f"1) git checkout {branch} (or use git worktree if branch exists elsewhere)\n"
         "2) git status && git branch --show-current\n"
         "3) If checkout fails because the branch exists elsewhere, create worktree:\n"
         f"   git worktree add {workspace_root}/pr-{pr_number}-rerun {pr_number} && cd {workspace_root}/pr-{pr_number}-rerun\n"
-        "4) Fetch PR feedback from ALL sources (pagination-safe):\n"
-        '   - Issue comments: gh api "/repos/{owner}/{repo}/issues/{pr}/comments" --paginate -F per_page=100\n'
-        '   - Review summaries: gh api "/repos/{owner}/{repo}/pulls/{pr}/reviews" --paginate -F per_page=100\n'
-        '   - Inline review comments: gh api "/repos/{owner}/{repo}/pulls/{pr}/comments" --paginate -F per_page=100\n'
-        "   Ensure you cover all feedback; do not assume `gh pr view --json comments` includes inline review comments.\n"
-        "5) Identify failing checks (gh pr view --json statusCheckRollup) and reproduce locally (tests/linters as needed)\n"
+        "4) Fetch PR feedback using Python (DO NOT use gh api - triggers macOS prompts):\n"
+        f"   ```python\n"
+        f"   import requests\n"
+        f"   from automation.jleechanorg_pr_automation.orchestrated_pr_runner import get_github_token\n"
+        f"   token = get_github_token()\n"
+        f"   headers = {{'Authorization': f'Bearer {{token}}', 'Accept': 'application/vnd.github.v3+json'}}\n"
+        f"   # Issue comments:\n"
+        f"   requests.get('https://api.github.com/repos/{repo_full}/issues/{pr_number}/comments', headers=headers, params={{'per_page': 100}})\n"
+        f"   # Review summaries:\n"
+        f"   requests.get('https://api.github.com/repos/{repo_full}/pulls/{pr_number}/reviews', headers=headers, params={{'per_page': 100}})\n"
+        f"   # Inline review comments:\n"
+        f"   requests.get('https://api.github.com/repos/{repo_full}/pulls/{pr_number}/comments', headers=headers, params={{'per_page': 100}})\n"
+        f"   ```\n"
+        "   Ensure you cover all feedback from all sources.\n"
+        "5) Identify failing checks using GitHub API (Python requests, not gh CLI)\n"
         "6) Apply fixes (prefer a deterministic branch sync strategy: merge base into branch; avoid rebases unless required by policy)\n"
         f'7) git add -A && git commit -m "[fixpr {commit_marker_cli}-automation-commit] fix PR #{pr_number}" && git push\n'
-        f"8) gh pr view {pr_number} --json mergeable,mergeStateStatus,statusCheckRollup\n"
+        "8) Verify PR status using Python requests (DO NOT use gh pr view)\n"
         f"9) Write completion report to {workspace_root}/{workspace_name}/orchestration_results.json summarizing actions and test results\n\n"
         f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
         "Do not create new PRs or branches. Skip /copilot. Use only the requested CLI chain (in order).\n\n"

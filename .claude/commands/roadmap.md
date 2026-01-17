@@ -75,7 +75,7 @@ For each task, execute in sequence:
 
 11. Commit changes with format: `docs(roadmap): [description]`
 
-12. Push branch: `git push origin HEAD:roadmap-update-[timestamp]`
+12. Push branch: `git push -u origin roadmap-update-[timestamp]`
 
 13. Create PR: `gh pr create --title "docs(roadmap): [description]" --body "Roadmap update via /roadmap command"`
 

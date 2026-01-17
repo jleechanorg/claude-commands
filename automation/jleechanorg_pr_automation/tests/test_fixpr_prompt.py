@@ -43,11 +43,15 @@ class TestFixprPrompt(unittest.TestCase):
             "[fixpr codex-automation-commit] fix PR #123",
             dispatcher.task_description,
         )
-        # Verify the prompt instructs fetching ALL feedback sources (inline review comments included).
-        self.assertIn("/pulls/{pr}/comments", dispatcher.task_description)
-        self.assertIn("/pulls/{pr}/reviews", dispatcher.task_description)
-        self.assertIn("/issues/{pr}/comments", dispatcher.task_description)
-        self.assertIn("--paginate", dispatcher.task_description)
+        # Verify the prompt instructs fetching ALL feedback sources using Python requests (not gh CLI)
+        # Check for Python requests syntax instead of gh CLI syntax
+        self.assertIn("requests.get", dispatcher.task_description)
+        # Check for API endpoints - the prompt uses full URLs with actual PR number
+        self.assertIn("pulls/123/comments", dispatcher.task_description, "Prompt should contain pulls/comments endpoint")
+        self.assertIn("pulls/123/reviews", dispatcher.task_description, "Prompt should contain reviews endpoint")
+        self.assertIn("issues/123/comments", dispatcher.task_description, "Prompt should contain issues/comments endpoint")
+        # Should use Python requests params instead of --paginate
+        self.assertIn("params=", dispatcher.task_description, "Prompt should use params= for pagination")
 
 
 if __name__ == "__main__":
