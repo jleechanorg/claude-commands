@@ -1041,7 +1041,8 @@ def main():
                 already_replied += 1
                 continue
 
-        # Skip if thread ends with [AI responder] comment indicating completion
+        # Skip if thread ends with OUR [AI responder] comment indicating completion
+        # Only skip if WE are the last commenter, not if someone else replied after us
         thread_replies = [
             c for c in all_comments if c.get("in_reply_to_id") == comment_id
         ]
@@ -1050,8 +1051,10 @@ def main():
             thread_replies.sort(key=lambda x: x.get("created_at", ""))
             last_reply = thread_replies[-1]
             last_reply_body = last_reply.get("body", "")
-            if "[AI responder]" in last_reply_body:
-                print("   ↪️ Skip: thread already completed with [AI responder] comment")
+            last_reply_author = last_reply.get("user", {}).get("login", "")
+            # Only skip if WE are the last commenter AND our comment has [AI responder]
+            if "[AI responder]" in last_reply_body and last_reply_author == actor_login:
+                print("   ↪️ Skip: thread already completed with our [AI responder] comment")
                 already_replied += 1
                 continue
 
