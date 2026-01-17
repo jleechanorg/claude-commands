@@ -1498,11 +1498,6 @@ class CampaignUpgradeAgent(BaseAgent):
                 "falling back to core instructions only"
             )
 
-        # Add mechanics reference for stat conversion
-        # These are NOT included in build_core_system_instructions()
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MECHANICS))
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
-
         # Finalize without world content (ceremony doesn't need world lore)
         return builder.finalize_instructions(parts, use_default_world=False)
 

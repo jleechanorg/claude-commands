@@ -1936,29 +1936,29 @@ class GameState:
 
         Used for converting stats to God Power in divine/sovereign tiers.
         """
-        attributes = self.player_character_data.get("attributes", {})
+        pc_data = self.player_character_data if isinstance(self.player_character_data, dict) else {}
+        attributes = pc_data.get("attributes", {})
         if not isinstance(attributes, dict):
             return 0
 
         highest_modifier: int | None = None
         for attr_name, attr_value in attributes.items():
+            modifier: int | None = None
             if isinstance(attr_value, dict):
                 # Handle {"score": 18, "modifier": 4} format
-                # If modifier key is missing, calculate from score
                 if "modifier" in attr_value:
-                    modifier = attr_value.get("modifier", 0)
+                    modifier = _coerce_int(attr_value.get("modifier"), None)
                 elif "score" in attr_value:
-                    score = attr_value.get("score", 10)
-                    modifier = (score - 10) // 2 if isinstance(score, int) else 0
-                else:
-                    continue
-            elif isinstance(attr_value, int):
-                # Handle direct score value - calculate modifier
-                modifier = (attr_value - 10) // 2
+                    score = _coerce_int(attr_value.get("score"), None)
+                    if score is not None:
+                        modifier = (score - 10) // 2
             else:
-                continue
+                # Handle direct score value (int/str/float) - calculate modifier
+                score = _coerce_int(attr_value, None)
+                if score is not None:
+                    modifier = (score - 10) // 2
 
-            if isinstance(modifier, int):
+            if modifier is not None:
                 if highest_modifier is None or modifier > highest_modifier:
                     highest_modifier = modifier
 
