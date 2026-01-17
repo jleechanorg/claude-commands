@@ -17,12 +17,16 @@ Class Hierarchy:
 
 Agent Selection Priority (used by get_agent_for_input):
 1. GodModeAgent: Administrative commands (highest priority)
-2. CharacterCreationAgent: Character creation & level-up (creation focus)
-3. PlanningAgent: Strategic planning (think mode)
-4. InfoAgent: Equipment/inventory queries
-5. CombatAgent: Active combat encounters
-6. RewardsAgent: Reward processing after combat/encounters
-7. StoryModeAgent: Default narrative storytelling
+2. Character creation completion override (transition to StoryModeAgent)
+3. CampaignUpgradeAgent: Ascension ceremonies (divine/sovereign) - STATE-BASED
+4. CharacterCreationAgent: Character creation & level-up (creation focus) - STATE-BASED
+5. PlanningAgent: Strategic planning (think mode) - EXPLICIT OVERRIDE
+6. Semantic Intent Classifier (PRIMARY BRAIN): Routes based on semantic analysis of user input
+   - Uses FastEmbed (BAAI/bge-small-en-v1.5) to classify intent
+   - Can route to: CombatAgent, RewardsAgent, InfoAgent, CharacterCreationAgent, CampaignUpgradeAgent, PlanningAgent
+   - Falls back to StoryModeAgent if no match
+7. API explicit mode override (if provided)
+8. StoryModeAgent: Default narrative storytelling
 
 Usage:
     from mvp_site.agents import (
@@ -57,7 +61,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from mvp_site import constants, intent_classifier, logging_util
-from mvp_site.agent_prompts import PromptBuilder
+from mvp_site.agent_prompts import PromptBuilder, _load_instruction_file
 
 if TYPE_CHECKING:
     from mvp_site.game_state import GameState
@@ -522,6 +526,26 @@ class StoryModeAgent(BaseAgent):
 
         # Add system reference instructions (D&D SRD)
         builder.add_system_reference_instructions(parts)
+
+        # Add campaign tier-specific prompts (Divine Leverage / Sovereign Protocol)
+        # These are optional prompts that activate based on campaign_tier
+        if self.game_state is not None:
+            campaign_tier = self.game_state.get_campaign_tier()
+
+            if campaign_tier == constants.CAMPAIGN_TIER_DIVINE:
+                divine_system = _load_instruction_file(constants.PROMPT_TYPE_DIVINE_SYSTEM)
+                if divine_system:
+                    parts.append(divine_system)
+                    logging_util.debug("📿 DIVINE_TIER: Including Divine Leverage system prompt")
+                else:
+                    logging_util.warning("📿 DIVINE_TIER: Divine system prompt missing/empty")
+            elif campaign_tier == constants.CAMPAIGN_TIER_SOVEREIGN:
+                sovereign_system = _load_instruction_file(constants.PROMPT_TYPE_SOVEREIGN_SYSTEM)
+                if sovereign_system:
+                    parts.append(sovereign_system)
+                    logging_util.debug("🌌 SOVEREIGN_TIER: Including Sovereign Protocol system prompt")
+                else:
+                    logging_util.warning("🌌 SOVEREIGN_TIER: Sovereign system prompt missing/empty")
 
         # Add continuation-specific reminders for story continuation
         if include_continuation_reminder:
@@ -1379,6 +1403,138 @@ class RewardsAgent(FixedPromptAgent):
         return False
 
 
+class CampaignUpgradeAgent(BaseAgent):
+    """
+    Agent for handling campaign tier upgrades (divine/multiverse ascension ceremonies).
+
+    This agent handles the one-time upgrade ceremonies when a player transitions:
+    - Normal (mortal) → Divine (Divine Leverage system)
+    - Divine or Normal → Sovereign (Multiversal campaign)
+
+    After the ceremony completes, the StoryModeAgent handles ongoing gameplay
+    with the new tier's mechanics via optional prompts.
+
+    Priority: Just below GodModeAgent (highest priority after admin commands).
+    """
+
+    MODE = constants.MODE_CAMPAIGN_UPGRADE
+
+    # Required prompts - ordered tuple (source of truth for loading order)
+    # Order: master → game_state → planning_protocol → dnd_srd → mechanics
+    REQUIRED_PROMPT_ORDER: tuple[str, ...] = (
+        constants.PROMPT_TYPE_MASTER_DIRECTIVE,
+        constants.PROMPT_TYPE_GAME_STATE,
+        constants.PROMPT_TYPE_PLANNING_PROTOCOL,  # Canonical planning block schema
+        constants.PROMPT_TYPE_DND_SRD,
+        constants.PROMPT_TYPE_MECHANICS,
+    )
+    REQUIRED_PROMPTS: frozenset[str] = frozenset(REQUIRED_PROMPT_ORDER)
+
+    # No optional prompts - ceremony prompts are selected dynamically
+    OPTIONAL_PROMPTS: frozenset[str] = frozenset()
+
+    def __init__(self, game_state: "GameState | None" = None) -> None:
+        """Initialize the CampaignUpgradeAgent with game state."""
+        super().__init__(game_state)
+        self._upgrade_type: str | None = None
+        if game_state is not None:
+            self._upgrade_type = game_state.get_pending_upgrade_type()
+
+    def build_system_instructions(
+        self,
+        selected_prompts: list[str] | None = None,
+        use_default_world: bool = False,
+        include_continuation_reminder: bool = True,
+        turn_number: int = 0,
+        llm_requested_sections: list[str] | None = None,
+    ) -> str:
+        """
+        Build system instructions for campaign upgrade ceremony.
+
+        Returns prompts appropriate for the pending upgrade type
+        (divine ascension or multiverse ascension).
+
+        Args:
+            selected_prompts: User-selected prompt types (unused - ceremony uses fixed set)
+            use_default_world: Whether to include world content (unused)
+            include_continuation_reminder: Whether to add reminders (unused)
+            turn_number: Current turn number (unused)
+            llm_requested_sections: LLM-requested sections (unused)
+
+        Returns:
+            Complete system instruction string for the upgrade ceremony
+        """
+        # Parameters intentionally unused - ceremony uses fixed prompt set
+        del selected_prompts, use_default_world, include_continuation_reminder, turn_number
+        del llm_requested_sections
+
+        builder = self._prompt_builder
+
+        # Use build_from_order() with REQUIRED_PROMPT_ORDER to load all required prompts
+        # This ensures DND_SRD and MECHANICS are included (matching CombatAgent's pattern)
+        parts: list[str] = builder.build_from_order(
+            self.REQUIRED_PROMPT_ORDER, include_debug=True
+        )
+
+        # Add the appropriate ascension ceremony prompt
+        if self._upgrade_type == "multiverse":
+            parts.append(
+                _load_instruction_file(constants.PROMPT_TYPE_SOVEREIGN_ASCENSION)
+            )
+            logging_util.info(
+                "🌌 CAMPAIGN_UPGRADE: Loading Sovereign ascension ceremony"
+            )
+        elif self._upgrade_type == "divine":
+            parts.append(
+                _load_instruction_file(constants.PROMPT_TYPE_DIVINE_ASCENSION)
+            )
+            logging_util.info(
+                "✨ CAMPAIGN_UPGRADE: Loading Divine ascension ceremony"
+            )
+        else:
+            # Edge case: upgrade flagged but type not determined
+            logging_util.warning(
+                f"⚠️ CAMPAIGN_UPGRADE: Unknown upgrade type '{self._upgrade_type}', "
+                "falling back to core instructions only"
+            )
+
+        # Finalize without world content (ceremony doesn't need world lore)
+        return builder.finalize_instructions(parts, use_default_world=False)
+
+    @classmethod
+    def matches_game_state(cls, game_state: "GameState | None") -> bool:
+        """
+        Check if a campaign upgrade is available based on game state.
+
+        Returns True if:
+        - Divine upgrade available (mortal tier, divine_potential >= 100 or level >= 25)
+        - Multiverse upgrade available (any tier, universe_control >= 70)
+
+        Args:
+            game_state: Current game state to check
+
+        Returns:
+            True if an upgrade ceremony should be triggered
+        """
+        if game_state is None:
+            return False
+
+        return game_state.is_campaign_upgrade_available()
+
+    @classmethod
+    def matches_input(cls, _user_input: str) -> bool:
+        """
+        Campaign upgrade is NOT triggered by input - only by game state.
+
+        Args:
+            _user_input: Raw user input text (unused)
+
+        Returns:
+            Always False - use matches_game_state instead
+        """
+        return False
+
+
 def get_agent_for_input(
     user_input: str,
     game_state: GameState | None = None,
@@ -1388,19 +1544,21 @@ def get_agent_for_input(
     Factory function to get the appropriate agent for user input.
 
     Primary routing is handled by the Semantic Intent Classifier.
-    Safety overrides (God Mode) are checked first.
+    Safety overrides (God Mode) and state-based checks (CharacterCreation, CampaignUpgrade) are checked first.
 
     Priority:
     1. GodModeAgent (Manual override)
     2. Character Creation Completion Override
-    3. CharacterCreationAgent (State-based - when char creation is active)
-    4. PlanningAgent (Explicit override - "THINK:" prefix or mode="think")
-    5. Semantic Intent Classification (PRIMARY BRAIN)
+    3. CampaignUpgradeAgent (State-based - when upgrade is available - takes precedence over character creation)
+    4. CharacterCreationAgent (State-based - when char creation is active)
+    5. PlanningAgent (Explicit override - "THINK:" prefix or mode="think")
+    6. Semantic Intent Classification (PRIMARY BRAIN)
        - CombatAgent: Routes on semantic intent (can initiate combat if not active)
        - RewardsAgent: Routes on semantic intent (can check for missed rewards)
        - CharacterCreationAgent: Routes on semantic intent (can initiate level-up/recreation)
-    6. API Explicit Mode (Forced via UI/Param)
-    7. StoryModeAgent (Default)
+       - CampaignUpgradeAgent: Routes on semantic intent (can guide toward ascension)
+    7. API Explicit Mode (Forced via UI/Param)
+    8. StoryModeAgent (Default)
     """
     # 1. Safety Override: GOD MODE
     if GodModeAgent.matches_input(user_input, mode):
@@ -1425,24 +1583,34 @@ def get_agent_for_input(
                 custom_state["character_creation_stage"] = "complete"
                 return StoryModeAgent(game_state)
 
-    # 3. State-based Context (Character Creation only - Combat/Rewards handled via semantic classifier)
+    # 3. State-based: Campaign upgrade ceremonies (divine/multiverse ascension)
+    # This check happens BEFORE character creation since upgrades are more important
+    # and should take precedence when available
+    # NOTE: If state doesn't match, semantic classifier (Priority 5) can still route here
+    if CampaignUpgradeAgent.matches_game_state(game_state):
+        logging_util.info("⬆️ CAMPAIGN_UPGRADE_AVAILABLE (STATE-BASED): Using CampaignUpgradeAgent (bypassing classifier)")
+        return CampaignUpgradeAgent(game_state)
+
+    # 4. State-based Context (Character Creation only - Combat/Rewards handled via semantic classifier)
     if CharacterCreationAgent.matches_game_state(game_state):
         logging_util.info("🎭 CHARACTER_CREATION_ACTIVE: Using CharacterCreationAgent")
         return CharacterCreationAgent(game_state)
 
-    # 4. Explicit Overrides (THINK: prefix or API mode params)
+    # 5. Explicit Overrides (THINK: prefix or API mode params)
     if PlanningAgent.matches_input(user_input, mode):
         logging_util.info("🧠 THINK_MODE_DETECTED: Using PlanningAgent (Explicit Override)")
         return PlanningAgent(game_state)
 
     # 5. Semantic Intent Classification (PRIMARY BRAIN)
+    # This classifier uses FastEmbed to semantically route user input to the appropriate agent
+    # It runs when state-based checks don't match, allowing semantic routing even without state flags
     intent_mode = constants.MODE_CHARACTER
     confidence = 0.0
     start_time = time.time()
     try:
         intent_mode, confidence = intent_classifier.classify_intent(user_input)
         elapsed_time = time.time() - start_time
-        logging_util.info(f"🧠 CLASSIFIER: classify_intent() call completed in {elapsed_time*1000:.2f}ms")
+        logging_util.info(f"🧠 CLASSIFIER: classify_intent() -> {intent_mode} (confidence: {confidence:.2f}) in {elapsed_time*1000:.2f}ms")
     except Exception as e:
         elapsed_time = time.time() - start_time
         logging_util.warning(f"🧠 CLASSIFIER: Error during classification: {e}. Defaulting to MODE_CHARACTER. (took {elapsed_time*1000:.2f}ms)")
@@ -1495,6 +1663,20 @@ def get_agent_for_input(
             )
         return CharacterCreationAgent(game_state)
 
+    if intent_mode == constants.MODE_CAMPAIGN_UPGRADE:
+        # Route to CampaignUpgradeAgent based on semantic intent (classifier detected ascension intent)
+        # Agent can handle upgrade ceremonies and guide players toward ascension
+        # NOTE: This allows semantic routing even when state doesn't indicate upgrade is available
+        if CampaignUpgradeAgent.matches_game_state(game_state):
+            logging_util.info(
+                f"⬆️ SEMANTIC_INTENT_CAMPAIGN_UPGRADE (CLASSIFIER): ({confidence:.2f}) -> CampaignUpgradeAgent (upgrade available + semantic match)"
+            )
+        else:
+            logging_util.info(
+                f"⬆️ SEMANTIC_INTENT_CAMPAIGN_UPGRADE (CLASSIFIER): ({confidence:.2f}) -> CampaignUpgradeAgent (semantic routing - guiding toward ascension)"
+            )
+        return CampaignUpgradeAgent(game_state)
+
     # 6. API Explicit Mode (UI forced fallback)
     if mode:
         # Normalize mode to lowercase for case-insensitive comparison (consistent with Priority 1 and 4)
@@ -1527,6 +1709,13 @@ def get_agent_for_input(
             else:
                 logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> CharacterCreationAgent (initiating level-up/recreation)")
             return CharacterCreationAgent(game_state)
+        elif normalized_mode == constants.MODE_CAMPAIGN_UPGRADE:
+            # Route to CampaignUpgradeAgent - can handle upgrade ceremonies and guide toward ascension
+            if CampaignUpgradeAgent.matches_game_state(game_state):
+                logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> CampaignUpgradeAgent (upgrade available)")
+            else:
+                logging_util.info(f"🔌 API_EXPLICIT_MODE: mode={mode} -> CampaignUpgradeAgent (guiding toward ascension)")
+            return CampaignUpgradeAgent(game_state)
         # MODE_CHARACTER falls through to default StoryModeAgent
 
     # 7. Default Fallback (always returns StoryModeAgent if no other agent matched)
@@ -1545,6 +1734,7 @@ ALL_AGENT_CLASSES: tuple[type[BaseAgent], ...] = (
     StoryModeAgent,
     GodModeAgent,
     CharacterCreationAgent,
+    CampaignUpgradeAgent,
     PlanningAgent,
     InfoAgent,
     CombatAgent,
@@ -1574,6 +1764,7 @@ __all__ = [
     "StoryModeAgent",
     "GodModeAgent",
     "CharacterCreationAgent",
+    "CampaignUpgradeAgent",
     "PlanningAgent",
     "InfoAgent",
     "CombatAgent",

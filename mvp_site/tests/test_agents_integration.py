@@ -169,6 +169,8 @@ class TestAgentGameStateIntegration(unittest.TestCase):
         # CombatAgent.matches_game_state() calls is_in_combat() and get_combat_state()
         mock_game_state.is_in_combat.return_value = False
         mock_game_state.get_combat_state.return_value = {"in_combat": False}
+        # CampaignUpgradeAgent.matches_game_state() calls is_campaign_upgrade_available()
+        mock_game_state.is_campaign_upgrade_available.return_value = False
 
         # Test story mode agent
         story_agent = get_agent_for_input("I look around", game_state=mock_game_state)
