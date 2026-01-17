@@ -2766,6 +2766,7 @@ Take your time! Once we finalize these details, we'll begin your epic adventure.
         gemini_response = LLMResponse.create_from_structured_response(
             structured_response,
             model_to_use,
+            combined_narrative_text=narrative_text,
             provider=provider_selection.provider,
             processing_metadata=processing_metadata,
             raw_response_text=raw_response_text,
@@ -3854,6 +3855,7 @@ def continue_story(  # noqa: PLR0912, PLR0915
         gemini_response = LLMResponse.create_from_structured_response(
             structured_response,
             chosen_model,
+            combined_narrative_text=narrative_text,
             provider=provider_selection.provider,
             processing_metadata=processing_metadata,
             agent_mode=agent.MODE,
