@@ -772,8 +772,38 @@ When `npc_data` is present in your input, each NPC entry contains:
 - `role`: (string) NPC role/title (e.g., "Empress", "Captain", "Innkeeper")
 - `level`: (number) NPC level (if applicable)
 - `relationships.player.trust_level`: (number) -10 to +10 trust with player
-- `relationships.player.disposition`: (string) hostile | antagonistic | neutral | friendly | allied
+- `relationships.player.disposition`: (string) hostile | antagonistic | cold | neutral | friendly | trusted | devoted | bonded
 - Additional fields: hp, armor_class, status, etc. (see entity schemas)
+
+### 🔗 Relationships Object (REQUIRED for recurring NPCs)
+
+**Every significant NPC MUST have a `relationships` object in state:**
+
+```json
+"npc_data": {
+  "Theron Blackwood": {
+    "string_id": "npc_theron_001",
+    "relationships": {
+      "player": {
+        "trust_level": 3,
+        "disposition": "friendly",
+        "history": ["saved his life in the goblin cave", "shared a drink at the tavern"],
+        "debts": ["owes player a favor"],
+        "grievances": []
+      }
+    }
+  }
+}
+```
+
+**Fields:**
+- `trust_level`: (number) -10 to +10, current trust with player
+- `disposition`: (string) hostile | antagonistic | cold | neutral | friendly | trusted | devoted | bonded
+- `history`: (array) List of significant interactions/events
+- `debts`: (array) Favors owed by NPC to player
+- `grievances`: (array) Wrongs NPC believes player committed
+
+**(Detailed relationship mechanics, trust change tables, and trigger conditions are documented in `relationship_instruction.md`)**
 
 **Social HP Usage:** When initiating Social HP challenges, you MUST:
 1. **Extract `npc_tier`** from `INPUT.npc_data.<name>.tier` and set `OUTPUT.social_hp_challenge.npc_tier` to that value
@@ -922,6 +952,24 @@ If the math doesn't add up, fix it before outputting. The UI will display all th
   - Barbarian/Ranger/Druid: `["light armor", "medium armor", "shields"]`
   - Rogue/Bard: `["light armor"]`
   - Wizard/Sorcerer/Monk: `[]` (no armor proficiency)
+
+#### Saving Throw Proficiencies (`saving_throw_proficiencies`)
+**Source**: Class features
+- **Format**: Array of strings (capitalized)
+- **Examples**: `["Strength", "Constitution"]`, `["Dexterity", "Charisma"]`
+- **Class defaults**:
+  - Barbarian: `["Strength", "Constitution"]`
+  - Bard: `["Dexterity", "Charisma"]`
+  - Cleric: `["Wisdom", "Charisma"]`
+  - Druid: `["Intelligence", "Wisdom"]`
+  - Fighter: `["Strength", "Constitution"]`
+  - Monk: `["Strength", "Dexterity"]`
+  - Paladin: `["Wisdom", "Charisma"]`
+  - Ranger: `["Strength", "Dexterity"]`
+  - Rogue: `["Dexterity", "Intelligence"]`
+  - Sorcerer: `["Constitution", "Charisma"]`
+  - Warlock: `["Wisdom", "Charisma"]`
+  - Wizard: `["Intelligence", "Wisdom"]`
 
 #### Tool Proficiencies (`tool_proficiencies`)
 **Source**: Background, class, or racial features
@@ -1303,6 +1351,47 @@ When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate ra
 **Don't Track:** Feelings, descriptions, temporary scene details (narrative content)
 
 **🚨 RELATIONSHIP UPDATES ARE MANDATORY:** After any significant NPC interaction, update that NPC's `relationships.player.trust_level` and relevant arrays. For trust change amounts and trigger tables, request `debug_info.meta.needs_detailed_instructions: ["relationships"]`.
+
+### 📢 Reputation Schema (REQUIRED)
+
+**Reputation is stored in `custom_campaign_state.reputation` with TWO layers:**
+
+```json
+"reputation": {
+  "public": {
+    "score": 0,
+    "titles": [],
+    "known_deeds": [],
+    "rumors": [],
+    "notoriety_level": "unknown"
+  },
+  "private": {
+    "faction_id_001": {
+      "score": 5,
+      "standing": "trusted",
+      "known_deeds": ["completed mission X", "saved agent Y"],
+      "secret_knowledge": ["knows about the artifact"],
+      "trust_override": null
+    }
+  }
+}
+```
+
+**Public Reputation Fields:**
+- `score`: (number) -100 to +100, public reputation score
+- `titles`: (array) Honorific titles earned
+- `known_deeds`: (array) Publicly known accomplishments
+- `rumors`: (array) Current rumors circulating
+- `notoriety_level`: (string) unknown | infamous | notorious | neutral | respected | renowned | legendary
+
+**Private Reputation Fields (per faction):**
+- `score`: (number) Faction-specific reputation score
+- `standing`: (string) Current standing with faction
+- `known_deeds`: (array) Deeds known to this faction
+- `secret_knowledge`: (array) Secret information shared with faction
+- `trust_override`: (number | null) Override trust level if set
+
+**(Detailed reputation mechanics, score scales, and faction standing rules are documented in `reputation_instruction.md`)**
 
 ### frozen_plans (Think Mode Only)
 
