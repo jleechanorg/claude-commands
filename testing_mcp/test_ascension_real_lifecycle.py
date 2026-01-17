@@ -41,7 +41,7 @@ from testing_mcp.lib import evidence_utils
 from testing_mcp.lib.campaign_utils import create_campaign, get_campaign_state, process_action
 from testing_mcp.lib.mcp_client import MCPClient
 from testing_mcp.lib.model_utils import settings_for_model, update_user_settings
-from testing_mcp.lib.server_utils import pick_free_port
+from testing_mcp.lib.server_utils import LocalServer, pick_free_port, start_local_mcp_server
 
 
 # =============================================================================
@@ -1511,66 +1511,91 @@ def main():
         default=True,
         help="Save evidence bundles (default: True)",
     )
+    parser.add_argument(
+        "--start-server",
+        action="store_true",
+        help="Start a local MCP server for testing",
+    )
 
     args = parser.parse_args()
 
-    print("\n" + "=" * 80)
-    print("REAL LIFECYCLE ASCENSION TESTS")
-    print("=" * 80)
-    print(f"Server: {args.url}")
-    print(f"Model: {args.model}")
-    print(f"Tests: {args.test}")
-    print("=" * 80)
+    server: LocalServer | None = None
+    base_url = args.url
 
-    results = {}
+    # Start server if requested
+    if args.start_server:
+        print("🚀 Starting local MCP server...")
+        port = pick_free_port()
+        server = start_local_mcp_server(port)
+        base_url = f"http://localhost:{port}"
+        print(f"✅ Server started at {base_url}")
+        # Wait for server to be ready
+        import time
+        time.sleep(10)
+        print("⏳ Waiting for server to initialize...")
 
-    if args.test in ("level25", "all"):
-        evidence = test_divine_ascension_via_level_25(
-            base_url=args.url,
-            model_id=args.model,
-            verbose=args.verbose,
-        )
-        results["level25"] = evidence
-        if args.save_evidence:
-            save_test_evidence(evidence, "level25")
+    try:
+        print("\n" + "=" * 80)
+        print("REAL LIFECYCLE ASCENSION TESTS")
+        print("=" * 80)
+        print(f"Server: {base_url}")
+        print(f"Model: {args.model}")
+        print(f"Tests: {args.test}")
+        print("=" * 80)
 
-    if args.test in ("divine_potential", "all"):
-        evidence = test_divine_ascension_via_divine_potential(
-            base_url=args.url,
-            model_id=args.model,
-            verbose=args.verbose,
-        )
-        results["divine_potential"] = evidence
-        if args.save_evidence:
-            save_test_evidence(evidence, "divine_potential")
+        results = {}
 
-    if args.test in ("universe_control", "all"):
-        evidence = test_multiverse_ascension_via_universe_control(
-            base_url=args.url,
-            model_id=args.model,
-            verbose=args.verbose,
-        )
-        results["universe_control"] = evidence
-        if args.save_evidence:
-            save_test_evidence(evidence, "universe_control")
+        if args.test in ("level25", "all"):
+            evidence = test_divine_ascension_via_level_25(
+                base_url=base_url,
+                model_id=args.model,
+                verbose=args.verbose,
+            )
+            results["level25"] = evidence
+            if args.save_evidence:
+                save_test_evidence(evidence, "level25")
 
-    # Summary
-    print("\n" + "=" * 80)
-    print("FINAL SUMMARY")
-    print("=" * 80)
+        if args.test in ("divine_potential", "all"):
+            evidence = test_divine_ascension_via_divine_potential(
+                base_url=base_url,
+                model_id=args.model,
+                verbose=args.verbose,
+            )
+            results["divine_potential"] = evidence
+            if args.save_evidence:
+                save_test_evidence(evidence, "divine_potential")
 
-    all_passed = True
-    for test_name, evidence in results.items():
-        test_result = evidence.get("test_results", {})
-        success = test_result.get("success", False)
-        all_passed = all_passed and success
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{test_name}: {status}")
+        if args.test in ("universe_control", "all"):
+            evidence = test_multiverse_ascension_via_universe_control(
+                base_url=base_url,
+                model_id=args.model,
+                verbose=args.verbose,
+            )
+            results["universe_control"] = evidence
+            if args.save_evidence:
+                save_test_evidence(evidence, "universe_control")
 
-    print("=" * 80)
-    print(f"Overall: {'✅ ALL TESTS PASSED' if all_passed else '❌ SOME TESTS FAILED'}")
+        # Summary
+        print("\n" + "=" * 80)
+        print("FINAL SUMMARY")
+        print("=" * 80)
 
-    return 0 if all_passed else 1
+        all_passed = True
+        for test_name, evidence in results.items():
+            test_result = evidence.get("test_results", {})
+            success = test_result.get("success", False)
+            all_passed = all_passed and success
+            status = "✅ PASS" if success else "❌ FAIL"
+            print(f"{test_name}: {status}")
+
+        print("=" * 80)
+        print(f"Overall: {'✅ ALL TESTS PASSED' if all_passed else '❌ SOME TESTS FAILED'}")
+
+        return 0 if all_passed else 1
+    finally:
+        if server:
+            print("🛑 Stopping local server...")
+            server.stop()
 
 
 if __name__ == "__main__":
