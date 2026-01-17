@@ -1823,14 +1823,25 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 )
                 # Continue to process despite history
             elif status_unknown:
-                # Status unknown but commit already processed - skip to avoid duplicates
-                # Will retry on new commits or when status becomes known
-                self.logger.info(
-                    "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
-                    pr_number,
-                    head_sha[:8],
-                )
-                return "skipped"
+                # Status unknown but commit already processed
+                # However, if there are unaddressed comments, process them even with unknown status
+                # (transient API failures shouldn't suppress valid review feedback)
+                if has_unaddressed:
+                    self.logger.info(
+                        "🔄 PR #%s commit %s already processed but status unknown; processing due to unaddressed comments",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                    # Continue to process unaddressed comments
+                else:
+                    # Status unknown, no unaddressed comments - skip to avoid duplicates
+                    # Will retry on new commits or when status becomes known
+                    self.logger.info(
+                        "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                    return "skipped"
             elif not has_unaddressed and not (is_conflicting or is_failing):
                 # No completion marker, commit in history, no issues, and no unaddressed comments - skip
                 self.logger.info(
