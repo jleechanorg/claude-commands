@@ -1741,14 +1741,47 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             )
             return "skipped"
 
-        # Check completion marker FIRST (authoritative checkpoint)
+        # Check for conflicts, failing checks, and unaddressed comments BEFORE other checks
+        # If PR is clean (no conflicts, no failing checks, no unaddressed comments), skip fix-comment entirely
+        is_conflicting = False
+        is_failing = False
+        status_unknown = False
+
+        try:
+            # Fetch mergeable status
+            result = AutomationUtils.execute_subprocess_with_timeout(
+                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                timeout=30, check=False
+            )
+            if result.returncode == 0:
+                data = json.loads(result.stdout or "{}")
+                if data.get("mergeable") == "CONFLICTING":
+                    is_conflicting = True
+
+            # Check for failing checks
+            is_failing = has_failing_checks(repo_full, pr_number)
+        except Exception as e:
+            self.logger.warning(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
+            # Mark status as unknown - don't treat API failures as "clean"
+            status_unknown = True
+
+        # Cache unaddressed comments check (expensive API call, avoid redundant calls)
+        has_unaddressed = self._has_unaddressed_comments(repo_full, pr_number)
+
+        # FIRST check if PR is clean (no conflicts, no failing checks, no unaddressed comments)
+        # Only skip if PR is clean AND status is known (not unknown due to API failure)
+        if not status_unknown and not (is_conflicting or is_failing or has_unaddressed):
+            self.logger.info(
+                "⏭️ Skipping PR #%s - no conflicts, no failing checks, and no unaddressed comments",
+                pr_number,
+            )
+            return "skipped"
+
+        # Check completion marker (authoritative checkpoint)
         # This is the real indicator that fix-comment actually completed for this commit
         has_completion_marker = False
         if head_sha:
             has_completion_marker = self._has_fix_comment_comment_for_commit(comments, head_sha)
-        
-        # Cache unaddressed comments check (expensive API call, avoid redundant calls)
-        has_unaddressed = self._has_unaddressed_comments(repo_full, pr_number)
         
         # If completion marker exists, check if there are unaddressed comments
         # If no unaddressed comments, skip (work was completed successfully)
@@ -1770,23 +1803,42 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         
         # If no completion marker, check commit history as fallback
         # History might be stale (recorded after queuing but before completion)
+        # If PR has conflicts or failing checks, reprocess even if commit was already processed
         elif head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
-            # No completion marker but commit in history - check unaddressed comments to decide
-            if not has_unaddressed:
+            # If issues are detected (conflicts/failing checks), allow reprocessing even if commit was already processed
+            if is_conflicting or is_failing:
+                self.logger.info(
+                    "🔁 Reprocessing PR #%s - commit %s already processed but conflicts/failing checks persist",
+                    pr_number,
+                    head_sha[:8],
+                )
+                # Continue to process despite history
+            elif status_unknown:
+                # Status unknown but commit already processed - skip to avoid duplicates
+                # Will retry on new commits or when status becomes known
+                self.logger.info(
+                    "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
+                    pr_number,
+                    head_sha[:8],
+                )
+                return "skipped"
+            elif not has_unaddressed:
+                # No completion marker, commit in history, no issues, and no unaddressed comments - skip
                 self.logger.info(
                     "⏭️ Skipping PR #%s - commit %s in history and no unaddressed comments",
                     pr_number,
                     head_sha[:8],
                 )
                 return "skipped"
-            # Commit in history but no completion marker AND unaddressed comments exist
-            # This indicates a previous run didn't complete - reprocess
-            self.logger.info(
-                "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
-                pr_number,
-                head_sha[:8],
-            )
-            # Continue to process unaddressed comments
+            else:
+                # Commit in history but no completion marker AND unaddressed comments exist
+                # This indicates a previous run didn't complete - reprocess
+                self.logger.info(
+                    "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
+                    pr_number,
+                    head_sha[:8],
+                )
+                # Continue to process unaddressed comments
         
         # Final check: if no completion marker and not in history, check for unaddressed comments
         elif not has_unaddressed:
@@ -1823,6 +1875,28 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                         queued_age_hours,
                     )
                     return "skipped"
+
+        # Log that we're processing due to issues or unaddressed comments
+        if status_unknown:
+            self.logger.info(
+                "🔧 Processing PR #%s - status unknown (API failure), proceeding conservatively",
+                pr_number,
+            )
+        elif is_conflicting:
+            self.logger.info(
+                "🔧 Processing PR #%s - has conflicts",
+                pr_number,
+            )
+        elif is_failing:
+            self.logger.info(
+                "🔧 Processing PR #%s - has failing checks",
+                pr_number,
+            )
+        else:
+            self.logger.info(
+                "🔧 Processing PR #%s - has unaddressed comments",
+                pr_number,
+            )
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
