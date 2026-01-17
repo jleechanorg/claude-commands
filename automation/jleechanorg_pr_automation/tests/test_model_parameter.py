@@ -221,7 +221,7 @@ class TestModelParameter(unittest.TestCase):
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher"), \
-             patch.object(monitor, "dispatch_fix_comment_agent", return_value=True) as mock_dispatch, \
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True) as mock_dispatch, \
              patch.object(monitor, "_post_fixpr_queued", return_value=True), \
              patch.object(monitor, "_record_processed_pr"), \
              patch.object(monitor, "safety_manager") as mock_safety:
@@ -236,7 +236,7 @@ class TestModelParameter(unittest.TestCase):
             )
 
             self.assertEqual(result, "posted")
-            # Verify model was passed to dispatch_fix_comment_agent
+            # Verify model was passed to dispatch_agent_for_pr
             mock_dispatch.assert_called_once()
             call_kwargs = mock_dispatch.call_args[1] if mock_dispatch.call_args else {}
             self.assertEqual(call_kwargs.get("model"), "sonnet")
