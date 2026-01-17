@@ -110,7 +110,7 @@ After creating the PR, the command automatically invokes `/r` logic with PR work
    - **HANDOFF-[TASK_NAME]** 🟢 [description] - PR #[number] READY FOR HANDOFF
    ```
 6. **Commit changes**: `git commit -m "docs(roadmap): Add handoff task [task_name]"`
-7. **Push branch**: `git push origin HEAD:roadmap-handoff-[task_name]`
+7. **Push branch**: `git push -u origin roadmap-handoff-[task_name]`
 8. **Create roadmap PR**: `gh pr create --title "docs(roadmap): Add handoff task [task_name]" --body "Roadmap update for handoff task"`
 9. **Switch back**: `git checkout [original-branch]`
 

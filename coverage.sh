@@ -82,6 +82,9 @@ cd mvp_site
 print_status "Activating virtual environment..."
 source "$PROJECT_ROOT/venv/bin/activate"
 
+# Set PYTHONPATH to include project root for mvp_site imports
+export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
+
 print_status "🧪 Running coverage analysis..."
 print_status "Setting TESTING=true for faster AI model usage"
 if [ "$generate_html" = true ]; then
@@ -120,7 +123,7 @@ done < <(find ./tests -name "test_*.py" -type f \
     ! -path "./node_modules/*" \
     ! -path "./prototype/*" \
     ! -path "./tests/manual_tests/*" \
-    ! -path "./tests/test_integration/*" \
+    ! -path "./tests/integration/*" \
     -print0)
 
 # Also include test_integration directories if requested
@@ -132,11 +135,11 @@ if [ "$include_integration" = true ]; then
         done < <(find ./test_integration -name "test_*.py" -type f -print0)
     fi
 
-    if [ -d "./tests/test_integration" ]; then
-        print_status "Including integration tests from tests/test_integration/"
+    if [ -d "./tests/integration" ]; then
+        print_status "Including integration tests from tests/integration/"
         while IFS= read -r -d '' file; do
             test_files+=("$file")
-        done < <(find ./tests/test_integration -name "test_*.py" -type f -print0)
+        done < <(find ./tests/integration -name "test_*.py" -type f -print0)
     fi
 fi
 
