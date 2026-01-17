@@ -183,12 +183,12 @@ class TestAgentCliSelection(unittest.TestCase):
         self.assertIn("Gemini exit code", script_contents)
         self.assertIn("Codex exit code", script_contents)
 
-    def test_create_dynamic_agent_falls_back_when_requested_cli_missing(self):
-        """Gracefully switch to an available CLI when the preferred one is absent."""
+    def test_create_dynamic_agent_fails_when_requested_cli_missing(self):
+        """Agent creation should fail when the requested CLI is absent (no automatic fallback)."""
 
         agent_spec = {
             "name": "task-agent-fallback-test",
-            "focus": "Fallback behavior",
+            "focus": "No fallback behavior",
             "prompt": "Do the work",
             "capabilities": [],
             "type": "development",
@@ -212,7 +212,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch("orchestration.task_dispatcher.shutil.which") as mock_which,
             patch.object(self.dispatcher, "_ensure_mock_claude_binary", return_value=None),
             patch.object(self.dispatcher, "_ensure_mock_cli_binary", return_value=None),
-            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True) as mock_validate,
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=False) as mock_validate,
         ):
 
             def which_side_effect(command):
@@ -228,10 +228,10 @@ class TestAgentCliSelection(unittest.TestCase):
 
             result = self.dispatcher.create_dynamic_agent(agent_spec)
 
-        self.assertTrue(result)
-        self.assertEqual(agent_spec["cli"], "codex")
-        script_contents = mock_write_text.call_args_list[0][0][0]  # First positional arg is the content
-        self.assertIn("codex exec --yolo", script_contents)
+        # Should fail because claude is missing and no fallback occurs
+        self.assertFalse(result, "Agent creation should fail when requested CLI is missing")
+        # CLI should remain unchanged (no fallback)
+        self.assertEqual(agent_spec["cli"], "claude")
 
 
 class TestGeminiCliSupport(unittest.TestCase):
@@ -364,11 +364,11 @@ class TestGeminiCliSupport(unittest.TestCase):
         self.assertIn(GEMINI_MODEL, script_contents)
         self.assertIn("Gemini exit code", script_contents)
 
-    def test_gemini_cli_fallback_when_requested_but_missing(self):
-        """Gracefully switch to an available CLI when Gemini is absent."""
+    def test_gemini_cli_fails_when_requested_but_missing(self):
+        """Agent creation should fail when Gemini is absent (no automatic fallback)."""
         agent_spec = {
             "name": "task-agent-gemini-fallback-test",
-            "focus": "Fallback behavior",
+            "focus": "No fallback behavior",
             "prompt": "Do the work",
             "capabilities": [],
             "type": "development",
@@ -392,7 +392,7 @@ class TestGeminiCliSupport(unittest.TestCase):
             patch("orchestration.task_dispatcher.shutil.which") as mock_which,
             patch.object(self.dispatcher, "_ensure_mock_claude_binary", return_value=None),
             patch.object(self.dispatcher, "_ensure_mock_cli_binary", return_value=None),
-            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True) as mock_validate,
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=False) as mock_validate,
         ):
 
             def which_side_effect(command):
@@ -409,11 +409,10 @@ class TestGeminiCliSupport(unittest.TestCase):
 
             result = self.dispatcher.create_dynamic_agent(agent_spec)
 
-        self.assertTrue(result)
-        # Should have fallen back to codex
-        self.assertEqual(agent_spec["cli"], "codex")
-        script_contents = mock_write_text.call_args_list[0][0][0]
-        self.assertIn("codex exec --yolo", script_contents)
+        # Should fail because gemini is missing and no fallback occurs
+        self.assertFalse(result, "Agent creation should fail when requested CLI is missing")
+        # CLI should remain unchanged (no fallback)
+        self.assertEqual(agent_spec["cli"], "gemini")
 
     def test_explicit_agent_cli_flag_gemini(self):
         """Verify --agent-cli gemini flag works correctly."""
@@ -1035,11 +1034,11 @@ class TestAgentCreationWithValidation(unittest.TestCase):
         # Verify validation was called
         mock_validate.assert_called()
 
-    def test_agent_creation_with_gemini_validation_failure_falls_back(self):
-        """Agent creation should fall back to another CLI when Gemini validation fails."""
+    def test_agent_creation_with_gemini_validation_failure_fails(self):
+        """Agent creation should fail when Gemini validation fails (no automatic fallback)."""
         agent_spec = {
             "name": "test-agent-gemini-fallback",
-            "focus": "Test fallback when Gemini validation fails",
+            "focus": "Test failure when Gemini validation fails",
             "prompt": "Test prompt",
             "capabilities": [],
             "type": "development",
@@ -1073,12 +1072,10 @@ class TestAgentCreationWithValidation(unittest.TestCase):
 
             mock_which.side_effect = which_side_effect
             
-            # Mock validation calls: Gemini fails, Codex succeeds
+            # Mock validation: Gemini fails (no fallback attempted)
             def validate_side_effect(cli_name, cli_path, agent_name, model=None):
                 if cli_name == "gemini":
                     return False
-                elif cli_name == "codex":
-                    return True
                 return False
             
             mock_validate_method.side_effect = validate_side_effect
@@ -1088,10 +1085,11 @@ class TestAgentCreationWithValidation(unittest.TestCase):
 
             result = self.dispatcher.create_dynamic_agent(agent_spec)
 
-        self.assertTrue(result, "Agent creation should succeed with fallback")
-        # Verify agent spec was updated to use fallback CLI
-        self.assertEqual(agent_spec["cli"], "codex", "Should fall back to Codex when Gemini fails")
-        # Verify both validations were attempted
+        # Should fail because Gemini validation failed and no fallback occurs
+        self.assertFalse(result, "Agent creation should fail when validation fails")
+        # CLI should remain unchanged (no fallback)
+        self.assertEqual(agent_spec["cli"], "gemini", "Should not fall back to Codex when Gemini fails")
+        # Verify only Gemini validation was attempted (no fallback validation)
         validation_calls = mock_validate_method.call_args_list
 
         def _extract_cli_name(call):
@@ -1102,7 +1100,7 @@ class TestAgentCreationWithValidation(unittest.TestCase):
         gemini_calls = [c for c in validation_calls if _extract_cli_name(c) == "gemini"]
         codex_calls = [c for c in validation_calls if _extract_cli_name(c) == "codex"]
         self.assertGreater(len(gemini_calls), 0, "Gemini validation should be attempted")
-        self.assertGreater(len(codex_calls), 0, "Codex fallback validation should be attempted")
+        self.assertEqual(len(codex_calls), 0, "Codex fallback validation should NOT be attempted")
 
     def test_agent_creation_fails_when_all_validations_fail(self):
         """Agent creation should fail when all CLI validations fail."""

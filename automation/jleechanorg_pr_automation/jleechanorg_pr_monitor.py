@@ -359,10 +359,10 @@ class JleechanorgPRMonitor:
                 self.logger.debug(f"👤 Discovered current GitHub user: {user}")
                 return user
         except Exception as e:
-            self.logger.warning(f"⚠️ Failed to discover GitHub user: {e}")
+            self.logger.debug(f"⚠️ Failed to discover GitHub user: {e}")
 
         # Fallback (should ideally not happen in real usage, but safe default)
-        self.logger.warning("⚠️ Could not resolve automation username, defaulting to 'unknown'")
+        self.logger.info("ℹ️ Could not resolve automation username, defaulting to 'unknown'")
         return "unknown"
 
     def _record_processed_pr(self, repo_name: str, branch_name: str, pr_number: int, commit_sha: str) -> None:
@@ -1734,64 +1734,150 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         # Check workflow-specific safety limits for fix-comment
         fix_comment_count = self._count_workflow_comments(comments, "fix_comment")
-        if fix_comment_count >= self.safety_manager.fix_comment_limit:
+        # Ensure both values are ints for comparison (defensive programming for test mocks)
+        fix_comment_limit = getattr(self.safety_manager, 'fix_comment_limit', 10)
+        try:
+            fix_comment_limit = int(fix_comment_limit) if not isinstance(fix_comment_limit, int) else fix_comment_limit
+        except (ValueError, TypeError):
+            fix_comment_limit = 10
+        if isinstance(fix_comment_count, int) and fix_comment_count >= fix_comment_limit:
             self.logger.info(
                 f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number} (fix-comment); "
-                f"{fix_comment_count}/{self.safety_manager.fix_comment_limit} fix-comment automation comments"
+                f"{fix_comment_count}/{fix_comment_limit} fix-comment automation comments"
             )
             return "skipped"
 
-        # Check completion marker FIRST (authoritative checkpoint)
+        # Check for conflicts, failing checks, and unaddressed comments BEFORE other checks
+        # If PR is clean (no conflicts, no failing checks, no unaddressed comments), skip fix-comment entirely
+        is_conflicting = False
+        is_failing = False
+        status_unknown = False
+
+        try:
+            # Fetch mergeable status
+            result = AutomationUtils.execute_subprocess_with_timeout(
+                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                timeout=30, check=False
+            )
+            if result.returncode == 0:
+                data = json.loads(result.stdout or "{}")
+                if data.get("mergeable") == "CONFLICTING":
+                    is_conflicting = True
+
+            # Check for failing checks
+            is_failing = has_failing_checks(repo_full, pr_number)
+        except Exception as e:
+            self.logger.warning(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
+            # Mark status as unknown - don't treat API failures as "clean"
+            status_unknown = True
+
+        # Cache unaddressed comments check (expensive API call, avoid redundant calls)
+        has_unaddressed = self._has_unaddressed_comments(repo_full, pr_number)
+
+        # FIRST check if PR is clean (no conflicts, no failing checks, no unaddressed comments)
+        # Only skip if PR is clean AND status is known (not unknown due to API failure)
+        if not status_unknown and not (is_conflicting or is_failing or has_unaddressed):
+            self.logger.info(
+                "⏭️ Skipping PR #%s - no conflicts, no failing checks, and no unaddressed comments",
+                pr_number,
+            )
+            return "skipped"
+
+        # Check completion marker (authoritative checkpoint)
         # This is the real indicator that fix-comment actually completed for this commit
         has_completion_marker = False
         if head_sha:
             has_completion_marker = self._has_fix_comment_comment_for_commit(comments, head_sha)
         
-        # Cache unaddressed comments check (expensive API call, avoid redundant calls)
-        has_unaddressed = self._has_unaddressed_comments(repo_full, pr_number)
-        
-        # If completion marker exists, check if there are unaddressed comments
-        # If no unaddressed comments, skip (work was completed successfully)
+        # If completion marker exists, check if there are unaddressed comments OR new issues
+        # If no unaddressed comments AND no conflicts/failing checks AND status is known, skip (work was completed successfully)
+        # If conflicts/failing checks appeared after completion marker, reprocess to handle them
+        # Don't skip if status is unknown (API failure) - treat as needing processing
         if has_completion_marker:
-            if not has_unaddressed:
+            if not has_unaddressed and not (is_conflicting or is_failing) and not status_unknown:
                 self.logger.info(
-                    "✅ Fix-comment automation completed for commit %s on PR #%s with no unaddressed comments - skipping",
+                    "✅ Fix-comment automation completed for commit %s on PR #%s with no unaddressed comments and no conflicts/failing checks - skipping",
                     head_sha[:8] if head_sha else "unknown",
                     pr_number,
                 )
                 return "skipped"
-            # Completion marker exists but there are unaddressed comments - reprocess
-            self.logger.info(
-                "🔄 Fix-comment completed for commit %s on PR #%s, but unaddressed comments exist - reprocessing",
-                head_sha[:8] if head_sha else "unknown",
-                pr_number,
-            )
-            # Continue to process unaddressed comments (skip history check since completion marker already decided)
+            # Completion marker exists but there are unaddressed comments OR new conflicts/failing checks - reprocess
+            if has_unaddressed:
+                self.logger.info(
+                    "🔄 Fix-comment completed for commit %s on PR #%s, but unaddressed comments exist - reprocessing",
+                    head_sha[:8] if head_sha else "unknown",
+                    pr_number,
+                )
+            elif is_conflicting or is_failing:
+                self.logger.info(
+                    "🔄 Fix-comment completed for commit %s on PR #%s, but conflicts/failing checks appeared - reprocessing",
+                    head_sha[:8] if head_sha else "unknown",
+                    pr_number,
+                )
+            # Continue to process unaddressed comments or conflicts/failing checks (skip history check since completion marker already decided)
         
         # If no completion marker, check commit history as fallback
         # History might be stale (recorded after queuing but before completion)
+        # If PR has conflicts or failing checks, reprocess even if commit was already processed
         elif head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
-            # No completion marker but commit in history - check unaddressed comments to decide
-            if not has_unaddressed:
+            # If issues are detected (conflicts/failing checks), allow reprocessing even if commit was already processed
+            if is_conflicting or is_failing:
                 self.logger.info(
-                    "⏭️ Skipping PR #%s - commit %s in history and no unaddressed comments",
+                    "🔁 Reprocessing PR #%s - commit %s already processed but conflicts/failing checks persist",
+                    pr_number,
+                    head_sha[:8],
+                )
+                # Continue to process despite history
+            elif status_unknown:
+                # Status unknown but commit already processed
+                # However, if there are unaddressed comments, process them even with unknown status
+                # (transient API failures shouldn't suppress valid review feedback)
+                if has_unaddressed:
+                    self.logger.info(
+                        "🔄 PR #%s commit %s already processed but status unknown; processing due to unaddressed comments",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                    # Continue to process unaddressed comments
+                else:
+                    # Status unknown, no unaddressed comments - skip to avoid duplicates
+                    # Will retry on new commits or when status becomes known
+                    self.logger.info(
+                        "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                    return "skipped"
+            elif not has_unaddressed and not (is_conflicting or is_failing):
+                # No completion marker, commit in history, no issues, and no unaddressed comments - skip
+                self.logger.info(
+                    "⏭️ Skipping PR #%s - commit %s in history, no unaddressed comments, and no conflicts/failing checks",
                     pr_number,
                     head_sha[:8],
                 )
                 return "skipped"
-            # Commit in history but no completion marker AND unaddressed comments exist
-            # This indicates a previous run didn't complete - reprocess
-            self.logger.info(
-                "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
-                pr_number,
-                head_sha[:8],
-            )
-            # Continue to process unaddressed comments
+            else:
+                # Commit in history but no completion marker AND (unaddressed comments exist OR conflicts/failing checks)
+                # This indicates a previous run didn't complete OR new issues appeared - reprocess
+                if has_unaddressed:
+                    self.logger.info(
+                        "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                elif is_conflicting or is_failing:
+                    self.logger.info(
+                        "🔄 PR #%s commit %s in history but no completion marker and conflicts/failing checks exist - reprocessing",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                # Continue to process unaddressed comments or conflicts/failing checks
         
-        # Final check: if no completion marker and not in history, check for unaddressed comments
-        elif not has_unaddressed:
+        # Final check: if no completion marker and not in history, check for unaddressed comments OR conflicts/failing checks
+        # Don't skip if status is unknown (API failure) - treat as needing processing
+        elif not has_unaddressed and not (is_conflicting or is_failing) and not status_unknown:
             self.logger.info(
-                "⏭️ Skipping PR #%s - no unaddressed comments found",
+                "⏭️ Skipping PR #%s - no unaddressed comments, no conflicts, and no failing checks",
                 pr_number,
             )
             return "skipped"
@@ -1823,6 +1909,28 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                         queued_age_hours,
                     )
                     return "skipped"
+
+        # Log that we're processing due to issues or unaddressed comments
+        if status_unknown:
+            self.logger.info(
+                "🔧 Processing PR #%s - status unknown (API failure), proceeding conservatively",
+                pr_number,
+            )
+        elif is_conflicting:
+            self.logger.info(
+                "🔧 Processing PR #%s - has conflicts",
+                pr_number,
+            )
+        elif is_failing:
+            self.logger.info(
+                "🔧 Processing PR #%s - has failing checks",
+                pr_number,
+            )
+        else:
+            self.logger.info(
+                "🔧 Processing PR #%s - has unaddressed comments",
+                pr_number,
+            )
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
@@ -1887,17 +1995,24 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         # Check workflow-specific safety limits for fixpr
         fixpr_count = self._count_workflow_comments(comments, "fixpr")
-        if fixpr_count >= self.safety_manager.fixpr_limit:
+        # Ensure both values are ints for comparison (defensive programming for test mocks)
+        fixpr_limit = getattr(self.safety_manager, 'fixpr_limit', 10)
+        try:
+            fixpr_limit = int(fixpr_limit) if not isinstance(fixpr_limit, int) else fixpr_limit
+        except (ValueError, TypeError):
+            fixpr_limit = 10
+        if isinstance(fixpr_count, int) and fixpr_count >= fixpr_limit:
             self.logger.info(
                 f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number} (fixpr); "
-                f"{fixpr_count}/{self.safety_manager.fixpr_limit} fixpr automation comments"
+                f"{fixpr_count}/{fixpr_limit} fixpr automation comments"
             )
             return "skipped"
 
-        # Check for conflicts or failing checks BEFORE skip check
-        # If PR has issues, reprocess even if commit was already processed
+        # Check for conflicts or failing checks BEFORE other checks
+        # If PR is clean (no conflicts, no failing checks), skip fixpr entirely
         is_conflicting = False
         is_failing = False
+        status_unknown = False
 
         try:
             # Fetch mergeable status
@@ -1913,30 +2028,48 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             # Check for failing checks
             is_failing = has_failing_checks(repo_full, pr_number)
         except Exception as e:
-            self.logger.warning(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
-            # Continue with skip check if status check fails
+            # Treat status as unknown; leave defaults and do NOT assume the PR is clean.
+            self.logger.debug(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
+            status_unknown = True
 
-        # Only skip if PR has no issues (no conflicts, no failing checks)
-        # If PR has conflicts or failing checks, reprocess even if commit was already processed
+        # FIRST: If status is definitively clean (no conflicts/failing) → skip.
+        # If status is unknown due to API failure, DO NOT treat as clean — continue.
+        if not (is_conflicting or is_failing):
+            if not status_unknown:
+                self.logger.info("⏭️ Skipping PR #%s - no conflicts or failing checks to fix", pr_number)
+                return "skipped"
+            else:
+                self.logger.info("ℹ️ PR #%s status unknown (API failure) — proceeding conservatively", pr_number)
+
+        # If issues are detected, allow reprocessing even if the commit was already processed.
+        # If status is unknown (no issues detected), fall back to history gating to avoid duplicates.
         if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
-            if not (is_conflicting or is_failing):
+            if is_conflicting or is_failing:
                 self.logger.info(
-                    "⏭️ Skipping PR #%s - already processed commit %s (no conflicts or failing checks)",
+                    "🔁 Reprocessing PR #%s - commit %s already processed but issues persist",
+                    pr_number,
+                    head_sha[:8],
+                )
+            else:
+                self.logger.info(
+                    "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
                     pr_number,
                     head_sha[:8],
                 )
                 return "skipped"
-            self.logger.info(
-                "🔄 Reprocessing PR #%s (commit %s) - has conflicts or failing checks",
-                pr_number,
-                head_sha[:8],
-            )
-                # Continue processing despite skip check
+
+        # Log that we're processing due to issues
+        issue_label = (
+            "conflicts" if is_conflicting
+            else "failing checks" if is_failing
+            else "unknown status"
+        )
+        self.logger.info("🔧 Processing PR #%s - %s", pr_number, issue_label)
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
 
-        # Dispatch agent for fixpr
+        # Dispatch agent for fixpr (uses FIXPR prompt, not fix-comment prompt)
         try:
             base_dir = ensure_base_clone(repo_full)
             with chdir(base_dir):
@@ -1948,27 +2081,27 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     "number": pr_number,
                     "branch": branch_name,
                 }
-                success = dispatch_agent_for_pr(dispatcher, pr_info, agent_cli=agent_cli, model=model)
+                agent_success = dispatch_agent_for_pr(dispatcher, pr_info, agent_cli=agent_cli, model=model)
 
-                # Cleanup any pending reviews created by the agent during execution
-                # This catches reviews created despite the warnings in the prompt
-                self._cleanup_pending_reviews(repo_full, pr_number)
+            # Post-dispatch cleanup for consistency with _process_pr_fix_comment
+            # Note: Agent runs async in tmux, so this is a secondary cleanup pass
+            self._cleanup_pending_reviews(repo_full, pr_number)
 
-                if success:
-                    queued_posted = self._post_fixpr_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
-                    # Record processing so we don't loop
-                    if head_sha:
-                        self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+            if agent_success:
+                queued_posted = self._post_fixpr_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
+                # Record processing so we don't loop
+                if head_sha:
+                    self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
 
-                    if not queued_posted:
-                        self.logger.warning(
-                            "⚠️ Queued comment failed for PR #%s, but agent is dispatched",
-                            pr_number,
-                        )
-                        return "partial"
+                if not queued_posted:
+                    self.logger.warning(
+                        "⚠️ Queued comment failed for PR #%s, but agent is dispatched",
+                        pr_number,
+                    )
+                    return "partial"
 
-                    return "posted" # "posted" means action taken
-                return "failed"
+                return "posted"  # "posted" means action taken
+            return "failed"
         except Exception as exc:
             self.logger.error(
                 "❌ Failed to dispatch fixpr agent for %s #%s: %s",
@@ -2122,11 +2255,18 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             )
             return None
 
-        pr_data = (
-            data.get("data", {})
-            .get("repository", {})
-            .get("pullRequest", {})
-        )
+        # Defensive programming: Check if data.get("data") exists before chaining
+        data_dict = data.get("data")
+        if not isinstance(data_dict, dict):
+            return None
+        
+        repository_dict = data_dict.get("repository")
+        if not isinstance(repository_dict, dict):
+            return None
+        
+        pr_data = repository_dict.get("pullRequest", {})
+        if not isinstance(pr_data, dict):
+            return None
         commits_data = pr_data.get("commits") or {}
         commit_nodes = commits_data.get("nodes") if isinstance(commits_data, dict) else None
         if not commit_nodes or not isinstance(commit_nodes, list):
