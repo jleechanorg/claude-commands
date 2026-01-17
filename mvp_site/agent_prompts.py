@@ -147,6 +147,9 @@ def _load_instruction_file(instruction_type: str) -> str:
     This function is now strict: it will raise an exception if a file
     cannot be found, ensuring the application does not continue with
     incomplete instructions.
+    
+    Adds a filename header so the LLM can identify which content came from
+    which file when prompts reference filenames (e.g., "see game_state_instruction.md").
     """
     if instruction_type not in _loaded_instructions_cache:
         relative_path = PATH_MAP.get(instruction_type)
@@ -163,7 +166,15 @@ def _load_instruction_file(instruction_type: str) -> str:
             content = read_file_cached(file_path).strip()
             # Apply schema injection to replace placeholders with canonical schemas
             content = _inject_schema_placeholders(content)
-            _loaded_instructions_cache[instruction_type] = content
+            
+            # Extract filename from relative_path (e.g., "prompts/game_state_instruction.md" -> "game_state_instruction.md")
+            filename = os.path.basename(relative_path)
+            
+            # Add filename header so LLM can identify which file this content came from
+            # This allows cross-references like "see game_state_instruction.md" to work
+            content_with_header = f"# File: {filename}\n\n{content}"
+            
+            _loaded_instructions_cache[instruction_type] = content_with_header
         except FileNotFoundError:
             logging_util.error(
                 f"CRITICAL: System instruction file not found: {file_path}. This is a fatal error for this request."
