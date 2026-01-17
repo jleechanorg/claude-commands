@@ -1787,7 +1787,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         # If no unaddressed comments AND no conflicts/failing checks, skip (work was completed successfully)
         # If conflicts/failing checks appeared after completion marker, reprocess to handle them
         if has_completion_marker:
-            if not has_unaddressed and not (is_conflicting or is_failing):
+            if not has_unaddressed and not (is_conflicting or is_failing) and not status_unknown:
                 self.logger.info(
                     "✅ Fix-comment automation completed for commit %s on PR #%s with no unaddressed comments and no conflicts/failing checks - skipping",
                     head_sha[:8] if head_sha else "unknown",
@@ -1856,7 +1856,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 # Continue to process unaddressed comments or conflicts/failing checks
         
         # Final check: if no completion marker and not in history, check for unaddressed comments OR conflicts/failing checks
-        elif not has_unaddressed and not (is_conflicting or is_failing):
+        elif not has_unaddressed and not (is_conflicting or is_failing) and not status_unknown:
             self.logger.info(
                 "⏭️ Skipping PR #%s - no unaddressed comments, no conflicts, and no failing checks",
                 pr_number,
