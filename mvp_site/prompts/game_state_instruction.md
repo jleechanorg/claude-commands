@@ -289,7 +289,7 @@ The following schemas are injected from the backend to ensure consistency betwee
 - `state_updates`: (object) **MUST be present** even if empty {}
   - Include `world_data.world_time` as an object with the **in-game year** (NOT real-world year):
     ```json
-    {"year": 1492, "month": 1, "day": 16, "hour": 6, "minute": 0, "time_of_day": "Early Morning"}
+    {"year": 1492, "month": "Hammer", "day": 16, "hour": 6, "minute": 0, "time_of_day": "Early Morning"}
     ```
   - **CRITICAL**: Use the campaign's in-game year (e.g., 1492 for Forgotten Realms DR), NOT the real-world year (2025/2026).
   - **CRITICAL**: This MUST match the `Timestamp:` line in your `session_header` (see Session Header Format section).
@@ -416,7 +416,7 @@ Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 
 **Example of correct matching:**
 - `session_header`: `Timestamp: 1492 DR, Mirtul 15, 14:30`
-- `world_time`: `{"year": 1492, "month": 5, "day": 15, "hour": 14, "minute": 30, "time_of_day": "Afternoon"}`
+- `world_time`: `{"year": 1492, "month": "Mirtul", "day": 15, "hour": 14, "minute": 30, "time_of_day": "Afternoon"}`
 
 ## Scene vs Turn Terminology
 
