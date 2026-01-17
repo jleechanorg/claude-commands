@@ -94,12 +94,26 @@ These fixes ensure `/copilot` achieves true **100% comment coverage** as documen
 +                         continue
 +             return items
 +
-+         # Single JSON object/array
-+         return json.loads(result.stdout)
++         # Single JSON object/array OR user-provided --jq output
++         try:
++             return json.loads(result.stdout)
++         except json.JSONDecodeError:
++             # Fallback for user-provided --jq that produces JSONL (e.g. --jq '.[]')
++             if is_paginated and original_has_jq:
++                 items = []
++                 for line in result.stdout.strip().split('\n'):
++                     if line.strip():
++                         try:
++                             items.append(json.loads(line))
++                         except json.JSONDecodeError:
++                             continue
++                 return items
++             raise
       except subprocess.CalledProcessError as e:
 -         self.log_error(f"GitHub CLI error: {e.stderr}")
 -         return {}
-+         return [] if '--paginate' in command else {}
++         self.log_error(f"GitHub CLI error: {e.stderr}")
++         return [] if is_paginated else {}
 ```
 
 **Lines changed:** 98-143
