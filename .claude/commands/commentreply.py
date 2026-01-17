@@ -1052,22 +1052,42 @@ def main():
             continue
         total_targets += 1
 
-        # Idempotency: skip if already replied by current actor
-        # For both top-level and reply comments, check if we've already replied to this comment
-        replied_by_actor = any(
-            (c.get("in_reply_to_id") == comment_id)
+        # Idempotency: skip if already replied by current actor AND no one replied after us
+        # Support both user.login and author field formats
+        our_replies = [
+            c for c in all_comments
+            if (c.get("in_reply_to_id") == comment_id)
             and (
                 (c.get("user", {}).get("login") == actor_login)
                 if isinstance(c.get("user"), dict)
                 else (c.get("author") == actor_login)
             )
-            for c in all_comments
-        )
-        if replied_by_actor:
-            comment_type_for_skip = "reply" if in_reply_to_id else "comment"
-            print(f"   ↪️ Skip: already replied to this {comment_type_for_skip} by current actor")
-            already_replied += 1
-            continue
+        ]
+        if our_replies:
+            # Check if anyone replied AFTER our last reply
+            our_replies.sort(key=lambda x: x.get("created_at", ""))
+            our_last_reply_time = our_replies[-1].get("created_at", "")
+            # Find all replies to this comment
+            all_replies_to_comment = [
+                c for c in all_comments
+                if c.get("in_reply_to_id") == comment_id
+            ]
+            # Check if there are any replies after our last reply
+            replies_after_ours = [
+                c for c in all_replies_to_comment
+                if c.get("created_at", "") > our_last_reply_time
+                and (
+                    (c.get("user", {}).get("login") != actor_login)
+                    if isinstance(c.get("user"), dict)
+                    else (c.get("author") != actor_login)
+                )
+            ]
+            if not replies_after_ours:
+                print("   ↪️ Skip: already replied by current actor (no new replies)")
+                already_replied += 1
+                continue
+            # Someone replied after us - continue processing to respond to their reply
+            print(f"   ℹ️  We already replied, but {len(replies_after_ours)} new reply(ies) found - will process")
 
         # Idempotency for review body comments (type="review"): check for existing issue comment
         # with reference pattern since review bodies are replied via issue comments without in_reply_to_id
@@ -1087,7 +1107,8 @@ def main():
                 already_replied += 1
                 continue
 
-        # Skip if thread ends with [AI responder] comment indicating completion
+        # Skip if thread ends with OUR [AI responder] comment indicating completion
+        # Only skip if WE are the last commenter, not if someone else replied after us
         thread_replies = [
             c for c in all_comments if c.get("in_reply_to_id") == comment_id
         ]
@@ -1096,8 +1117,10 @@ def main():
             thread_replies.sort(key=lambda x: x.get("created_at", ""))
             last_reply = thread_replies[-1]
             last_reply_body = last_reply.get("body", "")
-            if "[AI responder]" in last_reply_body:
-                print("   ↪️ Skip: thread already completed with [AI responder] comment")
+            last_reply_author = last_reply.get("user", {}).get("login", "")
+            # Only skip if WE are the last commenter AND our comment has [AI responder]
+            if "[AI responder]" in last_reply_body and last_reply_author == actor_login:
+                print("   ↪️ Skip: thread already completed with our [AI responder] comment")
                 already_replied += 1
                 continue
 

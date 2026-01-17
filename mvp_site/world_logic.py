@@ -154,12 +154,40 @@ KEY_TRACEBACK = "traceback"
 # Temporal validation constants
 # DISABLED: Set to 0 to prevent multiple LLM calls for temporal correction
 # Previously was 2, but this causes 3 LLM calls total when time goes backward
+# This ensures we only make one LLM call per request, accepting the first response
 MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0  # Max retries before accepting response
 
 _extract_world_time_from_response = world_time.extract_world_time_from_response
 _check_temporal_violation = world_time.check_temporal_violation
 _apply_timestamp_to_world_time = world_time.apply_timestamp_to_world_time
 _format_world_time_for_prompt = world_time.format_world_time_for_prompt
+
+
+def _get_agent_name_from_mode(agent_mode: str | None) -> str:
+    """Convert agent_mode constant to human-readable agent name for test compatibility.
+    
+    Args:
+        agent_mode: Agent mode constant (e.g., MODE_CAMPAIGN_UPGRADE)
+        
+    Returns:
+        Human-readable agent name (e.g., "CampaignUpgradeAgent") or "unknown" if mode is None
+    """
+    if not agent_mode:
+        return "unknown"
+    
+    # Map mode constants to agent class names
+    mode_to_agent = {
+        constants.MODE_GOD: "GodModeAgent",
+        constants.MODE_THINK: "PlanningAgent",
+        constants.MODE_CHARACTER: "StoryModeAgent",
+        constants.MODE_COMBAT: "CombatAgent",
+        constants.MODE_REWARDS: "RewardsAgent",
+        constants.MODE_INFO: "InfoAgent",
+        constants.MODE_CAMPAIGN_UPGRADE: "CampaignUpgradeAgent",
+        constants.MODE_CHARACTER_CREATION: "CharacterCreationAgent",
+    }
+    
+    return mode_to_agent.get(agent_mode, f"UnknownAgent({agent_mode})")
 
 
 def _extract_xp_from_player_data(pc_data: dict[str, Any]) -> int:
@@ -3273,6 +3301,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "debug_mode": debug_mode,  # Add debug_mode for test compatibility
             # agent_mode: single source of truth for which agent was selected
             "agent_mode": getattr(llm_response_obj, "agent_mode", None),
+            # agent_used: human-readable agent name for test compatibility
+            "agent_used": _get_agent_name_from_mode(getattr(llm_response_obj, "agent_mode", None)),
         }
 
         if include_raw_llm_payloads:

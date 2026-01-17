@@ -56,6 +56,12 @@ PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_CHARACTER_CREATION: constants.CHARACTER_CREATION_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_THINK: constants.THINK_MODE_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_PLANNING_PROTOCOL: constants.PLANNING_PROTOCOL_PATH,
+    # Divine Leverage (god tier) prompts
+    constants.PROMPT_TYPE_DIVINE_ASCENSION: constants.DIVINE_ASCENSION_PATH,
+    constants.PROMPT_TYPE_DIVINE_SYSTEM: constants.DIVINE_SYSTEM_PATH,
+    # Sovereign Protocol (multiverse tier) prompts
+    constants.PROMPT_TYPE_SOVEREIGN_ASCENSION: constants.SOVEREIGN_ASCENSION_PATH,
+    constants.PROMPT_TYPE_SOVEREIGN_SYSTEM: constants.SOVEREIGN_SYSTEM_PATH,
 }
 
 # Store loaded instruction content in a dictionary for easy access
@@ -147,6 +153,9 @@ def _load_instruction_file(instruction_type: str) -> str:
     This function is now strict: it will raise an exception if a file
     cannot be found, ensuring the application does not continue with
     incomplete instructions.
+    
+    Adds a filename header so the LLM can identify which content came from
+    which file when prompts reference filenames (e.g., "see game_state_instruction.md").
     """
     if instruction_type not in _loaded_instructions_cache:
         relative_path = PATH_MAP.get(instruction_type)
@@ -163,7 +172,15 @@ def _load_instruction_file(instruction_type: str) -> str:
             content = read_file_cached(file_path).strip()
             # Apply schema injection to replace placeholders with canonical schemas
             content = _inject_schema_placeholders(content)
-            _loaded_instructions_cache[instruction_type] = content
+            
+            # Extract filename from relative_path (e.g., "prompts/game_state_instruction.md" -> "game_state_instruction.md")
+            filename = os.path.basename(relative_path)
+            
+            # Add filename header so LLM can identify which file this content came from
+            # This allows cross-references like "see game_state_instruction.md" to work
+            content_with_header = f"# File: {filename}\n\n{content}"
+            
+            _loaded_instructions_cache[instruction_type] = content_with_header
         except FileNotFoundError:
             logging_util.error(
                 f"CRITICAL: System instruction file not found: {file_path}. This is a fatal error for this request."
@@ -767,9 +784,19 @@ class PromptBuilder:
             constants.PROMPT_TYPE_MECHANICS,
         ]
 
+        # CRITICAL: Narrative instructions are ALWAYS required when building story mode instructions
+        # StoryModeAgent's job is to generate narrative, so it must always have narrative instructions
+        # even if "narrative" is not explicitly in selected_prompts
+        # This fixes smoke test failures where campaigns are created without narrative in selected_prompts
+        # Ensure narrative is always included for story mode (this method is only called by StoryModeAgent)
+        # Create a copy to avoid mutating the caller's list
+        effective_prompts = list(selected_prompts) if selected_prompts else []
+        if constants.PROMPT_TYPE_NARRATIVE not in effective_prompts:
+            effective_prompts.append(constants.PROMPT_TYPE_NARRATIVE)
+        
         # Add in order
         for p_type in prompt_order:
-            if p_type in selected_prompts:
+            if p_type in effective_prompts:
                 content = _load_instruction_file(p_type)
                 parts.append(
                     _extract_essentials(content) if essentials_only else content
@@ -780,7 +807,7 @@ class PromptBuilder:
             # ESSENTIALS mode: Always load detailed sections (either LLM-requested or all)
             if llm_requested_sections:
                 requested = llm_requested_sections
-            elif constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
+            elif constants.PROMPT_TYPE_NARRATIVE in effective_prompts:
                 requested = list(SECTION_TO_PROMPT_TYPE.keys())
             else:
                 requested = []

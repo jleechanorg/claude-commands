@@ -1,30 +1,8 @@
-# 📢 Reputation System
+# 📢 Reputation System (Detailed)
 
 **CRITICAL: Reputation has TWO layers - what's publicly known vs. what specific groups know privately.**
 
-## Reputation Data Schema
-
-**Track in `custom_campaign_state.reputation`:**
-```json
-"reputation": {
-  "public": {
-    "score": 0,
-    "titles": [],
-    "known_deeds": [],
-    "rumors": [],
-    "notoriety_level": "unknown"
-  },
-  "private": {
-    "faction_id_001": {
-      "score": 5,
-      "standing": "trusted",
-      "known_deeds": ["completed mission X", "saved agent Y"],
-      "secret_knowledge": ["knows about the artifact"],
-      "trust_override": null
-    }
-  }
-}
-```
+**Schema:** See `game_state_instruction.md` → "📢 Reputation Schema (REQUIRED)" section for the JSON structure. Reputation is stored in `custom_campaign_state.reputation` with structure: `public` (score, titles, known_deeds, rumors, notoriety_level) and `private[faction_id]` (score, standing, known_deeds, secret_knowledge, trust_override).
 
 ## Public Reputation (What Everyone Knows)
 
@@ -33,12 +11,11 @@
 | Score | Notoriety Level | Effect |
 |-------|-----------------|--------|
 | -100 to -50 | **Infamous** | Hunted, refused service everywhere, bounty on head |
-| -49 to -20 | **Notorious** | Guards suspicious, merchants charge +50%, common folk flee |
-| -19 to -1 | **Disreputable** | Side-eye from NPCs, some services refused, +25% prices |
+| -49 to -1 | **Notorious** | Guards suspicious, merchants charge +50%, common folk flee, side-eye from NPCs, some services refused, +25% prices |
 | 0 | **Unknown** | No reputation precedes player, treated neutrally |
-| +1 to +19 | **Known** | Mild recognition, occasional nod of respect |
+| +1 to +19 | **Neutral** | Mild recognition, occasional nod of respect |
 | +20 to +49 | **Respected** | Welcomed, -10% prices, guards helpful, rumors spread |
-| +50 to +79 | **Famous** | Crowds gather, -25% prices, lords request audience |
+| +50 to +79 | **Renowned** | Crowds gather, -25% prices, lords request audience |
 | +80 to +100 | **Legendary** | Songs written, statues erected, -50% prices, automatic audience with rulers |
 
 **Public Reputation Components:**

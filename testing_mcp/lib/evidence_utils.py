@@ -30,6 +30,7 @@ import pathlib
 import re
 import shutil
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
@@ -39,6 +40,10 @@ from typing import Any
 # re is already imported above, no need to import again
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+# Add project root to path for scripts imports (needed for lazy imports later)
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 # Evidence format versioning
 EVIDENCE_FORMAT_VERSION = "1.1.0"  # Current bundle format version
@@ -502,8 +507,9 @@ def write_with_checksum(filepath: Path, content: str) -> str:
 def download_test_campaigns(
     results: dict[str, Any],
     user_id: str | None = None,
+    evidence_dir: Path | None = None,
 ) -> Path | None:
-    """Download all test campaigns to ~/Downloads/test_campaign/.
+    """Download all test campaigns to /tmp/<repo>/<branch>/<test>/campaigns/.
 
     Extracts campaign_ids from results and downloads them using the
     download_campaign.py script from scripts/.
@@ -511,6 +517,8 @@ def download_test_campaigns(
     Args:
         results: Test results dict containing scenarios with campaign_ids.
         user_id: Firebase user ID. If None, extracts from first scenario.
+        evidence_dir: Evidence directory path. If provided, downloads to
+            evidence_dir/campaigns. If None, uses ~/Downloads/test_campaign.
 
     Returns:
         Path to download directory or None if no campaigns downloaded.
@@ -537,56 +545,49 @@ def download_test_campaigns(
         print("⚠️  No user_id found, skipping campaign download")
         return None
 
-    # Prepare download directory
-    download_dir = Path.home() / "Downloads" / "test_campaign"
+    # Prepare download directory - use evidence_dir/campaigns if provided
+    if evidence_dir:
+        download_dir = evidence_dir / "campaigns"
+    else:
+        download_dir = Path.home() / "Downloads" / "test_campaign"
     download_dir.mkdir(parents=True, exist_ok=True)
 
     # Download each campaign
     print(f"\n📥 Downloading {len(campaign_ids)} test campaigns...")
     success_count = 0
 
+    # Lazy import of export_campaign to avoid Firebase dependencies at module load time
+    from mvp_site.clock_skew_credentials import apply_clock_skew_patch
+    apply_clock_skew_patch()
+    from scripts.download_campaign import export_campaign
+
     for campaign_id in campaign_ids:
         try:
-            # Run download_campaign.py script
-            cmd = [
-                "python",
-                str(PROJECT_ROOT / "scripts" / "download_campaign.py"),
-                "--uid",
-                user_id,
-                "--campaign-id",
-                campaign_id,
-                "--output-dir",
-                str(download_dir),
-                "--format",
-                "txt",
-            ]
-
-            # Prepare environment variables
-            env = os.environ.copy()
-            env["WORLDAI_DEV_MODE"] = "true"
+            # Set environment variables for Firebase if needed
+            if "WORLDAI_DEV_MODE" not in os.environ:
+                os.environ["WORLDAI_DEV_MODE"] = "true"
 
             # Copy Firebase credentials if available
-            if "WORLDAI_GOOGLE_APPLICATION_CREDENTIALS" not in env:
-                if "GOOGLE_APPLICATION_CREDENTIALS" in env:
-                    env["WORLDAI_GOOGLE_APPLICATION_CREDENTIALS"] = env["GOOGLE_APPLICATION_CREDENTIALS"]
+            if "WORLDAI_GOOGLE_APPLICATION_CREDENTIALS" not in os.environ:
+                if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
+                    os.environ["WORLDAI_GOOGLE_APPLICATION_CREDENTIALS"] = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
 
-            result = subprocess.run(
-                cmd,
-                cwd=PROJECT_ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-                timeout=60,
+            # Call export_campaign directly (returns tuple[str, int] or None)
+            result = export_campaign(
+                user_id=user_id,
+                campaign_id=campaign_id,
+                output_dir=str(download_dir),
+                export_format="txt",
+                include_scenes=True,
             )
 
-            if result.returncode == 0:
-                print(f"  ✅ Downloaded campaign {campaign_id[:8]}...")
+            if result:
+                output_path, entry_count = result
+                print(f"  ✅ Downloaded campaign {campaign_id[:8]}... ({entry_count} entries)")
                 success_count += 1
             else:
-                print(f"  ❌ Failed to download {campaign_id[:8]}: {result.stderr[:100]}")
+                print(f"  ❌ Failed to download {campaign_id[:8]}: export returned None")
 
-        except subprocess.TimeoutExpired:
-            print(f"  ❌ Timeout downloading {campaign_id[:8]}")
         except Exception as e:
             print(f"  ❌ Error downloading {campaign_id[:8]}: {e}")
 
@@ -1072,14 +1073,29 @@ the raw narrative validation missed. See `errors` in individual scenario files.
     files["_iteration"] = Path(str(iteration_num))  # Type-compatible placeholder
     files["_run_id"] = Path(run_id)  # Type-compatible placeholder
 
-    print(f"📦 Evidence bundle created: {actual_evidence_dir}")
-    print(f"   Run ID: {run_id}")
-    print(f"   Iteration: {iteration_num}")
+    print("\n" + "=" * 80)
+    print("📦 EVIDENCE BUNDLE CREATED")
+    print("=" * 80)
+    print(f"📁 Evidence Directory:")
+    print(f"   {actual_evidence_dir}")
+    print(f"\n📋 Bundle Metadata:")
+    print(f"   Run ID:        {run_id}")
+    print(f"   Iteration:     {iteration_num}")
     print(f"   Bundle Version: {EVIDENCE_FORMAT_VERSION}")
 
-    # Download test campaigns for inspection
-    campaign_dir = download_test_campaigns(results)
+    # Download test campaigns for inspection to evidence_dir/campaigns
+    campaign_dir = download_test_campaigns(results, evidence_dir=actual_evidence_dir)
     if campaign_dir:
         files["_campaign_dir"] = campaign_dir
+
+    # Final summary
+    print("\n" + "=" * 80)
+    print("✅ TEST EVIDENCE SUMMARY")
+    print("=" * 80)
+    print(f"📁 Evidence Location:  {actual_evidence_dir}")
+    if campaign_dir:
+        print(f"📥 Campaigns Location: {campaign_dir}")
+    print(f"🔗 Latest Symlink:     {actual_evidence_dir.parent / 'latest'}")
+    print("=" * 80 + "\n")
 
     return files

@@ -1370,39 +1370,18 @@ Complete the task, then use /pr to create a new pull request."""
                 agent_spec["cli_chain"] = cli_chain
 
             if not cli_path:
-                print(f"⚠️ Requested CLI '{cli_profile['binary']}' not available for {agent_name}")
-
-                fallback_cli = None
-                fallback_path = None
-                for candidate_cli in CLI_PROFILES:
-                    if candidate_cli == agent_cli:
-                        continue
-                    candidate_path = self._resolve_cli_binary(candidate_cli)
-                    if candidate_path:
-                        fallback_cli = candidate_cli
-                        fallback_path = candidate_path
-                        break
-
-                if fallback_cli and fallback_path:
-                    print(f"   ➡️ Falling back to {CLI_PROFILES[fallback_cli]['display_name']} CLI")
-                    agent_cli = fallback_cli
-                    cli_profile = CLI_PROFILES[agent_cli]
-                    cli_path = fallback_path
-                    agent_spec["cli"] = agent_cli
-                    agent_spec["cli_chain"] = [agent_cli]
-                else:
-                    print(f"❌ Required CLI '{cli_profile['binary']}' not found for agent {agent_name}")
-                    if agent_cli == "claude":
-                        print("   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code")
-                    elif agent_cli == "codex":
-                        print("   Install Codex CLI and ensure the 'codex' command is available on your PATH")
-                    elif agent_cli == "gemini":
-                        print("   Install Gemini CLI and ensure the 'gemini' command is available on your PATH")
-                    elif agent_cli == "cursor":
-                        print(
-                            "   Install Cursor Agent CLI and ensure the 'cursor-agent' command is available on your PATH"
-                        )
-                    return False
+                print(f"❌ Required CLI '{cli_profile['binary']}' not found for agent {agent_name}")
+                if agent_cli == "claude":
+                    print("   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code")
+                elif agent_cli == "codex":
+                    print("   Install Codex CLI and ensure the 'codex' command is available on your PATH")
+                elif agent_cli == "gemini":
+                    print("   Install Gemini CLI and ensure the 'gemini' command is available on your PATH")
+                elif agent_cli == "cursor":
+                    print(
+                        "   Install Cursor Agent CLI and ensure the 'cursor-agent' command is available on your PATH"
+                    )
+                return False
 
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
 
@@ -1431,26 +1410,9 @@ Complete the task, then use /pr to create a new pull request."""
                 else:
                     print(f"   ❌ CLI '{candidate_cli}' failed pre-flight validation")
             
-            # If no CLIs in chain passed validation, try fallback CLIs
-            # Prefer Codex for fallback (most reliable), then others
+            # If no CLIs in chain passed validation, fail (no automatic fallback)
             if not validated_cli:
-                print(f"⚠️ All CLIs in chain failed validation for {agent_name}, attempting fallback")
-                # Prioritize Codex for fallback (most reliable for automation)
-                fallback_priority = ["codex", "claude", "cursor", "gemini"]
-                for fallback_cli in fallback_priority:
-                    if fallback_cli in cli_chain:
-                        continue  # Already tried in chain
-                    fallback_path = self._resolve_cli_binary(fallback_cli)
-                    if fallback_path:
-                        print(f"   🔄 Trying fallback: {CLI_PROFILES[fallback_cli]['display_name']} CLI at {fallback_path}...")
-                        if self._validate_cli_availability(fallback_cli, fallback_path, agent_name, model=model):
-                            validated_clis.append((fallback_cli, fallback_path))
-                            validated_cli = fallback_cli
-                            validated_path = fallback_path
-                            print(f"   ✅ Fallback to {CLI_PROFILES[fallback_cli]['display_name']} CLI validated for {agent_name}")
-                            break
-                        else:
-                            print(f"   ❌ Fallback {CLI_PROFILES[fallback_cli]['display_name']} CLI validation failed")
+                print(f"❌ All CLIs in chain failed validation for {agent_name} - no fallback available")
             
             # Log validation summary
             if validated_clis:

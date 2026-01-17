@@ -199,7 +199,7 @@ NARRATIVE_RESPONSE_SCHEMA = {
         },
         "tool_requests": {
             "type": "array",
-            "description": "Request dice rolls or skill checks. Server will execute and you'll get results for the final narrative.",
+            "description": "MANDATORY for combat and dice rolls. Request dice rolls or skill checks - server will execute and you'll get results for the final narrative. MUST include tool_requests for any attack, skill check, or saving throw.",
             "items": {
                 "type": "object",
                 "properties": {

@@ -17,6 +17,14 @@ import json
 from typing import Any, Literal, overload
 
 from mvp_site import constants, dice as dice_module, logging_util
+from mvp_site.campaign_divine import (
+    get_campaign_tier as _get_campaign_tier,
+    get_highest_stat_modifier as _get_highest_stat_modifier,
+    get_pending_upgrade_type as _get_pending_upgrade_type,
+    is_campaign_upgrade_available as _is_campaign_upgrade_available,
+    is_divine_upgrade_available as _is_divine_upgrade_available,
+    is_multiverse_upgrade_available as _is_multiverse_upgrade_available,
+)
 from mvp_site.dice import DiceRollResult, execute_dice_tool
 
 # =============================================================================
@@ -313,6 +321,30 @@ class GameState:
             self.custom_campaign_state["attribute_system"] = (
                 constants.DEFAULT_ATTRIBUTE_SYSTEM
             )
+
+        # Campaign tier progression (mortal → divine → sovereign)
+        # Normalize campaign_tier: validate against allowed tiers and default on invalid values
+        # Firestore can store null or invalid values, which would break get_campaign_tier()
+        allowed_tiers = {
+            constants.CAMPAIGN_TIER_MORTAL,
+            constants.CAMPAIGN_TIER_DIVINE,
+            constants.CAMPAIGN_TIER_SOVEREIGN,
+        }
+        campaign_tier = self.custom_campaign_state.get("campaign_tier")
+        if campaign_tier not in allowed_tiers:
+            self.custom_campaign_state["campaign_tier"] = (
+                constants.CAMPAIGN_TIER_MORTAL
+            )
+
+        # Divine/multiverse progression tracking
+        if "divine_potential" not in self.custom_campaign_state:
+            self.custom_campaign_state["divine_potential"] = 0
+        if "universe_control" not in self.custom_campaign_state:
+            self.custom_campaign_state["universe_control"] = 0
+        if "divine_upgrade_available" not in self.custom_campaign_state:
+            self.custom_campaign_state["divine_upgrade_available"] = False
+        if "multiverse_upgrade_available" not in self.custom_campaign_state:
+            self.custom_campaign_state["multiverse_upgrade_available"] = False
 
         self.combat_state = kwargs.get("combat_state", {"in_combat": False})
         # Normalize combat_state to handle LLM-generated malformed data
@@ -1807,6 +1839,206 @@ class GameState:
             lines.append(f"{i}. {directive}")
 
         return "\n".join(lines)
+
+    # =========================================================================
+    # Campaign Upgrade Detection (Divine/Multiverse Tiers)
+    # =========================================================================
+    # Delegated to campaign_divine.py module for maintainability
+
+    def get_campaign_tier(self) -> str:
+        """Get the current campaign tier (mortal, divine, or sovereign)."""
+        return _get_campaign_tier(self.custom_campaign_state)
+
+    def is_divine_upgrade_available(self) -> bool:
+        """
+        Check if divine upgrade (mortal → divine) is available.
+
+        Triggers:
+        - divine_potential >= 100
+        - Level >= 25
+        - divine_upgrade_available flag set by narrative milestone
+        """
+        return _is_divine_upgrade_available(
+            self.custom_campaign_state, self.player_character_data
+        )
+
+    def is_multiverse_upgrade_available(self) -> bool:
+        """
+        Check if multiverse upgrade (any tier → sovereign) is available.
+
+        Triggers:
+        - universe_control >= 70
+        - multiverse_upgrade_available flag set by narrative milestone
+        """
+        return _is_multiverse_upgrade_available(self.custom_campaign_state)
+
+    def is_campaign_upgrade_available(self) -> bool:
+        """Check if any campaign upgrade is currently available."""
+        return _is_campaign_upgrade_available(
+            self.custom_campaign_state, self.player_character_data
+        )
+
+    def get_pending_upgrade_type(self) -> str | None:
+        """
+        Get the type of upgrade that's currently available.
+
+        Returns:
+            "divine" if divine upgrade is available
+            "multiverse" if multiverse upgrade is available
+            None if no upgrade is available
+        """
+        return _get_pending_upgrade_type(
+            self.custom_campaign_state, self.player_character_data
+        )
+
+    def get_highest_stat_modifier(self) -> int:
+        """
+        Get the highest ability score modifier for GP calculation.
+
+        Used for converting stats to God Power in divine/sovereign tiers.
+        """
+        return _get_highest_stat_modifier(self.player_character_data)
+
+    # =========================================================================
+    # Divine Rank System (Level-Based Progression)
+    # =========================================================================
+
+    def get_character_level(self) -> int:
+        """
+        Get the character's current level.
+
+        Returns:
+            Character level (defaults to 1 if not found or invalid)
+        """
+        # Level may be at top-level (normalized) or in experience dict
+        # Guard against non-dict player_character_data (Firestore can persist nulls)
+        pc_data = self.player_character_data if isinstance(self.player_character_data, dict) else {}
+        level_raw = pc_data.get("level", None)
+        if level_raw is None:
+            experience = pc_data.get("experience", {})
+            level_raw = experience.get("level", 1) if isinstance(experience, dict) else 1
+        try:
+            level = int(level_raw) if level_raw else 1
+        except (ValueError, TypeError):
+            level = 1
+        return max(1, level)  # Ensure at least level 1
+
+    def get_divine_rank(self) -> str:
+        """
+        Get the divine rank name based on character level.
+
+        Uses constants.get_divine_rank_from_level() for calculation.
+
+        Returns:
+            Divine rank constant (e.g., "minor_god", "lesser_deity")
+        """
+        level = self.get_character_level()
+        return constants.get_divine_rank_from_level(level)
+
+    def get_divine_rank_display_name(self) -> str:
+        """
+        Get the display name for the character's divine rank.
+
+        Returns:
+            Human-readable rank name (e.g., "Minor God", "Lesser Deity")
+        """
+        rank = self.get_divine_rank()
+        return constants.DIVINE_RANK_DISPLAY_NAMES.get(rank, "Mortal")
+
+    def get_divine_rank_bonus(self) -> int:
+        """
+        Get the divine rank bonus for the character.
+
+        This bonus is applied to:
+        - AC (Divine Defense)
+        - Attack rolls (Divine Strike)
+        - Saving throws (Divine Resilience)
+        - Ability checks (Divine Competence)
+        - Spell DCs (Divine Authority)
+
+        Returns:
+            Divine rank bonus (0-6+)
+        """
+        level = self.get_character_level()
+        return constants.get_divine_rank_bonus(level)
+
+    def get_divine_safe_limit(self) -> int:
+        """
+        Get the safe leverage limit for the character.
+
+        Using Divine Leverage beyond this limit generates Dissonance.
+        Safe Limit = Divine Rank × 5
+
+        Returns:
+            Safe leverage limit (0, 5, 10, 15, 20, 25, 30)
+        """
+        level = self.get_character_level()
+        return constants.get_divine_safe_limit(level)
+
+    def get_xp_for_next_level(self) -> int:
+        """
+        Get the XP required to reach the next level.
+
+        Returns:
+            XP needed for next level
+        """
+        level = self.get_character_level()
+        return constants.get_xp_for_level(level + 1)
+
+    def get_xp_to_next_level(self) -> int:
+        """
+        Get the XP needed to advance from current level to next.
+
+        Returns:
+            XP delta needed for next level
+        """
+        level = self.get_character_level()
+        return constants.get_xp_to_next_level(level)
+
+    def get_divine_immunities(self) -> list[str]:
+        """
+        Get the list of immunities granted by divine rank.
+
+        Immunities are cumulative as divine rank increases.
+
+        Returns:
+            List of immunity names (e.g., ["sleep", "paralysis", "charm"])
+        """
+        level = self.get_character_level()
+        return constants.get_divine_immunities(level)
+
+    def is_epic_level(self) -> bool:
+        """
+        Check if the character is at epic level (21+).
+
+        Returns:
+            True if level 21 or higher
+        """
+        return constants.is_epic_level(self.get_character_level())
+
+    def is_divine_level(self) -> bool:
+        """
+        Check if the character has divine rank bonuses (26+).
+
+        Returns:
+            True if level 26 or higher (Quasi-Deity+)
+        """
+        return constants.is_divine_level(self.get_character_level())
+
+    def get_divine_leverage_bonus(self) -> int:
+        """
+        Calculate the total Divine Leverage bonus.
+
+        Divine Leverage = Highest Ability Modifier + Divine Rank Bonus
+
+        This replaces the separate DPP system with scaled stats.
+
+        Returns:
+            Total leverage bonus available
+        """
+        highest_mod = self.get_highest_stat_modifier()
+        rank_bonus = self.get_divine_rank_bonus()
+        return highest_mod + rank_bonus
 
     # =========================================================================
     # Post-Combat Reward Detection

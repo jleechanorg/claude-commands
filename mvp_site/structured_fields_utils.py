@@ -5,6 +5,11 @@ from __future__ import annotations
 from typing import Any, TypeVar
 
 from mvp_site import constants
+from mvp_site.action_resolution_utils import (
+    extract_dice_rolls_from_action_resolution,
+    get_action_resolution,
+    get_outcome_resolution,
+)
 
 T = TypeVar("T")
 
@@ -66,22 +71,56 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
                 sr, constants.FIELD_DIRECTIVES, {}
             ),
         }
-        
-        # Extract action_resolution and outcome_resolution for audit trail persistence
-        # Use the helper functions from action_resolution_utils to ensure consistent extraction
-        # Always include action_resolution and outcome_resolution for audit trail persistence
-        # Even if empty, these fields should be present in Firestore for consistency
-        # The helper functions return empty dict {} if not present, which is fine to persist
-        from mvp_site.action_resolution_utils import (
-            get_action_resolution,
-            get_outcome_resolution,
-        )
-        
+
+        # Extract action_resolution and outcome_resolution for audit trail persistence.
+        # Always include even if empty for Firestore consistency.
         action_resolution = get_action_resolution(sr)
+
+        # Backward compatibility: If action_resolution is empty but dice_rolls contains structured data,
+        # canonicalize it into action_resolution format.
+        # This handles legacy Think Mode responses that may have used dice_rolls directly before consolidation.
+        raw_rolls = structured_fields.get(constants.FIELD_DICE_ROLLS, [])
+        if not action_resolution and isinstance(raw_rolls, list) and raw_rolls and isinstance(raw_rolls[0], dict):
+            converted_rolls = []
+            for roll in raw_rolls:
+                # Map Think Mode fields to action_resolution schema
+                # roll -> notation, type -> purpose
+                if isinstance(roll, dict):
+                    converted_rolls.append({
+                        "notation": roll.get("roll"),
+                        "result": roll.get("result"),
+                        "dc": roll.get("dc"),
+                        "success": roll.get("success"),
+                        "purpose": roll.get("type"),
+                        # Preserve Think Mode specific fields
+                        "dc_category": roll.get("dc_category"),
+                        "dc_reasoning": roll.get("dc_reasoning"),
+                        "margin": roll.get("margin"),
+                        "outcome": roll.get("outcome")
+                    })
+            
+            if converted_rolls:
+                action_resolution = {
+                    "mechanics": {
+                        "rolls": converted_rolls,
+                        "type": "planning_check"
+                    }
+                }
+
         structured_fields["action_resolution"] = action_resolution  # Always include, even if {}
-        
+
         outcome_resolution = get_outcome_resolution(sr)
         structured_fields["outcome_resolution"] = outcome_resolution  # Always include, even if {}
+
+        # Extract dice_rolls from action_resolution.mechanics.rolls (single source of truth)
+        # Per game_state_instruction.md:236, LLM should NOT populate dice_rolls directly;
+        # instead, dice should be in action_resolution.mechanics.rolls and extracted here.
+        # This ensures Firestore storage has formatted dice_rolls even when LLM correctly
+        # leaves dice_rolls empty and puts data in action_resolution.
+        if action_resolution:
+            extracted_rolls = extract_dice_rolls_from_action_resolution(action_resolution)
+            if extracted_rolls:
+                structured_fields[constants.FIELD_DICE_ROLLS] = extracted_rolls
 
         # Store a filtered subset of state_updates needed for Living World UI
         # This keeps storage small while still surfacing relevant debug data

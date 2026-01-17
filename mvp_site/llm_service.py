@@ -2766,6 +2766,7 @@ Take your time! Once we finalize these details, we'll begin your epic adventure.
         gemini_response = LLMResponse.create_from_structured_response(
             structured_response,
             model_to_use,
+            combined_narrative_text=narrative_text,
             provider=provider_selection.provider,
             processing_metadata=processing_metadata,
             raw_response_text=raw_response_text,
@@ -3854,6 +3855,7 @@ def continue_story(  # noqa: PLR0912, PLR0915
         gemini_response = LLMResponse.create_from_structured_response(
             structured_response,
             chosen_model,
+            combined_narrative_text=narrative_text,
             provider=provider_selection.provider,
             processing_metadata=processing_metadata,
             agent_mode=agent.MODE,
@@ -3878,46 +3880,6 @@ def continue_story(  # noqa: PLR0912, PLR0915
         # (No longer modifies response_text - validation goes to logs only)
         _validate_entity_tracking(response_text, expected_entities, current_game_state)
 
-    # POST-PROCESSING: 3-layer item validation against player inventory
-    # Layer 1: Pre-process player input for item claims
-    # Layer 2: Check items_used (LLM audit trail) against inventory
-    # Layer 3: Scan narrative for unlisted items
-    if not is_god_mode_command:
-        items_used: list[str] = []
-        if gemini_response.structured_response:
-            raw_items_used = getattr(
-                gemini_response.structured_response, "items_used", []
-            )
-            if isinstance(raw_items_used, list):
-                candidates = raw_items_used
-            elif isinstance(raw_items_used, str):
-                candidates = [raw_items_used]
-            else:
-                candidates = []
-            for item in candidates:
-                if isinstance(item, str):
-                    cleaned = item.strip()
-                    if cleaned:
-                        items_used.append(cleaned)
-
-        # Skip item validation during character creation (CHAR-w8m fix)
-        # Character creation agent may reference items before inventory is initialized
-        custom_state = getattr(current_game_state, "custom_campaign_state", {})
-        if isinstance(custom_state, dict):
-            char_creation_active = custom_state.get("character_creation_in_progress", False)
-        else:
-            char_creation_active = getattr(custom_state, "character_creation_in_progress", False)
-
-        if char_creation_active:
-            logging_util.debug(
-                "⏭️ Skipping item validation - character creation in progress"
-            )
-        # TODO: Item validation is currently disabled (comprehensive_item_validation function missing).
-        # When item validation is restored, implement 3-layer validation:
-        # 1. Pre-process player input for item claims
-        # 2. Check items_used (LLM audit trail) against inventory
-        # 3. Scan narrative for unlisted items
-        # Then uncomment validation logic to block exploits and update processing_metadata.
 
     # Validate and enforce planning block for story mode
     # Check if user is switching to god mode with their input
