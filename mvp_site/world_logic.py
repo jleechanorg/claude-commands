@@ -154,6 +154,7 @@ KEY_TRACEBACK = "traceback"
 # Temporal validation constants
 # DISABLED: Set to 0 to prevent multiple LLM calls for temporal correction
 # Previously was 2, but this causes 3 LLM calls total when time goes backward
+# This ensures we only make one LLM call per request, accepting the first response
 MAX_TEMPORAL_CORRECTION_ATTEMPTS = 0  # Max retries before accepting response
 
 _extract_world_time_from_response = world_time.extract_world_time_from_response
