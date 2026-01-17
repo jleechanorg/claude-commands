@@ -1783,23 +1783,31 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if head_sha:
             has_completion_marker = self._has_fix_comment_comment_for_commit(comments, head_sha)
         
-        # If completion marker exists, check if there are unaddressed comments
-        # If no unaddressed comments, skip (work was completed successfully)
+        # If completion marker exists, check if there are unaddressed comments OR new issues
+        # If no unaddressed comments AND no conflicts/failing checks, skip (work was completed successfully)
+        # If conflicts/failing checks appeared after completion marker, reprocess to handle them
         if has_completion_marker:
-            if not has_unaddressed:
+            if not has_unaddressed and not (is_conflicting or is_failing):
                 self.logger.info(
-                    "✅ Fix-comment automation completed for commit %s on PR #%s with no unaddressed comments - skipping",
+                    "✅ Fix-comment automation completed for commit %s on PR #%s with no unaddressed comments and no conflicts/failing checks - skipping",
                     head_sha[:8] if head_sha else "unknown",
                     pr_number,
                 )
                 return "skipped"
-            # Completion marker exists but there are unaddressed comments - reprocess
-            self.logger.info(
-                "🔄 Fix-comment completed for commit %s on PR #%s, but unaddressed comments exist - reprocessing",
-                head_sha[:8] if head_sha else "unknown",
-                pr_number,
-            )
-            # Continue to process unaddressed comments (skip history check since completion marker already decided)
+            # Completion marker exists but there are unaddressed comments OR new conflicts/failing checks - reprocess
+            if has_unaddressed:
+                self.logger.info(
+                    "🔄 Fix-comment completed for commit %s on PR #%s, but unaddressed comments exist - reprocessing",
+                    head_sha[:8] if head_sha else "unknown",
+                    pr_number,
+                )
+            elif is_conflicting or is_failing:
+                self.logger.info(
+                    "🔄 Fix-comment completed for commit %s on PR #%s, but conflicts/failing checks appeared - reprocessing",
+                    head_sha[:8] if head_sha else "unknown",
+                    pr_number,
+                )
+            # Continue to process unaddressed comments or conflicts/failing checks (skip history check since completion marker already decided)
         
         # If no completion marker, check commit history as fallback
         # History might be stale (recorded after queuing but before completion)
@@ -1822,28 +1830,35 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     head_sha[:8],
                 )
                 return "skipped"
-            elif not has_unaddressed:
+            elif not has_unaddressed and not (is_conflicting or is_failing):
                 # No completion marker, commit in history, no issues, and no unaddressed comments - skip
                 self.logger.info(
-                    "⏭️ Skipping PR #%s - commit %s in history and no unaddressed comments",
+                    "⏭️ Skipping PR #%s - commit %s in history, no unaddressed comments, and no conflicts/failing checks",
                     pr_number,
                     head_sha[:8],
                 )
                 return "skipped"
             else:
-                # Commit in history but no completion marker AND unaddressed comments exist
-                # This indicates a previous run didn't complete - reprocess
-                self.logger.info(
-                    "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
-                    pr_number,
-                    head_sha[:8],
-                )
-                # Continue to process unaddressed comments
+                # Commit in history but no completion marker AND (unaddressed comments exist OR conflicts/failing checks)
+                # This indicates a previous run didn't complete OR new issues appeared - reprocess
+                if has_unaddressed:
+                    self.logger.info(
+                        "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                elif is_conflicting or is_failing:
+                    self.logger.info(
+                        "🔄 PR #%s commit %s in history but no completion marker and conflicts/failing checks exist - reprocessing",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                # Continue to process unaddressed comments or conflicts/failing checks
         
-        # Final check: if no completion marker and not in history, check for unaddressed comments
-        elif not has_unaddressed:
+        # Final check: if no completion marker and not in history, check for unaddressed comments OR conflicts/failing checks
+        elif not has_unaddressed and not (is_conflicting or is_failing):
             self.logger.info(
-                "⏭️ Skipping PR #%s - no unaddressed comments found",
+                "⏭️ Skipping PR #%s - no unaddressed comments, no conflicts, and no failing checks",
                 pr_number,
             )
             return "skipped"
