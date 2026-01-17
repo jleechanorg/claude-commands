@@ -11,12 +11,11 @@
 | Score | Notoriety Level | Effect |
 |-------|-----------------|--------|
 | -100 to -50 | **Infamous** | Hunted, refused service everywhere, bounty on head |
-| -49 to -20 | **Notorious** | Guards suspicious, merchants charge +50%, common folk flee |
-| -19 to -1 | **Disreputable** | Side-eye from NPCs, some services refused, +25% prices |
+| -49 to -1 | **Notorious** | Guards suspicious, merchants charge +50%, common folk flee, side-eye from NPCs, some services refused, +25% prices |
 | 0 | **Unknown** | No reputation precedes player, treated neutrally |
-| +1 to +19 | **Known** | Mild recognition, occasional nod of respect |
+| +1 to +19 | **Neutral** | Mild recognition, occasional nod of respect |
 | +20 to +49 | **Respected** | Welcomed, -10% prices, guards helpful, rumors spread |
-| +50 to +79 | **Famous** | Crowds gather, -25% prices, lords request audience |
+| +50 to +79 | **Renowned** | Crowds gather, -25% prices, lords request audience |
 | +80 to +100 | **Legendary** | Songs written, statues erected, -50% prices, automatic audience with rulers |
 
 **Public Reputation Components:**
