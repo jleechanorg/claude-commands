@@ -300,6 +300,120 @@ class TestPromptBuilderIntegration(unittest.TestCase):
         self.assertIn("--- RELATIONSHIPS MECHANICS ---", combined)
         self.assertIn("--- REPUTATION MECHANICS ---", combined)
 
+    def test_narrative_always_loaded_for_story_mode(self):
+        """Test that narrative is always loaded even when not in selected_prompts.
+
+        PR #3000 fix: StoryModeAgent's core function is generating narrative,
+        so narrative instructions must always be loaded, even if not explicitly selected.
+        This fixes smoke test failures where campaigns are created with only mechanics.
+        """
+        from unittest.mock import patch
+
+        parts = []
+        selected_prompts = [constants.PROMPT_TYPE_MECHANICS]  # Only mechanics, no narrative
+
+        # Mock _load_instruction_file to track what's loaded
+        with patch("mvp_site.agent_prompts._load_instruction_file") as mock_load:
+            mock_load.side_effect = lambda p_type: f"CONTENT:{p_type}"
+
+            self.builder.add_selected_prompt_instructions(parts, selected_prompts)
+
+            # Verify narrative was loaded even though not in selected_prompts
+            self.assertIn(f"CONTENT:{constants.PROMPT_TYPE_NARRATIVE}", parts)
+            # Verify mechanics was also loaded
+            self.assertIn(f"CONTENT:{constants.PROMPT_TYPE_MECHANICS}", parts)
+            # Verify narrative appears before mechanics (order matters)
+            narrative_idx = parts.index(f"CONTENT:{constants.PROMPT_TYPE_NARRATIVE}")
+            mechanics_idx = parts.index(f"CONTENT:{constants.PROMPT_TYPE_MECHANICS}")
+            self.assertLess(
+                narrative_idx, mechanics_idx, "Narrative should come before mechanics"
+            )
+
+    def test_narrative_loaded_when_explicitly_selected(self):
+        """Test that narrative works correctly when explicitly in selected_prompts."""
+        from unittest.mock import patch
+
+        parts = []
+        selected_prompts = [
+            constants.PROMPT_TYPE_NARRATIVE,
+            constants.PROMPT_TYPE_MECHANICS,
+        ]
+
+        with patch("mvp_site.agent_prompts._load_instruction_file") as mock_load:
+            mock_load.side_effect = lambda p_type: f"CONTENT:{p_type}"
+
+            self.builder.add_selected_prompt_instructions(parts, selected_prompts)
+
+            # Verify both were loaded
+            self.assertIn(f"CONTENT:{constants.PROMPT_TYPE_NARRATIVE}", parts)
+            self.assertIn(f"CONTENT:{constants.PROMPT_TYPE_MECHANICS}", parts)
+
+    def test_narrative_loaded_when_selected_prompts_empty(self):
+        """Test that narrative is loaded even when selected_prompts is empty."""
+        from unittest.mock import patch
+
+        parts = []
+        selected_prompts = []
+
+        with patch("mvp_site.agent_prompts._load_instruction_file") as mock_load:
+            mock_load.side_effect = lambda p_type: f"CONTENT:{p_type}"
+
+            self.builder.add_selected_prompt_instructions(parts, selected_prompts)
+
+            # Verify narrative was loaded
+            self.assertIn(f"CONTENT:{constants.PROMPT_TYPE_NARRATIVE}", parts)
+            # Verify mechanics was NOT loaded (not in selected_prompts)
+            self.assertNotIn(f"CONTENT:{constants.PROMPT_TYPE_MECHANICS}", parts)
+
+    def test_original_selected_prompts_not_mutated(self):
+        """Test that the original selected_prompts list is not mutated."""
+        from unittest.mock import patch
+
+        original_prompts = [constants.PROMPT_TYPE_MECHANICS]
+        selected_prompts = list(original_prompts)  # Create a copy
+        parts = []
+
+        with patch("mvp_site.agent_prompts._load_instruction_file") as mock_load:
+            mock_load.side_effect = lambda p_type: f"CONTENT:{p_type}"
+
+            self.builder.add_selected_prompt_instructions(parts, selected_prompts)
+
+            # Verify original list was not mutated (narrative should not be added to it)
+            self.assertEqual(selected_prompts, original_prompts)
+            self.assertEqual(len(selected_prompts), 1)
+            self.assertEqual(selected_prompts[0], constants.PROMPT_TYPE_MECHANICS)
+            # But narrative should still be in parts
+            self.assertIn(f"CONTENT:{constants.PROMPT_TYPE_NARRATIVE}", parts)
+
+    def test_smoke_test_scenario_narrative_always_loaded(self):
+        """Test the exact scenario from the smoke test failure.
+
+        Smoke test passes: selected_prompts: ['mechanicalPrecision']
+        Which maps to: [constants.PROMPT_TYPE_MECHANICS]
+        Narrative MUST be loaded even though not explicitly selected.
+        """
+        from unittest.mock import patch
+
+        parts = []
+        selected_prompts = [constants.PROMPT_TYPE_MECHANICS]
+
+        with patch("mvp_site.agent_prompts._load_instruction_file") as mock_load:
+            mock_load.side_effect = lambda p_type: f"CONTENT:{p_type}"
+
+            self.builder.add_selected_prompt_instructions(parts, selected_prompts)
+
+            # CRITICAL: Narrative MUST be loaded even though not in selected_prompts
+            # This is what fixes the smoke test failure
+            self.assertIn(f"CONTENT:{constants.PROMPT_TYPE_NARRATIVE}", parts)
+            # Mechanics should also be loaded
+            self.assertIn(f"CONTENT:{constants.PROMPT_TYPE_MECHANICS}", parts)
+
+            # Verify _load_instruction_file was called for both
+            self.assertGreaterEqual(mock_load.call_count, 2)
+            call_args = [call[0][0] for call in mock_load.call_args_list]
+            self.assertIn(constants.PROMPT_TYPE_NARRATIVE, call_args)
+            self.assertIn(constants.PROMPT_TYPE_MECHANICS, call_args)
+
 
 class TestSectionToPromptTypeMapping(unittest.TestCase):
     """Test the SECTION_TO_PROMPT_TYPE mapping is correct."""
