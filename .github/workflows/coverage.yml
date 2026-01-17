@@ -99,8 +99,9 @@ jobs:
           coverage xml -o coverage.xml
           coverage json -o coverage.json
 
-      - name: Coverage comment
+      - name: Coverage comment (PR)
         id: coverage_comment
+        if: github.event_name == 'pull_request'
         uses: py-cov-action/python-coverage-comment-action@fb02115d6115e7b3325dc3295fe1dcfb1919248a  # v3.32
         with:
           GITHUB_TOKEN: ${{ github.token }}
@@ -108,6 +109,14 @@ jobs:
           MINIMUM_ORANGE: 60
           ANNOTATE_MISSING_LINES: true
           MAX_FILES_IN_COMMENT: 50
+
+      - name: Update coverage baseline (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: py-cov-action/python-coverage-comment-action@fb02115d6115e7b3325dc3295fe1dcfb1919248a  # v3.32
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          MINIMUM_GREEN: 80
+          MINIMUM_ORANGE: 60
 
       - name: Check coverage threshold
         if: github.event_name == 'pull_request'
