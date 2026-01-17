@@ -1784,8 +1784,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             has_completion_marker = self._has_fix_comment_comment_for_commit(comments, head_sha)
         
         # If completion marker exists, check if there are unaddressed comments OR new issues
-        # If no unaddressed comments AND no conflicts/failing checks, skip (work was completed successfully)
+        # If no unaddressed comments AND no conflicts/failing checks AND status is known, skip (work was completed successfully)
         # If conflicts/failing checks appeared after completion marker, reprocess to handle them
+        # Don't skip if status is unknown (API failure) - treat as needing processing
         if has_completion_marker:
             if not has_unaddressed and not (is_conflicting or is_failing) and not status_unknown:
                 self.logger.info(
@@ -1856,6 +1857,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 # Continue to process unaddressed comments or conflicts/failing checks
         
         # Final check: if no completion marker and not in history, check for unaddressed comments OR conflicts/failing checks
+        # Don't skip if status is unknown (API failure) - treat as needing processing
         elif not has_unaddressed and not (is_conflicting or is_failing) and not status_unknown:
             self.logger.info(
                 "⏭️ Skipping PR #%s - no unaddressed comments, no conflicts, and no failing checks",
