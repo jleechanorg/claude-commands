@@ -1431,26 +1431,9 @@ Complete the task, then use /pr to create a new pull request."""
                 else:
                     print(f"   ❌ CLI '{candidate_cli}' failed pre-flight validation")
             
-            # If no CLIs in chain passed validation, try fallback CLIs
-            # Prefer Codex for fallback (most reliable), then others
+            # If no CLIs in chain passed validation, fail (no automatic fallback)
             if not validated_cli:
-                print(f"⚠️ All CLIs in chain failed validation for {agent_name}, attempting fallback")
-                # Prioritize Codex for fallback (most reliable for automation)
-                fallback_priority = ["codex", "claude", "cursor", "gemini"]
-                for fallback_cli in fallback_priority:
-                    if fallback_cli in cli_chain:
-                        continue  # Already tried in chain
-                    fallback_path = self._resolve_cli_binary(fallback_cli)
-                    if fallback_path:
-                        print(f"   🔄 Trying fallback: {CLI_PROFILES[fallback_cli]['display_name']} CLI at {fallback_path}...")
-                        if self._validate_cli_availability(fallback_cli, fallback_path, agent_name, model=model):
-                            validated_clis.append((fallback_cli, fallback_path))
-                            validated_cli = fallback_cli
-                            validated_path = fallback_path
-                            print(f"   ✅ Fallback to {CLI_PROFILES[fallback_cli]['display_name']} CLI validated for {agent_name}")
-                            break
-                        else:
-                            print(f"   ❌ Fallback {CLI_PROFILES[fallback_cli]['display_name']} CLI validation failed")
+                print(f"❌ All CLIs in chain failed validation for {agent_name} - no fallback available")
             
             # Log validation summary
             if validated_clis:
