@@ -778,9 +778,19 @@ class PromptBuilder:
             constants.PROMPT_TYPE_MECHANICS,
         ]
 
+        # CRITICAL: Narrative instructions are ALWAYS required when building story mode instructions
+        # StoryModeAgent's job is to generate narrative, so it must always have narrative instructions
+        # even if "narrative" is not explicitly in selected_prompts
+        # This fixes smoke test failures where campaigns are created without narrative in selected_prompts
+        # Ensure narrative is always included for story mode (this method is only called by StoryModeAgent)
+        # Create a copy to avoid mutating the caller's list
+        effective_prompts = list(selected_prompts) if selected_prompts else []
+        if constants.PROMPT_TYPE_NARRATIVE not in effective_prompts:
+            effective_prompts.append(constants.PROMPT_TYPE_NARRATIVE)
+        
         # Add in order
         for p_type in prompt_order:
-            if p_type in selected_prompts:
+            if p_type in effective_prompts:
                 content = _load_instruction_file(p_type)
                 parts.append(
                     _extract_essentials(content) if essentials_only else content
@@ -791,7 +801,7 @@ class PromptBuilder:
             # ESSENTIALS mode: Always load detailed sections (either LLM-requested or all)
             if llm_requested_sections:
                 requested = llm_requested_sections
-            elif constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
+            elif constants.PROMPT_TYPE_NARRATIVE in effective_prompts:
                 requested = list(SECTION_TO_PROMPT_TYPE.keys())
             else:
                 requested = []
