@@ -1315,7 +1315,7 @@ def _persist_turn_to_firestore(
         campaign_id,
         constants.ACTOR_GEMINI,
         ai_response_text,
-        None,  # mode
+        mode,  # Preserve mode so think/god responses can be identified when story is retrieved
         structured_fields,
     )
 

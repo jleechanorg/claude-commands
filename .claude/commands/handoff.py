@@ -193,8 +193,8 @@ This task has been analyzed and is ready for a worker to pick up and implement.
             check=True,
         )
 
-        # Push branch
-        subprocess.run(["git", "push", "origin", f"HEAD:{branch_name}"], check=True)
+        # Push branch (use branch_name directly, not HEAD:branch_name, to properly set upstream tracking)
+        subprocess.run(["git", "push", "-u", "origin", branch_name], check=True)
 
         # Create PR
         result = subprocess.run(
