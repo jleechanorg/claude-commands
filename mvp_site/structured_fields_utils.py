@@ -76,9 +76,9 @@ def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
         # Always include even if empty for Firestore consistency.
         action_resolution = get_action_resolution(sr)
 
-        # Think Mode compatibility: If action_resolution is empty but dice_rolls contains structured data,
+        # Backward compatibility: If action_resolution is empty but dice_rolls contains structured data,
         # canonicalize it into action_resolution format.
-        # This handles Think Mode which currently writes to dice_rolls directly.
+        # This handles legacy Think Mode responses that may have used dice_rolls directly before consolidation.
         raw_rolls = structured_fields.get(constants.FIELD_DICE_ROLLS, [])
         if not action_resolution and isinstance(raw_rolls, list) and raw_rolls and isinstance(raw_rolls[0], dict):
             converted_rolls = []
