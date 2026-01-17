@@ -18,7 +18,7 @@ import time
 import traceback
 import urllib.request
 from collections import Counter
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import requests
@@ -2279,7 +2279,8 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if not head_sha:
             return None
 
-        for comment in comments:
+        # Iterate in reverse to find the NEWEST queued comment first
+        for comment in reversed(comments):
             body = comment.get("body", "")
             # Check for queued run marker (FIX_COMMENT_RUN_MARKER_PREFIX)
             marker_sha = self._extract_fix_comment_run_marker(body)
@@ -2296,8 +2297,8 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                             created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
                             # Ensure timezone-aware datetime (handle edge case where fromisoformat returns naive)
                             if created_at.tzinfo is None:
-                                created_at = created_at.replace(tzinfo=timezone.utc)
-                            now = datetime.now(timezone.utc)
+                                created_at = created_at.replace(tzinfo=UTC)
+                            now = datetime.now(UTC)
                             age_hours = (now - created_at).total_seconds() / 3600
                             return {
                                 "age_hours": age_hours,
