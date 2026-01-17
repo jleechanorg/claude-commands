@@ -1012,16 +1012,33 @@ def main():
             continue
         total_targets += 1
 
-        # Idempotency: skip if already replied by current actor
-        replied_by_actor = any(
-            (c.get("in_reply_to_id") == comment_id)
+        # Idempotency: skip if already replied by current actor AND no one replied after us
+        our_replies = [
+            c for c in all_comments
+            if (c.get("in_reply_to_id") == comment_id)
             and (c.get("user", {}).get("login") == actor_login)
-            for c in all_comments
-        )
-        if replied_by_actor:
-            print("   ↪️ Skip: already replied by current actor")
-            already_replied += 1
-            continue
+        ]
+        if our_replies:
+            # Check if anyone replied AFTER our last reply
+            our_replies.sort(key=lambda x: x.get("created_at", ""))
+            our_last_reply_time = our_replies[-1].get("created_at", "")
+            # Find all replies to this comment
+            all_replies_to_comment = [
+                c for c in all_comments
+                if c.get("in_reply_to_id") == comment_id
+            ]
+            # Check if there are any replies after our last reply
+            replies_after_ours = [
+                c for c in all_replies_to_comment
+                if c.get("created_at", "") > our_last_reply_time
+                and c.get("user", {}).get("login") != actor_login
+            ]
+            if not replies_after_ours:
+                print("   ↪️ Skip: already replied by current actor (no new replies)")
+                already_replied += 1
+                continue
+            # Someone replied after us - continue processing to respond to their reply
+            print(f"   ℹ️  We already replied, but {len(replies_after_ours)} new reply(ies) found - will process")
 
         # Idempotency for review body comments (type="review"): check for existing issue comment
         # with reference pattern since review bodies are replied via issue comments without in_reply_to_id
