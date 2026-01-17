@@ -265,7 +265,7 @@ class TestPromptBuilderIntegration(unittest.TestCase):
         self.assertIn("--- REPUTATION MECHANICS ---", combined)
 
     def test_add_selected_prompt_instructions_without_narrative(self):
-        """Test add_selected_prompt_instructions without narrative doesn't auto-include sections."""
+        """Test add_selected_prompt_instructions without narrative still auto-includes narrative essentials."""
         parts = []
         self.builder.add_selected_prompt_instructions(
             parts,
@@ -274,10 +274,10 @@ class TestPromptBuilderIntegration(unittest.TestCase):
             essentials_only=True,
         )
 
-        # Without narrative, should NOT auto-include relationship/reputation
         combined = "\n".join(parts)
-        self.assertNotIn("--- RELATIONSHIPS MECHANICS ---", combined)
-        self.assertNotIn("--- REPUTATION MECHANICS ---", combined)
+        # Narrative is injected for story mode, so essentials include relationship/reputation
+        self.assertIn("--- RELATIONSHIPS MECHANICS ---", combined)
+        self.assertIn("--- REPUTATION MECHANICS ---", combined)
 
     def test_add_selected_prompt_instructions_loads_llm_requested_in_full_prompt(self):
         """In full-prompt mode, load detailed sections when LLM explicitly requests them.
