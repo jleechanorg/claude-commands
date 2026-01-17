@@ -436,5 +436,71 @@ class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
         self.assertEqual(res, "posted")
 
 
+class TestFixprUsesCorrectDispatchFunction(unittest.TestCase):
+    """
+    Regression test for critical bug: fixpr must use dispatch_agent_for_pr (FIXPR prompt),
+    NOT dispatch_fix_comment_agent (FIX-COMMENT prompt).
+
+    Bug discovered: _process_pr_fixpr was calling dispatch_fix_comment_agent() which builds
+    a task description for addressing review comments, not for fixing conflicts/failing checks.
+    """
+
+    def setUp(self):
+        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager'):
+            self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
+            self.monitor.safety_manager.fixpr_limit = 10
+
+    def _base_pr(self):
+        return {
+            "number": 123,
+            "title": "Test PR",
+            "headRefName": "test-branch",
+            "baseRefName": "main",
+            "url": "https://github.com/test/repo/pull/123",
+            "headRefOid": "abc12345",
+            "mergeable": "CONFLICTING",
+        }
+
+    def test_fixpr_calls_dispatch_agent_for_pr_not_dispatch_fix_comment_agent(self):
+        """
+        REGRESSION TEST: Verify _process_pr_fixpr uses dispatch_agent_for_pr
+        which builds FIXPR prompt, not dispatch_fix_comment_agent which builds
+        FIX-COMMENT prompt.
+        """
+        pr = self._base_pr()
+
+        # Mock conflicting status so fixpr processes (doesn't skip)
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=False):
+            mock_subprocess_result = SimpleNamespace(returncode=0, stdout='{"mergeable":"CONFLICTING"}', stderr="")
+            with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_subprocess_result):
+                with patch.object(self.monitor, "_should_skip_pr", return_value=False):
+                    with patch.object(self.monitor, "_get_pr_comment_state", return_value=("abc12345", [])):
+                        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"):
+                            with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"):
+                                with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher") as mock_dispatcher_class:
+                                    # This is the CORRECT function that should be called
+                                    with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True) as mock_correct_dispatch:
+                                        # This is the WRONG function that should NOT be called
+                                        with patch.object(self.monitor, "dispatch_fix_comment_agent", return_value=True) as mock_wrong_dispatch:
+                                            with patch.object(self.monitor, "_post_fixpr_queued", return_value=True):
+                                                with patch.object(self.monitor, "_record_processed_pr"):
+                                                    with patch.object(self.monitor, "_cleanup_pending_reviews"):
+                                                        with patch.object(self.monitor, "_count_workflow_comments", return_value=0):
+                                                            res = self.monitor._process_pr_fixpr("test/repo", 123, pr, agent_cli="claude", model=None)
+
+        # CRITICAL ASSERTIONS:
+        # 1. The correct function (dispatch_agent_for_pr) MUST be called
+        mock_correct_dispatch.assert_called_once()
+
+        # 2. The wrong function (dispatch_fix_comment_agent) MUST NOT be called
+        mock_wrong_dispatch.assert_not_called()
+
+        # 3. TaskDispatcher must be instantiated (used by dispatch_agent_for_pr)
+        mock_dispatcher_class.assert_called_once()
+
+        # 4. Result should be "posted"
+        self.assertEqual(res, "posted")
+
+
 if __name__ == "__main__":
     unittest.main()
