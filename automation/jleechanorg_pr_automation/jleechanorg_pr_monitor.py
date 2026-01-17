@@ -1996,8 +1996,8 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             )
             return "skipped"
 
-        # Check for conflicts or failing checks BEFORE skip check
-        # If PR has issues, reprocess even if commit was already processed
+        # Check for conflicts or failing checks, failing checks, and unaddressed comments BEFORE other checks
+        # If PR is clean (no conflicts, no failing checks), skip fixpr entirely
         is_conflicting = False
         is_failing = False
         status_unknown = False
@@ -2016,18 +2016,18 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             # Check for failing checks
             is_failing = has_failing_checks(repo_full, pr_number)
         except Exception as e:
-            self.logger.warning(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
-            # Mark status as unknown - don't treat API failures as "clean"
+            # Treat status as unknown; leave defaults and do NOT assume the PR is clean.
+            self.logger.debug(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
             status_unknown = True
 
-        # FIRST check if there are any issues to fix (conflicts or failing checks)
-        # Only skip if PR is clean AND status is known (not unknown due to API failure)
-        if not status_unknown and not (is_conflicting or is_failing):
-            self.logger.info(
-                "⏭️ Skipping PR #%s - no conflicts or failing checks to fix",
-                pr_number,
-            )
-            return "skipped"
+        # FIRST: If status is definitively clean (no conflicts/failing) → skip.
+        # If status is unknown due to API failure, DO NOT treat as clean — continue.
+        if not (is_conflicting or is_failing):
+            if not status_unknown:
+                self.logger.info("⏭️ Skipping PR #%s - no conflicts or failing checks to fix", pr_number)
+                return "skipped"
+            else:
+                self.logger.info("ℹ️ PR #%s status unknown (API failure) — proceeding conservatively", pr_number)
 
         # If issues are detected, allow reprocessing even if the commit was already processed.
         # If status is unknown (no issues detected), fall back to history gating to avoid duplicates.
@@ -2039,7 +2039,6 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     head_sha[:8],
                 )
             else:
-                # Status unknown but commit already processed - skip to avoid duplicates
                 self.logger.info(
                     "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
                     pr_number,
@@ -2047,67 +2046,24 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 )
                 return "skipped"
 
-        # Log that we're processing due to issues or unknown status
-        if status_unknown:
-            self.logger.info(
-                "🔧 Processing PR #%s - status unknown (API failure), proceeding conservatively",
-                pr_number,
-            )
-        elif is_conflicting:
-            self.logger.info(
-                "🔧 Processing PR #%s - has conflicts",
-                pr_number,
-            )
-        else:
-            self.logger.info(
-                "🔧 Processing PR #%s - has failing checks",
-                pr_number,
-            )
+        # Log that we're processing due to issues
+        issue_label = (
+            "conflicts" if is_conflicting
+            else "failing checks" if is_failing
+            else "unknown status"
+        )
+        self.logger.info("🔧 Processing PR #%s - %s", pr_number, issue_label)
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
 
-        # Dispatch agent for fixpr
-        try:
-            base_dir = ensure_base_clone(repo_full)
-            with chdir(base_dir):
-                dispatcher = TaskDispatcher()
-                # Prepare PR dict for dispatch_agent_for_pr
-                pr_info = {
-                    "repo_full": repo_full,
-                    "repo": repo_name,
-                    "number": pr_number,
-                    "branch": branch_name,
-                }
-                success = dispatch_agent_for_pr(dispatcher, pr_info, agent_cli=agent_cli, model=model)
-
-                # Cleanup any pending reviews created by the agent during execution
-                # This catches reviews created despite the warnings in the prompt
-                self._cleanup_pending_reviews(repo_full, pr_number)
-
-                if success:
-                    queued_posted = self._post_fixpr_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
-                    # Record processing so we don't loop
-                    if head_sha:
-                        self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
-
-                    if not queued_posted:
-                        self.logger.warning(
-                            "⚠️ Queued comment failed for PR #%s, but agent is dispatched",
-                            pr_number,
-                        )
-                        return "partial"
-
-                    return "posted" # "posted" means action taken
-                return "failed"
-        except Exception as exc:
-            self.logger.error(
-                "❌ Failed to dispatch fixpr agent for %s #%s: %s",
-                repo_full,
-                pr_number,
-                exc,
-            )
-            return "failed"
+        agent_success = self.dispatch_fix_comment_agent(
+            repo_full,
+            pr_number,
+            pr_data,
+            agent_cli=agent_cli,
+            model=model
+        )
 
     def _get_pr_comment_state(self, repo_full_name: str, pr_number: int) -> tuple[str | None, list[dict] | None]:
         """Fetch PR comment data needed for Codex comment gating using Python requests (avoids bash prompts).
