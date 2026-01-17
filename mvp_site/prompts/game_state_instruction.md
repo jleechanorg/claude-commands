@@ -750,7 +750,7 @@ When `npc_data` is present in your input, each NPC entry contains:
 - `role`: (string) NPC role/title (e.g., "Empress", "Captain", "Innkeeper")
 - `level`: (number) NPC level (if applicable)
 - `relationships.player.trust_level`: (number) -10 to +10 trust with player
-- `relationships.player.disposition`: (string) hostile | antagonistic | neutral | friendly | allied
+- `relationships.player.disposition`: (string) hostile | antagonistic | cold | neutral | friendly | trusted | devoted | bonded
 - Additional fields: hp, armor_class, status, etc. (see entity schemas)
 
 ### 🔗 Relationships Object (REQUIRED for recurring NPCs)
@@ -776,7 +776,7 @@ When `npc_data` is present in your input, each NPC entry contains:
 
 **Fields:**
 - `trust_level`: (number) -10 to +10, current trust with player
-- `disposition`: (string) hostile | antagonistic | neutral | friendly | allied
+- `disposition`: (string) hostile | antagonistic | cold | neutral | friendly | trusted | devoted | bonded
 - `history`: (array) List of significant interactions/events
 - `debts`: (array) Favors owed by NPC to player
 - `grievances`: (array) Wrongs NPC believes player committed
