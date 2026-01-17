@@ -495,5 +495,98 @@ class TestPlanningBlockProsConsPreservation(unittest.TestCase):
         self.assertEqual(non_list_choice.get("confidence"), "high")
 
 
+class TestLLMResponseCombinedNarrativeText(unittest.TestCase):
+    """
+    Regression tests for combined_narrative_text parameter (PR #3727).
+
+    Bug: When god_mode_response has content but narrative is empty with
+    planning_block, the placeholder "You pause to consider your options..."
+    was replacing the actual god_mode_response content.
+
+    Fix: Pass combined_narrative_text (from parse_structured_response) to
+    create_from_structured_response to preserve god_mode_response content.
+    """
+
+    def test_red_without_combined_narrative_text_uses_placeholder(self):
+        """
+        RED: Without combined_narrative_text, placeholder replaces god_mode_response.
+
+        This documents the buggy behavior when combined_narrative_text is NOT passed.
+        """
+        from mvp_site.narrative_response_schema import parse_structured_response
+
+        # Scenario from scene #187: god_mode_response + empty narrative + planning_block
+        llm_response = json.dumps({
+            "god_mode_response": "Your Spell Save DC is 22.",
+            "narrative": "",  # Empty - triggers placeholder
+            "planning_block": {"thinking": "Calculating...", "options": []},
+            "entities_mentioned": [],
+            "location_confirmed": ""
+        })
+
+        narrative_text, structured_response = parse_structured_response(llm_response)
+
+        # The combined narrative HAS the god_mode_response content
+        self.assertIn("22", narrative_text)
+
+        # But WITHOUT combined_narrative_text, we get placeholder
+        llm_response_obj = LLMResponse.create_from_structured_response(
+            structured_response,
+            "gemini-3-flash-preview",
+            # combined_narrative_text NOT passed!
+        )
+
+        # Verify: structured_response.narrative is the placeholder
+        self.assertEqual(
+            structured_response.narrative.strip(),
+            "You pause to consider your options...",
+            "RED: structured_response.narrative should be placeholder"
+        )
+
+        # And LLMResponse uses that placeholder (the bug)
+        self.assertEqual(
+            llm_response_obj.narrative_text.strip(),
+            "You pause to consider your options...",
+            "RED: Without combined_narrative_text, placeholder is used"
+        )
+
+    def test_green_with_combined_narrative_text_preserves_content(self):
+        """
+        GREEN: With combined_narrative_text, god_mode_response is preserved.
+
+        This is the correct behavior after the fix.
+        """
+        from mvp_site.narrative_response_schema import parse_structured_response
+
+        llm_response = json.dumps({
+            "god_mode_response": "Your Spell Save DC is 22.",
+            "narrative": "",
+            "planning_block": {"thinking": "Calculating...", "options": []},
+            "entities_mentioned": [],
+            "location_confirmed": ""
+        })
+
+        narrative_text, structured_response = parse_structured_response(llm_response)
+
+        # WITH combined_narrative_text, god_mode_response is preserved
+        llm_response_obj = LLMResponse.create_from_structured_response(
+            structured_response,
+            "gemini-3-flash-preview",
+            combined_narrative_text=narrative_text,  # THE FIX!
+        )
+
+        # Verify: god_mode_response content is preserved
+        self.assertIn(
+            "22",
+            llm_response_obj.narrative_text,
+            "GREEN: god_mode_response content should be preserved"
+        )
+        self.assertNotEqual(
+            llm_response_obj.narrative_text.strip(),
+            "You pause to consider your options...",
+            "GREEN: Should NOT be placeholder"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
