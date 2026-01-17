@@ -83,13 +83,14 @@ class TestFixprReturnValue(unittest.TestCase):
                 with patch.object(self.monitor, '_should_skip_pr', return_value=False):
                     with patch.object(self.monitor, '_count_workflow_comments', return_value=5):  # Under limit
                         with patch.object(self.monitor, '_cleanup_pending_reviews'):
-                            with patch.object(self.monitor, '_post_fixpr_queued', return_value=False) as mock_post_queued:  # FAILS
-                                with patch.object(self.monitor, '_record_processed_pr'):
-                                    result = self.monitor._process_pr_fixpr(
-                                        repository="test/repo",
-                                        pr_number=1234,
-                                        pr_data=pr_data,
-                                    )
+                            with patch.object(self.monitor, 'dispatch_fix_comment_agent', return_value=True):  # Agent succeeds
+                                with patch.object(self.monitor, '_post_fixpr_queued', return_value=False) as mock_post_queued:  # FAILS
+                                    with patch.object(self.monitor, '_record_processed_pr'):
+                                        result = self.monitor._process_pr_fixpr(
+                                            repository="test/repo",
+                                            pr_number=1234,
+                                            pr_data=pr_data,
+                                        )
 
         # CRITICAL: Should return "partial" when queued comment fails
         self.assertEqual(
@@ -152,13 +153,14 @@ class TestFixprReturnValue(unittest.TestCase):
                 with patch.object(self.monitor, '_should_skip_pr', return_value=False):
                     with patch.object(self.monitor, '_count_workflow_comments', return_value=5):  # Under limit
                         with patch.object(self.monitor, '_cleanup_pending_reviews'):
-                            with patch.object(self.monitor, '_post_fixpr_queued', return_value=True) as mock_post_queued:  # SUCCEEDS
-                                with patch.object(self.monitor, '_record_processed_pr'):
-                                    result = self.monitor._process_pr_fixpr(
-                                        repository="test/repo",
-                                        pr_number=1234,
-                                        pr_data=pr_data,
-                                    )
+                            with patch.object(self.monitor, 'dispatch_fix_comment_agent', return_value=True):
+                                with patch.object(self.monitor, '_post_fixpr_queued', return_value=True) as mock_post_queued:  # SUCCEEDS
+                                    with patch.object(self.monitor, '_record_processed_pr'):
+                                        result = self.monitor._process_pr_fixpr(
+                                            repository="test/repo",
+                                            pr_number=1234,
+                                            pr_data=pr_data,
+                                        )
 
         # Should return "posted" when everything succeeds
         self.assertEqual(result, "posted")
@@ -283,13 +285,14 @@ class TestFixprSkipsCleanPRs(unittest.TestCase):
                 with patch.object(self.monitor, '_count_workflow_comments', return_value=0):
                     with patch.object(self.monitor, '_should_skip_pr', return_value=False):
                         with patch.object(self.monitor, '_cleanup_pending_reviews'):
-                            with patch.object(self.monitor, '_post_fixpr_queued', return_value=True):
-                                with patch.object(self.monitor, '_record_processed_pr'):
-                                    result = self.monitor._process_pr_fixpr(
-                                        repository="test/repo",
-                                        pr_number=1234,
-                                        pr_data=pr_data,
-                                    )
+                            with patch.object(self.monitor, 'dispatch_fix_comment_agent', return_value=True) as mock_dispatch_agent:
+                                with patch.object(self.monitor, '_post_fixpr_queued', return_value=True):
+                                    with patch.object(self.monitor, '_record_processed_pr'):
+                                        result = self.monitor._process_pr_fixpr(
+                                            repository="test/repo",
+                                            pr_number=1234,
+                                            pr_data=pr_data,
+                                        )
 
         # Should process PRs with failing checks
         self.assertEqual(result, "posted")
@@ -340,13 +343,14 @@ class TestFixprSkipsCleanPRs(unittest.TestCase):
                 with patch.object(self.monitor, '_count_workflow_comments', return_value=0):
                     with patch.object(self.monitor, '_should_skip_pr', return_value=False):
                         with patch.object(self.monitor, '_cleanup_pending_reviews'):
-                            with patch.object(self.monitor, '_post_fixpr_queued', return_value=True):
-                                with patch.object(self.monitor, '_record_processed_pr'):
-                                    result = self.monitor._process_pr_fixpr(
-                                        repository="test/repo",
-                                        pr_number=5678,
-                                        pr_data=pr_data,
-                                    )
+                            with patch.object(self.monitor, 'dispatch_fix_comment_agent', return_value=True) as mock_dispatch_agent:
+                                with patch.object(self.monitor, '_post_fixpr_queued', return_value=True):
+                                    with patch.object(self.monitor, '_record_processed_pr'):
+                                        result = self.monitor._process_pr_fixpr(
+                                            repository="test/repo",
+                                            pr_number=5678,
+                                            pr_data=pr_data,
+                                        )
 
         # Should process PRs with conflicts
         self.assertEqual(result, "posted")
@@ -384,7 +388,7 @@ class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
                         with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"):
                             with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"):
                                 with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher"):
-                                    with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True) as mock_dispatch:
+                                    with patch.object(self.monitor, "dispatch_fix_comment_agent", return_value=True) as mock_dispatch:
                                         with patch.object(self.monitor, "_post_fixpr_queued", return_value=True):
                                             with patch.object(self.monitor, "_record_processed_pr"):
                                                 with patch.object(self.monitor, "_cleanup_pending_reviews"):
@@ -422,7 +426,7 @@ class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
                         with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"):
                             with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"):
                                 with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher"):
-                                    with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True):
+                                    with patch.object(self.monitor, "dispatch_fix_comment_agent", return_value=True):
                                         with patch.object(self.monitor, "_post_fixpr_queued", return_value=True):
                                             with patch.object(self.monitor, "_record_processed_pr"):
                                                 with patch.object(self.monitor, "_cleanup_pending_reviews"):
