@@ -2008,7 +2008,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             )
             return "skipped"
 
-        # Check for conflicts or failing checks, failing checks, and unaddressed comments BEFORE other checks
+        # Check for conflicts or failing checks BEFORE other checks
         # If PR is clean (no conflicts, no failing checks), skip fixpr entirely
         is_conflicting = False
         is_failing = False
@@ -2069,15 +2069,19 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
 
-        # Dispatch agent for fixpr
+        # Dispatch agent for fixpr (uses FIXPR prompt, not fix-comment prompt)
         try:
-            agent_success = self.dispatch_fix_comment_agent(
-                repo_full,
-                pr_number,
-                pr_data,
-                agent_cli=agent_cli,
-                model=model
-            )
+            base_dir = ensure_base_clone(repo_full)
+            with chdir(base_dir):
+                dispatcher = TaskDispatcher()
+                # Prepare PR dict for dispatch_agent_for_pr
+                pr_info = {
+                    "repo_full": repo_full,
+                    "repo": repo_name,
+                    "number": pr_number,
+                    "branch": branch_name,
+                }
+                agent_success = dispatch_agent_for_pr(dispatcher, pr_info, agent_cli=agent_cli, model=model)
 
             # Post-dispatch cleanup for consistency with _process_pr_fix_comment
             # Note: Agent runs async in tmux, so this is a secondary cleanup pass
