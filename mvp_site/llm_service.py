@@ -2458,9 +2458,7 @@ Take your time! Once we finalize these details, we'll begin your epic adventure.
                     structured_response.debug_info = {}
                 structured_response.debug_info["agent_name"] = "CharacterCreationAgent"
                 return LLMResponse.create_from_structured_response(
-                    structured_response,
-                    "mock-model",
-                    combined_narrative_text=narrative_text,
+                    structured_response, "mock-model"
                 )
             return LLMResponse.create_legacy(
                 character_creation_narrative,
@@ -2487,9 +2485,7 @@ Take your time! Once we finalize these details, we'll begin your epic adventure.
                 structured_response.debug_info = {}
             structured_response.debug_info["agent_name"] = "StoryModeAgent"
             return LLMResponse.create_from_structured_response(
-                structured_response,
-                "mock-model",
-                combined_narrative_text=narrative_text,
+                structured_response, "mock-model"
             )
         return LLMResponse.create_legacy(
             "Welcome to your adventure! You find yourself at the entrance of a mysterious dungeon, with stone walls covered in ancient runes. The air is thick with magic and possibility.",
@@ -2767,9 +2763,6 @@ Take your time! Once we finalize these details, we'll begin your epic adventure.
     # Create LLMResponse with proper debug content separation
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
-        # CRITICAL: Pass narrative_text as combined_narrative_text to preserve
-        # god_mode_response content. Without this, the placeholder from
-        # _apply_planning_fallback ("You pause to consider...") replaces the actual response.
         gemini_response = LLMResponse.create_from_structured_response(
             structured_response,
             model_to_use,
@@ -3859,9 +3852,6 @@ def continue_story(  # noqa: PLR0912, PLR0915
     # Include agent_mode as single source of truth for mode detection in world_logic.py
     if structured_response:
         # Use structured response (preferred) - ensures clean separation
-        # CRITICAL: Pass narrative_text as combined_narrative_text to preserve
-        # god_mode_response content. Without this, the placeholder from
-        # _apply_planning_fallback ("You pause to consider...") replaces the actual response.
         gemini_response = LLMResponse.create_from_structured_response(
             structured_response,
             chosen_model,
