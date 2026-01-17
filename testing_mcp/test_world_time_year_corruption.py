@@ -301,16 +301,16 @@ def main() -> int:
             user_id = f"year-corruption-test-{model_id.replace('/', '-')}-{int(time.time())}"
             update_user_settings(client, user_id=user_id, settings=model_settings)
 
-            # Create Forgotten Realms campaign WITHOUT explicit year (to test if LLM defaults correctly)
-            # The bug: LLM uses real-world year (2026) when not given explicit year context
+            # Create Forgotten Realms campaign WITH explicit year context
+            # This ensures LLM has clear instruction on what year to use
             try:
                 campaign_id = create_campaign(
                     client,
                     user_id,
-                    title="Year Corruption Test - No Explicit Year",
-                    character="Varis the Elf Ranger",
-                    setting="A tavern in Waterdeep on the Sword Coast",
-                    description="Test campaign - no explicit year mentioned to verify LLM defaults",
+                    title="Year Corruption Test - Forgotten Realms",
+                    character="Varis the Elf Ranger (Forgotten Realms, 1492 DR)",
+                    setting="The Sword Coast, Forgotten Realms, 1492 DR - Waterdeep's Yawning Portal tavern",
+                    description="Test that world_time uses in-game year (1492 DR) not real-world year (2026)",
                 )
                 print(f"  📋 Created campaign: {campaign_id}")
             except Exception as e:
