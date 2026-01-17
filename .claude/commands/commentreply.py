@@ -958,9 +958,14 @@ def main():
             if author == actor_login:
                 continue
             comment_id = comment.get("id")
+            # Support both user.login and author field formats (consistent with main loop)
             replied_by_actor = any(
                 (c.get("in_reply_to_id") == comment_id)
-                and (c.get("user", {}).get("login") == actor_login)
+                and (
+                    (c.get("user", {}).get("login") == actor_login)
+                    if isinstance(c.get("user"), dict)
+                    else (c.get("author") == actor_login)
+                )
                 for c in all_comments
             )
             if replied_by_actor:
