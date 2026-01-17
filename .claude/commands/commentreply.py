@@ -407,7 +407,7 @@ def sanitize_comment_content(content: str) -> str:
 
 
 def get_response_for_comment(
-    comment: Dict, responses_data: Dict, commit_hash: str
+    comment: Dict, responses_data: Dict, commit_hash: str, parent_comment: Optional[Dict] = None
 ) -> str:
     """
     Get Claude-generated response for a specific comment.
@@ -416,6 +416,7 @@ def get_response_for_comment(
         comment: Comment data from GitHub API
         responses_data: Loaded responses from Claude
         commit_hash: Current commit hash as fallback
+        parent_comment: Optional parent comment for context when processing replies
 
     Returns:
         Claude-generated response text or placeholder if not found
@@ -916,12 +917,19 @@ def main():
     processed_comments = []
     successful_replies = 0
 
-    # Determine current actor and limit to top-level comments
+    # Determine current actor
     ok_actor, actor_login, _ = run_command(
         ["gh", "api", "user", "-q", ".login"], description="current actor"
     )
     actor_login = (actor_login or "").strip() or os.environ.get("GITHUB_ACTOR", "")
-    top_level = [c for c in all_comments if not c.get("in_reply_to_id")]
+    
+    # CRITICAL FIX: Process ALL comments (including replies) in chronological order
+    # Sort all comments by created_at to preserve conversation order
+    # This prevents out-of-sequence execution when replies contain corrections
+    all_targets = sorted(
+        all_comments,
+        key=lambda c: c.get("created_at", "")
+    )
     total_targets = 0
     already_replied = 0
     missing_responses = 0
@@ -937,7 +945,8 @@ def main():
     # GitHub blocks threaded replies if there's a pending review from the same user
     should_cleanup_pending = False
     if actor_login:
-        for comment in top_level:
+        # Check all comments (including replies) for inline comments that need threading
+        for comment in all_targets:
             if not validate_comment_data(comment):
                 continue
             user = comment.get("user", {})
@@ -949,9 +958,14 @@ def main():
             if author == actor_login:
                 continue
             comment_id = comment.get("id")
+            # Support both user.login and author field formats (consistent with main loop)
             replied_by_actor = any(
                 (c.get("in_reply_to_id") == comment_id)
-                and (c.get("user", {}).get("login") == actor_login)
+                and (
+                    (c.get("user", {}).get("login") == actor_login)
+                    if isinstance(c.get("user"), dict)
+                    else (c.get("author") == actor_login)
+                )
                 for c in all_comments
             )
             if replied_by_actor:
@@ -985,13 +999,41 @@ def main():
             "\nℹ️ PRE-PROCESSING: No inline replies planned; skipping pending review deletion"
         )
 
-    for i, comment in enumerate(top_level, 1):
+    # CRITICAL FIX: Process all comments in chronological order (including replies)
+    for i, comment in enumerate(all_targets, 1):
         # SECURITY: Validate each comment before processing
         if not validate_comment_data(comment):
-            print(f"[{i}/{len(top_level)}] ❌ SECURITY: Skipping invalid comment data")
+            print(f"[{i}/{len(all_targets)}] ❌ SECURITY: Skipping invalid comment data")
             continue
 
         comment_id = comment.get("id")
+        in_reply_to_id = comment.get("in_reply_to_id")
+        
+        # CRITICAL FIX: Fetch parent comment context when processing replies
+        parent_comment = None
+        if in_reply_to_id:
+            parent_comment = next(
+                (c for c in all_comments if c.get("id") == in_reply_to_id),
+                None
+            )
+            if parent_comment:
+                parent_author = (
+                    parent_comment.get("user", {}).get("login")
+                    if isinstance(parent_comment.get("user"), dict)
+                    else parent_comment.get("author", "unknown")
+                )
+                parent_body_snippet = sanitize_comment_content(
+                    parent_comment.get("body", "")
+                )[:50].replace("\n", " ")
+                print(
+                    f"   📎 Reply context: Parent comment #{in_reply_to_id} by @{parent_author}"
+                )
+                print(f'   📎 Parent content: "{parent_body_snippet}..."')
+            else:
+                print(
+                    f"   ⚠️ WARNING: Parent comment #{in_reply_to_id} not found in fetched comments"
+                )
+        
         # Support both user.login and author field formats
         user = comment.get("user", {})
         author = (
@@ -1003,7 +1045,10 @@ def main():
             "\n", " "
         )
 
-        print(f"\n[{i}/{len(top_level)}] Processing comment #{comment_id} by @{author}")
+        comment_type_label = "reply" if in_reply_to_id else "top-level"
+        print(
+            f"\n[{i}/{len(all_targets)}] Processing {comment_type_label} comment #{comment_id} by @{author}"
+        )
         print(f'   Content: "{body_snippet}..."')
 
         # Skip our own comments
@@ -1013,10 +1058,15 @@ def main():
         total_targets += 1
 
         # Idempotency: skip if already replied by current actor AND no one replied after us
+        # Support both user.login and author field formats
         our_replies = [
             c for c in all_comments
             if (c.get("in_reply_to_id") == comment_id)
-            and (c.get("user", {}).get("login") == actor_login)
+            and (
+                (c.get("user", {}).get("login") == actor_login)
+                if isinstance(c.get("user"), dict)
+                else (c.get("author") == actor_login)
+            )
         ]
         if our_replies:
             # Check if anyone replied AFTER our last reply
@@ -1031,7 +1081,11 @@ def main():
             replies_after_ours = [
                 c for c in all_replies_to_comment
                 if c.get("created_at", "") > our_last_reply_time
-                and c.get("user", {}).get("login") != actor_login
+                and (
+                    (c.get("user", {}).get("login") != actor_login)
+                    if isinstance(c.get("user"), dict)
+                    else (c.get("author") != actor_login)
+                )
             ]
             if not replies_after_ours:
                 print("   ↪️ Skip: already replied by current actor (no new replies)")
@@ -1076,7 +1130,10 @@ def main():
                 continue
 
         # Get Claude-generated response for this comment
-        response_text = get_response_for_comment(comment, responses_data, commit_hash)
+        # CRITICAL FIX: Include parent comment context when processing replies
+        response_text = get_response_for_comment(
+            comment, responses_data, commit_hash, parent_comment=parent_comment
+        )
 
         # Skip posting if no response available (empty string = skip)
         if not response_text or not response_text.strip():

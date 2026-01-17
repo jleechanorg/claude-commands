@@ -95,26 +95,67 @@ class CopilotCommandBase(ABC):
         sanitized = re.sub(r"^[.-]+", "", sanitized)
         return sanitized or "unknown-branch"
 
-    def run_gh_command(self, command: List[str]) -> Dict[str, Any]:
+    def run_gh_command(self, command: List[str]) -> Any:
         """Run GitHub CLI command and return parsed JSON.
+
+        Handles pagination by flattening results with --jq when --paginate is present.
 
         Args:
             command: Command list for subprocess
 
         Returns:
-            Parsed JSON response or empty dict on error
+            Parsed JSON response (list for paginated, dict/object for single page)
         """
+        # Check if --paginate is in command (before modification)
+        is_paginated = '--paginate' in command
+        original_has_jq = '--jq' in command
+
         try:
+            if is_paginated and not original_has_jq:
+                # Add --jq to flatten paginated results
+                # Find where --paginate is and insert --jq after it
+                paginate_idx = command.index('--paginate')
+                # Use --jq '.[]' to flatten all pages into single array
+                command = command[:paginate_idx+1] + ['--jq', '.[]'] + command[paginate_idx+1:]
+
             result = subprocess.run(command, capture_output=True, text=True, check=True)
             if not result.stdout.strip():
-                return {}
-            return json.loads(result.stdout)
+                return [] if is_paginated else {}
+
+            # For paginated with INJECTED --jq, output is JSONL (one JSON object per line)
+            # We only use special parsing if WE added the --jq flag
+            if is_paginated and not original_has_jq:
+                items = []
+                for line in result.stdout.strip().split('\n'):
+                    if line.strip():
+                        try:
+                            items.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            continue
+                return items
+
+            # Single JSON object/array OR user-provided --jq output
+            try:
+                return json.loads(result.stdout)
+            except json.JSONDecodeError:
+                # Fallback for user-provided --jq that produces JSONL (e.g. --jq '.[]')
+                if is_paginated and original_has_jq:
+                    items = []
+                    for line in result.stdout.strip().split('\n'):
+                        if line.strip():
+                            try:
+                                items.append(json.loads(line))
+                            except json.JSONDecodeError:
+                                continue
+                    return items
+                raise
+
         except subprocess.CalledProcessError as e:
             self.log_error(f"GitHub CLI error: {e.stderr}")
-            return {}
+            return [] if is_paginated else {}
         except json.JSONDecodeError as e:
             self.log_error(f"JSON parsing error: {e}")
-            return {}
+            return [] if is_paginated else {}
 
     # JSON file operations removed - using stateless approach
 
