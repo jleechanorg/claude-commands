@@ -17,6 +17,14 @@ import json
 from typing import Any, Literal, overload
 
 from mvp_site import constants, dice as dice_module, logging_util
+from mvp_site.campaign_divine import (
+    get_campaign_tier as _get_campaign_tier,
+    get_highest_stat_modifier as _get_highest_stat_modifier,
+    get_pending_upgrade_type as _get_pending_upgrade_type,
+    is_campaign_upgrade_available as _is_campaign_upgrade_available,
+    is_divine_upgrade_available as _is_divine_upgrade_available,
+    is_multiverse_upgrade_available as _is_multiverse_upgrade_available,
+)
 from mvp_site.dice import DiceRollResult, execute_dice_tool
 
 # =============================================================================
@@ -1835,12 +1843,11 @@ class GameState:
     # =========================================================================
     # Campaign Upgrade Detection (Divine/Multiverse Tiers)
     # =========================================================================
+    # Delegated to campaign_divine.py module for maintainability
 
     def get_campaign_tier(self) -> str:
         """Get the current campaign tier (mortal, divine, or sovereign)."""
-        return self.custom_campaign_state.get(
-            "campaign_tier", constants.CAMPAIGN_TIER_MORTAL
-        )
+        return _get_campaign_tier(self.custom_campaign_state)
 
     def is_divine_upgrade_available(self) -> bool:
         """
@@ -1851,38 +1858,9 @@ class GameState:
         - Level >= 25
         - divine_upgrade_available flag set by narrative milestone
         """
-        if self.get_campaign_tier() != constants.CAMPAIGN_TIER_MORTAL:
-            return False
-
-        # Check explicit flag (set by narrative milestone)
-        if self.custom_campaign_state.get("divine_upgrade_available", False):
-            return True
-
-        # Check divine potential threshold (coerce to int to handle string values)
-        divine_potential_raw = self.custom_campaign_state.get("divine_potential", 0)
-        try:
-            divine_potential = int(divine_potential_raw) if divine_potential_raw else 0
-        except (ValueError, TypeError):
-            divine_potential = 0
-        if divine_potential >= constants.DIVINE_POTENTIAL_THRESHOLD:
-            return True
-
-        # Check level threshold (coerce to int to handle string values)
-        # Level may be at top-level (normalized) or in experience dict
-        # Guard against non-dict player_character_data (Firestore can persist nulls)
-        pc_data = self.player_character_data if isinstance(self.player_character_data, dict) else {}
-        level_raw = pc_data.get("level", None)
-        if level_raw is None:
-            experience = pc_data.get("experience", {})
-            level_raw = experience.get("level", 1) if isinstance(experience, dict) else 1
-        try:
-            level = int(level_raw) if level_raw else 1
-        except (ValueError, TypeError):
-            level = 1
-        if level >= constants.DIVINE_UPGRADE_LEVEL_THRESHOLD:
-            return True
-
-        return False
+        return _is_divine_upgrade_available(
+            self.custom_campaign_state, self.player_character_data
+        )
 
     def is_multiverse_upgrade_available(self) -> bool:
         """
@@ -1892,27 +1870,13 @@ class GameState:
         - universe_control >= 70
         - multiverse_upgrade_available flag set by narrative milestone
         """
-        if self.get_campaign_tier() == constants.CAMPAIGN_TIER_SOVEREIGN:
-            return False
-
-        # Check explicit flag (set by narrative milestone)
-        if self.custom_campaign_state.get("multiverse_upgrade_available", False):
-            return True
-
-        # Check universe control threshold (coerce to int to handle string values)
-        universe_control_raw = self.custom_campaign_state.get("universe_control", 0)
-        try:
-            universe_control = int(universe_control_raw) if universe_control_raw else 0
-        except (ValueError, TypeError):
-            universe_control = 0
-        if universe_control >= constants.UNIVERSE_CONTROL_THRESHOLD:
-            return True
-
-        return False
+        return _is_multiverse_upgrade_available(self.custom_campaign_state)
 
     def is_campaign_upgrade_available(self) -> bool:
         """Check if any campaign upgrade is currently available."""
-        return self.is_divine_upgrade_available() or self.is_multiverse_upgrade_available()
+        return _is_campaign_upgrade_available(
+            self.custom_campaign_state, self.player_character_data
+        )
 
     def get_pending_upgrade_type(self) -> str | None:
         """
@@ -1923,12 +1887,9 @@ class GameState:
             "multiverse" if multiverse upgrade is available
             None if no upgrade is available
         """
-        # Multiverse takes priority (can upgrade from any tier)
-        if self.is_multiverse_upgrade_available():
-            return "multiverse"
-        if self.is_divine_upgrade_available():
-            return "divine"
-        return None
+        return _get_pending_upgrade_type(
+            self.custom_campaign_state, self.player_character_data
+        )
 
     def get_highest_stat_modifier(self) -> int:
         """
@@ -1936,34 +1897,7 @@ class GameState:
 
         Used for converting stats to God Power in divine/sovereign tiers.
         """
-        pc_data = self.player_character_data if isinstance(self.player_character_data, dict) else {}
-        attributes = pc_data.get("attributes", {})
-        if not isinstance(attributes, dict):
-            return 0
-
-        highest_modifier: int | None = None
-        for attr_name, attr_value in attributes.items():
-            modifier: int | None = None
-            if isinstance(attr_value, dict):
-                # Handle {"score": 18, "modifier": 4} format
-                if "modifier" in attr_value:
-                    modifier = _coerce_int(attr_value.get("modifier"), None)
-                elif "score" in attr_value:
-                    score = _coerce_int(attr_value.get("score"), None)
-                    if score is not None:
-                        modifier = (score - 10) // 2
-            else:
-                # Handle direct score value (int/str/float) - calculate modifier
-                score = _coerce_int(attr_value, None)
-                if score is not None:
-                    modifier = (score - 10) // 2
-
-            if modifier is not None:
-                if highest_modifier is None or modifier > highest_modifier:
-                    highest_modifier = modifier
-
-        # Return 0 if no valid attributes found (fallback)
-        return highest_modifier if highest_modifier is not None else 0
+        return _get_highest_stat_modifier(self.player_character_data)
 
     # =========================================================================
     # Divine Rank System (Level-Based Progression)

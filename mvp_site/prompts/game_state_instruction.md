@@ -1364,24 +1364,17 @@ When setting `hp_max` for a combatant, it MUST fall within the CR-appropriate ra
 **Location:** `custom_campaign_state`
 
 **Fields to Track:**
-- `divine_potential` (0-100): Progress toward divine ascension. Increment when player:
-  - Touches divine artifacts (+5-10)
-  - Defeats divine/demonic entities (+10-20)
-  - Receives blessings or curses from gods (+15-25)
-  - Performs miraculous feats beyond mortal capability (+5-15)
-  - Reaches narrative milestones indicating divine attention (+10-30)
-  - At 100: Divine upgrade becomes available
+- `divine_potential` (0-100): Progress toward divine ascension
+- `universe_control` (0-100): Progress toward multiversal dominion
+- `divine_upgrade_available` (boolean): Set to `true` when conditions are met
+- `multiverse_upgrade_available` (boolean): Set to `true` when conditions are met
+- `campaign_tier`: Current tier ("mortal", "divine", or "sovereign")
 
-- `universe_control` (0-100): Progress toward multiversal dominion. Increment when player:
-  - Controls entire kingdoms or empires (+5-15)
-  - Defeats world-ending threats (+10-20)
-  - Gains absolute power over fundamental forces (+15-25)
-  - Manipulates reality on cosmic scale (+20-30)
-  - Absorbs other divine entities' power (+15-25)
-  - At 70+: Multiverse upgrade becomes available
-
-- `divine_upgrade_available` (boolean): Set to `true` when divine potential >= 100 or level >= 25 or narrative milestone reached
-- `multiverse_upgrade_available` (boolean): Set to `true` when universe_control >= 70 or narrative milestone reached
+**Trigger Detection:**
+The system automatically detects when upgrades become available based on:
+- `divine_potential >= 100` OR `level >= 25` → Divine upgrade available
+- `universe_control >= 70` → Multiverse upgrade available
+- Narrative milestone flags (`divine_upgrade_available` / `multiverse_upgrade_available`)
 
 **Update Example:**
 ```json
@@ -1406,6 +1399,13 @@ When the player explicitly becomes a god or achieves cosmic dominion:
   }
 }
 ```
+
+**Detailed Rules:**
+For complete mechanics on divine/multiverse progression, see:
+- **Divine Tier:** `prompts/divine/divine_leverage_system.md` - Full divine progression rules
+- **Divine Ascension:** `prompts/divine/divine_ascension_ceremony.md` - Ascension ceremony details
+- **Multiverse Tier:** `prompts/multiverse/sovereign_system.md` - Sovereign progression rules
+- **Multiverse Ascension:** `prompts/multiverse/sovereign_ascension_ceremony.md` - Sovereign ceremony details
 
 **Rules:**
 - Increment gradually based on narrative events - don't jump to 100 suddenly
