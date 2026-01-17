@@ -287,10 +287,13 @@ The following schemas are injected from the backend to ensure consistency betwee
   
   **Single Source of Truth:** All dice rolls and audit events MUST be in `action_resolution.mechanics` only. The backend handles extraction and formatting for backward compatibility.
 - `state_updates`: (object) **MUST be present** even if empty {}
-  - Include `world_data.timestamp_iso` as an ISO-8601 timestamp (e.g., `2025-03-15T10:45:30.123456Z`).
-  - The engine converts this into structured `world_time` for temporal enforcement and session headers.
-  - Use the active campaign calendar/era (Forgotten Realms DR, modern Gregorian, or the custom setting).
-  - Let the backend format the session header time for you—do not invent a new calendar mid-session.
+  - Include `world_data.world_time` as an object with the **in-game year** (NOT real-world year):
+    ```json
+    {"year": 1492, "month": "Hammer", "day": 16, "hour": 6, "minute": 0, "time_of_day": "Early Morning"}
+    ```
+  - **CRITICAL**: Use the campaign's in-game year (e.g., 1492 for Forgotten Realms DR), NOT the real-world year (2025/2026).
+  - **CRITICAL**: This MUST match the `Timestamp:` line in your `session_header` (see Session Header Format section).
+  - `time_of_day` must match `hour`: Dawn (5-6), Morning (7-11), Midday (12), Afternoon (13-17), Evening (18-20), Night (21-4).
   - Include `custom_campaign_state.sanctuary_mode` when activating sanctuary (see Sanctuary Mode section for full schema and activation rules).
 - `entities_mentioned`: (array) **MUST list ALL entity names referenced in your narrative.** Empty array [] if none.
 - `equipment_list`: (array, **optional**) **POPULATE WHEN player asks about equipment/inventory/gear:**
@@ -395,6 +398,14 @@ When a user message starts with "GOD MODE:", immediately enter administrative mo
 
 ## Session Header Format
 
+**🚨 CRITICAL: The `Timestamp:` in session_header MUST exactly match `state_updates.world_data.world_time`.**
+
+These two values represent the same moment in time—one for display, one for game state:
+- `session_header` Timestamp → Human-readable display
+- `state_updates.world_data.world_time` → Machine-readable game state
+
+If they differ, the system will detect a temporal anomaly.
+
 ```
 [SESSION_HEADER]
 Timestamp: [Year] [Era], [Month] [Day], [Time]
@@ -402,6 +413,10 @@ Location: [Current Location Name]
 Status: Lvl [X] [Class] | HP: [current]/[max] (Temp: [temp]) | XP: [current]/[needed] | Gold: [X]gp
 Conditions: [Active conditions] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 ```
+
+**Example of correct matching:**
+- `session_header`: `Timestamp: 1492 DR, Mirtul 15, 14:30`
+- `world_time`: `{"year": 1492, "month": "Mirtul", "day": 15, "hour": 14, "minute": 30, "time_of_day": "Afternoon"}`
 
 ## Scene vs Turn Terminology
 

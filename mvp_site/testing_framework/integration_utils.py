@@ -14,7 +14,7 @@ import main
 
 from .factory import get_service_provider
 
-# Removed circular import - update_test_imports is defined in this file
+# Note: update_test_imports() is defined below (line 246) - no import needed since it's in this module
 
 # Add the project root to the path for imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
