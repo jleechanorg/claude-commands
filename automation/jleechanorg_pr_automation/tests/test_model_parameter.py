@@ -210,6 +210,10 @@ class TestModelParameter(unittest.TestCase):
 
         # Mock has_failing_checks to ensure PR is not skipped as "clean"
         with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=True), \
+             patch(
+                 "jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout",
+                 return_value=SimpleNamespace(returncode=0, stdout='{"mergeable":"MERGEABLE"}', stderr=""),
+             ), \
              patch.object(monitor, "_get_pr_comment_state", return_value=(None, [])), \
              patch.object(monitor, "_should_skip_pr", return_value=False), \
              patch.object(monitor, "_post_fixpr_queued", return_value=True), \

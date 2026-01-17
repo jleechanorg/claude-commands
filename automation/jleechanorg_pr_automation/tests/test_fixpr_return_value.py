@@ -397,7 +397,7 @@ class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
         pr = self._base_pr()
         
         # Unknown status path again (e.g. failing checks throws exception)
-        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", side_effect=Exception("API Fail")):
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", side_effect=RuntimeError("API failure")):
             # gh pr view failure
             mock_subprocess_result = SimpleNamespace(returncode=1, stdout="", stderr="fail")
             with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_subprocess_result):
@@ -405,7 +405,7 @@ class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
                     # History says processed → should skip because status is unknown (cannot confirm issues exist)
                     with patch.object(self.monitor, "_should_skip_pr", return_value=True):
                         with patch.object(self.monitor, "_count_workflow_comments", return_value=0):
-                             res = self.monitor._process_pr_fixpr("test/repo", 123, pr, agent_cli="claude", model=None)
+                            res = self.monitor._process_pr_fixpr("test/repo", 123, pr, agent_cli="claude", model=None)
         
         self.assertEqual(res, "skipped")
 
