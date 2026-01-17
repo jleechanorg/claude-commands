@@ -1743,7 +1743,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if isinstance(fix_comment_count, int) and fix_comment_count >= fix_comment_limit:
             self.logger.info(
                 f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number} (fix-comment); "
-                f"{fix_comment_count}/{self.safety_manager.fix_comment_limit} fix-comment automation comments"
+                f"{fix_comment_count}/{fix_comment_limit} fix-comment automation comments"
             )
             return "skipped"
 
@@ -2004,7 +2004,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if isinstance(fixpr_count, int) and fixpr_count >= fixpr_limit:
             self.logger.info(
                 f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number} (fixpr); "
-                f"{fixpr_count}/{self.safety_manager.fixpr_limit} fixpr automation comments"
+                f"{fixpr_count}/{fixpr_limit} fixpr automation comments"
             )
             return "skipped"
 
