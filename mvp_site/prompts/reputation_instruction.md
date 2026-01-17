@@ -2,29 +2,7 @@
 
 **CRITICAL: Reputation has TWO layers - what's publicly known vs. what specific groups know privately.**
 
-## Reputation Data Schema
-
-**Track in `custom_campaign_state.reputation`:**
-```json
-"reputation": {
-  "public": {
-    "score": 0,
-    "titles": [],
-    "known_deeds": [],
-    "rumors": [],
-    "notoriety_level": "unknown"
-  },
-  "private": {
-    "faction_id_001": {
-      "score": 5,
-      "standing": "trusted",
-      "known_deeds": ["completed mission X", "saved agent Y"],
-      "secret_knowledge": ["knows about the artifact"],
-      "trust_override": null
-    }
-  }
-}
-```
+**Schema:** Reputation is stored in `custom_campaign_state.reputation` with structure: `public` (score, titles, known_deeds, rumors, notoriety_level) and `private[faction_id]` (score, standing, known_deeds, secret_knowledge, trust_override). See the "State Update Rules" section for state management patterns.
 
 ## Public Reputation (What Everyone Knows)
 
