@@ -121,11 +121,18 @@
 
 ## 🧠 5. Planning and Social Examples
 
-### ✅ CORRECT - Dice match action intent:
-```
+### ✅ CORRECT - Dice in action_resolution.mechanics.rolls (single source of truth):
+```json
 Player: "Dramatic Entrance - Use Charisma to make a grand entrance"
 AI: "You throw open the ballroom doors with theatrical flair! Your presence radiates authority..."
-dice_rolls: ["Intimidation: 1d20 +8 CHA = 17 +8 CHA = 25 vs DC 15 (civilian crowd) - Success"]
+action_resolution: {
+  "mechanics": {
+    "rolls": [
+      {"notation": "1d20+8", "result": 25, "dc": 15, "success": true, "purpose": "Intimidation (Dramatic Entrance)"}
+    ]
+  }
+}
+// NOTE: dice_rolls field is auto-populated by backend from action_resolution.mechanics.rolls
 ```
 
 ### ❌ WRONG - Planning Loop Violation:
