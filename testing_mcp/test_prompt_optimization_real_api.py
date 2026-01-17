@@ -596,7 +596,7 @@ def main():
                 print("ERROR: --start-local requires lib modules (firebase_admin, etc.)")
                 print("Please ensure dependencies are installed or use --server-url with external server")
                 return 1
-            port = pick_free_port(8001)
+            port = pick_free_port()
             print(f"Starting local MCP server on port {port}...")
             server = start_local_mcp_server(port)
             base_url = f"http://127.0.0.1:{port}"
