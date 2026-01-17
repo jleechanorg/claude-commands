@@ -14,13 +14,16 @@ Evidence: Campaign STpjRuwjeUt97tpCl5nK has:
 This test reproduces the extraction failure.
 """
 
+import os
 import sys
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add parent directory to path for imports (matches pattern in mvp_site/tests/)
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from mvp_site.structured_fields_utils import extract_structured_fields
 
