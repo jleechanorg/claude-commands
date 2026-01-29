@@ -155,6 +155,9 @@ class PerCommentCache:
         if not comment_id:
             raise ValueError("Comment must have an 'id' field")
         
+        existing_comment = self.load_comment(comment_id)
+        existing_type = existing_comment.get("type", "unknown") if existing_comment else None
+
         # Save the comment file
         self.save_comment(comment)
         
@@ -174,14 +177,23 @@ class PerCommentCache:
                 }
             
             comment_ids = index.get("comment_ids", [])
-            if comment_id not in comment_ids:
+            is_new_comment = comment_id not in comment_ids
+            if is_new_comment:
                 comment_ids.append(comment_id)
                 index["comment_ids"] = comment_ids
                 index["total"] = len(comment_ids)
             
             # Update type counts
             ctype = comment.get("type", "unknown")
-            index["by_type"][ctype] = index["by_type"].get(ctype, 0) + 1
+            if is_new_comment:
+                index["by_type"][ctype] = index["by_type"].get(ctype, 0) + 1
+            elif existing_type and existing_type != ctype:
+                previous_count = index["by_type"].get(existing_type, 0)
+                if previous_count <= 1:
+                    index["by_type"].pop(existing_type, None)
+                else:
+                    index["by_type"][existing_type] = previous_count - 1
+                index["by_type"][ctype] = index["by_type"].get(ctype, 0) + 1
             
             with open(self.index_file, 'w') as f:
                 json.dump(index, f, indent=2)
