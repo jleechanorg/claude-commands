@@ -117,6 +117,65 @@ class SafeJSONManager:
                 logging.exception(f"Failed to update JSON {file_path}: {e}")
                 return False
 
+    def atomic_update(self, file_path: str, update_func, default: Any = None) -> bool:
+        """
+        ATOMIC read-modify-write with file lock held across entire operation.
+
+        This fixes the race condition where separate read_json() and write_json()
+        calls release the file lock between operations, allowing other processes
+        to interleave and corrupt the update.
+
+        Args:
+            file_path: Path to JSON file
+            update_func: Callback that takes current data dict and returns updated dict
+            default: Default value if file doesn't exist (default: {})
+
+        Returns:
+            bool: True if update succeeded, False otherwise
+        """
+        lock = self._get_lock(file_path)
+        default_val = default if default is not None else {}
+
+        with lock:
+            try:
+                # Ensure directory exists
+                directory = os.path.dirname(file_path)
+                if directory:
+                    os.makedirs(directory, exist_ok=True)
+
+                # FIX: Use single code path to avoid TOCTOU race condition
+                # 'a+' mode creates file if missing, doesn't truncate if exists
+                # Lock is acquired BEFORE any truncation happens
+                with open(file_path, 'a+') as f:
+                    # Acquire EXCLUSIVE lock for entire read-modify-write
+                    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                    try:
+                        # Read current data (seek to start for 'a+' mode)
+                        f.seek(0)
+                        try:
+                            content = f.read()
+                            data = json.loads(content) if content.strip() else default_val
+                        except (json.JSONDecodeError, ValueError):
+                            data = default_val
+
+                        # Apply update function
+                        updated_data = update_func(data)
+
+                        # Write updated data atomically (truncate AFTER lock acquired)
+                        f.seek(0)
+                        f.truncate()
+                        json.dump(updated_data, f, indent=2, default=str)
+                        f.flush()
+                        os.fsync(f.fileno())
+
+                        return True
+                    finally:
+                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+            except Exception as e:
+                logging.exception(f"Failed atomic update of {file_path}: {e}")
+                return False
+
 
 # Global instance for shared use
 json_manager = SafeJSONManager()

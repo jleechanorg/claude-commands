@@ -194,6 +194,6 @@ The command automatically searches memory for relevant presentation creation exp
 ## Command Composition
 
 Can be combined with other commands:
-- `/presentation /plan` - Add planning phase
+- `/presentation /planexec` - Add planning phase
 - `/presentation /think` - Extra deep analysis
 - `/presentation /research` - Research-heavy topics

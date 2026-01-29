@@ -13,6 +13,7 @@ Minimal implementation to pass the RED phase tests with:
 import argparse
 import importlib.util
 import json
+import logging
 import os
 import smtplib
 import sys
@@ -66,6 +67,11 @@ class AutomationSafetyManager:
         self.codex_update_limit = merged_limits["codex_update_limit"]
         self.fixpr_limit = merged_limits["fixpr_limit"]
 
+        # Concurrent processing limit (max agents working on same PR at once)
+        # This is separate from pr_limit (total attempts over time)
+        # Default: 1 agent per PR to prevent race conditions, duplicate work, git conflicts
+        self.concurrent_limit = 1
+
         # File paths
         self.pr_attempts_file = os.path.join(data_dir, "pr_attempts.json")
         self.global_runs_file = os.path.join(data_dir, "global_runs.json")
@@ -78,6 +84,7 @@ class AutomationSafetyManager:
         self._pr_attempts_cache = {}
         self._global_runs_cache = 0
         self._pr_inflight_cache: Dict[str, int] = {}
+        self._pr_inflight_updated_at: Dict[str, str] = {}
         self._pr_overrides_cache: Dict[str, int] = {}  # Per-PR limit overrides (0 = unlimited)
 
         # Initialize files if they don't exist
@@ -179,7 +186,9 @@ class AutomationSafetyManager:
 
             # Load inflight cache
             inflight_data = self._read_json_file(self.inflight_file)
-            self._pr_inflight_cache = {k: int(v) for k, v in inflight_data.items()}
+            inflight_counts, inflight_updated = self._parse_inflight_data(inflight_data)
+            self._pr_inflight_cache = inflight_counts
+            self._pr_inflight_updated_at = inflight_updated
 
             # Load PR limit overrides
             overrides_data = self._read_json_file(self.pr_overrides_file)
@@ -192,7 +201,86 @@ class AutomationSafetyManager:
             self._write_json_file(self.pr_attempts_file, self._pr_attempts_cache)
 
             # Sync inflight cache to prevent concurrent processing
-            self._write_json_file(self.inflight_file, self._pr_inflight_cache)
+            self._write_json_file(self.inflight_file, self._serialize_inflight_data())
+
+    def _parse_timestamp(self, timestamp_str: str) -> datetime:
+        """Parse ISO timestamp string to datetime object.
+
+        Returns:
+            datetime object in UTC, or epoch (1970-01-01) if parsing fails
+        """
+        if not timestamp_str:
+            return datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+        try:
+            # Parse ISO format timestamp (e.g., "2026-01-18T02:33:26.798956+00:00")
+            dt = datetime.fromisoformat(timestamp_str)
+            # Ensure timezone-aware (convert to UTC if needed)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except (ValueError, AttributeError, TypeError):
+            # Return epoch if parse fails (very old attempt, will be filtered out)
+            # TypeError: timestamp is not a string (e.g., int from corrupted/legacy data)
+            # ValueError: timestamp string is malformed
+            # AttributeError: timestamp_str is None or has no expected attributes
+            return datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+    def _parse_inflight_entry(self, value: object) -> tuple[int, Optional[str]]:
+        """Parse inflight entry into count + updated_at (if present)."""
+        if isinstance(value, dict):
+            raw_count = value.get("count", 0)
+            try:
+                count = int(raw_count)
+            except (TypeError, ValueError):
+                count = 0
+            updated_at = value.get("updated_at")
+            return count, updated_at if isinstance(updated_at, str) else None
+        try:
+            return int(value), None
+        except (TypeError, ValueError):
+            return 0, None
+
+    def _parse_inflight_data(self, inflight_data: dict) -> tuple[Dict[str, int], Dict[str, str]]:
+        counts: Dict[str, int] = {}
+        updated: Dict[str, str] = {}
+        for key, value in inflight_data.items():
+            count, updated_at = self._parse_inflight_entry(value)
+            counts[key] = count
+            if updated_at:
+                updated[key] = updated_at
+        return counts, updated
+
+    def _serialize_inflight_data(self) -> Dict[str, object]:
+        payload: Dict[str, object] = {}
+        for key, count in self._pr_inflight_cache.items():
+            updated_at = self._pr_inflight_updated_at.get(key)
+            if updated_at:
+                payload[key] = {"count": count, "updated_at": updated_at}
+            else:
+                payload[key] = {"count": count}
+        return payload
+
+    def _get_inflight_stale_seconds(self) -> int:
+        # Guard against stuck slots when a process dies before release.
+        # Use a conservative multiplier on subprocess_timeout with a 30m minimum.
+        return max(int(self.subprocess_timeout) * 3, 1800)
+
+    def _is_inflight_stale(
+        self,
+        *,
+        updated_at: Optional[str],
+        file_mtime: Optional[float],
+    ) -> bool:
+        now = datetime.now(timezone.utc)
+        stale_seconds = self._get_inflight_stale_seconds()
+        if updated_at:
+            last_update = self._parse_timestamp(updated_at)
+            return (now - last_update) > timedelta(seconds=stale_seconds)
+        if file_mtime is None:
+            return False
+        mtime_dt = datetime.fromtimestamp(file_mtime, tz=timezone.utc)
+        return (now - mtime_dt) > timedelta(seconds=stale_seconds)
 
     def _make_pr_key(
         self,
@@ -354,11 +442,12 @@ class AutomationSafetyManager:
     def can_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
         """Check if PR can be processed (under attempt limit).
 
-        NEW BEHAVIOR: Counts attempts from TODAY only (daily cooldown, resets at midnight).
+        NEW BEHAVIOR: Uses rolling window (default 24 hours) instead of daily reset.
+        Attempts expire gradually as they age out of the window, not all at midnight.
         Supports per-PR limit overrides (0 = unlimited).
 
         Blocks if:
-        1. Today's attempts >= effective_pr_limit (respects overrides)
+        1. Attempts in last N hours >= effective_pr_limit (respects overrides)
         """
         with self.lock:
             raw_data = self._read_json_file(self.pr_attempts_file)
@@ -370,75 +459,139 @@ class AutomationSafetyManager:
             # Get effective limit (checks for per-PR override)
             effective_limit = self._get_effective_pr_limit(pr_number, repo, branch)
 
-            # Filter attempts to TODAY only (daily cooldown)
-            # Timestamps are stored in UTC, so compare against UTC date only
-            today_utc = datetime.now(timezone.utc).date().isoformat()
-            
-            today_attempts = [
+            # Filter attempts to rolling window (last N hours)
+            # Get window hours from env var or config (default 24)
+            # Use coerce_positive_int to gracefully handle invalid env var values
+            window_hours = coerce_positive_int(
+                os.environ.get("AUTOMATION_ATTEMPT_WINDOW_HOURS", "24"),
+                default=24
+            )
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+
+            window_attempts = [
                 attempt for attempt in attempts
-                if isinstance(attempt, dict) and attempt.get("timestamp", "").startswith(today_utc)
+                if isinstance(attempt, dict) and self._parse_timestamp(attempt.get("timestamp")) >= cutoff_time
             ]
 
-            # Count TODAY's attempts only
-            total_attempts = len(today_attempts)
+            # Count attempts within rolling window
+            total_attempts = len(window_attempts)
 
             # Check against effective limit
             return total_attempts < effective_limit
 
     def try_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
-        """Atomically reserve a processing slot for PR."""
+        """Atomically reserve a processing slot for PR with proper cross-process locking."""
         with self.lock:
             # Check consecutive failure limit first
             if not self.can_process_pr(pr_number, repo, branch):
                 return False
 
             pr_key = self._make_pr_key(pr_number, repo, branch)
-            inflight = self._pr_inflight_cache.get(pr_key, 0)
 
-            # Check if we're at the concurrent processing limit for this PR
-            if inflight >= self.pr_limit:
-                return False
+            # Use atomic_update to prevent race conditions between processes
+            # This holds the file lock across the entire read-modify-write operation
+            success = False
+            inflight_file_mtime = None
+            try:
+                inflight_file_mtime = os.path.getmtime(self.inflight_file)
+            except OSError:
+                inflight_file_mtime = None
 
-            # Reserve a processing slot
-            self._pr_inflight_cache[pr_key] = inflight + 1
+            def reserve_slot(inflight_data: dict) -> dict:
+                nonlocal success
+                # Update in-memory cache from disk data
+                inflight_counts, inflight_updated = self._parse_inflight_data(inflight_data)
+                self._pr_inflight_cache = inflight_counts
+                self._pr_inflight_updated_at = inflight_updated
 
-            # Persist immediately to prevent race conditions with concurrent cron jobs
-            self._write_json_file(self.inflight_file, self._pr_inflight_cache)
+                inflight = self._pr_inflight_cache.get(pr_key, 0)
+                updated_at = self._pr_inflight_updated_at.get(pr_key)
+                legacy_entry = pr_key in inflight_data and not isinstance(inflight_data.get(pr_key), dict)
 
-            return True
+                # Check if we're at the concurrent processing limit for this PR
+                if inflight >= self.concurrent_limit:
+                    if legacy_entry or self._is_inflight_stale(
+                        updated_at=updated_at,
+                        file_mtime=inflight_file_mtime,
+                    ):
+                        self.logger.warning(
+                            "⚠️ Clearing stale inflight slot for %s (count=%s, updated_at=%s, legacy=%s)",
+                            pr_key,
+                            inflight,
+                            updated_at,
+                            legacy_entry,
+                        )
+                        inflight = 0
+                        self._pr_inflight_cache.pop(pr_key, None)
+                        self._pr_inflight_updated_at.pop(pr_key, None)
+                    else:
+                        success = False
+                        return inflight_data  # Return unchanged
+
+                # Reserve a processing slot
+                self._pr_inflight_cache[pr_key] = inflight + 1
+                self._pr_inflight_updated_at[pr_key] = datetime.now(timezone.utc).isoformat()
+                success = True
+                return self._serialize_inflight_data()
+
+            write_success = json_manager.atomic_update(self.inflight_file, reserve_slot, {})
+            # Only return True if BOTH reservation logic AND file write succeeded
+            return success and write_success
 
     def release_pr_slot(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
-        """Release a processing slot for PR (call in finally block)"""
+        """Release a processing slot for PR (call in finally block) with atomic cross-process locking."""
         with self.lock:
             pr_key = self._make_pr_key(pr_number, repo, branch)
-            inflight = self._pr_inflight_cache.get(pr_key, 0)
-            if inflight > 0:
-                self._pr_inflight_cache[pr_key] = inflight - 1
-                # Persist immediately to prevent race conditions
-                self._write_json_file(self.inflight_file, self._pr_inflight_cache)
+
+            # Use atomic_update to prevent race conditions between processes
+            def release_slot(inflight_data: dict) -> dict:
+                # Update in-memory cache from disk data
+                inflight_counts, inflight_updated = self._parse_inflight_data(inflight_data)
+                self._pr_inflight_cache = inflight_counts
+                self._pr_inflight_updated_at = inflight_updated
+
+                inflight = self._pr_inflight_cache.get(pr_key, 0)
+                if inflight > 0:
+                    self._pr_inflight_cache[pr_key] = inflight - 1
+                    if self._pr_inflight_cache[pr_key] == 0:
+                        self._pr_inflight_cache.pop(pr_key, None)
+                        self._pr_inflight_updated_at.pop(pr_key, None)
+                    else:
+                        self._pr_inflight_updated_at[pr_key] = datetime.now(timezone.utc).isoformat()
+
+                return self._serialize_inflight_data()
+
+            write_success = json_manager.atomic_update(self.inflight_file, release_slot, {})
+            if not write_success:
+                logging.error(f"Failed to release slot for PR {pr_key} - file write failed")
 
     def get_pr_attempts(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
         """Get count of attempts for a specific PR.
 
-        NEW BEHAVIOR: Counts attempts from TODAY only (daily cooldown).
+        NEW BEHAVIOR: Uses rolling window (consistent with can_process_pr()).
+        This ensures CLI output matches actual attempt counting logic.
         """
         with self.lock:
             raw_data = self._read_json_file(self.pr_attempts_file)
             self._pr_attempts_cache = self._normalize_pr_attempt_keys(raw_data)
             pr_key = self._make_pr_key(pr_number, repo, branch)
             attempts = list(self._pr_attempts_cache.get(pr_key, []))
-            
-            # Filter to today's attempts only (daily cooldown)
-            # Timestamps are stored in UTC, so compare against UTC date only
-            today_utc = datetime.now(timezone.utc).date().isoformat()
-            
-            today_attempts = [
+
+            # Filter attempts to rolling window (last N hours)
+            # MUST match the logic in can_process_pr() to avoid misleading CLI output
+            window_hours = coerce_positive_int(
+                os.environ.get("AUTOMATION_ATTEMPT_WINDOW_HOURS", "24"),
+                default=24
+            )
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+
+            window_attempts = [
                 attempt for attempt in attempts
-                if isinstance(attempt, dict) and attempt.get("timestamp", "").startswith(today_utc)
+                if isinstance(attempt, dict) and self._parse_timestamp(attempt.get("timestamp")) >= cutoff_time
             ]
-            
-            # Return count of TODAY's attempts
-            return len(today_attempts)
+
+            # Return count of attempts within rolling window
+            return len(window_attempts)
 
     def get_pr_attempt_list(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
         """Get list of attempts for a specific PR (for detailed analysis)"""
@@ -473,8 +626,10 @@ class AutomationSafetyManager:
             if inflight > 0:
                 if inflight == 1:
                     self._pr_inflight_cache.pop(pr_key, None)
+                    self._pr_inflight_updated_at.pop(pr_key, None)
                 else:
                     self._pr_inflight_cache[pr_key] = inflight - 1
+                    self._pr_inflight_updated_at[pr_key] = datetime.now(timezone.utc).isoformat()
 
             # Sync to file for persistence
             self._sync_state_to_files()
@@ -822,10 +977,12 @@ This is an automated notification from the WorldArchitect.AI automation system.
             # Clear from inflight cache
             if pr_key in self._pr_inflight_cache:
                 del self._pr_inflight_cache[pr_key]
+            if pr_key in self._pr_inflight_updated_at:
+                del self._pr_inflight_updated_at[pr_key]
 
             # Persist to disk
             self._write_json_file(self.pr_attempts_file, self._pr_attempts_cache)
-            self._write_json_file(self.inflight_file, self._pr_inflight_cache)
+            self._write_json_file(self.inflight_file, self._serialize_inflight_data())
 
             self.logger.info(f"✅ Cleared all attempts for PR {pr_key}")
             return True

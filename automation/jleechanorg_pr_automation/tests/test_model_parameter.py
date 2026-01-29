@@ -208,13 +208,22 @@ class TestModelParameter(unittest.TestCase):
             "headRefOid": "abc123",
         }
 
-        with patch.object(monitor, "_get_pr_comment_state", return_value=(None, [])), \
+        # Mock has_failing_checks to ensure PR is not skipped as "clean"
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=True), \
+             patch(
+                 "jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout",
+                 return_value=SimpleNamespace(returncode=0, stdout='{"mergeable":"MERGEABLE"}', stderr=""),
+             ), \
+             patch.object(monitor, "_get_pr_comment_state", return_value=(None, [])), \
              patch.object(monitor, "_should_skip_pr", return_value=False), \
+             patch.object(monitor, "_count_workflow_comments", return_value=0), \
              patch.object(monitor, "_post_fixpr_queued", return_value=True), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher"), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr", return_value=True) as mock_dispatch, \
+             patch.object(monitor, "_post_fixpr_queued", return_value=True), \
+             patch.object(monitor, "_record_processed_pr"), \
              patch.object(monitor, "safety_manager") as mock_safety:
 
             mock_safety.fixpr_limit = 10
@@ -226,8 +235,11 @@ class TestModelParameter(unittest.TestCase):
                 model="sonnet",
             )
 
-        self.assertEqual(result, "posted")
-        self.assertEqual(mock_dispatch.call_args[1].get("model"), "sonnet")
+            self.assertEqual(result, "posted")
+            # Verify model was passed to dispatch_agent_for_pr
+            mock_dispatch.assert_called_once()
+            call_kwargs = mock_dispatch.call_args[1] if mock_dispatch.call_args else {}
+            self.assertEqual(call_kwargs.get("model"), "sonnet")
 
 
     def test_normalize_model_none_returns_none(self):

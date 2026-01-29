@@ -87,6 +87,36 @@ This skill integrates with:
 - `/pushl` command - Push with automatic labeling
 - Build/test/lint autopilot - Pre-PR validation
 
+## PR Branch Verification (MANDATORY)
+
+**CRITICAL: Always verify the correct PR remote branch before working on merge conflicts or PR operations.**
+
+### Forbidden Actions
+- Guessing or assuming PR branch names
+- Using branch names that "look like" they match the PR number
+- Working on branches without verifying they're the actual PR branch
+
+### Required Steps
+1. **Verify PR branch name**:
+   - `gh pr view <number> --json headRefName`
+   - Or: `git log --oneline --all --grep="<PR-number>"`
+2. **Fetch the correct remote branch**: `git fetch origin <actual-branch-name>`
+3. **Reset to the correct branch**: `git reset --hard origin/<actual-branch-name>`
+4. **Verify before proceeding**: `git log --oneline -5`
+
+### Example
+```bash
+# WRONG - Don't guess
+git fetch origin pull/3096/head:pr-3096
+
+# CORRECT - Verify first
+gh pr view 3096 --json headRefName  # Returns actual branch name
+git fetch origin claude/byok-settings-feature-0WgQP
+git reset --hard origin/claude/byok-settings-feature-0WgQP
+```
+
+**Root Cause Prevention:** Multiple branches may exist with similar names. Always verify from PR metadata.
+
 ## Reporting expectations
 - Confirm upstream tracking is set: `git branch -vv` output
 - Display PR URL after creation

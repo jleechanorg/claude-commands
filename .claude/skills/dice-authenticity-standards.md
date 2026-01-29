@@ -139,14 +139,49 @@ def _code_contains_rng(code_text: str) -> bool:
 
 ### Evidence Fields
 
-The `extract_code_execution_evidence()` function returns:
+The `extract_code_execution_evidence()` function returns evidence that is saved to Firestore `story.debug_info`:
 
 | Field | Type | Meaning |
 |-------|------|---------|
 | `code_execution_used` | bool | Code was executed |
+| `executable_code_parts` | int | Count of code blocks executed |
+| `code_execution_result_parts` | int | Count of execution results |
 | `code_contains_rng` | bool | RNG function found in code |
 | `rng_verified` | bool | `code_execution_used AND code_contains_rng` |
+| `stdout` | str | JSON output from code execution (dice results) |
 | `stdout_is_valid_json` | bool | Output is valid JSON |
+| `executed_code` | list[str] | **Actual Python code executed** (for audit) |
+
+### Querying Code Execution Evidence from Firestore
+
+```python
+# Query recent story entries to check code execution evidence
+from mvp_site.clock_skew_credentials import apply_clock_skew_patch
+apply_clock_skew_patch()
+
+import firebase_admin
+from firebase_admin import auth, firestore, credentials
+
+cred = credentials.Certificate('~/serviceAccountKey.json')
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+# Get story entry
+user_record = auth.get_user_by_email('user@example.com')
+campaign_ref = db.collection('users').document(user_record.uid).collection('campaigns').document('<campaign_id>')
+story_ref = campaign_ref.collection('story')
+entries = story_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(5).stream()
+
+for entry in entries:
+    data = entry.to_dict()
+    if data.get('actor') != 'gemini':
+        continue
+    debug = data.get('debug_info', {})
+    print(f"code_execution_used: {debug.get('code_execution_used')}")
+    print(f"rng_verified: {debug.get('rng_verified')}")
+    print(f"executed_code: {debug.get('executed_code', [])}")
+    print(f"stdout: {debug.get('stdout', '')[:200]}")
+```
 
 ### Fabrication Detection Logic
 

@@ -311,12 +311,12 @@ class TestPromptAPIEndpoint(unittest.TestCase):
         assert dispatcher.task_description is not None, "Task description should be set"
         prompt = dispatcher.task_description
 
-        # Should contain correct endpoint: /comments with in_reply_to parameter
-        assert "/pulls/123/comments" in prompt, "Prompt should contain /comments endpoint"
+        # Should contain correct endpoint: /comments with in_reply_to parameter (Python requests syntax)
+        assert "/pulls/123/comments" in prompt or "pulls/123/comments" in prompt, "Prompt should contain /comments endpoint"
         assert "in_reply_to" in prompt, "Prompt should contain in_reply_to parameter"
-        assert "-F in_reply_to" in prompt, "Prompt should use -F flag for numeric parameter"
-        assert "-f body" in prompt, "Prompt should use -f flag for string parameter"
-
+        # Should use Python requests POST syntax specifically (not just GET)
+        assert "post_pr_comment_python" in prompt or "requests.post" in prompt, "Prompt should use Python requests POST for posting comments, not gh CLI"
+        
         # Should NOT contain incorrect endpoint
         assert "/comments/{comment_id}/replies" not in prompt, "Prompt should NOT contain incorrect /replies endpoint"
 
@@ -486,18 +486,22 @@ class TestDailyCooldownAttempts(unittest.TestCase):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_can_process_pr_filters_by_date(self):
-        """Test that can_process_pr only counts today's attempts"""
+        """Test that can_process_pr only counts attempts within rolling window (24h)"""
 
-        # Use UTC to match production code (datetime.now(timezone.utc).date().isoformat())
-        today = datetime.now(timezone.utc).date().isoformat()
-        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+        # Use rolling window logic to match production code
+        now = datetime.now(timezone.utc)
+        # Recent attempts (inside window)
+        recent1 = (now - timedelta(hours=1)).isoformat()
+        recent2 = (now - timedelta(hours=2)).isoformat()
+        # Old attempt (outside 24h window)
+        old = (now - timedelta(hours=25)).isoformat()
 
-        # Create attempts with different dates (match production format: ISO with timezone)
+        # Create attempts with timestamps
         attempts_data = {
             "r=owner/repo||p=123||b=feature/branch": [
-                {"result": "success", "timestamp": f"{today}T10:00:00+00:00"},
-                {"result": "failure", "timestamp": f"{yesterday}T10:00:00+00:00"},
-                {"result": "success", "timestamp": f"{today}T15:00:00+00:00"},
+                {"result": "success", "timestamp": recent1},
+                {"result": "failure", "timestamp": old},
+                {"result": "success", "timestamp": recent2},
             ]
         }
 
@@ -506,32 +510,36 @@ class TestDailyCooldownAttempts(unittest.TestCase):
         with open(attempts_file, "w") as f:
             json.dump(attempts_data, f)
 
-        # Test with limit of 2 (should allow since only 2 today's attempts)
+        # Test with limit of 2 (should allow since only 2 attempts in window)
         self.safety_manager.pr_limit = 2
         can_process = self.safety_manager.can_process_pr(123, repo="owner/repo", branch="feature/branch")
 
-        # Should allow processing (2 today's attempts < limit of 2... wait, that's equal, so should be False)
-        # Actually, the check is `total_attempts < effective_limit`, so 2 < 2 is False
-        self.assertFalse(can_process, "Should not allow processing when today's attempts equal limit")
+        # Should not allow processing when window attempts (2) equal limit (2)
+        # total_attempts < effective_limit => 2 < 2 is False
+        self.assertFalse(can_process, "Should not allow processing when window attempts equal limit")
 
-        # Test with limit of 3 (should allow since only 2 today's attempts)
+        # Test with limit of 3 (should allow since only 2 attempts in window)
         self.safety_manager.pr_limit = 3
         can_process = self.safety_manager.can_process_pr(123, repo="owner/repo", branch="feature/branch")
-        self.assertTrue(can_process, "Should allow processing when today's attempts < limit")
+        self.assertTrue(can_process, "Should allow processing when window attempts < limit")
 
     def test_get_pr_attempts_filters_by_date(self):
-        """Test that get_pr_attempts only counts today's attempts"""
+        """Test that get_pr_attempts only counts attempts within rolling window (24h)"""
 
-        # Use UTC to match production code (datetime.now(timezone.utc).date().isoformat())
-        today = datetime.now(timezone.utc).date().isoformat()
-        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+        # Use rolling window logic to match production code
+        now = datetime.now(timezone.utc)
+        # Recent attempts (inside window)
+        recent1 = (now - timedelta(hours=1)).isoformat()
+        recent2 = (now - timedelta(hours=2)).isoformat()
+        # Old attempt (outside 24h window)
+        old = (now - timedelta(hours=25)).isoformat()
 
-        # Create attempts with different dates (match production format: ISO with timezone)
+        # Create attempts with timestamps
         attempts_data = {
             "r=owner/repo||p=123||b=feature/branch": [
-                {"result": "success", "timestamp": f"{today}T10:00:00+00:00"},
-                {"result": "failure", "timestamp": f"{yesterday}T10:00:00+00:00"},
-                {"result": "success", "timestamp": f"{today}T15:00:00+00:00"},
+                {"result": "success", "timestamp": recent1},
+                {"result": "failure", "timestamp": old},
+                {"result": "success", "timestamp": recent2},
             ]
         }
 
@@ -542,8 +550,8 @@ class TestDailyCooldownAttempts(unittest.TestCase):
 
         count = self.safety_manager.get_pr_attempts(123, repo="owner/repo", branch="feature/branch")
 
-        # Should only count today's attempts (2), not yesterday's (1)
-        self.assertEqual(count, 2, f"Expected 2 today's attempts, got {count}")
+        # Should only count attempts in window (2), not old ones (1)
+        self.assertEqual(count, 2, f"Expected 2 attempts in window, got {count}")
 
 
 if __name__ == "__main__":

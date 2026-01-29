@@ -6,7 +6,9 @@
 #   ./scripts/install_mcp_servers.sh           # Install for Claude (default)
 #   ./scripts/install_mcp_servers.sh claude    # Install for Claude explicitly
 #   ./scripts/install_mcp_servers.sh codex     # Install for Codex
+#   ./scripts/install_mcp_servers.sh gemini    # Install for Gemini
 #   ./scripts/install_mcp_servers.sh both      # Install for both Claude and Codex
+#   ./scripts/install_mcp_servers.sh all       # Install for all products (Claude, Codex, Gemini)
 #
 # On a new computer: Just run this script to install all your MCP servers
 
@@ -57,7 +59,7 @@ TEST_MODE_DETECTED=false
 for arg in "${normalized_args[@]}"; do
     lower_arg="$(printf '%s' "$arg" | tr '[:upper:]' '[:lower:]')"
     case "$lower_arg" in
-        claude|codex|both)
+        claude|codex|gemini|both|all)
             if [[ -z "$TARGET_ARG" ]]; then
                 TARGET_ARG="$lower_arg"
             else
@@ -208,21 +210,57 @@ case "$TARGET_PRODUCT" in
         exit $?
         ;;
 
+    gemini)
+        echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${BLUE}║  Gemini MCP Server Installer (User Scope)                     ║${NC}"
+        echo -e "${BLUE}║  Installing to user scope for global availability             ║${NC}"
+        echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+        echo ""
+        echo -e "${GREEN}📍 Installation Scope: User (available in ALL projects)${NC}"
+        echo -e "${GREEN}📦 All servers will be globally available after installation${NC}"
+        echo ""
+
+        # Check if CLI is available (skip in test mode)
+        if [[ "$TEST_MODE_DETECTED" != true ]]; then
+            if ! command -v gemini &> /dev/null; then
+                echo -e "${RED}❌ gemini CLI not found. Please install Gemini first.${NC}"
+                exit 1
+            fi
+        fi
+
+        # Configuration
+        MCP_PRODUCT_NAME="Gemini"
+        MCP_CLI_BIN="gemini"
+        export MCP_SCOPE="user"
+        export MCP_INSTALL_DUAL_SCOPE="false"
+        export TEST_MODE="${TEST_MODE:-false}"
+
+        # Load environment variables from .bashrc
+        load_interactive_env_var "GOOGLE_GEMINI_API_KEY"
+        load_interactive_env_var "GEMINI_API_KEY"
+        load_interactive_env_var "GOOGLE_API_KEY"
+        load_interactive_env_var "GITHUB_TOKEN"
+
+        # Source shared logic
+        source "${SCRIPT_DIR}/mcp_common.sh" "${PASSTHROUGH_ARGS[@]}"
+        exit $?
+        ;;
+
     both)
         echo -e "${BLUE}🔄 Installing for both Claude and Codex...${NC}"
         echo ""
 
         # Run Claude installation
-        "$0" claude "${PASSTHROUGH_ARGS[@]}"
-        CLAUDE_EXIT=$?
+        CLAUDE_EXIT=0
+        "$0" claude "${PASSTHROUGH_ARGS[@]}" || CLAUDE_EXIT=$?
 
         echo ""
         echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
         echo ""
 
         # Run Codex installation
-        "$0" codex "${PASSTHROUGH_ARGS[@]}"
-        CODEX_EXIT=$?
+        CODEX_EXIT=0
+        "$0" codex "${PASSTHROUGH_ARGS[@]}" || CODEX_EXIT=$?
 
         # Exit with failure if either failed
         if [[ $CLAUDE_EXIT -ne 0 ]] || [[ $CODEX_EXIT -ne 0 ]]; then
@@ -231,12 +269,45 @@ case "$TARGET_PRODUCT" in
         exit 0
         ;;
 
+    all)
+        echo -e "${BLUE}🔄 Installing for Claude, Codex, and Gemini...${NC}"
+        echo ""
+
+        # Run Claude installation
+        CLAUDE_EXIT=0
+        "$0" claude "${PASSTHROUGH_ARGS[@]}" || CLAUDE_EXIT=$?
+
+        echo ""
+        echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+
+        # Run Codex installation
+        CODEX_EXIT=0
+        "$0" codex "${PASSTHROUGH_ARGS[@]}" || CODEX_EXIT=$?
+
+        echo ""
+        echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+
+        # Run Gemini installation
+        GEMINI_EXIT=0
+        "$0" gemini "${PASSTHROUGH_ARGS[@]}" || GEMINI_EXIT=$?
+
+        # Exit with failure if any failed
+        if [[ $CLAUDE_EXIT -ne 0 ]] || [[ $CODEX_EXIT -ne 0 ]] || [[ $GEMINI_EXIT -ne 0 ]]; then
+            exit 1
+        fi
+        exit 0
+        ;;
+
     *)
         echo -e "${RED}❌ Invalid target: $TARGET_PRODUCT${NC}"
-        echo -e "${YELLOW}Usage: $0 [claude|codex|both]${NC}"
+        echo -e "${YELLOW}Usage: $0 [claude|codex|gemini|both|all]${NC}"
         echo -e "${YELLOW}  claude - Install for Claude only (default)${NC}"
         echo -e "${YELLOW}  codex  - Install for Codex only${NC}"
+        echo -e "${YELLOW}  gemini - Install for Gemini only${NC}"
         echo -e "${YELLOW}  both   - Install for both Claude and Codex${NC}"
+        echo -e "${YELLOW}  all    - Install for all supported products${NC}"
         exit 1
         ;;
 esac

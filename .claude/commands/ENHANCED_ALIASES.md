@@ -26,7 +26,7 @@ Quick reference for enhanced command aliases with memory integration.
 | Standard | Enhanced | Aliases | Description |
 |----------|----------|---------|-------------|
 | `/execute` | `/execute-enhanced` | `/ee`, `/e+` | Memory-enhanced execution with pattern guidance |
-| `/plan` | `/plan-enhanced` | `/plan+`, `/pe` | Memory-informed planning with pattern consultation |
+| `/planexec` | `/plan-enhanced` | `/plan+`, `/pe` | Memory-informed planning with pattern consultation |
 | `/testui` | `/testui-enhanced` | `/testui+`, `/tue` | Pattern-aware UI testing with learned preferences |
 | `/learn` | `/learn-enhanced` | `/learn+`, `/le` | Enhanced learning with pattern analysis |
 
@@ -36,7 +36,7 @@ Quick reference for enhanced command aliases with memory integration.
 
 ```bash
 /ee [task]          # Enhanced execute with memory
-/plan+ [task]       # Enhanced planning with patterns
+/planexec+ [task]   # Enhanced planning with patterns
 /testui+ [test]     # Pattern-aware UI testing
 /learn+ [learning]  # Enhanced learning capture
 ```

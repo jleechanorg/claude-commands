@@ -6,12 +6,23 @@ safety features, intelligent filtering, and cross-process synchronization.
 """
 
 import re
-from importlib.metadata import PackageNotFoundError, version as dist_version
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as dist_version
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 from .automation_safety_manager import AutomationSafetyManager
-from .jleechanorg_pr_monitor import JleechanorgPRMonitor
+
+
+# Lazy import to avoid RuntimeWarning when running as script
+# Use __getattr__ for Python 3.7+ lazy module imports
+def __getattr__(name: str) -> Any:
+    """Lazy import of JleechanorgPRMonitor to avoid frozen module warning."""
+    if name == "JleechanorgPRMonitor":
+        from .jleechanorg_pr_monitor import JleechanorgPRMonitor
+        return JleechanorgPRMonitor
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 from .utils import (
     SafeJSONManager,
     get_automation_limits,
@@ -26,7 +37,7 @@ _SECTION_RE = re.compile(r"^\s*\[[^\]]+\]\s*$")
 _VERSION_RE = re.compile(r'^\s*version\s*=\s*"([^"]+)"\s*$')
 
 
-def _version_from_pyproject(pyproject_path: Path) -> Optional[str]:
+def _version_from_pyproject(pyproject_path: Path) -> str | None:
     if not pyproject_path.exists():
         return None
 

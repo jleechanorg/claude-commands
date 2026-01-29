@@ -158,7 +158,7 @@ execution_mode: immediate
 
 ```bash
 /context | /checkpoint           # Check context then create checkpoint
-/checkpoint --optimize | /plan   # Checkpoint with optimization then plan
+/checkpoint --optimize | /planexec   # Checkpoint with optimization then plan
 /checkpoint --summary | /learn   # Comprehensive summary then capture learning
 ```
 

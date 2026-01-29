@@ -158,7 +158,7 @@ def validate_cli_execution(
     Args:
         cli_name: Name of CLI (e.g., "gemini", "codex")
         cli_path: Path to CLI binary
-        execution_cmd: Command to run (e.g., ["-m", "gemini-2.0-flash-exp", "--yolo"])
+        execution_cmd: Command to run (e.g., ["-m", "gemini-3-flash-preview", "--yolo"])
         test_prompt: Prompt to send to CLI
         env: Environment variables (defaults to os.environ)
         timeout: Timeout in seconds
@@ -238,6 +238,8 @@ def validate_cli_execution(
                 )
         
         # Check for quota/rate limit errors in stderr or stdout
+        # CRITICAL: Cursor returns "authentication required" when quota exhausted, NOT for real auth issues
+        # This check must run BEFORE auth error detection to catch quota exhaustion properly
         combined_output = f"{stderr_output}\n{validation_output_file.read_text() if validation_output_file.exists() else ''}"
         quota_phrases = [
             "exhausted your capacity",
@@ -246,6 +248,24 @@ def validate_cli_execution(
             "quota exceeded",
             "resource_exhausted",
         ]
+
+        # Cursor-specific: "authentication required" is actually quota exhaustion
+        # User confirmed Cursor CLI is authenticated and working, so these are quota errors
+        cursor_quota_phrases = [
+            "authentication required",
+            "please run agent login first",
+        ]
+
+        # Check Cursor-specific quota patterns if this is Cursor CLI
+        if cli_name.lower() == "cursor":
+            if any(phrase in combined_output.lower() for phrase in cursor_quota_phrases):
+                return ValidationResult(
+                    success=False,
+                    phase="execution",
+                    message=f"{cli_name} quota/rate limit detected (Cursor returns auth errors when quota exhausted)",
+                )
+
+        # Check general quota patterns for all CLIs
         if any(phrase in combined_output.lower() for phrase in quota_phrases):
             return ValidationResult(
                 success=False,
