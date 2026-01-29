@@ -92,6 +92,12 @@ if [[ -n "$TEST_INSTALL_DIR" ]]; then
         # Codex doesn't have --mcp-config, so we use empty scope args
         # and rely on environment variable overrides if possible
         MCP_SCOPE_ARGS=()
+    elif [[ "${MCP_CLI_BIN}" == "gemini" ]]; then
+        TEST_CONFIG_FILE="$TEST_INSTALL_DIR/configs/gemini.json"
+        echo '{"mcpServers":{}}' > "$TEST_CONFIG_FILE"
+
+        # Override MCP_SCOPE_ARGS to use test config
+        MCP_SCOPE_ARGS=(--mcp-config "$TEST_CONFIG_FILE")
     fi
 
     # Override npm global installation to use test directory
@@ -293,7 +299,6 @@ declare -a ALL_SERVER_NAMES=(
     "gemini-cli-mcp"
     "grok"
     "perplexity-ask"
-    # "filesystem"  # Disabled by default - uncomment to enable
     "react-mcp"
     "beads"
 )
@@ -2100,54 +2105,6 @@ if should_install_server "perplexity-ask"; then
     fi
 fi
 
-if should_install_server "filesystem"; then
-    display_step "Setting up Filesystem MCP Server..."
-    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-    echo -e "${BLUE}  📁 Configuring filesystem access for projects directory...${NC}"
-    log_with_timestamp "Setting up MCP server: filesystem (package: @modelcontextprotocol/server-filesystem)"
-
-    if server_already_exists "filesystem"; then
-        echo -e "${GREEN}  ✅ Server filesystem already exists, skipping installation${NC}"
-        log_with_timestamp "Server filesystem already exists, skipping"
-        INSTALL_RESULTS["filesystem"]="ALREADY_EXISTS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-    else
-        ${MCP_CLI_BIN} mcp remove "filesystem" >/dev/null 2>&1 || true
-
-        FS_SERVER_DIRS=("$HOME/projects")
-        wide_fs_enabled=false
-        if [[ "${ALLOW_WIDE_FS:-false}" == "true" ]]; then
-            FS_SERVER_DIRS+=("/tmp" "$HOME")
-            wide_fs_enabled=true
-        fi
-
-        allowed_dirs_display=$(printf "%s, " "${FS_SERVER_DIRS[@]}")
-        allowed_dirs_display=${allowed_dirs_display%, }
-
-        if [[ "$wide_fs_enabled" == true ]]; then
-            echo -e "${YELLOW}  ⚠️ Granting filesystem server access to ${allowed_dirs_display} (ALLOW_WIDE_FS=true)...${NC}"
-            log_with_timestamp "ALLOW_WIDE_FS=true: Granting filesystem access to: ${allowed_dirs_display}"
-        else
-            echo -e "${BLUE}  🔗 Adding filesystem server with ${allowed_dirs_display} access...${NC}"
-            log_with_timestamp "Granting filesystem access to: ${allowed_dirs_display}"
-        fi
-
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "filesystem" "${DEFAULT_MCP_ENV_FLAGS[@]}" -- "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "${FS_SERVER_DIRS[@]}"
-
-        if [ $add_exit_code -eq 0 ]; then
-            echo -e "${GREEN}  ✅ Successfully configured filesystem server with access to ${allowed_dirs_display}${NC}"
-            log_with_timestamp "Successfully added filesystem server with access to: ${allowed_dirs_display}"
-            INSTALL_RESULTS["filesystem"]="SUCCESS"
-            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-        else
-            echo -e "${RED}  ❌ Failed to add filesystem server${NC}"
-            log_error_details "${MCP_CLI_BIN} mcp add filesystem" "filesystem" "$add_output"
-            INSTALL_RESULTS["filesystem"]="ADD_FAILED"
-            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-        fi
-    fi
-fi
-
 
 if should_install_server "react-mcp"; then
     display_step "Setting up React MCP Server..."
@@ -2221,74 +2178,6 @@ fi
 #     setup_second_opinion_mcp_server
 # fi
 
-# DISABLED: Serena MCP (semantic code analysis - using standard file tools instead)
-# if should_install_server "serena"; then
-#     display_step "Setting up Serena MCP Server..."
-#     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-#     echo -e "${BLUE}  🧠 Configuring Serena MCP server for semantic code analysis...${NC}"
-#     log_with_timestamp "Setting up MCP server: serena (uvx: git+https://github.com/oraios/serena)"
-#
-#     echo -e "${BLUE}  🔍 Checking uvx availability...${NC}"
-#     if ! command -v uvx >/dev/null 2>&1; then
-#         echo -e "${RED}  ❌ 'uvx' not found - required for Serena MCP server${NC}"
-#         echo -e "${YELLOW}  💡 Install uvx with: pip install uv${NC}"
-#         log_with_timestamp "ERROR: uvx not found, skipping Serena MCP server installation"
-#         INSTALL_RESULTS["serena"]="DEPENDENCY_MISSING"
-#         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-#         TOTAL_SERVERS=$((TOTAL_SERVERS - 1))
-#     else
-#         echo -e "${GREEN}  ✅ uvx found: $(uvx --version 2>/dev/null || echo "available")${NC}"
-#         log_with_timestamp "uvx dependency check passed"
-#
-#         if server_already_exists "serena"; then
-#             echo -e "${GREEN}  ✅ Server serena already exists, skipping installation${NC}"
-#             log_with_timestamp "Server serena already exists, skipping"
-#             INSTALL_RESULTS["serena"]="ALREADY_EXISTS"
-#             SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-#         else
-#             ${MCP_CLI_BIN} mcp remove "serena" >/dev/null 2>&1 || true
-#
-#             echo -e "${BLUE}  🔗 Adding Serena MCP server via uvx...${NC}"
-#             log_with_timestamp "Attempting to add Serena MCP server via uvx"
-#
-#             debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
-#             serena_command_label=""
-#             add_output=""
-#             add_exit_code=0
-#             if [[ "$MCP_CLI_BIN" == "codex" ]]; then
-#                 serena_command_label="${MCP_CLI_BIN} mcp add serena"
-#                 capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add \
-#                     --env "${debug_env_var}=false" \
-#                     --env "MCP_VERBOSE_TOOLS=false" \
-#                     --env "MCP_AUTO_DISCOVER=false" \
-#                     "serena" \
-#                     "uvx" "--from" "git+https://github.com/oraios/serena" "serena" "start-mcp-server"
-#             else
-#                 serena_command_label="${MCP_CLI_BIN} mcp add-json serena"
-#                 serena_payload=""
-#                 serena_payload=$(printf '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"%s":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' "$debug_env_var")
-#                 capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "serena" "$serena_payload"
-#             fi
-#
-#             if [ $add_exit_code -eq 0 ]; then
-#                 echo -e "${GREEN}  ✅ Successfully configured Serena MCP server${NC}"
-#                 echo -e "${BLUE}  📋 Server info:${NC}"
-#                 echo -e "     • Repository: https://github.com/oraios/serena"
-#                 echo -e "     • Available tools: Semantic code analysis, file operations, memory system"
-#                 echo -e "     • Dashboard: http://127.0.0.1:24282/dashboard/index.html"
-#                 echo -e "     • Configuration: ~/.serena/serena_config.yml"
-#                 log_with_timestamp "Successfully added Serena MCP server via uvx"
-#                 INSTALL_RESULTS["serena"]="SUCCESS"
-#                 SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-#             else
-#                 echo -e "${RED}  ❌ Failed to add Serena MCP server${NC}"
-#                 log_error_details "$serena_command_label" "serena" "$add_output"
-#                 INSTALL_RESULTS["serena"]="ADD_FAILED"
-#                 FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-#             fi
-#         fi
-#     fi
-# fi
 
 # Setup Beads MCP Server
 if should_install_server "beads"; then

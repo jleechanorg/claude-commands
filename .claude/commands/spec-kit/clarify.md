@@ -51,8 +51,8 @@ execution_mode: immediate
 ### Phase 5: 🔗 INTEGRATION WITH WORKFLOW
 
 **Action Steps:**
-**Mandatory Gate for /plan Command**:
-1. `/plan` checks for clarifications before execution
+**Mandatory Gate for /planexec Command**:
+1. `/planexec` checks for clarifications before execution
 2. If ambiguities exist → automatically trigger `/clarify`
 3. Only proceed after clarification completion
 

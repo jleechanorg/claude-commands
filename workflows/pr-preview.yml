@@ -132,8 +132,12 @@ jobs:
             sleep 30
           }
 
+          # Source shared config for consistent resource allocation
+          source scripts/shared_config.sh
+
           # Deploy to Cloud Run with PR label
           echo "Deploying to Cloud Run service: $SERVICE_NAME"
+          echo "Using memory: $WORLDARCH_MEMORY, timeout: $WORLDARCH_TIMEOUT_SECONDS"
           gcloud run deploy "$SERVICE_NAME" \
             --image "$IMAGE_TAG" \
             --region="${{ env.GCP_REGION }}" \
@@ -142,10 +146,10 @@ jobs:
             --allow-unauthenticated \
             --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview" \
             --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
-            --memory=512Mi \
-            --cpu=1 \
+            --memory="$WORLDARCH_MEMORY" \
+            --cpu="$WORLDARCH_CPU" \
             --max-instances=2 \
-            --timeout=300 \
+            --timeout="$WORLDARCH_TIMEOUT_SECONDS" \
             --update-labels="pr-number=$PR_NUMBER" \
             --quiet
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # Stream tmux logs with readable formatting
 
 main() {

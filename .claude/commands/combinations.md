@@ -47,7 +47,7 @@ Instead of complex hardcoded mappings, the system creates simple meta-prompts th
 ### Examples of True Universality
 
 **Real Commands**:
-- `/think /plan /arch` → Strategic architectural planning with deep thinking
+- `/think /planexec /arch` → Strategic architectural planning with deep thinking
 - `/debug /optimize /test` → Systematic debugging with optimization and testing
 
 **Creative Commands**:
@@ -90,7 +90,7 @@ The system requires no configuration! Claude's natural language processing handl
 
 ## Usage Notes
 
-- Order doesn't matter: `/think /plan` = `/plan /think`
+- Order doesn't matter: `/think /planexec` = `/planexec /think`
 - Single commands work unchanged: `/think` remains `/think`
 - Unknown combinations pass through unchanged
 - Conflicting combinations (like `/brief /verbose`) are handled gracefully

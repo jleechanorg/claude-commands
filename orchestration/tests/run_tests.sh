@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Run tests for orchestration
 
 echo "Running tests for orchestration..."

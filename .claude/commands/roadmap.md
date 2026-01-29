@@ -15,7 +15,7 @@ execution_mode: immediate
 **Action Steps:**
 For each task, execute in sequence:
 1. **`/think light`** - Quick analysis to understand task scope
-2. **`/plan`** - Create detailed execution plan with optimal strategy
+2. **`/planexec`** - Create detailed execution plan with optimal strategy
 3. **`/handoff`** - Generate handoff branches and coordinate parallel work
 
 ## 📋 REFERENCE DOCUMENTATION
@@ -75,7 +75,7 @@ For each task, execute in sequence:
 
 11. Commit changes with format: `docs(roadmap): [description]`
 
-12. Push branch: `git push origin HEAD:roadmap-update-[timestamp]`
+12. Push branch: `git push -u origin roadmap-update-[timestamp]`
 
 13. Create PR: `gh pr create --title "docs(roadmap): [description]" --body "Roadmap update via /roadmap command"`
 
@@ -142,7 +142,7 @@ Task 1: Implement auth system - Complex, needs design
 Task 2: Create API docs - Medium, documentation task
 Task 3: Add unit tests - Small, testing task
 
-[Executes /plan for each task with optimal strategies]
+[Executes /planexec for each task with optimal strategies]
 
 [Executes /handoff for each task, creating branches]
 
@@ -164,7 +164,7 @@ You can monitor progress with:
 1. **Parse Tasks**: Split by commas or process multiple args
 2. **For Each Task**:
    - Execute `/think light` to analyze
-   - Execute `/plan` to create strategy
+   - Execute `/planexec` to create strategy
    - Execute `/handoff` to create work branch
    - Spawn agent via `/orchestrate`
 3. **Update Roadmap**: Add parallel task section
@@ -173,7 +173,7 @@ You can monitor progress with:
 
 ## Implementation Approach
 
-**LLM-Native Design**: This enhanced roadmap command works through Claude's natural interpretation of the above specifications, similar to other slash commands like `/think`, `/plan`, and `/handoff`.
+**LLM-Native Design**: This enhanced roadmap command works through Claude's natural interpretation of the above specifications, similar to other slash commands like `/think`, `/planexec`, and `/handoff`.
 
 When you use `/roadmap` with multiple tasks, Claude will:
 1. Parse the input according to the specifications above

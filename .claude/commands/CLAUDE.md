@@ -77,7 +77,7 @@ Commands without this header are considered invalid and should be updated before
 ## Command Architecture
 
 **Two Command Types**:
-1. **Cognitive Commands** (`/think`, `/debug`, `/plan`): Natural language processing and analysis
+1. **Cognitive Commands** (`/think`, `/debug`, `/planexec`): Natural language processing and analysis
 2. **Operational Commands** (`/orch`, `/execute`, `/push`): Direct system operations and automation
 
 **Execution Patterns**:
@@ -107,7 +107,7 @@ Commands without this header are considered invalid and should be updated before
 
 /think [analysis topic]
 /debug [issue description]
-/plan [task description]
+/planexec [task description]
 
 # Operational Commands (system operations):
 

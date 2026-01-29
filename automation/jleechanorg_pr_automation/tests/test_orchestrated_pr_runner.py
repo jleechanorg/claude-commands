@@ -3,15 +3,44 @@ import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 # Ensure repository root is importable
 ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import pytest
-
 import automation.jleechanorg_pr_automation.orchestrated_pr_runner as runner
+import pytest
+import requests
+import yaml
+
+
+def _mock_has_failing_checks_responses(monkeypatch, pr_number, check_runs_data, head_sha="abc123"):
+    """Helper to mock requests.get responses for has_failing_checks tests."""
+    # Mock get_github_token
+    monkeypatch.setattr(runner, "get_github_token", lambda: "test-token-123")
+
+    # Mock PR data response
+    pr_response = Mock()
+    pr_response.status_code = 200
+    pr_response.json.return_value = {"head": {"sha": head_sha}}
+    pr_response.raise_for_status = Mock()
+
+    # Mock check-runs response
+    checks_response = Mock()
+    checks_response.status_code = 200
+    checks_response.json.return_value = {"check_runs": check_runs_data}
+    checks_response.raise_for_status = Mock()
+
+    def mock_get(url, headers=None, timeout=None, params=None):
+        if f"pulls/{pr_number}" in url and "commits" not in url and "check-runs" not in url:
+            return pr_response
+        if "check-runs" in url:
+            return checks_response
+        return Mock(status_code=200, json=dict, raise_for_status=Mock())
+
+    return mock_get
 
 
 def test_sanitize_workspace_name_includes_pr_number():
@@ -162,32 +191,66 @@ def test_dispatch_agent_for_pr_injects_workspace(monkeypatch, tmp_path):
 
 def test_has_failing_checks_uses_conclusion_field(monkeypatch):
     """Test that conclusion field is checked (authoritative checkpoint)."""
-    fake_pr_data = {
-        "statusCheckRollup": [
+    # Mock get_github_token
+    monkeypatch.setattr(runner, "get_github_token", lambda: "test-token-123")
+
+    # Mock PR data response
+    pr_response = Mock()
+    pr_response.status_code = 200
+    pr_response.json.return_value = {"head": {"sha": "abc123"}}
+    pr_response.raise_for_status = Mock()
+
+    # Mock check-runs response
+    checks_response = Mock()
+    checks_response.status_code = 200
+    checks_response.json.return_value = {
+        "check_runs": [
             {"name": "ci", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "ci.yml"}
         ]
     }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is True
+    checks_response.raise_for_status = Mock()
+
+    def mock_get(url, headers=None, timeout=None, params=None):
+        if "pulls/1" in url and "commits" not in url and "check-runs" not in url:
+            return pr_response
+        if "check-runs" in url:
+            return checks_response
+        return Mock(status_code=200, json=dict, raise_for_status=Mock())
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_uses_state_fallback(monkeypatch):
     """Test that state field is used as fallback when conclusion is None."""
-    fake_pr_data = {
-        "statusCheckRollup": [
+    # Mock get_github_token
+    monkeypatch.setattr(runner, "get_github_token", lambda: "test-token-123")
+
+    # Mock PR data response
+    pr_response = Mock()
+    pr_response.status_code = 200
+    pr_response.json.return_value = {"head": {"sha": "abc123"}}
+    pr_response.raise_for_status = Mock()
+
+    # Mock check-runs response
+    checks_response = Mock()
+    checks_response.status_code = 200
+    checks_response.json.return_value = {
+        "check_runs": [
             {"name": "ci", "state": "FAILED", "conclusion": None, "workflow": "ci.yml"}
         ]
     }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is True
+    checks_response.raise_for_status = Mock()
+
+    def mock_get(url, headers=None, timeout=None, params=None):
+        if "pulls/1" in url and "commits" not in url and "check-runs" not in url:
+            return pr_response
+        if "check-runs" in url:
+            return checks_response
+        return Mock(status_code=200, json=dict, raise_for_status=Mock())
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_kill_tmux_session_matches_variants(monkeypatch):
@@ -221,207 +284,129 @@ def test_kill_tmux_session_matches_variants(monkeypatch):
 
 def test_has_failing_checks_conclusion_failure(monkeypatch):
     """Test FAILURE conclusion triggers True (authoritative checkpoint)."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "ci.yml"}
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is True
+    check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "ci.yml"}]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_state_failure_fallback(monkeypatch):
     """Test FAILURE state triggers True when conclusion is None (check still running)."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "FAILURE", "conclusion": None, "workflow": "ci.yml"}
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is True
+    check_runs = [{"name": "ci", "state": "FAILURE", "conclusion": None, "workflow": "ci.yml"}]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_state_cancelled(monkeypatch):
     """Test CANCELLED state triggers True."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "COMPLETED", "conclusion": "CANCELLED", "workflow": "ci.yml"}
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is True
+    check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "CANCELLED", "workflow": "ci.yml"}]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_state_timed_out(monkeypatch):
     """Test TIMED_OUT conclusion triggers True."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "COMPLETED", "conclusion": "TIMED_OUT", "workflow": "ci.yml"}
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is True
+    check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "TIMED_OUT", "workflow": "ci.yml"}]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_state_action_required(monkeypatch):
     """Test ACTION_REQUIRED conclusion triggers True."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "COMPLETED", "conclusion": "ACTION_REQUIRED", "workflow": "ci.yml"}
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is True
+    check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "ACTION_REQUIRED", "workflow": "ci.yml"}]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_conclusion_success(monkeypatch):
     """Test SUCCESS conclusion returns False."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "ci.yml"}
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is False
+    check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "ci.yml"}]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is False
 
 
 def test_has_failing_checks_conclusion_neutral(monkeypatch):
     """Test NEUTRAL conclusion returns False (not treated as failure)."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "COMPLETED", "conclusion": "NEUTRAL", "workflow": "ci.yml"}
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is False
+    check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "NEUTRAL", "workflow": "ci.yml"}]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is False
 
 
 def test_has_failing_checks_state_success_with_failure_conclusion(monkeypatch):
     """Test that conclusion takes precedence over state."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "ci.yml"}
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is True
+    check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "ci.yml"}]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_state_pending(monkeypatch):
     """Test PENDING state returns False."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "PENDING", "conclusion": None, "workflow": "ci.yml"}
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is False
+    check_runs = [{"name": "ci", "state": "PENDING", "conclusion": None, "workflow": "ci.yml"}]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is False
 
 
 def test_has_failing_checks_empty_state(monkeypatch):
     """Test empty/None conclusion returns False."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "COMPLETED", "conclusion": "", "workflow": "ci.yml"}
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is False
+    check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "", "workflow": "ci.yml"}]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is False
 
 
 def test_has_failing_checks_multiple_all_pass(monkeypatch):
     """Test multiple checks all passing returns False."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "ci.yml"},
-            {"name": "lint", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "lint.yml"},
-            {"name": "test", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "test.yml"},
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is False
+    check_runs = [
+        {"name": "ci", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "ci.yml"},
+        {"name": "lint", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "lint.yml"},
+        {"name": "test", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "test.yml"},
+    ]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is False
 
 
 def test_has_failing_checks_multiple_mixed(monkeypatch):
     """Test multiple checks with one failing returns True."""
-    fake_pr_data = {
-        "statusCheckRollup": [
-            {"name": "ci", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "ci.yml"},
-            {"name": "lint", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "lint.yml"},
-            {"name": "test", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "test.yml"},
-        ]
-    }
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is True
+    check_runs = [
+        {"name": "ci", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "ci.yml"},
+        {"name": "lint", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "lint.yml"},
+        {"name": "test", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "test.yml"},
+    ]
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is True
 
 
 def test_has_failing_checks_empty_array(monkeypatch):
-    """Test empty statusCheckRollup array returns False."""
-    fake_pr_data = {"statusCheckRollup": []}
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=0, stdout=json.dumps(fake_pr_data), stderr=""),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is False
+    """Test empty check_runs array returns False."""
+    check_runs = []
+    mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        assert runner.has_failing_checks("org/repo", 1) is False
 
 
 def test_has_failing_checks_api_error(monkeypatch):
-    """Test API error (non-zero returncode) returns False."""
-    monkeypatch.setattr(
-        runner,
-        "run_cmd",
-        lambda *_, **__: SimpleNamespace(returncode=1, stdout="", stderr="API error"),
-    )
-    assert runner.has_failing_checks("org/repo", 1) is False
+    """Test API error returns False."""
+    monkeypatch.setattr(runner, "get_github_token", lambda: "test-token-123")
+
+    # Mock HTTP error
+    mock_response = Mock()
+    mock_response.status_code = 500
+    http_error = requests.HTTPError("API Error")
+    http_error.response = mock_response
+    mock_response.raise_for_status = Mock(side_effect=http_error)
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_response):
+        assert runner.has_failing_checks("org/repo", 1) is False
 
 
 # Matrix 2: kill_tmux_session_if_exists() - Additional Variant Tests
@@ -706,28 +691,28 @@ def test_multiple_repos_same_pr_number_no_collision(tmp_path, monkeypatch):
 def test_dispatch_agent_for_pr_accepts_model_for_all_clis(monkeypatch, tmp_path):
     """Test that model parameter is accepted for all CLIs, not just claude."""
     runner.WORKSPACE_ROOT_BASE = tmp_path
-    
+
     captured_model = None
-    
+
     class FakeDispatcher:
         def analyze_task_and_create_agents(self, task_description, forced_cli=None):
             return [{"id": "agent-spec"}]
-        
+
         def create_dynamic_agent(self, spec):
             nonlocal captured_model
             captured_model = spec.get("model")
             return True
-    
+
     monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
     monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
-    
+
     pr = {
         "repo_full": "jleechanorg/test-repo",
         "repo": "test-repo",
         "number": 123,
         "branch": "test-branch",
     }
-    
+
     # Test with gemini CLI
     success = runner.dispatch_agent_for_pr(
         FakeDispatcher(),
@@ -735,10 +720,10 @@ def test_dispatch_agent_for_pr_accepts_model_for_all_clis(monkeypatch, tmp_path)
         agent_cli="gemini",
         model="gemini-3-auto"
     )
-    
+
     assert success, "Should succeed with gemini CLI and model parameter"
     assert captured_model == "gemini-3-auto", f"Expected 'gemini-3-auto', got '{captured_model}'"
-    
+
     # Test with codex CLI
     captured_model = None
     success = runner.dispatch_agent_for_pr(
@@ -747,7 +732,7 @@ def test_dispatch_agent_for_pr_accepts_model_for_all_clis(monkeypatch, tmp_path)
         agent_cli="codex",
         model="composer-1"
     )
-    
+
     assert success, "Should succeed with codex CLI and model parameter"
     assert captured_model == "composer-1", f"Expected 'composer-1', got '{captured_model}'"
 
@@ -755,24 +740,24 @@ def test_dispatch_agent_for_pr_accepts_model_for_all_clis(monkeypatch, tmp_path)
 def test_dispatch_agent_for_pr_rejects_invalid_model(monkeypatch, tmp_path):
     """Test that invalid model names are rejected."""
     runner.WORKSPACE_ROOT_BASE = tmp_path
-    
+
     class FakeDispatcher:
         def analyze_task_and_create_agents(self, task_description, forced_cli=None):
             return [{"id": "agent-spec"}]
-        
+
         def create_dynamic_agent(self, spec):
             return True
-    
+
     monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
     monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
-    
+
     pr = {
         "repo_full": "jleechanorg/test-repo",
         "repo": "test-repo",
         "number": 123,
         "branch": "test-branch",
     }
-    
+
     # Test with invalid model name (contains space)
     success = runner.dispatch_agent_for_pr(
         FakeDispatcher(),
@@ -780,9 +765,9 @@ def test_dispatch_agent_for_pr_rejects_invalid_model(monkeypatch, tmp_path):
         agent_cli="gemini",
         model="invalid model name"
     )
-    
+
     assert not success, "Should reject invalid model name with spaces"
-    
+
     # Test with invalid model name (contains special characters)
     success = runner.dispatch_agent_for_pr(
         FakeDispatcher(),
@@ -790,5 +775,429 @@ def test_dispatch_agent_for_pr_rejects_invalid_model(monkeypatch, tmp_path):
         agent_cli="gemini",
         model="model@invalid"
     )
-    
+
     assert not success, "Should reject invalid model name with special characters"
+
+
+# Tests for Python GitHub API functions (post_pr_comment_python, cleanup_pending_reviews_python, get_github_token)
+
+
+def test_get_github_token_from_env(monkeypatch):
+    """Test get_github_token retrieves token from GITHUB_TOKEN env var."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token-123")
+    monkeypatch.setattr(runner, "subprocess", Mock())
+    token = runner.get_github_token()
+    assert token == "test-token-123"
+
+
+def test_get_github_token_from_config_file_top_level(monkeypatch, tmp_path):
+    """Test get_github_token reads token from gh config file (top-level oauth_token)."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    # Create mock config file
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+
+    config_data = {
+        "github.com": {
+            "oauth_token": "config-token-789"
+        }
+    }
+    config_file.write_text(yaml.dump(config_data))
+
+    # Mock Path.home() to return our temp directory
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    token = runner.get_github_token()
+    assert token == "config-token-789"
+
+
+def test_get_github_token_from_config_file_user_specific(monkeypatch, tmp_path):
+    """Test get_github_token reads token from gh config file (user-specific token)."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    # Create mock config file with user-specific token
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+
+    config_data = {
+        "github.com": {
+            "users": {
+                "testuser": {
+                    "oauth_token": "user-token-abc"
+                }
+            }
+        }
+    }
+    config_file.write_text(yaml.dump(config_data))
+
+    # Mock Path.home() to return our temp directory
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    token = runner.get_github_token()
+    assert token == "user-token-abc"
+
+
+def test_get_github_token_config_file_not_exists(monkeypatch, tmp_path):
+    """Test get_github_token returns None when config file doesn't exist."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    # Mock Path.home() to return temp directory without config file
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    token = runner.get_github_token()
+    assert token is None
+
+
+def test_get_github_token_config_file_invalid_yaml(monkeypatch, tmp_path):
+    """Test get_github_token handles invalid YAML in config file gracefully."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    # Create invalid YAML file
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+    config_file.write_text("invalid: yaml: content: [")
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    token = runner.get_github_token()
+    assert token is None
+
+
+def test_get_github_token_config_file_no_github_com(monkeypatch, tmp_path):
+    """Test get_github_token returns None when config has no github.com entry."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+
+    config_data = {
+        "gitlab.com": {
+            "oauth_token": "gitlab-token"
+        }
+    }
+    config_file.write_text(yaml.dump(config_data))
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    token = runner.get_github_token()
+    assert token is None
+
+
+def test_get_github_token_config_file_no_yaml_module(monkeypatch, tmp_path):
+    """Test get_github_token handles missing PyYAML module gracefully."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+    config_file.write_text("github.com:\n  oauth_token: test-token")
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    # Mock yaml module as None (not available)
+    original_yaml = runner.yaml
+    monkeypatch.setattr(runner, "yaml", None)
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+        token = runner.get_github_token()
+        assert token is None
+        mock_log.assert_any_call("⚠️ PyYAML not available, cannot read gh config file")
+
+    # Restore yaml module
+    runner.yaml = original_yaml
+
+
+def test_get_github_token_env_var_takes_precedence(monkeypatch, tmp_path):
+    """Test that GITHUB_TOKEN env var takes precedence over config file."""
+    monkeypatch.setenv("GITHUB_TOKEN", "env-token-123")
+
+    # Create config file with different token
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+
+    config_data = {
+        "github.com": {
+            "oauth_token": "config-token-456"
+        }
+    }
+    config_file.write_text(yaml.dump(config_data))
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    token = runner.get_github_token()
+    # Should use env var, not config file
+    assert token == "env-token-123"
+
+
+def test_post_pr_comment_python_success(monkeypatch):
+    """Test post_pr_comment_python successfully posts a comment."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    mock_response = Mock()
+    mock_response.status_code = 201
+    mock_response.raise_for_status = Mock()
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", return_value=mock_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+            result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
+
+            assert result is True
+            mock_log.assert_any_call("✅ Posted comment to owner/repo#123")
+
+
+def test_post_pr_comment_python_reply(monkeypatch):
+    """Test post_pr_comment_python posts a threaded reply when in_reply_to is provided."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    mock_response = Mock()
+    mock_response.status_code = 201
+    mock_response.raise_for_status = Mock()
+
+    post_calls = []
+
+    def mock_post(url, json=None, headers=None, timeout=None):
+        post_calls.append({"url": url, "json": json, "headers": headers})
+        return mock_response
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", side_effect=mock_post):
+        result = runner.post_pr_comment_python("owner/repo", 123, "Reply comment", in_reply_to=456)
+
+        assert result is True
+        assert len(post_calls) == 1
+        assert "pulls/123/comments" in post_calls[0]["url"]
+        assert post_calls[0]["json"]["in_reply_to"] == 456
+        assert post_calls[0]["json"]["body"] == "Reply comment"
+
+
+def test_post_pr_comment_python_no_token(monkeypatch):
+    """Test post_pr_comment_python returns False when no token is available."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(
+        runner,
+        "get_github_token",
+        lambda: None
+    )
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+        result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
+
+        assert result is False
+        mock_log.assert_any_call("⚠️ No GitHub token available for posting comment")
+
+
+def test_post_pr_comment_python_api_error(monkeypatch):
+    """Test post_pr_comment_python handles API errors gracefully."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    # Create a proper HTTPError with response attribute
+    mock_response = Mock()
+    mock_response.status_code = 500
+    http_error = requests.HTTPError("API Error")
+    http_error.response = mock_response
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", return_value=mock_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+            # Mock raise_for_status to raise the HTTPError
+            mock_response.raise_for_status = Mock(side_effect=http_error)
+            result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
+
+            assert result is False
+            # Check for the new more specific error message
+            mock_log.assert_any_call("⚠️ HTTP error while posting comment to owner/repo#123 (status 500): API Error")
+
+
+def test_cleanup_pending_reviews_python_success(monkeypatch):
+    """Test cleanup_pending_reviews_python successfully deletes pending reviews."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    # Mock reviews response
+    reviews_response = [
+        {
+            "id": 1001,
+            "state": "PENDING",
+            "user": {"login": "automation-user"},
+        },
+        {
+            "id": 1002,
+            "state": "APPROVED",
+            "user": {"login": "automation-user"},
+        },
+        {
+            "id": 1003,
+            "state": "PENDING",
+            "user": {"login": "other-user"},
+        },
+        {
+            "id": 1004,
+            "state": "PENDING",
+            "user": {"login": "automation-user"},
+        },
+    ]
+
+    mock_get_response = Mock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = reviews_response
+    mock_get_response.raise_for_status = Mock()
+
+    mock_delete_response = Mock()
+    mock_delete_response.status_code = 204
+
+    get_calls = []
+    delete_calls = []
+
+    def mock_get(url, headers=None, timeout=None):
+        get_calls.append({"url": url, "headers": headers})
+        return mock_get_response
+
+    def mock_delete(url, headers=None, timeout=None):
+        delete_calls.append({"url": url, "headers": headers})
+        return mock_delete_response
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.delete", side_effect=mock_delete):
+            with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+                runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
+
+                # Should fetch reviews once
+                assert len(get_calls) == 1
+                assert "pulls/123/reviews" in get_calls[0]["url"]
+
+                # Should delete only pending reviews from automation-user (1001 and 1004)
+                assert len(delete_calls) == 2
+                assert "reviews/1001" in delete_calls[0]["url"] or "reviews/1001" in delete_calls[1]["url"]
+                assert "reviews/1004" in delete_calls[0]["url"] or "reviews/1004" in delete_calls[1]["url"]
+
+                mock_log.assert_any_call("✅ Deleted pending review 1001 for owner/repo#123")
+                mock_log.assert_any_call("✅ Deleted pending review 1004 for owner/repo#123")
+
+
+def test_cleanup_pending_reviews_python_no_pending(monkeypatch):
+    """Test cleanup_pending_reviews_python handles no pending reviews gracefully."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    # Mock reviews response with no pending reviews from automation user
+    reviews_response = [
+        {
+            "id": 1001,
+            "state": "APPROVED",
+            "user": {"login": "automation-user"},
+        },
+        {
+            "id": 1002,
+            "state": "PENDING",
+            "user": {"login": "other-user"},
+        },
+    ]
+
+    mock_get_response = Mock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = reviews_response
+    mock_get_response.raise_for_status = Mock()
+
+    delete_calls = []
+
+    def mock_get(url, headers=None, timeout=None):
+        return mock_get_response
+
+    def mock_delete(url, headers=None, timeout=None):
+        delete_calls.append(url)
+        return Mock(status_code=204)
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.delete", side_effect=mock_delete):
+            runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
+
+            # Should not delete anything
+            assert len(delete_calls) == 0
+
+
+def test_cleanup_pending_reviews_python_no_token(monkeypatch):
+    """Test cleanup_pending_reviews_python handles missing token gracefully."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(
+        runner,
+        "get_github_token",
+        lambda: None
+    )
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+        runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
+
+        mock_log.assert_any_call("⚠️ No GitHub token available for cleanup")
+
+
+def test_cleanup_pending_reviews_python_api_error(monkeypatch):
+    """Test cleanup_pending_reviews_python handles API errors gracefully."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    # Create a proper HTTPError with response attribute
+    mock_response = Mock()
+    mock_response.status_code = 500
+    http_error = requests.HTTPError("API Error")
+    http_error.response = mock_response
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+            # Mock raise_for_status to raise the HTTPError
+            mock_response.raise_for_status = Mock(side_effect=http_error)
+            runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
+
+            # Check for the new more specific error message
+            mock_log.assert_any_call("⚠️ HTTP error while cleaning up pending reviews for owner/repo#123 (status 500): API Error")
+
+
+def test_cleanup_pending_reviews_python_delete_failure(monkeypatch):
+    """Test cleanup_pending_reviews_python handles delete failures gracefully."""
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    reviews_response = [
+        {
+            "id": 1001,
+            "state": "PENDING",
+            "user": {"login": "automation-user"},
+        },
+    ]
+
+    mock_get_response = Mock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = reviews_response
+    mock_get_response.raise_for_status = Mock()
+
+    mock_delete_response = Mock()
+    mock_delete_response.status_code = 500  # Server error
+
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_get_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.delete", return_value=mock_delete_response):
+            with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
+                runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
+
+                mock_log.assert_any_call("⚠️ Failed to delete review 1001: 500")
+
+def test_get_github_token_from_config_file_with_encoding(monkeypatch, tmp_path):
+    """Test get_github_token reads token with utf-8 encoding."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    config_dir = tmp_path / ".config" / "gh"
+    config_dir.mkdir(parents=True)
+    config_file = config_dir / "hosts.yml"
+
+    config_data = {
+        "github.com": {
+            "oauth_token": "utf8-token-🚀"
+        }
+    }
+    # Write as utf-8
+    config_file.write_text(yaml.dump(config_data), encoding="utf-8")
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    # We can't easily verify encoding was used in open() without mocking open(),
+    # but we can verify it reads correctly.
+    token = runner.get_github_token()
+    assert token == "utf8-token-🚀"

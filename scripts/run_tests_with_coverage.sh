@@ -40,15 +40,24 @@ print_warning() {
 
 # Auto-detect source directory for testing
 SOURCE_DIR="${PROJECT_SRC_DIR:-}"
+RUN_FROM_ROOT=false
+
 if [[ -z "$SOURCE_DIR" ]]; then
-    # Try common source directory patterns
-    for dir in src lib app mvp_site source code; do
-        if [[ -d "$dir" ]]; then
-            SOURCE_DIR="$dir"
-            break
-        fi
-    done
-    # Fallback to current directory if no common patterns found
+    if [[ -d "mvp_site" ]]; then
+        SOURCE_DIR="mvp_site"
+        RUN_FROM_ROOT=true
+        print_status "Detected 'mvp_site' at root. Running tests from project root."
+    else
+        # Try other patterns
+        for dir in src lib app source code; do
+            if [[ -d "$dir" ]]; then
+                SOURCE_DIR="$dir"
+                break
+            fi
+        done
+    fi
+    
+    # Fallback to current directory
     if [[ -z "$SOURCE_DIR" ]]; then
         SOURCE_DIR="."
         print_warning "No common source directory found, using current directory"
@@ -86,8 +95,15 @@ PROJECT_NAME="$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/n
 COVERAGE_DIR="/tmp/${PROJECT_NAME}/coverage"
 mkdir -p "$COVERAGE_DIR"
 
-# Change to source directory
-cd "$SOURCE_DIR"
+# Change to source directory ONLY if not running from root
+if [ "$RUN_FROM_ROOT" = false ] && [ "$SOURCE_DIR" != "." ]; then
+    cd "$SOURCE_DIR"
+    # When we cd, the source is now current dir for finding files
+    FIND_DIR="."
+else
+    # Running from root or current dir is source
+    FIND_DIR="$SOURCE_DIR"
+fi
 
 print_status "🧪 Running tests with coverage analysis..."
 print_status "Setting TESTING=true for faster AI model usage"
@@ -140,16 +156,25 @@ else
     print_status "Coverage already installed"
 fi
 
-# Find all test files in tests subdirectory, excluding venv, prototype, manual_tests, and test_integration
+# Find all test files in tests subdirectory
+# Use FIND_DIR to locate tests correctly
+print_status "Searching for tests in $FIND_DIR/tests..."
+
 test_files=()
 while IFS= read -r -d '' file; do
+    # Skip integration/MCP filenames if explicit integration flag is NOT set
+    if [ "$include_integration" = false ]; then
+        if [[ "$file" == *"test_integration"* ]] || [[ "$file" == *"test_mcp"* ]] || [[ "$file" == *"test_concurrency"* ]]; then
+            continue
+        fi
+    fi
     test_files+=("$file")
-done < <(find ./tests -name "test_*.py" -type f \
-    ! -path "./venv/*" \
-    ! -path "./node_modules/*" \
-    ! -path "./prototype/*" \
-    ! -path "./tests/manual_tests/*" \
-    ! -path "./tests/test_integration/*" \
+done < <(find "$FIND_DIR/tests" -name "test_*.py" -type f \
+    ! -path "*/venv/*" \
+    ! -path "*/node_modules/*" \
+    ! -path "*/prototype/*" \
+    ! -path "*/tests/manual_tests/*" \
+    ! -path "*/tests/test_integration/*" \
     -print0)
 
 # Also include test_integration directories if not in GitHub export mode
@@ -162,18 +187,18 @@ if [ "$include_integration" = true ]; then
         done < <(find ./test_integration -name "test_*.py" -type f -print0)
     fi
 
-    if [ -d "./tests/test_integration" ]; then
-        print_status "Including integration tests from tests/test_integration/"
+    if [ -d "$FIND_DIR/tests/test_integration" ]; then
+        print_status "Including integration tests from $FIND_DIR/tests/test_integration/"
         while IFS= read -r -d '' file; do
             test_files+=("$file")
-        done < <(find ./tests/test_integration -name "test_*.py" -type f -print0)
+        done < <(find "$FIND_DIR/tests/test_integration" -name "test_*.py" -type f -print0)
     fi
 fi
 
 # Check if any test files exist
 if [ ${#test_files[@]} -eq 0 ]; then
     if [ "$include_integration" = false ]; then
-        print_warning "No unit test files found in tests/ directory"
+        print_warning "No unit test files found in $FIND_DIR/tests/ directory"
     else
         print_warning "No test files found (checked both unit and integration tests)"
     fi
@@ -197,13 +222,20 @@ passed_tests=0
 failed_tests=0
 failed_test_files=()
 
+# Determine coverage source argument
+if [ "$RUN_FROM_ROOT" = true ]; then
+    COV_SOURCE="$SOURCE_DIR"
+else
+    COV_SOURCE="."
+fi
+
 # Run tests sequentially with coverage
 for test_file in "${test_files[@]}"; do
     if [ -f "$test_file" ]; then
         total_tests=$((total_tests + 1))
         echo -n "[$total_tests/${#test_files[@]}] Running: $test_file ... "
 
-        if TESTING=true activate_venv && python -m coverage run --append --source=. "$test_file" >/dev/null 2>&1; then
+        if TESTING=true activate_venv && python -m coverage run --append --source="$COV_SOURCE" "$test_file" >/dev/null 2>&1; then
             passed_tests=$((passed_tests + 1))
             print_success "✓"
         else
