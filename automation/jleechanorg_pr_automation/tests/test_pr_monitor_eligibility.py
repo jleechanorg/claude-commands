@@ -1,4 +1,5 @@
 import unittest
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock, patch
 
 from _pytest.capture import CaptureFixture
@@ -886,3 +887,127 @@ class TestRaceConditionFix(unittest.TestCase):
         self.assertEqual(result, "posted")
         mock_dispatch.assert_called_once()
         mock_post_queued.assert_called_once()
+
+    def test_process_pr_fix_comment_allows_rerun_when_stale_queued_comment_exists(self):
+        """Test that agent dispatch is allowed when STALE queued comment exists."""
+        # Setup: queued comment exists but is OLD (stale)
+        stale_time = (datetime.now(UTC) - timedelta(hours=2)).isoformat()
+        comments = [
+            {
+                "body": (
+                    "[AI automation - gemini] Fix-comment run queued for this PR.\n\n"
+                    f"<!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->"
+                ),
+                "author": {"login": "test-automation-user"},
+                "createdAt": stale_time,
+            }
+        ]
+
+        pr_data = {
+            "title": "Test PR",
+            "headRefName": "test-branch",
+            "headRefOid": self.head_sha,
+        }
+
+        # Mock dependencies
+        with patch.object(self.monitor, "_get_pr_comment_state", return_value=(self.head_sha, comments)), \
+             patch.object(self.monitor, "_count_workflow_comments", return_value=0), \
+             patch.object(self.monitor, "_has_unaddressed_comments", return_value=True), \
+             patch.object(self.monitor, "_has_fix_comment_comment_for_commit", return_value=False), \
+             patch.object(self.monitor, "_should_skip_pr", return_value=False), \
+             patch.object(self.monitor, "_cleanup_pending_reviews"), \
+             patch.object(self.monitor, "dispatch_fix_comment_agent", return_value=True) as mock_dispatch, \
+             patch.object(self.monitor, "_post_fix_comment_queued", return_value=True) as mock_post_queued, \
+             patch.object(self.monitor, "_start_fix_comment_review_watcher", return_value=True):
+            
+            result = self.monitor._process_pr_fix_comment(
+                "test-org/test-repo",
+                123,
+                pr_data,
+                agent_cli="gemini",
+            )
+
+            # Should dispatch agent because queued comment is stale
+            self.assertEqual(result, "posted")
+            mock_dispatch.assert_called_once()
+            mock_post_queued.assert_called_once()
+
+    def test_process_pr_fix_comment_skips_when_recent_queued_comment_exists(self):
+        """Test that agent dispatch is skipped when RECENT queued comment exists."""
+        # Setup: queued comment exists and is RECENT
+        recent_time = (datetime.now(UTC) - timedelta(minutes=30)).isoformat()
+        comments = [
+            {
+                "body": (
+                    "[AI automation - gemini] Fix-comment run queued for this PR.\n\n"
+                    f"<!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->"
+                ),
+                "author": {"login": "test-automation-user"},
+                "createdAt": recent_time,
+            }
+        ]
+
+        pr_data = {
+            "title": "Test PR",
+            "headRefName": "test-branch",
+            "headRefOid": self.head_sha,
+        }
+
+        # Mock dependencies
+        with patch.object(self.monitor, "_get_pr_comment_state", return_value=(self.head_sha, comments)), \
+             patch.object(self.monitor, "_count_workflow_comments", return_value=0), \
+             patch.object(self.monitor, "_has_unaddressed_comments", return_value=True), \
+             patch.object(self.monitor, "_has_fix_comment_comment_for_commit", return_value=False), \
+             patch.object(self.monitor, "_should_skip_pr", return_value=False), \
+             patch.object(self.monitor, "_cleanup_pending_reviews"), \
+             patch.object(self.monitor, "dispatch_fix_comment_agent") as mock_dispatch, \
+             patch.object(self.monitor, "_post_fix_comment_queued") as mock_post_queued:
+            
+            result = self.monitor._process_pr_fix_comment(
+                "test-org/test-repo",
+                123,
+                pr_data,
+                agent_cli="gemini",
+            )
+
+            # Should skip
+            self.assertEqual(result, "skipped")
+            mock_dispatch.assert_not_called()
+
+    def test_get_fix_comment_queued_info_uses_newest_comment(self):
+        """Test that _get_fix_comment_queued_info picks the NEWEST queued marker."""
+        old_time = (datetime.now(UTC) - timedelta(hours=5)).isoformat()
+        new_time = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+        
+        comments = [
+            {
+                "body": f"Old queued run <!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": old_time,
+            },
+            {
+                "body": f"New queued run <!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": new_time,
+            },
+        ]
+        
+        # Should pick the new one (10 mins old = ~0.16 hours)
+        info = self.monitor._get_fix_comment_queued_info(comments, self.head_sha)
+        self.assertIsNotNone(info)
+        self.assertLess(info["age_hours"], 1.0)
+        self.assertEqual(info["created_at"], new_time)
+
+    def test_get_fix_comment_queued_info_handles_unparseable_timestamp(self):
+        """Test that unparseable timestamp results in 0.0 age."""
+        comments = [
+            {
+                "body": f"Queued run <!-- fix-comment-run-automation-commit:gemini:{self.head_sha}-->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": "invalid-date",
+            }
+        ]
+        
+        info = self.monitor._get_fix_comment_queued_info(comments, self.head_sha)
+        self.assertIsNotNone(info)
+        self.assertEqual(info["age_hours"], 0.0)

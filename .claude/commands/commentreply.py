@@ -20,6 +20,18 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+# Import per-comment cache (add to path first, then import)
+_copilot_modules_path = str(Path(__file__).parent / "_copilot_modules")
+if _copilot_modules_path not in sys.path:
+    sys.path.insert(0, _copilot_modules_path)
+
+try:
+    from per_comment_cache import PerCommentCache
+    PER_COMMENT_CACHE_AVAILABLE = True
+except ImportError:
+    PER_COMMENT_CACHE_AVAILABLE = False
+    PerCommentCache = None
+
 
 def run_command(
     cmd: List[str],
@@ -55,19 +67,49 @@ def parse_arguments() -> Tuple[str, str, str]:
     return sys.argv[1], sys.argv[2], sys.argv[3]
 
 
+def sanitize_branch_name(branch: str) -> str:
+    """Sanitize branch name to match shell's tr -cd '[:alnum:]._-'.
+
+    Removes any character that is NOT alphanumeric, dot, underscore, or dash.
+    """
+    return re.sub(r'[^a-zA-Z0-9._-]', '', branch or "")
+
+
+def sanitize_repo_name(repo_name: str) -> str:
+    """Sanitize repo name for filesystem safety.
+
+    Uses the same allowlist as branch sanitization so cache paths cannot be
+    influenced by path separators or traversal sequences.
+    """
+    return re.sub(r'[^a-zA-Z0-9._-]', '', repo_name or "")
+
+def _is_relative_to(path: Path, base: Path) -> bool:
+    try:
+        path.relative_to(base)
+        return True
+    except ValueError:
+        return False
+
 def get_current_branch() -> str:
     """Get current git branch name for temp file path"""
     success, branch, _ = run_command(["git", "branch", "--show-current"])
     if success and branch.strip():
-        # Sanitize branch name to prevent path traversal
-        branch = branch.strip()
-        # Remove dangerous characters that could be used for path traversal
-        safe_branch = re.sub(r"[^a-zA-Z0-9_-]", "_", branch)
-        return safe_branch[:50]  # Limit length
-    return "unknown"
+        return sanitize_branch_name(branch.strip()) or "unknown-branch"
+    return "unknown-branch"
+
+def get_repo_name(fallback_repo: str) -> str:
+    """Get repo name from git root to match shell scripts, with fallback."""
+    success, git_root, _ = run_command(["git", "rev-parse", "--show-toplevel"])
+    if success and git_root.strip():
+        candidate = os.path.basename(git_root.strip())
+    else:
+        candidate = fallback_repo
+
+    sanitized = sanitize_repo_name(candidate)
+    return sanitized or "unknown-repo"
 
 
-def load_claude_responses(branch_name: str) -> Dict:
+def load_claude_responses(branch_name: str, repo_name: str) -> Dict:
     """
     Load Claude-generated responses from JSON file.
     In the modern workflow, Claude analyzes comments, implements fixes,
@@ -75,23 +117,29 @@ def load_claude_responses(branch_name: str) -> Dict:
 
     Args:
         branch_name: Current git branch name (sanitized)
+        repo_name: Repository name (sanitized)
 
     Returns:
         Dictionary containing responses data, empty dict if file not found
     """
-    # Ensure branch_name is safe and create secure path
-    safe_branch = re.sub(r"[^a-zA-Z0-9_-]", "_", branch_name)[:50]
-    responses_file = f"/tmp/{safe_branch}/responses.json"
+    safe_repo = sanitize_repo_name(repo_name) or "unknown-repo"
+    safe_branch = sanitize_branch_name(branch_name) or "unknown-branch"
 
-    # Verify the path doesn't contain traversal attempts
-    responses_path = Path(responses_file).resolve()
-    expected_prefix = Path(f"/tmp/{safe_branch}").resolve()
-    if not str(responses_path).startswith(str(expected_prefix)):
-        print(f"⚠️ SECURITY: Path traversal attempt blocked: {responses_file}")
+    base_dir = Path("/tmp").resolve()
+    responses_path = (base_dir / safe_repo / safe_branch / "responses.json").resolve()
+    expected_dir = (base_dir / safe_repo / safe_branch).resolve()
+
+    # Verify the resolved path stays within /tmp (symlink-safe) and matches expected dir
+    if (
+        not _is_relative_to(responses_path, base_dir)
+        or not _is_relative_to(expected_dir, base_dir)
+        or responses_path.parent != expected_dir
+    ):
+        print(f"⚠️ SECURITY: Path traversal/symlink escape blocked: {responses_path}")
         return {}
 
-    if not os.path.exists(responses_file):
-        print(f"⚠️  RESPONSES FILE NOT FOUND: {responses_file}")
+    if not responses_path.exists():
+        print(f"⚠️  RESPONSES FILE NOT FOUND: {responses_path}")
         print("⚠️  Claude should have generated responses.json after analyzing comments")
         return {}
 
@@ -100,16 +148,12 @@ def load_claude_responses(branch_name: str) -> Dict:
         if responses_path.exists():
             file_size = responses_path.stat().st_size
             if file_size > 10 * 1024 * 1024:  # 10MB limit
-                print(
-                    f"⚠️ SECURITY: File too large: {responses_file} ({file_size} bytes)"
-                )
+                print(f"⚠️ SECURITY: File too large: {responses_path} ({file_size} bytes)")
                 return {}
 
-        with open(responses_file, "r") as f:
+        with responses_path.open("r") as f:
             responses_data = json.load(f)
-        print(
-            f"📁 LOADED: {len(responses_data.get('responses', []))} responses from {responses_file}"
-        )
+        print(f"📁 LOADED: {len(responses_data.get('responses', []))} responses from {responses_path}")
         return responses_data
     except json.JSONDecodeError as e:
         print(f"❌ ERROR: Failed to parse responses JSON: {e}")
@@ -119,34 +163,49 @@ def load_claude_responses(branch_name: str) -> Dict:
         return {}
 
 
-def load_comments_with_staleness_check(
-    branch_name: str, owner: str, repo: str, pr_number: str
-) -> List[Dict]:
+def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, pr_number: str, repo_name: str) -> List[Dict]:
     """
     Load comment data with staleness detection and real-time fallback.
-
-    Args:
-        branch_name: Current git branch name (sanitized)
-        owner: Repository owner
         repo: Repository name
         pr_number: PR number
+        repo_name: Repository name (sanitized)
 
     Returns:
         List of comment dictionaries (fresh or cached)
     """
-    # Ensure branch_name is safe and create secure path
-    safe_branch = re.sub(r"[^a-zA-Z0-9_-]", "_", branch_name)[:50]
-    comments_file = f"/tmp/{safe_branch}/comments.json"
+    safe_repo = sanitize_repo_name(repo_name) or "unknown-repo"
+    safe_branch = sanitize_branch_name(branch_name) or "unknown-branch"
 
-    # Verify the path doesn't contain traversal attempts
-    comments_path = Path(comments_file).resolve()
-    expected_prefix = Path(f"/tmp/{safe_branch}").resolve()
-    if not str(comments_path).startswith(str(expected_prefix)):
-        print(f"⚠️ SECURITY: Path traversal attempt blocked: {comments_file}")
+    base_dir = Path("/tmp").resolve()
+    cache_dir = (base_dir / safe_repo / safe_branch).resolve()
+    comments_path = (cache_dir / "comments.json").resolve()
+    comments_index_path = (cache_dir / "comments_index.json").resolve()
+    comments_dir = (cache_dir / "comments").resolve()
+    
+    # Security check
+    if (
+        not _is_relative_to(cache_dir, base_dir)
+        or not _is_relative_to(comments_path, base_dir)
+    ):
+        print(f"⚠️ SECURITY: Path traversal/symlink escape blocked: {cache_dir}")
         sys.exit(1)
 
+    # Try loading from new per-comment cache structure first
+    if PER_COMMENT_CACHE_AVAILABLE and comments_index_path.exists() and comments_dir.exists():
+        try:
+            cache = PerCommentCache(cache_dir)
+            comments = cache.load_all_comments()
+            if comments:
+                print(f"📁 LOADED: {len(comments)} comments from per-comment cache")
+                return comments
+        except Exception as e:
+            print(f"⚠️ Failed to load from per-comment cache: {e}, falling back to legacy format")
+
+    # Fallback to legacy single-file format
+    comments_file = str(comments_path)
+
     # COPILOT: Always fetch fresh data - no cache for PR processing
-    if os.path.exists(comments_file):
+    if comments_path.exists():
         cache_age_minutes = (time.time() - os.path.getmtime(comments_file)) / 60
         print(
             f"🔄 COPILOT MODE: Ignoring {cache_age_minutes:.1f}min cache - fetching fresh comments"
@@ -157,7 +216,7 @@ def load_comments_with_staleness_check(
         fetch_fresh_comments(owner, repo, pr_number, comments_file)
 
     try:
-        with open(comments_file, "r") as f:
+        with comments_path.open("r") as f:
             comment_data = json.load(f)
         return comment_data.get("comments", [])
     except Exception as e:
@@ -348,7 +407,7 @@ def sanitize_comment_content(content: str) -> str:
 
 
 def get_response_for_comment(
-    comment: Dict, responses_data: Dict, commit_hash: str
+    comment: Dict, responses_data: Dict, commit_hash: str, parent_comment: Optional[Dict] = None
 ) -> str:
     """
     Get Claude-generated response for a specific comment.
@@ -357,6 +416,7 @@ def get_response_for_comment(
         comment: Comment data from GitHub API
         responses_data: Loaded responses from Claude
         commit_hash: Current commit hash as fallback
+        parent_comment: Optional parent comment for context when processing replies
 
     Returns:
         Claude-generated response text or placeholder if not found
@@ -506,13 +566,17 @@ def detect_comment_type(comment: Dict) -> str:
 
 def create_threaded_reply(
     owner: str, repo: str, pr_number: str, comment: Dict, response_text: str
-) -> bool:
-    """Create a threaded reply to a PR comment using appropriate GitHub API"""
+) -> Tuple[bool, Optional[str]]:
+    """Create a threaded reply to a PR comment using appropriate GitHub API.
+
+    Returns:
+        Tuple of (success: bool, reply_id: Optional[str])
+    """
     comment_id = comment.get("id")
     comment_type = comment.get("type") or detect_comment_type(comment)
     if comment_id is None:
         print("❌ ERROR: Missing comment id; skip reply")
-        return False
+        return False, None
 
     print(f"🔗 CREATING: Threaded reply to {comment_type} comment #{comment_id}")
 
@@ -529,12 +593,16 @@ def create_threaded_reply(
 
 def create_issue_comment_reply(
     owner: str, repo: str, pr_number: str, comment: Dict, response_text: str
-) -> bool:
-    """Create a reply to an issue comment (general PR discussion)"""
+) -> Tuple[bool, Optional[str]]:
+    """Create a reply to an issue comment (general PR discussion).
+
+    Returns:
+        Tuple of (success: bool, reply_id: Optional[str])
+    """
     # SECURITY: Validate inputs
     if not validate_comment_data(comment):
         print("❌ SECURITY: Invalid comment data for issue comment reply")
-        return False
+        return False, None
 
     comment_id = comment.get("id")
     print(f"📝 POSTING: Issue comment reply to #{comment_id}")
@@ -604,16 +672,16 @@ def create_issue_comment_reply(
                 f"✅ SUCCESS: Issue comment reply #{reply_id} created for comment #{comment_id}"
             )
             print(f"🔗 URL: {reply_url}")
-            return True
+            return True, str(reply_id) if reply_id else None
         except json.JSONDecodeError:
             print(
                 f"⚠️ WARNING: Reply created but couldn't parse response for comment #{comment_id}"
             )
-            return True
+            return True, None
     else:
         print(f"❌ ERROR: Failed to create issue comment reply for #{comment_id}")
         print(f"   Error: {stderr}")
-        return False
+        return False, None
 
 
 def create_review_comment_reply(
@@ -623,14 +691,18 @@ def create_review_comment_reply(
     comment_id: int,
     response_text: str,
     comment: Dict = None,
-) -> bool:
-    """Create a threaded reply to a review comment (code-specific)"""
+) -> Tuple[bool, Optional[str]]:
+    """Create a threaded reply to a review comment (code-specific).
+
+    Returns:
+        Tuple of (success: bool, reply_id: Optional[str])
+    """
     print(f"🧵 POSTING: Review comment threaded reply to #{comment_id}")
 
     # SECURITY: Validate inputs to prevent injection
     if not isinstance(comment_id, (int, str)) or not str(comment_id).isdigit():
         print(f"❌ SECURITY: Invalid comment_id format: {comment_id}")
-        return False
+        return False, None
 
     # SURGICAL FIX: Validate comment exists before attempting threading
     if comment is None:
@@ -669,7 +741,7 @@ def create_review_comment_reply(
 
     except Exception as e:
         print(f"❌ ERROR: Failed to create secure JSON input: {e}")
-        return False
+        return False, None
     finally:
         # Clean up temporary file in all scenarios
         if temp_file_path and os.path.exists(temp_file_path):
@@ -685,12 +757,12 @@ def create_review_comment_reply(
                 f"✅ SUCCESS: Review comment reply #{reply_id} created for comment #{comment_id}"
             )
             print(f"🔗 URL: {reply_url}")
-            return True
+            return True, str(reply_id) if reply_id else None
         except json.JSONDecodeError:
             print(
                 f"⚠️ WARNING: Reply created but couldn't parse response for comment #{comment_id}"
             )
-            return True
+            return True, None
     else:
         if "422" in (stderr or ""):
             print(f"🔍 DEBUG 422: GitHub returned 422 for comment #{comment_id}")
@@ -707,7 +779,7 @@ def create_review_comment_reply(
                     f"🚨 STALE COMMENT: Comment #{comment_id} no longer exists (deleted or from different PR state)"
                 )
                 print(f"↪️ SKIP: Cannot reply to non-existent comment #{comment_id}")
-                return False
+                return False, None
 
             if comment:
                 # SECURITY: Only log safe diagnostic information
@@ -724,19 +796,19 @@ def create_review_comment_reply(
                 print(
                     f"🔄 FALLBACK: Attempting issue comment fallback for review comment #{comment_id}"
                 )
-                fallback_success = create_issue_comment_reply(
+                fallback_success, fallback_reply_id = create_issue_comment_reply(
                     owner, repo, pr_number, comment, response_text
                 )
                 if fallback_success:
                     print(
                         f"✅ FALLBACK SUCCESS: Posted as issue comment instead of threaded review reply for #{comment_id}"
                     )
-                    return True
+                    return True, fallback_reply_id
                 else:
                     print(
                         f"❌ FALLBACK FAILED: Both review threading and issue comment failed for #{comment_id}"
                     )
-                    return False
+                    return False, None
             else:
                 print(
                     "🔍 DEBUG 422: Comment object not available for detailed analysis"
@@ -744,8 +816,190 @@ def create_review_comment_reply(
                 print(
                     f"↪️ SKIP: GitHub returned 422 (likely stale comment or threading constraint) for #{comment_id}"
                 )
-                return False
+                return False, None
         print(f"❌ ERROR: Failed to create review comment reply for #{comment_id}")
+        print(f"   Error: {stderr}")
+        return False, None
+
+
+def post_initial_summary(
+    owner: str,
+    repo: str,
+    pr_number: str,
+    responses_data: Dict,
+    commit_hash: str,
+) -> bool:
+    """Post initial summary comment BEFORE posting individual replies.
+
+    This provides visibility into what the copilot command will accomplish,
+    showing breakdown by category and response type.
+
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        pr_number: PR number
+        responses_data: Loaded responses.json data with ACTION_ACCOUNTABILITY format
+        commit_hash: Current commit hash
+
+    Returns:
+        True if summary was posted successfully
+    """
+    print(f"📝 POSTING: Initial summary comment to PR #{pr_number}")
+
+    responses = responses_data.get("responses", [])
+
+    # Helper function to get all issues from a response (handles both single and multi-issue formats)
+    def get_all_issues(response):
+        """Extract all issues from response, handling both single-issue and multi-issue formats."""
+        if "issues" in response and "analysis" in response:
+            # Multi-issue format: return list of issues
+            return response.get("issues", [])
+        else:
+            # Single-issue format: treat entire response as one issue
+            return [response]
+
+    # Count by category (aggregate across all issues in all responses)
+    critical_count = sum(
+        1 for r in responses
+        for issue in get_all_issues(r)
+        if issue.get("category") == "CRITICAL"
+    )
+    blocking_count = sum(
+        1 for r in responses
+        for issue in get_all_issues(r)
+        if issue.get("category") == "BLOCKING"
+    )
+    important_count = sum(
+        1 for r in responses
+        for issue in get_all_issues(r)
+        if issue.get("category") == "IMPORTANT"
+    )
+    routine_count = sum(
+        1 for r in responses
+        for issue in get_all_issues(r)
+        if issue.get("category") == "ROUTINE"
+    )
+
+    # Count by response type (aggregate across all issues in all responses)
+    fixed_count = sum(
+        1 for r in responses
+        for issue in get_all_issues(r)
+        if issue.get("response") == "FIXED"
+    )
+    deferred_count = sum(
+        1 for r in responses
+        for issue in get_all_issues(r)
+        if issue.get("response") == "DEFERRED"
+    )
+    acknowledged_count = sum(
+        1 for r in responses
+        for issue in get_all_issues(r)
+        if issue.get("response") == "ACKNOWLEDGED"
+    )
+    not_done_count = sum(
+        1 for r in responses
+        for issue in get_all_issues(r)
+        if issue.get("response") == "NOT_DONE"
+    )
+
+    # Count multi-issue responses and total issues
+    multi_issue_count = sum(1 for r in responses if "issues" in r and "analysis" in r)
+    total_issues = sum(
+        len(get_all_issues(r)) for r in responses
+    )
+
+    # Build category breakdown
+    category_breakdown = []
+    if critical_count > 0:
+        category_breakdown.append(f"  - 🚨 **Critical**: {critical_count} issue(s)")
+    if blocking_count > 0:
+        category_breakdown.append(f"  - ⛔ **Blocking**: {blocking_count} issue(s)")
+    if important_count > 0:
+        category_breakdown.append(f"  - ⚠️  **Important**: {important_count} issue(s)")
+    if routine_count > 0:
+        category_breakdown.append(f"  - 📝 **Routine**: {routine_count} issue(s)")
+
+    # Build response type breakdown
+    response_breakdown = []
+    if fixed_count > 0:
+        response_breakdown.append(f"  - ✅ **FIXED**: {fixed_count} issue(s) implemented with working code")
+    if deferred_count > 0:
+        response_breakdown.append(f"  - 🔄 **DEFERRED**: {deferred_count} issue(s) - created issues for future implementation")
+    if acknowledged_count > 0:
+        response_breakdown.append(f"  - 📋 **ACKNOWLEDGED**: {acknowledged_count} issue(s) - noted but not actionable")
+    if not_done_count > 0:
+        response_breakdown.append(f"  - ❌ **NOT DONE**: {not_done_count} issue(s) - cannot implement with specific reason")
+
+    summary_body = f"""## 🤖 Copilot Comment Analysis Summary
+
+**Processing Overview**:
+- 📊 **Total Comments**: {len(responses)} comment(s) will receive responses
+- 📈 **Total Issues**: {total_issues} distinct issue(s) identified across all comments
+- 🔀 **Multi-Issue Comments**: {multi_issue_count} comment(s) contain multiple issues
+
+**Category Breakdown**:
+{chr(10).join(category_breakdown) if category_breakdown else '  - No categorized responses'}
+
+**Response Type Breakdown**:
+{chr(10).join(response_breakdown) if response_breakdown else '  - No responses'}
+
+**Commit**: {commit_hash}
+
+---
+
+**Next Steps**: Individual threaded replies will be posted below addressing each comment with specific technical details.
+
+**LLM Architecture**: Following CLAUDE.md principles - LLM analyzed FULL comment content, identified ALL distinct issues (even when multiple issues in one comment), and generated comprehensive responses with ACTION_ACCOUNTABILITY format.
+
+*Generated by /commentreply - Systematic comment processing with comprehensive multi-issue analysis*"""
+
+    # Post to main PR issue
+    summary_data = {"body": summary_body}
+
+    # Use secure JSON input with temporary file to prevent shell injection
+    temp_file_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as temp_file:
+            json.dump(summary_data, temp_file)
+            temp_file_path = temp_file.name
+
+        # Use secure subprocess call with proper argument separation
+        success, response_json, stderr = run_command(
+            [
+                "gh",
+                "api",
+                f"repos/{owner}/{repo}/issues/{pr_number}/comments",
+                "--method",
+                "POST",
+                "--header",
+                "Content-Type: application/json",
+                "--input",
+                temp_file_path,
+            ]
+        )
+
+    except Exception as e:
+        print(f"❌ ERROR: Failed to create secure summary JSON: {e}")
+        return False
+    finally:
+        # Clean up temporary file in all scenarios
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
+
+    if success:
+        try:
+            response_data = json.loads(response_json)
+            summary_url = response_data.get("html_url")
+            print("✅ SUCCESS: Initial summary comment posted")
+            print(f"🔗 SUMMARY URL: {summary_url}")
+            return True
+        except json.JSONDecodeError:
+            print("⚠️ WARNING: Summary posted but couldn't parse response")
+            return True
+    else:
+        print("❌ ERROR: Failed to post initial summary comment")
         print(f"   Error: {stderr}")
         return False
 
@@ -843,10 +1097,9 @@ def main():
     print(f"📋 PR NUMBER: #{pr_number}")
 
     # Step 2: Load comments with staleness detection and real-time fallback
+    repo_name = get_repo_name(repo)
     branch_name = get_current_branch()
-    all_comments = load_comments_with_staleness_check(
-        branch_name, owner, repo, pr_number
-    )
+    all_comments = load_comments_with_staleness_check(branch_name, owner, repo, pr_number, repo_name)
     print(f"📁 LOADED: {len(all_comments)} comments with staleness validation")
 
     if not all_comments:
@@ -858,12 +1111,19 @@ def main():
     processed_comments = []
     successful_replies = 0
 
-    # Determine current actor and limit to top-level comments
+    # Determine current actor
     ok_actor, actor_login, _ = run_command(
         ["gh", "api", "user", "-q", ".login"], description="current actor"
     )
     actor_login = (actor_login or "").strip() or os.environ.get("GITHUB_ACTOR", "")
-    top_level = [c for c in all_comments if not c.get("in_reply_to_id")]
+    
+    # CRITICAL FIX: Process ALL comments (including replies) in chronological order
+    # Sort all comments by created_at to preserve conversation order
+    # This prevents out-of-sequence execution when replies contain corrections
+    all_targets = sorted(
+        all_comments,
+        key=lambda c: c.get("created_at", "")
+    )
     total_targets = 0
     already_replied = 0
     missing_responses = 0
@@ -873,13 +1133,28 @@ def main():
     print(f"📝 COMMIT: Using commit {commit_hash} for all responses")
 
     # Step 3: Load Claude-generated responses
-    responses_data = load_claude_responses(branch_name)
+    responses_data = load_claude_responses(branch_name, repo_name)
+
+    # Initialize per-comment cache for mark_handled tracking
+    per_comment_cache = None
+    if PER_COMMENT_CACHE_AVAILABLE:
+        safe_repo = sanitize_repo_name(repo_name) or "unknown-repo"
+        safe_branch = sanitize_branch_name(branch_name) or "unknown-branch"
+        cache_dir = Path("/tmp") / safe_repo / safe_branch
+        per_comment_cache = PerCommentCache(cache_dir)
+        print(f"📁 CACHE: Per-comment cache initialized at {cache_dir}")
+
+    # Step 3.1: Post initial summary comment BEFORE posting individual replies
+    # This gives visibility into what will be accomplished
+    print("\n📝 PRE-PROCESSING: Posting initial summary comment")
+    post_initial_summary(owner, repo, pr_number, responses_data, commit_hash)
 
     # Step 3.5: Delete pending reviews only if we need threaded replies (inline comments)
     # GitHub blocks threaded replies if there's a pending review from the same user
     should_cleanup_pending = False
     if actor_login:
-        for comment in top_level:
+        # Check all comments (including replies) for inline comments that need threading
+        for comment in all_targets:
             if not validate_comment_data(comment):
                 continue
             user = comment.get("user", {})
@@ -891,9 +1166,14 @@ def main():
             if author == actor_login:
                 continue
             comment_id = comment.get("id")
+            # Support both user.login and author field formats (consistent with main loop)
             replied_by_actor = any(
                 (c.get("in_reply_to_id") == comment_id)
-                and (c.get("user", {}).get("login") == actor_login)
+                and (
+                    (c.get("user", {}).get("login") == actor_login)
+                    if isinstance(c.get("user"), dict)
+                    else (c.get("author") == actor_login)
+                )
                 for c in all_comments
             )
             if replied_by_actor:
@@ -927,13 +1207,41 @@ def main():
             "\nℹ️ PRE-PROCESSING: No inline replies planned; skipping pending review deletion"
         )
 
-    for i, comment in enumerate(top_level, 1):
+    # CRITICAL FIX: Process all comments in chronological order (including replies)
+    for i, comment in enumerate(all_targets, 1):
         # SECURITY: Validate each comment before processing
         if not validate_comment_data(comment):
-            print(f"[{i}/{len(top_level)}] ❌ SECURITY: Skipping invalid comment data")
+            print(f"[{i}/{len(all_targets)}] ❌ SECURITY: Skipping invalid comment data")
             continue
 
         comment_id = comment.get("id")
+        in_reply_to_id = comment.get("in_reply_to_id")
+        
+        # CRITICAL FIX: Fetch parent comment context when processing replies
+        parent_comment = None
+        if in_reply_to_id:
+            parent_comment = next(
+                (c for c in all_comments if c.get("id") == in_reply_to_id),
+                None
+            )
+            if parent_comment:
+                parent_author = (
+                    parent_comment.get("user", {}).get("login")
+                    if isinstance(parent_comment.get("user"), dict)
+                    else parent_comment.get("author", "unknown")
+                )
+                parent_body_snippet = sanitize_comment_content(
+                    parent_comment.get("body", "")
+                )[:50].replace("\n", " ")
+                print(
+                    f"   📎 Reply context: Parent comment #{in_reply_to_id} by @{parent_author}"
+                )
+                print(f'   📎 Parent content: "{parent_body_snippet}..."')
+            else:
+                print(
+                    f"   ⚠️ WARNING: Parent comment #{in_reply_to_id} not found in fetched comments"
+                )
+        
         # Support both user.login and author field formats
         user = comment.get("user", {})
         author = (
@@ -945,7 +1253,10 @@ def main():
             "\n", " "
         )
 
-        print(f"\n[{i}/{len(top_level)}] Processing comment #{comment_id} by @{author}")
+        comment_type_label = "reply" if in_reply_to_id else "top-level"
+        print(
+            f"\n[{i}/{len(all_targets)}] Processing {comment_type_label} comment #{comment_id} by @{author}"
+        )
         print(f'   Content: "{body_snippet}..."')
 
         # Skip our own comments
@@ -954,16 +1265,42 @@ def main():
             continue
         total_targets += 1
 
-        # Idempotency: skip if already replied by current actor
-        replied_by_actor = any(
-            (c.get("in_reply_to_id") == comment_id)
-            and (c.get("user", {}).get("login") == actor_login)
-            for c in all_comments
-        )
-        if replied_by_actor:
-            print("   ↪️ Skip: already replied by current actor")
-            already_replied += 1
-            continue
+        # Idempotency: skip if already replied by current actor AND no one replied after us
+        # Support both user.login and author field formats
+        our_replies = [
+            c for c in all_comments
+            if (c.get("in_reply_to_id") == comment_id)
+            and (
+                (c.get("user", {}).get("login") == actor_login)
+                if isinstance(c.get("user"), dict)
+                else (c.get("author") == actor_login)
+            )
+        ]
+        if our_replies:
+            # Check if anyone replied AFTER our last reply
+            our_replies.sort(key=lambda x: x.get("created_at", ""))
+            our_last_reply_time = our_replies[-1].get("created_at", "")
+            # Find all replies to this comment
+            all_replies_to_comment = [
+                c for c in all_comments
+                if c.get("in_reply_to_id") == comment_id
+            ]
+            # Check if there are any replies after our last reply
+            replies_after_ours = [
+                c for c in all_replies_to_comment
+                if c.get("created_at", "") > our_last_reply_time
+                and (
+                    (c.get("user", {}).get("login") != actor_login)
+                    if isinstance(c.get("user"), dict)
+                    else (c.get("author") != actor_login)
+                )
+            ]
+            if not replies_after_ours:
+                print("   ↪️ Skip: already replied by current actor (no new replies)")
+                already_replied += 1
+                continue
+            # Someone replied after us - continue processing to respond to their reply
+            print(f"   ℹ️  We already replied, but {len(replies_after_ours)} new reply(ies) found - will process")
 
         # Idempotency for review body comments (type="review"): check for existing issue comment
         # with reference pattern since review bodies are replied via issue comments without in_reply_to_id
@@ -983,7 +1320,8 @@ def main():
                 already_replied += 1
                 continue
 
-        # Skip if thread ends with [AI responder] comment indicating completion
+        # Skip if thread ends with OUR [AI responder] comment indicating completion
+        # Only skip if WE are the last commenter, not if someone else replied after us
         thread_replies = [
             c for c in all_comments if c.get("in_reply_to_id") == comment_id
         ]
@@ -992,13 +1330,18 @@ def main():
             thread_replies.sort(key=lambda x: x.get("created_at", ""))
             last_reply = thread_replies[-1]
             last_reply_body = last_reply.get("body", "")
-            if "[AI responder]" in last_reply_body:
-                print("   ↪️ Skip: thread already completed with [AI responder] comment")
+            last_reply_author = last_reply.get("user", {}).get("login", "")
+            # Only skip if WE are the last commenter AND our comment has [AI responder]
+            if "[AI responder]" in last_reply_body and last_reply_author == actor_login:
+                print("   ↪️ Skip: thread already completed with our [AI responder] comment")
                 already_replied += 1
                 continue
 
         # Get Claude-generated response for this comment
-        response_text = get_response_for_comment(comment, responses_data, commit_hash)
+        # CRITICAL FIX: Include parent comment context when processing replies
+        response_text = get_response_for_comment(
+            comment, responses_data, commit_hash, parent_comment=parent_comment
+        )
 
         # Skip posting if no response available (empty string = skip)
         if not response_text or not response_text.strip():
@@ -1016,8 +1359,17 @@ def main():
             )
 
         # Create threaded reply
-        if create_threaded_reply(owner, repo, pr_number, comment, response_text):
+        reply_success, reply_id = create_threaded_reply(owner, repo, pr_number, comment, response_text)
+        if reply_success:
             successful_replies += 1
+            # Mark comment as handled in per-comment cache for resumability
+            if per_comment_cache and reply_id:
+                per_comment_cache.mark_handled(
+                    comment_id=str(comment_id),
+                    reply_id=reply_id,
+                    status="replied"
+                )
+                print(f"   📝 CACHE: Marked comment #{comment_id} as handled (reply: {reply_id})")
 
         processed_comments.append(comment)
 

@@ -12,6 +12,7 @@ Execute `.claude/commands/savetmp.py` to archive evidence following `.claude/ski
 - Git provenance capture (HEAD commit, origin/main, changed files)
 - Parallel git command execution for speed
 - Structured `/tmp/<repo>/<branch>/<work>/<timestamp>/` layout
+- Metadata paths stored as relative paths for portability
 - Optional validation pass for checksum gaps and portability issues
 
 ## Quick Usage
@@ -32,7 +33,10 @@ python .claude/commands/savetmp.py "<work_name>" \
 | `--evidence` / `--evidence-file` | Evidence summary |
 | `--notes` / `--notes-file` | Additional notes |
 | `--artifact` | Copy file/dir to artifacts/ (repeatable) |
+| `--command-log` | Copy a test run log that includes command + stdout/stderr + exit code |
+| `--capture-git-provenance-full` | Write `git_provenance_full.txt` with raw git command output + exit codes |
 | `--skip-git` | Skip git commands for faster execution |
+| `--clean-checksums` | Remove existing `.sha256` files from artifacts before packaging |
 | `--validate` | Run post-package validation (checksums, portability, required files) |
 | `--llm-claims` | Declare LLM/API behavior claims (requires `request_responses.jsonl`) |
 
@@ -45,6 +49,7 @@ python .claude/commands/savetmp.py "<work_name>" \
 ├── notes.md + .sha256
 ├── metadata.json + .sha256   # Includes git_provenance
 ├── README.md + .sha256
+├── git_provenance_full.txt + .sha256   # Optional, with --capture-git-provenance-full
 └── artifacts/
 ```
 
@@ -55,3 +60,4 @@ See `.claude/skills/evidence-standards.md` for:
 - Mock vs Real mode decision tree
 - Git provenance requirements
 - Checksum verification
+- Test execution evidence requirements (command + output + exit code)

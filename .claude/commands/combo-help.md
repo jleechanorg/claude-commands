@@ -60,17 +60,17 @@ All combinations defined in `.claude/command-compositions.json`:
 
 **Output**:
 ```
-Command Combination: /arch /plan
+Command Combination: /arch /planexec
 Transforms to: /execute Create detailed architectural plan with implementation strategy: {your_text}
 
 Description: Combines architectural thinking with detailed planning
 Tags: architecture, planning, design
 
 Example Usage:
-  /arch /plan build microservices platform
+  /arch /planexec build microservices platform
   → Creates comprehensive architectural plan for microservices platform
 
 Related Combinations:
-  - /arch /plan /think (adds deep reasoning)
-  - /brief /arch /plan (adds concise output)
+  - /arch /planexec /think (adds deep reasoning)
+  - /brief /arch /planexec (adds concise output)
 ```

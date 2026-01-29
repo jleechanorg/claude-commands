@@ -190,6 +190,108 @@ TESTING=true python3 -m pytest $PROJECT_ROOT/tests/test_code_execution_dice_roll
 ./run_tests_with_coverage.sh
 ```
 
+## Flask API End2End Test Pattern (MANDATORY)
+
+**All API-level end2end tests MUST follow this pattern.** Located in `$PROJECT_ROOT/tests/test_end2end/`.
+
+### Required Environment Variable
+
+```python
+# CORRECT - Use TESTING_AUTH_BYPASS
+os.environ["TESTING_AUTH_BYPASS"] = "true"
+
+# WRONG - Don't use just TESTING
+os.environ["TESTING"] = "true"  # ❌ Not sufficient for API tests
+```
+
+### Required Imports and Base Class
+
+```python
+import json
+import os
+import sys
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+os.environ["TESTING_AUTH_BYPASS"] = "true"
+os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
+
+# Path setup
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+MVP_SITE_ROOT = PROJECT_ROOT / "mvp_site"
+for path in (PROJECT_ROOT, MVP_SITE_ROOT):
+    path_str = str(path)
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
+
+from main import create_app  # noqa: E402
+from tests.fake_firestore import FakeFirestoreClient  # noqa: E402
+```
+
+### Required Test Class Pattern
+
+```python
+class TestFeatureEndToEnd(unittest.TestCase):
+    """Descriptive docstring for the test class."""
+
+    def setUp(self):
+        # 1. Create Flask app and test client
+        self.app = create_app()
+        self.app.config["TESTING"] = True
+        self.client = self.app.test_client()
+
+        # 2. Test user ID
+        self.test_user_id = "feature-e2e-user"
+
+        # 3. Stub auth (MANDATORY)
+        self._auth_patcher = patch(
+            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+        )
+        self._auth_patcher.start()
+        self.addCleanup(self._auth_patcher.stop)
+
+        # 4. Use FakeFirestore (MANDATORY)
+        self.fake_firestore = FakeFirestoreClient()
+        self._db_patcher = patch(
+            "firestore_service.get_db", return_value=self.fake_firestore
+        )
+        self._db_patcher.start()
+        self.addCleanup(self._db_patcher.stop)
+
+        # 5. Headers for API requests
+        self.headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer test-id-token",
+        }
+
+    def test_feature_roundtrip(self):
+        """Test the feature saves and retrieves correctly."""
+        # POST to save
+        save_resp = self.client.post(
+            "/api/endpoint", data=json.dumps({"field": "value"}), headers=self.headers
+        )
+        assert save_resp.status_code == 200, f"Save failed: {save_resp.data}"
+
+        # GET to retrieve
+        get_resp = self.client.get("/api/endpoint", headers=self.headers)
+        assert get_resp.status_code == 200
+        data = json.loads(get_resp.data)
+        assert data.get("field") == "value"
+```
+
+### Pattern Checklist
+
+| Requirement | Status |
+|-------------|--------|
+| `TESTING_AUTH_BYPASS=true` env var | ✅ Required |
+| `unittest.TestCase` base class | ✅ Required |
+| `FakeFirestoreClient` for database | ✅ Required |
+| `patch("main.auth.verify_id_token")` | ✅ Required |
+| `create_app()` + `test_client()` | ✅ Required |
+| `addCleanup()` for patchers | ✅ Required |
+| Debug info in assertions | ✅ Required |
+
 ## Best Practices
 
 ### DO:

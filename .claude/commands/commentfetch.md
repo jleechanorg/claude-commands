@@ -62,11 +62,11 @@ get_comprehensive_comment_count() {
 
 ## Description
 
-Pure Python implementation that collects ALL comments from all GitHub PR sources AND GitHub CI status. Marks comments starting with '[AI responder]' as our responses. Implements /fixpr CI status methodology with defensive programming patterns. Always fetches fresh data on each execution and saves to `/tmp/{branch_name}/comments.json` for downstream processing by `/commentreply`.
+Pure Python implementation that collects ALL comments from all GitHub PR sources AND GitHub CI status. Marks comments starting with '[AI responder]' as our responses. Implements /fixpr CI status methodology with defensive programming patterns. Always fetches fresh data on each execution and saves to `/tmp/{repo_name}/{branch_name}/comments.json` for downstream processing by `/commentreply`.
 
 ## Output Format
 
-Saves structured JSON data to `/tmp/{branch_name}/comments.json` with:
+Saves structured JSON data to `/tmp/{repo_name}/{branch_name}/comments.json` with:
 
 ```json
 {
@@ -215,8 +215,9 @@ fetch.execute()
 # If user requested inline display, show the results
 
 if [ "$PRINT_INLINE" = "true" ]; then
-    BRANCH_NAME=$(git branch --show-current)
-    COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
+    BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
+    REPO_NAME=$(basename "$(git rev-parse --show-toplevel)" | tr -cd '[:alnum:]._-')
+    COMMENTS_FILE="/tmp/$REPO_NAME/$BRANCH_NAME/comments.json"
 
     if [ -f "$COMMENTS_FILE" ]; then
         echo ""
@@ -248,7 +249,7 @@ fi
 
 # Internally runs: cd .claude/commands && python3 -c "import _copilot_modules.commentfetch as cf; ..."
 
-# Saves comments to /tmp/{branch_name}/comments.json
+# Saves comments to /tmp/{repo_name}/{branch_name}/comments.json
 
 # Downstream commands read from the saved file
 
@@ -256,7 +257,7 @@ fi
 
 ## Integration
 
-This command is typically the first step in the `/copilot` workflow, providing fresh comment data AND CI status to `/tmp/{branch_name}/comments.json` for other commands like `/fixpr` and `/commentreply`. Uses /fixpr methodology for authoritative GitHub CI status with defensive programming patterns. Always fetches current data and overwrites the comments file.
+This command is typically the first step in the `/copilot` workflow, providing fresh comment data AND CI status to `/tmp/{repo_name}/{branch_name}/comments.json` for other commands like `/fixpr` and `/commentreply`. Uses /fixpr methodology for authoritative GitHub CI status with defensive programming patterns. Always fetches current data and overwrites the comments file.
 
 ## CI Status Integration
 

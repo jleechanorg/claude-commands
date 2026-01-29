@@ -1,6 +1,53 @@
-# Code Centralization - Avoiding Duplication
+# Code Centralization - Mandatory Investigation Protocol
 
-**Purpose**: Guidelines for identifying, extracting, and centralizing duplicated code to create single sources of truth and improve maintainability.
+**Purpose**: Before writing ANY new code, you MUST investigate existing code to prevent duplication. This is not optional.
+
+## CRITICAL: Investigation Before Implementation
+
+**DEFAULT: REUSE EXISTING CODE** - You must prove similar code doesn't already exist before writing new code.
+
+### Mandatory Pre-Implementation Checklist
+
+Before writing ANY new function, class, or module:
+
+1. **Search for existing implementations**
+   ```bash
+   # Search for similar function names
+   grep -r "def similar_name" --include="*.py"
+
+   # Search for similar logic patterns
+   grep -r "pattern_keyword" --include="*.py"
+
+   # Search imports to find utility modules
+   grep -r "from.*utils import" --include="*.py"
+   ```
+
+2. **Document what you found**
+   - List ALL similar functions/modules discovered
+   - Explain why each cannot be reused (or CAN be reused)
+
+3. **Justify new code only if reuse is impossible**
+   - "Couldn't find similar code" is only valid with search evidence
+   - "Existing code doesn't quite fit" requires explanation of gap
+
+### Evidence Required
+
+```markdown
+### Code Investigation for: <what you're implementing>
+
+**Search performed:**
+- `grep -r "keyword1" --include="*.py"` → Found: <results>
+- `grep -r "keyword2" --include="*.py"` → Found: <results>
+
+**Similar code found:**
+- `file1.py:function_name()` - Does X, but not Y (can't reuse because...)
+- `file2.py:other_function()` - Does Y, can be extended to also do X
+
+**Decision:**
+- [ ] Reuse existing: <which function>
+- [ ] Extend existing: <which function + what extension>
+- [ ] New code justified: <why reuse/extension impossible>
+```
 
 ## Core Principle
 
@@ -288,6 +335,62 @@ Track improvements:
 | Consuming code lines | 35 | 3 | -32 lines |
 | **Net change** | 35 | 23 | **-12 lines** |
 | **Test coverage** | 19 tests | 37 tests | **+18 tests** |
+
+## Banned Patterns (ZERO TOLERANCE)
+
+These patterns are **explicitly banned** and must never appear in code:
+
+### 1. `_v2`/`_new`/`_backup`/`_old` File Names
+
+```python
+# ❌ BANNED - Never create these files
+auth_service_v2.py      # Edit the original instead
+user_model_new.py       # Edit the original instead
+config_backup.py        # Use git for backups
+helper_old.py           # Delete and replace
+
+# ✅ CORRECT - Edit existing files directly
+auth_service.py         # Modify in place
+user_model.py           # Modify in place
+```
+
+**Why banned:** Creates confusion about which file is authoritative. Use git for version history.
+
+### 2. "Pre-existing Issue" Excuse
+
+```python
+# ❌ BANNED PHRASES - Never use these
+"This is a pre-existing issue"
+"This test was already failing"
+"Not caused by my changes"
+"Unrelated to this PR"
+
+# ✅ CORRECT - Fix ALL failures
+# If a test fails vs origin/main, FIX IT. No excuses.
+```
+
+**Why banned:** All test failures must be fixed in the current PR. There are no "pre-existing" issues - if it fails, fix it.
+
+### 3. Direct `import logging` (in `$PROJECT_ROOT/`)
+
+```python
+# ❌ BANNED - Direct logging module in $PROJECT_ROOT/
+import logging
+logger = logging.getLogger(__name__)
+logger.info("message")
+
+# ✅ CORRECT - Use unified logging_util
+from mvp_site import logging_util
+logging_util.info("message")
+logging_util.warning("something concerning")
+logging_util.error("something failed")
+```
+
+**Why banned:** `logging_util` provides unified output to both GCP Cloud Logging and local files with consistent formatting. Direct `import logging` bypasses this.
+
+**Exception:** Test files (`$PROJECT_ROOT/tests/*`) may use direct logging.
+
+---
 
 ## Anti-Patterns
 

@@ -124,7 +124,7 @@ Phase 5 - Review:
 
 **Alternative commands**:
 - `/execute` - Just implementation
-- `/plan` - Implementation with approval
+- `/planexec` - Implementation with approval
 - `/push` - Just create PR
 - `/review` - Just code review
 - `/copilot` - Just handle feedback

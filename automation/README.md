@@ -255,7 +255,7 @@ jleechanorg-pr-monitor --fixpr --dry-run
 
 ```bash
 # Monitor and fix in one command
-jleechanorg-pr-monitor --fixpr --max-prs 5 --fixpr-agent claude
+jleechanorg-pr-monitor --fixpr --max-prs 5 --cli-agent claude
 ```
 
 ### Agent CLI Options

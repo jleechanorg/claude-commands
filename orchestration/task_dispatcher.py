@@ -32,14 +32,14 @@ from .constants import (
     AGENT_SESSION_TIMEOUT_SECONDS,
     DEFAULT_MAX_CONCURRENT_AGENTS,
     RUNTIME_CLI_TIMEOUT_SECONDS,
-    RUNTIME_OAUTH_CLI_TIMEOUT_SECONDS,
     TIMESTAMP_MODULO,
 )
 
 A2A_AVAILABLE = True
+logger = logging.getLogger(__name__)
 
-# Default Gemini model can be overridden via GEMINI_MODEL; default to gemini-3-pro-preview (Gemini 3 Pro)
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-pro-preview")
+# Default Gemini model can be overridden via GEMINI_MODEL; default to gemini-3-flash-preview (Gemini 3 Flash)
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 # Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
 
@@ -75,7 +75,7 @@ CLI_PROFILES = {
         "conversation_dir": None,
         "continue_flag": "",
         "restart_env": "CODEX_RESTART",
-        "command_template": "{binary} exec --yolo",
+        "command_template": "{binary} exec --yolo --skip-git-repo-check",
         "stdin_template": "{prompt_file}",
         "quote_prompt": True,
         # Unset API key to force OAuth/interactive auth (consistent with other CLIs)
@@ -230,6 +230,69 @@ class TaskDispatcher:
         # Basic safety rules only - no constraint system needed
 
         # All tasks are now dynamic - no static loading needed
+
+    def _get_tmp_subdirectory_names(self, tmp_root: str = "/tmp") -> list[str]:
+        """Return immediate subdirectory names under tmp_root (dirs only)."""
+        try:
+            root = Path(tmp_root)
+            if not root.exists():
+                return []
+            names: list[str] = []
+            for entry in root.iterdir():
+                try:
+                    if entry.is_dir():
+                        names.append(entry.name)
+                except OSError:
+                    # Ignore unreadable entries; this is best-effort diagnostics.
+                    continue
+            return names
+        except OSError:
+            return []
+
+    def _print_tmp_subdirectories(
+        self,
+        tmp_root: str = "/tmp",
+        max_entries: int = 25,
+        *,
+        correlation_id: str | None = None,
+    ) -> None:
+        """Best-effort diagnostic: log a bounded listing of /tmp subdirectories."""
+        names = self._get_tmp_subdirectory_names(tmp_root=tmp_root)
+        log_extra = {"correlation_id": correlation_id}
+        if not names:
+            logger.info("   📁 %s subdirectories: (none found)", tmp_root, extra=log_extra)
+            return
+
+        def is_interesting(name: str) -> bool:
+            lowered = name.lower()
+            return any(
+                token in lowered
+                for token in (
+                    "orchestration",
+                    "worldarchitect",
+                    "pytest",
+                    "coverage",
+                    "agent",
+                    "playwright",
+                    "browser",
+                )
+            )
+
+        names_sorted = sorted(names, key=lambda n: (0 if is_interesting(n) else 1, n))
+        shown = names_sorted[:max_entries]
+        omitted = max(len(names_sorted) - len(shown), 0)
+
+        logger.info(
+            "   📁 %s subdirectories (showing %s/%s):",
+            tmp_root,
+            len(shown),
+            len(names_sorted),
+            extra=log_extra,
+        )
+        for name in shown:
+            logger.info("      - %s", name, extra=log_extra)
+        if omitted:
+            logger.info("      … and %s more", omitted, extra=log_extra)
 
     @property
     def active_agents(self) -> set:
@@ -748,7 +811,7 @@ class TaskDispatcher:
                 execution_cmd = ["-m", test_model, "--yolo"]
             elif cli_name == "codex":
                 help_args = ["exec", "--help"]
-                execution_cmd = ["exec", "--yolo"]
+                execution_cmd = ["exec", "--yolo", "--skip-git-repo-check"]
             elif cli_name == "claude":
                 # OAuth CLI - check executable first, then use prompt file for execution
                 if not os.access(cli_path, os.X_OK):
@@ -1370,45 +1433,25 @@ Complete the task, then use /pr to create a new pull request."""
                 agent_spec["cli_chain"] = cli_chain
 
             if not cli_path:
-                print(f"⚠️ Requested CLI '{cli_profile['binary']}' not available for {agent_name}")
-
-                fallback_cli = None
-                fallback_path = None
-                for candidate_cli in CLI_PROFILES:
-                    if candidate_cli == agent_cli:
-                        continue
-                    candidate_path = self._resolve_cli_binary(candidate_cli)
-                    if candidate_path:
-                        fallback_cli = candidate_cli
-                        fallback_path = candidate_path
-                        break
-
-                if fallback_cli and fallback_path:
-                    print(f"   ➡️ Falling back to {CLI_PROFILES[fallback_cli]['display_name']} CLI")
-                    agent_cli = fallback_cli
-                    cli_profile = CLI_PROFILES[agent_cli]
-                    cli_path = fallback_path
-                    agent_spec["cli"] = agent_cli
-                    agent_spec["cli_chain"] = [agent_cli]
-                else:
-                    print(f"❌ Required CLI '{cli_profile['binary']}' not found for agent {agent_name}")
-                    if agent_cli == "claude":
-                        print("   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code")
-                    elif agent_cli == "codex":
-                        print("   Install Codex CLI and ensure the 'codex' command is available on your PATH")
-                    elif agent_cli == "gemini":
-                        print("   Install Gemini CLI and ensure the 'gemini' command is available on your PATH")
-                    elif agent_cli == "cursor":
-                        print(
-                            "   Install Cursor Agent CLI and ensure the 'cursor-agent' command is available on your PATH"
-                        )
-                    return False
+                print(f"❌ Required CLI '{cli_profile['binary']}' not found for agent {agent_name}")
+                if agent_cli == "claude":
+                    print("   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code")
+                elif agent_cli == "codex":
+                    print("   Install Codex CLI and ensure the 'codex' command is available on your PATH")
+                elif agent_cli == "gemini":
+                    print("   Install Gemini CLI and ensure the 'gemini' command is available on your PATH")
+                elif agent_cli == "cursor":
+                    print(
+                        "   Install Cursor Agent CLI and ensure the 'cursor-agent' command is available on your PATH"
+                    )
+                return False
 
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
 
             # Pre-flight validation: Test if CLI can actually work (API connectivity/quota check)
             # Validate ALL CLIs in chain to ensure fallback options are ready
             print(f"🔍 Starting pre-flight validation for {agent_name} (CLI chain: {', '.join(cli_chain)}, model: {model})")
+            self._print_tmp_subdirectories(correlation_id=agent_name)
             validated_clis = []  # List of (cli_name, cli_path) tuples that passed validation
             validated_cli = None
             validated_path = None
@@ -1431,26 +1474,9 @@ Complete the task, then use /pr to create a new pull request."""
                 else:
                     print(f"   ❌ CLI '{candidate_cli}' failed pre-flight validation")
             
-            # If no CLIs in chain passed validation, try fallback CLIs
-            # Prefer Codex for fallback (most reliable), then others
+            # If no CLIs in chain passed validation, fail (no automatic fallback)
             if not validated_cli:
-                print(f"⚠️ All CLIs in chain failed validation for {agent_name}, attempting fallback")
-                # Prioritize Codex for fallback (most reliable for automation)
-                fallback_priority = ["codex", "claude", "cursor", "gemini"]
-                for fallback_cli in fallback_priority:
-                    if fallback_cli in cli_chain:
-                        continue  # Already tried in chain
-                    fallback_path = self._resolve_cli_binary(fallback_cli)
-                    if fallback_path:
-                        print(f"   🔄 Trying fallback: {CLI_PROFILES[fallback_cli]['display_name']} CLI at {fallback_path}...")
-                        if self._validate_cli_availability(fallback_cli, fallback_path, agent_name, model=model):
-                            validated_clis.append((fallback_cli, fallback_path))
-                            validated_cli = fallback_cli
-                            validated_path = fallback_path
-                            print(f"   ✅ Fallback to {CLI_PROFILES[fallback_cli]['display_name']} CLI validated for {agent_name}")
-                            break
-                        else:
-                            print(f"   ❌ Fallback {CLI_PROFILES[fallback_cli]['display_name']} CLI validation failed")
+                print(f"❌ All CLIs in chain failed validation for {agent_name} - no fallback available")
             
             # Log validation summary
             if validated_clis:
@@ -1518,6 +1544,44 @@ Complete the task, then use /pr to create a new pull request."""
                     else:
                         print(f"❌ Git worktree failed: {git_result.stderr}")
                         return False
+
+                # Pre-clean worktree to avoid dirty state issues
+                # This prevents agents from stopping to ask about staged changes from previous runs
+                print(f"🧹 Pre-cleaning worktree to ensure clean state...")
+                try:
+                    # Reset any staged changes
+                    reset_result = subprocess.run(
+                        ["git", "reset", "--hard", "HEAD"],
+                        cwd=agent_dir,
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                        timeout=30,
+                        shell=False,
+                    )
+                    if reset_result.returncode != 0:
+                        print(f"⚠️ Git reset warning (non-fatal): {reset_result.stderr}")
+
+                    # Clean untracked files
+                    clean_result = subprocess.run(
+                        ["git", "clean", "-fd"],
+                        cwd=agent_dir,
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                        timeout=30,
+                        shell=False,
+                    )
+                    if clean_result.returncode != 0:
+                        print(f"⚠️ Git clean warning (non-fatal): {clean_result.stderr}")
+                    else:
+                        cleaned_files = clean_result.stdout.strip()
+                        if cleaned_files:
+                            print(f"   Cleaned: {cleaned_files}")
+                        print(f"✅ Worktree pre-cleaned successfully")
+                except Exception as clean_error:
+                    # Non-fatal: dirty state will be handled by agent with autonomous-execution skill
+                    print(f"⚠️ Pre-clean warning (non-fatal): {clean_error}")
 
             except Exception as e:
                 print(f"❌ Failed to create worktree: {e}")
@@ -1797,13 +1861,9 @@ Agent Configuration:
                 )
 
                 attempt_display_name = attempt_profile.get("display_name", attempt_cli)
-                
-                # Determine timeout based on CLI type (OAuth CLIs need longer timeout for interactive auth)
-                # OAuth CLIs: claude, cursor
-                if attempt_cli in ["claude", "cursor"]:
-                    attempt_timeout_seconds = RUNTIME_OAUTH_CLI_TIMEOUT_SECONDS
-                else:
-                    attempt_timeout_seconds = RUNTIME_CLI_TIMEOUT_SECONDS
+
+                # All CLIs use OAuth and may need time for complex tasks
+                attempt_timeout_seconds = RUNTIME_CLI_TIMEOUT_SECONDS
 
                 attempt_blocks += f"""
 if [ $RESULT_WRITTEN -eq 0 ]; then
@@ -1828,7 +1888,7 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
 
     # Wrap execution with timeout to prevent hangs and allow prompt fallback
     # Exit code 124 = timeout, which should trigger fallback to next CLI
-    timeout {attempt_timeout_seconds} bash -c '{attempt_execution_line}' 2>&1 | tee -a {log_file_quoted}
+    timeout {attempt_timeout_seconds} sh -c '{attempt_execution_line}' 2>&1 | tee -a {log_file_quoted}
     ATTEMPT_EXIT=${{PIPESTATUS[0]}}
     
     # Handle timeout exit code (124) - treat as failure to trigger fallback
@@ -1842,15 +1902,23 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
     echo "[$(date)] {attempt_display_name} exit code: $ATTEMPT_EXIT" | tee -a {log_file_quoted}
 
     RATE_LIMITED=0
+    ASKED_QUESTION=0
     if [ "$LOG_END_LINE" -ge "$LOG_START_LINE" ]; then
         if sed -n "$((LOG_START_LINE+1)),$LOG_END_LINE p" {log_file_quoted} 2>/dev/null | grep -Eqi "{rate_limit_pattern}"; then
             RATE_LIMITED=1
             RATE_LIMITED_SEEN=1
             echo "[$(date)] ⚠️  Detected rate limit/quota output (treating as failure)" | tee -a {log_file_quoted}
         fi
+
+        # Detect if agent asked a question instead of proceeding (autonomous execution violation)
+        if sed -n "$((LOG_START_LINE+1)),$LOG_END_LINE p" {log_file_quoted} 2>/dev/null | grep -Eq "Per instructions.*stop|Do you want me to:|Question \\(required before|Should I keep|stash.*discard"; then
+            ASKED_QUESTION=1
+            echo "[$(date)] ⚠️  Agent asked question instead of proceeding autonomously (treating as failure)" | tee -a {log_file_quoted}
+            ATTEMPT_EXIT=1  # Override exit code to trigger fallback CLI
+        fi
     fi
 
-    if [ $ATTEMPT_EXIT -eq 0 ] && [ $RATE_LIMITED -eq 0 ]; then
+    if [ $ATTEMPT_EXIT -eq 0 ] && [ $RATE_LIMITED -eq 0 ] && [ $ASKED_QUESTION -eq 0 ]; then
         RESULT_STATUS="completed"
         FINAL_EXIT_CODE=0
         CLI_USED="$ATTEMPT_CLI"
@@ -1859,7 +1927,7 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
     else
         CLI_LAST="$ATTEMPT_CLI"
         FINAL_EXIT_CODE=$ATTEMPT_EXIT
-        echo "[$(date)] ❌ Attempt failed via {attempt_display_name} (exit=$ATTEMPT_EXIT rate_limited=$RATE_LIMITED)" | tee -a {log_file_quoted}
+        echo "[$(date)] ❌ Attempt failed via {attempt_display_name} (exit=$ATTEMPT_EXIT rate_limited=$RATE_LIMITED asked_question=$ASKED_QUESTION)" | tee -a {log_file_quoted}
     fi
 fi
 """
@@ -1870,7 +1938,8 @@ fi
 # Ensure PATH includes common CLI binary locations
 export PATH="$HOME/.local/bin:$HOME/.nvm/versions/node/$(nvm version 2>/dev/null || echo 'v20.19.4')/bin:$PATH"
 """
-            bash_cmd = f"""
+            bash_cmd = f"""#!/bin/bash
+
 # Signal handler to log interruptions
 trap 'echo "[$(date)] Agent interrupted with signal SIGINT" | tee -a {log_file_quoted}; exit 130' SIGINT
 trap 'echo "[$(date)] Agent terminated with signal SIGTERM" | tee -a {log_file_quoted}; exit 143' SIGTERM
@@ -1967,7 +2036,6 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                     agent_name,
                     "-c",
                     agent_dir,
-                    "bash",
                     str(script_path),
                 ]
             )

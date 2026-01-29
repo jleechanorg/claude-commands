@@ -150,7 +150,7 @@ ccusage daily --instances --since 2025-07-29
 ## Integration with Commands
 
 This guide is referenced by:
-- `/plan` - Planning execution strategy
+- `/planexec` - Planning execution strategy
 - `/execute` - Choosing execution method
 - `/arch` - Architectural task distribution
 - `/test` - Test execution strategy

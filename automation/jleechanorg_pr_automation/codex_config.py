@@ -39,6 +39,8 @@ FIX_COMMENT_RUN_MARKER_SUFFIX = "-->"
 # Updated to match new format from build_automation_marker()
 FIXPR_MARKER_PREFIX = "<!-- fixpr-run-automation-commit:"
 FIXPR_MARKER_SUFFIX = "-->"
+COMMENT_VALIDATION_MARKER_PREFIX = "<!-- comment-validation-commit:"
+COMMENT_VALIDATION_MARKER_SUFFIX = "-->"
 
 
 def build_automation_marker(workflow: str, agent: str, commit_sha: str) -> str:

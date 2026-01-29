@@ -54,7 +54,7 @@ Apply enhanced Genesis validation:
 
 **Action Steps:**
 **Compatible with existing commands**:
-1. `/plan` - Our context-aware planning (unchanged)
+1. `/planexec` - Our context-aware planning (unchanged)
 2. `/gene` - Genesis will use improved specifications
 3. `/consensus` - Multi-agent validation includes Spec Kit criteria
 4. Memory MCP - Spec patterns stored for reuse
@@ -79,7 +79,7 @@ goals/2025-09-24-feature-name/
 ## 🎯 CONFLICT-FREE DESIGN
 
 **✅ No Installation Required**: Uses extracted templates, no CLI tool conflicts
-**✅ Preserves /plan Command**: Our sophisticated 171-line /plan command remains untouched
+**✅ Preserves /planexec Command**: Our sophisticated 171-line /planexec command remains untouched
 **✅ Compatible Integration**: Enhances Genesis workflow without disruption
 
 ## 🚀 EXECUTION PROTOCOL

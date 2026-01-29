@@ -10,14 +10,14 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 1: Planning (/plan)
+### Phase 1: Planning (/planexec)
 
 **Action Steps:**
-**Executes `/plan` command**: Follows the complete planning protocol documented in [`plan.md`](./plan.md)
-1. **Guidelines Consultation**: `/plan` calls `/guidelines` directly for comprehensive consultation
+**Executes `/planexec` command**: Follows the complete planning protocol documented in [`planexec.md`](./planexec.md)
+1. **Guidelines Consultation**: `/planexec` calls `/guidelines` directly for comprehensive consultation
 2. **Comprehensive Context**: CLAUDE.md reading + base guidelines + PR/branch-specific guidelines via direct command composition
 3. Creates TodoWrite checklist with specific steps including guidelines validation
-4. Presents execution plan using the [Standard Plan Display Format](./plan.md#📋-standard-plan-display-format)
+4. Presents execution plan using the [Standard Plan Display Format](./planexec.md#📋-standard-plan-display-format)
 5. Shows complexity, execution method, tools, timeline, and parallelization strategy
 6. **Tool Selection**: Follows guidelines hierarchy (Serena MCP → Read tool → Bash commands)
 7. Provides full visibility into the execution approach before auto-approval
@@ -28,7 +28,7 @@ execution_mode: immediate
 **Full Approval Workflow**:
 1. **`/preapprove`**: Prepare approval context, validate plan completeness
 2. **`/autoapprove`**: Trigger automatic approval mechanism (proceeds silently)
-3. **Key difference from `/plan`**: Built-in auto-approval eliminates manual approval requirement
+3. **Key difference from `/planexec`**: Built-in auto-approval eliminates manual approval requirement
 4. Proceed directly to execution phase with approval satisfied
 
 ### Phase 3: Implementation
@@ -45,11 +45,11 @@ execution_mode: immediate
 
 # Execute Command - Plan-Approve-Execute Composition
 
-> **Summary**: `/execute` runs `/plan`, auto-approves the generated plan,
+> **Summary**: `/execute` runs `/planexec`, auto-approves the generated plan,
 > then performs execution with TodoWrite progress tracking in a single
 > uninterrupted workflow.
 
-**Purpose**: Execute tasks by composing `/plan` → auto-approve → execute workflow
+**Purpose**: Execute tasks by composing `/planexec` → auto-approve → execute workflow
 
 **Usage**: `/execute` or `/e` - Plan, auto-approve, then execute immediately
 
@@ -58,7 +58,7 @@ execution_mode: immediate
 ### Command Flow
 
 **The `/execute` command is a composition of**:
-1. **`/plan`** - Create detailed implementation plan with TodoWrite
+1. **`/planexec`** - Create detailed implementation plan with TodoWrite
 2. **`/preapprove`** - Prepare approval context and validation
 3. **`/autoapprove`** - Automatic approval mechanism (proceeds silently with execution)
 4. **Execute** - Proceed with planned implementation
@@ -69,14 +69,14 @@ execution_mode: immediate
 ```
 User: /execute fix the login button styling
 Assistant:
-Phase 1 - Planning (/plan):
+Phase 1 - Planning (/planexec):
 ✅ CLAUDE.md read: Current rules, constraints, and protocols understood
 ✅ Guidelines consultation: `/guidelines` command completed - mistake prevention patterns applied
 ✅ Anti-patterns avoided: Using Edit tool for existing files, no _v2 or _backup files
 Creating implementation plan with TodoWrite...
 [Creates checklist: Check styles, Update CSS, Test changes, Commit]
 
-[Displays execution plan using standard format from plan.md]
+[Displays execution plan using standard format from planexec.md]
 Execution Plan:
 - Task complexity: Simple (direct execution)
 - **Execution method: Direct execution** - Simple file edits, no parallelization needed
@@ -96,14 +96,14 @@ Phase 3 - Implementation:
 ```
 User: /execute implement user authentication system
 Assistant:
-Phase 1 - Planning (/plan):
+Phase 1 - Planning (/planexec):
 ✅ CLAUDE.md read: Current rules, constraints, and security protocols understood
 ✅ Guidelines consultation: Applied security patterns from docs/pr-guidelines/{current}/guidelines.md + docs/pr-guidelines/base-guidelines.md
 ✅ Anti-patterns avoided: No subprocess shell=True, proper timeout enforcement, explicit error handling
 Creating comprehensive implementation plan...
 [Creates detailed TodoWrite with multiple subtasks]
 
-[Displays execution plan using standard format from plan.md]
+[Displays execution plan using standard format from planexec.md]
 Execution Plan:
 - Task complexity: Complex (coordination needed)
 - **Execution method: Sequential Tasks** - Security implementation requiring coordination
@@ -131,7 +131,7 @@ Phase 3 - Implementation:
 
 ## Key Characteristics
 
-- ✅ **Planned execution** - `/plan` creates structured approach with detailed display
+- ✅ **Planned execution** - `/planexec` creates structured approach with detailed display
 - ✅ **Plan presentation** - Shows complexity, execution method, tools, timeline, and strategy
 - ✅ **Parallelization strategy** - Displays parallel vs sequential decision with reasoning
 - ✅ **Full approval chain** - `/preapprove` + `/autoapprove` sequence
@@ -142,9 +142,9 @@ Phase 3 - Implementation:
 
 ## Relationship to Other Commands
 
-- **`/plan`** - Just planning, requires manual approval, defines standard plan display format
-- **`/execute`** - Planning + built-in auto-approval + execution (no manual approval needed), uses same display format as `/plan`
+- **`/planexec`** - Just planning, requires manual approval, defines standard plan display format
+- **`/execute`** - Planning + built-in auto-approval + execution (no manual approval needed), uses same display format as `/planexec`
 - **`/preapprove`** - Prepare approval context and validation
 - **`/autoapprove`** - Automatic approval mechanism that satisfies the approval requirement internally. When invoked, `/autoapprove` treats the plan as if the user explicitly approved it and proceeds directly to the execution phase. This command is integral to the `/execute` workflow, enabling seamless transitions from planning to implementation without user intervention.
 
-**Format Consistency**: Both `/plan` and `/execute` use the centralized plan display format documented in `plan.md` to ensure consistent presentation of execution strategies and parallelization decisions.
+**Format Consistency**: Both `/planexec` and `/execute` use the centralized plan display format documented in `planexec.md` to ensure consistent presentation of execution strategies and parallelization decisions.

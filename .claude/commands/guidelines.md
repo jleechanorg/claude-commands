@@ -108,7 +108,7 @@ execution_mode: immediate
 
 # Called by enhanced commands for systematic consultation
 
-/plan [task]         → calls /guidelines → proceeds with planning
+/planexec [task]     → calls /guidelines → proceeds with planning
 /execute [task]      → calls /guidelines → proceeds with execution
 /review-enhanced     → calls /guidelines → proceeds with review
 /reviewdeep          → calls /guidelines → proceeds with deep analysis
@@ -260,4 +260,4 @@ execution_mode: immediate
 
 ---
 
-**Implementation Method**: This command provides centralized guidelines consultation that other enhanced commands (`/execute`, `/plan`, `/review-enhanced`, `/reviewdeep`) call through command composition for systematic mistake prevention.
+**Implementation Method**: This command provides centralized guidelines consultation that other enhanced commands (`/execute`, `/planexec`, `/review-enhanced`, `/reviewdeep`) call through command composition for systematic mistake prevention.

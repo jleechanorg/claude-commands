@@ -257,11 +257,11 @@ From `$PROJECT_ROOT/llm_service.py`:
 - **Max history turns:** 100 (truncation limit)
 - **200K threshold:** Above this = "long context" pricing (2x cost)
 
-### Gemini 3 Pro Pricing
+### Gemini 3 Flash Pricing
 | Context Size | Input | Output |
 |--------------|-------|--------|
-| ≤200K tokens | $2/M  | $12/M  |
-| >200K tokens | $4/M  | $18/M  |
+| ≤200K tokens | $0.50/M | $3/M |
+| >200K tokens | $1.00/M | $6/M |
 
 ## Common Issues
 

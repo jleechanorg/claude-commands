@@ -14,12 +14,15 @@ Based on copilot_comment_fetch.py from PR #796 but adapted for modular architect
 import sys
 import argparse
 import json
+import os
+import re
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 from .base import CopilotCommandBase
+from .per_comment_cache import PerCommentCache
 
 
 class CommentFetch(CopilotCommandBase):
@@ -43,17 +46,38 @@ class CommentFetch(CopilotCommandBase):
             result = subprocess.run(['git', 'branch', '--show-current'],
                                   capture_output=True, text=True, check=True)
             branch_name = result.stdout.strip()
-            # Sanitize branch name for filesystem safety
-            self.branch_name = self._sanitize_branch_name(branch_name) if branch_name else "unknown-branch"
+            # Sanitize branch name for filesystem safety - match shell's tr -cd '[:alnum:]._-'
+            # Remove any character that is NOT alphanumeric, dot, underscore, or dash
+            sanitized_branch = re.sub(r'[^a-zA-Z0-9._-]', '', branch_name) if branch_name else ""
+            self.branch_name = sanitized_branch or "unknown-branch"
         except subprocess.CalledProcessError:
             # Use consistent fallback with base class
             self.branch_name = "unknown-branch"
 
-        # Set output file path using sanitized branch name
-        self.output_file = Path(f"/tmp/{self.branch_name}/comments.json")
+        # Extract repo name from directory name to match shell scripts (basename of git root)
+        try:
+            git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).strip().decode('utf-8')
+            repo_name = os.path.basename(git_root)
+        except Exception:
+            # Fallback to splitting repo string if git command fails
+            repo_name = self.repo.split('/')[-1] if '/' in self.repo else self.repo
 
-    def _get_inline_comments(self) -> List[Dict[str, Any]]:
-        """Fetch inline code review comments."""
+        # Sanitize repo name to match shell's tr -cd '[:alnum:]._-' (filesystem-safe)
+        sanitized_repo = re.sub(r'[^a-zA-Z0-9._-]', '', repo_name) if repo_name else ""
+        self.repo_name = sanitized_repo or "unknown-repo"
+
+        # Set cache directory and initialize per-comment cache
+        self.cache_dir = Path(f"/tmp/{self.repo_name}/{self.branch_name}")
+        self.output_file = self.cache_dir / "comments.json"  # Keep for backward compatibility
+        self.cache_metadata_file = self.cache_dir / "cache_metadata.json"
+        self.per_comment_cache = PerCommentCache(self.cache_dir)
+
+    def _get_inline_comments(self, since: str = None) -> List[Dict[str, Any]]:
+        """Fetch inline code review comments.
+
+        Args:
+            since: Optional ISO8601 timestamp to fetch only comments created/updated after this time
+        """
         self.log("Fetching inline PR comments...")
 
         comments = []
@@ -64,6 +88,13 @@ class CommentFetch(CopilotCommandBase):
             f"repos/{self.repo}/pulls/{self.pr_number}/comments",
             "--paginate",
         ]
+
+        # Add incremental fetch parameters if since timestamp provided
+        if since:
+            cmd.extend(["-F", f"since={since}"])
+            cmd.extend(["-F", "sort=updated"])  # Sort by updated to catch edits
+            cmd.extend(["-F", "direction=desc"])  # Newest first for early exit detection
+            self.log(f"Incremental fetch: only comments since {since}")
 
         page_comments = self.run_gh_command(cmd)
         if isinstance(page_comments, list):
@@ -90,8 +121,12 @@ class CommentFetch(CopilotCommandBase):
 
         return standardized
 
-    def _get_general_comments(self) -> List[Dict[str, Any]]:
-        """Fetch general PR comments (issue comments)."""
+    def _get_general_comments(self, since: str = None) -> List[Dict[str, Any]]:
+        """Fetch general PR comments (issue comments).
+
+        Args:
+            since: Optional ISO8601 timestamp to fetch only comments created/updated after this time
+        """
         self.log("Fetching general PR comments...")
 
         cmd = [
@@ -100,6 +135,13 @@ class CommentFetch(CopilotCommandBase):
             f"repos/{self.repo}/issues/{self.pr_number}/comments",
             "--paginate",
         ]
+
+        # Add incremental fetch parameters if since timestamp provided
+        if since:
+            cmd.extend(["-F", f"since={since}"])
+            cmd.extend(["-F", "sort=updated"])  # Sort by updated to catch edits
+            cmd.extend(["-F", "direction=desc"])  # Newest first
+            self.log(f"Incremental fetch: only comments since {since}")
 
         comments = self.run_gh_command(cmd)
         if not isinstance(comments, list):
@@ -122,8 +164,12 @@ class CommentFetch(CopilotCommandBase):
 
         return standardized
 
-    def _get_review_comments(self) -> List[Dict[str, Any]]:
-        """Fetch PR review comments."""
+    def _get_review_comments(self, since: str = None) -> List[Dict[str, Any]]:
+        """Fetch PR review comments.
+
+        Args:
+            since: Optional ISO8601 timestamp to fetch only reviews submitted after this time
+        """
         self.log("Fetching PR reviews...")
 
         cmd = [
@@ -133,9 +179,34 @@ class CommentFetch(CopilotCommandBase):
             "--paginate",
         ]
 
+        # Note: GitHub reviews API doesn't support 'since' parameter directly
+        # We'll filter after fetching
+        # TODO: Consider using timestamps endpoint for more efficient filtering
+
         reviews = self.run_gh_command(cmd)
         if not isinstance(reviews, list):
             return []
+
+        # If since timestamp provided, filter reviews client-side
+        if since:
+            # datetime is already imported at module level
+            since_dt = datetime.fromisoformat(since.replace('Z', '+00:00'))
+            filtered_reviews = []
+            for review in reviews:
+                submitted_at = review.get("submitted_at", "")
+                if submitted_at:
+                    try:
+                        review_dt = datetime.fromisoformat(submitted_at.replace('Z', '+00:00'))
+                        if review_dt > since_dt:
+                            filtered_reviews.append(review)
+                    except (ValueError, AttributeError):
+                        # Include review if we can't parse date (be conservative)
+                        filtered_reviews.append(review)
+                else:
+                    # Include review if no timestamp (be conservative, e.g. pending/unknown)
+                    filtered_reviews.append(review)
+            reviews = filtered_reviews
+            self.log(f"Filtered to {len(reviews)} reviews since {since}")
 
         # Extract review body comments
         standardized = []
@@ -206,6 +277,46 @@ class CommentFetch(CopilotCommandBase):
             self.log(f"Could not fetch Copilot comments: {e}")
 
         return []
+
+    def _save_cache_metadata(self, comment_count: int, fetched_at: str) -> None:
+        """Save cache metadata to track freshness.
+
+        Args:
+            comment_count: Number of comments in cache
+            fetched_at: Timestamp when comments were fetched
+        """
+        # Get TTL from env var or default to 300 seconds (5 minutes)
+        try:
+            ttl = int(os.environ.get("COPILOT_CACHE_TTL_SECONDS", 300))
+        except (TypeError, ValueError):
+            ttl = 300
+            self.log("Invalid COPILOT_CACHE_TTL_SECONDS value; using default 300s")
+        
+        # Get PR head SHA to invalidate cache on PR updates
+        try:
+            result = subprocess.run(
+                ['gh', 'pr', 'view', self.pr_number, '--json', 'headRefOid', '--jq', '.headRefOid'],
+                capture_output=True, text=True, check=True
+            )
+            pr_head_sha = result.stdout.strip()
+        except Exception:
+            pr_head_sha = "unknown"
+        
+        metadata = {
+            "last_fetch_timestamp": fetched_at,
+            "comment_count": comment_count,
+            "pr_number": self.pr_number,
+            "cache_ttl_seconds": ttl,
+            "repo": self.repo,
+            "pr_head_sha": pr_head_sha
+        }
+
+        try:
+            with open(self.cache_metadata_file, 'w') as f:
+                json.dump(metadata, f, indent=2)
+            self.log(f"Cache metadata saved to {self.cache_metadata_file}")
+        except Exception as e:
+            self.log_error(f"Failed to save cache metadata: {e}")
 
     def _requires_response(self, comment: Dict[str, Any]) -> bool:
         """Filter out meta-comments to prevent recursive processing.
@@ -532,6 +643,68 @@ class CommentFetch(CopilotCommandBase):
                 'summary': {'total': 0, 'passing': 0, 'failing': 0, 'pending': 0}
             }
 
+    def check_for_new_comments(self, since_timestamp: str) -> Dict[str, Any]:
+        """Check if there are any new comments since the given timestamp.
+
+        This is a lightweight operation that uses the 'since' parameter to fetch
+        only comments created/updated after the cache timestamp. Returns immediately
+        if no new comments found (early exit optimization).
+
+        Args:
+            since_timestamp: ISO8601 timestamp from cache_metadata.json
+
+        Returns:
+            Dict with 'has_new_comments' bool and 'new_count' int
+        """
+        self.log(f"🔍 Checking for new comments since {since_timestamp}")
+
+        # Fetch comments from all sources with 'since' filter
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {
+                executor.submit(self._get_inline_comments, since_timestamp): "inline",
+                executor.submit(self._get_general_comments, since_timestamp): "general",
+                executor.submit(self._get_review_comments, since_timestamp): "review",
+                executor.submit(self._get_copilot_comments, since_timestamp): "copilot",
+            }
+
+            new_comment_count = 0
+            failed_checks = 0
+
+            for future in as_completed(futures):
+                data_type = futures[future]
+                try:
+                    result = future.result()
+                    count = len(result)
+                    if count > 0:
+                        self.log(f"  Found {count} new {data_type} comment(s)")
+                        new_comment_count += count
+                except Exception as e:
+                    self.log_error(f"Failed to check {data_type} comments: {e}")
+                    failed_checks += 1
+
+        # If API calls failed, we can't be sure about freshness
+        if failed_checks > 0:
+            self.log(f"⚠️  {failed_checks} API checks failed - assuming STALE for safety")
+            return {
+                "has_new_comments": True, # Force refresh
+                "new_count": new_comment_count,
+                "error": f"{failed_checks} API checks failed",
+                "checked_at": datetime.now(timezone.utc).isoformat()
+            }
+
+        has_new = new_comment_count > 0
+
+        if has_new:
+            self.log(f"✅ Cache is STALE: {new_comment_count} new comment(s) found")
+        else:
+            self.log(f"✅ Cache is FRESH: No new comments since {since_timestamp}")
+
+        return {
+            "has_new_comments": has_new,
+            "new_count": new_comment_count,
+            "checked_at": datetime.now(timezone.utc).isoformat()
+        }
+
     def execute(self) -> Dict[str, Any]:
         """Execute comment fetching from all sources."""
         self.log(f"🔄 FETCHING FRESH COMMENTS for PR #{self.pr_number} from GitHub API")
@@ -616,13 +789,24 @@ class CommentFetch(CopilotCommandBase):
         }
 
         # Create directory if it doesn't exist
-        self.output_file.parent.mkdir(parents=True, exist_ok=True)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save to file (always replace)
+        # Save using per-comment cache structure (new format)
+        self.per_comment_cache.save_comments(
+            self.comments,
+            self.pr_number,
+            data["fetched_at"],
+            ci_status or {'overall_state': 'UNKNOWN', 'error': 'CI status not fetched'}
+        )
+        self.log(f"Comments saved to per-comment cache: {self.per_comment_cache.comments_dir}")
+
+        # Also save legacy format for backward compatibility during migration
         with open(self.output_file, 'w') as f:
             json.dump(data, f, indent=2)
+        self.log(f"Legacy format saved to {self.output_file}")
 
-        self.log(f"Comments saved to {self.output_file}")
+        # Save cache metadata
+        self._save_cache_metadata(len(self.comments), data["fetched_at"])
 
         # Prepare result with CI status summary
         ci_summary = ""

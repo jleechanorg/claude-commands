@@ -1,0 +1,242 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+name: Coverage Report
+
+# Run on PRs to show coverage delta, and on main to update baseline
+on:
+  pull_request:
+    paths:
+      - 'mvp_site/**/*.py'
+      - 'coverage.sh'
+      - '.github/workflows/coverage.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'mvp_site/**/*.py'
+      - 'coverage.sh'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        with:
+          persist-credentials: true
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
+        with:
+          path: |
+            ~/.cache/pip
+            venv
+          key: ${{ runner.os }}-coverage-python-3.11-${{ hashFiles('mvp_site/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-coverage-python-3.11-
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip setuptools wheel
+          pip install -r mvp_site/requirements.txt
+          pip install coverage pytest
+
+      - name: Run tests with coverage
+        run: |
+          source venv/bin/activate
+
+          # Set environment and PYTHONPATH (run from project root)
+          export TESTING=true
+          export TESTING_AUTH_BYPASS=true
+          export PYTHONPATH="${PWD}:$PYTHONPATH"
+
+          # Playwright usage is not needed for unit tests, but if needed later:
+          # pip install playwright && playwright install chromium
+
+          # Create .coveragerc for py-cov-action compatibility
+          cat > .coveragerc << 'EOF'
+          [run]
+          relative_files = true
+          source = mvp_site
+          omit =
+              */tests/*
+              */testing_framework/*
+              */venv/*
+              */__pycache__/*
+
+          [report]
+          exclude_lines =
+              pragma: no cover
+              def __repr__
+              raise NotImplementedError
+          EOF
+          
+          # Run tests SEQUENTIALLY using the shell script to avoid OOM (Exit code 137)
+          # The single 'coverage run' command causes memory to accumulate over 240+ test files.
+          # We use set +e to capture failures but continue to report generation.
+          # We also verify dependencies before running.
+          chmod +x run_tests_with_coverage.sh
+          
+          set +e
+          # Script now auto-detects mvp_site at root and runs from root (generating .coverage at root)
+          ./run_tests_with_coverage.sh --no-html
+          test_exit_code=$?
+          set -e
+          
+          if [ "${test_exit_code}" -ne 0 ]; then
+            echo "::warning::Tests failed (exit code ${test_exit_code}), but forcing success to generate coverage reports"
+            # We want the job to pass so we can see the coverage delta, relying on test.yml for verification.
+            # NOTE: test.yml is the primary gatekeeper and will fail the PR on test failures.
+            # This workflow MUST pass to allow coverage artifacts to be uploaded for analysis.
+          fi
+          
+          if [ ! -f .coverage ]; then
+             echo "::warning::No .coverage file found at root"
+          fi
+
+          # Generate reports using the root .coveragerc
+          # Suppress errors here too just in case coverage data is partial
+          coverage report --format=markdown > coverage_report.md || echo "Coverage report generation failed"
+          coverage xml -o coverage.xml || echo "Coverage XML generation failed"
+          coverage json -o coverage.json || echo "Coverage JSON generation failed"
+          
+          # Force step success even if tests failed
+          exit 0
+
+      - name: Coverage comment (PR)
+        id: coverage_comment
+        if: github.event_name == 'pull_request'
+        uses: py-cov-action/python-coverage-comment-action@fb02115d6115e7b3325dc3295fe1dcfb1919248a  # v3.32
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          MINIMUM_GREEN: 80
+          MINIMUM_ORANGE: 60
+          ANNOTATE_MISSING_LINES: true
+          MAX_FILES_IN_COMMENT: 50
+
+      - name: Update coverage baseline (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: py-cov-action/python-coverage-comment-action@fb02115d6115e7b3325dc3295fe1dcfb1919248a  # v3.32
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          MINIMUM_GREEN: 80
+          MINIMUM_ORANGE: 60
+
+      - name: Check coverage threshold
+        if: github.event_name == 'pull_request'
+        run: |
+          source venv/bin/activate
+
+          # Extract current coverage percentage with error handling
+          COVERAGE_RAW=$(coverage report | tail -1 | awk '{print $4}' | tr -d '%')
+
+          # Validate coverage is numeric
+          if ! [[ "$COVERAGE_RAW" =~ ^[0-9]+$ ]]; then
+            echo "::warning::Could not parse coverage value: '$COVERAGE_RAW'"
+            # Try alternative extraction from TOTAL line
+            COVERAGE_RAW=$(coverage report | grep "^TOTAL" | awk '{print $NF}' | tr -d '%')
+            if ! [[ "$COVERAGE_RAW" =~ ^[0-9]+$ ]]; then
+              echo "::error::Coverage parsing failed - cannot determine coverage percentage"
+              exit 1
+            fi
+          fi
+
+          COVERAGE=$COVERAGE_RAW
+          echo "Current coverage: ${COVERAGE}%"
+
+          # Minimum threshold - align with py-cov-action: warn if below 80%, fail if below 60%
+          MIN_WARN=80
+          MIN_FAIL=60
+
+          if [ "$COVERAGE" -lt "$MIN_FAIL" ]; then
+            echo "::error::Coverage ${COVERAGE}% is below minimum threshold of ${MIN_FAIL}%"
+            exit 1
+
+          elif [ "$COVERAGE" -lt "$MIN_WARN" ]; then
+            echo "::warning::Coverage ${COVERAGE}% is below recommended threshold of ${MIN_WARN}%"
+          else
+            echo "::notice::Coverage ${COVERAGE}% meets threshold requirements"
+          fi
+
+      - name: Generate coverage badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          source venv/bin/activate
+
+          # Extract total coverage percentage
+          COVERAGE=$(coverage report | tail -1 | awk '{print $4}' | tr -d '%')
+
+          # Validate coverage is numeric
+          if ! [[ "$COVERAGE" =~ ^[0-9]+$ ]]; then
+            COVERAGE=$(coverage report | grep "^TOTAL" | awk '{print $NF}' | tr -d '%')
+            if ! [[ "$COVERAGE" =~ ^[0-9]+$ ]]; then
+              echo "::warning::Could not parse coverage for badge generation, defaulting to 0"
+              COVERAGE=0
+            fi
+          fi
+
+          echo "Total coverage: ${COVERAGE}%"
+
+          # Determine badge color
+          if [ "$COVERAGE" -ge 80 ]; then
+            COLOR="brightgreen"
+          elif [ "$COVERAGE" -ge 60 ]; then
+            COLOR="green"
+          elif [ "$COVERAGE" -ge 40 ]; then
+            COLOR="yellow"
+          else
+            COLOR="red"
+          fi
+
+          # Save coverage data for badge
+          echo "COVERAGE=${COVERAGE}" >> $GITHUB_ENV
+          echo "BADGE_COLOR=${COLOR}" >> $GITHUB_ENV
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            coverage_report.md
+            coverage.xml
+            coverage.json
+            .coverage
+          retention-days: 30
+
+      - name: Post coverage summary
+        if: always()
+        run: |
+          source venv/bin/activate
+
+          echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f coverage_report.md ]; then
+            cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+          else
+            coverage report --format=markdown >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Coverage report generation failed" >> $GITHUB_STEP_SUMMARY
+          fi

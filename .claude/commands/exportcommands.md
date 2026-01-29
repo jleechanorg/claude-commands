@@ -258,7 +258,7 @@ Each command is designed to **compose** with others through a shared protocol:
 **Building Blocks**:
 - `/think` + `/arch` + `/debug` = Cognitive analysis chain
 - `/test` + `/fix` + `/verify` = Quality assurance chain
-- `/plan` + `/implement` + `/validate` = Development chain
+- `/planexec` + `/implement` + `/validate` = Development chain
 
 **The Hook Architecture**: Simple `.md` files that Claude Code reads as executable instructions, enabling complex behavior through composition rather than complexity.
 
@@ -346,7 +346,7 @@ Claude:
   Phase 3 - Implementation: [TodoWrite tracking, step execution]
 ```
 
-### `/plan` - Manual Approval Development Planning
+### `/planexec` - Manual Approval Development Planning
 
 **What It Does**: Structured development planning with explicit user approval required before execution.
 
@@ -354,7 +354,7 @@ Claude:
 
 **Composition Architecture**:
 ```bash
-/plan "redesign authentication system"
+/planexec "redesign authentication system"
 ```
 
 **Workflow**:
@@ -908,7 +908,7 @@ print("🧱 Building Blocks:", building_blocks)
 print("📊 Command Composition Patterns:")
 print("- /pr → /think → /execute → /pushl → /copilot → /review")
 print("- /copilot → /execute → /commentfetch → /fixpr → /commentreply")
-print("- /execute → /plan → /think → implementation → /test")
+print("- /execute → /planexec → /think → implementation → /test")
 ```
 
 # Execute the Python implementation
@@ -998,7 +998,7 @@ print("🧱 Building Blocks:", building_blocks)
 print("📊 Command Composition Patterns:")
 print("- /pr → /think → /execute → /pushl → /copilot → /review")
 print("- /copilot → /execute → /commentfetch → /fixpr → /commentreply")
-print("- /execute → /plan → /think → implementation → /test")
+print("- /execute → /planexec → /think → implementation → /test")
 ```
 
 # Replace the basic export README with comprehensive command showcase

@@ -483,7 +483,7 @@ Ready for CLAUDE.md deployment pipeline!
 **Enhances**:
 - `/fake3` - Provides deployment target analysis for code quality automation
 - `/execute` - Enables automated CLAUDE.md deployment workflows
-- `/plan` - Informs deployment planning with systematic analysis
+- `/planexec` - Informs deployment planning with systematic analysis
 
 **Uses**:
 - Standard filesystem tools (`find`, `ls`, `grep`)

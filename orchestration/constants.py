@@ -9,10 +9,10 @@ Shared constants used across the orchestration system to ensure consistency.
 AGENT_SESSION_TIMEOUT_SECONDS = 3600  # 1 hour (was 24 hours)
 
 # Runtime CLI execution timeout (per attempt)
+# All CLIs (claude, codex, gemini, cursor) use OAuth authentication and complex tasks may timeout
 # Preflight validation allows timeouts to pass, so runtime must have timeouts to prevent hangs
 # and allow prompt fallback to next CLI in chain
-RUNTIME_CLI_TIMEOUT_SECONDS = 600  # 10 minutes per CLI attempt
-RUNTIME_OAUTH_CLI_TIMEOUT_SECONDS = 900  # 15 minutes for OAuth CLIs (may need interactive auth)
+RUNTIME_CLI_TIMEOUT_SECONDS = 1800  # 30 minutes per CLI attempt (all CLIs use OAuth and may need time for complex tasks)
 
 # Agent monitoring thresholds
 IDLE_MINUTES_THRESHOLD = 30  # Minutes of no activity before considering agent idle

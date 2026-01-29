@@ -20,7 +20,9 @@ execution_mode: immediate
 **🚨 EXECUTE BEFORE ANY COMMENT PROCESSING:**
 
 **Action Steps:**
-1. **Fetch All Comments**: Execute `/commentfetch` to get complete comment list
+1. **Check Comment Cache**: Use the `is_cache_fresh()` function to check if cached comments exist and are fresh (< 5 minutes old)
+   - If cache is fresh: Skip `/commentfetch` and use cached data from `$COMMENTS_FILE`
+   - If cache is stale or missing: Execute `/commentfetch` to get complete comment list
 2. **Critical Bug Detection**: Scan ALL comments for critical keywords:
    - Security: "CRITICAL", "BUG", "SECURITY", "BLOCKER", "PRODUCTION", "VULNERABILITY"
    - Auth/Rate Limiting: "rate limit", "authentication", "authorization", "admin", "UID"
@@ -78,13 +80,19 @@ fi
 
 ### **Phase 2: Implementation & Response Generation**
 
+**🚨 CRITICAL LLM PRINCIPLE**: Every comment receives FULL comprehensive analysis regardless of length, author, or type.
+
 **Action Steps:**
-1. **Prioritize Queue**: Use `categorize_comment()` to tag every remaining comment, then process strictly in severity order (CRITICAL → BLOCKING → IMPORTANT → ROUTINE). Maintain a TodoWrite checklist so no items are skipped.
-2. **Direct Implementation**: The orchestrator fixes CRITICAL and BLOCKING issues immediately (no delegation) while documenting `action_taken`, `files_modified`, and verification steps for responses.json.
-3. **Selective Delegation**: IMPORTANT issues that require large file edits may be delegated to the `copilot-fixpr` agent. ROUTINE comments stay with the orchestrator to avoid agent churn.
-4. **Agent Result Collection**: Once delegated tasks finish, collect the structured status file (`agent_status.json`) and integrate file diffs/commits back into the orchestrator context.
-5. **Action-Based Responses**: Generate `responses.json` entries using the ACTION_ACCOUNTABILITY format for every comment, capturing implementation details, deferrals, or acknowledgments.
-6. **GitHub Operations**: Run `/commentreply` after validating responses.json, then `/commentcheck` to confirm 100% coverage.
+1. **Prioritize Queue**: Use `categorize_comment()` to tag comments for processing order ONLY (CRITICAL → BLOCKING → IMPORTANT → ROUTINE). **CRITICAL**: This categorization is solely for prioritization scheduling, NOT for filtering context. Maintain a TodoWrite checklist so no items are skipped.
+2. **Read Full Comment Body**: For EACH comment (regardless of initial category tag), LLM reads the ENTIRE content with NO truncation, NO pre-parsing, NO keyword extraction. The LLM re-analyzes and determines the true category and how many distinct issues exist within each comment.
+3. **Identify ALL Issues**: LLM analyzes each comment to identify EVERY distinct issue/suggestion, even if multiple issues are grouped in a single comment. No issue is skipped based on position in comment. Initial category tag from Step 1 is advisory only - LLM makes final determination.
+4. **Direct Implementation**: The orchestrator fixes CRITICAL and BLOCKING issues immediately (no delegation) while documenting `action_taken`, `files_modified`, and verification steps for responses.json.
+5. **Selective Delegation**: IMPORTANT issues that require large file edits may be delegated to the `copilot-fixpr` agent. ROUTINE comments stay with the orchestrator to avoid agent churn.
+6. **Agent Result Collection**: Once delegated tasks finish, collect the structured status file (`agent_status.json`) and integrate file diffs/commits back into the orchestrator context.
+7. **Comprehensive Response**: Generate ONE consolidated response per comment addressing ALL issues found, using ACTION_ACCOUNTABILITY format with specific status for each issue (FIXED/DEFERRED/ACKNOWLEDGED/NOT_DONE).
+8. **GitHub Operations**: Run `/commentreply` after validating responses.json, then `/commentcheck` to confirm 100% coverage.
+
+**Example**: If CodeRabbit posts 1 comment with 11 issues, LLM identifies all 11 and generates 1 consolidated response with 11 status items.
 
 ### **Phase 3: Verification & Completion (ENHANCED)**
 
@@ -110,17 +118,46 @@ fi
 
 ### Phase 1 Playbook — Analysis & Categorization
 
-- **Status + Comment Fetch**: Execute `/gstatus` and `/commentfetch` immediately after Phase 0 to refresh state.
+- **Status + Comment Fetch**: Execute `/gstatus` immediately after Phase 0. Comments are already loaded from Phase 0 (either from cache or fresh fetch).
+- **Outdated Comment Detection**: Before processing, check if comments reference code that has been refactored:
+  ```bash
+  # For each inline comment, check if the referenced commit is still relevant
+  check_comment_outdated() {
+      local comment_commit="$1"  # original_commit_id from the comment
+      local comment_path="$2"    # file path the comment is on
+      local comment_line="$3"    # line number
+
+      # If comment references a commit not in current HEAD ancestry, it may be outdated
+      if [ -n "$comment_commit" ] && ! git merge-base --is-ancestor "$comment_commit" HEAD 2>/dev/null; then
+          echo "OUTDATED"
+          return
+      fi
+
+      # Check if the file/line has been modified since the comment's commit
+      if [ -n "$comment_commit" ] && [ -n "$comment_path" ]; then
+          local changes=$(git diff "$comment_commit"..HEAD -- "$comment_path" 2>/dev/null | wc -l)
+          if [ "$changes" -gt 50 ]; then
+              echo "LIKELY_OUTDATED"
+              return
+          fi
+      fi
+
+      echo "CURRENT"
+  }
+
+  # Comments marked OUTDATED get response: "ALREADY FIXED - Code has been refactored since this comment"
+  ```
 - **Categorization Pipeline**:
   1. Sanitize each comment body.
-  2. Pass sanitized text to `categorize_comment()` to obtain CRITICAL/BLOCKING/IMPORTANT/ROUTINE labels.
-  3. Record the mapping (e.g., in TodoWrite or a scratch buffer) so Phase 2 can consume a prioritized queue.
+  2. Check if comment is OUTDATED (references refactored code).
+  3. Pass sanitized text to `categorize_comment()` to obtain CRITICAL/BLOCKING/IMPORTANT/ROUTINE labels.
+  4. Record the mapping (e.g., in TodoWrite or a scratch buffer) so Phase 2 can consume a prioritized queue.
 - **Clarify Delegation Rules**: Critical + blocking items remain orchestrator-owned. Only mark an item as agent-eligible if it is IMPORTANT and requires heavy file edits (e.g., multi-file refactors). ROUTINE feedback is kept local for speed.
 - **Test Expectations**: No new tests run in Phase 1; this is purely classification + planning.
 
 ### Phase 2 Playbook — Implementation & Responses
 
-- **Priority Queue Implementation**: Enforce the priority order with an explicit loop so reviewers can see it’s implemented, not just promised:
+- **Priority Queue Implementation**: Enforce the priority order with an explicit loop so reviewers can see it's implemented, not just promised:
 
 ```bash
 PRIORITIZED_COMMENTS=$(jq -c '.comments[]' "$COMMENTS_FILE" | while read -r comment; do
@@ -147,8 +184,73 @@ for entry in $PRIORITIZED_COMMENTS; do
 done
 ```
 
-- **Agent Coordination**: When delegation occurs, poll `/tmp/$BRANCH_NAME/agent_status.json` until it reports `"status": "completed"`. Only then fold the diff back into responses.json.
+- **Agent Coordination**: When delegation occurs, poll `/tmp/$REPO_NAME/$BRANCH_NAME/agent_status.json` until it reports `"status": "completed"`. Only then fold the diff back into responses.json.
 - **Response Assembly**: Populate every response with the new ACTION_ACCOUNTABILITY fields (`action_taken`, `files_modified`, `commit`, `verification`, etc.) as you implement each fix so evidence is fresh.
+
+#### Comprehensive Comment Analysis Protocol
+
+**🚨 LLM ARCHITECTURE PRINCIPLE: Full Context Analysis (MANDATORY)**
+
+**For EVERY comment (regardless of author, type, length, or category):**
+
+1. **Full Content Analysis**:
+   - Read entire comment body with NO length limits, NO truncation
+   - Identify ALL distinct issues/suggestions within the comment
+   - Parse file:line references from ANY format (markdown, plain text, etc.)
+   - Extract severity indicators from comment text content
+   - **NO special handling for bot comments** - LLM treats all comments identically
+
+2. **Multi-Issue Detection**:
+   - Count total distinct issues in each comment
+   - For each issue identified, determine:
+     - What specific action needs to be done
+     - Which files/lines are affected
+     - What the priority/severity is
+     - Whether it requires code changes or is informational
+
+3. **Consolidated Response Generation**:
+   - Generate ONE comprehensive response per comment
+   - Address ALL N issues found (not just the first issue)
+   - Provide specific status for EACH issue identified
+   - Group by type when presenting (Actionable/Nitpick/Informational)
+   - Show completion statistics (e.g., "Fixed 8/11 issues")
+
+   **Response Format Structure** (uses global issue numbering):
+   ```markdown
+   ## Comment Analysis (N issues identified)
+
+   ### Actionable Issues (X found)
+   1. **[File:Line]** - Status: FIXED
+      - Action: Specific implementation details
+      - Commit: abc123
+      - Verification: Tests pass
+
+   2. **[File:Line]** - Status: DEFERRED
+      - Reason: Requires architectural discussion
+      - Issue: #1234
+
+   ### Nitpick Issues (Y found)
+   3. **[File:Line]** - Status: FIXED
+      - Action: Code style improvement applied
+      - Commit: def456
+
+   ### Summary
+   - Total issues: N (= X + Y + ...)
+   - Fixed: M issues
+   - Deferred: K issues
+   - Acknowledged: P issues
+   ```
+
+   **Note**: Issue numbering is global across all sections (1, 2, 3, ..., N), not reset per section.
+
+4. **No Keyword-Based Shortcuts**:
+   - ❌ NO bot author detection (e.g., checking if author == "coderabbitai")
+   - ❌ NO structure-based pre-parsing (e.g., extracting "Actionable comments posted: 6")
+   - ❌ NO automatic file:line extraction before LLM sees content
+   - ❌ NO pre-categorization that strips context from LLM
+   - ✅ LLM receives FULL comment body and makes ALL decisions
+
+**Why This Matters**: A single comment from CodeRabbit or any reviewer may contain multiple distinct issues. Generic "acknowledged" responses miss actionable items. The LLM must read and analyze the ENTIRE comment to identify ALL issues, then generate a comprehensive response addressing each one.
 
 ### Phase 3 Playbook — Verification & Completion
 
@@ -282,9 +384,40 @@ Ultra-fast PR processing using hybrid orchestration still needs reliable cleanup
 ```bash
 # CLEANUP FUNCTION: Define error recovery and cleanup mechanisms
 
+get_repo_name() {
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+    local repo_name=""
+
+    if [ -n "$repo_root" ]; then
+        repo_name=$(basename "$repo_root")
+    else
+        repo_name=$(basename "$(pwd)")
+    fi
+
+    repo_name=$(echo "$repo_name" | tr -cd '[:alnum:]._-')
+    echo "${repo_name:-unknown-repo}"
+}
+
+get_branch_name() {
+    local branch_name
+    branch_name=$(git branch --show-current 2>/dev/null || true)
+    branch_name=$(echo "$branch_name" | tr -cd '[:alnum:]._-')
+    echo "${branch_name:-unknown-branch}"
+}
+
 cleanup_temp_files() {
-    local branch_name=$(git branch --show-current | tr -cd '[:alnum:]._-')
-    local temp_dir="/tmp/$branch_name"
+    local repo_name
+    repo_name=$(get_repo_name)
+    local branch_name
+    branch_name=$(get_branch_name)
+    local temp_dir="/tmp/$repo_name/$branch_name"
+
+    # Safety: never allow cleanup to target /tmp itself
+    if [ "$temp_dir" = "/tmp" ] || [ "$temp_dir" = "/tmp/" ]; then
+        echo "⚠️  CLEANUP: Skipping unsafe temp_dir=$temp_dir"
+        return 0
+    fi
 
     if [ -d "$temp_dir" ]; then
         echo "🧹 CLEANUP: Removing temporary files from $temp_dir"
@@ -296,17 +429,91 @@ cleanup_temp_files() {
     # Additional cleanup operations as needed
 }
 
+# Cleanup old caches (older than 7 days)
+cleanup_old_caches() {
+    local repo_name
+    repo_name=$(get_repo_name)
+    local repo_cache_dir="/tmp/$repo_name"
+    
+    # Safety: never allow cleanup to target /tmp itself
+    if [ "$repo_cache_dir" = "/tmp" ] || [ "$repo_cache_dir" = "/tmp/" ]; then
+        echo "⚠️  CLEANUP: Skipping unsafe repo_cache_dir=$repo_cache_dir"
+        return 0
+    fi
+
+    if [ -d "$repo_cache_dir" ]; then
+        # Remove caches older than 7 days (within the repo-scoped directory only)
+        find "$repo_cache_dir" -mindepth 1 -type d -mtime +7 -exec rm -rf {} + 2>/dev/null || true
+    fi
+}
+
 # ERROR HANDLER: Trap errors for graceful cleanup
 
 trap 'cleanup_temp_files; echo "🚨 ERROR: Copilot workflow interrupted"; exit 1' ERR
+
+COPILOT_START_TIME=$(date +%s)
+
+# Initialize path variables with repo name
+
+REPO_NAME=$(get_repo_name)
+BRANCH_NAME=$(get_branch_name)
+CACHE_DIR="/tmp/$REPO_NAME/$BRANCH_NAME"
+CACHE_METADATA_FILE="$CACHE_DIR/cache_metadata.json"
+COMMENTS_FILE="$CACHE_DIR/comments.json"
+
+# Perform cleanup of old caches
+cleanup_old_caches
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CACHE STRATEGY: Always Fresh + Handled Registry (v2.0)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Previous approach: Complex staleness detection (is_cache_fresh_incremental, is_cache_fresh)
+#   - Problem: Missed 12 comments because staleness check only covered 2/4 comment types
+#   - Problem: Cache was "fresh" by TTL but stale in reality
+#
+# New approach: Always fetch fresh, skip already-handled comments
+#   - Always get fresh comment data from GitHub (no staleness bugs)
+#   - Per-comment cache tracks "handled" status after each successful reply
+#   - Resumable: if interrupted mid-run, already-handled comments won't be reprocessed
+#   - Thread-independent: each reply is tracked separately
+#
+# See bead worktree_worker4-qqj for design details
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Phase 0: ALWAYS fetch fresh comments - no staleness check
+# The handled registry in per-comment cache ensures we don't reprocess comments
+echo "🔄 Fetching fresh comments from GitHub API (always-fresh strategy)"
+/commentfetch
+
+# Resolve project root for Python helper import (must be before first use)
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+# Report unhandled comment count for visibility
+if [ -d "$CACHE_DIR/comments" ]; then
+    UNHANDLED_COUNT=$(python3 -c "
+import sys
+import os
+sys.path.insert(0, os.path.join('$PROJECT_ROOT', '.claude', 'commands', '_copilot_modules'))
+try:
+    from per_comment_cache import PerCommentCache
+    cache = PerCommentCache('$CACHE_DIR')
+    unhandled = cache.get_unhandled_comments()
+    print(len(unhandled))
+except Exception as e:
+    print(-1)
+" || echo -1)
+
+    if [ "$UNHANDLED_COUNT" -ge 0 ]; then
+        echo "📊 Found $UNHANDLED_COUNT unhandled comment(s) requiring responses"
+    fi
+fi
 
 # Get comprehensive PR status first
 
 /gstatus
 
 # Initialize timing for performance tracking (silent unless exceeded)
-
-COPILOT_START_TIME=$(date +%s)
 ```
 
 ### Security Functions
@@ -369,11 +576,15 @@ Launch specialized agent for file modifications with structured coordination:
 **🚨 EXPLICIT SYNCHRONIZATION PROTOCOL**: Eliminates race conditions
 ```bash
 
-# Secure branch name and setup paths
+# Secure branch name and setup paths (using repo-scoped cache directory)
 
-BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
-AGENT_STATUS="/tmp/$BRANCH_NAME/agent_status.json"
-mkdir -p "/tmp/$BRANCH_NAME"
+REPO_NAME=$(get_repo_name)
+BRANCH_NAME=$(get_branch_name)
+CACHE_DIR="/tmp/$REPO_NAME/$BRANCH_NAME"
+
+# Ensure consistency across all cache operations
+AGENT_STATUS="$CACHE_DIR/agent_status.json"
+mkdir -p "$CACHE_DIR"
 
 # Agent execution with status tracking
 
@@ -428,8 +639,8 @@ fi
 
 # Read structured agent results from status file
 
-BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
-AGENT_STATUS="/tmp/$BRANCH_NAME/agent_status.json"
+# Note: AGENT_STATUS is already set earlier in the workflow
+# Using the centralized cache directory for consistency
 
 if [ -f "$AGENT_STATUS" ]; then
     # Parse structured agent results with error handling
@@ -457,6 +668,12 @@ fi
 
 **Response Generation with Action Protocol** (MANDATORY ORCHESTRATOR RESPONSIBILITY):
 ```bash
+# Ensure cache paths are defined for this block
+REPO_NAME=$(get_repo_name)
+BRANCH_NAME=$(get_branch_name)
+CACHE_DIR="/tmp/$REPO_NAME/$BRANCH_NAME"
+AGENT_STATUS="$CACHE_DIR/agent_status.json"
+
 echo "📝 Generating action-based responses.json with implementation accountability"
 
 # 🚨 NEW PROTOCOL: Action-based responses with files_modified, tests_added, commit, verification
@@ -472,7 +689,16 @@ echo "    Lines: $PR_LINES"
 # 2. IMPLEMENTED: JSON validation with jq -e (CodeRabbit suggestion)
 
 echo "  • Adding jq -e validation for all JSON files"
-for json_file in /tmp/$(git branch --show-current)/*.json; do
+# Ensure cache paths are defined for this block (self-contained)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+REPO_NAME=$(basename "$REPO_ROOT" | tr -cd '[:alnum:]._-')
+BRANCH_NAME=$(git branch --show-current 2>/dev/null | tr -cd '[:alnum:]._-')
+REPO_NAME=${REPO_NAME:-unknown-repo}
+BRANCH_NAME=${BRANCH_NAME:-unknown-branch}
+CACHE_DIR="/tmp/$REPO_NAME/$BRANCH_NAME"
+AGENT_STATUS="$CACHE_DIR/agent_status.json"
+
+for json_file in $CACHE_DIR/*.json; do
     if [ -f "$json_file" ]; then
         echo "    Validating: $json_file"
         jq -e . "$json_file" > /dev/null || {
@@ -486,7 +712,7 @@ done
 # 3. IMPLEMENTED: Fix agent status race condition (CodeRabbit concern)
 
 echo "  • Implementing proper agent status coordination (not immediate file creation)"
-AGENT_STATUS="/tmp/$(git branch --show-current)/agent_status.json"
+# Note: AGENT_STATUS is already set earlier using CACHE_DIR
 
 # Wait for agent completion instead of immediate file creation
 
@@ -498,7 +724,7 @@ echo "    ✅ Agent coordination: Proper status synchronization"
 
 # CRITICAL: Generate responses in commentreply.py expected format
 
-# Orchestrator writes: /tmp/$(git branch --show-current)/responses.json
+# Orchestrator writes to: $CACHE_DIR/responses.json
 
 # 🚨 ACTION RESPONSE PROTOCOL: Every comment gets detailed action report
 
@@ -535,19 +761,22 @@ categorize_comment() {
     echo "ROUTINE"
 }
 
-# INPUT SANITIZATION: Secure branch name validation to prevent path injection
+# INPUT SANITIZATION: Validate branch name (already sanitized earlier)
 
-BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
+REPO_NAME=$(get_repo_name)
+BRANCH_NAME=$(get_branch_name)
+CACHE_DIR="/tmp/$REPO_NAME/$BRANCH_NAME"
+COMMENTS_FILE="$CACHE_DIR/comments.json"
 if [ -z "$BRANCH_NAME" ]; then
     echo "❌ CRITICAL: Invalid or empty branch name"
     cleanup_temp_files
     return 1
 fi
 
-# SECURE PATH CONSTRUCTION: Use sanitized branch name
+# SECURE PATH CONSTRUCTION: Use repo-scoped cache directory
 
-COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
-export RESPONSES_FILE="/tmp/$BRANCH_NAME/responses.json"
+# Note: COMMENTS_FILE and CACHE_DIR are already set earlier in the workflow
+export RESPONSES_FILE="$CACHE_DIR/responses.json"
 
 # API RESPONSE VALIDATION: Verify comment data exists and is valid JSON (using jq -e)
 
@@ -604,14 +833,20 @@ cat > "$RESPONSES_FILE" << 'EOF'
 {
   "response_protocol": "ACTION_ACCOUNTABILITY",
   "response_types": {
-    "FIXED": "Issue implemented with working code",
-    "DEFERRED": "Created issue for future implementation",
-    "ACKNOWLEDGED": "Noted but not actionable",
-    "NOT_DONE": "Cannot implement with specific reason"
+    "FIXED": "Issue implemented with working code (STRONGLY PREFERRED)",
+    "DEFERRED": "Cannot do now - MUST create real bead with ID",
+    "ACKNOWLEDGED": "Purely informational - NO future promises allowed",
+    "NOT_DONE": "Won't implement with specific technical reason"
+  },
+  "response_priority_rules": {
+    "rule_1": "FIXED is STRONGLY PREFERRED - do the work if at all feasible",
+    "rule_2": "DEFERRED requires real bead_id - no vague 'TODO tracked'",
+    "rule_3": "ACKNOWLEDGED must NOT contain 'will', 'TODO', or future promises",
+    "rule_4": "NOT_DONE requires specific technical reason why not feasible"
   },
   "required_fields": {
     "FIXED": ["category", "action_taken", "files_modified", "commit", "verification"],
-    "DEFERRED": ["category", "reason", "issue_url"],
+    "DEFERRED": ["category", "reason", "bead_id"],
     "ACKNOWLEDGED": ["category", "explanation"],
     "NOT_DONE": ["category", "reason"]
   },
@@ -627,18 +862,43 @@ cat > "$RESPONSES_FILE" << 'EOF'
   "template_deferred": {
     "response": "DEFERRED",
     "category": "CRITICAL|BLOCKING|IMPORTANT|ROUTINE",
-    "reason": "Documented reason for deferment",
-    "issue_url": "https://github.com/org/repo/issues/1234"
+    "reason": "Specific technical reason why cannot be done in this PR",
+    "bead_id": "worktree_worker4-xyz",
+    "note": "MUST create actual bead BEFORE using DEFERRED - no vague 'TODO tracked'"
   },
   "template_acknowledged": {
     "response": "ACKNOWLEDGED",
     "category": "CRITICAL|BLOCKING|IMPORTANT|ROUTINE",
-    "explanation": "Why the comment is noted but no action taken"
+    "explanation": "Factual note only - NO future promises, NO 'will do', NO 'TODO'",
+    "forbidden": ["will", "TODO", "follow-up", "future", "later"]
   },
   "template_not_done": {
     "response": "NOT_DONE",
     "category": "CRITICAL|BLOCKING|IMPORTANT|ROUTINE",
     "reason": "Specific reason why implementation not feasible"
+  },
+  "template_multi_issue": {
+    "comment_id": "3675347161",
+    "analysis": {
+      "total_issues": 11,
+      "actionable": 6,
+      "nitpicks": 5
+    },
+    "issues": [
+      {
+        "number": 1,
+        "file": "game_state_instruction.md",
+        "line": "751-776",
+        "description": "Remove phrase-scanning triggers",
+        "category": "BLOCKING",
+        "response": "FIXED",
+        "action_taken": "Removed phrase-scanning trigger patterns, converted to intent-based processing",
+        "files_modified": ["game_state_instruction.md:751-776"],
+        "commit": "abc123",
+        "verification": "✅ Verified no phrase-scanning patterns remain"
+      }
+    ],
+    "reply_text": "Consolidated markdown addressing all 11 issues"
   },
   "responses": []
 }
@@ -812,14 +1072,38 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
     cleanup_temp_files
     return 1
 }
+
+# 🚨 POST-PUSH COMMENT REFRESH: Catch late comments posted during workflow
+echo "🔄 POST-PUSH: Re-fetching comments to catch late arrivals"
+/commentfetch
+
+# Check for NEW unhandled comments that arrived during the workflow
+NEW_UNHANDLED=$(python3 -c "
+import sys
+import os
+sys.path.insert(0, os.path.join('$PROJECT_ROOT', '.claude', 'commands', '_copilot_modules'))
+try:
+    from per_comment_cache import PerCommentCache
+    cache = PerCommentCache('$CACHE_DIR')
+    unhandled = cache.get_unhandled_comments()
+    print(len(unhandled))
+except Exception as e:
+    print(0)
+" || echo 0)
+
+if [ "$NEW_UNHANDLED" -gt 0 ]; then
+    echo "⚠️ Found $NEW_UNHANDLED new comment(s) posted during workflow - processing..."
+    /commentreply || echo "⚠️ Warning: Some late comments may need manual response"
+fi
 ```
 
 **Coverage Tracking (MANDATORY GATE):**
 ```bash
 
 # HARD VERIFICATION GATE with RECOVERY - Must pass before proceeding
+# Now includes ROUTINE comment coverage (90% minimum)
 
-echo "🔍 MANDATORY: Verifying 100% comment coverage"
+echo "🔍 MANDATORY: Verifying comment coverage (100% critical/blocking, 90% routine)"
 if ! /commentcheck; then
     echo "🚨 CRITICAL: Comment coverage failed - attempting recovery"
     echo "🔧 RECOVERY: Re-running comment response workflow"
@@ -827,7 +1111,7 @@ if ! /commentcheck; then
     # Attempt recovery by re-running comment responses
     /commentreply || {
         echo "🚨 CRITICAL: Recovery failed - manual intervention required";
-        echo "📊 DIAGNOSTIC: Check /tmp/$(git branch --show-current | tr -cd '[:alnum:]_-')/responses.json format";
+        echo "📊 DIAGNOSTIC: Check $CACHE_DIR/responses.json format";
         echo "📊 DIAGNOSTIC: Verify GitHub API permissions and rate limits";
         exit 1;
     }
@@ -839,6 +1123,22 @@ if ! /commentcheck; then
         return 1
     }
 fi
+
+# Additional check: Verify ROUTINE comments have ≥90% coverage
+ROUTINE_TOTAL=$(jq '[.responses[] | select(.category == "ROUTINE")] | length' "$RESPONSES_FILE" 2>/dev/null || echo 0)
+ROUTINE_RESPONDED=$(jq '[.responses[] | select(.category == "ROUTINE" and (.response == "FIXED" or .response == "ACKNOWLEDGED" or .response == "NOT_DONE"))] | length' "$RESPONSES_FILE" 2>/dev/null || echo 0)
+
+if [ "$ROUTINE_TOTAL" -gt 0 ]; then
+    ROUTINE_PCT=$((ROUTINE_RESPONDED * 100 / ROUTINE_TOTAL))
+    if [ "$ROUTINE_PCT" -lt 90 ]; then
+        echo "⚠️ ROUTINE coverage: $ROUTINE_RESPONDED/$ROUTINE_TOTAL ($ROUTINE_PCT%) - below 90% target"
+        echo "🔧 Attempting to process remaining ROUTINE comments..."
+        /commentreply
+    else
+        echo "✅ ROUTINE coverage: $ROUTINE_RESPONDED/$ROUTINE_TOTAL ($ROUTINE_PCT%)"
+    fi
+fi
+
 echo "✅ Comment coverage verification passed - proceeding with completion"
 ```
 
@@ -917,26 +1217,31 @@ cleanup_temp_files
 1. **Critical Bug Resolution**: ALL critical bugs fixed with working code (100% required)
 2. **Blocking Issue Resolution**: ALL blocking issues fixed or properly documented (100% required)
 3. **Important Issue Handling**: Important issues fixed OR deferred with created issues (≥80% target)
-4. **Communication Coverage**: 100% comment response rate with action-based accountability
-5. **Test Verification**: All critical/blocking fixes verified with passing tests
+4. **Routine Issue Handling**: Routine issues responded to (≥90% target) - includes low-severity bot comments
+5. **Communication Coverage**: 100% comment response rate with action-based accountability
+6. **Test Verification**: All critical/blocking fixes verified with passing tests
+7. **Post-Push Refresh**: Re-fetch comments after push to catch late arrivals
 
 **SUCCESS LEVELS:**
 
 **✅ SAFE TO MERGE:**
 - Critical bugs fixed: 100% (or 0 critical bugs found)
 - Blocking issues fixed: 100% (or 0 blocking issues found)
+- Routine issues responded: ≥90%
 - All tests passing
 - 100% comment response rate with action details
 
 **⚠️ NEEDS REVIEW:**
 - Critical bugs fixed: 100%
 - Blocking issues fixed: <100% with documented reasons
+- Routine issues responded: <90%
 - Some tests pending
 - 100% comment response rate
 
 **❌ NOT READY:**
 - Critical bugs unfixed: ANY
 - Blocking issues unfixed: >20%
+- Routine issues responded: <80%
 - Tests failing
 - Comment response rate: <100%
 
@@ -946,11 +1251,14 @@ cleanup_temp_files
 2. ✅ **Blocking Issue Priority**: CI failures, breaking changes fixed SECOND
 3. ✅ **Direct Implementation**: Critical/blocking bugs fixed by orchestrator directly
 4. ✅ **Test Verification**: All critical/blocking fixes verified with test execution
-5. ✅ **Action Accountability**: Every response includes category, action, files, commits, verification
-6. ✅ **File Justification Protocol**: All code changes properly documented and justified
-7. ✅ **Input Sanitization**: All GitHub comment content validated and sanitized
-8. ✅ **Synchronization**: Explicit agent coordination prevents race conditions
-9. ✅ **Adaptive Performance**: Execution completed within complexity-appropriate targets
+5. ✅ **Routine Coverage**: Low-severity comments responded to (≥90%) - no silent skips
+6. ✅ **Outdated Detection**: Comments on refactored code marked as "ALREADY FIXED"
+7. ✅ **Post-Push Refresh**: Re-fetch comments after push to catch late arrivals
+8. ✅ **Action Accountability**: Every response includes category, action, files, commits, verification
+9. ✅ **File Justification Protocol**: All code changes properly documented and justified
+10. ✅ **Input Sanitization**: All GitHub comment content validated and sanitized
+11. ✅ **Synchronization**: Explicit agent coordination prevents race conditions
+12. ✅ **Adaptive Performance**: Execution completed within complexity-appropriate targets
 
 ### **FAILURE CONDITIONS (PRIORITY ORDER)**:
 
@@ -979,6 +1287,56 @@ cleanup_temp_files
     - ❌ **ONLY EXCEPTION**: Comments starting with "[AI responder]" (our own AI-generated responses)
   - 🚨 **MANDATORY**: Bot code review comments MUST be addressed - either implement fixes OR explain "NOT DONE: [reason]"
   - 🚨 **ZERO SKIP RATE**: 100% reply rate means EVERY comment (human AND bot) gets a response
+
+### 🚨 **CRITICAL: GitHub API Reply Requirements (NEW)**
+
+**"100% reply rate" means ACTUAL GitHub API POST calls, not just responses.json tracking.**
+
+Every comment MUST receive an actual GitHub reply via the appropriate API endpoint:
+
+| Comment Type | Source | API Endpoint for Reply |
+|--------------|--------|----------------------|
+| **Inline review comments** | `gh api repos/.../pulls/{pr}/comments` | `gh api repos/{owner}/{repo}/pulls/{pr}/comments/{comment_id}/replies -X POST -f body="..."` |
+| **General issue comments** | `gh api repos/.../issues/{pr}/comments` | `gh api repos/{owner}/{repo}/issues/{pr}/comments -X POST -f body="..."` |
+| **Review summary comments** | `gh pr view --json reviews` | Reply via inline comment on same review thread |
+
+**Common Failure Mode (AVOID THIS):**
+```
+❌ WRONG: Track comment in responses.json → Post summary comment → Done
+✅ RIGHT: Track comment in responses.json → Post DIRECT REPLY to that specific comment → Done
+```
+
+**Example: Responding to a General Issue Comment (like CodeRabbit protocol violation):**
+```bash
+# CodeRabbit posts general comment IC_kwDOO8L8Qs7itxod asking for DONE/NOT_DONE responses
+# WRONG: Only post a new summary comment
+# RIGHT: Post a direct reply to that specific comment
+
+gh api repos/{owner}/{repo}/issues/{pr}/comments \
+  -X POST \
+  -f body="[AI responder] ✅ **Protocol Compliance Restored**
+
+In reply to the Protocol Violation report:
+- Issue 1: ✅ DONE (commit abc123)
+- Issue 2: ✅ DONE (commit abc123)
+..."
+```
+
+**Example: Responding to an Inline Review Comment:**
+```bash
+# Cursor posts inline comment 2730561960 about a bug
+# Use the /replies endpoint for inline comments
+
+gh api repos/{owner}/{repo}/pulls/{pr}/comments/2730561960/replies \
+  -X POST \
+  -f body="[AI responder] ✅ **DONE - BUG FIXED**
+..."
+```
+
+**Verification Checklist:**
+- [ ] Did I post GitHub API replies to ALL inline review comments?
+- [ ] Did I post GitHub API replies to ALL general issue comments that asked questions or requested action?
+- [ ] Did I check that bot comments (CodeRabbit, Copilot, Cursor) received direct replies, not just summary acknowledgment?
 - **GitHub MCP Primary**: Strategic tool usage for minimal context consumption
 - **Semantic Search**: Use Serena MCP for targeted analysis before file operations
 - **Hybrid Coordination**: Efficient orchestration with selective task delegation
@@ -1003,6 +1361,8 @@ cleanup_temp_files
 
 The orchestrator MUST generate responses.json in this exact format:
 
+#### Single-Issue Comment Example:
+
 ```json
 {
   "response_protocol": "ACTION_ACCOUNTABILITY",
@@ -1018,24 +1378,88 @@ The orchestrator MUST generate responses.json in this exact format:
       "verification": "✅ Tests pass, admin UIDs now recognized",
       "reply_text": "[AI responder] ✅ **CRITICAL BUG FIXED**\n\n**Category**: CRITICAL\n**Action**: Implemented UID-based admin check in isAuthenticatedNonVIP()\n**Files Modified**: shared-libs/packages/mcp-server-utils/src/RateLimitTool.ts:145\n**Tests Added**: backend/src/test/rate-limit-uid-fallback.test.ts\n**Commit**: 53702d91\n**Verification**: ✅ Tests pass, admin UIDs now recognized",
       "in_reply_to": "optional_parent_id"
-    },
-    {
-      "comment_id": "2357534670",
-      "category": "ROUTINE",
-      "response": "ACKNOWLEDGED",
-      "explanation": "Good suggestion for code clarity, will apply in next refactoring cycle",
-      "reply_text": "[AI responder] 📝 **ACKNOWLEDGED**\n\n**Category**: ROUTINE\n**Note**: Good suggestion for code clarity, will apply in next refactoring cycle"
     }
   ]
 }
 ```
+
+#### Multi-Issue Comment Example (NEW - Critical for Bot Comments):
+
+When a SINGLE comment contains MULTIPLE issues (e.g., CodeRabbit summary with 11 issues):
+
+```json
+{
+  "response_protocol": "ACTION_ACCOUNTABILITY",
+  "responses": [
+    {
+      "comment_id": "3675347161",
+      "category": "BLOCKING",
+      "response": "FIXED",
+      "analysis": {
+        "total_issues": 11,
+        "actionable": 6,
+        "nitpicks": 5
+      },
+      "issues": [
+        {
+          "number": 1,
+          "file": "game_state_instruction.md",
+          "line": "751-776",
+          "description": "Remove phrase-scanning triggers",
+          "category": "BLOCKING",
+          "response": "FIXED",
+          "action_taken": "Removed phrase-scanning trigger patterns, converted to intent-based processing",
+          "files_modified": ["game_state_instruction.md:751-776"],
+          "commit": "abc123",
+          "verification": "✅ Verified no phrase-scanning patterns remain"
+        },
+        {
+          "number": 2,
+          "file": "game_state_instruction.md",
+          "line": "800-820",
+          "description": "Update validation logic for edge cases",
+          "category": "IMPORTANT",
+          "response": "FIXED",
+          "action_taken": "Added null checks and edge case handling",
+          "files_modified": ["game_state_instruction.md:800-820"],
+          "commit": "abc123",
+          "verification": "✅ Edge cases now handled correctly"
+        },
+        {
+          "number": 3,
+          "file": "system_instruction.md",
+          "line": "100",
+          "description": "Fix typo in documentation",
+          "category": "ROUTINE",
+          "response": "FIXED",
+          "action_taken": "Corrected typo",
+          "files_modified": ["system_instruction.md:100"],
+          "commit": "def456",
+          "verification": "✅ Typo fixed"
+        }
+      ],
+      "reply_text": "[AI responder] ## Comment Analysis (11 issues identified)\n\n### Actionable Issues (6 found)\n1. **[game_state_instruction.md:751-776]** - Status: FIXED\n   - Action: Removed phrase-scanning triggers\n   - Commit: abc123\n\n2. **[game_state_instruction.md:800-820]** - Status: FIXED\n   - Action: Added edge case validation\n   - Commit: abc123\n\n...(4 more actionable issues)...\n\n### Nitpick Issues (5 found)\n7. **[system_instruction.md:100]** - Status: FIXED\n   - Action: Corrected typo\n   - Commit: def456\n\n...(4 more nitpick issues)...\n\n### Summary\n- Total: 11 issues\n- Fixed: 11 issues\n- Deferred: 0 issues"
+    }
+  ]
+}
+```
+
+**📌 NOTES**:
+- **Top-level fields**: `category` and `response` at top level represent the highest-priority issue in the comment (BLOCKING in this example)
+- **Truncated example**: This shows only 3 of 11 issues for brevity; production responses would include all issues in the `issues` array
+- **Global numbering**: Issue numbering continues globally (1, 2, 3, ..., 11), shown with `...(N more)...` truncation indicators
+- **One reply_text**: Despite containing 11 issues, generates ONE consolidated `reply_text` addressing all issues together
 
 ### **CRITICAL FORMAT REQUIREMENTS**:
 
 **Base Fields (ALL responses):**
 - `comment_id` MUST be STRING (not integer)
 - `category` MUST be one of: CRITICAL, BLOCKING, IMPORTANT, ROUTINE
+  - **Multi-issue format**: Top-level `category` represents the highest-priority issue in the comment
+  - **Single-issue format**: Top-level `category` represents the issue's priority
 - `response` MUST be one of: FIXED, DEFERRED, ACKNOWLEDGED, NOT_DONE
+  - **Multi-issue format**: Top-level `response` represents the overall status (typically FIXED if all fixed)
+  - **Single-issue format**: Top-level `response` represents the issue's status
 - `reply_text` MUST contain formatted action details for GitHub (example above shows the auto-generated output)
 - `files_modified` should list repo-relative paths with optional `:line` suffixes for precision
 - `commit` values must use the standard 7-8 character `git rev-parse --short` format for traceability
@@ -1049,15 +1473,34 @@ The orchestrator MUST generate responses.json in this exact format:
 - `commit`: Short commit SHA
 - `verification`: Test/verification status
 
-**DEFERRED** (created issue for future):
-- `reason`: Why deferred
-- `issue_url`: GitHub issue URL (if created)
+**DEFERRED** (ONLY if genuinely cannot do in this PR):
+- `reason`: Specific technical reason (complexity, risk, architectural discussion needed)
+- `bead_id`: REQUIRED - actual bead ID created via beads/create (e.g., "worktree_worker4-xyz")
+- ⚠️ MUST create real bead BEFORE responding - no vague "TODO tracked"
+- ⚠️ If reviewer requests it and it's feasible, use FIXED instead
 
-**ACKNOWLEDGED** (noted, not actionable):
-- `explanation`: Why acknowledged but not implemented
+**ACKNOWLEDGED** (purely informational - NO action implied):
+- `explanation`: Factual statement only
+- ❌ FORBIDDEN: "will do", "TODO tracked", "in a follow-up", "later", future tense promises
+- ✅ CORRECT: "Noted for context" or "Informational comment, no action required"
 
 **NOT_DONE** (cannot implement):
 - `reason`: Specific technical reason why not feasible
+
+**MULTI_ISSUE** (comment contains multiple distinct issues):
+- `analysis`: Object with `total_issues`, `actionable`, `nitpicks` counts
+- `issues`: Array of issue objects, each with:
+  - `number`: Issue sequence number (1, 2, 3, ...)
+  - `file`: Affected file path
+  - `line`: Line number or range
+  - `description`: Brief issue description
+  - `category`: Severity level (CRITICAL/BLOCKING/IMPORTANT/ROUTINE)
+  - `response`: Action taken (FIXED/DEFERRED/ACKNOWLEDGED/NOT_DONE)
+  - `action_taken`: Specific implementation details
+  - `files_modified`: Array of affected files with :line notation
+  - `commit`: Commit SHA for the fix
+  - `verification`: Test/verification status
+- `reply_text`: Consolidated markdown addressing ALL issues together
 
 ### **INTEGRATION CONTRACT**:
 
@@ -1084,3 +1527,23 @@ The orchestrator MUST generate responses.json in this exact format:
 - No "FIXED" without files_modified and commit
 - No "NOT_DONE" without specific reason
 - Every response traceable to actual code changes or decision rationale
+
+**🚨 REVIEWER REQUEST PROTOCOL:**
+
+When a reviewer asks for a change (refactoring, extraction, improvement):
+
+1. **DEFAULT = DO IT NOW** (reviewer sets scope, not AI)
+2. **If feasible** → FIXED with commit reference
+3. **If genuinely not feasible** → NOT_DONE with specific technical reason
+4. **If complex but should be tracked** → DEFERRED with REAL bead_id (create bead first!)
+
+❌ **FORBIDDEN PATTERNS:**
+- "Will extract in a follow-up" (without bead_id)
+- "TODO tracked" (tracked WHERE?)
+- "Good suggestion, will consider" (empty promise)
+- Unilaterally deciding to defer reviewer requests
+
+✅ **CORRECT PATTERNS:**
+- FIXED: "Extracted to settings_validation.py (Commit: abc123)"
+- NOT_DONE: "Would require changing public API, needs design discussion"
+- DEFERRED: "Created bead worktree_worker4-xyz for this refactoring"

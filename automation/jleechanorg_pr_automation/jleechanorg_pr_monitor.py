@@ -18,8 +18,10 @@ import time
 import traceback
 import urllib.request
 from collections import Counter
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+import requests
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
@@ -59,6 +61,12 @@ from .codex_config import (
     FIXPR_MARKER_SUFFIX as SHARED_FIXPR_SUFFIX,
 )
 from .codex_config import (
+    COMMENT_VALIDATION_MARKER_PREFIX as SHARED_COMMENT_VALIDATION_PREFIX,
+)
+from .codex_config import (
+    COMMENT_VALIDATION_MARKER_SUFFIX as SHARED_COMMENT_VALIDATION_SUFFIX,
+)
+from .codex_config import (
     build_automation_marker,
     build_comment_intro,
 )
@@ -67,25 +75,26 @@ from .orchestrated_pr_runner import (
     dispatch_agent_for_pr,
     dispatch_agent_for_pr_with_task,
     ensure_base_clone,
+    get_github_token,
     has_failing_checks,
 )
 from .utils import json_manager, setup_logging
 
 
-def _parse_fixpr_agent_chain(value: str) -> str:
-    """Parse comma-separated CLI chain for --fixpr-agent (e.g., 'gemini,codex')."""
+def _parse_cli_agent_chain(value: str) -> str:
+    """Parse comma-separated CLI chain for --cli-agent (e.g., 'gemini,cursor')."""
     if not isinstance(value, str) or not value.strip():
-        raise argparse.ArgumentTypeError("--fixpr-agent must be a non-empty string")
+        raise argparse.ArgumentTypeError("--cli-agent must be a non-empty string")
 
     parts = [part.strip().lower() for part in value.split(",")]
     chain = [part for part in parts if part]
     if not chain:
-        raise argparse.ArgumentTypeError("--fixpr-agent chain is empty")
+        raise argparse.ArgumentTypeError("--cli-agent chain is empty")
 
     invalid = [cli for cli in chain if cli not in CLI_PROFILES]
     if invalid:
         raise argparse.ArgumentTypeError(
-            f"Invalid --fixpr-agent CLI(s): {invalid}. Must be subset of {list(CLI_PROFILES.keys())}"
+            f"Invalid --cli-agent CLI(s): {invalid}. Must be subset of {list(CLI_PROFILES.keys())}"
         )
 
     # De-duplicate while preserving order
@@ -131,12 +140,14 @@ def _normalize_model(model: str | None) -> str | None:
 class JleechanorgPRMonitor:
     """Cross-organization PR monitoring with Codex automation comments"""
 
-    def _determine_workflow_type(self, fix_comment: bool, fixpr: bool = False) -> str:
+    def _determine_workflow_type(self, fix_comment: bool, fixpr: bool = False, comment_validation: bool = False) -> str:
         """Determine workflow type from execution context"""
         if fix_comment:
             return "fix_comment"
         if fixpr:
             return "fixpr"
+        if comment_validation:
+            return "comment_validation"
         return "pr_automation"
 
     def _redact_email(self, email: str | None) -> str | None:
@@ -156,6 +167,8 @@ class JleechanorgPRMonitor:
     FIX_COMMENT_RUN_MARKER_SUFFIX = SHARED_FIX_COMMENT_RUN_SUFFIX
     FIXPR_MARKER_PREFIX = SHARED_FIXPR_PREFIX
     FIXPR_MARKER_SUFFIX = SHARED_FIXPR_SUFFIX
+    COMMENT_VALIDATION_MARKER_PREFIX = SHARED_COMMENT_VALIDATION_PREFIX
+    COMMENT_VALIDATION_MARKER_SUFFIX = SHARED_COMMENT_VALIDATION_SUFFIX
     CODEX_COMMIT_MESSAGE_MARKER = "[codex-automation-commit]"
     CODEX_BOT_IDENTIFIER = "codex"
     FIX_COMMENT_COMPLETION_MARKER = "Fix-comment automation complete"
@@ -356,10 +369,10 @@ class JleechanorgPRMonitor:
                 self.logger.debug(f"👤 Discovered current GitHub user: {user}")
                 return user
         except Exception as e:
-            self.logger.warning(f"⚠️ Failed to discover GitHub user: {e}")
+            self.logger.debug(f"⚠️ Failed to discover GitHub user: {e}")
 
         # Fallback (should ideally not happen in real usage, but safe default)
-        self.logger.warning("⚠️ Could not resolve automation username, defaulting to 'unknown'")
+        self.logger.info("ℹ️ Could not resolve automation username, defaulting to 'unknown'")
         return "unknown"
 
     def _record_processed_pr(self, repo_name: str, branch_name: str, pr_number: int, commit_sha: str) -> None:
@@ -627,25 +640,42 @@ class JleechanorgPRMonitor:
         cursor: str | None = None
         recent_prs: list[dict] = []
 
-        while True:
-            gh_api_cmd = [
-                "gh",
-                "api",
-                "graphql",
-                "-f",
-                f"query={graphql_query}",
-                "-f",
-                f"searchQuery={search_query}",
-            ]
-            if cursor:
-                gh_api_cmd.extend(["-f", f"cursor={cursor}"])
+        # Get GitHub token for API calls (avoids bash/subprocess)
+        token = get_github_token()
+        if not token:
+            raise RuntimeError("No GitHub token available for GraphQL API calls")
 
-            api_result = AutomationUtils.execute_subprocess_with_timeout(gh_api_cmd, timeout=60, check=False)
-            if api_result.returncode != 0:
-                raise RuntimeError(f"GraphQL search failed: {api_result.stderr.strip()}")
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+        }
+
+        while True:
+            # Use Python requests instead of gh CLI to avoid bash prompts
+            variables = {
+                "searchQuery": search_query,
+            }
+            if cursor:
+                variables["cursor"] = cursor
+
+            payload = {
+                "query": graphql_query,
+                "variables": variables,
+            }
 
             try:
-                api_data = json.loads(api_result.stdout)
+                response = requests.post(
+                    "https://api.github.com/graphql",
+                    json=payload,
+                    headers=headers,
+                    timeout=60,
+                )
+                response.raise_for_status()
+                api_data = response.json()
+            except requests.exceptions.RequestException as e:
+                self.logger.error(f"❌ GraphQL API request failed: {e}")
+                raise RuntimeError(f"GraphQL search failed: {e}")
             except json.JSONDecodeError as exc:
                 self.logger.error("❌ Failed to parse GraphQL response: %s", exc)
                 raise
@@ -858,10 +888,33 @@ class JleechanorgPRMonitor:
             self.logger.debug(f"Pending review cleanup failed for PR #{pr_number}: {exc}")
             # Non-fatal - continue with the workflow
 
-    def post_codex_instruction_simple(self, repository: str, pr_number: int, pr_data: dict) -> str:
-        """Post codex instruction comment to PR"""
+    def _post_pr_comment_common(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: dict,
+        build_comment_body_fn,
+        check_existing_comment_fn,
+        log_prefix: str,
+        skip_checks_fn=None,
+    ) -> str:
+        """Common logic for posting PR comments (shared by Codex and comment validation).
+        
+        Args:
+            repository: Repository name or full name
+            pr_number: PR number
+            pr_data: PR data dictionary
+            build_comment_body_fn: Function to build comment body (repo, pr_num, pr_data, head_sha) -> str
+            check_existing_comment_fn: Function to check if comment exists (comments, head_sha) -> bool
+            log_prefix: Prefix for log messages (e.g., "Codex support" or "comment validation")
+            skip_checks_fn: Optional function for additional skip checks (head_sha, comments, repo_full, pr_number) -> tuple[bool, str]
+                           Returns (should_skip, reason). If None, only standard checks are performed.
+        
+        Returns:
+            "posted", "skipped", or "failed"
+        """
         repo_full = self._normalize_repository_name(repository)
-        self.logger.info(f"💬 Requesting Codex support for {repo_full} PR #{pr_number}")
+        self.logger.info(f"💬 Requesting {log_prefix} for {repo_full} PR #{pr_number}")
 
         if self.no_act:
             self.logger.info("🧪 --no-act enabled: skipping comment post for %s #%s", repo_full, pr_number)
@@ -876,64 +929,42 @@ class JleechanorgPRMonitor:
         # Handle API failures: treat None as empty list
         if comments is None:
             comments = []
-        head_commit_details = None
-        # Flag to bypass skip checks when new bot comments require attention
-        force_process_due_to_bot_comments = False
 
-        if head_sha:
-            head_commit_details = self._get_head_commit_details(repo_full, pr_number, head_sha)
-            if head_commit_details and self._is_head_commit_from_codex(head_commit_details):
-                # Check if there are new bot comments that need attention
-                if self._has_new_bot_comments_since_codex(comments):
-                    self.logger.info(
-                        "🤖 Head commit %s for %s#%s is from Codex, but new bot comments detected - forcing re-run",
-                        head_sha[:8],
-                        repo_full,
-                        pr_number,
-                    )
-                    force_process_due_to_bot_comments = True
-                else:
-                    self.logger.debug(
-                        "🆔 Head commit %s for %s#%s already attributed to Codex",
-                        head_sha[:8],
-                        repo_full,
-                        pr_number,
-                    )
+        # Run custom skip checks if provided (e.g., Codex-specific checks)
+        force_process = False
+        if skip_checks_fn:
+            should_skip, reason = skip_checks_fn(head_sha, comments, repo_full, pr_number)
+            if should_skip:
+                self.logger.info(reason)
+                if head_sha:
                     self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
-                    return "skipped"
+                return "skipped"
+            # Check if skip_checks_fn returned a special flag indicating we should force process
+            # (This is used by Codex when new bot comments require attention)
+            if reason and "forcing re-run" in reason.lower():
+                force_process = True
 
         if not head_sha:
             self.logger.warning(
                 f"⚠️ Could not determine commit SHA for PR #{pr_number}; proceeding without marker gating"
             )
-        elif not force_process_due_to_bot_comments:
-            # Only apply skip checks if we're not forcing a re-run due to new bot comments
+        elif not force_process:
+            # Only apply standard skip checks if we're not forcing a re-run
             # Check if we should skip this PR based on commit-based tracking
             if self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
                 self.logger.info(f"⏭️ Skipping PR #{pr_number} - already processed this commit")
                 return "skipped"
 
-            if self._has_codex_comment_for_commit(comments, head_sha):
+            # Check if comment already exists for this commit
+            if check_existing_comment_fn(comments, head_sha):
                 self.logger.info(
-                    f"♻️ Codex instruction already posted for commit {head_sha[:8]} on PR #{pr_number}, skipping"
+                    f"♻️ {log_prefix} already posted for commit {head_sha[:8]} on PR #{pr_number}, skipping"
                 )
                 self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
                 return "skipped"
 
-            if self._has_pending_codex_commit(comments, head_sha):
-                self.logger.info(
-                    f"⏳ Pending Codex automation commit {head_sha[:8]} detected on PR #{pr_number}; skipping re-run"
-                )
-                self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
-                return "skipped"
-
-        # Build comment body that tells Codex to fix PR comments and failing tests
-        comment_body = self._build_codex_comment_body_simple(
-            repo_full,
-            pr_number,
-            pr_data,
-            head_sha,
-        )
+        # Build comment body using provided function
+        comment_body = build_comment_body_fn(repo_full, pr_number, pr_data, head_sha or "")
 
         # Post the comment
         try:
@@ -956,7 +987,7 @@ class JleechanorgPRMonitor:
                 ),
             )
 
-            self.logger.info(f"✅ Posted Codex instruction comment on PR #{pr_number} ({repo_full})")
+            self.logger.info(f"✅ Posted {log_prefix} comment on PR #{pr_number} ({repo_full})")
             time.sleep(2.0)
 
             # Record that we've processed this PR with this commit when available
@@ -966,11 +997,69 @@ class JleechanorgPRMonitor:
             return "posted"
 
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"❌ Failed to post comment on PR #{pr_number}: {e.stderr}")
+            self.logger.error(f"❌ Failed to post {log_prefix} comment on PR #{pr_number}: {e.stderr}")
             return "failed"
         except Exception as e:
-            self.logger.error(f"💥 Unexpected error posting comment: {e}")
+            self.logger.error(f"💥 Unexpected error posting {log_prefix} comment: {e}")
             return "failed"
+
+    def _codex_skip_checks(self, head_sha: str | None, comments: list[dict], repo_full: str, pr_number: int) -> tuple[bool, str]:
+        """Codex-specific skip checks (checks for Codex commits and pending commits).
+        
+        Returns (should_skip, reason). If should_skip is False, processing should continue.
+        The reason string can include "forcing re-run" to bypass standard skip checks.
+        """
+        if not head_sha:
+            return False, ""
+        
+        head_commit_details = self._get_head_commit_details(repo_full, pr_number, head_sha)
+        if head_commit_details and self._is_head_commit_from_codex(head_commit_details):
+            # Check if there are new bot comments that need attention
+            if self._has_new_bot_comments_since_codex(comments):
+                self.logger.info(
+                    "🤖 Head commit %s for %s#%s is from Codex, but new bot comments detected - forcing re-run",
+                    head_sha[:8],
+                    repo_full,
+                    pr_number,
+                )
+                return False, "forcing re-run"  # Signal to bypass standard skip checks
+            else:
+                return True, (
+                    f"🆔 Head commit {head_sha[:8]} for {repo_full}#{pr_number} already attributed to Codex"
+                )
+        
+        # Check for pending Codex commits (only if not forcing re-run)
+        if self._has_pending_codex_commit(comments, head_sha):
+            return True, (
+                f"⏳ Pending Codex automation commit {head_sha[:8]} detected on PR #{pr_number}; skipping re-run"
+            )
+        
+        return False, ""
+
+    def post_codex_instruction_simple(self, repository: str, pr_number: int, pr_data: dict) -> str:
+        """Post codex instruction comment to PR"""
+        return self._post_pr_comment_common(
+            repository=repository,
+            pr_number=pr_number,
+            pr_data=pr_data,
+            build_comment_body_fn=self._build_codex_comment_body_simple,
+            check_existing_comment_fn=self._has_codex_comment_for_commit,
+            log_prefix="Codex support",
+            skip_checks_fn=self._codex_skip_checks,
+        )
+
+    def post_comment_validation_request(self, repository: str, pr_number: int, pr_data: dict) -> str:
+        """Post comment validation request to PR (asks AI bots minus Codex to review)"""
+        return self._post_pr_comment_common(
+            repository=repository,
+            pr_number=pr_number,
+            pr_data=pr_data,
+            build_comment_body_fn=self._build_comment_validation_body,
+            check_existing_comment_fn=self._has_comment_validation_comment_for_commit,
+            log_prefix="comment validation",
+            skip_checks_fn=None,  # No special skip checks for comment validation
+        )
+
 
 
 
@@ -983,17 +1072,46 @@ class JleechanorgPRMonitor:
 
 
     def _are_tests_passing(self, repository: str, pr_number: int) -> bool:
-        """Check if tests are passing on the PR"""
+        """Check if tests are passing on the PR using Python requests (avoids bash prompts)"""
         try:
-            # Get PR status checks
-            result = AutomationUtils.execute_subprocess_with_timeout([
-                "gh", "pr", "view", str(pr_number),
-                "--repo", repository,
-                "--json", "statusCheckRollup"
-            ], timeout=30)
+            # Use Python requests instead of gh CLI to avoid bash prompts
+            token = get_github_token()
+            if not token:
+                self.logger.warning(f"⚠️ No GitHub token available for checking test status: {repository}#{pr_number}")
+                return False
 
-            pr_status = json.loads(result.stdout or "{}")
-            status_checks = pr_status.get("statusCheckRollup", [])
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github.v3+json",
+            }
+
+            # Fetch PR status checks using GitHub REST API
+            url = f"https://api.github.com/repos/{repository}/pulls/{pr_number}"
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+                response.raise_for_status()
+                pr_status = response.json()
+            except requests.exceptions.RequestException as e:
+                self.logger.warning(f"⚠️ Failed to fetch PR status for {repository}#{pr_number}: {e}")
+                return False
+
+            # Extract status checks from PR data
+            # GitHub REST API doesn't include statusCheckRollup directly, need to fetch checks separately
+            checks_url = f"https://api.github.com/repos/{repository}/commits/{pr_status.get('head', {}).get('sha', '')}/check-runs"
+            try:
+                checks_response = requests.get(checks_url, headers=headers, timeout=30, params={"per_page": 100})
+                checks_response.raise_for_status()
+                checks_data = checks_response.json()
+                status_checks = checks_data.get("check_runs", [])
+            except requests.exceptions.RequestException:
+                # Fallback: try statuses endpoint
+                statuses_url = f"https://api.github.com/repos/{repository}/commits/{pr_status.get('head', {}).get('sha', '')}/statuses"
+                try:
+                    statuses_response = requests.get(statuses_url, headers=headers, timeout=30)
+                    statuses_response.raise_for_status()
+                    status_checks = statuses_response.json()
+                except requests.exceptions.RequestException:
+                    status_checks = []
 
             # If no status checks are configured, assume tests are failing
             if not status_checks:
@@ -1001,9 +1119,27 @@ class JleechanorgPRMonitor:
                 return False
 
             # Check if all status checks are successful
+            # Handle both check_runs format (check-runs API) and statuses format (statuses API)
             for check in status_checks:
-                if check.get("state") not in ["SUCCESS", "NEUTRAL"]:
-                    self.logger.debug(f"❌ Status check failed: {check.get('name')} - {check.get('state')}")
+                # Check-runs API format: conclusion field
+                conclusion = (check.get("conclusion") or "").upper()
+                state = (check.get("state") or "").upper()
+                # Statuses API format: state field
+                status_state = (check.get("state") or "").upper() if "status" not in check else None
+                
+                # Determine if check is passing
+                is_passing = False
+                if conclusion:
+                    is_passing = conclusion in ["SUCCESS", "NEUTRAL"]
+                elif state:
+                    is_passing = state in ["SUCCESS", "NEUTRAL"]
+                elif status_state:
+                    is_passing = status_state in ["SUCCESS", "NEUTRAL"]
+
+                
+                if not is_passing:
+                    check_name = check.get("name") or check.get("context") or "unknown"
+                    self.logger.debug(f"❌ Status check failed: {check_name} - conclusion={conclusion}, state={state}")
                     return False
 
             self.logger.debug(f"✅ All {len(status_checks)} status checks passing for PR #{pr_number}")
@@ -1060,13 +1196,54 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         return comment_body
 
+    def _build_comment_validation_body(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: dict,
+        head_sha: str,
+    ) -> str:
+        """Build comment body that requests AI bots (minus Codex) to review PR and ensure comments are addressed"""
+
+        comment_body = f"""@coderabbit-ai @greptileai @bugbot @copilot
+
+**Summary (Review Flow):**
+1. Review every outstanding PR comment to understand required fixes and clarifications.
+2. Verify that the author has addressed each comment, implementing necessary updates or providing "NOT DONE" justifications.
+3. Check for any new bugs, security vulnerabilities, or regressions introduced by these changes.
+4. Ensure the PR adheres to project standards and the "DONE/NOT DONE" response protocol.
+
+**PR Details:**
+- Title: {pr_data.get('title', 'Unknown')}
+- Author: {pr_data.get('author', {}).get('login', 'unknown')}
+- Branch: {pr_data.get('headRefName', 'unknown')}
+- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})
+
+**Instructions:**
+Review the PR for completeness and quality. Do not write code changes; instead, analyze the existing changes. Verify that the author has followed the binary response protocol - every previous comment needs a "DONE" or "NOT DONE" reply. Flag any missed comments, failing tests, or unresolved conflicts.
+
+**Tasks:**
+1. **Verify comments addressed** - Confirm the author implemented ALL feedback or provided valid reasons.
+2. **Check for bugs/security** - Identify serious issues or regressions.
+3. **Validate Code Quality** - Ensure best practices are followed.
+4. **Enforce Protocol** - Complain if "DONE"/"NOT DONE" responses are missing.
+"""
+
+        if head_sha:
+            comment_body += (
+                f"\n\n{self.COMMENT_VALIDATION_MARKER_PREFIX}{head_sha}"
+                f"{self.COMMENT_VALIDATION_MARKER_SUFFIX}"
+            )
+
+        return comment_body
+
     def _compose_fix_comment_mentions(self) -> str:
         mentions = [
             token for token in (self.assistant_mentions or "").split() if token.startswith("@")
         ]
         lower_mentions = {token.lower() for token in mentions}
-        if "@greptile" not in lower_mentions:
-            mentions.append("@greptile")
+        if "@greptileai" not in lower_mentions:
+            mentions.append("@greptileai")
         return " ".join(mentions)
 
     def _build_fix_comment_prompt_body(
@@ -1143,7 +1320,16 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             f"   - Issue/PR comments: `gh pr comment {pr_number} --body '[Response]'`\n"
             "   - Do NOT post mega-comments consolidating multiple responses; reply individually to each comment.\n\n"
             "4) Run tests and fix failures (block completion on critical/blocking test failures)\n\n"
-            "5) Resolve merge conflicts (prefer merge over rebase)\n\n"
+            "5) Resolve merge conflicts - EXPLICIT STEPS:\n"
+            f"   a) Check merge status: gh pr view {pr_number} --json mergeable,mergeStateStatus\n"
+            f"   b) If mergeable == \"CONFLICTING\" or mergeStateStatus == \"DIRTY\":\n"
+            "      - git fetch origin main && git merge origin/main --no-edit\n"
+            "      - Resolve conflicts:\n"
+            "        * .beads/issues.jsonl: git checkout --ours .beads/issues.jsonl\n"
+            "        * test files (mvp_site/tests/*, testing_mcp/lib/*): git checkout --theirs <file>\n"
+            "        * code files: manually resolve, keeping both changes where appropriate\n"
+            "      - git add -A && git commit -m \"[fixcomment-automation-commit] Merge main to resolve conflicts\" && git push\n"
+            f"   c) Verify: gh pr view {pr_number} --json mergeable (should show MERGEABLE, not CONFLICTING)\n\n"
             f'6) git add -A && git commit -m "[{commit_marker_cli}-automation-commit] fix PR #{pr_number} review feedback" && git push\n\n'
             f"7) Write completion report to /tmp/orchestration_results/pr-{pr_number}_results.json "
             "with comments addressed, files modified, tests run, and remaining issues\n\n"
@@ -1252,21 +1438,48 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         repo_full: str,
         pr_number: int,
     ) -> tuple[dict, str | None, list[dict], list[str]]:
-        view_cmd = [
-            "gh",
-            "pr",
-            "view",
-            str(pr_number),
-            "--repo",
-            repo_full,
-            "--json",
-            "title,headRefName,headRefOid,author,comments,commits",
-        ]
-        result = AutomationUtils.execute_subprocess_with_timeout(view_cmd, timeout=30, check=False)
-        if result.returncode != 0:
-            raise RuntimeError(result.stderr or f"gh pr view failed for {repo_full}#{pr_number}")
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
+            raise RuntimeError(f"No GitHub token available for PR view: {repo_full}#{pr_number}")
 
-        pr_data = json.loads(result.stdout or "{}")
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+
+        # Fetch PR data using GitHub REST API
+        url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}"
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+            pr_data = response.json()
+            # Normalize fields to match GraphQL expectations
+            pr_data["headRefName"] = pr_data.get("head", {}).get("ref")
+            pr_data["author"] = pr_data.get("user", {})
+            pr_data["headRefOid"] = pr_data.get("head", {}).get("sha")
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"Failed to fetch PR data for {repo_full}#{pr_number}: {e}")
+
+        # Fetch comments separately (REST API doesn't include comments in PR endpoint)
+        comments_url = f"https://api.github.com/repos/{repo_full}/issues/{pr_number}/comments"
+        try:
+            comments_response = requests.get(comments_url, headers=headers, timeout=30, params={"per_page": 100})
+            comments_response.raise_for_status()
+            pr_data["comments"] = comments_response.json()
+        except requests.exceptions.RequestException:
+            # Comments are optional, continue without them
+            pr_data["comments"] = []
+
+        # Fetch commits separately
+        commits_url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}/commits"
+        try:
+            commits_response = requests.get(commits_url, headers=headers, timeout=30, params={"per_page": 100})
+            commits_response.raise_for_status()
+            pr_data["commits"] = commits_response.json()
+        except requests.exceptions.RequestException:
+            # Commits are optional, continue without them
+            pr_data["commits"] = []
         head_sha = pr_data.get("headRefOid")
 
         comments_data = pr_data.get("comments", [])
@@ -1289,7 +1502,14 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         for node in commit_nodes:
             # Handle both nested 'commit' node structure and flat structure
             commit_obj = node.get("commit") if isinstance(node, dict) and "commit" in node else node
-            headline = commit_obj.get("messageHeadline") if isinstance(commit_obj, dict) else None
+            if not isinstance(commit_obj, dict):
+                continue
+                
+            headline = commit_obj.get("messageHeadline")
+            if not headline and "message" in commit_obj:
+                # REST API returns full message; headline is first line
+                headline = commit_obj["message"].split("\n")[0]
+                
             if headline:
                 headlines.append(headline)
 
@@ -1482,7 +1702,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             str(pr_number),
             "--target-repo",
             repo_full,
-            "--fixpr-agent",
+            "--cli-agent",
             agent_cli,
         ]
         try:
@@ -1633,64 +1853,150 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         # Check workflow-specific safety limits for fix-comment
         fix_comment_count = self._count_workflow_comments(comments, "fix_comment")
-        if fix_comment_count >= self.safety_manager.fix_comment_limit:
+        # Ensure both values are ints for comparison (defensive programming for test mocks)
+        fix_comment_limit = getattr(self.safety_manager, 'fix_comment_limit', 10)
+        try:
+            fix_comment_limit = int(fix_comment_limit) if not isinstance(fix_comment_limit, int) else fix_comment_limit
+        except (ValueError, TypeError):
+            fix_comment_limit = 10
+        if isinstance(fix_comment_count, int) and fix_comment_count >= fix_comment_limit:
             self.logger.info(
                 f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number} (fix-comment); "
-                f"{fix_comment_count}/{self.safety_manager.fix_comment_limit} fix-comment automation comments"
+                f"{fix_comment_count}/{fix_comment_limit} fix-comment automation comments"
             )
             return "skipped"
 
-        # Check completion marker FIRST (authoritative checkpoint)
+        # Check for conflicts, failing checks, and unaddressed comments BEFORE other checks
+        # If PR is clean (no conflicts, no failing checks, no unaddressed comments), skip fix-comment entirely
+        is_conflicting = False
+        is_failing = False
+        status_unknown = False
+
+        try:
+            # Fetch mergeable status
+            result = AutomationUtils.execute_subprocess_with_timeout(
+                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                timeout=30, check=False
+            )
+            if result.returncode == 0:
+                data = json.loads(result.stdout or "{}")
+                if data.get("mergeable") == "CONFLICTING":
+                    is_conflicting = True
+
+            # Check for failing checks
+            is_failing = has_failing_checks(repo_full, pr_number)
+        except Exception as e:
+            self.logger.warning(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
+            # Mark status as unknown - don't treat API failures as "clean"
+            status_unknown = True
+
+        # Cache unaddressed comments check (expensive API call, avoid redundant calls)
+        has_unaddressed = self._has_unaddressed_comments(repo_full, pr_number)
+
+        # FIRST check if PR is clean (no conflicts, no failing checks, no unaddressed comments)
+        # Only skip if PR is clean AND status is known (not unknown due to API failure)
+        if not status_unknown and not (is_conflicting or is_failing or has_unaddressed):
+            self.logger.info(
+                "⏭️ Skipping PR #%s - no conflicts, no failing checks, and no unaddressed comments",
+                pr_number,
+            )
+            return "skipped"
+
+        # Check completion marker (authoritative checkpoint)
         # This is the real indicator that fix-comment actually completed for this commit
         has_completion_marker = False
         if head_sha:
             has_completion_marker = self._has_fix_comment_comment_for_commit(comments, head_sha)
         
-        # Cache unaddressed comments check (expensive API call, avoid redundant calls)
-        has_unaddressed = self._has_unaddressed_comments(repo_full, pr_number)
-        
-        # If completion marker exists, check if there are unaddressed comments
-        # If no unaddressed comments, skip (work was completed successfully)
+        # If completion marker exists, check if there are unaddressed comments OR new issues
+        # If no unaddressed comments AND no conflicts/failing checks AND status is known, skip (work was completed successfully)
+        # If conflicts/failing checks appeared after completion marker, reprocess to handle them
+        # Don't skip if status is unknown (API failure) - treat as needing processing
         if has_completion_marker:
-            if not has_unaddressed:
+            if not has_unaddressed and not (is_conflicting or is_failing) and not status_unknown:
                 self.logger.info(
-                    "✅ Fix-comment automation completed for commit %s on PR #%s with no unaddressed comments - skipping",
+                    "✅ Fix-comment automation completed for commit %s on PR #%s with no unaddressed comments and no conflicts/failing checks - skipping",
                     head_sha[:8] if head_sha else "unknown",
                     pr_number,
                 )
                 return "skipped"
-            # Completion marker exists but there are unaddressed comments - reprocess
-            self.logger.info(
-                "🔄 Fix-comment completed for commit %s on PR #%s, but unaddressed comments exist - reprocessing",
-                head_sha[:8] if head_sha else "unknown",
-                pr_number,
-            )
-            # Continue to process unaddressed comments (skip history check since completion marker already decided)
+            # Completion marker exists but there are unaddressed comments OR new conflicts/failing checks - reprocess
+            if has_unaddressed:
+                self.logger.info(
+                    "🔄 Fix-comment completed for commit %s on PR #%s, but unaddressed comments exist - reprocessing",
+                    head_sha[:8] if head_sha else "unknown",
+                    pr_number,
+                )
+            elif is_conflicting or is_failing:
+                self.logger.info(
+                    "🔄 Fix-comment completed for commit %s on PR #%s, but conflicts/failing checks appeared - reprocessing",
+                    head_sha[:8] if head_sha else "unknown",
+                    pr_number,
+                )
+            # Continue to process unaddressed comments or conflicts/failing checks (skip history check since completion marker already decided)
         
         # If no completion marker, check commit history as fallback
         # History might be stale (recorded after queuing but before completion)
+        # If PR has conflicts or failing checks, reprocess even if commit was already processed
         elif head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
-            # No completion marker but commit in history - check unaddressed comments to decide
-            if not has_unaddressed:
+            # If issues are detected (conflicts/failing checks), allow reprocessing even if commit was already processed
+            if is_conflicting or is_failing:
                 self.logger.info(
-                    "⏭️ Skipping PR #%s - commit %s in history and no unaddressed comments",
+                    "🔁 Reprocessing PR #%s - commit %s already processed but conflicts/failing checks persist",
+                    pr_number,
+                    head_sha[:8],
+                )
+                # Continue to process despite history
+            elif status_unknown:
+                # Status unknown but commit already processed
+                # However, if there are unaddressed comments, process them even with unknown status
+                # (transient API failures shouldn't suppress valid review feedback)
+                if has_unaddressed:
+                    self.logger.info(
+                        "🔄 PR #%s commit %s already processed but status unknown; processing due to unaddressed comments",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                    # Continue to process unaddressed comments
+                else:
+                    # Status unknown, no unaddressed comments - skip to avoid duplicates
+                    # Will retry on new commits or when status becomes known
+                    self.logger.info(
+                        "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                    return "skipped"
+            elif not has_unaddressed and not (is_conflicting or is_failing):
+                # No completion marker, commit in history, no issues, and no unaddressed comments - skip
+                self.logger.info(
+                    "⏭️ Skipping PR #%s - commit %s in history, no unaddressed comments, and no conflicts/failing checks",
                     pr_number,
                     head_sha[:8],
                 )
                 return "skipped"
-            # Commit in history but no completion marker AND unaddressed comments exist
-            # This indicates a previous run didn't complete - reprocess
-            self.logger.info(
-                "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
-                pr_number,
-                head_sha[:8],
-            )
-            # Continue to process unaddressed comments
+            else:
+                # Commit in history but no completion marker AND (unaddressed comments exist OR conflicts/failing checks)
+                # This indicates a previous run didn't complete OR new issues appeared - reprocess
+                if has_unaddressed:
+                    self.logger.info(
+                        "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                elif is_conflicting or is_failing:
+                    self.logger.info(
+                        "🔄 PR #%s commit %s in history but no completion marker and conflicts/failing checks exist - reprocessing",
+                        pr_number,
+                        head_sha[:8],
+                    )
+                # Continue to process unaddressed comments or conflicts/failing checks
         
-        # Final check: if no completion marker and not in history, check for unaddressed comments
-        elif not has_unaddressed:
+        # Final check: if no completion marker and not in history, check for unaddressed comments OR conflicts/failing checks
+        # Don't skip if status is unknown (API failure) - treat as needing processing
+        elif not has_unaddressed and not (is_conflicting or is_failing) and not status_unknown:
             self.logger.info(
-                "⏭️ Skipping PR #%s - no unaddressed comments found",
+                "⏭️ Skipping PR #%s - no unaddressed comments, no conflicts, and no failing checks",
                 pr_number,
             )
             return "skipped"
@@ -1722,6 +2028,28 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                         queued_age_hours,
                     )
                     return "skipped"
+
+        # Log that we're processing due to issues or unaddressed comments
+        if status_unknown:
+            self.logger.info(
+                "🔧 Processing PR #%s - status unknown (API failure), proceeding conservatively",
+                pr_number,
+            )
+        elif is_conflicting:
+            self.logger.info(
+                "🔧 Processing PR #%s - has conflicts",
+                pr_number,
+            )
+        elif is_failing:
+            self.logger.info(
+                "🔧 Processing PR #%s - has failing checks",
+                pr_number,
+            )
+        else:
+            self.logger.info(
+                "🔧 Processing PR #%s - has unaddressed comments",
+                pr_number,
+            )
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
@@ -1786,17 +2114,24 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         # Check workflow-specific safety limits for fixpr
         fixpr_count = self._count_workflow_comments(comments, "fixpr")
-        if fixpr_count >= self.safety_manager.fixpr_limit:
+        # Ensure both values are ints for comparison (defensive programming for test mocks)
+        fixpr_limit = getattr(self.safety_manager, 'fixpr_limit', 10)
+        try:
+            fixpr_limit = int(fixpr_limit) if not isinstance(fixpr_limit, int) else fixpr_limit
+        except (ValueError, TypeError):
+            fixpr_limit = 10
+        if isinstance(fixpr_count, int) and fixpr_count >= fixpr_limit:
             self.logger.info(
                 f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number} (fixpr); "
-                f"{fixpr_count}/{self.safety_manager.fixpr_limit} fixpr automation comments"
+                f"{fixpr_count}/{fixpr_limit} fixpr automation comments"
             )
             return "skipped"
 
-        # Check for conflicts or failing checks BEFORE skip check
-        # If PR has issues, reprocess even if commit was already processed
+        # Check for conflicts or failing checks BEFORE other checks
+        # If PR is clean (no conflicts, no failing checks), skip fixpr entirely
         is_conflicting = False
         is_failing = False
+        status_unknown = False
 
         try:
             # Fetch mergeable status
@@ -1812,30 +2147,48 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             # Check for failing checks
             is_failing = has_failing_checks(repo_full, pr_number)
         except Exception as e:
-            self.logger.warning(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
-            # Continue with skip check if status check fails
+            # Treat status as unknown; leave defaults and do NOT assume the PR is clean.
+            self.logger.debug(f"⚠️ Error checking PR status for #{pr_number} ({type(e).__name__}): {e}")
+            status_unknown = True
 
-        # Only skip if PR has no issues (no conflicts, no failing checks)
-        # If PR has conflicts or failing checks, reprocess even if commit was already processed
+        # FIRST: If status is definitively clean (no conflicts/failing) → skip.
+        # If status is unknown due to API failure, DO NOT treat as clean — continue.
+        if not (is_conflicting or is_failing):
+            if not status_unknown:
+                self.logger.info("⏭️ Skipping PR #%s - no conflicts or failing checks to fix", pr_number)
+                return "skipped"
+            else:
+                self.logger.info("ℹ️ PR #%s status unknown (API failure) — proceeding conservatively", pr_number)
+
+        # If issues are detected, allow reprocessing even if the commit was already processed.
+        # If status is unknown (no issues detected), fall back to history gating to avoid duplicates.
         if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
-            if not (is_conflicting or is_failing):
+            if is_conflicting or is_failing:
                 self.logger.info(
-                    "⏭️ Skipping PR #%s - already processed commit %s (no conflicts or failing checks)",
+                    "🔁 Reprocessing PR #%s - commit %s already processed but issues persist",
+                    pr_number,
+                    head_sha[:8],
+                )
+            else:
+                self.logger.info(
+                    "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
                     pr_number,
                     head_sha[:8],
                 )
                 return "skipped"
-            self.logger.info(
-                "🔄 Reprocessing PR #%s (commit %s) - has conflicts or failing checks",
-                pr_number,
-                head_sha[:8],
-            )
-                # Continue processing despite skip check
+
+        # Log that we're processing due to issues
+        issue_label = (
+            "conflicts" if is_conflicting
+            else "failing checks" if is_failing
+            else "unknown status"
+        )
+        self.logger.info("🔧 Processing PR #%s - %s", pr_number, issue_label)
 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
 
-        # Dispatch agent for fixpr
+        # Dispatch agent for fixpr (uses FIXPR prompt, not fix-comment prompt)
         try:
             base_dir = ensure_base_clone(repo_full)
             with chdir(base_dir):
@@ -1847,27 +2200,27 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     "number": pr_number,
                     "branch": branch_name,
                 }
-                success = dispatch_agent_for_pr(dispatcher, pr_info, agent_cli=agent_cli, model=model)
+                agent_success = dispatch_agent_for_pr(dispatcher, pr_info, agent_cli=agent_cli, model=model)
 
-                # Cleanup any pending reviews created by the agent during execution
-                # This catches reviews created despite the warnings in the prompt
-                self._cleanup_pending_reviews(repo_full, pr_number)
+            # Post-dispatch cleanup for consistency with _process_pr_fix_comment
+            # Note: Agent runs async in tmux, so this is a secondary cleanup pass
+            self._cleanup_pending_reviews(repo_full, pr_number)
 
-                if success:
-                    queued_posted = self._post_fixpr_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
-                    # Record processing so we don't loop
-                    if head_sha:
-                        self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+            if agent_success:
+                queued_posted = self._post_fixpr_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
+                # Record processing so we don't loop
+                if head_sha:
+                    self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
 
-                    if not queued_posted:
-                        self.logger.warning(
-                            "⚠️ Queued comment failed for PR #%s, but agent is dispatched",
-                            pr_number,
-                        )
-                        return "partial"
+                if not queued_posted:
+                    self.logger.warning(
+                        "⚠️ Queued comment failed for PR #%s, but agent is dispatched",
+                        pr_number,
+                    )
+                    return "partial"
 
-                    return "posted" # "posted" means action taken
-                return "failed"
+                return "posted"  # "posted" means action taken
+            return "failed"
         except Exception as exc:
             self.logger.error(
                 "❌ Failed to dispatch fixpr agent for %s #%s: %s",
@@ -1878,71 +2231,62 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             return "failed"
 
     def _get_pr_comment_state(self, repo_full_name: str, pr_number: int) -> tuple[str | None, list[dict] | None]:
-        """Fetch PR comment data needed for Codex comment gating.
+        """Fetch PR comment data needed for Codex comment gating using Python requests (avoids bash prompts).
         
         Returns:
             Tuple of (head_sha, comments). If API call fails, returns (None, None) to
             distinguish from "no comments" case (None, []). Callers should check for
             None comments and treat as "unknown" rather than skipping.
         """
-        view_cmd = [
-            "gh",
-            "pr",
-            "view",
-            str(pr_number),
-            "--repo",
-            repo_full_name,
-            "--json",
-            "headRefOid,comments",
-        ]
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
+            self.logger.warning(f"⚠️ No GitHub token available for fetching PR comment state: {repo_full_name}#{pr_number}")
+            return None, None
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
 
         try:
-            result = AutomationUtils.execute_subprocess_with_timeout(
-                view_cmd,
-                timeout=30,
-                check=False
-            )
-            # Check return code to distinguish API failures from empty results
-            if result.returncode != 0:
-                error_message = result.stderr.strip() if result.stderr else f"Exit code {result.returncode}"
+            # Fetch PR data using GitHub REST API
+            pr_url = f"https://api.github.com/repos/{repo_full_name}/pulls/{pr_number}"
+            try:
+                pr_response = requests.get(pr_url, headers=headers, timeout=30)
+                pr_response.raise_for_status()
+                pr_data = pr_response.json()
+                head_sha = pr_data.get("head", {}).get("sha")  # REST API uses head.sha, not headRefOid
+            except requests.exceptions.RequestException as e:
                 self.logger.warning(
-                    f"⚠️ Failed to fetch PR comment state for PR #{pr_number}: {error_message}"
+                    f"⚠️ Failed to fetch PR data for PR #{pr_number}: {e}"
                 )
-                # Return sentinel value to indicate API failure (distinct from "no comments")
-                # Caller should treat this as "unknown" rather than "no comments"
                 return None, None
 
-            pr_data = json.loads(result.stdout or "{}")
-            head_sha = pr_data.get("headRefOid")
-
-            # Handle different comment structures from GitHub API
-            comments_data = pr_data.get("comments", [])
-            if isinstance(comments_data, dict):
-                comments = comments_data.get("nodes", [])
-            elif isinstance(comments_data, list):
-                comments = comments_data
-            else:
-                comments = []
+            # Fetch comments separately (REST API doesn't include comments in PR endpoint)
+            comments_url = f"https://api.github.com/repos/{repo_full_name}/issues/{pr_number}/comments"
+            try:
+                comments_response = requests.get(comments_url, headers=headers, timeout=30, params={"per_page": 100})
+                comments_response.raise_for_status()
+                comments = comments_response.json()
+            except requests.exceptions.RequestException as e:
+                self.logger.warning(
+                    f"⚠️ Failed to fetch PR comments for PR #{pr_number}: {e}"
+                )
+                # Return None comments to indicate API failure
+                return head_sha, None
 
             # Ensure comments are sorted by creation time (oldest first)
-            # GitHub API should return them sorted, but let's be explicit
             comments.sort(
-                key=lambda c: (c.get("createdAt") or c.get("updatedAt") or "")
+                key=lambda c: (c.get("created_at") or c.get("updated_at") or "")
             )
 
             return head_sha, comments
-        except subprocess.CalledProcessError as e:
-            error_message = e.stderr.strip() if e.stderr else str(e)
+        except Exception as e:
             self.logger.warning(
-                f"⚠️ Failed to fetch PR comment state for PR #{pr_number}: {error_message}"
+                f"⚠️ Unexpected error fetching PR comment state for PR #{pr_number}: {e}"
             )
             # Return sentinel value to indicate API failure
-            return None, None
-        except json.JSONDecodeError as e:
-            self.logger.warning(
-                f"⚠️ Failed to parse PR comment state for PR #{pr_number}: {e}"
-            )
-            # Return sentinel value to indicate parse failure
             return None, None
 
     def _get_head_commit_details(
@@ -1977,41 +2321,50 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             self.logger.warning("⚠️ Invalid PR number: %s", pr_number)
             return None
 
-        cmd = [
-            "gh",
-            "api",
-            "graphql",
-            "-f",
-            f"query={self._HEAD_COMMIT_DETAILS_QUERY}",
-            "-f",
-            f"owner={owner}",
-            "-f",
-            f"name={name}",
-            "-F",
-            f"prNumber={pr_number}",
-        ]
-
-        try:
-            result = AutomationUtils.execute_subprocess_with_timeout(cmd, timeout=30)
-        except subprocess.CalledProcessError as exc:
+        # Use Python requests instead of gh CLI to avoid bash prompts
+        token = get_github_token()
+        if not token:
             self.logger.debug(
-                "⚠️ Failed to fetch head commit details for %s#%s: %s",
+                "⚠️ No GitHub token available for fetching head commit details: %s#%s",
                 repo_full_name,
                 pr_number,
-                exc.stderr or exc,
             )
             return None
-        except Exception as exc:
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+        }
+
+        variables = {
+            "owner": owner,
+            "name": name,
+            "prNumber": pr_number,
+        }
+
+        payload = {
+            "query": self._HEAD_COMMIT_DETAILS_QUERY,
+            "variables": variables,
+        }
+
+        try:
+            response = requests.post(
+                "https://api.github.com/graphql",
+                json=payload,
+                headers=headers,
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except requests.exceptions.RequestException as exc:
             self.logger.debug(
-                "⚠️ Error executing head commit lookup for %s#%s: %s",
+                "⚠️ Failed to fetch head commit details for %s#%s: %s",
                 repo_full_name,
                 pr_number,
                 exc,
             )
             return None
-
-        try:
-            data = json.loads(result.stdout or "{}")
         except json.JSONDecodeError as exc:
             self.logger.debug(
                 "⚠️ Failed to decode commit details for %s#%s: %s",
@@ -2021,11 +2374,18 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             )
             return None
 
-        pr_data = (
-            data.get("data", {})
-            .get("repository", {})
-            .get("pullRequest", {})
-        )
+        # Defensive programming: Check if data.get("data") exists before chaining
+        data_dict = data.get("data")
+        if not isinstance(data_dict, dict):
+            return None
+        
+        repository_dict = data_dict.get("repository")
+        if not isinstance(repository_dict, dict):
+            return None
+        
+        pr_data = repository_dict.get("pullRequest", {})
+        if not isinstance(pr_data, dict):
+            return None
         commits_data = pr_data.get("commits") or {}
         commit_nodes = commits_data.get("nodes") if isinstance(commits_data, dict) else None
         if not commit_nodes or not isinstance(commit_nodes, list):
@@ -2135,6 +2495,22 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         return marker_content
 
+    def _extract_comment_validation_marker(self, comment_body: str) -> str | None:
+        """Extract commit marker from comment validation automation comment"""
+        if not comment_body:
+            return None
+
+        prefix_index = comment_body.find(self.COMMENT_VALIDATION_MARKER_PREFIX)
+        if prefix_index == -1:
+            return None
+
+        start_index = prefix_index + len(self.COMMENT_VALIDATION_MARKER_PREFIX)
+        end_index = comment_body.find(self.COMMENT_VALIDATION_MARKER_SUFFIX, start_index)
+        if end_index == -1:
+            return None
+
+        return comment_body[start_index:end_index].strip()
+
     def _has_codex_comment_for_commit(self, comments: list[dict], head_sha: str) -> bool:
         """Determine if Codex instruction already exists for the latest commit"""
         if not head_sha:
@@ -2143,6 +2519,19 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         for comment in comments:
             body = comment.get("body", "")
             marker_sha = self._extract_commit_marker(body)
+            if marker_sha and marker_sha == head_sha:
+                return True
+
+        return False
+
+    def _has_comment_validation_comment_for_commit(self, comments: list[dict], head_sha: str) -> bool:
+        """Determine if comment validation request already exists for the latest commit"""
+        if not head_sha:
+            return False
+
+        for comment in comments:
+            body = comment.get("body", "")
+            marker_sha = self._extract_comment_validation_marker(body)
             if marker_sha and marker_sha == head_sha:
                 return True
 
@@ -2178,7 +2567,8 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if not head_sha:
             return None
 
-        for comment in comments:
+        # Iterate in reverse to find the NEWEST queued comment first
+        for comment in reversed(comments):
             body = comment.get("body", "")
             # Check for queued run marker (FIX_COMMENT_RUN_MARKER_PREFIX)
             marker_sha = self._extract_fix_comment_run_marker(body)
@@ -2195,8 +2585,8 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                             created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
                             # Ensure timezone-aware datetime (handle edge case where fromisoformat returns naive)
                             if created_at.tzinfo is None:
-                                created_at = created_at.replace(tzinfo=timezone.utc)
-                            now = datetime.now(timezone.utc)
+                                created_at = created_at.replace(tzinfo=UTC)
+                            now = datetime.now(UTC)
                             age_hours = (now - created_at).total_seconds() / 3600
                             return {
                                 "age_hours": age_hours,
@@ -2353,12 +2743,13 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             body = comment.get("body", "")
 
             if workflow_type == "pr_automation":
-                # PR automation uses codex-automation-commit marker (but not fix-comment or fixpr)
+                # PR automation uses codex-automation-commit marker (but not fix-comment, fixpr, or comment-validation)
                 if (
                     self.CODEX_COMMIT_MARKER_PREFIX in body
                     and self.FIX_COMMENT_MARKER_PREFIX not in body
                     and self.FIX_COMMENT_RUN_MARKER_PREFIX not in body
                     and self.FIXPR_MARKER_PREFIX not in body
+                    and self.COMMENT_VALIDATION_MARKER_PREFIX not in body
                 ):
                     count += 1
             elif workflow_type == "fix_comment":
@@ -2377,12 +2768,20 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     author = self._get_comment_author_login(comment)
                     if author == self.automation_username:
                         count += 1
+            elif workflow_type == "comment_validation":
+                # Comment validation workflow uses a dedicated marker.
+                # Only count if posted by the automation user, not bots echoing the marker
+                if self.COMMENT_VALIDATION_MARKER_PREFIX in body:
+                    author = self._get_comment_author_login(comment)
+                    if author == self.automation_username:
+                        count += 1
             # Fallback: count all automation comments
             elif (
                 self.CODEX_COMMIT_MARKER_PREFIX in body
                 or self.FIX_COMMENT_MARKER_PREFIX in body
                 or self.FIX_COMMENT_RUN_MARKER_PREFIX in body
                 or self.FIXPR_MARKER_PREFIX in body
+                or self.COMMENT_VALIDATION_MARKER_PREFIX in body
             ):
                 count += 1
         return count
@@ -2434,11 +2833,189 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             return author.strip()
         return ""
 
+    def _has_unresolved_review_threads(self, repo_full: str, pr_number: int) -> bool | None:
+        """
+        Check if PR has unresolved review threads using GraphQL API.
+
+        Returns:
+            True if unresolved threads exist
+            False if all threads are resolved or no threads exist
+            None if GraphQL query fails (allows fallback to heuristic method)
+        """
+        try:
+            # Parse repo owner and name
+            parts = repo_full.split("/")
+            if len(parts) != 2:
+                self.logger.warning(f"Invalid repo format: {repo_full}")
+                return None
+
+            owner, name = parts
+
+            # GraphQL query to fetch review threads with resolution status
+            query = """
+            query($owner: String!, $name: String!, $pr: Int!, $cursor: String) {
+              repository(owner: $owner, name: $name) {
+                pullRequest(number: $pr) {
+                  reviewThreads(first: 100, after: $cursor) {
+                    nodes {
+                      id
+                      isResolved
+                    }
+                    pageInfo {
+                      hasNextPage
+                      endCursor
+                    }
+                  }
+                }
+              }
+            }
+            """
+
+            cursor = None
+            total_threads = 0
+            unresolved_count = 0
+            while True:
+                # Execute GraphQL query via gh CLI
+                graphql_cmd = [
+                    "gh", "api", "graphql",
+                    "-f", f"query={query}",
+                    "-F", f"owner={owner}",
+                    "-F", f"name={name}",
+                    "-F", f"pr={pr_number}",
+                ]
+                if cursor is not None:
+                    graphql_cmd += ["-F", f"cursor={cursor}"]
+
+                result = AutomationUtils.execute_subprocess_with_timeout(
+                    # Keep timeout aligned with 600s guardrail across request-handling layers.
+                    graphql_cmd, timeout=600, check=False
+                )
+
+                if result.returncode != 0:
+                    self.logger.warning(
+                        f"⚠️ GraphQL query failed for PR #{pr_number} (exit {result.returncode}): {result.stderr}"
+                    )
+                    return None
+
+                # Parse GraphQL response
+                try:
+                    data = json.loads(result.stdout or "{}")
+
+                    if not isinstance(data, dict):
+                        self.logger.warning(f"Invalid GraphQL response for PR #{pr_number}")
+                        return None
+
+                    if data.get("errors"):
+                        self.logger.warning(
+                            f"⚠️ GraphQL response had errors for PR #{pr_number}: {data['errors']}"
+                        )
+                        return None
+
+                    # Defensive parsing with isinstance checks to prevent AttributeError
+                    # when GraphQL returns null for repository/pullRequest fields
+                    data_block = data.get("data", {})
+                    if not isinstance(data_block, dict):
+                        self.logger.warning(f"Invalid data block for PR #{pr_number}")
+                        return None
+
+                    if "repository" not in data_block:
+                        self.logger.warning(f"Missing repository data for PR #{pr_number}")
+                        return None
+                    repo_data = data_block.get("repository", {})
+                    if not isinstance(repo_data, dict):
+                        self.logger.warning(f"Invalid repository data for PR #{pr_number}")
+                        return None
+
+                    if "pullRequest" not in repo_data:
+                        self.logger.warning(f"Missing pull request data for PR #{pr_number}")
+                        return None
+                    pr_data = repo_data.get("pullRequest", {})
+                    if not isinstance(pr_data, dict):
+                        self.logger.warning(f"Invalid pull request data for PR #{pr_number}")
+                        return None
+
+                    if "reviewThreads" not in pr_data:
+                        self.logger.warning(f"Missing reviewThreads data for PR #{pr_number}")
+                        return None
+                    review_threads_block = pr_data.get("reviewThreads", {})
+                    if not isinstance(review_threads_block, dict):
+                        self.logger.warning(f"Unexpected reviewThreads format for PR #{pr_number}")
+                        return None
+
+                    review_threads = review_threads_block.get("nodes", [])
+                    if not isinstance(review_threads, list):
+                        self.logger.warning(f"Unexpected reviewThreads format for PR #{pr_number}")
+                        return None
+
+                    # Count unresolved threads
+                    unresolved_count += sum(
+                        1 for thread in review_threads
+                        if isinstance(thread, dict) and thread.get("isResolved") is False
+                    )
+                    total_threads += len(review_threads)
+
+                    page_info = review_threads_block.get("pageInfo", {})
+                    if not isinstance(page_info, dict):
+                        page_info = {}
+                    has_next_page = page_info.get("hasNextPage")
+                    end_cursor = page_info.get("endCursor")
+                    if has_next_page:
+                        if not end_cursor:
+                            self.logger.warning(
+                                f"⚠️ Missing reviewThreads endCursor for PR #{pr_number} with more pages"
+                            )
+                            return None
+                        cursor = end_cursor
+                        continue
+                    break
+
+                except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as e:
+                    self.logger.warning(
+                        f"⚠️ Failed to parse GraphQL response for PR #{pr_number}: {e}"
+                    )
+                    return None
+
+            self.logger.debug(
+                f"📊 PR #{pr_number} review threads: {unresolved_count} unresolved, "
+                f"{total_threads - unresolved_count} resolved, {total_threads} total"
+            )
+
+            return unresolved_count > 0
+
+        except Exception as e:
+            self.logger.warning(
+                f"⚠️ Error checking review threads for PR #{pr_number}: {e}"
+            )
+            return None
+
     def _has_unaddressed_comments(self, repo_full: str, pr_number: int) -> bool:
         """
         Check if PR has unaddressed comments that require a response.
+
+        Uses GraphQL API to check for unresolved review threads first (most accurate),
+        then falls back to REST API heuristic analysis if GraphQL fails.
+
         Returns True only if there are actionable comments that haven't been replied to.
         """
+        # Try GraphQL method first (most accurate - uses native GitHub reviewThreads)
+        has_unresolved = self._has_unresolved_review_threads(repo_full, pr_number)
+        if has_unresolved is True:
+            # GraphQL found unresolved review threads - return immediately
+            return True
+
+        # GraphQL returned False (no unresolved threads) or None (failed)
+        # Continue to REST API heuristic to check issue comments
+        # Note: GraphQL reviewThreads only covers inline code review comments,
+        # not standalone issue comments on the PR
+        if has_unresolved is None:
+            self.logger.info(
+                f"📋 GraphQL failed, falling back to REST API heuristic for PR #{pr_number}"
+            )
+        else:
+            self.logger.debug(
+                f"📋 No unresolved review threads for PR #{pr_number}, checking issue comments"
+            )
+
         try:
             # Fetch issue comments (already available from _get_pr_comment_state, but fetch fresh)
             issue_comments_cmd = [
@@ -2654,6 +3231,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         *,
         fix_comment: bool = False,
         fixpr: bool = False,
+        comment_validation: bool = False,
         agent_cli: str = "claude",
         model: str = None,
     ) -> bool:
@@ -2675,7 +3253,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         try:
             # Check workflow-specific safety limits
-            workflow_type = self._determine_workflow_type(fix_comment, fixpr)
+            workflow_type = self._determine_workflow_type(fix_comment, fixpr, comment_validation)
             _, comments = self._get_pr_comment_state(repo_full, pr_number)
             # Handle API failures: if comments is None, treat as "unknown" and proceed
             # (don't skip PRs when API calls fail - assume comments might exist)
@@ -2691,6 +3269,8 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 workflow_limit = self.safety_manager.fix_comment_limit
             elif workflow_type == "fixpr":
                 workflow_limit = self.safety_manager.fixpr_limit
+            elif workflow_type == "comment_validation":
+                workflow_limit = self.safety_manager.pr_automation_limit  # Use same limit as PR automation
             elif workflow_type == "pr_automation":
                 workflow_limit = self.safety_manager.pr_automation_limit
             else:
@@ -2730,12 +3310,31 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
             # Process PR with guaranteed cleanup
             try:
-                # Get PR details using gh CLI
-                result = AutomationUtils.execute_subprocess_with_timeout(
-                    ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "title,headRefName,baseRefName,url,author,headRefOid,mergeable"],
-                    timeout=30
-                )
-                pr_data = json.loads(result.stdout or "{}")
+                # Get PR details using Python requests (avoids bash prompts)
+                token = get_github_token()
+                if not token:
+                    self.logger.error(f"❌ No GitHub token available for fetching PR data: {repo_full}#{pr_number}")
+                    return False
+
+                headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github.v3+json",
+                }
+
+                pr_url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}"
+                try:
+                    pr_response = requests.get(pr_url, headers=headers, timeout=30)
+                    pr_response.raise_for_status()
+                    pr_data = pr_response.json()
+                    
+                    # Normalize field names to match GraphQL format expected by callers
+                    pr_data["headRefName"] = pr_data.get("head", {}).get("ref")
+                    pr_data["baseRefName"] = pr_data.get("base", {}).get("ref")
+                    pr_data["headRefOid"] = pr_data.get("head", {}).get("sha")
+                    pr_data["author"] = pr_data.get("user", {})
+                except requests.exceptions.RequestException as e:
+                    self.logger.error(f"❌ Failed to fetch PR data for #{pr_number}: {e}")
+                    return False
 
                 if not pr_data or "title" not in pr_data:
                     self.logger.error(f"❌ Failed to fetch PR data for #{pr_number} - empty or invalid response")
@@ -2759,6 +3358,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                         agent_cli=agent_cli,
                         model=model,
                     )
+                elif comment_validation:
+                    # Post comment validation request (asks AI bots minus Codex to review)
+                    comment_result = self.post_comment_validation_request(repo_full, pr_number, pr_data)
                 else:
                     # Post codex instruction comment
                     comment_result = self.post_codex_instruction_simple(repo_full, pr_number, pr_data)
@@ -2796,13 +3398,13 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             self.logger.debug("Traceback: %s", traceback.format_exc())
             return False
 
-    def run_monitoring_cycle(self, single_repo=None, max_prs=10, cutoff_hours: int = 24, fix_comment: bool = False, fixpr: bool = False, agent_cli: str = "claude", model: str = None):
+    def run_monitoring_cycle(self, single_repo=None, max_prs=10, cutoff_hours: int = 24, fix_comment: bool = False, fixpr: bool = False, comment_validation: bool = False, agent_cli: str = "claude", model: str = None):
         """Run a complete monitoring cycle with actionable PR counting"""
-        mode_label = "fix-comment" if fix_comment else ("fixpr" if fixpr else "comment")
+        mode_label = "fix-comment" if fix_comment else ("fixpr" if fixpr else ("comment-validation" if comment_validation else "comment"))
         self.logger.info("🚀 Starting jleechanorg PR monitoring cycle (%s mode)", mode_label)
 
         # FixPR workflow uses per-PR limits only, not global limit
-        # Other workflows (fix-comment, pr_automation) still check global limit
+        # Other workflows (fix-comment, pr_automation, comment_validation) still check global limit
         if not fixpr and not self.safety_manager.can_start_global_run():
             current_runs = self.safety_manager.get_global_runs()
             self.logger.warning(
@@ -2907,6 +3509,8 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 workflow_limit = self.safety_manager.fix_comment_limit
             elif workflow_type == "fixpr":
                 workflow_limit = self.safety_manager.fixpr_limit
+            elif workflow_type == "comment_validation":
+                workflow_limit = self.safety_manager.pr_automation_limit  # Use same limit as PR automation
             elif workflow_type == "pr_automation":
                 workflow_limit = self.safety_manager.pr_automation_limit
             else:
@@ -2957,6 +3561,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                         agent_cli=agent_cli,
                         model=model,
                     )
+                elif comment_validation:
+                    # Post comment validation request (asks AI bots minus Codex to review)
+                    comment_result = self.post_comment_validation_request(repo_full_name, pr_number, pr)
                 else:
                     # Post codex instruction comment directly (comment-only approach)
                     comment_result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
@@ -3234,6 +3841,8 @@ def main():
                         help="Run /fixpr-only orchestrated flow for conflicts/failing checks (skips drafts)")
     parser.add_argument("--fix-comment", action="store_true",
                         help="Run fix-comment orchestration flow to resolve PR review comments")
+    parser.add_argument("--comment-validation", action="store_true",
+                        help="Run comment validation mode (request AI bots minus Codex to review PRs)")
     parser.add_argument("--fix-comment-watch", action="store_true",
                         help="Watch a PR for automation commits and post review request when detected")
     parser.add_argument("--cutoff-hours", type=int, default=24,
@@ -3247,10 +3856,12 @@ def main():
     parser.add_argument("--target-repo",
                         help="Repository for target PR (required with --target-pr)")
     parser.add_argument(
-        "--fixpr-agent",
-        type=_parse_fixpr_agent_chain,
+        "--cli-agent",
+        "--fixpr-agent",  # Backwards compatibility alias
+        dest="cli_agent",
+        type=_parse_cli_agent_chain,
         default="claude",
-        help="AI CLI (or comma-separated chain) for --fixpr mode (default: claude). Example: gemini,codex",
+        help="AI CLI chain for --fixpr and --fix-comment modes (default: claude). Example: gemini,cursor",
     )
     parser.add_argument(
         "--model",
@@ -3293,6 +3904,8 @@ def main():
         parser.error("--target-pr is required when using --target-repo")
     if args.fixpr and args.fix_comment:
         parser.error("--fixpr and --fix-comment are mutually exclusive")
+    if args.comment_validation and (args.fixpr or args.fix_comment):
+        parser.error("--comment-validation is mutually exclusive with --fixpr and --fix-comment")
     if args.fix_comment_watch and not (args.target_pr and args.target_repo):
         parser.error("--fix-comment-watch requires --target-pr and --target-repo")
 
@@ -3322,7 +3935,7 @@ def main():
         success = monitor.run_fix_comment_review_watcher(
             args.target_pr,
             args.target_repo,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
         )
         sys.exit(0 if success else 1)
 
@@ -3386,7 +3999,7 @@ def main():
                 args.target_pr,
                 args.target_repo,
                 fixpr=True,
-                agent_cli=args.fixpr_agent,
+                agent_cli=args.cli_agent,
                 model=args.model,
             )
             sys.exit(0 if success else 1)
@@ -3396,7 +4009,7 @@ def main():
             max_prs=args.max_prs,
             cutoff_hours=args.cutoff_hours,
             fixpr=True,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
             model=args.model,
         )
         return
@@ -3409,7 +4022,7 @@ def main():
                 args.target_pr,
                 args.target_repo,
                 fix_comment=True,
-                agent_cli=args.fixpr_agent,
+                agent_cli=args.cli_agent,
                 model=args.model,
             )
             sys.exit(0 if success else 1)
@@ -3431,8 +4044,39 @@ def main():
             max_prs=args.max_prs,
             cutoff_hours=args.cutoff_hours,
             fix_comment=True,
-            agent_cli=args.fixpr_agent,
+            agent_cli=args.cli_agent,
             model=args.model,
+        )
+        return
+
+    if args.comment_validation:
+        # Handle target PR processing
+        if args.target_pr and args.target_repo:
+            print(f"🎯 Processing target PR (comment-validation): {args.target_repo} #{args.target_pr}")
+            success = monitor.process_single_pr_by_number(
+                args.target_pr,
+                args.target_repo,
+                comment_validation=True,
+            )
+            sys.exit(0 if success else 1)
+
+        if args.dry_run:
+            print("🔍 DRY RUN: Discovering PRs only")
+            prs = monitor.discover_open_prs(cutoff_hours=args.cutoff_hours)
+
+            if args.single_repo:
+                prs = [pr for pr in prs if pr["repository"] == args.single_repo]
+
+            print(f"📋 Found {len(prs)} open PRs:")
+            for pr in prs[:args.max_prs]:
+                print(f"  • {pr['repository']} PR #{pr['number']}: {pr.get('title', 'unknown')}")
+            return
+
+        monitor.run_monitoring_cycle(
+            single_repo=args.single_repo,
+            max_prs=args.max_prs,
+            cutoff_hours=args.cutoff_hours,
+            comment_validation=True,
         )
         return
 

@@ -475,7 +475,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
             "abc123",
         )
 
-        self.assertIn("@greptile", comment_body)
+        self.assertIn("@greptileai", comment_body)
         self.assertIn("@codex", comment_body)
         self.assertIn(self.monitor.FIX_COMMENT_MARKER_PREFIX, comment_body)
 
