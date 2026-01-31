@@ -57,7 +57,7 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 - **Infrastructure**: `/scaffold` - Repository setup and development environment
 - **Testing**: `/test`, `/tdd`, `/testuif` - Comprehensive testing workflows
 
-**46 Hooks** for Claude Code automation and workflow optimization
+**49 Hooks** for Claude Code automation and workflow optimization
 
 **19 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
@@ -219,8 +219,8 @@ See bottom of README for complete version history.
 ### Latest Release: v1.1.0 (2025-12-30)
 
 **Export Statistics**:
-- **207 Commands**: Complete workflow orchestration system
-- **46 Hooks**: Claude Code automation and workflow hooks
+- **209 Commands**: Complete workflow orchestration system
+- **49 Hooks**: Claude Code automation and workflow hooks
 - **19 Scripts**: Development and automation tools
 - **53 Skills**: Shared knowledge references
 

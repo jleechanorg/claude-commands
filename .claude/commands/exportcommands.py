@@ -1042,13 +1042,14 @@ Claude Code can assist with adapting these workflows to your specific project. J
                     r"jleechantest@gmail\.com", "<your-email@gmail.com>", content
                 )
 
-                # Scrub Firebase/GCP credentials
+                # Scrub WorldArchitect.AI Firebase credentials (main project, user-specific)
                 content = re.sub(
-                    r"AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc", "<YOUR_FIREBASE_API_KEY>", content
+                    r"AIzaSyARs7IekRptvhZIwtV7lwJh3axWFsn_4c8", "<YOUR_WORLDAI_FIREBASE_API_KEY>", content
                 )
-                content = re.sub(
-                    r"ai-universe-b3551", "<your-firebase-project-id>", content
-                )
+
+                # Note: AI Universe Firebase credentials are safe to expose publicly
+                # Firebase API keys are not secret - they're protected by domain restrictions
+                # Keep ai-universe-b3551 credentials as-is for shared service usage
 
                 content = re.sub(
                     r"/tmp/worldarchitectai", "/tmp/$PROJECT_NAME", content

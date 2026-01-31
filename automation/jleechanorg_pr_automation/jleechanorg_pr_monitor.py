@@ -268,8 +268,21 @@ class JleechanorgPRMonitor:
         name = actor.get("name")
         return (login, email, name)
 
-    def __init__(self, *, safety_limits: dict[str, int] | None = None, no_act: bool = False, automation_username: str | None = None):
-        self.logger = setup_logging(__name__)
+    def __init__(
+        self,
+        *,
+        safety_limits: dict[str, int] | None = None,
+        no_act: bool = False,
+        automation_username: str | None = None,
+        log_dir: str | None = None
+    ):
+        # Create log directory if it doesn't exist and set up logging
+        if log_dir:
+            log_path = Path(log_dir).expanduser().resolve()
+            log_path.mkdir(parents=True, exist_ok=True)
+            self.logger = setup_logging(__name__, log_dir=log_path)
+        else:
+            self.logger = setup_logging(__name__)
         self._explicit_automation_username = automation_username
 
         self.assistant_mentions = os.environ.get(
@@ -3398,10 +3411,16 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
             self.logger.debug("Traceback: %s", traceback.format_exc())
             return False
 
-    def run_monitoring_cycle(self, single_repo=None, max_prs=10, cutoff_hours: int = 24, fix_comment: bool = False, fixpr: bool = False, comment_validation: bool = False, agent_cli: str = "claude", model: str = None):
-        """Run a complete monitoring cycle with actionable PR counting"""
+    def run_monitoring_cycle(self, single_repo=None, max_prs=10, cutoff_hours: int = 24, fix_comment: bool = False, fixpr: bool = False, comment_validation: bool = False, agent_cli: str = "claude", model: str = None, parallel: bool = True):
+        """Run a complete monitoring cycle with actionable PR counting
+
+        Args:
+            parallel: If True (default), dispatch all eligible PR agents concurrently (up to max_prs)
+                     If False, process PRs sequentially (dispatch one, then next)
+        """
         mode_label = "fix-comment" if fix_comment else ("fixpr" if fixpr else ("comment-validation" if comment_validation else "comment"))
-        self.logger.info("🚀 Starting jleechanorg PR monitoring cycle (%s mode)", mode_label)
+        parallel_label = " (parallel)" if parallel else " (sequential)"
+        self.logger.info("🚀 Starting jleechanorg PR monitoring cycle (%s mode%s)", mode_label, parallel_label)
 
         # FixPR workflow uses per-PR limits only, not global limit
         # Other workflows (fix-comment, pr_automation, comment_validation) still check global limit
@@ -3439,6 +3458,163 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         actionable_processed = 0
         skipped_count = 0
 
+        # Parallel mode: Collect all eligible PRs first, then dispatch agents concurrently
+        if parallel and (fixpr or fix_comment):
+            self.logger.info(f"🚀 Parallel mode: Collecting up to {target_actionable_count} eligible PRs")
+            eligible_prs = []
+
+            for pr in open_prs:
+                if len(eligible_prs) >= target_actionable_count:
+                    break
+
+                repo_name = pr["repository"]
+                repo_full_name = self._normalize_repository_name(
+                    pr.get("repositoryFullName") or repo_name
+                )
+                pr_number = pr["number"]
+                branch_name = pr.get("headRefName", "unknown")
+
+                # CRITICAL FIX: Check workflow-specific comment limits in parallel mode
+                # This check was missing, allowing parallel dispatch to bypass per-PR workflow limits
+                # and spam PRs with comments after limits reached (matches sequential mode behavior)
+                workflow_type = self._determine_workflow_type(fix_comment, fixpr)
+                _, comments = self._get_pr_comment_state(repo_full_name, pr_number)
+                # Handle API failures: treat None as empty list
+                if comments is None:
+                    comments = []
+                automation_comment_count = self._count_workflow_comments(comments, workflow_type)
+
+                # Get workflow-specific limit (same logic as sequential mode)
+                if workflow_type == "fix_comment":
+                    workflow_limit = self.safety_manager.fix_comment_limit
+                elif workflow_type == "fixpr":
+                    workflow_limit = self.safety_manager.fixpr_limit
+                elif workflow_type == "comment_validation":
+                    workflow_limit = self.safety_manager.pr_automation_limit
+                elif workflow_type == "pr_automation":
+                    workflow_limit = self.safety_manager.pr_automation_limit
+                else:
+                    workflow_limit = self.safety_manager.pr_limit  # Fallback
+
+                # Skip if workflow comment limit exceeded
+                if automation_comment_count >= workflow_limit:
+                    self.logger.info(
+                        f"🚫 Safety limits exceeded for PR {repo_full_name} #{pr_number} ({workflow_type}); "
+                        f"{automation_comment_count}/{workflow_limit} automation comments (parallel mode check)"
+                    )
+                    skipped_count += 1
+                    continue
+
+                # Pre-check eligibility for parallel dispatch
+                # Cleanup pending reviews
+                if fixpr or fix_comment:
+                    self._cleanup_pending_reviews(repo_full_name, pr_number)
+
+                # Check if PR is eligible for fixpr/fix-comment
+                if fixpr:
+                    try:
+                        result = AutomationUtils.execute_subprocess_with_timeout(
+                            ["gh", "pr", "view", str(pr_number), "--repo", repo_full_name, "--json", "mergeable"],
+                            timeout=30, check=False
+                        )
+                        is_conflicting = False
+                        if result.returncode == 0:
+                            data = json.loads(result.stdout or "{}")
+                            if data.get("mergeable") == "CONFLICTING":
+                                is_conflicting = True
+
+                        is_failing = has_failing_checks(repo_full_name, pr_number)
+
+                        if is_conflicting or is_failing:
+                            eligible_prs.append((pr, repo_name, repo_full_name, pr_number))
+                            self.logger.info(f"✓ PR #{pr_number} eligible for fixpr (conflicts={is_conflicting}, failing={is_failing})")
+                        else:
+                            skipped_count += 1
+                    except Exception as e:
+                        # In parallel mode, avoid unconditionally skipping on transient API/CLI errors.
+                        # Fall back to the same actionable check used elsewhere.
+                        self.logger.warning(
+                            f"⚠️ Error checking PR #{pr_number} for fixpr eligibility: {e}. "
+                            f"Falling back to is_pr_actionable."
+                        )
+                        try:
+                            if self.is_pr_actionable(pr):
+                                eligible_prs.append((pr, repo_name, repo_full_name, pr_number))
+                                self.logger.info(
+                                    f"✓ PR #{pr_number} eligible for fixpr based on is_pr_actionable fallback"
+                                )
+                            else:
+                                skipped_count += 1
+                        except Exception as inner_e:
+                            self.logger.error(
+                                f"❌ Fallback eligibility check failed for PR #{pr_number}: {inner_e}"
+                            )
+                            skipped_count += 1
+                elif fix_comment:
+                    # For fix-comment, check if there are unaddressed comments
+                    if self.is_pr_actionable(pr):
+                        eligible_prs.append((pr, repo_name, repo_full_name, pr_number))
+                        self.logger.info(f"✓ PR #{pr_number} eligible for fix-comment")
+                    else:
+                        skipped_count += 1
+
+            self.logger.info(f"📊 Found {len(eligible_prs)} eligible PRs, dispatching agents concurrently")
+
+            # Dispatch all eligible PRs concurrently
+            for pr, repo_name, repo_full_name, pr_number in eligible_prs:
+                branch_name = pr.get("headRefName", "unknown")
+
+                # Safety check before dispatch
+                if not self.safety_manager.try_process_pr(pr_number, repo=repo_full_name, branch=branch_name):
+                    self.logger.info(f"🚫 Safety limits exceeded for PR {repo_full_name} #{pr_number}; skipping")
+                    skipped_count += 1
+                    continue
+
+                self.logger.info(f"🎯 Dispatching agent for PR: {repo_full_name} #{pr_number} - {pr.get('title', 'unknown')}")
+
+                attempt_recorded = False
+                try:
+                    if not global_run_recorded and not fixpr:
+                        self.safety_manager.record_global_run()
+                        global_run_recorded = True
+
+                    if fix_comment:
+                        comment_result = self._process_pr_fix_comment(
+                            repo_full_name, pr_number, pr,
+                            agent_cli=agent_cli, model=model,
+                        )
+                    elif fixpr:
+                        comment_result = self._process_pr_fixpr(
+                            repo_full_name, pr_number, pr,
+                            agent_cli=agent_cli, model=model,
+                        )
+
+                    success = comment_result in {"posted", "skipped"}
+                    if comment_result != "skipped":
+                        result = "success" if comment_result == "posted" else "failure"
+                        self.safety_manager.record_pr_attempt(
+                            pr_number, result,
+                            repo=repo_full_name, branch=branch_name,
+                        )
+                        attempt_recorded = True
+
+                    if success and comment_result == "posted":
+                        actionable_processed += 1
+                        self.logger.info(f"✅ Dispatched agent for PR {repo_full_name} #{pr_number}")
+
+                except Exception as e:
+                    self.logger.error(f"❌ Error dispatching PR {repo_full_name} #{pr_number}: {e}")
+                    self.safety_manager.record_pr_attempt(pr_number, "failure", repo=repo_full_name, branch=branch_name)
+                    attempt_recorded = True
+                finally:
+                    # Always release the processing slot if record_pr_attempt didn't do it
+                    if not attempt_recorded:
+                        self.safety_manager.release_pr_slot(pr_number, repo=repo_full_name, branch=branch_name)
+
+            self.logger.info(f"🏁 Parallel dispatch complete: {actionable_processed} agents dispatched, {skipped_count} skipped")
+            return
+
+        # Sequential mode (original behavior)
         for pr in open_prs:
             if actionable_processed >= target_actionable_count:
                 break
@@ -3839,6 +4015,8 @@ def main():
                         help="Discover PRs but do not process them")
     parser.add_argument("--fixpr", action="store_true",
                         help="Run /fixpr-only orchestrated flow for conflicts/failing checks (skips drafts)")
+    parser.add_argument("--sequential", action="store_true",
+                        help="Process PRs sequentially instead of parallel (default: parallel)")
     parser.add_argument("--fix-comment", action="store_true",
                         help="Run fix-comment orchestration flow to resolve PR review comments")
     parser.add_argument("--comment-validation", action="store_true",
@@ -3889,6 +4067,12 @@ def main():
     parser.add_argument("--fix-comment-limit", type=_positive_int_arg, default=None, help="Max fix-comment comments per PR (default: 10).")
     parser.add_argument("--fixpr-limit", type=_positive_int_arg, default=None, help="Max fixpr comments per PR (default: 10).")
     parser.add_argument("--automation-user", help="Override automation username for marker validation")
+    parser.add_argument(
+        "--log-dir",
+        type=str,
+        default=str(Path.home() / "Library" / "Logs" / "worldarchitect-automation"),
+        help="Directory for log files (default: ~/Library/Logs/worldarchitect-automation/)"
+    )
 
     args = parser.parse_args()
 
@@ -3928,7 +4112,8 @@ def main():
     monitor = JleechanorgPRMonitor(
         safety_limits=safety_limits or None,
         no_act=args.no_act,
-        automation_username=getattr(args, "automation_user", None)
+        automation_username=getattr(args, "automation_user", None),
+        log_dir=args.log_dir
     )
 
     if args.fix_comment_watch:
@@ -4011,6 +4196,7 @@ def main():
             fixpr=True,
             agent_cli=args.cli_agent,
             model=args.model,
+            parallel=not args.sequential,
         )
         return
 
@@ -4046,6 +4232,7 @@ def main():
             fix_comment=True,
             agent_cli=args.cli_agent,
             model=args.model,
+            parallel=not args.sequential,
         )
         return
 
