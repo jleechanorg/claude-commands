@@ -238,6 +238,17 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/moltbook-milestone.sh\" ] && exec \"$ROOT/.claude/hooks/moltbook-milestone.sh\"; fi; exit 0'",
+            "timeout": 30,
+            "description": "Intelligent Moltbook milestone posting: Detects PR merges/deployments and auto-posts (2hr rate limit)"
+          }
+        ]
+      },
+      {
         "matcher": "Write",
         "hooks": [
           {

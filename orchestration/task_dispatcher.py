@@ -1792,7 +1792,6 @@ Agent Configuration:
             # Compute per-CLI execution blocks (command + stdin + env unsets)
             cli_chain_str = ",".join(cli_chain)
             cli_chain_json = json.dumps(cli_chain_str)
-            rate_limit_pattern = "exhausted your daily quota|rate limit|quota exceeded|resource_exhausted"
 
             attempt_blocks = ""
             for idx, attempt_cli in enumerate(cli_chain, start=1):
@@ -1901,15 +1900,8 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
 
     echo "[$(date)] {attempt_display_name} exit code: $ATTEMPT_EXIT" | tee -a {log_file_quoted}
 
-    RATE_LIMITED=0
     ASKED_QUESTION=0
     if [ "$LOG_END_LINE" -ge "$LOG_START_LINE" ]; then
-        if sed -n "$((LOG_START_LINE+1)),$LOG_END_LINE p" {log_file_quoted} 2>/dev/null | grep -Eqi "{rate_limit_pattern}"; then
-            RATE_LIMITED=1
-            RATE_LIMITED_SEEN=1
-            echo "[$(date)] ⚠️  Detected rate limit/quota output (treating as failure)" | tee -a {log_file_quoted}
-        fi
-
         # Detect if agent asked a question instead of proceeding (autonomous execution violation)
         if sed -n "$((LOG_START_LINE+1)),$LOG_END_LINE p" {log_file_quoted} 2>/dev/null | grep -Eq "Per instructions.*stop|Do you want me to:|Question \\(required before|Should I keep|stash.*discard"; then
             ASKED_QUESTION=1
@@ -1918,7 +1910,7 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
         fi
     fi
 
-    if [ $ATTEMPT_EXIT -eq 0 ] && [ $RATE_LIMITED -eq 0 ] && [ $ASKED_QUESTION -eq 0 ]; then
+    if [ $ATTEMPT_EXIT -eq 0 ] && [ $ASKED_QUESTION -eq 0 ]; then
         RESULT_STATUS="completed"
         FINAL_EXIT_CODE=0
         CLI_USED="$ATTEMPT_CLI"
@@ -1927,7 +1919,7 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
     else
         CLI_LAST="$ATTEMPT_CLI"
         FINAL_EXIT_CODE=$ATTEMPT_EXIT
-        echo "[$(date)] ❌ Attempt failed via {attempt_display_name} (exit=$ATTEMPT_EXIT rate_limited=$RATE_LIMITED asked_question=$ASKED_QUESTION)" | tee -a {log_file_quoted}
+        echo "[$(date)] ❌ Attempt failed via {attempt_display_name} (exit=$ATTEMPT_EXIT asked_question=$ASKED_QUESTION)" | tee -a {log_file_quoted}
     fi
 fi
 """
@@ -1960,21 +1952,14 @@ FALLBACK_ATTEMPTED=0
 FALLBACK_FROM=""
 FALLBACK_TO=""
 FIRST_ATTEMPT_CLI=""
-RATE_LIMITED_SEEN=0
 
 {attempt_blocks}
 
 if [ "$RESULT_STATUS" = "completed" ]; then
     if [ $FALLBACK_ATTEMPTED -eq 1 ]; then
-        if [ $RATE_LIMITED_SEEN -eq 1 ]; then
-            cat > {result_file_quoted} <<EOF
-{{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{CLI_USED}}", "fallback_attempted": true, "rate_limited": true}}
-EOF
-        else
-            cat > {result_file_quoted} <<EOF
+        cat > {result_file_quoted} <<EOF
 {{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{CLI_USED}}", "fallback_attempted": true}}
 EOF
-        fi
     else
         cat > {result_file_quoted} <<EOF
 {{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}}}
@@ -1982,25 +1967,13 @@ EOF
     fi
 else
     if [ $FALLBACK_ATTEMPTED -eq 1 ]; then
-        if [ $RATE_LIMITED_SEEN -eq 1 ]; then
-            cat > {result_file_quoted} <<EOF
-{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{FALLBACK_TO}}", "fallback_attempted": true, "rate_limited": true}}
-EOF
-        else
-            cat > {result_file_quoted} <<EOF
+        cat > {result_file_quoted} <<EOF
 {{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{FALLBACK_TO}}", "fallback_attempted": true}}
 EOF
-        fi
     else
-        if [ $RATE_LIMITED_SEEN -eq 1 ]; then
-            cat > {result_file_quoted} <<EOF
-{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "rate_limited": true}}
-EOF
-        else
-            cat > {result_file_quoted} <<EOF
+        cat > {result_file_quoted} <<EOF
 {{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}}}
 EOF
-        fi
     fi
 fi
 
