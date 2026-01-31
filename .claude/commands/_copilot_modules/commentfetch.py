@@ -659,12 +659,11 @@ class CommentFetch(CopilotCommandBase):
         self.log(f"🔍 Checking for new comments since {since_timestamp}")
 
         # Fetch comments from all sources with 'since' filter
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        with ThreadPoolExecutor(max_workers=3) as executor:
             futures = {
                 executor.submit(self._get_inline_comments, since_timestamp): "inline",
                 executor.submit(self._get_general_comments, since_timestamp): "general",
                 executor.submit(self._get_review_comments, since_timestamp): "review",
-                executor.submit(self._get_copilot_comments, since_timestamp): "copilot",
             }
 
             new_comment_count = 0

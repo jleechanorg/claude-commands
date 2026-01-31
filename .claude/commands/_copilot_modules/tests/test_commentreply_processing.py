@@ -427,16 +427,14 @@ class TestCommentReplyProcessing(unittest.TestCase):
         # Should return None when parent not found (not crash)
         self.assertIsNone(fetched_parent, "Should return None when parent not found")
         
-        # Code should handle None parent gracefully
-        # (parent_comment=None is valid and should not cause errors)
+        # Code should handle missing parent gracefully
         response = commentreply.get_response_for_comment(
             reply_comment,
             {"responses": []},
-            "abc123",
-            parent_comment=None
+            "abc123"
         )
-        # Should not raise exception
-        self.assertIsNotNone(response)  # Returns empty string, not None
+        # Should return empty string when no response found
+        self.assertEqual(response, "", "Should return empty string when no response found")
 
 
 if __name__ == "__main__":

@@ -353,7 +353,8 @@ class TestCleanupBeforeEligibilityChecks(unittest.TestCase):
             with patch.object(self.monitor, "is_pr_actionable", return_value=False) as mock_actionable:
                 with patch.object(self.monitor, "_cleanup_pending_reviews") as mock_cleanup:
                     # Run monitoring cycle in fixpr mode (which triggers cleanup)
-                    self.monitor.run_monitoring_cycle(fixpr=True)
+                    # Use sequential mode to maintain test's original behavior
+                    self.monitor.run_monitoring_cycle(fixpr=True, parallel=False)
                     
                     # Verify cleanup was called
                     mock_cleanup.assert_called_once_with(repo_full, pr_number)
@@ -382,8 +383,9 @@ class TestCleanupBeforeEligibilityChecks(unittest.TestCase):
                     
                     mock_cleanup.side_effect = cleanup_side_effect
                     mock_actionable.side_effect = actionable_side_effect
-                    
-                    self.monitor.run_monitoring_cycle(fixpr=True)
+
+                    # Use sequential mode to maintain test's original behavior
+                    self.monitor.run_monitoring_cycle(fixpr=True, parallel=False)
                     
                     # Check order: cleanup should be before actionable
                     calls = [call[0] for call in order_mock.method_calls]
