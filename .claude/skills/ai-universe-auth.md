@@ -34,12 +34,12 @@ The script supports **two Firebase projects**. Use the correct one for your use 
 
 | Project | Firebase ID | Use Case | Command |
 |---------|-------------|----------|---------|
-| **AI Universe** | `ai-universe-b3551` | `/secondo`, multi-model synthesis | `node scripts/auth-cli.mjs token` (default) |
+| **AI Universe** | `<your-firebase-project-id>` | `/secondo`, multi-model synthesis | `node scripts/auth-cli.mjs token` (default) |
 | **WorldAI** | `worldarchitecture-ai` | Your Project app auth | `node scripts/auth-cli.mjs token --project worldarchitecture-ai` |
 
 ### When to Use Each Project
 
-#### AI Universe (`ai-universe-b3551`) - DEFAULT
+#### AI Universe (`<your-firebase-project-id>`) - DEFAULT
 - `/secondo` command for multi-model second opinions
 - AI Universe MCP server calls
 - Multi-model synthesis API

@@ -17,7 +17,6 @@ import tempfile
 import html
 import re
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -28,7 +27,6 @@ if _copilot_modules_path not in sys.path:
 
 try:
     from per_comment_cache import PerCommentCache
-
     PER_COMMENT_CACHE_AVAILABLE = True
 except ImportError:
     PER_COMMENT_CACHE_AVAILABLE = False
@@ -74,7 +72,7 @@ def sanitize_branch_name(branch: str) -> str:
 
     Removes any character that is NOT alphanumeric, dot, underscore, or dash.
     """
-    return re.sub(r"[^a-zA-Z0-9._-]", "", branch or "")
+    return re.sub(r'[^a-zA-Z0-9._-]', '', branch or "")
 
 
 def sanitize_repo_name(repo_name: str) -> str:
@@ -83,8 +81,7 @@ def sanitize_repo_name(repo_name: str) -> str:
     Uses the same allowlist as branch sanitization so cache paths cannot be
     influenced by path separators or traversal sequences.
     """
-    return re.sub(r"[^a-zA-Z0-9._-]", "", repo_name or "")
-
+    return re.sub(r'[^a-zA-Z0-9._-]', '', repo_name or "")
 
 def _is_relative_to(path: Path, base: Path) -> bool:
     try:
@@ -93,14 +90,12 @@ def _is_relative_to(path: Path, base: Path) -> bool:
     except ValueError:
         return False
 
-
 def get_current_branch() -> str:
     """Get current git branch name for temp file path"""
     success, branch, _ = run_command(["git", "branch", "--show-current"])
     if success and branch.strip():
         return sanitize_branch_name(branch.strip()) or "unknown-branch"
     return "unknown-branch"
-
 
 def get_repo_name(fallback_repo: str) -> str:
     """Get repo name from git root to match shell scripts, with fallback."""
@@ -153,16 +148,12 @@ def load_claude_responses(branch_name: str, repo_name: str) -> Dict:
         if responses_path.exists():
             file_size = responses_path.stat().st_size
             if file_size > 10 * 1024 * 1024:  # 10MB limit
-                print(
-                    f"⚠️ SECURITY: File too large: {responses_path} ({file_size} bytes)"
-                )
+                print(f"⚠️ SECURITY: File too large: {responses_path} ({file_size} bytes)")
                 return {}
 
         with responses_path.open("r") as f:
             responses_data = json.load(f)
-        print(
-            f"📁 LOADED: {len(responses_data.get('responses', []))} responses from {responses_path}"
-        )
+        print(f"📁 LOADED: {len(responses_data.get('responses', []))} responses from {responses_path}")
         return responses_data
     except json.JSONDecodeError as e:
         print(f"❌ ERROR: Failed to parse responses JSON: {e}")
@@ -172,9 +163,7 @@ def load_claude_responses(branch_name: str, repo_name: str) -> Dict:
         return {}
 
 
-def load_comments_with_staleness_check(
-    branch_name: str, owner: str, repo: str, pr_number: str, repo_name: str
-) -> List[Dict]:
+def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, pr_number: str, repo_name: str) -> List[Dict]:
     """
     Load comment data with staleness detection and real-time fallback.
         repo: Repository name
@@ -192,20 +181,17 @@ def load_comments_with_staleness_check(
     comments_path = (cache_dir / "comments.json").resolve()
     comments_index_path = (cache_dir / "comments_index.json").resolve()
     comments_dir = (cache_dir / "comments").resolve()
-
+    
     # Security check
-    if not _is_relative_to(cache_dir, base_dir) or not _is_relative_to(
-        comments_path, base_dir
+    if (
+        not _is_relative_to(cache_dir, base_dir)
+        or not _is_relative_to(comments_path, base_dir)
     ):
         print(f"⚠️ SECURITY: Path traversal/symlink escape blocked: {cache_dir}")
         sys.exit(1)
 
     # Try loading from new per-comment cache structure first
-    if (
-        PER_COMMENT_CACHE_AVAILABLE
-        and comments_index_path.exists()
-        and comments_dir.exists()
-    ):
+    if PER_COMMENT_CACHE_AVAILABLE and comments_index_path.exists() and comments_dir.exists():
         try:
             cache = PerCommentCache(cache_dir)
             comments = cache.load_all_comments()
@@ -213,9 +199,7 @@ def load_comments_with_staleness_check(
                 print(f"📁 LOADED: {len(comments)} comments from per-comment cache")
                 return comments
         except Exception as e:
-            print(
-                f"⚠️ Failed to load from per-comment cache: {e}, falling back to legacy format"
-            )
+            print(f"⚠️ Failed to load from per-comment cache: {e}, falling back to legacy format")
 
     # Fallback to legacy single-file format
     comments_file = str(comments_path)
@@ -327,7 +311,7 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
         # Save to cache file
         cache_data = {
             "pr": pr_number,
-            "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             "comments": all_comments,
         }
 
@@ -423,7 +407,7 @@ def sanitize_comment_content(content: str) -> str:
 
 
 def get_response_for_comment(
-    comment: Dict, responses_data: Dict, commit_hash: str
+    comment: Dict, responses_data: Dict, commit_hash: str, parent_comment: Optional[Dict] = None
 ) -> str:
     """
     Get Claude-generated response for a specific comment.
@@ -432,6 +416,8 @@ def get_response_for_comment(
         comment: Comment data from GitHub API
         responses_data: Loaded responses from Claude
         commit_hash: Current commit hash as fallback
+        parent_comment: Optional parent comment for context when processing replies
+
     Returns:
         Claude-generated response text or placeholder if not found
     """
@@ -578,39 +564,19 @@ def detect_comment_type(comment: Dict) -> str:
     return "inline"
 
 
-def classify_github_error(stderr: str) -> str:
-    """Classify GitHub API error from stderr."""
-    error_type = "network"
-    if not stderr:
-        return error_type
-
-    stderr_lower = stderr.lower()
-    if "422" in stderr_lower and (
-        "not found" in stderr_lower or "does not exist" in stderr_lower
-    ):
-        error_type = "422_not_found"
-    elif "403" in stderr_lower or "forbidden" in stderr_lower:
-        error_type = "permission"
-    elif "422" in stderr_lower:
-        error_type = "422_other"
-
-    return error_type
-
-
 def create_threaded_reply(
     owner: str, repo: str, pr_number: str, comment: Dict, response_text: str
-) -> Tuple[bool, Optional[str], Optional[str]]:
+) -> Tuple[bool, Optional[str]]:
     """Create a threaded reply to a PR comment using appropriate GitHub API.
 
     Returns:
-        Tuple of (success: bool, reply_id: Optional[str], error_type: Optional[str])
-        error_type: None | "422_not_found" | "422_other" | "network" | "permission"
+        Tuple of (success: bool, reply_id: Optional[str])
     """
     comment_id = comment.get("id")
     comment_type = comment.get("type") or detect_comment_type(comment)
     if comment_id is None:
         print("❌ ERROR: Missing comment id; skip reply")
-        return False, None, None
+        return False, None
 
     print(f"🔗 CREATING: Threaded reply to {comment_type} comment #{comment_id}")
 
@@ -627,17 +593,16 @@ def create_threaded_reply(
 
 def create_issue_comment_reply(
     owner: str, repo: str, pr_number: str, comment: Dict, response_text: str
-) -> Tuple[bool, Optional[str], Optional[str]]:
+) -> Tuple[bool, Optional[str]]:
     """Create a reply to an issue comment (general PR discussion).
 
     Returns:
-        Tuple of (success: bool, reply_id: Optional[str], error_type: Optional[str])
-        error_type: None | "422_not_found" | "422_other" | "network" | "permission"
+        Tuple of (success: bool, reply_id: Optional[str])
     """
     # SECURITY: Validate inputs
     if not validate_comment_data(comment):
         print("❌ SECURITY: Invalid comment data for issue comment reply")
-        return False, None, None
+        return False, None
 
     comment_id = comment.get("id")
     print(f"📝 POSTING: Issue comment reply to #{comment_id}")
@@ -691,7 +656,7 @@ def create_issue_comment_reply(
 
     except Exception as e:
         print(f"❌ ERROR: Failed to create secure JSON input: {e}")
-        return False, None, "network"
+        return False
     finally:
         # Clean up temporary file in all scenarios
         if temp_file_path and os.path.exists(temp_file_path):
@@ -707,18 +672,16 @@ def create_issue_comment_reply(
                 f"✅ SUCCESS: Issue comment reply #{reply_id} created for comment #{comment_id}"
             )
             print(f"🔗 URL: {reply_url}")
-            return True, str(reply_id) if reply_id else None, None
+            return True, str(reply_id) if reply_id else None
         except json.JSONDecodeError:
             print(
                 f"⚠️ WARNING: Reply created but couldn't parse response for comment #{comment_id}"
             )
-            return True, None, None
+            return True, None
     else:
         print(f"❌ ERROR: Failed to create issue comment reply for #{comment_id}")
         print(f"   Error: {stderr}")
-        # Distinguish stale comment (422_not_found) from generic network errors
-        error_type = classify_github_error(stderr)
-        return False, None, error_type
+        return False, None
 
 
 def create_review_comment_reply(
@@ -728,26 +691,24 @@ def create_review_comment_reply(
     comment_id: int,
     response_text: str,
     comment: Dict = None,
-) -> Tuple[bool, Optional[str], Optional[str]]:
+) -> Tuple[bool, Optional[str]]:
     """Create a threaded reply to a review comment (code-specific).
 
     Returns:
-        Tuple of (success: bool, reply_id: Optional[str], error_type: Optional[str])
-        error_type: None | "422_not_found" | "422_other" | "network"
+        Tuple of (success: bool, reply_id: Optional[str])
     """
     print(f"🧵 POSTING: Review comment threaded reply to #{comment_id}")
 
     # SECURITY: Validate inputs to prevent injection
     if not isinstance(comment_id, (int, str)) or not str(comment_id).isdigit():
         print(f"❌ SECURITY: Invalid comment_id format: {comment_id}")
-        return False, None, None
+        return False, None
 
     # SURGICAL FIX: Validate comment exists before attempting threading
     if comment is None:
         print(f"⚠️ WARNING: Comment object not provided for validation of #{comment_id}")
 
     # SECURITY: Sanitize response text
-    raw_response_text = response_text
     response_text = sanitize_comment_content(response_text)
 
     # Prepare the API call data for review comment threading
@@ -780,7 +741,7 @@ def create_review_comment_reply(
 
     except Exception as e:
         print(f"❌ ERROR: Failed to create secure JSON input: {e}")
-        return False, None, "network"
+        return False, None
     finally:
         # Clean up temporary file in all scenarios
         if temp_file_path and os.path.exists(temp_file_path):
@@ -796,12 +757,12 @@ def create_review_comment_reply(
                 f"✅ SUCCESS: Review comment reply #{reply_id} created for comment #{comment_id}"
             )
             print(f"🔗 URL: {reply_url}")
-            return True, str(reply_id) if reply_id else None, None
+            return True, str(reply_id) if reply_id else None
         except json.JSONDecodeError:
             print(
                 f"⚠️ WARNING: Reply created but couldn't parse response for comment #{comment_id}"
             )
-            return True, None, None
+            return True, None
     else:
         if "422" in (stderr or ""):
             print(f"🔍 DEBUG 422: GitHub returned 422 for comment #{comment_id}")
@@ -809,15 +770,16 @@ def create_review_comment_reply(
             sanitized_stderr = (stderr or "")[:200] if stderr else "No error details"
             print(f"🔍 DEBUG 422: Error summary: {sanitized_stderr}...")
 
-            error_type = classify_github_error(stderr)
-
             # Check for specific error patterns
-            if error_type == "422_not_found":
+            if (
+                "not found" in (stderr or "").lower()
+                or "does not exist" in (stderr or "").lower()
+            ):
                 print(
                     f"🚨 STALE COMMENT: Comment #{comment_id} no longer exists (deleted or from different PR state)"
                 )
                 print(f"↪️ SKIP: Cannot reply to non-existent comment #{comment_id}")
-                return False, None, "422_not_found"
+                return False, None
 
             if comment:
                 # SECURITY: Only log safe diagnostic information
@@ -834,21 +796,19 @@ def create_review_comment_reply(
                 print(
                     f"🔄 FALLBACK: Attempting issue comment fallback for review comment #{comment_id}"
                 )
-                fallback_success, fallback_reply_id, fallback_error = (
-                    create_issue_comment_reply(
-                        owner, repo, pr_number, comment, raw_response_text
-                    )
+                fallback_success, fallback_reply_id = create_issue_comment_reply(
+                    owner, repo, pr_number, comment, response_text
                 )
                 if fallback_success:
                     print(
                         f"✅ FALLBACK SUCCESS: Posted as issue comment instead of threaded review reply for #{comment_id}"
                     )
-                    return True, fallback_reply_id, None
+                    return True, fallback_reply_id
                 else:
                     print(
                         f"❌ FALLBACK FAILED: Both review threading and issue comment failed for #{comment_id}"
                     )
-                    return False, None, fallback_error
+                    return False, None
             else:
                 print(
                     "🔍 DEBUG 422: Comment object not available for detailed analysis"
@@ -856,10 +816,10 @@ def create_review_comment_reply(
                 print(
                     f"↪️ SKIP: GitHub returned 422 (likely stale comment or threading constraint) for #{comment_id}"
                 )
-                return False, None, "422_other"
+                return False, None
         print(f"❌ ERROR: Failed to create review comment reply for #{comment_id}")
         print(f"   Error: {stderr}")
-        return False, None, classify_github_error(stderr)
+        return False, None
 
 
 def post_initial_summary(
@@ -900,59 +860,53 @@ def post_initial_summary(
 
     # Count by category (aggregate across all issues in all responses)
     critical_count = sum(
-        1
-        for r in responses
+        1 for r in responses
         for issue in get_all_issues(r)
         if issue.get("category") == "CRITICAL"
     )
     blocking_count = sum(
-        1
-        for r in responses
+        1 for r in responses
         for issue in get_all_issues(r)
         if issue.get("category") == "BLOCKING"
     )
     important_count = sum(
-        1
-        for r in responses
+        1 for r in responses
         for issue in get_all_issues(r)
         if issue.get("category") == "IMPORTANT"
     )
     routine_count = sum(
-        1
-        for r in responses
+        1 for r in responses
         for issue in get_all_issues(r)
         if issue.get("category") == "ROUTINE"
     )
 
     # Count by response type (aggregate across all issues in all responses)
     fixed_count = sum(
-        1
-        for r in responses
+        1 for r in responses
         for issue in get_all_issues(r)
         if issue.get("response") == "FIXED"
     )
     deferred_count = sum(
-        1
-        for r in responses
+        1 for r in responses
         for issue in get_all_issues(r)
         if issue.get("response") == "DEFERRED"
     )
     acknowledged_count = sum(
-        1
-        for r in responses
+        1 for r in responses
         for issue in get_all_issues(r)
         if issue.get("response") == "ACKNOWLEDGED"
     )
     not_done_count = sum(
-        1
-        for r in responses
+        1 for r in responses
         for issue in get_all_issues(r)
         if issue.get("response") == "NOT_DONE"
     )
 
     # Count multi-issue responses and total issues
     multi_issue_count = sum(1 for r in responses if "issues" in r and "analysis" in r)
-    total_issues = sum(len(get_all_issues(r)) for r in responses)
+    total_issues = sum(
+        len(get_all_issues(r)) for r in responses
+    )
 
     # Build category breakdown
     category_breakdown = []
@@ -968,21 +922,13 @@ def post_initial_summary(
     # Build response type breakdown
     response_breakdown = []
     if fixed_count > 0:
-        response_breakdown.append(
-            f"  - ✅ **FIXED**: {fixed_count} issue(s) implemented with working code"
-        )
+        response_breakdown.append(f"  - ✅ **FIXED**: {fixed_count} issue(s) implemented with working code")
     if deferred_count > 0:
-        response_breakdown.append(
-            f"  - 🔄 **DEFERRED**: {deferred_count} issue(s) - created issues for future implementation"
-        )
+        response_breakdown.append(f"  - 🔄 **DEFERRED**: {deferred_count} issue(s) - created issues for future implementation")
     if acknowledged_count > 0:
-        response_breakdown.append(
-            f"  - 📋 **ACKNOWLEDGED**: {acknowledged_count} issue(s) - noted but not actionable"
-        )
+        response_breakdown.append(f"  - 📋 **ACKNOWLEDGED**: {acknowledged_count} issue(s) - noted but not actionable")
     if not_done_count > 0:
-        response_breakdown.append(
-            f"  - ❌ **NOT DONE**: {not_done_count} issue(s) - cannot implement with specific reason"
-        )
+        response_breakdown.append(f"  - ❌ **NOT DONE**: {not_done_count} issue(s) - cannot implement with specific reason")
 
     summary_body = f"""## 🤖 Copilot Comment Analysis Summary
 
@@ -992,10 +938,10 @@ def post_initial_summary(
 - 🔀 **Multi-Issue Comments**: {multi_issue_count} comment(s) contain multiple issues
 
 **Category Breakdown**:
-{chr(10).join(category_breakdown) if category_breakdown else "  - No categorized responses"}
+{chr(10).join(category_breakdown) if category_breakdown else '  - No categorized responses'}
 
 **Response Type Breakdown**:
-{chr(10).join(response_breakdown) if response_breakdown else "  - No responses"}
+{chr(10).join(response_breakdown) if response_breakdown else '  - No responses'}
 
 **Commit**: {commit_hash}
 
@@ -1064,7 +1010,6 @@ def post_final_summary(
     pr_number: str,
     processed_count: int,
     success_count: int,
-    already_replied_count: int,
     commit_hash: str,
 ) -> bool:
     """Post final summary comment to main PR issue"""
@@ -1076,8 +1021,7 @@ def post_final_summary(
 **Summary**:
 - 📊 **Total Comments Processed**: {processed_count}
 - ✅ **Successfully Replied**: {success_count} comments
-- 🔄 **Already Replied**: {already_replied_count} comments
-- ❌ **Failed Replies**: {processed_count - success_count - already_replied_count} comments
+- ❌ **Failed Replies**: {processed_count - success_count} comments
 - 🔄 **Threading**: All replies use GitHub's native threading API
 - 📝 **Commit**: {commit_hash}
 
@@ -1152,400 +1096,290 @@ def main():
     print(f"📋 REPOSITORY: {owner}/{repo}")
     print(f"📋 PR NUMBER: #{pr_number}")
 
-    # Retry control: Track retry attempts to prevent infinite loops
-    retry_count = 0
-    max_retries = 2
-
-    # Global tracking across retries
-    initial_target_ids: set[str] = set()
-    successful_reply_ids: set[str] = set()
-    already_replied_ids: set[str] = set()
-    missing_response_ids: set[str] = set()
-    failed_422_comment_ids: set[str] = (
-        set()
-    )  # Track comment IDs that failed with 422_not_found
-
     # Step 2: Load comments with staleness detection and real-time fallback
     repo_name = get_repo_name(repo)
     branch_name = get_current_branch()
+    all_comments = load_comments_with_staleness_check(branch_name, owner, repo, pr_number, repo_name)
+    print(f"📁 LOADED: {len(all_comments)} comments with staleness validation")
 
-    # Retry loop: Re-fetch and retry on 422 stale comment errors
-    while retry_count <= max_retries:
-        if retry_count > 0:
-            print(
-                f"\n🔄 RETRY ATTEMPT {retry_count}/{max_retries}: Re-fetching comments after 422 failures"
-            )
+    if not all_comments:
+        print("⚠️ WARNING: No comments found in fetched data")
+        return
 
-        all_comments = load_comments_with_staleness_check(
-            branch_name, owner, repo, pr_number, repo_name
-        )
-        print(f"📁 LOADED: {len(all_comments)} comments with staleness validation")
+    # Step 3: Process each comment systematically
+    print(f"\n🔄 PROCESSING: {len(all_comments)} comments systematically")
+    processed_comments = []
+    successful_replies = 0
 
-        if not all_comments:
-            print("⚠️ WARNING: No comments found in fetched data")
-            return
+    # Determine current actor
+    ok_actor, actor_login, _ = run_command(
+        ["gh", "api", "user", "-q", ".login"], description="current actor"
+    )
+    actor_login = (actor_login or "").strip() or os.environ.get("GITHUB_ACTOR", "")
+    
+    # CRITICAL FIX: Process ALL comments (including replies) in chronological order
+    # Sort all comments by created_at to preserve conversation order
+    # This prevents out-of-sequence execution when replies contain corrections
+    all_targets = sorted(
+        all_comments,
+        key=lambda c: c.get("created_at", "")
+    )
+    total_targets = 0
+    already_replied = 0
+    missing_responses = 0
 
-        # Step 3: Process each comment systematically
-        print(f"\n🔄 PROCESSING: {len(all_comments)} comments systematically")
-        current_failed_422_comment_ids: set[str] = set()
+    # Get commit hash once to avoid multiple git calls (fixes Copilot efficiency issue)
+    commit_hash = get_git_commit_hash()
+    print(f"📝 COMMIT: Using commit {commit_hash} for all responses")
 
-        # Determine current actor
-        ok_actor, actor_login, _ = run_command(
-            ["gh", "api", "user", "-q", ".login"], description="current actor"
-        )
-        actor_login = (actor_login or "").strip() or os.environ.get("GITHUB_ACTOR", "")
-        if not ok_actor and not actor_login:
-            print(
-                "⚠️ WARNING: Unable to determine actor login; self-comment filtering may be incomplete"
-            )
+    # Step 3: Load Claude-generated responses
+    responses_data = load_claude_responses(branch_name, repo_name)
 
-        # CRITICAL FIX: Process ALL comments (including replies) in chronological order
-        # Sort all comments by created_at to preserve conversation order
-        # This prevents out-of-sequence execution when replies contain corrections
-        all_targets = sorted(all_comments, key=lambda c: c.get("created_at", ""))
-        total_targets = 0
-        already_replied = 0
-        missing_responses = 0
+    # Initialize per-comment cache for mark_handled tracking
+    per_comment_cache = None
+    if PER_COMMENT_CACHE_AVAILABLE:
+        safe_repo = sanitize_repo_name(repo_name) or "unknown-repo"
+        safe_branch = sanitize_branch_name(branch_name) or "unknown-branch"
+        cache_dir = Path("/tmp") / safe_repo / safe_branch
+        per_comment_cache = PerCommentCache(cache_dir)
+        print(f"📁 CACHE: Per-comment cache initialized at {cache_dir}")
 
-        # Get commit hash once to avoid multiple git calls (fixes Copilot efficiency issue)
-        commit_hash = get_git_commit_hash()
-        print(f"📝 COMMIT: Using commit {commit_hash} for all responses")
+    # Step 3.1: Post initial summary comment BEFORE posting individual replies
+    # This gives visibility into what will be accomplished
+    print("\n📝 PRE-PROCESSING: Posting initial summary comment")
+    post_initial_summary(owner, repo, pr_number, responses_data, commit_hash)
 
-        # Step 3: Load Claude-generated responses
-        responses_data = load_claude_responses(branch_name, repo_name)
-
-        # Initialize per-comment cache for mark_handled tracking
-        per_comment_cache = None
-        if PER_COMMENT_CACHE_AVAILABLE:
-            safe_repo = sanitize_repo_name(repo_name) or "unknown-repo"
-            safe_branch = sanitize_branch_name(branch_name) or "unknown-branch"
-            cache_dir = Path("/tmp") / safe_repo / safe_branch
-            per_comment_cache = PerCommentCache(cache_dir)
-            print(f"📁 CACHE: Per-comment cache initialized at {cache_dir}")
-
-        # Step 3.1: Post initial summary comment BEFORE posting individual replies
-        # This gives visibility into what will be accomplished
-        # Only post on first attempt (not on retries)
-        if retry_count == 0:
-            print("\n📝 PRE-PROCESSING: Posting initial summary comment")
-            post_initial_summary(owner, repo, pr_number, responses_data, commit_hash)
-
-        # Step 3.5: Delete pending reviews only if we need threaded replies (inline comments)
-        # GitHub blocks threaded replies if there's a pending review from the same user
-        should_cleanup_pending = False
-        if actor_login:
-            # Check all comments (including replies) for inline comments that need threading
-            for comment in all_targets:
-                if not validate_comment_data(comment):
-                    continue
-                user = comment.get("user", {})
-                author = (
-                    user.get("login")
-                    if isinstance(user, dict)
-                    else comment.get("author", "unknown")
-                )
-                if author == actor_login:
-                    continue
-                comment_id = comment.get("id")
-                # Support both user.login and author field formats (consistent with main loop)
-                replied_by_actor = any(
-                    (c.get("in_reply_to_id") == comment_id)
-                    and (
-                        ((c.get("user") or {}).get("login") == actor_login)
-                        if isinstance(c.get("user"), dict)
-                        else (c.get("author") == actor_login)
-                    )
-                    for c in all_comments
-                )
-                if replied_by_actor:
-                    continue
-                thread_replies = [
-                    c for c in all_comments if c.get("in_reply_to_id") == comment_id
-                ]
-                if thread_replies:
-                    thread_replies.sort(key=lambda x: x.get("created_at", ""))
-                    last_reply_body = thread_replies[-1].get("body", "")
-                    if "[AI responder]" in last_reply_body:
-                        continue
-                response_text = get_response_for_comment(
-                    comment, responses_data, commit_hash
-                )
-                if not response_text:
-                    continue
-                comment_type = comment.get("type") or detect_comment_type(comment)
-                if comment_type in ("issue", "review"):
-                    continue
-                should_cleanup_pending = True
-                break
-
-        if should_cleanup_pending:
-            print(
-                "\n🔍 PRE-PROCESSING: Deleting pending reviews from current user to enable threaded replies"
-            )
-            dismiss_pending_reviews(owner, repo, pr_number, actor_login)
-        else:
-            print(
-                "\nℹ️ PRE-PROCESSING: No inline replies planned; skipping pending review deletion"
-            )
-
-        # CRITICAL FIX: Process all comments in chronological order (including replies)
-        # On retry, only process comments that previously failed with 422_not_found
-        targets_to_process = all_targets
-        if retry_count > 0:
-            unresolved_ids = (
-                initial_target_ids
-                - successful_reply_ids
-                - already_replied_ids
-                - missing_response_ids
-            )
-            targets_to_process = [
-                c for c in all_targets if str(c.get("id")) in unresolved_ids
-            ]
-            print(
-                f"🔄 RETRY: Processing only {len(targets_to_process)} unresolved comment(s)"
-            )
-        for i, comment in enumerate(targets_to_process, 1):
-            # SECURITY: Validate each comment before processing
+    # Step 3.5: Delete pending reviews only if we need threaded replies (inline comments)
+    # GitHub blocks threaded replies if there's a pending review from the same user
+    should_cleanup_pending = False
+    if actor_login:
+        # Check all comments (including replies) for inline comments that need threading
+        for comment in all_targets:
             if not validate_comment_data(comment):
-                print(
-                    f"[{i}/{len(targets_to_process)}] ❌ SECURITY: Skipping invalid comment data"
-                )
                 continue
-
-            comment_id = comment.get("id")
-            comment_id_str = str(comment_id)
-            in_reply_to_id = comment.get("in_reply_to_id")
-
-            # Capture parent comment context when processing replies (for logging)
-            parent_comment = None
-            if in_reply_to_id:
-                parent_comment = next(
-                    (c for c in all_comments if c.get("id") == in_reply_to_id), None
-                )
-                if parent_comment:
-                    parent_author = (
-                        (parent_comment.get("user") or {}).get("login")
-                        if isinstance(parent_comment.get("user"), dict)
-                        else parent_comment.get("author", "unknown")
-                    )
-                    parent_body_snippet = sanitize_comment_content(
-                        parent_comment.get("body", "")
-                    )[:50].replace("\n", " ")
-                    print(
-                        f"   📎 Reply context: Parent comment #{in_reply_to_id} by @{parent_author}"
-                    )
-                    print(f'   📎 Parent content: "{parent_body_snippet}..."')
-                else:
-                    print(
-                        f"   ⚠️ WARNING: Parent comment #{in_reply_to_id} not found in fetched comments"
-                    )
-
-            # Support both user.login and author field formats
-            user = comment.get("user") or {}
+            user = comment.get("user", {})
             author = (
                 user.get("login")
-                if isinstance(comment.get("user"), dict)
+                if isinstance(user, dict)
                 else comment.get("author", "unknown")
             )
-            body_snippet = sanitize_comment_content(comment.get("body", ""))[
-                :50
-            ].replace("\n", " ")
-
-            comment_type_label = "reply" if in_reply_to_id else "top-level"
-            print(
-                f"\n[{i}/{len(targets_to_process)}] Processing {comment_type_label} comment #{comment_id} by @{author}"
-            )
-            print(f'   Content: "{body_snippet}..."')
-
-            # Skip our own comments
             if author == actor_login:
-                print("   ↪️ Skip: comment authored by current actor")
                 continue
-            total_targets += 1
-            if retry_count == 0:
-                initial_target_ids.add(comment_id_str)
-
-            # Idempotency: skip if already replied by current actor AND no one replied after us
-            # Support both user.login and author field formats
-            our_replies = [
-                c
-                for c in all_comments
-                if (c.get("in_reply_to_id") == comment_id)
+            comment_id = comment.get("id")
+            # Support both user.login and author field formats (consistent with main loop)
+            replied_by_actor = any(
+                (c.get("in_reply_to_id") == comment_id)
                 and (
-                    ((c.get("user") or {}).get("login") == actor_login)
+                    (c.get("user", {}).get("login") == actor_login)
                     if isinstance(c.get("user"), dict)
                     else (c.get("author") == actor_login)
                 )
-            ]
-            if our_replies:
-                # Check if anyone replied AFTER our last reply
-                our_replies.sort(key=lambda x: x.get("created_at", ""))
-                our_last_reply_time = our_replies[-1].get("created_at", "")
-                # Find all replies to this comment
-                all_replies_to_comment = [
-                    c for c in all_comments if c.get("in_reply_to_id") == comment_id
-                ]
-                # Check if there are any replies after our last reply
-                replies_after_ours = [
-                    c
-                    for c in all_replies_to_comment
-                    if c.get("created_at", "") > our_last_reply_time
-                    and (
-                        ((c.get("user") or {}).get("login") != actor_login)
-                        if isinstance(c.get("user"), dict)
-                        else (c.get("author") != actor_login)
-                    )
-                ]
-                if not replies_after_ours:
-                    print(
-                        "   ↪️ Skip: already replied by current actor (no new replies)"
-                    )
-                    already_replied_ids.add(comment_id_str)
-                    missing_response_ids.discard(comment_id_str)
-                    continue
-                # Someone replied after us - continue processing to respond to their reply
-                print(
-                    f"   ℹ️  We already replied, but {len(replies_after_ours)} new reply(ies) found - will process"
-                )
-
-            # Idempotency for comments replied via issue comments (review bodies and issue comments)
-            # with reference pattern since these don't use in_reply_to_id
-            comment_type = comment.get("type") or detect_comment_type(comment)
-            if comment_type in ("review", "issue"):
-                review_ref_pattern = f"In response to [comment #{comment_id}]"
-                already_has_review_reply = any(
-                    ((c.get("user") or {}).get("login") == actor_login)
-                    and (review_ref_pattern in (c.get("body") or ""))
-                    for c in all_comments
-                    if c.get("type") in ("issue", None)
-                )
-                if already_has_review_reply:
-                    print(
-                        "   ↪️ Skip: comment already has issue comment reply from current actor"
-                    )
-                    already_replied_ids.add(comment_id_str)
-                    missing_response_ids.discard(comment_id_str)
-                    continue
-
-            # Skip if thread ends with OUR [AI responder] comment indicating completion
-            # Only skip if WE are the last commenter, not if someone else replied after us
+                for c in all_comments
+            )
+            if replied_by_actor:
+                continue
             thread_replies = [
                 c for c in all_comments if c.get("in_reply_to_id") == comment_id
             ]
             if thread_replies:
-                # Sort by created_at to find the last reply
                 thread_replies.sort(key=lambda x: x.get("created_at", ""))
-                last_reply = thread_replies[-1]
-                last_reply_body = last_reply.get("body", "")
-                last_reply_user = last_reply.get("user")
-                last_reply_author = (
-                    last_reply_user.get("login", "")
-                    if isinstance(last_reply_user, dict)
-                    else ""
-                )
-                # Only skip if WE are the last commenter AND our comment has [AI responder]
-                if (
-                    "[AI responder]" in last_reply_body
-                    and last_reply_author == actor_login
-                ):
-                    print(
-                        "   ↪️ Skip: thread already completed with our [AI responder] comment"
-                    )
-                    already_replied_ids.add(comment_id_str)
-                    missing_response_ids.discard(comment_id_str)
+                last_reply_body = thread_replies[-1].get("body", "")
+                if "[AI responder]" in last_reply_body:
                     continue
-
-            # Get Claude-generated response for this comment
             response_text = get_response_for_comment(
                 comment, responses_data, commit_hash
             )
+            if not response_text:
+                continue
+            comment_type = comment.get("type") or detect_comment_type(comment)
+            if comment_type in ("issue", "review"):
+                continue
+            should_cleanup_pending = True
+            break
 
-            # Skip posting if no response available (empty string = skip)
-            if not response_text or not response_text.strip():
-                print(f"   ❌ No Claude response available for comment #{comment_id}")
-                missing_responses += 1
-                missing_response_ids.add(comment_id_str)
+    if should_cleanup_pending:
+        print(
+            "\n🔍 PRE-PROCESSING: Deleting pending reviews from current user to enable threaded replies"
+        )
+        dismiss_pending_reviews(owner, repo, pr_number, actor_login)
+    else:
+        print(
+            "\nℹ️ PRE-PROCESSING: No inline replies planned; skipping pending review deletion"
+        )
+
+    # CRITICAL FIX: Process all comments in chronological order (including replies)
+    for i, comment in enumerate(all_targets, 1):
+        # SECURITY: Validate each comment before processing
+        if not validate_comment_data(comment):
+            print(f"[{i}/{len(all_targets)}] ❌ SECURITY: Skipping invalid comment data")
+            continue
+
+        comment_id = comment.get("id")
+        in_reply_to_id = comment.get("in_reply_to_id")
+        
+        # CRITICAL FIX: Fetch parent comment context when processing replies
+        parent_comment = None
+        if in_reply_to_id:
+            parent_comment = next(
+                (c for c in all_comments if c.get("id") == in_reply_to_id),
+                None
+            )
+            if parent_comment:
+                parent_author = (
+                    parent_comment.get("user", {}).get("login")
+                    if isinstance(parent_comment.get("user"), dict)
+                    else parent_comment.get("author", "unknown")
+                )
+                parent_body_snippet = sanitize_comment_content(
+                    parent_comment.get("body", "")
+                )[:50].replace("\n", " ")
+                print(
+                    f"   📎 Reply context: Parent comment #{in_reply_to_id} by @{parent_author}"
+                )
+                print(f'   📎 Parent content: "{parent_body_snippet}..."')
+            else:
+                print(
+                    f"   ⚠️ WARNING: Parent comment #{in_reply_to_id} not found in fetched comments"
+                )
+        
+        # Support both user.login and author field formats
+        user = comment.get("user", {})
+        author = (
+            user.get("login")
+            if isinstance(user, dict)
+            else comment.get("author", "unknown")
+        )
+        body_snippet = sanitize_comment_content(comment.get("body", ""))[:50].replace(
+            "\n", " "
+        )
+
+        comment_type_label = "reply" if in_reply_to_id else "top-level"
+        print(
+            f"\n[{i}/{len(all_targets)}] Processing {comment_type_label} comment #{comment_id} by @{author}"
+        )
+        print(f'   Content: "{body_snippet}..."')
+
+        # Skip our own comments
+        if author == actor_login:
+            print("   ↪️ Skip: comment authored by current actor")
+            continue
+        total_targets += 1
+
+        # Idempotency: skip if already replied by current actor AND no one replied after us
+        # Support both user.login and author field formats
+        our_replies = [
+            c for c in all_comments
+            if (c.get("in_reply_to_id") == comment_id)
+            and (
+                (c.get("user", {}).get("login") == actor_login)
+                if isinstance(c.get("user"), dict)
+                else (c.get("author") == actor_login)
+            )
+        ]
+        if our_replies:
+            # Check if anyone replied AFTER our last reply
+            our_replies.sort(key=lambda x: x.get("created_at", ""))
+            our_last_reply_time = our_replies[-1].get("created_at", "")
+            # Find all replies to this comment
+            all_replies_to_comment = [
+                c for c in all_comments
+                if c.get("in_reply_to_id") == comment_id
+            ]
+            # Check if there are any replies after our last reply
+            replies_after_ours = [
+                c for c in all_replies_to_comment
+                if c.get("created_at", "") > our_last_reply_time
+                and (
+                    (c.get("user", {}).get("login") != actor_login)
+                    if isinstance(c.get("user"), dict)
+                    else (c.get("author") != actor_login)
+                )
+            ]
+            if not replies_after_ours:
+                print("   ↪️ Skip: already replied by current actor (no new replies)")
+                already_replied += 1
+                continue
+            # Someone replied after us - continue processing to respond to their reply
+            print(f"   ℹ️  We already replied, but {len(replies_after_ours)} new reply(ies) found - will process")
+
+        # Idempotency for review body comments (type="review"): check for existing issue comment
+        # with reference pattern since review bodies are replied via issue comments without in_reply_to_id
+        comment_type = comment.get("type") or detect_comment_type(comment)
+        if comment_type == "review":
+            review_ref_pattern = f"In response to [comment #{comment_id}]"
+            already_has_review_reply = any(
+                (c.get("user", {}).get("login") == actor_login)
+                and (review_ref_pattern in (c.get("body") or ""))
+                for c in all_comments
+                if c.get("type") in ("issue", None)
+            )
+            if already_has_review_reply:
+                print(
+                    "   ↪️ Skip: review body already has issue comment reply from current actor"
+                )
+                already_replied += 1
                 continue
 
-            # SECURITY: Final validation before API call
-            if len(response_text.strip()) > 65000:  # GitHub comment limit
-                print(
-                    f"   ⚠️ WARNING: Response too long for comment #{comment_id}, truncating"
+        # Skip if thread ends with OUR [AI responder] comment indicating completion
+        # Only skip if WE are the last commenter, not if someone else replied after us
+        thread_replies = [
+            c for c in all_comments if c.get("in_reply_to_id") == comment_id
+        ]
+        if thread_replies:
+            # Sort by created_at to find the last reply
+            thread_replies.sort(key=lambda x: x.get("created_at", ""))
+            last_reply = thread_replies[-1]
+            last_reply_body = last_reply.get("body", "")
+            last_reply_author = last_reply.get("user", {}).get("login", "")
+            # Only skip if WE are the last commenter AND our comment has [AI responder]
+            if "[AI responder]" in last_reply_body and last_reply_author == actor_login:
+                print("   ↪️ Skip: thread already completed with our [AI responder] comment")
+                already_replied += 1
+                continue
+
+        # Get Claude-generated response for this comment
+        # CRITICAL FIX: Include parent comment context when processing replies
+        response_text = get_response_for_comment(
+            comment, responses_data, commit_hash, parent_comment=parent_comment
+        )
+
+        # Skip posting if no response available (empty string = skip)
+        if not response_text or not response_text.strip():
+            print(f"   ❌ No Claude response available for comment #{comment_id}")
+            missing_responses += 1
+            continue
+
+        # SECURITY: Final validation before API call
+        if len(response_text.strip()) > 65000:  # GitHub comment limit
+            print(
+                f"   ⚠️ WARNING: Response too long for comment #{comment_id}, truncating"
+            )
+            response_text = (
+                response_text[:65000] + "\n\n[Response truncated due to length limit]"
+            )
+
+        # Create threaded reply
+        reply_success, reply_id = create_threaded_reply(owner, repo, pr_number, comment, response_text)
+        if reply_success:
+            successful_replies += 1
+            # Mark comment as handled in per-comment cache for resumability
+            if per_comment_cache and reply_id:
+                per_comment_cache.mark_handled(
+                    comment_id=str(comment_id),
+                    reply_id=reply_id,
+                    status="replied"
                 )
-                response_text = (
-                    response_text[:65000]
-                    + "\n\n[Response truncated due to length limit]"
-                )
+                print(f"   📝 CACHE: Marked comment #{comment_id} as handled (reply: {reply_id})")
 
-            # Create threaded reply - capture error_type for retry tracking
-            reply_success, reply_id, error_type = create_threaded_reply(
-                owner, repo, pr_number, comment, response_text
-            )
-            if reply_success:
-                successful_reply_ids.add(comment_id_str)
-                missing_response_ids.discard(comment_id_str)
-                failed_422_comment_ids.discard(comment_id_str)
-                # Mark comment as handled in per-comment cache for resumability
-                if per_comment_cache and reply_id:
-                    per_comment_cache.mark_handled(
-                        comment_id=str(comment_id), reply_id=reply_id, status="replied"
-                    )
-                    print(
-                        f"   📝 CACHE: Marked comment #{comment_id} as handled (reply: {reply_id})"
-                    )
-            elif error_type == "422_not_found":
-                # Track 422_not_found failures for retry
-                current_failed_422_comment_ids.add(comment_id_str)
-                failed_422_comment_ids.add(comment_id_str)
-                print(
-                    f"   🔄 TRACKING: Comment #{comment_id} marked for retry due to 422_not_found"
-                )
+        processed_comments.append(comment)
 
-        # Capture total targets from first pass for accurate reporting
-        if retry_count == 0:
-            print(
-                f"📊 STATS: First pass processed {len(initial_target_ids)} valid targets"
-            )
-
-        # Step 4: Check if retry is needed for coverage gaps or 422 failures
-        failed_422_comment_ids.update(current_failed_422_comment_ids)
-        total_targets = len(initial_target_ids)
-        covered = len(successful_reply_ids) + len(already_replied_ids)
-        coverage_valid = (len(missing_response_ids) == 0) and (covered == total_targets)
-        if not coverage_valid and retry_count < max_retries:
-            print(
-                f"\n🔄 RETRY NEEDED: coverage {covered}/{total_targets} (missing={len(missing_response_ids)})"
-            )
-            unresolved_ids = (
-                initial_target_ids - successful_reply_ids - already_replied_ids
-            )
-            if failed_422_comment_ids:
-                print(f"   Failed 422 IDs: {sorted(failed_422_comment_ids)}")
-            print(f"   Unresolved IDs: {sorted(unresolved_ids)}")
-            print(
-                f"   Will re-fetch comments and retry (attempt {retry_count + 1}/{max_retries})"
-            )
-            retry_count += 1
-            continue  # Continue while loop for retry
-        elif not coverage_valid:
-            print(
-                f"\n⚠️ RETRY EXHAUSTED: coverage {covered}/{total_targets} (missing={len(missing_response_ids)})"
-            )
-            print("   Some comments could not be processed after retries")
-        else:
-            print("\n✅ NO RETRIES NEEDED: Coverage is 100%")
-
-        # Exit retry loop - proceed with coverage validation
-        break
-
-    # Step 5: Coverage validation over target comments
-    total_targets = len(initial_target_ids)
-    covered = len(successful_reply_ids) + len(already_replied_ids)
-    coverage_valid = (len(missing_response_ids) == 0) and (covered == total_targets)
+    # Step 4: Coverage validation over target comments
+    covered = already_replied + successful_replies
+    coverage_valid = (missing_responses == 0) and (covered == total_targets)
     print(
         f"\n🔍 VALIDATION: targets={total_targets} covered={covered} "
-        f"(already={len(already_replied_ids)}, posted={len(successful_reply_ids)}) "
-        f"missing={len(missing_response_ids)}"
+        f"(already={already_replied}, posted={successful_replies}) "
+        f"missing={missing_responses}"
     )
 
     # Fail on insufficient coverage
@@ -1553,28 +1387,22 @@ def main():
         print("\n❌ CRITICAL: Coverage validation failed")
         sys.exit(1)
 
-    # Step 6: Post final summary
+    # Step 5: Post final summary
     print("\n📝 SUMMARY: Posting final summary comment")
     post_final_summary(
-        owner,
-        repo,
-        pr_number,
-        total_targets,
-        len(successful_reply_ids),
-        len(already_replied_ids),
-        commit_hash,
+        owner, repo, pr_number, len(processed_comments), successful_replies, commit_hash
     )
 
-    # Step 7: Final report
+    # Step 6: Final report
     print("\n✅ COMPLETE: Comment processing finished")
     print(f"   📊 Total comments: {len(all_comments)}")
     print(f"   🎯 Target comments: {total_targets}")
-    print(f"   ✅ Successful replies: {len(successful_reply_ids)}")
-    print(f"   🔄 Already replied: {len(already_replied_ids)}")
-    print(f"   ❌ Missing responses: {len(missing_response_ids)}")
+    print(f"   ✅ Successful replies: {successful_replies}")
+    print(f"   🔄 Already replied: {already_replied}")
+    print(f"   ❌ Missing responses: {missing_responses}")
     print(f"   🎯 Coverage valid: {'Yes' if coverage_valid else 'No'}")
 
-    # Note: No additional failure check needed here - coverage_valid check above
+    # Note: No additional failure check needed here - coverage_valid check at line 692
     # already exits if coverage is invalid or missing_responses > 0
     print("\n🎉 SUCCESS: All comments processed with verified coverage!")
 
