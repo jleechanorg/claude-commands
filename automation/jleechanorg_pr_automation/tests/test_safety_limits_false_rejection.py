@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
-from jleechanorg_pr_automation.utils import json_manager
+from automation.jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
+from automation.jleechanorg_pr_automation.utils import json_manager
 
 
 class TestSafetyLimitsFalseRejection:
