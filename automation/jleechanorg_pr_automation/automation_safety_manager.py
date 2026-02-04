@@ -435,8 +435,7 @@ class AutomationSafetyManager:
             return None if return_none_on_fail else datetime(1970, 1, 1, tzinfo=timezone.utc)
 
         if dt.tzinfo is None:
-            local_tz = datetime.now().astimezone().tzinfo or timezone.utc
-            dt = dt.replace(tzinfo=local_tz)
+            dt = dt.replace(tzinfo=timezone.utc)
 
         return dt.astimezone(timezone.utc)
 

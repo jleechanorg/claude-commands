@@ -22,7 +22,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write  # Retained for compatibility when switching auth methods.
+  id-token: write  # Trusted publishing (OIDC)
 
 jobs:
   build-and-publish:
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     steps:
-    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
     - name: Set up Python
       uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d  # v5.1.0
@@ -48,7 +48,6 @@ jobs:
         python -m build
         
     - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e  # release/v1
+      uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e  # v1
       with:
         packages-dir: automation/dist/
-        password: ${{ secrets.PYPI_TOKEN }}

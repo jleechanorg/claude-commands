@@ -2180,14 +2180,8 @@ fi
 # fi
 
 
-# Setup Beads MCP Server
-if should_install_server "beads"; then
-    display_step "Setting up Beads MCP Server..."
-    install_beads_mcp
-fi
-
 # Setup MCP Mail Server (Agent Mail for multi-agent coordination)
-if should_install_server "mcp_mail"; then
+install_mcp_mail() {
     display_step "Setting up MCP Mail Server..."
     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
     echo -e "${BLUE}  📬 Configuring MCP Mail server for multi-agent coordination...${NC}"
@@ -2199,71 +2193,82 @@ if should_install_server "mcp_mail"; then
         log_with_timestamp "Server mcp_mail already exists, skipping"
         INSTALL_RESULTS["mcp_mail"]="ALREADY_EXISTS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-    else
-        # MCP Mail requires the server to be running locally on port 8765
-        # Check if MCP_MAIL_BEARER_TOKEN is set
-        local mcp_mail_token="${MCP_MAIL_BEARER_TOKEN:-}"
-
-        # Try to read from ~/mcp_mail/.env if token not set
-        if [[ -z "$mcp_mail_token" ]] && [[ -f "$HOME/mcp_mail/.env" ]]; then
-            mcp_mail_token=$(grep "HTTP_BEARER_TOKEN=" "$HOME/mcp_mail/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || true)
-        fi
-
-        if [[ -n "$mcp_mail_token" ]]; then
-            echo -e "${GREEN}  ✅ MCP Mail bearer token found${NC}"
-            echo -e "${BLUE}  📋 Features: Agent messaging, inbox/outbox, file reservations${NC}"
-
-            # Remove existing mcp_mail server to reconfigure
-            ${MCP_CLI_BIN} mcp remove "mcp_mail" >/dev/null 2>&1 || true
-
-            # Add MCP Mail server using HTTP transport
-            echo -e "${BLUE}  🔗 Adding MCP Mail server with HTTP transport...${NC}"
-            log_with_timestamp "Attempting to add MCP Mail server with bearer token"
-
-            local add_output=""
-            local add_exit_code=0
-
-            # Use JSON payload for Claude CLI
-            local escaped_token="${mcp_mail_token//\\/\\\\}"
-            escaped_token="${escaped_token//\"/\\\"}"
-
-            local json_temp
-            json_temp=$(mktemp)
-            chmod 600 "$json_temp"
-            echo "{\"type\":\"http\",\"url\":\"http://127.0.0.1:8765/mcp/\",\"headers\":{\"Authorization\":\"Bearer $escaped_token\"}}" > "$json_temp"
-            local json_payload
-            json_payload=$(<"$json_temp")
-            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "mcp_mail" "$json_payload"
-            rm -f "$json_temp"
-
-            local add_output_redacted=${add_output//${mcp_mail_token}/<MCP_MAIL_TOKEN>}
-
-            if [[ $add_exit_code -eq 0 ]]; then
-                echo -e "${GREEN}  ✅ Successfully configured MCP Mail server${NC}"
-                echo -e "${BLUE}  📋 Server info:${NC}"
-                echo -e "     • URL: http://127.0.0.1:8765/mcp/"
-                echo -e "     • Features: Agent messaging, coordination, file leases"
-                echo -e "     • Web UI: http://127.0.0.1:8765/mail"
-                echo -e "     • Note: Requires mcp_mail server running locally"
-                log_with_timestamp "Successfully added MCP Mail server with HTTP transport"
-                INSTALL_RESULTS["mcp_mail"]="SUCCESS"
-                SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-            else
-                echo -e "${RED}  ❌ Failed to add MCP Mail server${NC}"
-                log_error_details "${MCP_CLI_BIN} mcp add mcp_mail" "mcp_mail" "$add_output_redacted"
-                echo -e "${RED}  📋 Add error: $add_output_redacted${NC}"
-                INSTALL_RESULTS["mcp_mail"]="ADD_FAILED"
-                FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-            fi
-        else
-            echo -e "${YELLOW}  ⚠️ MCP Mail bearer token not found - skipping installation${NC}"
-            echo -e "${YELLOW}  💡 MCP Mail provides multi-agent coordination and messaging${NC}"
-            echo -e "${YELLOW}  💡 Set MCP_MAIL_BEARER_TOKEN or install mcp_mail at ~/mcp_mail${NC}"
-            echo -e "${YELLOW}  💡 Installation: git clone https://github.com/jleechanorg/mcp_mail ~/mcp_mail${NC}"
-            log_with_timestamp "MCP Mail bearer token not found, skipping server installation"
-            INSTALL_RESULTS["mcp_mail"]="API_KEY_MISSING"
-        fi
+        return 0
     fi
+
+    # MCP Mail requires the server to be running locally on port 8765
+    # Check if MCP_MAIL_BEARER_TOKEN is set
+    local mcp_mail_token="${MCP_MAIL_BEARER_TOKEN:-}"
+
+    # Try to read from ~/mcp_mail/.env if token not set
+    if [[ -z "$mcp_mail_token" ]] && [[ -f "$HOME/mcp_mail/.env" ]]; then
+        mcp_mail_token=$(grep "HTTP_BEARER_TOKEN=" "$HOME/mcp_mail/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || true)
+    fi
+
+    if [[ -n "$mcp_mail_token" ]]; then
+        echo -e "${GREEN}  ✅ MCP Mail bearer token found${NC}"
+        echo -e "${BLUE}  📋 Features: Agent messaging, inbox/outbox, file reservations${NC}"
+
+        # Remove existing mcp_mail server to reconfigure
+        ${MCP_CLI_BIN} mcp remove "mcp_mail" >/dev/null 2>&1 || true
+
+        # Add MCP Mail server using HTTP transport
+        echo -e "${BLUE}  🔗 Adding MCP Mail server with HTTP transport...${NC}"
+        log_with_timestamp "Attempting to add MCP Mail server with bearer token"
+
+        local add_output=""
+        local add_exit_code=0
+
+        # Use JSON payload for Claude CLI
+        local escaped_token="${mcp_mail_token//\\/\\\\}"
+        escaped_token="${escaped_token//\"/\\\"}"
+
+        local json_temp
+        json_temp=$(mktemp)
+        chmod 600 "$json_temp"
+        echo "{\"type\":\"http\",\"url\":\"http://127.0.0.1:8765/mcp/\",\"headers\":{\"Authorization\":\"Bearer $escaped_token\"}}" > "$json_temp"
+        local json_payload
+        json_payload=$(<"$json_temp")
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "mcp_mail" "$json_payload"
+        rm -f "$json_temp"
+
+        local add_output_redacted=${add_output//${mcp_mail_token}/<MCP_MAIL_TOKEN>}
+
+        if [[ $add_exit_code -eq 0 ]]; then
+            echo -e "${GREEN}  ✅ Successfully configured MCP Mail server${NC}"
+            echo -e "${BLUE}  📋 Server info:${NC}"
+            echo -e "     • URL: http://127.0.0.1:8765/mcp/"
+            echo -e "     • Features: Agent messaging, coordination, file leases"
+            echo -e "     • Web UI: http://127.0.0.1:8765/mail"
+            echo -e "     • Note: Requires mcp_mail server running locally"
+            log_with_timestamp "Successfully added MCP Mail server with HTTP transport"
+            INSTALL_RESULTS["mcp_mail"]="SUCCESS"
+            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        else
+            echo -e "${RED}  ❌ Failed to add MCP Mail server${NC}"
+            log_error_details "${MCP_CLI_BIN} mcp add mcp_mail" "mcp_mail" "$add_output_redacted"
+            echo -e "${RED}  📋 Add error: $add_output_redacted${NC}"
+            INSTALL_RESULTS["mcp_mail"]="ADD_FAILED"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        fi
+    else
+        echo -e "${YELLOW}  ⚠️ MCP Mail bearer token not found - skipping installation${NC}"
+        echo -e "${YELLOW}  💡 MCP Mail provides multi-agent coordination and messaging${NC}"
+        echo -e "${YELLOW}  💡 Set MCP_MAIL_BEARER_TOKEN or install mcp_mail at ~/mcp_mail${NC}"
+        echo -e "${YELLOW}  💡 Installation: git clone https://github.com/YOUR_ORG/mcp_mail ~/mcp_mail${NC}"
+        log_with_timestamp "MCP Mail bearer token not found, skipping server installation"
+        INSTALL_RESULTS["mcp_mail"]="API_KEY_MISSING"
+    fi
+}
+
+# Setup Beads MCP Server
+if should_install_server "beads"; then
+    display_step "Setting up Beads MCP Server..."
+    install_beads_mcp
+fi
+
+if should_install_server "mcp_mail"; then
+    install_mcp_mail
 fi
 
 # Final verification and results
