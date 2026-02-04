@@ -441,6 +441,43 @@ class TestGraphQLErrorHandling(unittest.TestCase):
 
         self.assertTrue(result, "Should return True when issue comments exist even if no unresolved review threads")
 
+    @patch("jleechanorg_pr_automation.automation_utils.AutomationUtils.execute_subprocess_with_timeout")
+    def test_consolidated_summary_marks_issue_comments_addressed(
+        self, mock_exec
+    ) -> None:
+        """Should treat consolidated summary references as addressed for issue comments."""
+        issue_comments_response = [
+            {
+                "id": 101,
+                "user": {"login": "reviewer"},
+                "body": "Please update the error handling.",
+                "created_at": "2024-01-01T00:00:00Z",
+            },
+            {
+                "id": 202,
+                "user": {"login": "test-automation-user"},
+                "body": (
+                    "## 🤖 [AI responder] Consolidated Comment Response Summary\n"
+                    "Re: [Comment #101]\n"
+                    "DONE - Updated error handling."
+                ),
+                "created_at": "2024-01-02T00:00:00Z",
+            },
+        ]
+
+        mock_exec.side_effect = [
+            MagicMock(returncode=0, stdout=json.dumps(issue_comments_response)),
+            MagicMock(returncode=0, stdout="[]"),
+            MagicMock(returncode=0, stdout="[]"),
+        ]
+
+        with patch.object(
+            self.monitor, "_has_unresolved_review_threads", return_value=False
+        ):
+            result = self.monitor._has_unaddressed_comments("org/repo", 123)
+
+        self.assertFalse(result, "Consolidated summary should mark issue comment as addressed")
+
 
 if __name__ == "__main__":
     unittest.main()

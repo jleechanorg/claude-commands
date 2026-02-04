@@ -86,36 +86,25 @@ execution_mode: immediate
    import unittest
    from unittest.mock import patch
 
-   os.environ.setdefault("TESTING", "true")
+   os.environ.setdefault("TESTING_AUTH_BYPASS", "true")
    os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
 
    from mvp_site import main
    from mvp_site.tests.fake_firestore import FakeFirestoreClient
    from mvp_site.tests.fake_llm import FakeLLMResponse  # Legacy tests may import from fake_firestore.
+   from mvp_site.tests.test_end2end import End2EndBaseTestCase
 
 
-   class Test{FeatureName}End2End(unittest.TestCase):
+   class Test{FeatureName}End2End(End2EndBaseTestCase):
        """Test {feature} through the full application stack."""
+
+       CREATE_APP = main.create_app
+       AUTH_PATCH_TARGET = "mvp_site.main.auth.verify_id_token"
+       TEST_USER_ID = "test-user-123"
 
        def setUp(self):
            """Set up test client."""
-           self.app = main.create_app()
-           self.app.config["TESTING"] = True
-           self.client = self.app.test_client()
-
-           # Stub Firebase authentication
-           self.test_user_id = "test-user-123"
-           self._auth_patcher = patch(
-               "mvp_site.main.auth.verify_id_token",
-               return_value={"uid": self.test_user_id},
-           )
-           self._auth_patcher.start()
-           self.addCleanup(self._auth_patcher.stop)
-
-           self.test_headers = {
-               "Content-Type": "application/json",
-               "Authorization": "Bearer test-id-token",
-           }
+           super().setUp()
 
        @patch("mvp_site.firestore_service.get_db")
        @patch("mvp_site.llm_service._call_llm_api_with_llm_request")

@@ -1,6 +1,7 @@
 """Tests for multi-CLI support in the task dispatcher."""
 
 import logging
+import re
 import shlex
 import tempfile
 import unittest
@@ -835,27 +836,27 @@ class TestCliValidation(unittest.TestCase):
             result = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
             self.assertFalse(result)
 
-    def test_gemini_validation_timeout_returns_true(self):
-        """Gemini validation timeout should return True (allows runtime fallback)."""
+    def test_gemini_validation_timeout_returns_false(self):
+        """Gemini validation timeout should return False (fail-safe, try next CLI)."""
         with patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate:
             mock_validate.return_value = ValidationResult(
-                success=True,
+                success=False,
                 phase="execution",
-                message="gemini execution test timed out (will try anyway)",
+                message="gemini execution test timed out (CLI unresponsive)",
             )
             result = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
-            self.assertTrue(result)
+            self.assertFalse(result)
 
-    def test_gemini_validation_exception_returns_true(self):
-        """Gemini validation exception should return True (allows runtime fallback)."""
+    def test_gemini_validation_exception_returns_false(self):
+        """Gemini validation exception should return False (fail-safe, try next CLI)."""
         with patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate:
             mock_validate.return_value = ValidationResult(
-                success=True,
+                success=False,
                 phase="execution",
-                message="gemini execution test error: Network error (will try anyway)",
+                message="gemini execution test error: Network error",
             )
             result = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
-            self.assertTrue(result)
+            self.assertFalse(result)
 
     def test_codex_validation_success_with_exit_code_0(self):
         """Codex validation should succeed when exit code is 0 and output file is created."""
@@ -902,27 +903,27 @@ class TestCliValidation(unittest.TestCase):
             result = self.dispatcher._validate_cli_availability("codex", "/usr/bin/codex", "test-agent")
             self.assertFalse(result)
 
-    def test_codex_validation_timeout_returns_true(self):
-        """Codex validation timeout should return True (allows runtime fallback)."""
+    def test_codex_validation_timeout_returns_false(self):
+        """Codex validation timeout should return False (fail-safe, try next CLI)."""
         with patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate:
             mock_validate.return_value = ValidationResult(
-                success=True,
+                success=False,
                 phase="execution",
-                message="codex execution test timed out (will try anyway)",
+                message="codex execution test timed out (CLI unresponsive)",
             )
             result = self.dispatcher._validate_cli_availability("codex", "/usr/bin/codex", "test-agent")
-            self.assertTrue(result)
+            self.assertFalse(result)
 
-    def test_codex_validation_exception_returns_true(self):
-        """Codex validation exception should return True (allows runtime fallback)."""
+    def test_codex_validation_exception_returns_false(self):
+        """Codex validation exception should return False (fail-safe, try next CLI)."""
         with patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate:
             mock_validate.return_value = ValidationResult(
-                success=True,
+                success=False,
                 phase="execution",
-                message="codex execution test error: Network error (will try anyway)",
+                message="codex execution test error: Network error",
             )
             result = self.dispatcher._validate_cli_availability("codex", "/usr/bin/codex", "test-agent")
-            self.assertTrue(result)
+            self.assertFalse(result)
 
     def test_claude_validation_success_with_executable(self):
         """Claude validation should succeed when binary is executable and can write output."""
@@ -996,17 +997,102 @@ class TestCliValidation(unittest.TestCase):
             self.assertTrue(agent_name_found, "agent_name should appear in log messages")
 
     def test_validation_exception_handling_includes_agent_name(self):
-        """Exception handling should include agent_name in log messages."""
+        """Exception handling should include agent_name in log messages and return False."""
+        # Patch cli_validation.subprocess.run since that's where validation actually runs
         with patch("builtins.print") as mock_print, patch(
-            "orchestration.task_dispatcher.subprocess.run"
+            "orchestration.cli_validation.subprocess.run"
         ) as mock_run:
             mock_run.side_effect = Exception("Test error")
             result = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "error-test-agent")
-            self.assertTrue(result)
+            # Changed behavior: exceptions now return False (fail-safe)
+            self.assertFalse(result)
             # Verify exception log includes agent name
             calls = [str(call) for call in mock_print.call_args_list]
             agent_name_found = any("error-test-agent" in call for call in calls)
             self.assertTrue(agent_name_found, "agent_name should appear in exception log")
+
+    def test_all_cli_validations_skip_mcp_servers(self):
+        """All CLI validations should use flags to skip MCP server loading for faster validation."""
+        # This test verifies that the execution_cmd for each CLI includes MCP-skip flags
+        # MCP server loading adds 4-6 seconds to validation; skipping it makes validation ~2s
+        with patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate:
+            mock_validate.return_value = ValidationResult(
+                success=True,
+                phase="execution",
+                message="test passed",
+            )
+
+            # Test Gemini - should have --allowed-mcp-server-names none
+            with patch("os.access", return_value=True):
+                self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
+                call_args = mock_validate.call_args
+                execution_cmd = call_args[1].get("execution_cmd", call_args[0][3] if len(call_args[0]) > 3 else [])
+                self.assertIn("--allowed-mcp-server-names", execution_cmd,
+                    "Gemini validation should skip MCP servers with --allowed-mcp-server-names")
+                self.assertIn("none", execution_cmd,
+                    "Gemini validation should use 'none' for --allowed-mcp-server-names")
+
+            mock_validate.reset_mock()
+
+            # Test Claude - should use --strict-mcp-config to skip MCP server loading
+            # Verified: `claude --help` shows --strict-mcp-config "Only uses MCP servers from --mcp-config"
+            # Using --strict-mcp-config WITHOUT --mcp-config = no MCP servers loaded = faster validation
+            with patch("os.access", return_value=True):
+                self.dispatcher._validate_cli_availability("claude", "/usr/bin/claude", "test-agent")
+                call_args = mock_validate.call_args
+                execution_cmd = call_args[1].get("execution_cmd", call_args[0][3] if len(call_args[0]) > 3 else [])
+                # Claude SHOULD have --strict-mcp-config to skip MCP server loading
+                self.assertIn("--strict-mcp-config", execution_cmd,
+                    "Claude validation should use --strict-mcp-config to skip MCP server loading")
+
+            mock_validate.reset_mock()
+
+            # Test Cursor - should have --approve-mcps or similar MCP handling
+            # Note: Cursor may not have a skip-MCP flag, but should at least auto-approve
+            with patch("os.access", return_value=True):
+                self.dispatcher._validate_cli_availability("cursor", "/usr/bin/cursor-agent", "test-agent")
+                call_args = mock_validate.call_args
+                execution_cmd = call_args[1].get("execution_cmd", call_args[0][3] if len(call_args[0]) > 3 else [])
+                # Cursor should have some MCP handling flag
+                has_mcp_flag = "--approve-mcps" in execution_cmd or "--no-mcp" in execution_cmd
+                self.assertTrue(has_mcp_flag,
+                    f"Cursor validation should have MCP handling flag, got: {execution_cmd}")
+
+    def test_strict_answer_matching_avoids_false_positives(self):
+        """Verify that '4' matching doesn't match HTTP 429, dates, or timestamps."""
+        # The regex used in cli_validation.py: r'(?<![0-9])4(?![0-9])'
+        strict_match_pattern = r'(?<![0-9])4(?![0-9])'
+
+        # These should NOT match (false positives we want to avoid)
+        # Each case has "4" embedded in a number context where it should NOT be detected
+        false_positive_cases = [
+            ("HTTP 429 Too Many Requests", "429 rate limit"),
+            ("Error code: 429", "429 error code"),
+            ("2024-01-31", "year in date"),
+            ("14:30:00", "hour in timestamp"),
+            ("Quota: 14/100", "14 in quota"),
+            ("Rate limit: retry in 45 seconds", "45 seconds"),
+            ("Error 0x00000004", "hex code"),
+        ]
+
+        for case, description in false_positive_cases:
+            match = re.search(strict_match_pattern, case)
+            self.assertIsNone(match, f"Should NOT match {description}: '{case}'")
+
+        # These SHOULD match (valid answers to 2+2)
+        valid_cases = [
+            "4",              # Just the answer
+            "4.",             # With period
+            "The answer is 4",  # Sentence
+            "2+2=4",          # Equation
+            "Result: 4",      # Label
+            "   4   ",        # Whitespace
+            "4\n",            # Newline
+        ]
+
+        for case in valid_cases:
+            match = re.search(strict_match_pattern, case)
+            self.assertIsNotNone(match, f"Valid answer should match: {case}")
 
 
 class TestAgentCreationWithValidation(unittest.TestCase):

@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
-# Git header generator script (ENHANCED VERSION WITH GIT STATUS)
+# Git header generator script (ENHANCED VERSION WITH GIT STATUS + CONTEXT %)
 # Usage: ./git-header.sh or git header (if aliased)
 # Works from any directory within a git repository or worktree
+
+# Parse context percentage from Claude Code JSON input (if available)
+# Claude Code sends JSON via stdin with context_window.used_percentage
+CONTEXT_PCT=""
+if [ -t 0 ]; then
+    # stdin is a terminal (no piped input), skip JSON parsing
+    :
+else
+    # stdin has data, try to parse JSON
+    json_input=$(cat)
+    if command -v jq >/dev/null 2>&1 && [ -n "$json_input" ]; then
+        CONTEXT_PCT=$(printf '%s' "$json_input" | jq -r '.context_window.used_percentage // empty' 2>/dev/null)
+    fi
+fi
 
 # Source cross-platform timeout utilities
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
@@ -305,4 +319,21 @@ fi
 
 
 # Simple output - just the essential info
-echo -e "\033[1;36m[Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"
+# Add context percentage if available (with color coding)
+context_display=""
+if [ -n "$CONTEXT_PCT" ]; then
+    # Color code based on usage: green <30%, yellow 30-60%, orange 61-80%, red >80%
+    pct_num=$(echo "$CONTEXT_PCT" | awk '{print int($1)}')
+    if [ "$pct_num" -lt 30 ]; then
+        context_color="\033[1;32m"  # Green
+    elif [ "$pct_num" -le 60 ]; then
+        context_color="\033[1;33m"  # Yellow
+    elif [ "$pct_num" -le 80 ]; then
+        context_color="\033[1;38;5;208m"  # Orange
+    else
+        context_color="\033[1;31m"  # Red
+    fi
+    context_display="${context_color}Context: ${CONTEXT_PCT}%\033[1;36m | "
+fi
+
+echo -e "\033[1;36m[${context_display}Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"

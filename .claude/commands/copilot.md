@@ -90,7 +90,14 @@ fi
 5. **Selective Delegation**: IMPORTANT issues that require large file edits may be delegated to the `copilot-fixpr` agent. ROUTINE comments stay with the orchestrator to avoid agent churn.
 6. **Agent Result Collection**: Once delegated tasks finish, collect the structured status file (`agent_status.json`) and integrate file diffs/commits back into the orchestrator context.
 7. **Comprehensive Response**: Generate ONE consolidated response per comment addressing ALL issues found, using ACTION_ACCOUNTABILITY format with specific status for each issue (FIXED/DEFERRED/ACKNOWLEDGED/NOT_DONE).
-8. **GitHub Operations**: Run `/commentreply` after validating responses.json, then `/commentcheck` to confirm 100% coverage.
+8. **GitHub Operations**:
+   - **Default (REQUIRED)**: Run `/commentreply` after validating responses.json, then `/commentcheck` to confirm 100% coverage.
+   - **Optional Summary-Only Override (EXPLICIT USER REQUEST REQUIRED)**:
+     - Allowed **only** when the user explicitly requests summary-only posting.
+     - Still requires full per-comment analysis internally.
+     - **Do not** post per-comment replies; **post one summary comment** to the PR instead.
+     - Skip `/commentreply` and `/commentcheck` for this run.
+     - In the summary comment, clearly state that per-comment replies were intentionally skipped at user request.
 
 **Example**: If CodeRabbit posts 1 comment with 11 issues, LLM identifies all 11 and generates 1 consolidated response with 11 status items.
 

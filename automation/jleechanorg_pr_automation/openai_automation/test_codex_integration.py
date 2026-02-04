@@ -17,8 +17,8 @@ Or with Chrome running:
 """
 
 import asyncio
+import inspect
 
-import aiohttp
 import pytest
 from playwright.async_api import async_playwright
 
@@ -26,10 +26,18 @@ from jleechanorg_pr_automation.openai_automation.codex_github_mentions import (
     CodexGitHubMentionsAutomation,
 )
 
+_IMPORTORSKIP_PARAMS = inspect.signature(pytest.importorskip).parameters
+if "exc_type" in _IMPORTORSKIP_PARAMS:
+    aiohttp = pytest.importorskip("aiohttp", exc_type=ModuleNotFoundError)
+else:
+    aiohttp = pytest.importorskip("aiohttp")
+
 
 # Helper to check if Chrome is running with CDP
 async def chrome_is_running(port=9222):
     """Check if Chrome is running with remote debugging."""
+    if aiohttp is None:
+        return False
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -251,4 +259,4 @@ def test_chrome_not_required_placeholder():
 
 if __name__ == "__main__":
     # Run tests
-    pytest.main([__file__, "-v", "-s"])
+    pytest.main([__file__, "-v", "-s", "--no-cov"])

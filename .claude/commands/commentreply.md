@@ -87,20 +87,23 @@ graph TD
     D --> E["Claude generates responses"]
     E --> F["Claude writes /tmp/repo/branch/responses.json"]
     F --> G["Python reads responses.json"]
-    G --> H["Python posts initial summary comment"]
-    H --> I["Python posts individual threaded replies"]
-    I --> J["Python posts final completion summary"]
-    J --> K["Verify coverage"]
+    G --> H["Python posts ONE consolidated summary comment"]
+    H --> I["Verify coverage"]
 ```
 
-**🆕 Initial Summary Comment**: Before posting individual replies, the Python script now posts a comprehensive summary comment showing:
-- Total comments and issues to be processed
+**🆕 CONSOLIDATED REPLY MODE**: Instead of posting individual threaded replies, the Python script now posts ONE comprehensive summary comment containing:
+- Processing overview with total comments, issues, and coverage statistics
 - Category breakdown (CRITICAL/BLOCKING/IMPORTANT/ROUTINE)
 - Response type breakdown (FIXED/DEFERRED/ACKNOWLEDGED/NOT_DONE)
+- **All individual responses embedded** in a single comment, each referencing the original with `Re: [Comment #<id>]`
 - Multi-issue comment detection (when single comments contain multiple issues)
 - Alignment with CLAUDE.md LLM Architecture Principles
 
-This provides immediate visibility into what the copilot command accomplished before users see individual threaded replies.
+**Benefits of Consolidated Mode**:
+- Reduces notification spam (one comment instead of N comments)
+- Provides complete visibility in a single view
+- Maintains traceability via `Re: [Comment #<id>]` links
+- Still achieves 100% coverage requirement
 
 ## 📋 REFERENCE DOCUMENTATION
 
@@ -324,7 +327,7 @@ Before processing any comments:
   - ❌ **Only exception**: "[AI responder]" tagged comments (our own responses)
 - **✅ Real Fixes Implemented**: Actual file changes for code issues
 - **✅ Technical Quality**: Specific analysis, not generic templates
-- **✅ GitHub Threading**: Proper in_reply_to threading via Python
+- **✅ Consolidated Summary**: Single summary comment with all responses embedded and `Re: [Comment #<id>]` links
 - **✅ Verification**: All responses include commit hash references
 
 ## 🛠️ INTEGRATION

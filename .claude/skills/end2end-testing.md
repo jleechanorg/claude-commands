@@ -206,6 +206,10 @@ os.environ["TESTING"] = "true"  # ❌ Not sufficient for API tests
 
 ### Required Imports and Base Class
 
+Use the shared base class in `$PROJECT_ROOT/tests/test_end2end/__init__.py` to avoid duplicating
+Flask app + auth setup. Subclasses must set `CREATE_APP` and `AUTH_PATCH_TARGET` and can
+override `TEST_USER_ID` when needed.
+
 ```python
 import json
 import os
@@ -227,31 +231,23 @@ for path in (PROJECT_ROOT, MVP_SITE_ROOT):
 
 from main import create_app  # noqa: E402
 from tests.fake_firestore import FakeFirestoreClient  # noqa: E402
+from tests.test_end2end import End2EndBaseTestCase  # noqa: E402
 ```
 
 ### Required Test Class Pattern
 
 ```python
-class TestFeatureEndToEnd(unittest.TestCase):
+class TestFeatureEndToEnd(End2EndBaseTestCase):
     """Descriptive docstring for the test class."""
 
+    CREATE_APP = create_app
+    AUTH_PATCH_TARGET = "main.auth.verify_id_token"
+    TEST_USER_ID = "feature-e2e-user"
+
     def setUp(self):
-        # 1. Create Flask app and test client
-        self.app = create_app()
-        self.app.config["TESTING"] = True
-        self.client = self.app.test_client()
+        super().setUp()
 
-        # 2. Test user ID
-        self.test_user_id = "feature-e2e-user"
-
-        # 3. Stub auth (MANDATORY)
-        self._auth_patcher = patch(
-            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
-        )
-        self._auth_patcher.start()
-        self.addCleanup(self._auth_patcher.stop)
-
-        # 4. Use FakeFirestore (MANDATORY)
+        # Use FakeFirestore (MANDATORY)
         self.fake_firestore = FakeFirestoreClient()
         self._db_patcher = patch(
             "firestore_service.get_db", return_value=self.fake_firestore
@@ -259,11 +255,8 @@ class TestFeatureEndToEnd(unittest.TestCase):
         self._db_patcher.start()
         self.addCleanup(self._db_patcher.stop)
 
-        # 5. Headers for API requests
-        self.headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer test-id-token",
-        }
+        # Headers for API requests
+        self.headers = self.test_headers
 
     def test_feature_roundtrip(self):
         """Test the feature saves and retrieves correctly."""

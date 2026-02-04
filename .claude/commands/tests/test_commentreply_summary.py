@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Unit tests for commentreply.py post_initial_summary function.
+Unit tests for commentreply.py post_consolidated_summary function.
 specifically testing the total_issues calculation fix.
 """
 
 import unittest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, MagicMock
 import sys
 import json
 from pathlib import Path
@@ -21,11 +21,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "_copilot_module
 import commentreply
 
 class TestCommentReplySummary(unittest.TestCase):
-    """Test post_initial_summary logic"""
+    """Test post_consolidated_summary logic"""
 
-    @patch('commentreply.run_command')
-    @patch('commentreply.tempfile.NamedTemporaryFile')
-    def test_total_issues_calculation_fix(self, mock_tempfile, mock_run_command):
+    @patch("commentreply.os.path.exists", return_value=True)
+    @patch("commentreply.os.unlink")
+    @patch("commentreply.run_command")
+    @patch("commentreply.tempfile.NamedTemporaryFile")
+    def test_total_issues_calculation_fix(
+        self, mock_tempfile, mock_run_command, mock_unlink, mock_exists
+    ):
         """Test that total_issues sums actual issues, not metadata"""
         
         # mock run_command to return success
@@ -69,12 +73,15 @@ class TestCommentReplySummary(unittest.TestCase):
         # Total: 4 issues (NOT 101 or 100)
 
         # Run the function
-        commentreply.post_initial_summary(
+        commentreply.post_consolidated_summary(
             owner="owner",
             repo="repo",
             pr_number="123",
+            collected_replies=[],
             responses_data=responses_data,
-            commit_hash="abc"
+            commit_hash="abc",
+            total_targets=4,
+            already_replied_count=0
         )
 
         # Verify temp file write

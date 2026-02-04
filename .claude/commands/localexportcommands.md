@@ -38,6 +38,7 @@ This command copies standard Claude Code directories to ~/.claude:
 - **Skills** (.claude/skills/) → ~/.claude/skills/ - Skill documentation and guides
 - **Settings** (.claude/settings.json) → ~/.claude/settings.json - Configuration
 - **Dependencies** (package.json, package-lock.json) → ~/.claude/ - Node.js dependencies for secondo command
+- **Codex Skills** (.codex/skills/) → ~/.codex/skills/ - Codex CLI skill documentation
 **🚨 EXCLUDED**: Project-specific directories (schemas, templates, framework, guides, learnings, memory_templates, research) are NOT exported to maintain clean global ~/.claude structure.
 
 **✅ INCLUDES**:
@@ -294,6 +295,29 @@ echo "   ls -la ~/.claude"
 echo ""
 echo "🚀 Commands from this project can now be used in any Claude Code session!"
 
+# Export Codex skills from .codex/skills/ to ~/.codex/skills/
+echo ""
+echo "📦 Exporting Codex skills..."
+echo "================================="
+
+if [ -d ".codex/skills" ]; then
+    mkdir -p "$HOME/.codex/skills"
+
+    # Count skills before copy
+    codex_skill_count=$(find .codex/skills -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+
+    # Use rsync if available, otherwise cp -a
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -a ".codex/skills/" "$HOME/.codex/skills/"
+    else
+        cp -a ".codex/skills/." "$HOME/.codex/skills/"
+    fi
+
+    echo "   ✅ Exported $codex_skill_count Codex skills to ~/.codex/skills/"
+else
+    echo "   ⚠️  .codex/skills/ not found, skipping Codex skills export"
+fi
+
 # Validation checklist
 
 echo ""
@@ -307,6 +331,7 @@ echo "5. Scripts directory: $([ -d "$HOME/.claude/scripts" ] && echo "✅ Presen
 echo "6. Skills directory: $([ -d "$HOME/.claude/skills" ] && echo "✅ Present" || echo "❌ Missing")"
 echo "7. package.json: $([ -f "$HOME/.claude/package.json" ] && echo "✅ Present" || echo "⚠️  Missing (secondo may not work)")"
 echo "8. install_mcp_servers.sh: $([ -f "$HOME/.claude/scripts/install_mcp_servers.sh" ] && echo "✅ Present" || echo "⚠️  Missing")"
+echo "9. Codex skills directory: $([ -d "$HOME/.codex/skills" ] && echo "✅ Present ($(find "$HOME/.codex/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') skills)" || echo "⚠️  Missing")"
 
 echo ""
 echo "🎉 Local export completed successfully!"

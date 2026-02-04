@@ -479,8 +479,8 @@ class TestPRFilteringMatrix(unittest.TestCase):
         self.assertIn("@codex", comment_body)
         self.assertIn(self.monitor.FIX_COMMENT_MARKER_PREFIX, comment_body)
 
-    def test_fix_comment_prompt_requires_gh_comment_replies(self):
-        """Fix-comment prompt should require gh pr comment replies for 100% of comments."""
+    def test_fix_comment_prompt_requires_consolidated_replies(self):
+        """Fix-comment prompt should require /commentreply consolidated summary for 100% of comments."""
         pr_data = {
             "title": "Test PR",
             "author": {"login": "dev"},
@@ -495,8 +495,9 @@ class TestPRFilteringMatrix(unittest.TestCase):
             "gemini",
         )
 
-        self.assertIn("gh pr comment", prompt_body)
-        self.assertIn("reply to **100%** of comments INDIVIDUALLY", prompt_body)
+        self.assertIn("/commentreply", prompt_body)
+        self.assertIn("consolidated summary comment", prompt_body)
+        self.assertIn("Do not post individual GitHub API replies", prompt_body)
 
     def test_fix_comment_mode_dispatches_agent(self):
         """Fix-comment processing should dispatch orchestration agent and post comments."""

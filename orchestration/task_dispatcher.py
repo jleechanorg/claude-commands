@@ -22,7 +22,6 @@ from typing import Any
 from .cli_validation import (
     CLI_VALIDATION_TEST_PROMPT,
     CLI_VALIDATION_TIMEOUT_SECONDS,
-    OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS,
     validate_cli_two_phase,
 )
 
@@ -44,7 +43,7 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
 
 # CLI validation constants imported from centralized validation library
-# CLI_VALIDATION_TEST_PROMPT, CLI_VALIDATION_TIMEOUT_SECONDS, OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS
+# CLI_VALIDATION_TEST_PROMPT, CLI_VALIDATION_TIMEOUT_SECONDS
 
 CLI_PROFILES = {
     "claude": {
@@ -808,7 +807,8 @@ class TaskDispatcher:
             if cli_name == "gemini":
                 help_args = ["--help"]
                 test_model = model if model and model != "sonnet" else GEMINI_MODEL
-                execution_cmd = ["-m", test_model, "--yolo"]
+                # Use --allowed-mcp-server-names none to skip MCP server loading during validation (2s vs 6s+)
+                execution_cmd = ["-m", test_model, "--yolo", "--allowed-mcp-server-names", "none"]
             elif cli_name == "codex":
                 help_args = ["exec", "--help"]
                 execution_cmd = ["exec", "--yolo", "--skip-git-repo-check"]
@@ -821,8 +821,8 @@ class TaskDispatcher:
                 test_model = model if model else "sonnet"
                 # For Claude, we need to create a prompt file (handled in execution phase)
                 # Use a special marker to indicate prompt file needed
-                execution_cmd = ["--model", test_model, "-p", "@PROMPT_FILE", "--output-format", "text"]
-                execution_timeout = OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS
+                # Use --strict-mcp-config without --mcp-config to skip MCP server loading during validation
+                execution_cmd = ["--model", test_model, "-p", "@PROMPT_FILE", "--output-format", "text", "--strict-mcp-config"]
                 skip_help = True  # Skip help for OAuth CLIs (may require auth)
             elif cli_name == "cursor":
                 # OAuth CLI - check executable first, then use prompt file for execution
@@ -833,8 +833,8 @@ class TaskDispatcher:
                 # Use CURSOR_MODEL when model is "sonnet" or None to match runtime command_template
                 test_model = model if model and model != "sonnet" else CURSOR_MODEL
                 # For Cursor, we need to create a prompt file (handled in execution phase)
-                execution_cmd = ["-f", "-p", "@PROMPT_FILE", "--model", test_model, "--output-format", "text"]
-                execution_timeout = OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS
+                # Use --approve-mcps to auto-approve MCP servers (Cursor doesn't have a skip-MCP flag)
+                execution_cmd = ["-f", "-p", "@PROMPT_FILE", "--model", test_model, "--output-format", "text", "--approve-mcps"]
                 skip_help = True  # Skip help for OAuth CLIs (may require auth)
             else:
                 # Unknown CLI type - assume available
@@ -856,12 +856,12 @@ class TaskDispatcher:
 
             return result.success
         except Exception as e:
-            # DESIGN DECISION: Unknown exceptions are treated as "available" (return True) to allow runtime fallback.
-            # Rationale: Preflight validation should catch definitive failures (quota, binary not found),
-            # not block on unexpected errors that might be transient or environment-specific.
-            # Tradeoff: Real breakage could be masked, but runtime will catch actual failures and fallback to next CLI.
-            print(f"   ⚠️ CLI validation failed for {cli_name} (agent {agent_name}): {e} (will try anyway)")
-            return True
+            # DESIGN DECISION: Unknown exceptions are treated as FAILURE (return False) for fail-safe behavior.
+            # Rationale: If we can't even run validation, the CLI is likely broken. Better to skip this CLI
+            # and try the next one in the fallback chain than to optimistically assume it works.
+            # This matches the fail-safe behavior in cli_validation.py for timeouts and exceptions.
+            print(f"   ⚠️ CLI validation failed for {cli_name} (agent {agent_name}): {e}")
+            return False
 
     def _find_recent_pr(self) -> str | None:
         """Try to find a recent PR from current branch or user."""
@@ -1865,6 +1865,19 @@ Agent Configuration:
                 # All CLIs use OAuth and may need time for complex tasks
                 attempt_timeout_seconds = RUNTIME_CLI_TIMEOUT_SECONDS
 
+                # Build runtime pre-flight check command based on CLI type
+                # This is a quick test to verify CLI can run before the full task
+                # Note: Each CLI uses its own model - cursor uses CURSOR_MODEL, gemini uses GEMINI_MODEL
+                if attempt_cli == "gemini":
+                    preflight_cmd = f'{attempt_binary_value} -m {shlex.quote(GEMINI_MODEL)} --yolo --allowed-mcp-server-names none'
+                elif attempt_cli == "cursor":
+                    # Use CURSOR_MODEL to match the actual command_template which hardcodes this model
+                    preflight_cmd = f'{attempt_binary_value} -f -p - --model {shlex.quote(CURSOR_MODEL)} --output-format text'
+                elif attempt_cli == "claude":
+                    preflight_cmd = f'{attempt_binary_value} -p - --model {shlex.quote(model)} --output-format text'
+                else:
+                    preflight_cmd = f'{attempt_binary_value}'
+
                 attempt_blocks += f"""
 if [ $RESULT_WRITTEN -eq 0 ]; then
     ATTEMPT_NUM={idx}
@@ -1877,18 +1890,36 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
     fi
 
     echo "[$(date)] 🔁 Attempt $ATTEMPT_NUM: {attempt_display_name}" | tee -a {log_file_quoted}
-    echo "[$(date)] Executing: {attempt_execution_line}" | tee -a {log_file_quoted}
-    echo "[$(date)] Timeout: {attempt_timeout_seconds}s" | tee -a {log_file_quoted}
-
-    LOG_START_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo 0)
 
     {prompt_env_export}
     {github_token_export}
     {attempt_env_unset_commands}
 
-    # Wrap execution with timeout to prevent hangs and allow prompt fallback
-    # Exit code 124 = timeout, which should trigger fallback to next CLI
-    timeout {attempt_timeout_seconds} sh -c '{attempt_execution_line}' 2>&1 | tee -a {log_file_quoted}
+    # Quick pre-flight check: Test CLI can actually run before full execution
+    # This catches quota exhaustion that happened between dispatch and execution
+    echo "[$(date)] 🧪 Runtime pre-flight check for {attempt_display_name}..." | tee -a {log_file_quoted}
+    PREFLIGHT_OUTPUT=$(echo "What is 2+2? Reply with just the number." | timeout 30 {preflight_cmd} 2>&1 || true)
+
+    # Check for quota/rate limit errors in pre-flight output
+    if echo "$PREFLIGHT_OUTPUT" | grep -Eqi "{rate_limit_pattern}|hit your usage limit|authentication required"; then
+        echo "[$(date)] ❌ Runtime pre-flight check FAILED - quota/rate limit detected" | tee -a {log_file_quoted}
+        echo "[$(date)] Pre-flight output: $PREFLIGHT_OUTPUT" | tee -a {log_file_quoted}
+        RATE_LIMITED_SEEN=1
+        CLI_LAST="$ATTEMPT_CLI"
+        FINAL_EXIT_CODE=1
+        # Skip to next CLI in chain without running full task
+        echo "[$(date)] ❌ Attempt failed via {attempt_display_name} (exit=1 rate_limited=1 asked_question=0)" | tee -a {log_file_quoted}
+    else
+        echo "[$(date)] ✅ Runtime pre-flight check passed for {attempt_display_name}" | tee -a {log_file_quoted}
+
+        echo "[$(date)] Executing: {attempt_execution_line}" | tee -a {log_file_quoted}
+        echo "[$(date)] Timeout: {attempt_timeout_seconds}s" | tee -a {log_file_quoted}
+
+        LOG_START_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo 0)
+
+        # Wrap execution with timeout to prevent hangs and allow prompt fallback
+        # Exit code 124 = timeout, which should trigger fallback to next CLI
+        timeout {attempt_timeout_seconds} sh -c '{attempt_execution_line}' 2>&1 | tee -a {log_file_quoted}
     ATTEMPT_EXIT=${{PIPESTATUS[0]}}
     
     # Handle timeout exit code (124) - treat as failure to trigger fallback
@@ -1929,6 +1960,7 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
         FINAL_EXIT_CODE=$ATTEMPT_EXIT
         echo "[$(date)] ❌ Attempt failed via {attempt_display_name} (exit=$ATTEMPT_EXIT rate_limited=$RATE_LIMITED asked_question=$ASKED_QUESTION)" | tee -a {log_file_quoted}
     fi
+    fi  # End of runtime pre-flight check passed block
 fi
 """
 
