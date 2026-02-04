@@ -203,28 +203,16 @@ class AutomationSafetyManager:
             # Sync inflight cache to prevent concurrent processing
             self._write_json_file(self.inflight_file, self._serialize_inflight_data())
 
-    def _parse_timestamp(self, timestamp_str: str) -> datetime:
+    def _parse_timestamp(self, timestamp_str: object) -> datetime:
         """Parse ISO timestamp string to datetime object.
 
         Returns:
             datetime object in UTC, or epoch (1970-01-01) if parsing fails
         """
-        if not timestamp_str:
+        parsed = self._parse_timestamp_value(timestamp_str, return_none_on_fail=False)
+        if parsed is None:
             return datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-        try:
-            # Parse ISO format timestamp (e.g., "2026-01-18T02:33:26.798956+00:00")
-            dt = datetime.fromisoformat(timestamp_str)
-            # Ensure timezone-aware (convert to UTC if needed)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt
-        except (ValueError, AttributeError, TypeError):
-            # Return epoch if parse fails (very old attempt, will be filtered out)
-            # TypeError: timestamp is not a string (e.g., int from corrupted/legacy data)
-            # ValueError: timestamp string is malformed
-            # AttributeError: timestamp_str is None or has no expected attributes
-            return datetime(1970, 1, 1, tzinfo=timezone.utc)
+        return parsed
 
     def _parse_inflight_entry(self, value: object) -> tuple[int, Optional[str]]:
         """Parse inflight entry into count + updated_at (if present)."""
@@ -352,16 +340,12 @@ class AutomationSafetyManager:
         payload: Optional[dict],
         *,
         now: Optional[datetime] = None,
+        add_run: Optional[datetime] = None,
     ) -> tuple[dict, int, bool]:
-        """Normalize persisted global run data and determine if it is stale."""
+        """Normalize persisted global run data for rolling window accounting."""
 
-        current_time = now or datetime.now()
-        today = current_time.date().isoformat()
-
-        if isinstance(payload, dict):
-            data = dict(payload)
-        else:
-            data = {}
+        current_time = now or datetime.now(timezone.utc)
+        data = dict(payload) if isinstance(payload, dict) else {}
 
         # Ensure start_date is always present and well-formed
         start_date = data.get("start_date")
@@ -373,71 +357,87 @@ class AutomationSafetyManager:
         else:
             data["start_date"] = current_time.isoformat()
 
-        stored_date = data.get("current_date")
-        normalized_date: Optional[str] = None
-        if isinstance(stored_date, str):
+        runs: list[datetime] = []
+        raw_runs = data.get("runs")
+        if isinstance(raw_runs, list):
+            for entry in raw_runs:
+                parsed_run = self._parse_global_run_timestamp(entry)
+                if parsed_run is not None:
+                    runs.append(parsed_run)
+        else:
+            # Legacy payload: approximate existing count as occurring at last_run/start_date.
+            raw_total = data.get("total_runs", 0)
             try:
-                normalized_date = REAL_DATETIME.fromisoformat(stored_date).date().isoformat()
-            except ValueError:
-                # Support legacy data that stored raw dates without full ISO format
-                if len(stored_date) >= ISO_DATE_PREFIX_LENGTH:
-                    candidate = stored_date[:ISO_DATE_PREFIX_LENGTH]
-                    try:
-                        normalized_date = REAL_DATETIME.fromisoformat(candidate).date().isoformat()
-                    except ValueError:
-                        normalized_date = None
-                else:
-                    normalized_date = None
+                legacy_total = max(int(raw_total), 0)
+            except (TypeError, ValueError):
+                legacy_total = 0
 
-        if normalized_date is None:
-            try:
-                normalized_date = REAL_DATETIME.fromisoformat(data["start_date"]).date().isoformat()
-            except ValueError:
-                normalized_date = None
+            seed = None
+            last_run = data.get("last_run")
+            if isinstance(last_run, str):
+                seed = self._parse_global_run_timestamp(last_run)
+            if seed is None:
+                seed = self._parse_global_run_timestamp(data.get("start_date"))
+            if seed is None:
+                seed = current_time
 
-        is_stale = normalized_date != today
+            runs.extend([seed] * legacy_total)
 
-        if is_stale:
-            normalized_date = today
-            data["total_runs"] = 0
-            data["last_reset"] = current_time.isoformat()
+        if add_run is not None:
+            runs.append(add_run)
 
-        data["current_date"] = normalized_date or today
+        window_hours = self._get_global_window_hours()
+        cutoff_time = current_time - timedelta(hours=window_hours)
+        filtered_runs = [run for run in runs if run >= cutoff_time]
+        filtered_runs.sort()
 
-        raw_total = data.get("total_runs", 0)
-        try:
-            total_runs = int(raw_total)
-        except (TypeError, ValueError):
-            total_runs = 0
+        trimmed = len(filtered_runs) != len(runs)
+        data["runs"] = [run.isoformat() for run in filtered_runs]
+        data["total_runs"] = len(filtered_runs)
 
-        total_runs = max(total_runs, 0)
+        if filtered_runs:
+            data["last_run"] = filtered_runs[-1].isoformat()
+        else:
+            data.pop("last_run", None)
 
-        data["total_runs"] = total_runs
-
-        last_run = data.get("last_run")
-        if last_run is not None:
-            if not isinstance(last_run, str):
-                data.pop("last_run", None)
-            else:
-                try:
-                    REAL_DATETIME.fromisoformat(last_run)
-                except ValueError:
-                    data.pop("last_run", None)
+        data["current_date"] = current_time.date().isoformat()
 
         last_reset = data.get("last_reset")
-        if last_reset is not None:
-            if not isinstance(last_reset, str):
-                data.pop("last_reset", None)
-            else:
-                try:
-                    REAL_DATETIME.fromisoformat(last_reset)
-                except ValueError:
-                    data.pop("last_reset", None)
-
-        if "last_reset" not in data:
+        if not isinstance(last_reset, str):
             data["last_reset"] = data["start_date"]
 
-        return data, total_runs, is_stale
+        return data, len(filtered_runs), trimmed
+
+    def _get_global_window_hours(self) -> int:
+        """Return rolling window duration for global runs."""
+        return coerce_positive_int(
+            os.environ.get("AUTOMATION_GLOBAL_WINDOW_HOURS", "24"),
+            default=24,
+        )
+
+    def _parse_global_run_timestamp(self, timestamp: object) -> Optional[datetime]:
+        """Parse global run timestamps into timezone-aware datetime."""
+        return self._parse_timestamp_value(timestamp, return_none_on_fail=True)
+
+    def _parse_timestamp_value(
+        self,
+        timestamp: object,
+        *,
+        return_none_on_fail: bool,
+    ) -> Optional[datetime]:
+        """Parse ISO timestamp strings into UTC datetimes."""
+        if not isinstance(timestamp, str) or not timestamp:
+            return None if return_none_on_fail else datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+        try:
+            dt = REAL_DATETIME.fromisoformat(timestamp)
+        except (ValueError, AttributeError, TypeError):
+            return None if return_none_on_fail else datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        return dt.astimezone(timezone.utc)
 
     def can_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
         """Check if PR can be processed (under attempt limit).
@@ -652,7 +652,7 @@ class AutomationSafetyManager:
             return False
 
     def get_global_runs(self) -> int:
-        """Get total number of global runs (resets daily)"""
+        """Get total number of global runs within the rolling window."""
         with self.lock:
             normalized_total = 0
 
@@ -676,30 +676,39 @@ class AutomationSafetyManager:
 
     def record_global_run(self):
         """Record a global automation run atomically"""
+        self._record_global_run_at_time(datetime.now(timezone.utc))
+
+    def _record_global_run_at_time(self, run_time: datetime, *, now: Optional[datetime] = None):
+        """Record a global run at a specific time (test helper)."""
         with self.lock:
             new_total = 0
-            current_time = datetime.now()
+            current_time = now or datetime.now(timezone.utc)
+            if current_time.tzinfo is None:
+                current_time = current_time.replace(tzinfo=timezone.utc)
+            else:
+                current_time = current_time.astimezone(timezone.utc)
+            if run_time.tzinfo is None:
+                run_time = run_time.replace(tzinfo=timezone.utc)
+            else:
+                run_time = run_time.astimezone(timezone.utc)
 
             def _increment(payload: Optional[dict]):
                 nonlocal new_total
-                normalized, total, _ = self._normalize_global_run_payload(payload, now=current_time)
-                total += 1
-                normalized["total_runs"] = total
-                normalized["current_date"] = current_time.date().isoformat()
-                normalized["last_run"] = current_time.isoformat()
+                normalized, total, _ = self._normalize_global_run_payload(
+                    payload,
+                    now=current_time,
+                    add_run=run_time,
+                )
                 new_total = total
                 return normalized
 
             if not json_manager.update_json(self.global_runs_file, _increment):
-                self.logger.warning(
-                    "Falling back to manual increment for global run counter"
-                )
                 payload = self._read_json_file(self.global_runs_file)
-                normalized, total, _ = self._normalize_global_run_payload(payload, now=current_time)
-                total += 1
-                normalized["total_runs"] = total
-                normalized["current_date"] = current_time.date().isoformat()
-                normalized["last_run"] = current_time.isoformat()
+                normalized, total, _ = self._normalize_global_run_payload(
+                    payload,
+                    now=current_time,
+                    add_run=run_time,
+                )
                 new_total = total
                 self._write_json_file(self.global_runs_file, normalized)
 
@@ -874,8 +883,9 @@ This is an automated notification from the WorldArchitect.AI automation system.
             self._global_runs_cache = 0
             data = self._read_json_file(self.global_runs_file)
             data["total_runs"] = 0
-            data["last_run"] = None
-            now = datetime.now()
+            data.pop("last_run", None)
+            data["runs"] = []
+            now = datetime.now(timezone.utc)
             data["current_date"] = now.date().isoformat()
             data["last_reset"] = now.isoformat()
             self._write_json_file(self.global_runs_file, data)

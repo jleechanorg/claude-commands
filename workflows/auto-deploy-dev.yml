@@ -13,6 +13,8 @@
 # Auto-Deploy to Development Environment
 # Lightweight trigger that delegates to reusable deploy-dev workflow
 # Triggers on push to main OR manual workflow_dispatch
+#
+# GATED DEPLOYMENT: Smoke tests run after deploy and must pass for success
 
 name: Auto-Deploy Dev
 
@@ -26,6 +28,11 @@ on:
         description: 'Manual auto-deploy trigger reason (optional)'
         required: false
         type: string
+      skip_smoke_tests:
+        description: 'Skip smoke tests (emergency deploys only)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -40,3 +47,88 @@ jobs:
     permissions:
       contents: read
       issues: write
+
+  # Run smoke tests after deployment to validate the release
+  # Can be skipped for emergency manual deploys via workflow_dispatch
+  smoke-tests:
+    needs: deploy
+    # Note: workflow_dispatch inputs are strings, not booleans - compare against 'true' string
+    if: ${{ github.event_name == 'push' || github.event.inputs.skip_smoke_tests != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GCP_REGION: us-central1
+      GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+      SERVICE_NAME: mvp-site-app-dev
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200  # v2
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Get deployment URL
+        id: get-url
+        run: |
+          URL=$(gcloud run services describe "${{ env.SERVICE_NAME }}" \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT }} \
+            --format='value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Deployment URL: $URL"
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
+        with:
+          node-version: 20
+
+      - name: Run MCP smoke tests
+        id: smoke_tests
+        timeout-minutes: 15
+        env:
+          MCP_SERVER_URL: ${{ steps.get-url.outputs.url }}
+          MCP_TEST_MODE: real
+          # Test BOTH Cerebras and Gemini 3 to catch provider-specific regressions
+          MCP_TEST_PROVIDERS: cerebras,gemini
+        run: |
+          echo "🧪 Running MCP smoke tests against dev deployment..."
+          echo "Target: $MCP_SERVER_URL/mcp"
+          echo "Providers: $MCP_TEST_PROVIDERS"
+
+          node scripts/mcp-smoke-tests.mjs
+
+          echo "✅ MCP smoke tests passed"
+
+      - name: Upload smoke test logs
+        if: always()
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+        with:
+          name: mcp-smoke-logs-dev-${{ github.run_number }}
+          path: /tmp/${{ github.repository }}/*/smoke_tests/*.log
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Post smoke test summary
+        if: always()
+        run: |
+          if [ "${{ steps.smoke_tests.outcome }}" = "success" ]; then
+            echo "## ✅ Dev Deployment Smoke Tests Passed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All smoke tests passed against the dev deployment." >> $GITHUB_STEP_SUMMARY
+            echo "- **URL**: ${{ steps.get-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Providers tested**: Cerebras, Gemini 3" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Dev Deployment Smoke Tests Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Smoke tests failed - the deployment may have issues." >> $GITHUB_STEP_SUMMARY
+            echo "- **URL**: ${{ steps.get-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
+          fi

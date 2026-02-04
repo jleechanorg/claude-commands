@@ -18,7 +18,7 @@ All workflows use safety limits, commit tracking, and orchestrated AI agents to 
 
 ### What It Does
 
-The @codex comment agent continuously monitors all open PRs across the jleechanorg organization and posts standardized Codex instruction comments when new commits are pushed. This enables AI assistants (@codex, @coderabbitai, @copilot, @cursor) to review and improve PRs automatically.
+The @codex comment agent continuously monitors all open PRs across the jleechanorg organization and posts standardized Codex instruction comments when new commits are pushed. This enables AI assistants (@codex, @coderabbitai, @cursor) to review and improve PRs automatically.
 
 ### How It Works
 
@@ -62,13 +62,13 @@ The @codex comment agent continuously monitors all open PRs across the jleechano
 The agent posts this standardized instruction:
 
 ```markdown
-@codex @coderabbitai @copilot @cursor [AI automation] Codex will implement
-the code updates while coderabbitai, copilot, and cursor focus on review
+@codex @coderabbitai @cursor [AI automation] Codex will implement
+the code updates while coderabbitai and cursor focus on review
 support. Please make the following changes to this PR.
 
 Use your judgment to fix comments from everyone or explain why it should
-not be fixed. Follow binary response protocol - every comment needs "DONE"
-or "NOT DONE" classification explicitly with an explanation. Address all
+not be fixed. Use /commentreply to post ONE consolidated summary with all
+responses (avoids GitHub rate limits from individual replies). Address all
 comments on this PR. Fix any failing tests and resolve merge conflicts.
 Push any commits needed to remote so the PR is updated.
 

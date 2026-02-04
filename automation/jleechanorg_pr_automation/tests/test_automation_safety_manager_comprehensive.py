@@ -8,7 +8,7 @@ import json
 import os
 import tempfile
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
 import pytest
@@ -150,48 +150,92 @@ class TestGlobalLimits:
         manager._clear_global_runs()
         assert manager.get_global_runs() == 0
 
-    def test_global_runs_auto_resets_daily(self, manager):
-        """Daily reset should clear the counter and allow automation without manual approval."""
+    def test_global_runs_use_rolling_window(self, manager):
+        """Global runs should use a rolling 24-hour window instead of daily reset."""
         manager._clear_global_runs()
 
-        # Simulate crossing the daily limit
-        for _ in range(manager.global_limit):
-            manager.record_global_run()
+        # Simulate 50 runs from 30 hours ago (outside window)
+        base_time = datetime.now(timezone.utc) - timedelta(hours=30)
+        for i in range(50):
+            manager._record_global_run_at_time(base_time + timedelta(minutes=i))
 
-        assert manager.requires_manual_approval() is True
+        # Simulate 40 runs from 2 hours ago (inside window)
+        recent_time = datetime.now(timezone.utc) - timedelta(hours=2)
+        for i in range(40):
+            manager._record_global_run_at_time(recent_time + timedelta(minutes=i))
 
-        now = datetime.now()
-        stale_payload = {
-            "total_runs": manager.global_limit,
-            "start_date": (now - timedelta(days=4)).isoformat(),
-            "current_date": (now - timedelta(days=1)).date().isoformat(),
-            "last_run": (now - timedelta(hours=2)).isoformat(),
-            "last_reset": (now - timedelta(days=2)).isoformat(),
-        }
-        json_manager.write_json(manager.global_runs_file, stale_payload)
+        # Only recent runs should count
+        current_runs = manager.get_global_runs()
+        assert current_runs == 40, (
+            f"Expected 40 runs in last 24 hours (old 50 excluded), got {current_runs}"
+        )
+        assert manager.can_start_global_run() is True
 
-        refreshed_runs = manager.get_global_runs()
-        expected_today = datetime.now().date().isoformat()
-        assert refreshed_runs == 0
-        assert manager.requires_manual_approval() is False
 
-        normalized = manager._read_json_file(manager.global_runs_file)
-        assert normalized["current_date"] == expected_today
-        assert normalized["total_runs"] == 0
+class TestGlobalRunsRollingWindow:
+    """Rolling window behavior for global runs."""
 
-        # Ensure the reset timestamp is updated and sane
-        last_reset = normalized.get("last_reset")
-        assert last_reset is not None
-        parsed_reset = datetime.fromisoformat(last_reset)
-        assert (
-            parsed_reset is not None
-        ), "last_reset should be a valid ISO datetime"
+    @pytest.fixture
+    def manager(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yield AutomationSafetyManager(temp_dir)
 
-        # Record another run and verify counters/log fields move forward
-        manager.record_global_run()
-        normalized = manager._read_json_file(manager.global_runs_file)
-        assert normalized["total_runs"] == 1
-        assert datetime.fromisoformat(normalized["last_run"])
+    def test_global_runs_exclude_old_runs(self, manager):
+        """Old runs (>24h) should be excluded from the count."""
+        old_time = datetime.now(timezone.utc) - timedelta(hours=25, minutes=100)
+        for i in range(100):
+            manager._record_global_run_at_time(old_time + timedelta(minutes=i))
+
+        current_runs = manager.get_global_runs()
+        assert current_runs == 0, (
+            f"Expected 0 runs in last 24 hours (100 older runs excluded), got {current_runs}"
+        )
+        assert manager.can_start_global_run() is True
+
+    def test_global_runs_enforce_limit_in_window(self, manager):
+        """Limit should be enforced within the rolling window."""
+        base_time = datetime.now(timezone.utc) - timedelta(hours=20)
+        for i in range(100):
+            manager._record_global_run_at_time(base_time + timedelta(minutes=i * 12))
+
+        current_runs = manager.get_global_runs()
+        assert current_runs == 100, f"Expected 100 runs, got {current_runs}"
+        assert manager.can_start_global_run() is False
+
+    def test_global_runs_gradual_expiration(self, manager):
+        """Runs should age out gradually (no midnight reset)."""
+        old_time = datetime.now(timezone.utc) - timedelta(hours=25)
+        for i in range(50):
+            manager._record_global_run_at_time(old_time + timedelta(minutes=i))
+
+        recent_time = datetime.now(timezone.utc) - timedelta(hours=1)
+        for i in range(50):
+            manager._record_global_run_at_time(recent_time + timedelta(minutes=i))
+
+        current_runs = manager.get_global_runs()
+        assert current_runs == 50, (
+            f"Expected 50 runs (50 old excluded), got {current_runs}"
+        )
+        assert manager.can_start_global_run() is True
+
+    def test_global_runs_configurable_window(self, manager, monkeypatch):
+        """Rolling window should honor AUTOMATION_GLOBAL_WINDOW_HOURS."""
+        monkeypatch.setenv("AUTOMATION_GLOBAL_WINDOW_HOURS", "12")
+
+        times = [
+            datetime.now(timezone.utc) - timedelta(hours=15),
+            datetime.now(timezone.utc) - timedelta(hours=10),
+            datetime.now(timezone.utc) - timedelta(hours=5),
+            datetime.now(timezone.utc) - timedelta(hours=1),
+        ]
+
+        for run_time in times:
+            manager._record_global_run_at_time(run_time)
+
+        current_runs = manager.get_global_runs()
+        assert current_runs == 3, (
+            f"Expected 3 runs in last 12 hours, got {current_runs}"
+        )
 
 
 class TestPRLimits:

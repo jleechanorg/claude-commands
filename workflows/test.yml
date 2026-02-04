@@ -159,12 +159,23 @@ jobs:
         # Install additional requirements for specific directories if needed
         # NOTE: Keep the group names in sync with GROUP_CONFIG in scripts/ci-detect-changes.sh (source of truth).
         case "${{ matrix.test-group }}" in
-          "claude"|"orchestration"|"automation"|"scripts"|"mcp")
+          "core"|"claude"|"orchestration"|"automation"|"scripts"|"mcp")
             # These directories may have additional requirements
             find . -name "requirements.txt" -not -path "./venv/*" -not -path "./mvp_site/requirements.txt" | while read req_file; do
               echo "Installing $req_file (with 300s timeout)"
               timeout 300 pip install -r "$req_file" || echo "Warning: Failed to install $req_file"
             done
+            # Install utility packages if testing core group (tests/ directory needs these)
+            if [ "${{ matrix.test-group }}" = "core" ]; then
+              if [ -f "moltbook_poster/pyproject.toml" ]; then
+                echo "Installing moltbook_poster package for tests/ directory"
+                timeout 300 pip install -e "./moltbook_poster" || echo "Warning: Failed to install moltbook_poster"
+              fi
+              if [ -f "orchestration/pyproject.toml" ]; then
+                echo "Installing orchestration package for tests/ directory"
+                timeout 300 pip install -e "./orchestration" || echo "Warning: Failed to install orchestration"
+              fi
+            fi
             # Install automation package if testing automation
             if [ "${{ matrix.test-group }}" = "automation" ] && [ -f "automation/pyproject.toml" ]; then
               echo "Installing automation package in editable mode with dev dependencies"

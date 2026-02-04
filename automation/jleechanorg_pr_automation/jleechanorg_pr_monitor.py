@@ -32,7 +32,11 @@ if str(ROOT_DIR) not in sys.path:
 # and allow re-running the fix-comment agent (handles cases where agent failed silently)
 STALE_QUEUE_THRESHOLD_HOURS = 1.0
 
-from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
+from orchestration.cli_validation import (
+    CLI_VALIDATION_TIMEOUT_SECONDS,
+    validate_cli_two_phase,
+)
+from orchestration.task_dispatcher import CLI_PROFILES, CURSOR_MODEL, GEMINI_MODEL, TaskDispatcher
 
 from .automation_safety_manager import AutomationSafetyManager
 from .automation_utils import AutomationUtils
@@ -41,6 +45,15 @@ from .codex_config import (
 )
 from .codex_config import (
     CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
+)
+from .codex_config import (
+    COMMENT_VALIDATION_MARKER_PREFIX as SHARED_COMMENT_VALIDATION_PREFIX,
+)
+from .codex_config import (
+    COMMENT_VALIDATION_MARKER_SUFFIX as SHARED_COMMENT_VALIDATION_SUFFIX,
+)
+from .codex_config import (
+    DEFAULT_ASSISTANT_MENTIONS,
 )
 from .codex_config import (
     FIX_COMMENT_MARKER_PREFIX as SHARED_FIX_COMMENT_PREFIX,
@@ -61,14 +74,9 @@ from .codex_config import (
     FIXPR_MARKER_SUFFIX as SHARED_FIXPR_SUFFIX,
 )
 from .codex_config import (
-    COMMENT_VALIDATION_MARKER_PREFIX as SHARED_COMMENT_VALIDATION_PREFIX,
-)
-from .codex_config import (
-    COMMENT_VALIDATION_MARKER_SUFFIX as SHARED_COMMENT_VALIDATION_SUFFIX,
-)
-from .codex_config import (
     build_automation_marker,
     build_comment_intro,
+    is_automation_comment,
 )
 from .orchestrated_pr_runner import (
     chdir,
@@ -274,7 +282,7 @@ class JleechanorgPRMonitor:
 
         self.assistant_mentions = os.environ.get(
             "AI_ASSISTANT_MENTIONS",
-            "@codex @coderabbitai @copilot @cursor",
+            DEFAULT_ASSISTANT_MENTIONS,
         )
 
         self.wrapper_managed = os.environ.get("AUTOMATION_SAFETY_WRAPPER") == "1"
@@ -301,6 +309,7 @@ class JleechanorgPRMonitor:
         # by checking if it was set after init or passing it in.
         # Actually, let's update __init__ signature to accept it.
         self.automation_username = self._resolve_automation_username()
+        self._fix_comment_inflight: dict[str, dict[str, float | str]] = {}
 
         self.logger.info("🏢 Initialized jleechanorg PR monitor")
         self.logger.info(f"📁 History storage: {self.history_base_dir}")
@@ -382,6 +391,51 @@ class JleechanorgPRMonitor:
         history[pr_key] = commit_sha
         self._save_branch_history(repo_name, branch_name, history)
         self.logger.debug(f"📝 Recorded processing of PR {repo_name}/{branch_name}#{pr_number} with commit {commit_sha[:8]}")
+
+    def _get_fix_comment_inflight_key(self, repo_full: str, pr_number: int) -> str:
+        return f"{repo_full}#{pr_number}"
+
+    def _get_fix_comment_inflight_ttl(self) -> int:
+        env_value = os.environ.get("FIX_COMMENT_INFLIGHT_TTL")
+        if env_value:
+            try:
+                ttl = int(env_value)
+                if ttl > 0:
+                    return ttl
+            except (TypeError, ValueError):
+                pass
+        return int(STALE_QUEUE_THRESHOLD_HOURS * 3600)
+
+    def _set_fix_comment_inflight(
+        self,
+        repo_full: str,
+        pr_number: int,
+        head_sha: str,
+        ttl_seconds: int,
+    ) -> None:
+        key = self._get_fix_comment_inflight_key(repo_full, pr_number)
+        self._fix_comment_inflight[key] = {
+            "head_sha": head_sha,
+            "expires_at": time.time() + ttl_seconds,
+        }
+
+    def _clear_fix_comment_inflight(self, repo_full: str, pr_number: int) -> None:
+        key = self._get_fix_comment_inflight_key(repo_full, pr_number)
+        if key in self._fix_comment_inflight:
+            del self._fix_comment_inflight[key]
+
+    def _is_fix_comment_inflight(self, repo_full: str, pr_number: int, head_sha: str) -> bool:
+        key = self._get_fix_comment_inflight_key(repo_full, pr_number)
+        entry = self._fix_comment_inflight.get(key)
+        if not entry:
+            return False
+        if entry.get("head_sha") != head_sha:
+            return False
+        expires_at = entry.get("expires_at")
+        if not isinstance(expires_at, (int, float)) or expires_at <= time.time():
+            self._fix_comment_inflight.pop(key, None)
+            return False
+        return True
 
     # TDD GREEN: Implement methods for PR filtering and actionable counting
     def _record_pr_processing(self, repo_name: str, branch_name: str, pr_number: int, commit_sha: str) -> None:
@@ -1011,7 +1065,7 @@ class JleechanorgPRMonitor:
         """
         if not head_sha:
             return False, ""
-        
+
         head_commit_details = self._get_head_commit_details(repo_full, pr_number, head_sha)
         if head_commit_details and self._is_head_commit_from_codex(head_commit_details):
             # Check if there are new bot comments that need attention
@@ -1023,17 +1077,16 @@ class JleechanorgPRMonitor:
                     pr_number,
                 )
                 return False, "forcing re-run"  # Signal to bypass standard skip checks
-            else:
-                return True, (
-                    f"🆔 Head commit {head_sha[:8]} for {repo_full}#{pr_number} already attributed to Codex"
-                )
-        
+            return True, (
+                f"🆔 Head commit {head_sha[:8]} for {repo_full}#{pr_number} already attributed to Codex"
+            )
+
         # Check for pending Codex commits (only if not forcing re-run)
         if self._has_pending_codex_commit(comments, head_sha):
             return True, (
                 f"⏳ Pending Codex automation commit {head_sha[:8]} detected on PR #{pr_number}; skipping re-run"
             )
-        
+
         return False, ""
 
     def post_codex_instruction_simple(self, repository: str, pr_number: int, pr_data: dict) -> str:
@@ -1126,7 +1179,7 @@ class JleechanorgPRMonitor:
                 state = (check.get("state") or "").upper()
                 # Statuses API format: state field
                 status_state = (check.get("state") or "").upper() if "status" not in check else None
-                
+
                 # Determine if check is passing
                 is_passing = False
                 if conclusion:
@@ -1136,7 +1189,7 @@ class JleechanorgPRMonitor:
                 elif status_state:
                     is_passing = status_state in ["SUCCESS", "NEUTRAL"]
 
-                
+
                 if not is_passing:
                     check_name = check.get("name") or check.get("context") or "unknown"
                     self.logger.debug(f"❌ Status check failed: {check_name} - conclusion={conclusion}, state={state}")
@@ -1163,10 +1216,10 @@ class JleechanorgPRMonitor:
 
 **Summary (Execution Flow):**
 1. Review every outstanding PR comment to understand required fixes and clarifications.
-2. Implement code or configuration updates that address each comment, then reply with explicit DONE/NOT DONE outcomes plus context.
-3. Run the relevant test suites locally and in CI, repairing any failures until the checks report success.
-4. Rebase or merge with the base branch to clear conflicts, then push the updated commits to this PR.
-5. Perform a final self-review to confirm linting, formatting, and documentation standards are met before handoff.
+2. Implement code or configuration updates that address each comment.
+3. Run /commentreply to post a consolidated summary with all responses (avoids rate limits from individual replies).
+4. Run the relevant test suites locally and in CI, repairing any failures until the checks report success.
+5. Rebase or merge with the base branch to clear conflicts, then push the updated commits to this PR.
 
 **PR Details:**
 - Title: {pr_data.get('title', 'Unknown')}
@@ -1175,13 +1228,13 @@ class JleechanorgPRMonitor:
 - Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})
 
 **Instructions:**
-Use your judgment to fix comments from everyone or explain why it should not be fixed. Follow binary response protocol - every comment needs "DONE" or "NOT DONE" classification explicitly with an explanation. Address all comments on this PR. Fix any failing tests and resolve merge conflicts. Push any commits needed to remote so the PR is updated.
+Use your judgment to fix comments from everyone or explain why it should not be fixed. Use /commentreply to post ONE consolidated summary comment with all responses embedded (this avoids GitHub rate limits from posting individual replies). Address all comments on this PR. Fix any failing tests and resolve merge conflicts. Push any commits needed to remote so the PR is updated.
 
 **Tasks:**
 1. **Address all comments** - Review and implement ALL feedback from reviewers
-2. **Fix failing tests** - Review test failures and implement fixes
-3. **Resolve merge conflicts** - Handle any conflicts with the base branch
-4. **Ensure code quality** - Follow project standards and best practices
+2. **Run /commentreply** - Post consolidated summary with all responses (not individual replies)
+3. **Fix failing tests** - Review test failures and implement fixes
+4. **Resolve merge conflicts** - Handle any conflicts with the base branch
 
 **Automation Markers:**
 - Leave the hidden comment marker `<!-- codex-automation-commit:... -->` in this thread so we only re-ping you after new commits.
@@ -1209,9 +1262,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
 **Summary (Review Flow):**
 1. Review every outstanding PR comment to understand required fixes and clarifications.
-2. Verify that the author has addressed each comment, implementing necessary updates or providing "NOT DONE" justifications.
+2. Verify that the author has addressed each comment in code or via consolidated response summary.
 3. Check for any new bugs, security vulnerabilities, or regressions introduced by these changes.
-4. Ensure the PR adheres to project standards and the "DONE/NOT DONE" response protocol.
+4. Ensure the PR adheres to project standards.
 
 **PR Details:**
 - Title: {pr_data.get('title', 'Unknown')}
@@ -1220,13 +1273,55 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 - Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})
 
 **Instructions:**
-Review the PR for completeness and quality. Do not write code changes; instead, analyze the existing changes. Verify that the author has followed the binary response protocol - every previous comment needs a "DONE" or "NOT DONE" reply. Flag any missed comments, failing tests, or unresolved conflicts.
+Review the PR for completeness and quality. Do not write code changes; instead, analyze the existing changes. Verify that the author has addressed comments either through code changes OR via a consolidated response summary (look for "[AI responder] Consolidated Comment Response Summary" comments with `Re: [Comment #<id>]` references). Do NOT require individual threaded DONE/NOT DONE replies - the consolidated approach is preferred to avoid GitHub rate limits.
 
 **Tasks:**
-1. **Verify comments addressed** - Confirm the author implemented ALL feedback or provided valid reasons.
+1. **Verify comments addressed** - Check if issues were fixed in code OR acknowledged in consolidated summary.
 2. **Check for bugs/security** - Identify serious issues or regressions.
 3. **Validate Code Quality** - Ensure best practices are followed.
-4. **Enforce Protocol** - Complain if "DONE"/"NOT DONE" responses are missing.
+4. **Check CI status** - Flag failing tests or merge conflicts.
+
+---
+
+**🎯 REQUIRED OUTPUT FORMAT (MANDATORY):**
+
+Your response MUST follow this exact structure for clarity:
+
+```markdown
+## ✅ AUTOMATION COMPLETE — [STATUS: READY FOR MERGE / NEEDS WORK / BLOCKED]
+
+**Verified at commit `{head_sha[:8] if head_sha else 'unknown'}` ({head_sha or 'unknown'})**
+
+---
+
+## 📊 Current Status: **[PERFECT/ISSUES FOUND]** [✅/⚠️/❌]
+
+| Category | Status |
+|----------|--------|
+| **CI Checks** | [✅ X/Y PASSING / ❌ FAILING] |
+| **Merge Status** | [✅ CLEAN / ❌ CONFLICTS] |
+| **PR State** | [✅ MERGEABLE / ❌ BLOCKED] |
+| **Comments Addressed** | [✅ ALL DONE / ⚠️ X UNRESOLVED] |
+| **Code Quality** | [✅ GOOD / ⚠️ ISSUES] |
+
+---
+
+## 🎯 Comment Resolution Summary
+
+[List each outstanding comment and whether it was addressed - check for code fixes OR consolidated response summary]
+
+---
+
+## 🚀 **FINAL VERDICT: [APPROVE / REQUEST CHANGES / BLOCKED]**
+
+[Brief explanation of decision]
+
+---
+
+🐰 [Sign-off emoji and message]
+```
+
+**IMPORTANT:** Do NOT include raw script execution output or analysis chain details in your response. Only provide the clean formatted summary above.
 """
 
         if head_sha:
@@ -1279,17 +1374,29 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
             "   - `add_comment_to_pending_review` MCP tool (FORBIDDEN - DO NOT USE)\n"
             "   - `POST /repos/.../pulls/.../reviews` endpoint (FORBIDDEN - DO NOT USE)\n"
             "   - Any GitHub review workflow that requires 'submit' (FORBIDDEN - DO NOT USE)\n\n"
-            "   ✅✅✅ CORRECT METHOD - Reply to inline review comments (ONLY USE THIS):\n"
-            f"   `gh api /repos/{repository}/pulls/{pr_number}/comments -f body='...' -F in_reply_to={{comment_id}}`\n"
-            "   This `/comments` endpoint with `in_reply_to` creates a threaded reply WITHOUT starting a review.\n"
-            "   ⚠️ Use `-f` for body (string) and `-F` for in_reply_to (numeric comment ID).\n\n"
-            "   ✅✅✅ CORRECT METHOD - General PR comments (not line-specific):\n"
-            f"   `gh pr comment {pr_number} --body '...'` or `gh api /repos/{repository}/issues/{pr_number}/comments -f body='...'`\n\n"
+            "   ✅✅✅ REQUIRED METHOD - Python (NO bash, NO macOS permission prompts):\n"
+            "   ```python\n"
+            "   from automation.jleechanorg_pr_automation.orchestrated_pr_runner import post_pr_comment_python\n"
+            "   # General PR comment:\n"
+            "   post_pr_comment_python('{repository}', {pr_number}, 'Your comment text')\n"
+            "   # Reply to inline review comment:\n"
+            "   post_pr_comment_python('{repository}', {pr_number}, 'Your reply', in_reply_to=comment_id)\n"
+            "   ```\n\n"
+            "   ❌ FORBIDDEN - Do NOT use bash/gh CLI commands (triggers macOS permission prompts):\n"
+            "   - DO NOT use: `gh api /repos/{repository}/pulls/{pr_number}/comments`\n"
+            "   - DO NOT use: `gh pr comment {pr_number} --body '...'`\n"
+            "   - These commands trigger macOS permission dialogs - USE PYTHON FUNCTIONS INSTEAD\n\n"
+
             "   ✅ ALLOWED - Verification and Cleanup:\n"
             "   - `GET /repos/.../pulls/.../reviews` (ALLOWED - used to check for pending reviews)\n"
             "   - `DELETE /repos/.../pulls/.../reviews/{review_id}` (ALLOWED - used to clean up pending reviews)\n\n"
-            "   ⚠️ VERIFICATION: After replying, verify NO pending review was created:\n"
-            f"   `gh api /repos/{repository}/pulls/{pr_number}/reviews --jq '.[] | select(.state==\"PENDING\")'`\n"
+            "   ⚠️ VERIFICATION & CLEANUP: After posting ANY comment, you MUST check for and delete pending reviews.\n"
+            "   PREFERRED METHOD (Python - NO bash, NO macOS permission prompts):\n"
+            "   ```python\n"
+            "   from automation.jleechanorg_pr_automation.orchestrated_pr_runner import cleanup_pending_reviews_python\n"
+            "   # Replace 'your-automation-username' with your actual GitHub username\n"
+            "   cleanup_pending_reviews_python('{repo_full}', {pr_number}, 'your-automation-username')\n"
+            "   ```\n"
             "   If any pending reviews exist from your user, DELETE THEM IMMEDIATELY.\n\n"
             "🚨🚨🚨 ABSOLUTE PROHIBITION - PENDING REVIEWS:\n"
             "   ⚠️⚠️⚠️ YOU ARE FORBIDDEN FROM CREATING PENDING REVIEWS. THIS IS NOT A SUGGESTION - IT IS A HARD REQUIREMENT.\n"
@@ -1302,33 +1409,34 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
             "Steps:\n"
             f"1) gh pr checkout {pr_number}\n\n"
             "2) Fetch ALL PR feedback sources (pagination-safe) using correct GitHub API endpoints:\n"
-            f"   - Issue comments: `gh api /repos/{repository}/issues/{pr_number}/comments --paginate -F per_page=100`\n"
-            f"   - Review summaries: `gh api /repos/{repository}/pulls/{pr_number}/reviews --paginate -F per_page=100`\n"
-            f"   - Inline review comments: `gh api /repos/{repository}/pulls/{pr_number}/comments --paginate -F per_page=100`\n"
+            "   - Use Python `requests.get` to fetch: issue comments, review summaries, and inline review comments\n"
+            "   - DO NOT USE `gh api` (triggers macOS permission prompts)\n"
             "   ⚠️ WARNING: `gh pr view --json comments` ONLY fetches issue comments, NOT inline review comments.\n\n"
-            "3) Apply code changes to address feedback, then reply to **100%** of comments INDIVIDUALLY.\n"
-            "   Threading rules:\n"
-            "   - Inline review comments MUST use threaded replies via the GitHub API.\n"
-            "   - Issue/PR comments do not support threading (they are top-level only).\n\n"
+            "3) Apply code changes to address feedback, then run /commentreply to post a **consolidated summary comment**.\n"
+            "   The /commentreply command will:\n"
+            "   - Analyze ALL comments and generate responses\n"
+            "   - Post ONE summary comment with all replies embedded (reduces notification spam)\n"
+            "   - Use pattern `Re: [Comment #<id>]` to reference each original comment\n\n"
             "   **Response Protocol** (use ONE of these categories for EACH comment):\n"
             "   - **FIXED**: Issue implemented with working code → include files modified, tests added, verification\n"
             "   - **DEFERRED**: Created issue for future work → include issue URL and reason\n"
             "   - **ACKNOWLEDGED**: Noted but not actionable → include explanation\n"
             "   - **NOT DONE**: Cannot implement → include specific technical reason\n\n"
-            "   **Reply Methods (ONLY use these - no pending reviews!):**\n"
-            f"   - Inline review comments: `gh api /repos/{repository}/pulls/{pr_number}/comments -f body='[Response]' -F in_reply_to={{comment_id}}`\n"
-            f"   - Issue/PR comments: `gh pr comment {pr_number} --body '[Response]'`\n"
-            "   - Do NOT post mega-comments consolidating multiple responses; reply individually to each comment.\n\n"
+            "   **Reply Method (CONSOLIDATED):**\n"
+            "   - Run `/commentreply` slash command to post consolidated summary with all responses\n"
+            "   - The summary starts with `[AI responder] Consolidated Comment Response Summary`\n"
+            "   - Each comment is referenced with `Re: [Comment #<id>]` for traceability\n"
+            "   - Do not post individual GitHub API replies alongside /commentreply; use only the consolidated summary\n\n"
             "4) Run tests and fix failures (block completion on critical/blocking test failures)\n\n"
             "5) Resolve merge conflicts - EXPLICIT STEPS:\n"
             f"   a) Check merge status: gh pr view {pr_number} --json mergeable,mergeStateStatus\n"
-            f"   b) If mergeable == \"CONFLICTING\" or mergeStateStatus == \"DIRTY\":\n"
+            f'   b) If mergeable == "CONFLICTING" or mergeStateStatus == "DIRTY":\n'
             "      - git fetch origin main && git merge origin/main --no-edit\n"
             "      - Resolve conflicts:\n"
             "        * .beads/issues.jsonl: git checkout --ours .beads/issues.jsonl\n"
             "        * test files (mvp_site/tests/*, testing_mcp/lib/*): git checkout --theirs <file>\n"
             "        * code files: manually resolve, keeping both changes where appropriate\n"
-            "      - git add -A && git commit -m \"[fixcomment-automation-commit] Merge main to resolve conflicts\" && git push\n"
+            '      - git add -A && git commit -m "[fixcomment-automation-commit] Merge main to resolve conflicts" && git push\n'
             f"   c) Verify: gh pr view {pr_number} --json mergeable (should show MERGEABLE, not CONFLICTING)\n\n"
             f'6) git add -A && git commit -m "[{commit_marker_cli}-automation-commit] fix PR #{pr_number} review feedback" && git push\n\n'
             f"7) Write completion report to /tmp/orchestration_results/pr-{pr_number}_results.json "
@@ -1347,10 +1455,15 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         pr_data: dict,
         head_sha: str | None,
         agent_cli: str = "claude",
+        status_line: str | None = None,
     ) -> str:
+        if status_line is None:
+            status_line = (
+                f"[AI automation - {agent_cli}] Fix-comment run queued for this PR. "
+                "A review request will follow after updates are pushed."
+            )
         comment_body = (
-            f"[AI automation - {agent_cli}] Fix-comment run queued for this PR. "
-            "A review request will follow after updates are pushed.\n\n"
+            f"{status_line}\n\n"
             "**PR Details:**\n"
             f"- Title: {pr_data.get('title', 'Unknown')}\n"
             f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
@@ -1377,11 +1490,14 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         pr_data: dict,
         head_sha: str | None,
         agent_cli: str = "claude",
+        status_line: str | None = None,
     ) -> str:
         full_sha = head_sha or "unknown"
         short_sha = head_sha[:8] if head_sha else "unknown"
+        if status_line is None:
+            status_line = f"[AI automation - {agent_cli}] FixPR run queued for this PR."
         comment_body = (
-            f"[AI automation - {agent_cli}] FixPR run queued for this PR.\n\n"
+            f"{status_line}\n\n"
             "**PR Details:**\n"
             f"- Title: {pr_data.get('title', 'Unknown')}\n"
             f"- Author: {pr_data.get('author', {}).get('login', 'unknown')}\n"
@@ -1504,12 +1620,12 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
             commit_obj = node.get("commit") if isinstance(node, dict) and "commit" in node else node
             if not isinstance(commit_obj, dict):
                 continue
-                
+
             headline = commit_obj.get("messageHeadline")
             if not headline and "message" in commit_obj:
                 # REST API returns full message; headline is first line
                 headline = commit_obj["message"].split("\n")[0]
-                
+
             if headline:
                 headlines.append(headline)
 
@@ -1577,6 +1693,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         pr_data: dict,
         head_sha: str | None,
         agent_cli: str = "claude",
+        status_line: str | None = None,
     ) -> bool:
         repo_full = self._normalize_repository_name(repository)
         comment_body = self._build_fix_comment_queued_body(
@@ -1585,6 +1702,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
             pr_data,
             head_sha,
             agent_cli=agent_cli,
+            status_line=status_line,
         )
 
         try:
@@ -1632,6 +1750,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         pr_data: dict,
         head_sha: str | None,
         agent_cli: str = "claude",
+        status_line: str | None = None,
     ) -> bool:
         repo_full = self._normalize_repository_name(repository)
         comment_body = self._build_fixpr_queued_body(
@@ -1640,6 +1759,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
             pr_data,
             head_sha,
             agent_cli=agent_cli,
+            status_line=status_line,
         )
 
         try:
@@ -1679,6 +1799,120 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
                 exc,
             )
             return False
+
+    def _parse_cli_chain(self, agent_cli: str) -> list[str]:
+        cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+        return cli_chain or ["claude"]
+
+    def _run_two_phase_cli_validation(
+        self,
+        cli_name: str,
+        *,
+        agent_name: str,
+        retain_output: bool = False,
+    ) -> bool:
+        profile = CLI_PROFILES.get(cli_name)
+        if not profile:
+            self.logger.debug("Unknown CLI '%s' in preflight - failing", cli_name)
+            return False
+
+        cli_binary = shutil.which(profile.get("binary", cli_name))
+        if not cli_binary:
+            self.logger.debug("CLI binary not found for '%s' - failing preflight", cli_name)
+            return False
+
+        env = {k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
+
+        # Build help and execution commands for two-phase validation (help first, then real 2+2)
+        help_args = ["--help"]
+        execution_cmd: list[str] = []
+        if cli_name == "gemini":
+            test_model = GEMINI_MODEL
+            execution_cmd = [
+                "-m",
+                test_model,
+                "--yolo",
+                "--allowed-mcp-server-names",
+                "none",
+            ]
+        elif cli_name == "codex":
+            help_args = ["exec", "--help"]
+            execution_cmd = ["exec", "--yolo", "--skip-git-repo-check"]
+        elif cli_name == "claude":
+            execution_cmd = [
+                "--model",
+                "sonnet",
+                "-p",
+                "@PROMPT_FILE",
+                "--output-format",
+                "text",
+                "--strict-mcp-config",
+            ]
+        elif cli_name == "cursor":
+            execution_cmd = [
+                "-f",
+                "-p",
+                "@PROMPT_FILE",
+                "--model",
+                CURSOR_MODEL,
+                "--output-format",
+                "text",
+                "--approve-mcps",
+            ]
+
+        try:
+            result = validate_cli_two_phase(
+                cli_name=cli_name,
+                cli_path=cli_binary,
+                help_args=help_args,
+                execution_cmd=execution_cmd,
+                env=env,
+                execution_timeout=CLI_VALIDATION_TIMEOUT_SECONDS,
+                retain_output=retain_output,
+                skip_help=False,
+                agent_name=agent_name,
+            )
+        except Exception as exc:
+            self.logger.warning("❌ Preflight: %s validation error: %s", cli_name, exc)
+            return False
+
+        if retain_output and result.output_file is not None:
+            self.logger.info(
+                "📎 Preflight output saved for %s (%s): %s",
+                cli_name,
+                agent_name,
+                result.output_file,
+            )
+
+        if result.success:
+            self.logger.info("✅ Preflight: %s passed help + 2+2 validation", cli_name)
+            return True
+
+        self.logger.warning("❌ Preflight: %s failed help + 2+2 validation", cli_name)
+        return False
+
+    def _validate_cli_chain(
+        self,
+        agent_cli: str,
+        *,
+        agent_name: str,
+        retain_output: bool = False,
+    ) -> tuple[str | None, dict[str, bool]]:
+        cli_chain = self._parse_cli_chain(agent_cli)
+        results: dict[str, bool] = {}
+        selected_cli: str | None = None
+
+        for cli_name in cli_chain:
+            success = self._run_two_phase_cli_validation(
+                cli_name,
+                agent_name=agent_name,
+                retain_output=retain_output,
+            )
+            results[cli_name] = success
+            if success and selected_cli is None:
+                selected_cli = cli_name
+
+        return selected_cli, results
 
     def _start_fix_comment_review_watcher(
         self,
@@ -1785,7 +2019,8 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         pr_data: dict,
         agent_cli: str = "claude",
         model: str = None,
-    ) -> bool:
+        return_cli_used: bool = False,
+    ) -> bool | tuple[bool, str | None]:
         repo_full = self._normalize_repository_name(repository)
         repo_name = repo_full.split("/")[-1]
         branch = pr_data.get("headRefName", "")
@@ -1818,6 +2053,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
                     task_description,
                     agent_cli=agent_cli,
                     model=model,
+                    return_cli_used=return_cli_used,
                 )
         except Exception as exc:
             self.logger.error(
@@ -1851,10 +2087,18 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         if head_sha and pr_data.get("headRefOid") != head_sha:
             pr_data = {**pr_data, "headRefOid": head_sha}
 
+        if head_sha and self._is_fix_comment_inflight(repo_full, pr_number, head_sha):
+            self.logger.info(
+                "⏭️ Skipping PR #%s - fix-comment already in-flight for commit %s",
+                pr_number,
+                head_sha[:8],
+            )
+            return "skipped"
+
         # Check workflow-specific safety limits for fix-comment
         fix_comment_count = self._count_workflow_comments(comments, "fix_comment")
         # Ensure both values are ints for comparison (defensive programming for test mocks)
-        fix_comment_limit = getattr(self.safety_manager, 'fix_comment_limit', 10)
+        fix_comment_limit = getattr(self.safety_manager, "fix_comment_limit", 10)
         try:
             fix_comment_limit = int(fix_comment_limit) if not isinstance(fix_comment_limit, int) else fix_comment_limit
         except (ValueError, TypeError):
@@ -1907,7 +2151,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         has_completion_marker = False
         if head_sha:
             has_completion_marker = self._has_fix_comment_comment_for_commit(comments, head_sha)
-        
+
         # If completion marker exists, check if there are unaddressed comments OR new issues
         # If no unaddressed comments AND no conflicts/failing checks AND status is known, skip (work was completed successfully)
         # If conflicts/failing checks appeared after completion marker, reprocess to handle them
@@ -1934,7 +2178,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
                     pr_number,
                 )
             # Continue to process unaddressed comments or conflicts/failing checks (skip history check since completion marker already decided)
-        
+
         # If no completion marker, check commit history as fallback
         # History might be stale (recorded after queuing but before completion)
         # If PR has conflicts or failing checks, reprocess even if commit was already processed
@@ -1975,23 +2219,22 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
                     head_sha[:8],
                 )
                 return "skipped"
-            else:
-                # Commit in history but no completion marker AND (unaddressed comments exist OR conflicts/failing checks)
-                # This indicates a previous run didn't complete OR new issues appeared - reprocess
-                if has_unaddressed:
-                    self.logger.info(
-                        "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
-                        pr_number,
-                        head_sha[:8],
-                    )
-                elif is_conflicting or is_failing:
-                    self.logger.info(
-                        "🔄 PR #%s commit %s in history but no completion marker and conflicts/failing checks exist - reprocessing",
-                        pr_number,
-                        head_sha[:8],
-                    )
+            # Commit in history but no completion marker AND (unaddressed comments exist OR conflicts/failing checks)
+            # This indicates a previous run didn't complete OR new issues appeared - reprocess
+            elif has_unaddressed:
+                self.logger.info(
+                    "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
+                    pr_number,
+                    head_sha[:8],
+                )
+            elif is_conflicting or is_failing:
+                self.logger.info(
+                    "🔄 PR #%s commit %s in history but no completion marker and conflicts/failing checks exist - reprocessing",
+                    pr_number,
+                    head_sha[:8],
+                )
                 # Continue to process unaddressed comments or conflicts/failing checks
-        
+
         # Final check: if no completion marker and not in history, check for unaddressed comments OR conflicts/failing checks
         # Don't skip if status is unknown (API failure) - treat as needing processing
         elif not has_unaddressed and not (is_conflicting or is_failing) and not status_unknown:
@@ -2054,7 +2297,26 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         # Cleanup any pending reviews left behind by previous automation runs
         self._cleanup_pending_reviews(repo_full, pr_number)
 
-        agent_success = self.dispatch_fix_comment_agent(repo_full, pr_number, pr_data, agent_cli=agent_cli, model=model)
+        dispatch_result = self.dispatch_fix_comment_agent(
+            repo_full,
+            pr_number,
+            pr_data,
+            agent_cli=agent_cli,
+            model=model,
+            return_cli_used=True,
+        )
+        if isinstance(dispatch_result, tuple):
+            agent_success, dispatched_cli = dispatch_result
+        else:
+            agent_success = dispatch_result
+            dispatched_cli = None
+        effective_cli = dispatched_cli or agent_cli
+        self.logger.info(
+            "🎛️ Dispatch selected CLI for PR #%s: %s (requested chain: %s)",
+            pr_number,
+            effective_cli,
+            agent_cli,
+        )
 
         # Cleanup any pending reviews created by the agent during execution
         # This catches reviews created despite the warnings in the prompt
@@ -2063,7 +2325,23 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         if not agent_success:
             return "failed"
 
-        queued_posted = self._post_fix_comment_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
+        if head_sha:
+            self._set_fix_comment_inflight(
+                repo_full,
+                pr_number,
+                head_sha,
+                self._get_fix_comment_inflight_ttl(),
+            )
+
+        queued_posted = self._post_fix_comment_queued(
+            repo_full,
+            pr_number,
+            pr_data,
+            head_sha,
+            agent_cli=effective_cli,
+        )
+        if queued_posted:
+            self._clear_fix_comment_inflight(repo_full, pr_number)
 
         # NOTE: Do NOT record in history here - only record after completion marker is posted
         # The completion marker is the authoritative checkpoint, history is just a cache
@@ -2072,7 +2350,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         if not self._start_fix_comment_review_watcher(
             repo_full,
             pr_number,
-            agent_cli=agent_cli,
+            agent_cli=effective_cli,
         ):
             self.logger.warning(
                 "⚠️ Failed to start review watcher for PR #%s, but agent is dispatched",
@@ -2115,7 +2393,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         # Check workflow-specific safety limits for fixpr
         fixpr_count = self._count_workflow_comments(comments, "fixpr")
         # Ensure both values are ints for comparison (defensive programming for test mocks)
-        fixpr_limit = getattr(self.safety_manager, 'fixpr_limit', 10)
+        fixpr_limit = getattr(self.safety_manager, "fixpr_limit", 10)
         try:
             fixpr_limit = int(fixpr_limit) if not isinstance(fixpr_limit, int) else fixpr_limit
         except (ValueError, TypeError):
@@ -2157,8 +2435,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
             if not status_unknown:
                 self.logger.info("⏭️ Skipping PR #%s - no conflicts or failing checks to fix", pr_number)
                 return "skipped"
-            else:
-                self.logger.info("ℹ️ PR #%s status unknown (API failure) — proceeding conservatively", pr_number)
+            self.logger.info("ℹ️ PR #%s status unknown (API failure) — proceeding conservatively", pr_number)
 
         # If issues are detected, allow reprocessing even if the commit was already processed.
         # If status is unknown (no issues detected), fall back to history gating to avoid duplicates.
@@ -2200,14 +2477,38 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
                     "number": pr_number,
                     "branch": branch_name,
                 }
-                agent_success = dispatch_agent_for_pr(dispatcher, pr_info, agent_cli=agent_cli, model=model)
+                dispatch_result = dispatch_agent_for_pr(
+                    dispatcher,
+                    pr_info,
+                    agent_cli=agent_cli,
+                    model=model,
+                    return_cli_used=True,
+                )
+                if isinstance(dispatch_result, tuple):
+                    agent_success, dispatched_cli = dispatch_result
+                else:
+                    agent_success = dispatch_result
+                    dispatched_cli = None
+                effective_cli = dispatched_cli or agent_cli
+                self.logger.info(
+                    "🎛️ Dispatch selected CLI for PR #%s: %s (requested chain: %s)",
+                    pr_number,
+                    effective_cli,
+                    agent_cli,
+                )
 
             # Post-dispatch cleanup for consistency with _process_pr_fix_comment
             # Note: Agent runs async in tmux, so this is a secondary cleanup pass
             self._cleanup_pending_reviews(repo_full, pr_number)
 
             if agent_success:
-                queued_posted = self._post_fixpr_queued(repo_full, pr_number, pr_data, head_sha, agent_cli=agent_cli)
+                queued_posted = self._post_fixpr_queued(
+                    repo_full,
+                    pr_number,
+                    pr_data,
+                    head_sha,
+                    agent_cli=effective_cli,
+                )
                 # Record processing so we don't loop
                 if head_sha:
                     self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
@@ -2378,11 +2679,11 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         data_dict = data.get("data")
         if not isinstance(data_dict, dict):
             return None
-        
+
         repository_dict = data_dict.get("repository")
         if not isinstance(repository_dict, dict):
             return None
-        
+
         pr_data = repository_dict.get("pullRequest", {})
         if not isinstance(pr_data, dict):
             return None
@@ -2670,20 +2971,19 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         """Find the timestamp of the last automation comment (any workflow marker).
 
         Note: Despite the method name, this checks ALL automation workflow markers
-        (codex, fix-comment, fixpr) to prevent rerun gating misfires with multiple workflows.
+        (codex, fix-comment, fixpr, comment-validation) to prevent rerun gating misfires.
+
+        Uses centralized is_automation_comment() to detect all marker types.
+        When adding new markers, add them to ALL_AUTOMATION_MARKER_PREFIXES in codex_config.py
+        and they will automatically be detected here.
         """
         last_time = None
 
         for comment in comments:
             body = comment.get("body", "")
-            # Check if this is ANY automation comment (any workflow marker)
-            if (
-                self.CODEX_COMMIT_MARKER_PREFIX in body
-                or self.FIX_COMMENT_MARKER_PREFIX in body
-                or self.FIX_COMMENT_RUN_MARKER_PREFIX in body
-                or self.FIXPR_MARKER_PREFIX in body
-            ):
-                created_at = comment.get("createdAt") or comment.get("updatedAt")
+            # Use centralized detection - automatically handles all marker types
+            if is_automation_comment(body):
+                created_at = comment.get("createdAt") or comment.get("created_at") or comment.get("updatedAt") or comment.get("updated_at")
                 if created_at and (last_time is None or created_at > last_time):
                     last_time = created_at
 
@@ -2730,7 +3030,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         for comment in comments:
             # Check if comment is from today (daily cooldown)
             # GitHub API returns ISO 8601 timestamps (UTC), extract date portion
-            created_at = comment.get("createdAt") or comment.get("updatedAt")
+            created_at = comment.get("createdAt") or comment.get("created_at") or comment.get("updatedAt") or comment.get("updated_at")
             if not created_at:
                 continue  # Skip comments without timestamps (cannot verify if from today)
 
@@ -2775,14 +3075,8 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
                     author = self._get_comment_author_login(comment)
                     if author == self.automation_username:
                         count += 1
-            # Fallback: count all automation comments
-            elif (
-                self.CODEX_COMMIT_MARKER_PREFIX in body
-                or self.FIX_COMMENT_MARKER_PREFIX in body
-                or self.FIX_COMMENT_RUN_MARKER_PREFIX in body
-                or self.FIXPR_MARKER_PREFIX in body
-                or self.COMMENT_VALIDATION_MARKER_PREFIX in body
-            ):
+            # Fallback: count all automation comments using centralized detection
+            elif is_automation_comment(body):
                 count += 1
         return count
 
@@ -2799,7 +3093,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         if not last_codex_time:
             for comment in comments:
                 if self._is_github_bot_comment(comment):
-                    created_at = comment.get("createdAt") or comment.get("updatedAt")
+                    created_at = comment.get("createdAt") or comment.get("created_at") or comment.get("updatedAt") or comment.get("updated_at")
                     self.logger.debug(
                         "🤖 Found bot comment from %s at %s with no prior Codex automation comment",
                         self._get_comment_author_login(comment),
@@ -2812,7 +3106,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
             if not self._is_github_bot_comment(comment):
                 continue
 
-            created_at = comment.get("createdAt") or comment.get("updatedAt")
+            created_at = comment.get("createdAt") or comment.get("created_at") or comment.get("updatedAt") or comment.get("updated_at")
             if created_at and created_at > last_codex_time:
                 self.logger.debug(
                     "🤖 Found new bot comment from %s at %s (after Codex comment at %s)",
@@ -3088,6 +3382,15 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
                 )
                 return True  # Proceed conservatively when ANY API failure occurs
 
+            # Tag comments with their source type to handle namespace collisions
+            # (Issue comment IDs and Review/Inline comment IDs are in different namespaces)
+            for c in issue_comments:
+                c["_source_type"] = "issue"
+            for c in review_comments:
+                c["_source_type"] = "review"
+            for c in inline_comments:
+                c["_source_type"] = "review"  # Inline comments share namespace with reviews
+
             # Combine all comments
             all_comments = issue_comments + review_comments + inline_comments
 
@@ -3095,14 +3398,33 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
                 self.logger.debug(f"📭 PR #{pr_number} has no comments")
                 return False
 
-            # Track which inline comments have replies (for inline comments only)
-            # Note: GitHub uses separate ID namespaces for issue comments, reviews, and inline comments
-            # So we must only check replied_comment_ids for inline comments to avoid false positives
-            replied_comment_ids = set()
+            # Track which inline comments have native GitHub replies
+            # Note: GitHub uses separate ID namespaces for issue comments vs review/inline comments
+            # We track these separately to avoid false positives (e.g. Issue Comment 100 != Review Comment 100)
+            replied_review_ids = set()
             for comment in inline_comments:
                 in_reply_to = comment.get("in_reply_to_id")
                 if in_reply_to:
-                    replied_comment_ids.add(in_reply_to)
+                    replied_review_ids.add(in_reply_to)
+
+            # CONSOLIDATED REPLY SUPPORT: Also check for comments addressed in consolidated summary comments
+            # The consolidated format uses pattern: "Re: [Comment #<id>]" for each addressed comment
+            # Since the text doesn't specify namespace, we must aggressively match against BOTH namespaces
+            # to be safe (better to falsely mark as replied than to duplicate reply)
+            consolidated_pattern = re.compile(r"Re: \[Comment #(\d+)\]")
+            replied_consolidated_ids = set()
+
+            for comment in all_comments:
+                comment_body = comment.get("body", "") or ""
+                # Check if this is a consolidated summary comment (contains [AI responder] and multiple "Re: [Comment #" patterns)
+                if "[AI responder]" in comment_body and "Consolidated Comment Response" in comment_body:
+                    # Extract all comment IDs addressed in this consolidated summary
+                    addressed_ids = consolidated_pattern.findall(comment_body)
+                    for addressed_id in addressed_ids:
+                        try:
+                            replied_consolidated_ids.add(int(addressed_id))
+                        except ValueError:
+                            pass  # Skip malformed IDs
 
             # Filter comments to find actionable ones
             actionable_count = 0
@@ -3134,18 +3456,36 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
                     automation_count += 1
                     continue
 
-                # Skip inline comments that have replies (already addressed)
-                # Only check replied_comment_ids for inline comments to avoid ID namespace collisions
+                # Skip comments already addressed via inline replies or consolidated summaries
                 comment_id = comment.get("id")
+                comment_id_value = None
+                if comment_id is not None:
+                    try:
+                        comment_id_value = int(comment_id)
+                    except (TypeError, ValueError):
+                        comment_id_value = None
+
+
+
+                if comment_id_value is not None:
+                    source_type = comment.get("_source_type", "issue")
+
+                    # Check against consolidated IDs (applies to all types)
+                    if comment_id_value in replied_consolidated_ids:
+                        replied_count += 1
+                        continue
+
+                    # Check against native review threads (only for review/inline types)
+                    if source_type == "review" and comment_id_value in replied_review_ids:
+                        replied_count += 1
+                        continue
+
                 is_inline_comment = bool(
                     comment.get("pull_request_review_id")
                     or comment.get("path")
                     or comment.get("diff_hunk")
                     or comment.get("line") is not None
                 )
-                if is_inline_comment and comment_id in replied_comment_ids:
-                    replied_count += 1
-                    continue
 
                 # Skip if this comment is itself a reply (for inline comments)
                 if comment.get("in_reply_to_id"):
@@ -3326,7 +3666,7 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
                     pr_response = requests.get(pr_url, headers=headers, timeout=30)
                     pr_response.raise_for_status()
                     pr_data = pr_response.json()
-                    
+
                     # Normalize field names to match GraphQL format expected by callers
                     pr_data["headRefName"] = pr_data.get("head", {}).get("ref")
                     pr_data["baseRefName"] = pr_data.get("base", {}).get("ref")
@@ -3418,6 +3758,43 @@ Review the PR for completeness and quality. Do not write code changes; instead, 
         global_run_recorded = self.wrapper_managed
 
         try:
+            if fixpr or fix_comment:
+                skip_preflight = (
+                    _parse_bool_env("TESTING", default=False)
+                    or _parse_bool_env("MOCK_SERVICES_MODE", default=False)
+                    or _parse_bool_env("GITHUB_ACTIONS", default=False)
+                    or _parse_bool_env("FAST_TESTS", default=False)
+                )
+                if skip_preflight:
+                    self.logger.info("🧪 Skipping startup preflight in test/CI mode")
+                    selected_cli = agent_cli
+                else:
+                    self.logger.info("🔍 Startup preflight: validating CLI chain (%s)", agent_cli)
+                    selected_cli, _ = self._validate_cli_chain(
+                        agent_cli,
+                        agent_name="startup-preflight",
+                        retain_output=True,
+                    )
+                    if not selected_cli:
+                        is_testing = os.environ.get("TESTING", "").lower() == "true"
+                        is_mock_mode = os.environ.get("MOCK_SERVICES_MODE", "").lower() == "true"
+                        if is_testing or is_mock_mode:
+                            self.logger.info(
+                                "🧪 Test mode: skipping startup preflight failure and continuing run."
+                            )
+                            selected_cli = agent_cli
+                        else:
+                            self.logger.warning(
+                                "🚫 Startup preflight failed: no CLIs passed help + 2+2 validation. Skipping run."
+                            )
+                            self.safety_manager.check_and_notify_limits()
+                            return
+                self.logger.info(
+                    "🎛️ Startup preflight selected CLI: %s (chain: %s)",
+                    selected_cli,
+                    agent_cli,
+                )
+
             open_prs = self.discover_open_prs(cutoff_hours=cutoff_hours)
         except Exception as exc:
             self.logger.error("❌ Failed to discover PRs: %s", exc)

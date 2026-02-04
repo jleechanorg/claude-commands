@@ -53,6 +53,74 @@ class TestFixprPrompt(unittest.TestCase):
         # Should use Python requests params instead of --paginate
         self.assertIn("params=", dispatcher.task_description, "Prompt should use params= for pagination")
 
+    def test_fixpr_uses_local_branch_name_not_remote_branch(self):
+        """Test that fixpr uses local branch name fixpr_{remote_branch} instead of remote branch directly."""
+        pr_payload = {
+            "repo_full": "jleechanorg/worldarchitect.ai",
+            "repo": "worldarchitect.ai",
+            "number": 456,
+            "title": "Test PR with feature branch",
+            "branch": "feature/add-cool-feature",
+        }
+
+        dispatcher = _FakeDispatcher()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.object(runner, "WORKSPACE_ROOT_BASE", Path(tmpdir)):
+                with patch.object(runner, "kill_tmux_session_if_exists", lambda _: None):
+                    ok = runner.dispatch_agent_for_pr(dispatcher, pr_payload, agent_cli="claude")
+
+        self.assertTrue(ok)
+        self.assertIsNotNone(dispatcher.task_description)
+
+        # Local branch name should be fixpr_feature-add-cool-feature (sanitized)
+        expected_local_branch = "fixpr_feature-add-cool-feature"
+
+        # Task description should use local branch for checkout
+        self.assertIn(f"git checkout -B {expected_local_branch}", dispatcher.task_description,
+                      "Task description should use 'git checkout -B' with local branch name")
+
+        # Should fetch the remote branch
+        self.assertIn("git fetch origin feature/add-cool-feature", dispatcher.task_description,
+                      "Task description should fetch the remote branch")
+
+        # Should track the remote branch
+        self.assertIn("origin/feature/add-cool-feature", dispatcher.task_description,
+                      "Task description should reference origin/remote_branch for tracking")
+
+        # Should NOT use plain 'git checkout feature/add-cool-feature'
+        self.assertNotIn("git checkout feature/add-cool-feature\n", dispatcher.task_description,
+                         "Task description should NOT use direct checkout of remote branch")
+
+    def test_fixpr_local_branch_name_with_special_chars(self):
+        """Test that local branch names are properly sanitized from remote branch names."""
+        pr_payload = {
+            "repo_full": "jleechanorg/worldarchitect.ai",
+            "repo": "worldarchitect.ai",
+            "number": 789,
+            "title": "Test PR with special chars in branch",
+            "branch": "fix/bug#123/urgent",
+        }
+
+        dispatcher = _FakeDispatcher()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.object(runner, "WORKSPACE_ROOT_BASE", Path(tmpdir)):
+                with patch.object(runner, "kill_tmux_session_if_exists", lambda _: None):
+                    ok = runner.dispatch_agent_for_pr(dispatcher, pr_payload, agent_cli="claude")
+
+        self.assertTrue(ok)
+        self.assertIsNotNone(dispatcher.task_description)
+
+        # Local branch name should be sanitized: fixpr_fix-bug-123-urgent
+        expected_local_branch = "fixpr_fix-bug-123-urgent"
+
+        # Should use local branch name
+        self.assertIn(expected_local_branch, dispatcher.task_description,
+                      "Task description should contain sanitized local branch name")
+
+        # Should still reference the original remote branch
+        self.assertIn("fix/bug#123/urgent", dispatcher.task_description,
+                      "Task description should still reference original remote branch name")
+
 
 if __name__ == "__main__":
     unittest.main()

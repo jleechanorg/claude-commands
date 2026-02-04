@@ -156,7 +156,41 @@ def has_failing_checks(repo_full: str, pr_number: int) -> bool:
         return False
 
 
+def _reset_base_clone_to_main(base_dir: Path) -> None:
+    """Reset base clone to main branch with clean state.
+
+    Handles: untracked files, detached HEAD, dirty working tree, missing main branch.
+    Raises subprocess.CalledProcessError on failure.
+    """
+    # Clean untracked files FIRST - must happen before checkout to avoid
+    # "untracked working tree files would be overwritten" errors
+    run_cmd(["git", "clean", "-fdx"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+    # Ensure we're on main branch (create if doesn't exist locally)
+    result = run_cmd(["git", "rev-parse", "--verify", "main"], cwd=base_dir, check=False, timeout=DEFAULT_TIMEOUT)
+    if result.returncode != 0:
+        # Local main doesn't exist - checkout from remote tracking branch
+        run_cmd(["git", "checkout", "-B", "main", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+    else:
+        # Local main exists - discard local changes first, then switch and reset
+        run_cmd(["git", "reset", "--hard"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        run_cmd(["git", "reset", "--hard", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+
+
+def _fresh_clone(base_dir: Path, repo_full: str, github_host: str) -> None:
+    """Delete existing clone and create fresh one."""
+    shutil.rmtree(base_dir, ignore_errors=True)
+    run_cmd(
+        ["git", "clone", f"https://{github_host}/{repo_full}.git", str(base_dir)],
+        timeout=CLONE_TIMEOUT,
+    )
+
+
 def ensure_base_clone(repo_full: str) -> Path:
+    """Ensure a clean base clone exists for worktree creation.
+
+    Proactive recovery: if ANY git operation fails, nuke and re-clone.
+    """
     # Validate repo_full format defensively
     if not re.match(r"^[\w.-]+/[\w.-]+$", repo_full):
         raise ValueError(f"Invalid repository format: {repo_full}")
@@ -165,6 +199,7 @@ def ensure_base_clone(repo_full: str) -> Path:
     repo_name = repo_full.split("/")[-1]
     base_dir = BASE_CLONE_ROOT / repo_name
     BASE_CLONE_ROOT.mkdir(parents=True, exist_ok=True)
+
     if not base_dir.exists():
         log(f"Cloning base repo for {repo_full} into {base_dir}")
         run_cmd(
@@ -173,15 +208,28 @@ def ensure_base_clone(repo_full: str) -> Path:
         )
     else:
         log(f"Refreshing base repo for {repo_full}")
-        run_cmd(["git", "fetch", "origin", "--prune"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-    # Reset base clone to main to ensure clean worktrees
+        try:
+            run_cmd(["git", "fetch", "origin", "--prune"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            stderr_msg = getattr(exc, "stderr", "") or str(exc) or "No stderr"
+            log(f"Fetch failed for {repo_full}: {stderr_msg}. Re-cloning.")
+            _fresh_clone(base_dir, repo_full, github_host)
+
+    # Reset base clone to main - with automatic recovery on any failure
     try:
-        run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-        run_cmd(["git", "reset", "--hard", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-        run_cmd(["git", "clean", "-fdx"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-    except subprocess.CalledProcessError as exc:
-        stderr_msg = exc.stderr if exc.stderr else "No stderr available"
-        raise RuntimeError(f"Failed to reset base clone for {repo_full}: {stderr_msg}") from exc
+        _reset_base_clone_to_main(base_dir)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        stderr_msg = getattr(exc, "stderr", "") or str(exc) or "No stderr"
+        log(f"Reset failed for {repo_full}: {stderr_msg}. Proactive recovery: re-cloning.")
+        _fresh_clone(base_dir, repo_full, github_host)
+        try:
+            _reset_base_clone_to_main(base_dir)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as retry_exc:
+            retry_stderr = getattr(retry_exc, "stderr", "") or str(retry_exc) or "No stderr"
+            raise RuntimeError(
+                f"Failed to reset base clone for {repo_full} even after re-clone: {retry_stderr}"
+            ) from retry_exc
+
     return base_dir
 
 

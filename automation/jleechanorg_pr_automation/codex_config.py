@@ -10,7 +10,7 @@ DEFAULT_ASSISTANT_HANDLE = "coderabbitai"
 def compose_assistant_mentions(assistant_handle: str) -> str:
     """Return the canonical mention list for the supplied assistant handle."""
 
-    return f"@codex @{assistant_handle} @copilot @cursor"
+    return f"@codex @{assistant_handle} @cursor @copilot"
 
 
 DEFAULT_ASSISTANT_MENTIONS = compose_assistant_mentions(DEFAULT_ASSISTANT_HANDLE)
@@ -24,8 +24,8 @@ CODEX_COMMENT_INTRO_BODY = (
 CODEX_COMMENT_TEMPLATE = (
     "{comment_intro}\n\n"
     "Use your judgment to fix comments from everyone or explain why it should not be fixed. "
-    'Follow binary response protocol - every comment needs "DONE" or "NOT DONE" classification '
-    "explicitly with an explanation. Address all comments on this PR. Fix any failing tests and "
+    "Use /commentreply to post ONE consolidated summary with all responses (avoids GitHub rate limits). "
+    "Address all comments on this PR. Fix any failing tests and "
     "resolve merge conflicts. Push any commits needed to remote so the PR is updated."
 )
 
@@ -41,6 +41,34 @@ FIXPR_MARKER_PREFIX = "<!-- fixpr-run-automation-commit:"
 FIXPR_MARKER_SUFFIX = "-->"
 COMMENT_VALIDATION_MARKER_PREFIX = "<!-- comment-validation-commit:"
 COMMENT_VALIDATION_MARKER_SUFFIX = "-->"
+
+# Centralized tuple of ALL automation marker prefixes.
+# CRITICAL: When adding a new marker, add it here to automatically enable
+# feedback loop prevention across all detection points.
+ALL_AUTOMATION_MARKER_PREFIXES: tuple[str, ...] = (
+    CODEX_COMMIT_MARKER_PREFIX,
+    FIX_COMMENT_MARKER_PREFIX,
+    FIX_COMMENT_RUN_MARKER_PREFIX,
+    FIXPR_MARKER_PREFIX,
+    COMMENT_VALIDATION_MARKER_PREFIX,
+)
+
+
+def is_automation_comment(body: str | None) -> bool:
+    """Check if a comment body contains any automation marker.
+
+    This is the single source of truth for automation comment detection.
+    Use this function instead of manually checking individual markers.
+
+    Args:
+        body: Comment body text (can be None)
+
+    Returns:
+        True if the comment contains any automation marker prefix
+    """
+    if not body:
+        return False
+    return any(prefix in body for prefix in ALL_AUTOMATION_MARKER_PREFIXES)
 
 
 def build_automation_marker(workflow: str, agent: str, commit_sha: str) -> str:

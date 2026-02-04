@@ -3,7 +3,7 @@ set -euo pipefail
 shopt -s extglob
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CRON_FILE="$SCRIPT_DIR/cron_entry.txt"
+CRON_FILE="$SCRIPT_DIR/crontab.template"
 
 if ! command -v crontab >/dev/null 2>&1; then
     echo "crontab command not found; install cron before running this script" >&2
