@@ -108,7 +108,7 @@ class CommentFetch(CopilotCommandBase):
                     "id": comment.get("id"),
                     "type": "inline",
                     "body": comment.get("body", ""),
-                    "author": comment.get("user", {}).get("login", "unknown"),
+                    "author": (comment.get("user") or {}).get("login", "unknown"),
                     "created_at": comment.get("created_at", ""),
                     "file": comment.get("path"),
                     "line": comment.get("line") or comment.get("original_line"),
@@ -155,7 +155,7 @@ class CommentFetch(CopilotCommandBase):
                     "id": comment.get("id"),
                     "type": "general",
                     "body": comment.get("body", ""),
-                    "author": comment.get("user", {}).get("login", "unknown"),
+                    "author": (comment.get("user") or {}).get("login", "unknown"),
                     "created_at": comment.get("created_at", ""),
                     "requires_response": self._requires_response(comment),
                     "already_replied": self._check_already_replied_general(comment, self.comments),
@@ -217,7 +217,7 @@ class CommentFetch(CopilotCommandBase):
                         "id": review.get("id"),
                         "type": "review",
                         "body": review.get("body", ""),
-                        "author": review.get("user", {}).get("login", "unknown"),
+                        "author": (review.get("user") or {}).get("login", "unknown"),
                         "created_at": review.get("submitted_at", ""),
                         "state": review.get("state"),
                         "requires_response": self._requires_response(review),
@@ -331,10 +331,25 @@ class CommentFetch(CopilotCommandBase):
             False for meta-comments, True for actual technical comments
         """
         body = str(comment.get("body") or "")
+        author = comment.get("author")
+        if isinstance(author, dict):
+            author = author.get("login") or ""
+        elif author is None:
+            author = ""
+        if not author:
+            author = (comment.get("user") or {}).get("login") or ""
         text = body.strip()
 
         # Skip empty comments
         if not text:
+            return False
+
+        # Skip our own AI responder comments
+        if self._is_ai_responder_comment(body, author):
+            return False
+
+        # Skip bot replies in existing threads (avoid double-counting threaded bot analyses)
+        if comment.get("in_reply_to_id") and str(author).endswith("[bot]"):
             return False
 
         # Skip meta-comments created by previous commentreply runs

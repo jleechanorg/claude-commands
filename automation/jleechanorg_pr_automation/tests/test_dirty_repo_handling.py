@@ -113,7 +113,11 @@ def test_prepare_base_clone_handles_dirty_repo(tmp_path, monkeypatch):
 
 
 def test_prepare_base_clone_error_message_includes_command(tmp_path, monkeypatch):
-    """Test that error messages include the failing git command for debugging."""
+    """Test that error messages include the failing git command for debugging.
+
+    With proactive recovery, the first failure triggers a re-clone. Only if
+    the reset fails AGAIN after re-clone do we raise the error.
+    """
     base_clone_root = tmp_path / "pr-orch-bases"
     repo_full = "jleechanorg/test-repo"
     repo_name = repo_full.split("/")[-1]
@@ -124,31 +128,42 @@ def test_prepare_base_clone_error_message_includes_command(tmp_path, monkeypatch
 
     base_dir.mkdir(parents=True)
 
+    # Track how many times git clean is called
+    clean_call_count = [0]
+
     def mock_run_cmd_fail(cmd, cwd=None, check=True, timeout=None):
-        """Mock run_cmd that fails on git clean with detailed error."""
+        """Mock run_cmd that fails on git clean persistently (even after re-clone)."""
         if cmd == ["git", "rev-parse", "--verify", "main"]:
             return SimpleNamespace(returncode=0, stdout="", stderr="")
 
         if cmd == ["git", "clean", "-fdx"]:
+            clean_call_count[0] += 1
+            # Fail both times - first attempt AND retry after re-clone
             exc = subprocess.CalledProcessError(
                 1, cmd,
                 stderr="fatal: not a git repository"
             )
             raise exc
 
+        # git clone succeeds (for re-clone attempt)
+        if cmd[0] == "git" and cmd[1] == "clone":
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
         # Other commands succeed
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(runner, "run_cmd", mock_run_cmd_fail)
 
-    # Verify error message includes command and stderr
+    # Verify error message includes command and stderr (after retry fails)
     with pytest.raises(RuntimeError) as exc_info:
         runner.ensure_base_clone(repo_full)
 
     error_msg = str(exc_info.value)
     assert "Failed to reset base clone for jleechanorg/test-repo" in error_msg
-    assert "git clean -fdx" in error_msg  # Command should be in error
+    assert "even after re-clone" in error_msg  # New: indicates proactive recovery was attempted
     assert "fatal: not a git repository" in error_msg  # stderr should be in error
+    # Verify proactive recovery was attempted (clean called twice: initial + retry)
+    assert clean_call_count[0] == 2, f"Expected 2 clean attempts, got {clean_call_count[0]}"
 
 
 def test_prepare_base_clone_handles_detached_head(tmp_path, monkeypatch):

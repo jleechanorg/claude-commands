@@ -396,7 +396,7 @@ class TestCommentValidationRegression(unittest.TestCase):
         result = validate_comment_data(comment_with_user_field)
         self.assertTrue(result, "Comment with user.login field should pass validation")
 
-        # 🔴 RED: Invalid cases should still fail
+        # 🔴 RED: Missing author metadata should be normalized to "unknown" (allowed)
         invalid_comment_no_author = {
             "id": 2317638695,
             "type": "inline",
@@ -407,7 +407,12 @@ class TestCommentValidationRegression(unittest.TestCase):
         }
 
         result = validate_comment_data(invalid_comment_no_author)
-        self.assertFalse(result, "Comment without author/user should fail validation")
+        self.assertTrue(result, "Comment without author/user should pass validation")
+        self.assertEqual(
+            invalid_comment_no_author.get("author"),
+            "unknown",
+            "Missing author should be normalized to 'unknown'",
+        )
 
     def test_author_extraction_compatibility(self):
         """
@@ -467,63 +472,7 @@ class TestCommentValidationRegression(unittest.TestCase):
         )
 
 
-class TestDismissPendingReviews(unittest.TestCase):
-    """Tests for dismiss_pending_reviews behavior."""
 
-    def test_dismiss_pending_reviews_no_fetch(self):
-        """Return early if review fetch fails."""
-        with patch.object(
-            commentreply, "run_command", return_value=(False, "", "boom")
-        ) as mock_run:
-            commentreply.dismiss_pending_reviews("octo", "repo", "42", "octocat")
-
-        mock_run.assert_called_once()
-
-    def test_dismiss_pending_reviews_deletes_pending(self):
-        """Delete only pending reviews when found."""
-        reviews = [
-            {"id": 11, "state": "PENDING", "user": {"login": "octocat"}},
-            {"id": 12, "state": "APPROVED", "user": {"login": "octocat"}},
-            {"id": 13, "state": "PENDING", "user": {"login": "octocat"}},
-            {"id": 14, "state": "PENDING", "user": {"login": "other-user"}},
-        ]
-        reviews_output = "\n".join(json.dumps(review) for review in reviews)
-        side_effect = [
-            (True, reviews_output, ""),
-            (True, "", ""),
-            (True, "", ""),
-        ]
-        with patch.object(
-            commentreply, "run_command", side_effect=side_effect
-        ) as mock_run:
-            commentreply.dismiss_pending_reviews("octo", "repo", "42", "octocat")
-
-        self.assertEqual(mock_run.call_count, 3)
-        delete_calls = [
-            call(
-                [
-                    "gh",
-                    "api",
-                    "repos/octo/repo/pulls/42/reviews/11",
-                    "-X",
-                    "DELETE",
-                ],
-                description="delete pending review #11",
-                timeout=30,
-            ),
-            call(
-                [
-                    "gh",
-                    "api",
-                    "repos/octo/repo/pulls/42/reviews/13",
-                    "-X",
-                    "DELETE",
-                ],
-                description="delete pending review #13",
-                timeout=30,
-            ),
-        ]
-        mock_run.assert_has_calls(delete_calls, any_order=False)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,6 @@
 Tests for backward compatibility with legacy cache format.
 """
 
-import json
 import tempfile
 import unittest
 from pathlib import Path

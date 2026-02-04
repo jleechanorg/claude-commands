@@ -26,9 +26,13 @@ logger = logging.getLogger(__name__)
 CLI_VALIDATION_TEST_PROMPT = "What is 2+2? Write only the number."
 
 # Timeout constants for CLI validation subprocess runs
-CLI_VALIDATION_TIMEOUT_SECONDS = 10
-OAUTH_CLI_VALIDATION_TIMEOUT_SECONDS = 15
-HELP_CHECK_TIMEOUT_SECONDS = 5
+# All CLIs get 90s - enough time for MCP servers, network latency, and slow responses.
+# Help checks get 10s to keep startup responsive.
+CLI_VALIDATION_TIMEOUT_SECONDS = 90
+HELP_CHECK_TIMEOUT_SECONDS = 10
+
+# Expected answer for 2+2 validation test
+EXPECTED_VALIDATION_ANSWER = "4"
 
 
 class ValidationResult:
@@ -227,15 +231,29 @@ def validate_cli_execution(
         # Check output file
         if validation_output_file.exists() and validation_output_file.stat().st_size > 0:
             output_content = validation_output_file.read_text()
-            
-            # Success: file exists, has content, and exit code is 0
+
+            # Success: file exists, has content, exit code is 0, AND answer is correct
             if result.returncode == 0 and len(output_content.strip()) > 0:
-                return ValidationResult(
-                    success=True,
-                    phase="execution",
-                    message=f"{cli_name} execution test passed (output written to {validation_output_file})",
-                    output_file=validation_output_file,
-                )
+                # Verify the CLI actually answered "4" using strict matching
+                # IMPORTANT: Must avoid false positives from HTTP 429, timestamps, dates, etc.
+                # Match "4" as standalone: not preceded or followed by digits
+                # This matches: "4", "4.", "The answer is 4", but NOT "429", "2024", "14:30"
+                strict_match = re.search(r'(?<![0-9])4(?![0-9])', output_content)
+                if strict_match:
+                    return ValidationResult(
+                        success=True,
+                        phase="execution",
+                        message=f"{cli_name} execution test passed (2+2={EXPECTED_VALIDATION_ANSWER} verified)",
+                        output_file=validation_output_file,
+                    )
+                else:
+                    # CLI ran but didn't answer correctly - likely an error or unexpected state
+                    return ValidationResult(
+                        success=False,
+                        phase="execution",
+                        message=f"{cli_name} execution test failed (output missing expected answer '{EXPECTED_VALIDATION_ANSWER}')",
+                        output_file=validation_output_file,
+                    )
         
         # Check for quota/rate limit errors in stderr or stdout
         # CRITICAL: Cursor returns "authentication required" when quota exhausted, NOT for real auth issues
@@ -247,6 +265,8 @@ def validate_cli_execution(
             "rate limit",
             "quota exceeded",
             "resource_exhausted",
+            "hit your usage limit",  # Cursor uses this phrase
+            "usage limit",
         ]
 
         # Cursor-specific: "authentication required" is actually quota exhaustion
@@ -263,6 +283,7 @@ def validate_cli_execution(
                     success=False,
                     phase="execution",
                     message=f"{cli_name} quota/rate limit detected (Cursor returns auth errors when quota exhausted)",
+                    output_file=validation_output_file if validation_output_file.exists() else None,
                 )
 
         # Check general quota patterns for all CLIs
@@ -271,6 +292,7 @@ def validate_cli_execution(
                 success=False,
                 phase="execution",
                 message=f"{cli_name} quota/rate limit detected",
+                output_file=validation_output_file if validation_output_file.exists() else None,
             )
         
         # Check for auth/permission errors for OAuth CLIs (Claude/Cursor)
@@ -295,35 +317,26 @@ def validate_cli_execution(
                     output_file=validation_output_file if validation_output_file.exists() else None,
                 )
         
-        # Check for help/version output as fallback (for CLIs that emit help on error)
-        help_patterns = [
-            r"\bUsage:\s*",
-            r"\bversion\b",
-        ]
-        for pattern in help_patterns:
-            if re.search(pattern, combined_output, re.IGNORECASE):
-                return ValidationResult(
-                    success=True,
-                    phase="execution",
-                    message=f"{cli_name} execution test passed (help/version detected as fallback)",
-                    output_file=validation_output_file if validation_output_file.exists() else None,
-                )
+        # NOTE: Removed help/version fallback - it caused false positives when CLIs
+        # output "Usage:" in error messages. If CLI can't answer 2+2, it should fail.
         
         return ValidationResult(
             success=False,
             phase="execution",
             message=f"{cli_name} execution test failed (exit code {result.returncode}, output file exists={validation_output_file.exists()})",
+            output_file=validation_output_file if validation_output_file.exists() else None,
         )
     
     except subprocess.TimeoutExpired:
-        # DESIGN DECISION: Timeouts are treated as "available" (success=True) to allow runtime fallback.
-        # Rationale: A slow CLI may still work at runtime; preflight validation is meant to catch
-        # definitive failures (quota exhaustion, binary not found), not to block on slow responses.
-        # Tradeoff: A hung CLI could be selected, but runtime will catch actual failures.
+        # DESIGN DECISION: Timeouts are treated as FAILURE (success=False).
+        # Rationale: If CLI can't answer "2+2" within timeout, it's likely broken, hung, or
+        # experiencing API issues. Better to fail fast and try the next CLI in chain.
+        # Previous behavior (success=True) caused false positives where quota-exhausted
+        # CLIs would timeout waiting for API response, pass validation, then fail at runtime.
         return ValidationResult(
-            success=True,  # Timeout = slow but might work
+            success=False,
             phase="execution",
-            message=f"{cli_name} execution test timed out (will try anyway)",
+            message=f"{cli_name} execution test timed out (CLI unresponsive)",
         )
     except FileNotFoundError:
         return ValidationResult(
@@ -332,15 +345,14 @@ def validate_cli_execution(
             message=f"{cli_name} binary not found: {cli_path}",
         )
     except Exception as e:
-        # DESIGN DECISION: Unknown exceptions are treated as "available" (success=True) to allow runtime fallback.
-        # Rationale: Preflight validation should catch definitive failures (quota, binary not found),
-        # not block on unexpected errors that might be transient or environment-specific.
-        # Tradeoff: Real breakage (permission errors, network issues) could be masked, but runtime
-        # will catch actual failures and fallback to next CLI in chain.
+        # DESIGN DECISION: Unknown exceptions are treated as FAILURE (success=False).
+        # Rationale: If CLI validation fails unexpectedly, it's safer to skip this CLI
+        # and try the next one in the chain. False positives (passing broken CLIs) cause
+        # wasted automation runs and misleading "queued" comments.
         return ValidationResult(
-            success=True,  # Unknown error = assume available
+            success=False,
             phase="execution",
-            message=f"{cli_name} execution test error: {e} (will try anyway)",
+            message=f"{cli_name} execution test error: {e}",
         )
     finally:
         # Clean up validation directory unless retain_output is True

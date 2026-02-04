@@ -4,6 +4,14 @@ Test PR targeting functionality for jleechanorg_pr_monitor - Codex Strategy Test
 """
 
 import unittest
+import os
+import sys
+
+# Add properties directory to path for pr_code_suggester module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "scripts"))
+
+# Add automation source root to path to ensure we test local code, not installed package
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from jleechanorg_pr_automation.codex_config import build_comment_intro
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
@@ -123,7 +131,7 @@ class TestPRTargeting(unittest.TestCase):
 
         self.assertIn("**Summary (Execution Flow):**", comment_body)
         self.assertIn("1. Review every outstanding PR comment", comment_body)
-        self.assertIn("5. Perform a final self-review", comment_body)
+        self.assertIn("5. Rebase or merge with the base branch", comment_body)
 
     def test_fix_comment_queued_body_excludes_marker(self):
         """Queued fix-comment notices should not include commit markers."""
@@ -192,8 +200,8 @@ class TestPRTargeting(unittest.TestCase):
         # After fix for comment #2669657213, prompt clarifies:
         # - Inline review comments use: /pulls/{pr_number}/comments with -F in_reply_to={comment_id}
         # - Issue comments don't support threading (top-level comments only)
-        self.assertIn("pulls/42/comments", prompt)  # Updated to match actual PR number in prompt
-        self.assertIn("reply individually to each comment", prompt)  # Issue comments clarification
+        self.assertIn("inline review comments", prompt)
+        self.assertIn("/commentreply", prompt)  # Consolidated reply command
 
     def test_fix_comment_marker_ignores_queued_comment(self):
         """Queued notices with markers should not satisfy the fix-comment completion check."""

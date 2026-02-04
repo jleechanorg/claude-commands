@@ -273,10 +273,9 @@ class TestPromptAPIEndpoint(unittest.TestCase):
         )
 
         # Should contain correct endpoint: /comments with in_reply_to parameter
-        assert "/pulls/123/comments" in prompt, "Prompt should contain /comments endpoint"
-        assert "in_reply_to" in prompt, "Prompt should contain in_reply_to parameter"
-        assert "-F in_reply_to" in prompt, "Prompt should use -F flag for numeric parameter"
-        assert "-f body" in prompt, "Prompt should use -f flag for string parameter"
+        assert "/comments" in prompt, "Prompt should contain /comments endpoint"
+        assert "in_reply_to" in prompt, "Prompt should contain in_reply_to parameter for threaded replies"
+        assert "post_pr_comment_python" in prompt or "requests.post" in prompt, "Prompt should use Python functions/requests, not gh CLI"
 
         # Should NOT contain incorrect endpoint
         assert "/comments/{comment_id}/replies" not in prompt, "Prompt should NOT contain incorrect /replies endpoint"

@@ -6,11 +6,10 @@ Tests the fix where commentreply.py now processes all comments (including replie
 instead of filtering out comments with in_reply_to_id set.
 """
 
-import json
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import patch
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -391,6 +390,7 @@ class TestCommentReplyProcessing(unittest.TestCase):
                 "abc123",
                 parent_comment=fetched_parent
             )
+            self.assertEqual(response, "Response text")
             
             # Verify parent_comment parameter was accepted (function signature allows it)
             # The actual implementation may use parent_comment for context

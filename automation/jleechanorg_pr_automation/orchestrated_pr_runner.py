@@ -388,7 +388,44 @@ def has_failing_checks(repo_full: str, pr_number: int) -> bool:
         return False
 
 
+def _reset_base_clone_to_main(base_dir: Path) -> None:
+    """Reset base clone to main branch with clean state.
+
+    Handles: untracked files, detached HEAD, dirty working tree, missing main branch.
+    Raises subprocess.CalledProcessError on failure.
+    """
+    # Clean untracked files FIRST - must happen before checkout to avoid
+    # "untracked working tree files would be overwritten" errors
+    run_cmd(["git", "clean", "-fdx"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+    # Ensure we're on main branch (create if doesn't exist locally)
+    result = run_cmd(["git", "rev-parse", "--verify", "main"], cwd=base_dir, check=False, timeout=DEFAULT_TIMEOUT)
+    if result.returncode != 0:
+        # Local main doesn't exist - checkout from remote tracking branch
+        run_cmd(["git", "checkout", "-B", "main", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+    else:
+        # Local main exists - discard local changes first, then switch and reset
+        run_cmd(["git", "reset", "--hard"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        run_cmd(["git", "reset", "--hard", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+
+
+def _fresh_clone(base_dir: Path, repo_full: str, github_host: str) -> None:
+    """Delete existing clone and create fresh one."""
+    shutil.rmtree(base_dir, ignore_errors=True)
+    run_cmd(
+        ["git", "clone", f"https://{github_host}/{repo_full}.git", str(base_dir)],
+        timeout=CLONE_TIMEOUT,
+    )
+
+
 def ensure_base_clone(repo_full: str) -> Path:
+    """Ensure a clean base clone exists for worktree creation.
+
+    Proactive recovery strategy: if ANY git state operation fails (fetch, reset,
+    checkout, clean), we nuke and re-clone rather than propagating errors.
+    Base clones are expendable - worktrees are created from them, so we
+    never need to preserve local state.
+    """
     # Validate repo_full format defensively
     if not re.match(r"^[\w.-]+/[\w.-]+$", repo_full):
         raise ValueError(f"Invalid repository format: {repo_full}")
@@ -397,6 +434,7 @@ def ensure_base_clone(repo_full: str) -> Path:
     repo_name = repo_full.split("/")[-1]
     base_dir = BASE_CLONE_ROOT / repo_name
     BASE_CLONE_ROOT.mkdir(parents=True, exist_ok=True)
+
     if not base_dir.exists():
         log(f"Cloning base repo for {repo_full} into {base_dir}")
         run_cmd(
@@ -413,36 +451,57 @@ def ensure_base_clone(repo_full: str) -> Path:
                 f"Fetch failed for {repo_full} ({exc.__class__.__name__}): {stderr_msg}. "
                 "Re-cloning base repo."
             )
-            shutil.rmtree(base_dir, ignore_errors=True)
-            run_cmd(
-                ["git", "clone", f"https://{github_host}/{repo_full}.git", str(base_dir)],
-                timeout=CLONE_TIMEOUT,
-            )
-    # Reset base clone to main to ensure clean worktrees
+            _fresh_clone(base_dir, repo_full, github_host)
+
+    # Reset base clone to main - with automatic recovery on any failure
     try:
-        # Ensure we're on main branch (create if doesn't exist locally)
-        result = run_cmd(["git", "rev-parse", "--verify", "main"], cwd=base_dir, check=False, timeout=DEFAULT_TIMEOUT)
-        if result.returncode != 0:
-            # Local main doesn't exist - checkout from remote tracking branch
-            run_cmd(["git", "checkout", "-B", "main", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        _reset_base_clone_to_main(base_dir)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        # Proactive recovery: ANY reset failure means corrupted state - nuke and re-clone
+        stderr_msg = getattr(exc, "stderr", "") or str(exc) or "No stderr available"
+        # Normalize cmd handling: list/tuple -> join, str -> as-is, else -> "unknown"
+        cmd = getattr(exc, "cmd", None)
+        if isinstance(cmd, (list, tuple)):
+            cmd_str = " ".join(cmd)
+        elif cmd:
+            cmd_str = str(cmd)
         else:
-            # Local main exists - discard local changes first, then switch and reset
-            run_cmd(["git", "reset", "--hard"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-            run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-            run_cmd(["git", "reset", "--hard", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-        run_cmd(["git", "clean", "-fdx"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-    except subprocess.CalledProcessError as exc:
-        stderr_msg = exc.stderr if exc.stderr else "No stderr available"
-        cmd_str = " ".join(exc.cmd) if hasattr(exc, "cmd") else "unknown command"
-        raise RuntimeError(
-            f"Failed to reset base clone for {repo_full} (command: {cmd_str}): {stderr_msg}"
-        ) from exc
+            cmd_str = "unknown"
+        log(
+            f"Reset failed for {repo_full} ({cmd_str}): {stderr_msg}. "
+            "Proactive recovery: re-cloning base repo."
+        )
+        _fresh_clone(base_dir, repo_full, github_host)
+        # After fresh clone, we should be on main already, but ensure clean state
+        try:
+            _reset_base_clone_to_main(base_dir)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as retry_exc:
+            # If it fails after fresh clone, something is fundamentally wrong
+            retry_stderr = getattr(retry_exc, "stderr", "") or str(retry_exc) or "No stderr"
+            raise RuntimeError(
+                f"Failed to reset base clone for {repo_full} even after re-clone: {retry_stderr}"
+            ) from retry_exc
+
     return base_dir
 
 
 def sanitize_workspace_name(name: str, pr_number: int) -> str:
     sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-")
     return f"pr-{pr_number}-{sanitized}" if sanitized else f"pr-{pr_number}"
+
+
+def generate_local_branch_name(remote_branch: str) -> str:
+    """Generate local branch name from remote branch name.
+
+    Args:
+        remote_branch: The remote PR branch name (e.g., 'feature/add-cool-feature')
+
+    Returns:
+        Local branch name with fixpr_ prefix (e.g., 'fixpr_feature-add-cool-feature')
+    """
+    # Sanitize branch name: replace non-alphanumeric chars (except . _ -) with hyphen
+    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", remote_branch).strip("-")
+    return f"fixpr_{sanitized}"
 
 
 def prepare_workspace_dir(repo: str, workspace_name: str) -> Path:
@@ -544,7 +603,8 @@ def dispatch_agent_for_pr_with_task(
     task_description: str,
     agent_cli: str = "claude",
     model: str = None,
-) -> bool:
+    return_cli_used: bool = False,
+) -> bool | tuple[bool, str | None]:
     """Dispatch an agent for a PR using a custom task description."""
     repo_full = pr.get("repo_full")
     repo = pr.get("repo")
@@ -567,6 +627,7 @@ def dispatch_agent_for_pr_with_task(
     cli = agent_cli.strip().lower() if isinstance(agent_cli, str) and agent_cli.strip() else "claude"
     agent_specs = dispatcher.analyze_task_and_create_agents(task_description, forced_cli=cli)
     success = False
+    cli_used = None
     for spec in agent_specs:
         agent_spec = {**spec}
         session_name = agent_spec.get("name") or workspace_name
@@ -589,8 +650,11 @@ def dispatch_agent_for_pr_with_task(
             log(f"Spawned agent for {repo_full}#{pr_number} at /tmp/{repo}/{workspace_name}")
             display_log_viewing_command(session_name)
             success = True
+            cli_used = agent_spec.get("cli") or cli_used
         else:
             log(f"Failed to spawn agent for {repo_full}#{pr_number}")
+    if return_cli_used:
+        return success, cli_used
     return success
 
 
@@ -631,7 +695,8 @@ def dispatch_agent_for_pr(
     pr: dict,
     agent_cli: str = "claude",
     model: str | None = None,
-) -> bool:
+    return_cli_used: bool = False,
+) -> bool | tuple[bool, str | None]:
     repo_full = pr.get("repo_full")
     repo = pr.get("repo")
     pr_number = pr.get("number")
@@ -641,6 +706,10 @@ def dispatch_agent_for_pr(
         log(f"Skipping PR with missing required fields: {pr}")
         return False
     assert branch is not None and pr_number is not None
+
+    # Generate local branch name (fixpr_remotebranch) for isolation from remote branch
+    local_branch = generate_local_branch_name(branch)
+
     workspace_name = sanitize_workspace_name(branch or f"pr-{pr_number}", pr_number)
     workspace_root = WORKSPACE_ROOT_BASE / repo
     prepare_workspace_dir(repo, workspace_name)
@@ -671,10 +740,11 @@ def dispatch_agent_for_pr(
         f"   ```\n\n"
         f"   STEP 2 - If mergeable == \"CONFLICTING\" or mergeStateStatus == \"DIRTY\", resolve conflicts:\n"
         f"   ```bash\n"
-        f"   # Ensure you're on the PR branch\n"
-        f"   git checkout {branch}\n"
+        f"   # Fetch the remote PR branch and create/reset local fixpr branch\n"
+        f"   git fetch origin {branch}\n"
+        f"   git checkout -B {local_branch} origin/{branch}\n"
         f"   git status\n\n"
-        f"   # Fetch and merge main into the PR branch\n"
+        f"   # Fetch and merge main into the local fixpr branch\n"
         f"   git fetch origin main\n"
         f"   git merge origin/main --no-edit\n"
         f"   ```\n\n"
@@ -695,7 +765,7 @@ def dispatch_agent_for_pr(
         f"     ```bash\n"
         f"     git add -A\n"
         f"     git commit -m \"[fixpr {automation_user or 'claude'}-automation-commit] Merge main into {branch} to resolve conflicts\"\n"
-        f"     git push\n"
+        f"     git push origin {local_branch}:{branch}\n"
         f"     ```\n\n"
         f"   STEP 4 - Verify merge succeeded:\n"
         f"   ```bash\n"
@@ -746,10 +816,11 @@ def dispatch_agent_for_pr(
         f"   ```\n"
         "   This cleanup is MANDATORY - pending reviews block PR merges and must be deleted immediately.\n\n"
         "If /fixpr is unavailable, follow these steps explicitly (fallback for all CLIs including Claude):\n"
-        f"1) git checkout {branch} (or use git worktree if branch exists elsewhere)\n"
+        f"1) Fetch remote PR branch and create/reset local fixpr branch:\n"
+        f"   git fetch origin {branch} && git checkout -B {local_branch} origin/{branch}\n"
         "2) git status && git branch --show-current\n"
         "3) If checkout fails because the branch exists elsewhere, create worktree:\n"
-        f"   git worktree add {workspace_root}/pr-{pr_number}-rerun {pr_number} && cd {workspace_root}/pr-{pr_number}-rerun\n"
+        f"   git worktree add -b {local_branch} {workspace_root}/pr-{pr_number}-rerun origin/{branch} && cd {workspace_root}/pr-{pr_number}-rerun\n"
         "4) Fetch PR feedback using Python (DO NOT use gh api - triggers macOS prompts):\n"
         f"   ```python\n"
         f"   import requests\n"
@@ -769,11 +840,11 @@ def dispatch_agent_for_pr(
         "   a) FIRST: Check and resolve merge conflicts (see PRIORITY 1 section above for detailed steps)\n"
         "      - git fetch origin main && git merge origin/main --no-edit\n"
         "      - Resolve any conflicts (.beads/issues.jsonl: use --ours, test files: use --theirs, code: manual)\n"
-        "      - git add -A && git commit && git push\n"
+        f"      - git add -A && git commit && git push origin {local_branch}:{branch}\n"
         "   b) SECOND: Fix failing tests after merge conflicts are resolved\n"
         "      - Run tests locally to identify failures\n"
         "      - Apply code fixes to make tests pass\n"
-        f'7) git add -A && git commit -m "[fixpr {commit_marker_cli}-automation-commit] fix PR #{pr_number}" && git push\n'
+        f'7) git add -A && git commit -m "[fixpr {commit_marker_cli}-automation-commit] fix PR #{pr_number}" && git push origin {local_branch}:{branch}\n'
         "8) Verify PR status using Python requests (DO NOT use gh pr view)\n"
         f"9) Write completion report to {workspace_root}/{workspace_name}/orchestration_results.json summarizing actions and test results\n\n"
         f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
@@ -797,6 +868,7 @@ def dispatch_agent_for_pr(
 
     agent_specs = dispatcher.analyze_task_and_create_agents(task_description, forced_cli=agent_cli)
     success = False
+    cli_used = None
     for spec in agent_specs:
         # Preserve the CLI chain emitted by orchestration. Do not overwrite with a single CLI string.
         agent_spec = {**spec}
@@ -817,10 +889,13 @@ def dispatch_agent_for_pr(
             log(f"Spawned agent for {repo_full}#{pr_number} at /tmp/{repo}/{workspace_name}")
             display_log_viewing_command(session_name)
             success = True
+            cli_used = agent_spec.get("cli") or cli_used
         else:
             log(f"Failed to spawn agent for {repo_full}#{pr_number}")
             # No monitor cleanup needed - agent handles pending review cleanup directly
 
+    if return_cli_used:
+        return success, cli_used
     return success
 
 

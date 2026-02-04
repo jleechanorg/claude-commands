@@ -15,14 +15,20 @@ Run with:
 """
 
 import asyncio
+import inspect
 from unittest.mock import AsyncMock, Mock
 
-import aiohttp
 import pytest
 
 from jleechanorg_pr_automation.openai_automation.codex_github_mentions import (
     CodexGitHubMentionsAutomation,
 )
+
+_IMPORTORSKIP_PARAMS = inspect.signature(pytest.importorskip).parameters
+if "exc_type" in _IMPORTORSKIP_PARAMS:
+    aiohttp = pytest.importorskip("aiohttp", exc_type=ModuleNotFoundError)
+else:
+    aiohttp = pytest.importorskip("aiohttp")
 
 
 # Helper to check if Chrome is running with CDP
@@ -352,4 +358,4 @@ class TestNavigationInteraction:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-s"])
+    pytest.main([__file__, "-v", "-s", "--no-cov"])

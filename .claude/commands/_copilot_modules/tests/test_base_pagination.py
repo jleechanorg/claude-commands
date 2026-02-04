@@ -63,7 +63,7 @@ class TestBasePagination(unittest.TestCase):
         mock_result.returncode = 0
 
         with patch("subprocess.run", return_value=mock_result) as mock_run:
-            result = self.base.run_gh_command([
+            _ = self.base.run_gh_command([
                 "gh", "api", "repos/owner/repo/issues/comments", "--paginate"
             ])
 
@@ -150,7 +150,7 @@ class TestBasePagination(unittest.TestCase):
 
         with patch("subprocess.run", return_value=mock_result) as mock_run:
             # Command already has --jq
-            result = self.base.run_gh_command([
+            _ = self.base.run_gh_command([
                 "gh", "api", "repos/owner/repo/issues/comments",
                 "--paginate", "--jq", ".[]"
             ])
