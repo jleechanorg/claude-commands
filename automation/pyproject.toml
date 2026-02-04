@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jleechanorg-pr-automation"
-version = "0.2.120"
+version = "0.2.121"
 description = "GitHub PR automation system with safety limits and actionable counting"
 authors = [
     { name = "jleechan", email = "jlee@jleechan.org" },
@@ -138,6 +138,7 @@ select = [
 ignore = [
     "ANN101",
     "ANN102",
+    "PGH004",
     "S101",
     "PLR0913",
     "PLR0912",

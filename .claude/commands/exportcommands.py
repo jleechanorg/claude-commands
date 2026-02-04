@@ -1042,13 +1042,10 @@ Claude Code can assist with adapting these workflows to your specific project. J
                     r"jleechantest@gmail\.com", "<your-email@gmail.com>", content
                 )
 
-                # Scrub Firebase/GCP credentials
-                content = re.sub(
-                    r"AIzaSyAffORoaxiMslvZVVCNSqvT_20_kLh6ZJc", "<YOUR_FIREBASE_API_KEY>", content
-                )
-                content = re.sub(
-                    r"ai-universe-b3551", "<your-firebase-project-id>", content
-                )
+                # NOTE: AI Universe Firebase credentials are intentionally NOT scrubbed
+                # Firebase API keys are safe to expose publicly (protected by domain restrictions, not secrecy)
+                # AI Universe is a shared service - users should use actual credentials
+                # See PR #4291 for rationale
 
                 content = re.sub(
                     r"/tmp/worldarchitectai", "/tmp/$PROJECT_NAME", content

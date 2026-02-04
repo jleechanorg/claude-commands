@@ -10,16 +10,10 @@ New Behavior: Rolling window allows attempts to expire gradually as they age out
 of the window, providing more predictable and responsive automation.
 """
 
-import json
-import os
-import sys
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+# ruff: noqa: ANN001, ANN201, E712, PLR2004, SLF001
 
-# Ensure repository root is importable
-ROOT = Path(__file__).resolve().parents[3]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+import json
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from automation.jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
@@ -43,7 +37,7 @@ def test_rolling_window_excludes_old_attempts(tmp_path, monkeypatch):
     monkeypatch.setenv("AUTOMATION_ATTEMPT_WINDOW_HOURS", "24")
 
     # Create 10 attempts from 25 hours ago (outside window)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     old_time = now - timedelta(hours=25)
 
     pr_number = 1234
@@ -51,11 +45,7 @@ def test_rolling_window_excludes_old_attempts(tmp_path, monkeypatch):
     pr_key = f"r={repo}||p={pr_number}||b="
 
     old_attempts = [
-        {
-            "result": "failure",
-            "timestamp": (old_time + timedelta(minutes=i)).isoformat()
-        }
-        for i in range(10)
+        {"result": "failure", "timestamp": (old_time + timedelta(minutes=i)).isoformat()} for i in range(10)
     ]
 
     pr_attempts_file.write_text(json.dumps({pr_key: old_attempts}))
@@ -89,7 +79,7 @@ def test_rolling_window_includes_recent_attempts(tmp_path, monkeypatch):
     monkeypatch.setenv("AUTOMATION_ATTEMPT_WINDOW_HOURS", "24")
 
     # Create 10 attempts from 1 hour ago (inside window)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     recent_time = now - timedelta(hours=1)
 
     pr_number = 5678
@@ -97,11 +87,7 @@ def test_rolling_window_includes_recent_attempts(tmp_path, monkeypatch):
     pr_key = f"r={repo}||p={pr_number}||b="
 
     recent_attempts = [
-        {
-            "result": "failure",
-            "timestamp": (recent_time + timedelta(minutes=i)).isoformat()
-        }
-        for i in range(10)
+        {"result": "failure", "timestamp": (recent_time + timedelta(minutes=i)).isoformat()} for i in range(10)
     ]
 
     pr_attempts_file.write_text(json.dumps({pr_key: recent_attempts}))
@@ -135,7 +121,7 @@ def test_rolling_window_mixed_old_and_recent(tmp_path, monkeypatch):
     # Set 24 hour window
     monkeypatch.setenv("AUTOMATION_ATTEMPT_WINDOW_HOURS", "24")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     old_time = now - timedelta(hours=25)
     recent_time = now - timedelta(hours=1)
 
@@ -145,19 +131,11 @@ def test_rolling_window_mixed_old_and_recent(tmp_path, monkeypatch):
 
     # 50 old attempts + 5 recent attempts
     old_attempts = [
-        {
-            "result": "failure",
-            "timestamp": (old_time + timedelta(minutes=i)).isoformat()
-        }
-        for i in range(50)
+        {"result": "failure", "timestamp": (old_time + timedelta(minutes=i)).isoformat()} for i in range(50)
     ]
 
     recent_attempts = [
-        {
-            "result": "failure",
-            "timestamp": (recent_time + timedelta(minutes=i)).isoformat()
-        }
-        for i in range(5)
+        {"result": "failure", "timestamp": (recent_time + timedelta(minutes=i)).isoformat()} for i in range(5)
     ]
 
     all_attempts = old_attempts + recent_attempts
@@ -193,20 +171,14 @@ def test_rolling_window_configurable_size(tmp_path, monkeypatch):
     monkeypatch.setenv("AUTOMATION_ATTEMPT_WINDOW_HOURS", "1")
 
     # Create 10 attempts from 2 hours ago (outside 1h window)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     old_time = now - timedelta(hours=2)
 
     pr_number = 3333
     repo = "test/repo4"
     pr_key = f"r={repo}||p={pr_number}||b="
 
-    attempts = [
-        {
-            "result": "failure",
-            "timestamp": (old_time + timedelta(minutes=i)).isoformat()
-        }
-        for i in range(10)
-    ]
+    attempts = [{"result": "failure", "timestamp": (old_time + timedelta(minutes=i)).isoformat()} for i in range(10)]
 
     pr_attempts_file.write_text(json.dumps({pr_key: attempts}))
     inflight_file.write_text("{}")
@@ -219,6 +191,96 @@ def test_rolling_window_configurable_size(tmp_path, monkeypatch):
 
     # Should allow processing - all attempts outside 1h window
     assert manager.can_process_pr(pr_number, repo=repo) == True
+
+
+def test_global_runs_use_rolling_window(tmp_path, monkeypatch):
+    """Global runs should use a rolling 24-hour window."""
+    monkeypatch.setenv("AUTOMATION_GLOBAL_WINDOW_HOURS", "24")
+    manager = AutomationSafetyManager(str(tmp_path))
+    manager._clear_global_runs()
+
+    base_time = datetime.now(UTC) - timedelta(hours=30)
+    for i in range(50):
+        manager._record_global_run_at_time(base_time + timedelta(minutes=i))
+
+    recent_time = datetime.now(UTC) - timedelta(hours=2)
+    for i in range(40):
+        manager._record_global_run_at_time(recent_time + timedelta(minutes=i))
+
+    current_runs = manager.get_global_runs()
+    assert current_runs == 40
+    assert manager.can_start_global_run() is True
+
+
+def test_global_runs_exclude_old_runs(tmp_path, monkeypatch):
+    """Runs older than the window should be excluded."""
+    monkeypatch.setenv("AUTOMATION_GLOBAL_WINDOW_HOURS", "24")
+    manager = AutomationSafetyManager(str(tmp_path))
+    manager._clear_global_runs()
+
+    for i in range(100):
+        hours_ago = 48 - (i * 13 / 60)
+        run_time = datetime.now(UTC) - timedelta(hours=hours_ago)
+        manager._record_global_run_at_time(run_time)
+
+    current_runs = manager.get_global_runs()
+    assert current_runs == 0
+    assert manager.can_start_global_run() is True
+
+
+def test_global_runs_enforce_limit_in_window(tmp_path, monkeypatch):
+    """Limit should be enforced within the rolling window."""
+    monkeypatch.setenv("AUTOMATION_GLOBAL_WINDOW_HOURS", "24")
+    manager = AutomationSafetyManager(str(tmp_path), limits={"global_limit": 100})
+    manager._clear_global_runs()
+
+    base_time = datetime.now(UTC) - timedelta(hours=20)
+    for i in range(100):
+        run_time = base_time + timedelta(minutes=i * 12)
+        manager._record_global_run_at_time(run_time)
+
+    current_runs = manager.get_global_runs()
+    assert current_runs == 100
+    assert manager.can_start_global_run() is False
+
+
+def test_global_runs_gradual_expiration(tmp_path, monkeypatch):
+    """Runs should age out gradually rather than resetting at midnight."""
+    monkeypatch.setenv("AUTOMATION_GLOBAL_WINDOW_HOURS", "24")
+    manager = AutomationSafetyManager(str(tmp_path), limits={"global_limit": 100})
+    manager._clear_global_runs()
+
+    old_time = datetime.now(UTC) - timedelta(hours=25)
+    for i in range(50):
+        manager._record_global_run_at_time(old_time + timedelta(minutes=i))
+
+    recent_time = datetime.now(UTC) - timedelta(hours=1)
+    for i in range(50):
+        manager._record_global_run_at_time(recent_time + timedelta(minutes=i))
+
+    current_runs = manager.get_global_runs()
+    assert current_runs == 50
+    assert manager.can_start_global_run() is True
+
+
+def test_global_runs_configurable_window(tmp_path, monkeypatch):
+    """Global run window should be configurable."""
+    monkeypatch.setenv("AUTOMATION_GLOBAL_WINDOW_HOURS", "12")
+    manager = AutomationSafetyManager(str(tmp_path), limits={"global_limit": 100})
+    manager._clear_global_runs()
+
+    times = [
+        datetime.now(UTC) - timedelta(hours=15),
+        datetime.now(UTC) - timedelta(hours=10),
+        datetime.now(UTC) - timedelta(hours=5),
+        datetime.now(UTC) - timedelta(hours=1),
+    ]
+
+    for run_time in times:
+        manager._record_global_run_at_time(run_time)
+
+    current_runs = manager.get_global_runs()
+    assert current_runs == 3
 
 
 def test_rolling_window_boundary_condition(tmp_path, monkeypatch):
@@ -239,19 +301,14 @@ def test_rolling_window_boundary_condition(tmp_path, monkeypatch):
     monkeypatch.setenv("AUTOMATION_ATTEMPT_WINDOW_HOURS", "24")
 
     # Create 1 attempt at exactly 24 hours ago
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     boundary_time = now - timedelta(hours=24)
 
     pr_number = 4444
     repo = "test/repo5"
     pr_key = f"r={repo}||p={pr_number}||b="
 
-    attempts = [
-        {
-            "result": "failure",
-            "timestamp": boundary_time.isoformat()
-        }
-    ]
+    attempts = [{"result": "failure", "timestamp": boundary_time.isoformat()}]
 
     pr_attempts_file.write_text(json.dumps({pr_key: attempts}))
     inflight_file.write_text("{}")
@@ -289,24 +346,14 @@ def test_rolling_window_gradual_recovery(tmp_path, monkeypatch):
     pr_key = f"r={repo}||p={pr_number}||b="
 
     # Create 10 attempts: 5 from 3h ago, 5 from 1h ago
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     old_time = now - timedelta(hours=3)
     recent_time = now - timedelta(hours=1)
 
-    old_attempts = [
-        {
-            "result": "failure",
-            "timestamp": (old_time + timedelta(minutes=i)).isoformat()
-        }
-        for i in range(5)
-    ]
+    old_attempts = [{"result": "failure", "timestamp": (old_time + timedelta(minutes=i)).isoformat()} for i in range(5)]
 
     recent_attempts = [
-        {
-            "result": "failure",
-            "timestamp": (recent_time + timedelta(minutes=i)).isoformat()
-        }
-        for i in range(5)
+        {"result": "failure", "timestamp": (recent_time + timedelta(minutes=i)).isoformat()} for i in range(5)
     ]
 
     all_attempts = old_attempts + recent_attempts
@@ -344,20 +391,14 @@ def test_rolling_window_default_24h(tmp_path):
     inflight_file = history_dir / "pr_inflight.json"
 
     # Create 10 attempts from 23 hours ago (inside default 24h window)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     recent_time = now - timedelta(hours=23)
 
     pr_number = 6666
     repo = "test/repo7"
     pr_key = f"r={repo}||p={pr_number}||b="
 
-    attempts = [
-        {
-            "result": "failure",
-            "timestamp": (recent_time + timedelta(minutes=i)).isoformat()
-        }
-        for i in range(10)
-    ]
+    attempts = [{"result": "failure", "timestamp": (recent_time + timedelta(minutes=i)).isoformat()} for i in range(10)]
 
     pr_attempts_file.write_text(json.dumps({pr_key: attempts}))
     inflight_file.write_text("{}")

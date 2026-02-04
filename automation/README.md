@@ -438,7 +438,7 @@ python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
 # (See "Prerequisites" section above)
 
 # Optional: Customize task limit (used by `jleechanorg-pr-monitor --codex-update`)
-# Default: 200 (matches the standard cron entry). Override to keep evidence/test runs fast.
+# Default: 50 (matches CLI default; max 200). Override to keep evidence/test runs fast.
 # Use: `jleechanorg-pr-monitor --codex-update --codex-task-limit 200`
 
 # Optional: Auth state file location

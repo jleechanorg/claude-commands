@@ -115,10 +115,10 @@ if [ ! -f "$HOME/.claude/scripts/auth-cli.mjs" ]; then
 fi
 
 # CRITICAL: Use AI Universe Firebase credentials (not worldarchitecture-ai)
-export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID:-<your-firebase-project-id>}"
-export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:-<your-firebase-project-id>.firebaseapp.com}"
-# API key must come from secure config (Secret Manager, env file, or `auth-cli.mjs` login).
-export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY:?Set AI_UNIVERSE_FIREBASE_API_KEY from secure config}"
+export FIREBASE_PROJECT_ID="${AI_UNIVERSE_FIREBASE_PROJECT_ID:-ai-universe-b3551}"
+export FIREBASE_AUTH_DOMAIN="${AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:-ai-universe-b3551.firebaseapp.com}"
+# API key - hardcoded default for AI Universe shared service (safe to expose per Firebase security model)
+export FIREBASE_API_KEY="${AI_UNIVERSE_FIREBASE_API_KEY:-AIzaSyDWT4aEG2UoKEtTxozniGC6uPZi1fgjtG8}"
 
 # Get token (auto-refreshes if expired using refresh token)
 # This is silent - only prompts for login if refresh token is invalid/missing
@@ -127,16 +127,16 @@ TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
 # If this fails, user needs to authenticate with AI Universe credentials
 if [ $? -ne 0 ]; then
   echo "❌ Authentication failed. Please run:"
-  echo "   FIREBASE_PROJECT_ID=<your-firebase-project-id> \\" 
-  echo "   FIREBASE_AUTH_DOMAIN=<your-firebase-project-id>.firebaseapp.com \\" 
-  echo "   FIREBASE_API_KEY=<your-ai-universe-firebase-api-key> \\" 
+  echo "   FIREBASE_PROJECT_ID=ai-universe-b3551 \\" 
+  echo "   FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com \\" 
+  echo "   FIREBASE_API_KEY=AIzaSyDWT4aEG2UoKEtTxozniGC6uPZi1fgjtG8 \\" 
   echo "   node ~/.claude/scripts/auth-cli.mjs login"
   exit 1
 fi
 ```
 
 **Key Behavior**:
-- **AI Universe Credentials Required**: Uses `<your-firebase-project-id>` Firebase project (NOT worldarchitecture-ai)
+- **AI Universe Credentials Required**: Uses `ai-universe-b3551` Firebase project (NOT worldarchitecture-ai)
 - **Seamless Auto-Refresh**: Automatically renews ID tokens using refresh token (no browser popup)
 - **30+ Day Sessions**: Refresh tokens enable long-lived sessions without re-authentication
 - **Browser Only When Needed**: Only opens browser for initial login or if refresh token expires

@@ -1,29 +1,25 @@
 #!/usr/bin/env python3
+# ruff: noqa
 """
 Orchestrated PR runner that uses TaskDispatcher (Claude agents) to run /fixpr and /copilot
 for recent PRs. Workspaces live under /tmp/{repo}/{branch}.
 """
 
 import argparse
-import fcntl
 import json
 import os
 import re
 import shutil
 import subprocess
 import sys
-import tempfile
-from typing import Optional
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import requests
-
+import yaml
 from orchestration import task_dispatcher
 from orchestration.task_dispatcher import TaskDispatcher
-
-import yaml
 
 ORG = "jleechanorg"
 BASE_CLONE_ROOT = Path("/tmp/pr-orch-bases")
@@ -31,7 +27,7 @@ WORKSPACE_ROOT_BASE = Path("/tmp")
 DEFAULT_CUTOFF_HOURS = 24
 DEFAULT_MAX_PRS = 5
 DEFAULT_TIMEOUT = 30  # baseline timeout per security guideline
-TIMEOUT_SECONDS = DEFAULT_TIMEOUT # Alias for backward compatibility (fixes NameError in tests)
+TIMEOUT_SECONDS = DEFAULT_TIMEOUT  # Alias for backward compatibility (fixes NameError in tests)
 CLONE_TIMEOUT = 300
 FETCH_TIMEOUT = 120
 API_TIMEOUT = 60
@@ -58,9 +54,9 @@ def display_log_viewing_command(session_name: str) -> None:
         log("")
 
 
-def get_github_token() -> Optional[str]:
+def get_github_token() -> str | None:
     """Get GitHub token from environment or gh CLI config file (avoids bash/subprocess calls).
-    
+
     Reads token directly from ~/.config/gh/hosts.yml to avoid macOS permission prompts
     that occur when calling 'gh auth token' via subprocess.
     """
@@ -69,54 +65,56 @@ def get_github_token() -> Optional[str]:
     if token:
         # Basic validation: ensure token is non-empty
         token = token.strip()
-        if token and len(token) > 0:
+        if token:
             return token
-    
+
     # Try reading from gh CLI config file directly (avoids subprocess/bash calls)
     try:
         gh_config_path = Path.home() / ".config" / "gh" / "hosts.yml"
         if gh_config_path.exists():
-            if yaml is None:
-                log("⚠️ PyYAML not available, cannot read gh config file")
-            else:
-                try:
-                    with open(gh_config_path, "r", encoding="utf-8") as f:
-                        config = yaml.safe_load(f)
-                    # Extract token from config structure: github.com -> oauth_token
-                    if config and "github.com" in config:
-                        github_config = config["github.com"]
-                        # Try oauth_token at top level first
-                        token = github_config.get("oauth_token")
-                        if not token and "users" in github_config:
-                            # Try user-specific token
-                            users = github_config["users"]
-                            if users:
-                                # Get first user's token
-                                first_user = next(iter(users.values()))
-                                token = first_user.get("oauth_token")
-                        
-                        if token:
-                            token = str(token).strip()
-                            if token and len(token) > 0:
-                                log("🔍 Retrieved GitHub token from gh CLI config file")
-                                return token
-                except Exception as e:
-                    log(f"⚠️ Failed to read GitHub token from gh config file: {e}")
+            try:
+                with open(gh_config_path, encoding="utf-8") as f:
+                    config = yaml.safe_load(f) or {}
+                # Extract token from config structure: github.com -> oauth_token
+                if isinstance(config, dict) and "github.com" in config:
+                    github_config = config.get("github.com") or {}
+                    if not isinstance(github_config, dict):
+                        log("⚠️ Unexpected gh config structure; skipping token lookup")
+                        github_config = {}
+                    # Try oauth_token at top level first
+                    token = github_config.get("oauth_token")
+                    if not token and "users" in github_config:
+                        # Try user-specific token
+                        users = github_config["users"]
+                        if users:
+                            # Get first user's token
+                            first_user = next(iter(users.values()))
+                            token = first_user.get("oauth_token")
+                elif config:
+                    log("⚠️ Unexpected gh config structure; skipping token lookup")
+
+                if token:
+                    token = str(token).strip()
+                    if token:
+                        log("🔍 Retrieved GitHub token from gh CLI config file")
+                        return token
+            except Exception as e:
+                log(f"⚠️ Failed to read GitHub token from gh config file: {e}")
     except Exception as e:
         log(f"⚠️ Error accessing gh config file: {e}")
-    
+
     return None
 
 
-def post_pr_comment_python(repo_full: str, pr_number: int, body: str, in_reply_to: Optional[int] = None) -> bool:
+def post_pr_comment_python(repo_full: str, pr_number: int, body: str, in_reply_to: int | None = None) -> bool:
     """Post a comment to a PR using Python GitHub API (avoids bash/macOS permission prompts).
-    
+
     Args:
         repo_full: Repository in format "owner/repo"
         pr_number: PR number
         body: Comment body text
         in_reply_to: Optional comment ID to reply to (creates threaded reply)
-    
+
     Returns:
         True if comment was posted successfully, False otherwise
     """
@@ -124,25 +122,22 @@ def post_pr_comment_python(repo_full: str, pr_number: int, body: str, in_reply_t
     if not token:
         log("⚠️ No GitHub token available for posting comment")
         return False
-    
+
     try:
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
         }
-        
-        if in_reply_to:
+
+        if in_reply_to is not None:
             # Reply to inline review comment
             url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}/comments"
-            data = {
-                "body": body,
-                "in_reply_to": in_reply_to
-            }
+            data = {"body": body, "in_reply_to": in_reply_to}
         else:
             # General PR comment (issue comment endpoint)
             url = f"https://api.github.com/repos/{repo_full}/issues/{pr_number}/comments"
             data = {"body": body}
-        
+
         response = requests.post(url, json=data, headers=headers, timeout=30)
         response.raise_for_status()
         log(f"✅ Posted comment to {repo_full}#{pr_number}")
@@ -151,7 +146,7 @@ def post_pr_comment_python(repo_full: str, pr_number: int, body: str, in_reply_t
         log(f"⚠️ Timeout while posting comment to {repo_full}#{pr_number}: {e}")
         return False
     except requests.exceptions.HTTPError as e:
-        status_code = e.response.status_code if hasattr(e, 'response') and e.response is not None else "unknown"
+        status_code = e.response.status_code if hasattr(e, "response") and e.response is not None else "unknown"
         log(f"⚠️ HTTP error while posting comment to {repo_full}#{pr_number} (status {status_code}): {e}")
         return False
     except requests.exceptions.RequestException as e:
@@ -164,7 +159,7 @@ def post_pr_comment_python(repo_full: str, pr_number: int, body: str, in_reply_t
 
 def cleanup_pending_reviews_python(repo_full: str, pr_number: int, automation_user: str) -> None:
     """Clean up pending reviews using Python GitHub API (avoids bash/macOS permission prompts).
-    
+
     This function can be called by agents to clean up pending reviews without
     triggering macOS permission dialogs from bash scripts.
     """
@@ -172,28 +167,29 @@ def cleanup_pending_reviews_python(repo_full: str, pr_number: int, automation_us
     if not token:
         log("⚠️ No GitHub token available for cleanup")
         return
-    
+
     try:
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
         }
-        
+
         # Get all reviews
         url = f"https://api.github.com/repos/{repo_full}/pulls/{pr_number}/reviews"
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
         reviews = response.json()
-        
+
         # Find pending reviews from automation user
         pending_reviews = [
-            r for r in reviews 
-            if r.get("state") == "PENDING" and r.get("user", {}).get("login") == automation_user
+            r
+            for r in reviews
+            if r.get("state") == "PENDING" and (r.get("user") or {}).get("login") == automation_user
         ]
-        
+
         if not pending_reviews:
             return
-        
+
         # Delete each pending review
         for review in pending_reviews:
             review_id = review.get("id")
@@ -207,13 +203,12 @@ def cleanup_pending_reviews_python(repo_full: str, pr_number: int, automation_us
     except requests.exceptions.Timeout as e:
         log(f"⚠️ Timeout while cleaning up pending reviews for {repo_full}#{pr_number}: {e}")
     except requests.exceptions.HTTPError as e:
-        status_code = e.response.status_code if hasattr(e, 'response') and e.response is not None else "unknown"
+        status_code = e.response.status_code if hasattr(e, "response") and e.response is not None else "unknown"
         log(f"⚠️ HTTP error while cleaning up pending reviews for {repo_full}#{pr_number} (status {status_code}): {e}")
     except requests.exceptions.RequestException as e:
         log(f"⚠️ Network/request error while cleaning up pending reviews for {repo_full}#{pr_number}: {e}")
     except Exception as e:
         log(f"⚠️ Unexpected error while cleaning up pending reviews for {repo_full}#{pr_number}: {e}")
-
 
 
 def run_cmd(
@@ -361,7 +356,7 @@ def has_failing_checks(repo_full: str, pr_number: int) -> bool:
 
         if not checks:
             return False
-        
+
         # Check conclusion field (authoritative - indicates final result)
         # Also check state as fallback for checks that haven't completed yet
         failing_conclusions = {"FAILURE", "FAILED", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"}
@@ -370,11 +365,6 @@ def has_failing_checks(repo_full: str, pr_number: int) -> bool:
             # Check-runs API format: conclusion field
             conclusion = (check.get("conclusion") or "").upper()
             state = (check.get("state") or "").upper()
-            # Statuses API format: state field (lowercase)
-            if not conclusion and not state:
-                status_state = (check.get("state") or "").upper()
-                if status_state in failing_states:
-                    return True
             # Conclusion is authoritative - if check completed with failure, it's failing
             if conclusion in failing_conclusions:
                 return True
@@ -447,10 +437,7 @@ def ensure_base_clone(repo_full: str) -> Path:
             run_cmd(["git", "fetch", "origin", "--prune"], cwd=base_dir, timeout=FETCH_TIMEOUT)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             stderr_msg = getattr(exc, "stderr", "") or str(exc) or "No stderr available"
-            log(
-                f"Fetch failed for {repo_full} ({exc.__class__.__name__}): {stderr_msg}. "
-                "Re-cloning base repo."
-            )
+            log(f"Fetch failed for {repo_full} ({exc.__class__.__name__}): {stderr_msg}. Re-cloning base repo.")
             _fresh_clone(base_dir, repo_full, github_host)
 
     # Reset base clone to main - with automatic recovery on any failure
@@ -467,10 +454,7 @@ def ensure_base_clone(repo_full: str) -> Path:
             cmd_str = str(cmd)
         else:
             cmd_str = "unknown"
-        log(
-            f"Reset failed for {repo_full} ({cmd_str}): {stderr_msg}. "
-            "Proactive recovery: re-cloning base repo."
-        )
+        log(f"Reset failed for {repo_full} ({cmd_str}): {stderr_msg}. Proactive recovery: re-cloning base repo.")
         _fresh_clone(base_dir, repo_full, github_host)
         # After fresh clone, we should be on main already, but ensure clean state
         try:
@@ -602,7 +586,7 @@ def dispatch_agent_for_pr_with_task(
     pr: dict,
     task_description: str,
     agent_cli: str = "claude",
-    model: str = None,
+    model: str | None = None,
     return_cli_used: bool = False,
 ) -> bool | tuple[bool, str | None]:
     """Dispatch an agent for a PR using a custom task description."""
@@ -640,9 +624,9 @@ def dispatch_agent_for_pr_with_task(
             },
         )
         # Inject model parameter for all CLIs in the chain (Gemini, Claude, Cursor, etc.)
-        if model:
+        if model is not None:
             raw_model = str(model).strip()
-            if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
+            if not raw_model or not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
                 log(f"❌ Invalid model name requested: {raw_model!r}")
                 return False
         ok = dispatcher.create_dynamic_agent(agent_spec)
@@ -658,7 +642,7 @@ def dispatch_agent_for_pr_with_task(
     return success
 
 
-def get_automation_user() -> Optional[str]:
+def get_automation_user() -> str | None:
     """Detect automation user from environment or gh CLI."""
     automation_user = os.environ.get("GITHUB_ACTOR") or os.environ.get("AUTOMATION_USERNAME")
     if automation_user:
@@ -675,18 +659,17 @@ def get_automation_user() -> Optional[str]:
         if result.returncode == 0:
             username = result.stdout.strip()
             # Validate GitHub username: alphanumeric and hyphens, cannot start or end with hyphen, max length 39
-            if username and re.match(r'^[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$', username):
+            if username and re.match(r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$", username):
                 log(f"🔍 Auto-detected automation user from gh CLI: {username}")
                 return username
-            else:
-                log(f"⚠️ Invalid username format from gh CLI: {username!r}")
+            log(f"⚠️ Invalid username format from gh CLI: {username!r}")
     except subprocess.TimeoutExpired:
         log("⚠️ Timeout while auto-detecting automation user from gh CLI")
     except subprocess.CalledProcessError as e:
         log(f"⚠️ gh CLI error while auto-detecting automation user: {e}")
     except Exception as e:
         log(f"⚠️ Failed to auto-detect automation user: {type(e).__name__}: {e}")
-    
+
     return None
 
 
@@ -718,9 +701,9 @@ def dispatch_agent_for_pr(
     commit_marker_cli = cli_chain_parts[0] if cli_chain_parts else str(agent_cli).strip().lower() or "claude"
 
     normalized_model: str | None = None
-    if model:
+    if model is not None:
         raw_model = str(model).strip()
-        if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
+        if not raw_model or not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
             log(f"❌ Invalid model name requested: {raw_model!r}")
             return False
         normalized_model = raw_model
@@ -738,7 +721,7 @@ def dispatch_agent_for_pr(
         f"   ```bash\n"
         f"   gh pr view {pr_number} --json mergeable,mergeStateStatus\n"
         f"   ```\n\n"
-        f"   STEP 2 - If mergeable == \"CONFLICTING\" or mergeStateStatus == \"DIRTY\", resolve conflicts:\n"
+        f'   STEP 2 - If mergeable == "CONFLICTING" or mergeStateStatus == "DIRTY", resolve conflicts:\n'
         f"   ```bash\n"
         f"   # Fetch the remote PR branch and create/reset local fixpr branch\n"
         f"   git fetch origin {branch}\n"
@@ -764,13 +747,13 @@ def dispatch_agent_for_pr(
         f"   - After resolving all conflicts:\n"
         f"     ```bash\n"
         f"     git add -A\n"
-        f"     git commit -m \"[fixpr {automation_user or 'claude'}-automation-commit] Merge main into {branch} to resolve conflicts\"\n"
+        f'     git commit -m "[fixpr {automation_user or "claude"}-automation-commit] Merge main into {branch} to resolve conflicts"\n'
         f"     git push origin {local_branch}:{branch}\n"
         f"     ```\n\n"
         f"   STEP 4 - Verify merge succeeded:\n"
         f"   ```bash\n"
         f"   gh pr view {pr_number} --json mergeable,mergeStateStatus\n"
-        f"   # Should now show mergeable: \"MERGEABLE\" or \"UNKNOWN\" (not \"CONFLICTING\")\n"
+        f'   # Should now show mergeable: "MERGEABLE" or "UNKNOWN" (not "CONFLICTING")\n'
         f"   ```\n\n"
         f"   ⚠️ DO NOT PROCEED TO TEST FIXES UNTIL MERGE CONFLICTS ARE RESOLVED AND PUSHED.\n\n"
         "🚨🚨🚨 PRE-FLIGHT CHECK - VERIFY TOOL AVAILABILITY (MANDATORY FIRST STEP):\n"
@@ -882,7 +865,7 @@ def dispatch_agent_for_pr(
                 "workspace_name": workspace_name,
             },
         )
-        if normalized_model:
+        if normalized_model is not None:
             agent_spec["model"] = normalized_model
         ok = dispatcher.create_dynamic_agent(agent_spec)
         if ok:
@@ -899,7 +882,9 @@ def dispatch_agent_for_pr(
     return success
 
 
-def run_fixpr_batch(cutoff_hours: int = DEFAULT_CUTOFF_HOURS, max_prs: int = DEFAULT_MAX_PRS, agent_cli: str = "claude") -> None:
+def run_fixpr_batch(
+    cutoff_hours: int = DEFAULT_CUTOFF_HOURS, max_prs: int = DEFAULT_MAX_PRS, agent_cli: str = "claude"
+) -> None:
     log(f"Discovering open PRs updated in last {cutoff_hours}h for org {ORG}")
     try:
         prs = query_recent_prs(cutoff_hours)

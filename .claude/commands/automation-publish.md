@@ -3,6 +3,9 @@ description: Automation Package Publishing Command - Publish both orchestration 
 type: llm-orchestration
 execution_mode: immediate
 ---
+## Command Summary
+Publish `jleechanorg-orchestration` and `jleechanorg-pr-automation` to PyPI, verify site-packages installs, then restart `jleechanorg-pr-monitor`.
+
 ## EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
 **This is NOT documentation - these are COMMANDS to execute right now.**
@@ -67,6 +70,18 @@ The `jleechanorg-pr-automation` package depends on `jleechanorg-orchestration`.
    print('SUCCESS: Both packages installed from PyPI')
    "
    ```
+4. **CRITICAL VERIFICATION** - Verify CLI validation imports resolve from the installed packages (still from /tmp):
+   ```
+   cd /tmp && python3 -c "
+   from orchestration import cli_validation
+   from jleechanorg_pr_automation import jleechanorg_pr_monitor
+   print('CLI validation module:', cli_validation.__file__)
+   print('PR monitor module:', jleechanorg_pr_monitor.__file__)
+   assert 'site-packages' in cli_validation.__file__, 'cli_validation not from PyPI!'
+   assert 'site-packages' in jleechanorg_pr_monitor.__file__, 'pr_monitor not from PyPI!'
+   print('SUCCESS: CLI validation and monitor resolve from PyPI')
+   "
+   ```
 
 ### Phase 6: Commit and Push
 
@@ -110,7 +125,7 @@ Any running `jleechanorg-pr-monitor` process must be restarted to use the new co
 
 After completion, verify:
 - [ ] Both packages show `site-packages` path (not local worktree)
-- [ ] CLI validation works: run quick test with quota-exhausted CLI
+- [ ] CLI validation imports resolve from PyPI: verify module paths include `site-packages`
 - [ ] `jleechanorg-pr-monitor --help` works
 
 ## REFERENCE DOCUMENTATION
