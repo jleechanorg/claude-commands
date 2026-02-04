@@ -4,7 +4,7 @@ Automation Safety Manager - GREEN Phase Implementation
 
 Minimal implementation to pass the RED phase tests with:
 - PR attempt limits (max 10 per PR)
-- Global run limits (max 50 per day with automatic midnight reset)
+- Global run limits (rolling window, default 24 hours)
 - Manual approval system
 - Thread-safe operations
 - Email notifications
@@ -108,9 +108,10 @@ class AutomationSafetyManager:
             self._write_json_file(self.pr_attempts_file, {})
 
         if not os.path.exists(self.global_runs_file):
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             today = now.date().isoformat()
             self._write_json_file(self.global_runs_file, {
+                "runs": [],
                 "total_runs": 0,
                 "start_date": now.isoformat(),
                 "current_date": today,
@@ -182,7 +183,9 @@ class AutomationSafetyManager:
 
             # Load global runs
             global_data = self._read_json_file(self.global_runs_file)
-            self._global_runs_cache = global_data.get("total_runs", 0)
+            normalized, total, _ = self._normalize_global_run_payload(global_data)
+            self._global_runs_cache = total
+            self._write_json_file(self.global_runs_file, normalized)
 
             # Load inflight cache
             inflight_data = self._read_json_file(self.inflight_file)
@@ -357,6 +360,9 @@ class AutomationSafetyManager:
         else:
             data["start_date"] = current_time.isoformat()
 
+        window_hours = self._get_global_window_hours()
+        cutoff_time = current_time - timedelta(hours=window_hours)
+
         runs: list[datetime] = []
         raw_runs = data.get("runs")
         if isinstance(raw_runs, list):
@@ -378,16 +384,16 @@ class AutomationSafetyManager:
                 seed = self._parse_global_run_timestamp(last_run)
             if seed is None:
                 seed = self._parse_global_run_timestamp(data.get("start_date"))
-            if seed is None:
-                seed = current_time
+            if seed is None or seed < cutoff_time:
+                legacy_total = 0
+                seed = None
 
-            runs.extend([seed] * legacy_total)
+            if seed is not None and legacy_total:
+                runs.extend([seed] * legacy_total)
 
         if add_run is not None:
             runs.append(add_run)
 
-        window_hours = self._get_global_window_hours()
-        cutoff_time = current_time - timedelta(hours=window_hours)
         filtered_runs = [run for run in runs if run >= cutoff_time]
         filtered_runs.sort()
 
@@ -435,7 +441,8 @@ class AutomationSafetyManager:
             return None if return_none_on_fail else datetime(1970, 1, 1, tzinfo=timezone.utc)
 
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            local_tz = datetime.now().astimezone().tzinfo or timezone.utc
+            dt = dt.replace(tzinfo=local_tz)
 
         return dt.astimezone(timezone.utc)
 
@@ -882,9 +889,9 @@ This is an automated notification from the WorldArchitect.AI automation system.
         with self.lock:
             self._global_runs_cache = 0
             data = self._read_json_file(self.global_runs_file)
+            data["runs"] = []
             data["total_runs"] = 0
             data.pop("last_run", None)
-            data["runs"] = []
             now = datetime.now(timezone.utc)
             data["current_date"] = now.date().isoformat()
             data["last_reset"] = now.isoformat()

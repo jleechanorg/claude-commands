@@ -301,9 +301,8 @@ class TestAutomationSafetyLimits(unittest.TestCase):
                 base_time + timedelta(minutes=i)
             )
 
-        result = self.automation_manager.can_start_global_run()
-        self.assertTrue(result)
         self.assertEqual(self.automation_manager.get_global_runs(), 48)
+        self.assertTrue(self.automation_manager.can_start_global_run())
 
     def test_rolling_window_50th_run_within_window(self):
         """50th run within window should be allowed (at limit)."""
@@ -313,9 +312,8 @@ class TestAutomationSafetyLimits(unittest.TestCase):
                 base_time + timedelta(minutes=i)
             )
 
-        result = self.automation_manager.can_start_global_run()
-        self.assertTrue(result)
         self.assertEqual(self.automation_manager.get_global_runs(), 49)
+        self.assertTrue(self.automation_manager.can_start_global_run())
 
     def test_rolling_window_51st_run_blocked(self):
         """51st run within window should be blocked."""
@@ -325,9 +323,8 @@ class TestAutomationSafetyLimits(unittest.TestCase):
                 base_time + timedelta(minutes=i)
             )
 
-        result = self.automation_manager.can_start_global_run()
-        self.assertFalse(result)
         self.assertEqual(self.automation_manager.get_global_runs(), 50)
+        self.assertFalse(self.automation_manager.can_start_global_run())
 
     def test_rolling_window_legacy_payload_outside_window(self):
         """Legacy payload outside window should be treated as expired."""

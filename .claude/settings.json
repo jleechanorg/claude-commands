@@ -298,7 +298,7 @@
   "mcpServers": {},
   "statusLine": {
     "type": "command",
-    "command": "bash -c 'cat >/dev/null; if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && \"$ROOT/.claude/hooks/git-header.sh\" --status-only && exit 0; fi; if [ -x \"$HOME/.claude/hooks/git-header.sh\" ]; then \"$HOME/.claude/hooks/git-header.sh\" --status-only; elif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo \"📁 $(basename \"$(pwd)\") | 🌿 $(git branch --show-current 2>/dev/null || echo 'detached')\"; else echo \"📁 $(basename \"$(pwd)\") | 🏠 home\"; fi'",
+    "command": "bash -c 'payload=\"\"; if [ ! -t 0 ]; then payload=$(python3 -c \"import os,sys,select; fd=sys.stdin.fileno(); sys.stdout.buffer.write(os.read(fd,65536)) if select.select([fd],[],[],0.1)[0] else None\" 2>/dev/null || cat </dev/null); fi; if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); if [ -x \"$ROOT/.claude/hooks/git-header.sh\" ]; then printf \"%s\" \"$payload\" | \"$ROOT/.claude/hooks/git-header.sh\" --status-only && exit 0; fi; fi; if [ -x \"$HOME/.claude/hooks/git-header.sh\" ]; then printf \"%s\" \"$payload\" | \"$HOME/.claude/hooks/git-header.sh\" --status-only; elif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo \"📁 $(basename \"$(pwd)\") | 🌿 $(git branch --show-current 2>/dev/null || echo 'detached')\"; else echo \"📁 $(basename \"$(pwd)\") | 🏠 home\"; fi'",
     "padding": 0
   }
 }
