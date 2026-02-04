@@ -150,9 +150,10 @@ class TestGlobalLimits:
         manager._clear_global_runs()
         assert manager.get_global_runs() == 0
 
-    def test_global_runs_use_rolling_window(self, manager):
+    def test_global_runs_use_rolling_window(self, manager, monkeypatch):
         """Global runs should use a rolling 24-hour window instead of daily reset."""
         manager._clear_global_runs()
+        monkeypatch.setenv("AUTOMATION_GLOBAL_WINDOW_HOURS", "24")
 
         # Simulate 50 runs from 30 hours ago (outside window)
         base_time = datetime.now(timezone.utc) - timedelta(hours=30)

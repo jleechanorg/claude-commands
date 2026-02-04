@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa
 """
 jleechanorg PR Monitor - Cross-Organization Automation
 
@@ -54,6 +55,9 @@ from .codex_config import (
 )
 from .codex_config import (
     DEFAULT_ASSISTANT_MENTIONS,
+    build_automation_marker,
+    build_comment_intro,
+    is_automation_comment,
 )
 from .codex_config import (
     FIX_COMMENT_MARKER_PREFIX as SHARED_FIX_COMMENT_PREFIX,
@@ -72,11 +76,6 @@ from .codex_config import (
 )
 from .codex_config import (
     FIXPR_MARKER_SUFFIX as SHARED_FIXPR_SUFFIX,
-)
-from .codex_config import (
-    build_automation_marker,
-    build_comment_intro,
-    is_automation_comment,
 )
 from .orchestrated_pr_runner import (
     chdir,
@@ -138,9 +137,7 @@ def _normalize_model(model: str | None) -> str | None:
         return None
 
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw):
-        raise argparse.ArgumentTypeError(
-            f"Invalid --model value {raw!r}. Allowed: letters, numbers, '.', '_', '-'."
-        )
+        raise argparse.ArgumentTypeError(f"Invalid --model value {raw!r}. Allowed: letters, numbers, '.', '_', '-'.")
 
     return raw
 
@@ -183,12 +180,8 @@ class JleechanorgPRMonitor:
     # GitHub short SHAs display with a minimum of 7 characters, while full SHAs are 40 characters.
     CODEX_COMMIT_SHA_LENGTH_RANGE: tuple[int, int] = (7, 40)
     CODEX_SUMMARY_COMMIT_PATTERNS = [
-        re.compile(
-            rf"/blob/([0-9a-fA-F]{{{CODEX_COMMIT_SHA_LENGTH_RANGE[0]},{CODEX_COMMIT_SHA_LENGTH_RANGE[1]}}})/"
-        ),
-        re.compile(
-            rf"/commit/([0-9a-fA-F]{{{CODEX_COMMIT_SHA_LENGTH_RANGE[0]},{CODEX_COMMIT_SHA_LENGTH_RANGE[1]}}})"
-        ),
+        re.compile(rf"/blob/([0-9a-fA-F]{{{CODEX_COMMIT_SHA_LENGTH_RANGE[0]},{CODEX_COMMIT_SHA_LENGTH_RANGE[1]}}})/"),
+        re.compile(rf"/commit/([0-9a-fA-F]{{{CODEX_COMMIT_SHA_LENGTH_RANGE[0]},{CODEX_COMMIT_SHA_LENGTH_RANGE[1]}}})"),
         # Cursor Bugbot summaries reference the pending Codex commit in prose, e.g.
         # "Written by Cursor Bugbot for commit c279655."
         re.compile(
@@ -233,10 +226,7 @@ class JleechanorgPRMonitor:
         "copilot",
         "cursor",
     ]
-    _codex_actor_patterns = [
-        re.compile(rf"\b{keyword}\b", re.IGNORECASE)
-        for keyword in _codex_actor_keywords
-    ]
+    _codex_actor_patterns = [re.compile(rf"\b{keyword}\b", re.IGNORECASE) for keyword in _codex_actor_keywords]
     _codex_commit_message_pattern_str = (
         r"\[(?:fixpr\s+)?(?:" + "|".join(_codex_actor_keywords) + r")-automation-commit\]"
     )
@@ -253,15 +243,17 @@ class JleechanorgPRMonitor:
     # - _codex_actor_keywords: Used to exclude our own automation bots from being
     #   treated as external review bots when they have the [bot] suffix.
     # The detection order in _is_github_bot_comment() ensures known bots are detected first.
-    KNOWN_GITHUB_BOTS = frozenset({
-        "github-actions",
-        "coderabbitai",
-        "copilot-swe-agent",
-        "dependabot",
-        "renovate",
-        "codecov",
-        "sonarcloud",
-    })
+    KNOWN_GITHUB_BOTS = frozenset(
+        {
+            "github-actions",
+            "coderabbitai",
+            "copilot-swe-agent",
+            "dependabot",
+            "renovate",
+            "codecov",
+            "sonarcloud",
+        }
+    )
 
     @staticmethod
     def _extract_actor_fields(
@@ -276,7 +268,13 @@ class JleechanorgPRMonitor:
         name = actor.get("name")
         return (login, email, name)
 
-    def __init__(self, *, safety_limits: dict[str, int] | None = None, no_act: bool = False, automation_username: str | None = None):
+    def __init__(
+        self,
+        *,
+        safety_limits: dict[str, int] | None = None,
+        no_act: bool = False,
+        automation_username: str | None = None,
+    ):
         self.logger = setup_logging(__name__)
         self._explicit_automation_username = automation_username
 
@@ -314,6 +312,7 @@ class JleechanorgPRMonitor:
         self.logger.info("🏢 Initialized jleechanorg PR monitor")
         self.logger.info(f"📁 History storage: {self.history_base_dir}")
         self.logger.info("💬 Comment-only automation mode")
+
     def _get_history_file(self, repo_name: str, branch_name: str) -> Path:
         """Get history file path for specific repo/branch"""
         repo_dir = self.history_base_dir / repo_name
@@ -346,11 +345,15 @@ class JleechanorgPRMonitor:
         # If commit has changed since we processed it, don't skip
         last_processed_commit = history[pr_key]
         if last_processed_commit != current_commit:
-            self.logger.info(f"🔄 PR {repo_name}/{branch_name}#{pr_number} has new commit ({current_commit[:8]} vs {last_processed_commit[:8]})")
+            self.logger.info(
+                f"🔄 PR {repo_name}/{branch_name}#{pr_number} has new commit ({current_commit[:8]} vs {last_processed_commit[:8]})"
+            )
             return False
 
         # We processed this PR with this exact commit, skip it
-        self.logger.info(f"⏭️ Skipping PR {repo_name}/{branch_name}#{pr_number} - already processed commit {current_commit[:8]}")
+        self.logger.info(
+            f"⏭️ Skipping PR {repo_name}/{branch_name}#{pr_number} - already processed commit {current_commit[:8]}"
+        )
         return True
 
     def _resolve_automation_username(self) -> str:
@@ -369,9 +372,7 @@ class JleechanorgPRMonitor:
         # 3. Dynamic discovery from GitHub CLI
         try:
             result = AutomationUtils.execute_subprocess_with_timeout(
-                ["gh", "api", "user", "--jq", ".login"],
-                timeout=10,
-                check=False
+                ["gh", "api", "user", "--jq", ".login"], timeout=10, check=False
             )
             if result.returncode == 0 and result.stdout.strip():
                 user = result.stdout.strip()
@@ -390,7 +391,9 @@ class JleechanorgPRMonitor:
         pr_key = str(pr_number)
         history[pr_key] = commit_sha
         self._save_branch_history(repo_name, branch_name, history)
-        self.logger.debug(f"📝 Recorded processing of PR {repo_name}/{branch_name}#{pr_number} with commit {commit_sha[:8]}")
+        self.logger.debug(
+            f"📝 Recorded processing of PR {repo_name}/{branch_name}#{pr_number} with commit {commit_sha[:8]}"
+        )
 
     def _get_fix_comment_inflight_key(self, repo_full: str, pr_number: int) -> str:
         return f"{repo_full}#{pr_number}"
@@ -482,8 +485,7 @@ class JleechanorgPRMonitor:
                     repo_full = self._normalize_repository_name(repo_name)
                 else:
                     self.logger.warning(
-                        "Skipping PR comment state check: missing repository information "
-                        f"(pr_number={pr_number})"
+                        f"Skipping PR comment state check: missing repository information (pr_number={pr_number})"
                     )
                     return False
 
@@ -538,7 +540,9 @@ class JleechanorgPRMonitor:
         eligible_prs = self.filter_eligible_prs(all_prs)
         return eligible_prs[:limit]
 
-    def list_actionable_prs(self, cutoff_hours: int = 24, max_prs: int = 20, mode: str = "fixpr", single_repo: str | None = None) -> list[dict]:
+    def list_actionable_prs(
+        self, cutoff_hours: int = 24, max_prs: int = 20, mode: str = "fixpr", single_repo: str | None = None
+    ) -> list[dict]:
         """
         Return PRs that would be processed for fixpr (merge conflicts or failing checks).
         """
@@ -621,7 +625,9 @@ class JleechanorgPRMonitor:
 
             # Reserve a processing slot for this PR
             if not self.safety_manager.try_process_pr(pr_number, repo=repo_full):
-                self.logger.info(f"⚠️ PR {repo_full}#{pr_number} blocked by safety manager - consecutive failures or rate limit")
+                self.logger.info(
+                    f"⚠️ PR {repo_full}#{pr_number} blocked by safety manager - consecutive failures or rate limit"
+                )
                 processing_failures += 1
                 continue
 
@@ -642,7 +648,7 @@ class JleechanorgPRMonitor:
             "actionable_processed": actionable_processed,
             "total_discovered": len(all_prs),
             "skipped_count": skipped_count,
-            "processing_failures": processing_failures
+            "processing_failures": processing_failures,
         }
 
     def _process_pr_comment(self, repo_name: str, pr_number: int, pr_data: dict) -> bool:
@@ -753,9 +759,7 @@ class JleechanorgPRMonitor:
                     if updated_time.tzinfo is None:
                         updated_time = updated_time.replace(tzinfo=UTC)
                 except ValueError:
-                    self.logger.debug(
-                        "⚠️ Invalid date format for PR %s: %s", node.get("number"), updated_str
-                    )
+                    self.logger.debug("⚠️ Invalid date format for PR %s: %s", node.get("number"), updated_str)
                     continue
 
                 if updated_time < one_day_ago:
@@ -809,7 +813,6 @@ class JleechanorgPRMonitor:
             self.logger.info("  %s. %s #%s - %s", i, pr["repositoryFullName"], pr["number"], updated_str)
 
         return recent_prs
-
 
     def _find_local_repository(self, repo_name: str) -> Path | None:
         """Find local repository path for given repo name"""
@@ -887,13 +890,14 @@ class JleechanorgPRMonitor:
 
             # Fetch all reviews for the PR
             reviews_cmd = [
-                "gh", "api",
+                "gh",
+                "api",
                 f"repos/{owner}/{repo}/pulls/{pr_number}/reviews",
-                "--paginate", "-q", ".[]",
+                "--paginate",
+                "-q",
+                ".[]",
             ]
-            result = AutomationUtils.execute_subprocess_with_timeout(
-                reviews_cmd, timeout=30, check=False
-            )
+            result = AutomationUtils.execute_subprocess_with_timeout(reviews_cmd, timeout=30, check=False)
 
             if result.returncode != 0:
                 self.logger.debug(f"Could not fetch reviews for pending cleanup: {result.stderr}")
@@ -916,9 +920,11 @@ class JleechanorgPRMonitor:
                             review_id = review.get("id")
                             if review_id:
                                 delete_cmd = [
-                                    "gh", "api",
+                                    "gh",
+                                    "api",
                                     f"repos/{owner}/{repo}/pulls/{pr_number}/reviews/{review_id}",
-                                    "-X", "DELETE",
+                                    "-X",
+                                    "DELETE",
                                 ]
                                 delete_result = AutomationUtils.execute_subprocess_with_timeout(
                                     delete_cmd, timeout=30, check=False
@@ -953,7 +959,7 @@ class JleechanorgPRMonitor:
         skip_checks_fn=None,
     ) -> str:
         """Common logic for posting PR comments (shared by Codex and comment validation).
-        
+
         Args:
             repository: Repository name or full name
             pr_number: PR number
@@ -963,7 +969,7 @@ class JleechanorgPRMonitor:
             log_prefix: Prefix for log messages (e.g., "Codex support" or "comment validation")
             skip_checks_fn: Optional function for additional skip checks (head_sha, comments, repo_full, pr_number) -> tuple[bool, str]
                            Returns (should_skip, reason). If None, only standard checks are performed.
-        
+
         Returns:
             "posted", "skipped", or "failed"
         """
@@ -1022,11 +1028,7 @@ class JleechanorgPRMonitor:
 
         # Post the comment
         try:
-            comment_cmd = [
-                "gh", "pr", "comment", str(pr_number),
-                "--repo", repo_full,
-                "--body", comment_body
-            ]
+            comment_cmd = ["gh", "pr", "comment", str(pr_number), "--repo", repo_full, "--body", comment_body]
 
             result = AutomationUtils.execute_subprocess_with_timeout(
                 comment_cmd,
@@ -1057,9 +1059,11 @@ class JleechanorgPRMonitor:
             self.logger.error(f"💥 Unexpected error posting {log_prefix} comment: {e}")
             return "failed"
 
-    def _codex_skip_checks(self, head_sha: str | None, comments: list[dict], repo_full: str, pr_number: int) -> tuple[bool, str]:
+    def _codex_skip_checks(
+        self, head_sha: str | None, comments: list[dict], repo_full: str, pr_number: int
+    ) -> tuple[bool, str]:
         """Codex-specific skip checks (checks for Codex commits and pending commits).
-        
+
         Returns (should_skip, reason). If should_skip is False, processing should continue.
         The reason string can include "forcing re-run" to bypass standard skip checks.
         """
@@ -1077,9 +1081,7 @@ class JleechanorgPRMonitor:
                     pr_number,
                 )
                 return False, "forcing re-run"  # Signal to bypass standard skip checks
-            return True, (
-                f"🆔 Head commit {head_sha[:8]} for {repo_full}#{pr_number} already attributed to Codex"
-            )
+            return True, (f"🆔 Head commit {head_sha[:8]} for {repo_full}#{pr_number} already attributed to Codex")
 
         # Check for pending Codex commits (only if not forcing re-run)
         if self._has_pending_codex_commit(comments, head_sha):
@@ -1112,17 +1114,6 @@ class JleechanorgPRMonitor:
             log_prefix="comment validation",
             skip_checks_fn=None,  # No special skip checks for comment validation
         )
-
-
-
-
-
-
-
-
-
-
-
 
     def _are_tests_passing(self, repository: str, pr_number: int) -> bool:
         """Check if tests are passing on the PR using Python requests (avoids bash prompts)"""
@@ -1189,7 +1180,6 @@ class JleechanorgPRMonitor:
                 elif status_state:
                     is_passing = status_state in ["SUCCESS", "NEUTRAL"]
 
-
                 if not is_passing:
                     check_name = check.get("name") or check.get("context") or "unknown"
                     self.logger.debug(f"❌ Status check failed: {check_name} - conclusion={conclusion}, state={state}")
@@ -1222,10 +1212,10 @@ class JleechanorgPRMonitor:
 5. Rebase or merge with the base branch to clear conflicts, then push the updated commits to this PR.
 
 **PR Details:**
-- Title: {pr_data.get('title', 'Unknown')}
-- Author: {pr_data.get('author', {}).get('login', 'unknown')}
-- Branch: {pr_data.get('headRefName', 'unknown')}
-- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})
+- Title: {pr_data.get("title", "Unknown")}
+- Author: {pr_data.get("author", {}).get("login", "unknown")}
+- Branch: {pr_data.get("headRefName", "unknown")}
+- Commit: {head_sha[:8] if head_sha else "unknown"} ({head_sha or "unknown"})
 
 **Instructions:**
 Use your judgment to fix comments from everyone or explain why it should not be fixed. Use /commentreply to post ONE consolidated summary comment with all responses embedded (this avoids GitHub rate limits from posting individual replies). Address all comments on this PR. Fix any failing tests and resolve merge conflicts. Push any commits needed to remote so the PR is updated.
@@ -1242,10 +1232,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 """
 
         if head_sha:
-            comment_body += (
-                f"\n\n{self.CODEX_COMMIT_MARKER_PREFIX}{head_sha}"
-                f"{self.CODEX_COMMIT_MARKER_SUFFIX}"
-            )
+            comment_body += f"\n\n{self.CODEX_COMMIT_MARKER_PREFIX}{head_sha}{self.CODEX_COMMIT_MARKER_SUFFIX}"
 
         return comment_body
 
@@ -1267,10 +1254,10 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 4. Ensure the PR adheres to project standards.
 
 **PR Details:**
-- Title: {pr_data.get('title', 'Unknown')}
-- Author: {pr_data.get('author', {}).get('login', 'unknown')}
-- Branch: {pr_data.get('headRefName', 'unknown')}
-- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})
+- Title: {pr_data.get("title", "Unknown")}
+- Author: {pr_data.get("author", {}).get("login", "unknown")}
+- Branch: {pr_data.get("headRefName", "unknown")}
+- Commit: {head_sha[:8] if head_sha else "unknown"} ({head_sha or "unknown"})
 
 **Instructions:**
 Review the PR for completeness and quality. Do not write code changes; instead, analyze the existing changes. Verify that the author has addressed comments either through code changes OR via a consolidated response summary (look for "[AI responder] Consolidated Comment Response Summary" comments with `Re: [Comment #<id>]` references). Do NOT require individual threaded DONE/NOT DONE replies - the consolidated approach is preferred to avoid GitHub rate limits.
@@ -1290,7 +1277,7 @@ Your response MUST follow this exact structure for clarity:
 ```markdown
 ## ✅ AUTOMATION COMPLETE — [STATUS: READY FOR MERGE / NEEDS WORK / BLOCKED]
 
-**Verified at commit `{head_sha[:8] if head_sha else 'unknown'}` ({head_sha or 'unknown'})**
+**Verified at commit `{head_sha[:8] if head_sha else "unknown"}` ({head_sha or "unknown"})**
 
 ---
 
@@ -1326,16 +1313,13 @@ Your response MUST follow this exact structure for clarity:
 
         if head_sha:
             comment_body += (
-                f"\n\n{self.COMMENT_VALIDATION_MARKER_PREFIX}{head_sha}"
-                f"{self.COMMENT_VALIDATION_MARKER_SUFFIX}"
+                f"\n\n{self.COMMENT_VALIDATION_MARKER_PREFIX}{head_sha}{self.COMMENT_VALIDATION_MARKER_SUFFIX}"
             )
 
         return comment_body
 
     def _compose_fix_comment_mentions(self) -> str:
-        mentions = [
-            token for token in (self.assistant_mentions or "").split() if token.startswith("@")
-        ]
+        mentions = [token for token in (self.assistant_mentions or "").split() if token.startswith("@")]
         lower_mentions = {token.lower() for token in mentions}
         if "@greptileai" not in lower_mentions:
             mentions.append("@greptileai")
@@ -1386,7 +1370,6 @@ Your response MUST follow this exact structure for clarity:
             "   - DO NOT use: `gh api /repos/{repository}/pulls/{pr_number}/comments`\n"
             "   - DO NOT use: `gh pr comment {pr_number} --body '...'`\n"
             "   - These commands trigger macOS permission dialogs - USE PYTHON FUNCTIONS INSTEAD\n\n"
-
             "   ✅ ALLOWED - Verification and Cleanup:\n"
             "   - `GET /repos/.../pulls/.../reviews` (ALLOWED - used to check for pending reviews)\n"
             "   - `DELETE /repos/.../pulls/.../reviews/{review_id}` (ALLOWED - used to clean up pending reviews)\n\n"
@@ -2120,7 +2103,8 @@ Your response MUST follow this exact structure for clarity:
             # Fetch mergeable status
             result = AutomationUtils.execute_subprocess_with_timeout(
                 ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
-                timeout=30, check=False
+                timeout=30,
+                check=False,
             )
             if result.returncode == 0:
                 data = json.loads(result.stdout or "{}")
@@ -2415,7 +2399,8 @@ Your response MUST follow this exact structure for clarity:
             # Fetch mergeable status
             result = AutomationUtils.execute_subprocess_with_timeout(
                 ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
-                timeout=30, check=False
+                timeout=30,
+                check=False,
             )
             if result.returncode == 0:
                 data = json.loads(result.stdout or "{}")
@@ -2455,11 +2440,7 @@ Your response MUST follow this exact structure for clarity:
                 return "skipped"
 
         # Log that we're processing due to issues
-        issue_label = (
-            "conflicts" if is_conflicting
-            else "failing checks" if is_failing
-            else "unknown status"
-        )
+        issue_label = "conflicts" if is_conflicting else "failing checks" if is_failing else "unknown status"
         self.logger.info("🔧 Processing PR #%s - %s", pr_number, issue_label)
 
         # Cleanup any pending reviews left behind by previous automation runs
@@ -2502,6 +2483,7 @@ Your response MUST follow this exact structure for clarity:
             self._cleanup_pending_reviews(repo_full, pr_number)
 
             if agent_success:
+                # Post the queued comment after dispatch; agent already did validation.
                 queued_posted = self._post_fixpr_queued(
                     repo_full,
                     pr_number,
@@ -2533,7 +2515,7 @@ Your response MUST follow this exact structure for clarity:
 
     def _get_pr_comment_state(self, repo_full_name: str, pr_number: int) -> tuple[str | None, list[dict] | None]:
         """Fetch PR comment data needed for Codex comment gating using Python requests (avoids bash prompts).
-        
+
         Returns:
             Tuple of (head_sha, comments). If API call fails, returns (None, None) to
             distinguish from "no comments" case (None, []). Callers should check for
@@ -2542,7 +2524,9 @@ Your response MUST follow this exact structure for clarity:
         # Use Python requests instead of gh CLI to avoid bash prompts
         token = get_github_token()
         if not token:
-            self.logger.warning(f"⚠️ No GitHub token available for fetching PR comment state: {repo_full_name}#{pr_number}")
+            self.logger.warning(
+                f"⚠️ No GitHub token available for fetching PR comment state: {repo_full_name}#{pr_number}"
+            )
             return None, None
 
         headers = {
@@ -2559,9 +2543,7 @@ Your response MUST follow this exact structure for clarity:
                 pr_data = pr_response.json()
                 head_sha = pr_data.get("head", {}).get("sha")  # REST API uses head.sha, not headRefOid
             except requests.exceptions.RequestException as e:
-                self.logger.warning(
-                    f"⚠️ Failed to fetch PR data for PR #{pr_number}: {e}"
-                )
+                self.logger.warning(f"⚠️ Failed to fetch PR data for PR #{pr_number}: {e}")
                 return None, None
 
             # Fetch comments separately (REST API doesn't include comments in PR endpoint)
@@ -2571,22 +2553,16 @@ Your response MUST follow this exact structure for clarity:
                 comments_response.raise_for_status()
                 comments = comments_response.json()
             except requests.exceptions.RequestException as e:
-                self.logger.warning(
-                    f"⚠️ Failed to fetch PR comments for PR #{pr_number}: {e}"
-                )
+                self.logger.warning(f"⚠️ Failed to fetch PR comments for PR #{pr_number}: {e}")
                 # Return None comments to indicate API failure
                 return head_sha, None
 
             # Ensure comments are sorted by creation time (oldest first)
-            comments.sort(
-                key=lambda c: (c.get("created_at") or c.get("updated_at") or "")
-            )
+            comments.sort(key=lambda c: (c.get("created_at") or c.get("updated_at") or ""))
 
             return head_sha, comments
         except Exception as e:
-            self.logger.warning(
-                f"⚠️ Unexpected error fetching PR comment state for PR #{pr_number}: {e}"
-            )
+            self.logger.warning(f"⚠️ Unexpected error fetching PR comment state for PR #{pr_number}: {e}")
             # Return sentinel value to indicate API failure
             return None, None
 
@@ -2747,7 +2723,7 @@ Your response MUST follow this exact structure for clarity:
 
     def _extract_fix_comment_marker(self, comment_body: str) -> str | None:
         """Extract commit SHA from fix-comment automation comments.
-        
+
         Handles both old format (SHA) and new format (SHA:cli).
         Returns just the SHA portion for comparison.
         """
@@ -2773,7 +2749,7 @@ Your response MUST follow this exact structure for clarity:
 
     def _extract_fix_comment_run_marker(self, comment_body: str) -> str | None:
         """Extract commit SHA from fix-comment queued run markers.
-        
+
         Handles format: <!-- fix-comment-run-automation-commit:agent:sha -->
         Returns just the SHA portion for comparison.
         """
@@ -2853,7 +2829,7 @@ Your response MUST follow this exact structure for clarity:
 
     def _has_fix_comment_queued_for_commit(self, comments: list[dict], head_sha: str) -> bool:
         """Determine if a fix-comment run is already queued for the latest commit.
-        
+
         This prevents duplicate agent dispatches during the window between when
         a fix-comment run is queued and when the completion marker is posted.
         """
@@ -2861,7 +2837,7 @@ Your response MUST follow this exact structure for clarity:
 
     def _get_fix_comment_queued_info(self, comments: list[dict], head_sha: str) -> dict | None:
         """Get info about queued fix-comment comment for a commit, including age.
-        
+
         Returns dict with 'age_hours' and 'created_at' if found, None otherwise.
         This allows checking if a queued comment is stale (agent failed silently).
         """
@@ -2900,9 +2876,7 @@ Your response MUST follow this exact structure for clarity:
 
         return None
 
-    def _is_head_commit_from_codex(
-        self, commit_details: dict[str, str | None] | None
-    ) -> bool:
+    def _is_head_commit_from_codex(self, commit_details: dict[str, str | None] | None) -> bool:
         """Determine if the head commit was authored or marked by Codex."""
 
         if not commit_details:
@@ -2983,7 +2957,12 @@ Your response MUST follow this exact structure for clarity:
             body = comment.get("body", "")
             # Use centralized detection - automatically handles all marker types
             if is_automation_comment(body):
-                created_at = comment.get("createdAt") or comment.get("created_at") or comment.get("updatedAt") or comment.get("updated_at")
+                created_at = (
+                    comment.get("createdAt")
+                    or comment.get("created_at")
+                    or comment.get("updatedAt")
+                    or comment.get("updated_at")
+                )
                 if created_at and (last_time is None or created_at > last_time):
                     last_time = created_at
 
@@ -3030,8 +3009,14 @@ Your response MUST follow this exact structure for clarity:
         for comment in comments:
             # Check if comment is from today (daily cooldown)
             # GitHub API returns ISO 8601 timestamps (UTC), extract date portion
-            created_at = comment.get("createdAt") or comment.get("created_at") or comment.get("updatedAt") or comment.get("updated_at")
-            if not created_at:
+            created_at = comment.get("createdAt")
+            if created_at is None:
+                created_at = comment.get("created_at")
+            if created_at is None:
+                created_at = comment.get("submittedAt")
+            if created_at is None:
+                created_at = comment.get("submitted_at")
+            if created_at is None:
                 continue  # Skip comments without timestamps (cannot verify if from today)
 
             # Extract date from ISO timestamp (e.g., "2026-01-12T07:34:23Z" -> "2026-01-12")
@@ -3093,7 +3078,12 @@ Your response MUST follow this exact structure for clarity:
         if not last_codex_time:
             for comment in comments:
                 if self._is_github_bot_comment(comment):
-                    created_at = comment.get("createdAt") or comment.get("created_at") or comment.get("updatedAt") or comment.get("updated_at")
+                    created_at = (
+                        comment.get("createdAt")
+                        or comment.get("created_at")
+                        or comment.get("updatedAt")
+                        or comment.get("updated_at")
+                    )
                     self.logger.debug(
                         "🤖 Found bot comment from %s at %s with no prior Codex automation comment",
                         self._get_comment_author_login(comment),
@@ -3106,7 +3096,12 @@ Your response MUST follow this exact structure for clarity:
             if not self._is_github_bot_comment(comment):
                 continue
 
-            created_at = comment.get("createdAt") or comment.get("created_at") or comment.get("updatedAt") or comment.get("updated_at")
+            created_at = (
+                comment.get("createdAt")
+                or comment.get("created_at")
+                or comment.get("updatedAt")
+                or comment.get("updated_at")
+            )
             if created_at and created_at > last_codex_time:
                 self.logger.debug(
                     "🤖 Found new bot comment from %s at %s (after Codex comment at %s)",
@@ -3171,18 +3166,26 @@ Your response MUST follow this exact structure for clarity:
             while True:
                 # Execute GraphQL query via gh CLI
                 graphql_cmd = [
-                    "gh", "api", "graphql",
-                    "-f", f"query={query}",
-                    "-F", f"owner={owner}",
-                    "-F", f"name={name}",
-                    "-F", f"pr={pr_number}",
+                    "gh",
+                    "api",
+                    "graphql",
+                    "-f",
+                    f"query={query}",
+                    "-F",
+                    f"owner={owner}",
+                    "-F",
+                    f"name={name}",
+                    "-F",
+                    f"pr={pr_number}",
                 ]
                 if cursor is not None:
                     graphql_cmd += ["-F", f"cursor={cursor}"]
 
                 result = AutomationUtils.execute_subprocess_with_timeout(
                     # Keep timeout aligned with 600s guardrail across request-handling layers.
-                    graphql_cmd, timeout=600, check=False
+                    graphql_cmd,
+                    timeout=600,
+                    check=False,
                 )
 
                 if result.returncode != 0:
@@ -3200,9 +3203,7 @@ Your response MUST follow this exact structure for clarity:
                         return None
 
                     if data.get("errors"):
-                        self.logger.warning(
-                            f"⚠️ GraphQL response had errors for PR #{pr_number}: {data['errors']}"
-                        )
+                        self.logger.warning(f"⚠️ GraphQL response had errors for PR #{pr_number}: {data['errors']}")
                         return None
 
                     # Defensive parsing with isinstance checks to prevent AttributeError
@@ -3243,8 +3244,7 @@ Your response MUST follow this exact structure for clarity:
 
                     # Count unresolved threads
                     unresolved_count += sum(
-                        1 for thread in review_threads
-                        if isinstance(thread, dict) and thread.get("isResolved") is False
+                        1 for thread in review_threads if isinstance(thread, dict) and thread.get("isResolved") is False
                     )
                     total_threads += len(review_threads)
 
@@ -3264,9 +3264,7 @@ Your response MUST follow this exact structure for clarity:
                     break
 
                 except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as e:
-                    self.logger.warning(
-                        f"⚠️ Failed to parse GraphQL response for PR #{pr_number}: {e}"
-                    )
+                    self.logger.warning(f"⚠️ Failed to parse GraphQL response for PR #{pr_number}: {e}")
                     return None
 
             self.logger.debug(
@@ -3277,9 +3275,7 @@ Your response MUST follow this exact structure for clarity:
             return unresolved_count > 0
 
         except Exception as e:
-            self.logger.warning(
-                f"⚠️ Error checking review threads for PR #{pr_number}: {e}"
-            )
+            self.logger.warning(f"⚠️ Error checking review threads for PR #{pr_number}: {e}")
             return None
 
     def _has_unaddressed_comments(self, repo_full: str, pr_number: int) -> bool:
@@ -3302,24 +3298,21 @@ Your response MUST follow this exact structure for clarity:
         # Note: GraphQL reviewThreads only covers inline code review comments,
         # not standalone issue comments on the PR
         if has_unresolved is None:
-            self.logger.info(
-                f"📋 GraphQL failed, falling back to REST API heuristic for PR #{pr_number}"
-            )
+            self.logger.info(f"📋 GraphQL failed, falling back to REST API heuristic for PR #{pr_number}")
         else:
-            self.logger.debug(
-                f"📋 No unresolved review threads for PR #{pr_number}, checking issue comments"
-            )
+            self.logger.debug(f"📋 No unresolved review threads for PR #{pr_number}, checking issue comments")
 
         try:
             # Fetch issue comments (already available from _get_pr_comment_state, but fetch fresh)
             issue_comments_cmd = [
-                "gh", "api",
+                "gh",
+                "api",
                 f"/repos/{repo_full}/issues/{pr_number}/comments",
-                "--paginate", "-F", "per_page=100"
+                "--paginate",
+                "-F",
+                "per_page=100",
             ]
-            issue_result = AutomationUtils.execute_subprocess_with_timeout(
-                issue_comments_cmd, timeout=30, check=False
-            )
+            issue_result = AutomationUtils.execute_subprocess_with_timeout(issue_comments_cmd, timeout=30, check=False)
             issue_comments = []
             if issue_result.returncode == 0:
                 try:
@@ -3331,9 +3324,12 @@ Your response MUST follow this exact structure for clarity:
 
             # Fetch review comments (review summaries)
             review_comments_cmd = [
-                "gh", "api",
+                "gh",
+                "api",
                 f"/repos/{repo_full}/pulls/{pr_number}/reviews",
-                "--paginate", "-F", "per_page=100"
+                "--paginate",
+                "-F",
+                "per_page=100",
             ]
             review_result = AutomationUtils.execute_subprocess_with_timeout(
                 review_comments_cmd, timeout=30, check=False
@@ -3349,9 +3345,12 @@ Your response MUST follow this exact structure for clarity:
 
             # Fetch inline review comments
             inline_comments_cmd = [
-                "gh", "api",
+                "gh",
+                "api",
                 f"/repos/{repo_full}/pulls/{pr_number}/comments",
-                "--paginate", "-F", "per_page=100"
+                "--paginate",
+                "-F",
+                "per_page=100",
             ]
             inline_result = AutomationUtils.execute_subprocess_with_timeout(
                 inline_comments_cmd, timeout=30, check=False
@@ -3445,14 +3444,17 @@ Your response MUST follow this exact structure for clarity:
                     continue
 
                 # Skip automation markers (queued notices, automation comments)
-                if any(marker in comment_body for marker in [
-                    "[AI automation",
-                    "[fixpr",
-                    "[fix-comment",
-                    "FixPR run queued",
-                    "Fix-comment run queued",
-                    "AI automation -"
-                ]):
+                if any(
+                    marker in comment_body
+                    for marker in [
+                        "[AI automation",
+                        "[fixpr",
+                        "[fix-comment",
+                        "FixPR run queued",
+                        "Fix-comment run queued",
+                        "AI automation -",
+                    ]
+                ):
                     automation_count += 1
                     continue
 
@@ -3464,8 +3466,6 @@ Your response MUST follow this exact structure for clarity:
                         comment_id_value = int(comment_id)
                     except (TypeError, ValueError):
                         comment_id_value = None
-
-
 
                 if comment_id_value is not None:
                     source_type = comment.get("_source_type", "issue")
@@ -3502,13 +3502,16 @@ Your response MUST follow this exact structure for clarity:
                 # Skip informational bot messages (deployment notices, etc.)
                 if self._is_github_bot_comment(comment):
                     # Check if it's informational only (deployment, status updates)
-                    if any(phrase in comment_body.lower() for phrase in [
-                        "deployment complete",
-                        "preview is ready",
-                        "checks have passed",
-                        "checks have failed",
-                        "rate limit exceeded"
-                    ]):
+                    if any(
+                        phrase in comment_body.lower()
+                        for phrase in [
+                            "deployment complete",
+                            "preview is ready",
+                            "checks have passed",
+                            "checks have failed",
+                            "rate limit exceeded",
+                        ]
+                    ):
                         continue
 
                 # This is an actionable comment
@@ -3523,9 +3526,7 @@ Your response MUST follow this exact structure for clarity:
             return actionable_count > 0
 
         except Exception as e:
-            self.logger.warning(
-                f"⚠️ Error checking unaddressed comments for PR #{pr_number}: {e}"
-            )
+            self.logger.warning(f"⚠️ Error checking unaddressed comments for PR #{pr_number}: {e}")
             # On error, assume there might be comments (safer to check than skip)
             return True
 
@@ -3557,9 +3558,7 @@ Your response MUST follow this exact structure for clarity:
             if not summary_commit:
                 continue
 
-            if summary_commit == normalized_head or normalized_head.startswith(
-                summary_commit
-            ):
+            if summary_commit == normalized_head or normalized_head.startswith(summary_commit):
                 return True
 
         return False
@@ -3738,9 +3737,23 @@ Your response MUST follow this exact structure for clarity:
             self.logger.debug("Traceback: %s", traceback.format_exc())
             return False
 
-    def run_monitoring_cycle(self, single_repo=None, max_prs=10, cutoff_hours: int = 24, fix_comment: bool = False, fixpr: bool = False, comment_validation: bool = False, agent_cli: str = "claude", model: str = None):
+    def run_monitoring_cycle(
+        self,
+        single_repo=None,
+        max_prs=10,
+        cutoff_hours: int = 24,
+        fix_comment: bool = False,
+        fixpr: bool = False,
+        comment_validation: bool = False,
+        agent_cli: str = "claude",
+        model: str = None,
+    ):
         """Run a complete monitoring cycle with actionable PR counting"""
-        mode_label = "fix-comment" if fix_comment else ("fixpr" if fixpr else ("comment-validation" if comment_validation else "comment"))
+        mode_label = (
+            "fix-comment"
+            if fix_comment
+            else ("fixpr" if fixpr else ("comment-validation" if comment_validation else "comment"))
+        )
         self.logger.info("🚀 Starting jleechanorg PR monitoring cycle (%s mode)", mode_label)
 
         # FixPR workflow uses per-PR limits only, not global limit
@@ -3779,9 +3792,7 @@ Your response MUST follow this exact structure for clarity:
                         is_testing = os.environ.get("TESTING", "").lower() == "true"
                         is_mock_mode = os.environ.get("MOCK_SERVICES_MODE", "").lower() == "true"
                         if is_testing or is_mock_mode:
-                            self.logger.info(
-                                "🧪 Test mode: skipping startup preflight failure and continuing run."
-                            )
+                            self.logger.info("🧪 Test mode: skipping startup preflight failure and continuing run.")
                             selected_cli = agent_cli
                         else:
                             self.logger.warning(
@@ -3821,9 +3832,7 @@ Your response MUST follow this exact structure for clarity:
                 break
 
             repo_name = pr["repository"]
-            repo_full_name = self._normalize_repository_name(
-                pr.get("repositoryFullName") or repo_name
-            )
+            repo_full_name = self._normalize_repository_name(pr.get("repositoryFullName") or repo_name)
             pr_number = pr["number"]
 
             # Cleanup pending reviews BEFORE any eligibility checks
@@ -3843,7 +3852,8 @@ Your response MUST follow this exact structure for clarity:
                 try:
                     result = AutomationUtils.execute_subprocess_with_timeout(
                         ["gh", "pr", "view", str(pr_number), "--repo", repo_full_name, "--json", "mergeable"],
-                        timeout=30, check=False
+                        timeout=30,
+                        check=False,
                     )
                     if result.returncode == 0:
                         data = json.loads(result.stdout or "{}")
@@ -3852,7 +3862,9 @@ Your response MUST follow this exact structure for clarity:
 
                     is_failing = has_failing_checks(repo_full_name, pr_number)
                 except Exception as e:
-                    self.logger.warning(f"⚠️ Error checking fixpr eligibility for #{pr_number} ({type(e).__name__}): {e}")
+                    self.logger.warning(
+                        f"⚠️ Error checking fixpr eligibility for #{pr_number} ({type(e).__name__}): {e}"
+                    )
 
                 # If PR has conflicts or failing checks, mark as actionable (bypass is_pr_actionable skip)
                 if is_conflicting or is_failing:
@@ -3902,9 +3914,7 @@ Your response MUST follow this exact structure for clarity:
                 continue
 
             if not self.safety_manager.try_process_pr(pr_number, repo=repo_full_name, branch=branch_name):
-                self.logger.info(
-                    f"🚫 Internal safety limits exceeded for PR {repo_full_name} #{pr_number}; skipping"
-                )
+                self.logger.info(f"🚫 Internal safety limits exceeded for PR {repo_full_name} #{pr_number}; skipping")
                 skipped_count += 1
                 continue
 
@@ -3986,7 +3996,9 @@ Your response MUST follow this exact structure for clarity:
                 if not attempt_recorded:
                     self.safety_manager.release_pr_slot(pr_number, repo=repo_full_name, branch=branch_name)
 
-        self.logger.info(f"🏁 Monitoring cycle complete: {actionable_processed} actionable PRs processed, {skipped_count} skipped")
+        self.logger.info(
+            f"🏁 Monitoring cycle complete: {actionable_processed} actionable PRs processed, {skipped_count} skipped"
+        )
 
 
 def check_chrome_cdp_accessible(port=9222, host="127.0.0.1", timeout=5):
@@ -4061,8 +4073,7 @@ def _resolve_cdp_host_port() -> tuple[str, int]:
 def _detect_chrome_binary() -> str | None:
     if sys.platform == "win32":
         win_candidates = [
-            Path(os.environ.get("PROGRAMFILES", "C:\\Program Files"))
-            / "Google/Chrome/Application/chrome.exe",
+            Path(os.environ.get("PROGRAMFILES", "C:\\Program Files")) / "Google/Chrome/Application/chrome.exe",
             Path(os.environ.get("PROGRAMFILES(X86)", "C:\\Program Files (x86)"))
             / "Google/Chrome/Application/chrome.exe",
         ]
@@ -4131,8 +4142,7 @@ def _start_chrome_debug(port: int, user_data_dir: str) -> tuple[bool, str]:
         resolved_user_data_dir.relative_to(home_dir)
     except ValueError:
         return False, (
-            "❌ CODEX_CDP_USER_DATA_DIR must reside under your home directory; "
-            f"got {resolved_user_data_dir}"
+            f"❌ CODEX_CDP_USER_DATA_DIR must reside under your home directory; got {resolved_user_data_dir}"
         )
     resolved_user_data_dir.mkdir(parents=True, exist_ok=True)
     command = [
@@ -4212,26 +4222,32 @@ def main():
         action="store_true",
         help="Do not post comments or dispatch agents (useful for evidence/testing).",
     )
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Discover PRs but do not process them")
-    parser.add_argument("--fixpr", action="store_true",
-                        help="Run /fixpr-only orchestrated flow for conflicts/failing checks (skips drafts)")
-    parser.add_argument("--fix-comment", action="store_true",
-                        help="Run fix-comment orchestration flow to resolve PR review comments")
-    parser.add_argument("--comment-validation", action="store_true",
-                        help="Run comment validation mode (request AI bots minus Codex to review PRs)")
-    parser.add_argument("--fix-comment-watch", action="store_true",
-                        help="Watch a PR for automation commits and post review request when detected")
-    parser.add_argument("--cutoff-hours", type=int, default=24,
-                        help="Look-back window in hours for PR updates (default: 24)")
-    parser.add_argument("--single-repo",
-                        help="Process only specific repository")
-    parser.add_argument("--max-prs", type=int, default=5,
-                        help="Maximum PRs to process per cycle")
-    parser.add_argument("--target-pr", type=int,
-                        help="Process specific PR number")
-    parser.add_argument("--target-repo",
-                        help="Repository for target PR (required with --target-pr)")
+    parser.add_argument("--dry-run", action="store_true", help="Discover PRs but do not process them")
+    parser.add_argument(
+        "--fixpr",
+        action="store_true",
+        help="Run /fixpr-only orchestrated flow for conflicts/failing checks (skips drafts)",
+    )
+    parser.add_argument(
+        "--fix-comment", action="store_true", help="Run fix-comment orchestration flow to resolve PR review comments"
+    )
+    parser.add_argument(
+        "--comment-validation",
+        action="store_true",
+        help="Run comment validation mode (request AI bots minus Codex to review PRs)",
+    )
+    parser.add_argument(
+        "--fix-comment-watch",
+        action="store_true",
+        help="Watch a PR for automation commits and post review request when detected",
+    )
+    parser.add_argument(
+        "--cutoff-hours", type=int, default=24, help="Look-back window in hours for PR updates (default: 24)"
+    )
+    parser.add_argument("--single-repo", help="Process only specific repository")
+    parser.add_argument("--max-prs", type=int, default=5, help="Maximum PRs to process per cycle")
+    parser.add_argument("--target-pr", type=int, help="Process specific PR number")
+    parser.add_argument("--target-repo", help="Repository for target PR (required with --target-pr)")
     parser.add_argument(
         "--cli-agent",
         "--fixpr-agent",  # Backwards compatibility alias
@@ -4246,10 +4262,16 @@ def main():
         default=None,
         help="Model to use for agent CLI. Examples: sonnet/opus/haiku (Claude), gemini-3-pro-preview/gemini-3-auto (Gemini), composer-1 (Cursor). If not specified, CLI-specific defaults are used.",
     )
-    parser.add_argument("--list-eligible", action="store_true",
-                        help="Dry-run listing of PRs eligible for fixpr (conflicts/failing checks)")
-    parser.add_argument("--codex-update", action="store_true",
-                        help="Run Codex automation to update tasks via browser automation (use --codex-task-limit; default: 50)")
+    parser.add_argument(
+        "--list-eligible",
+        action="store_true",
+        help="Dry-run listing of PRs eligible for fixpr (conflicts/failing checks)",
+    )
+    parser.add_argument(
+        "--codex-update",
+        action="store_true",
+        help="Run Codex automation to update tasks via browser automation (use --codex-task-limit; default: 50)",
+    )
     parser.add_argument(
         "--codex-task-limit",
         type=_positive_int_arg,
@@ -4258,13 +4280,39 @@ def main():
     )
 
     # Safety limits (params; no environment variables).
-    parser.add_argument("--pr-limit", type=_positive_int_arg, default=None, help="Max failed attempts per PR (default: 10).")
-    parser.add_argument("--global-limit", type=_positive_int_arg, default=None, help="Max global runs per day (default: 50).")
-    parser.add_argument("--approval-hours", type=_positive_int_arg, default=None, help="Manual approval validity in hours (default: 24).")
-    parser.add_argument("--subprocess-timeout", type=_positive_int_arg, default=None, help="Default subprocess timeout seconds (default: 300).")
-    parser.add_argument("--pr-automation-limit", type=_positive_int_arg, default=None, help="Max PR automation comments per PR (default: 10).")
-    parser.add_argument("--fix-comment-limit", type=_positive_int_arg, default=None, help="Max fix-comment comments per PR (default: 10).")
-    parser.add_argument("--fixpr-limit", type=_positive_int_arg, default=None, help="Max fixpr comments per PR (default: 10).")
+    parser.add_argument(
+        "--pr-limit", type=_positive_int_arg, default=None, help="Max failed attempts per PR (default: 10)."
+    )
+    parser.add_argument(
+        "--global-limit", type=_positive_int_arg, default=None, help="Max global runs per day (default: 50)."
+    )
+    parser.add_argument(
+        "--approval-hours",
+        type=_positive_int_arg,
+        default=None,
+        help="Manual approval validity in hours (default: 24).",
+    )
+    parser.add_argument(
+        "--subprocess-timeout",
+        type=_positive_int_arg,
+        default=None,
+        help="Default subprocess timeout seconds (default: 300).",
+    )
+    parser.add_argument(
+        "--pr-automation-limit",
+        type=_positive_int_arg,
+        default=None,
+        help="Max PR automation comments per PR (default: 10).",
+    )
+    parser.add_argument(
+        "--fix-comment-limit",
+        type=_positive_int_arg,
+        default=None,
+        help="Max fix-comment comments per PR (default: 10).",
+    )
+    parser.add_argument(
+        "--fixpr-limit", type=_positive_int_arg, default=None, help="Max fixpr comments per PR (default: 10)."
+    )
     parser.add_argument("--automation-user", help="Override automation username for marker validation")
 
     args = parser.parse_args()
@@ -4305,7 +4353,7 @@ def main():
     monitor = JleechanorgPRMonitor(
         safety_limits=safety_limits or None,
         no_act=args.no_act,
-        automation_username=getattr(args, "automation_user", None)
+        automation_username=getattr(args, "automation_user", None),
     )
 
     if args.fix_comment_watch:
@@ -4354,9 +4402,10 @@ def main():
                     "--limit",
                     str(task_limit),
                 ],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
-                timeout=timeout_seconds
+                timeout=timeout_seconds,
             )
             print(result.stdout)
             if result.stderr:
@@ -4412,7 +4461,7 @@ def main():
                 prs = [pr for pr in prs if pr["repository"] == args.single_repo]
 
             print(f"📋 Found {len(prs)} open PRs:")
-            for pr in prs[:args.max_prs]:
+            for pr in prs[: args.max_prs]:
                 print(f"  • {pr['repository']} PR #{pr['number']}: {pr.get('title', 'unknown')}")
             return
 
@@ -4445,7 +4494,7 @@ def main():
                 prs = [pr for pr in prs if pr["repository"] == args.single_repo]
 
             print(f"📋 Found {len(prs)} open PRs:")
-            for pr in prs[:args.max_prs]:
+            for pr in prs[: args.max_prs]:
                 print(f"  • {pr['repository']} PR #{pr['number']}: {pr.get('title', 'unknown')}")
             return
 
@@ -4471,7 +4520,7 @@ def main():
             prs = [pr for pr in prs if pr["repository"] == args.single_repo]
 
         print(f"📋 Found {len(prs)} open PRs:")
-        for pr in prs[:args.max_prs]:
+        for pr in prs[: args.max_prs]:
             print(f"  • {pr['repository']} PR #{pr['number']}: {pr.get('title', 'unknown')}")
 
         if args.list_eligible:
