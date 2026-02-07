@@ -355,6 +355,8 @@ class CommentFetch(CopilotCommandBase):
         # Skip meta-comments created by previous commentreply runs
         if "CLAUDE RESPONSE NEEDED" in body and "No Claude-generated response found" in body:
             return False
+        if text.startswith("[AI responder]"):
+            return False
 
         # Skip comments that are just quotes of other comments
         lines = text.strip().split('\n')
