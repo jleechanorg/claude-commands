@@ -518,11 +518,18 @@ killall "Google Chrome" 2>/dev/null
 **Issue**: Cron job failing with "unrecognized arguments: --codex-update"
 ```bash
 # This happens when installed PyPI package is older than source code
-# Temporary solution: Run manually from source until PR merges and package updates
+# DO NOT use editable install (pip install -e .) for cron jobs - breaks in multi-worktree setups
 
-# Reinstall from source
-cd automation
-pip install -e .
+# Option 1: Install from git (pin to tag or commit for reproducibility)
+pip install "git+https://github.com/jleechanorg/worldarchitect.ai.git@<tag-or-commit>#subdirectory=automation"
+
+# Option 2: Build and install from source (NOT editable - safe for cron)
+cd automation && pip install .
+
+# Option 3: Wait for PyPI package update (safest)
+# Check your installed version:
+pip show jleechanorg-pr-automation
+# See latest releases on PyPI: https://pypi.org/project/jleechanorg-pr-automation/
 
 # Verify flag exists
 jleechanorg-pr-monitor --help | grep codex-update
@@ -532,28 +539,58 @@ jleechanorg-pr-monitor --help | grep codex-update
 
 ## Installation
 
-### From PyPI
+### Production / Cron Jobs / Normal Usage (RECOMMENDED)
 
 ```bash
-# Basic installation
+# Basic installation from PyPI (stable, production-ready)
 pip install jleechanorg-pr-automation
 
 # With email notifications
 pip install jleechanorg-pr-automation[email]
-
-# For development
-pip install jleechanorg-pr-automation[dev]
 ```
 
-### From Source (Development)
+✅ **Use this for:**
+- Cron jobs and scheduled automation
+- Production deployments
+- Multi-worktree development
+- Any system where code stability matters
+
+### Development Only (Active Code Changes)
 
 ```bash
-# Clone and install from repository
-cd ~/worldarchitect.ai/automation
-pip install -e .
+# Install in editable mode (links to local source)
+cd automation && pip install -e .
 
 # With optional dependencies
-pip install -e .[email,dev]
+cd automation && pip install -e .[email,dev]
+```
+
+⚠️ **ONLY use editable installs when:**
+- You are actively modifying the package source code
+- You need immediate reflection of code changes without reinstalling
+- You are working in a single worktree
+
+🚫 **DO NOT use editable installs for:**
+- Cron jobs (will break when source directory changes)
+- Production deployments (unstable source code)
+- Multi-worktree setups (editable install points to single worktree)
+- Scheduled automation (no control over which worktree is active)
+
+### When PyPI Package is Outdated
+
+If you need features not yet in PyPI:
+
+```bash
+# Option 1: Install from git (pin to tag or commit for reproducibility)
+pip install "git+https://github.com/jleechanorg/worldarchitect.ai.git@<tag-or-commit>#subdirectory=automation"
+
+# Option 2: Build and install from source (NOT editable)
+cd automation
+pip install .  # Note: NOT pip install -e .
+
+# Option 3: Wait for PyPI package update (safest)
+# Check your installed version: pip show jleechanorg-pr-automation
+# See latest releases on PyPI: https://pypi.org/project/jleechanorg-pr-automation/
 ```
 
 ### macOS Automation (Scheduled Monitoring)

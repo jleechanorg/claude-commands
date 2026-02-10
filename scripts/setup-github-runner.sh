@@ -35,8 +35,15 @@ fi
 
 # Configuration
 RUNNER_DIR="$HOME/actions-runner"
-RUNNER_VERSION="2.311.0"
+RUNNER_VERSION="2.331.0"
 LABELS="self-hosted,claude"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
 # Determine repository URL: argument > env var > git remote > error
 REPO_URL=""
@@ -96,13 +103,6 @@ if [[ -z "$REPO_URL" ]]; then
     echo "Example: $0 --repo https://github.com/user/repo"
     exit 1
 fi
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
 
 echo -e "${BLUE}🚀 GitHub Runner Setup for Claude Bot Commands${NC}"
 echo "=============================================================="

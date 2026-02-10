@@ -808,6 +808,209 @@ mkdir -p staging/infrastructure-scripts
 
 mapfile -t ROOT_SCRIPTS < <(ls -1 *.sh 2>/dev/null | grep -E '^(claude_|start-claude-bot|integrate|resolve_conflicts|sync_branch|setup-github-runner|test_server_manager)\.sh$')
 
+# Export self-hosted runner setup scripts from scripts/ directory
+if [[ -f "scripts/setup-runner-with-drift.sh" ]]; then
+    echo "Exporting self-hosted runner setup script"
+    cp "scripts/setup-runner-with-drift.sh" "staging/infrastructure-scripts/setup-runner-with-drift.sh"
+
+    # Generalize repository references
+    sed -i 's|jleechanorg/worldarchitect\.ai|$GITHUB_OWNER/$GITHUB_REPO|g' "staging/infrastructure-scripts/setup-runner-with-drift.sh"
+    sed -i 's|claude-drift-runner|$RUNNER_NAME|g' "staging/infrastructure-scripts/setup-runner-with-drift.sh"
+
+    # Add header with setup instructions
+    cat > "staging/infrastructure-scripts/RUNNER_SETUP.md" << 'RUNNER_DOC'
+# Self-Hosted GitHub Runner Setup
+
+## Overview
+The `setup-runner-with-drift.sh` script configures a GitHub Actions self-hosted runner with clock drift support. This enables running workflow jobs on your own infrastructure for cost savings or special requirements (e.g., GPU access, specific OS versions).
+
+## Prerequisites
+1. **GitHub CLI (`gh`)**: Install from https://cli.github.com/
+   ```bash
+   # Verify installation
+   gh --version
+   gh auth status
+   ```
+
+2. **GitHub Actions Runner**: Download from https://github.com/actions/runner/releases
+   ```bash
+   mkdir -p ~/actions-runner && cd ~/actions-runner
+   # Download latest runner (check releases page for current version)
+   curl -o actions-runner-linux-x64-2.321.0.tar.gz -L \
+     https://github.com/actions/runner/releases/download/v2.321.0/actions-runner-linux-x64-2.321.0.tar.gz
+   tar xzf actions-runner-linux-x64-2.321.0.tar.gz
+   ```
+
+3. **Repository Admin Access**: You need admin access to the target repository to register runners
+
+4. **Clock Sync Capability**: macOS uses `sntp`, Linux typically uses `ntpdate`
+   ```bash
+   # macOS (already installed)
+   sudo sntp -sS time.apple.com
+
+   # Ubuntu/Debian
+   sudo apt-get install ntpdate
+   sudo ntpdate -s time.nist.gov
+   ```
+
+## Usage
+
+### Basic Setup (Default Repository)
+```bash
+# Uses default repository configured in script
+./infrastructure-scripts/setup-runner-with-drift.sh
+```
+
+### Custom Repository
+```bash
+# Format: https://github.com/owner/repo
+./infrastructure-scripts/setup-runner-with-drift.sh https://github.com/myorg/myrepo
+
+# With custom runner name
+./infrastructure-scripts/setup-runner-with-drift.sh https://github.com/myorg/myrepo my-custom-runner
+```
+
+### Alternative Format (owner/repo)
+```bash
+# Script accepts both full URL and owner/repo format
+./infrastructure-scripts/setup-runner-with-drift.sh myorg/myrepo my-runner-name
+```
+
+## What the Script Does
+
+1. **Uninstalls existing runner service** (if present)
+2. **Syncs system clock** using NTP (requires sudo)
+3. **Gets registration token** from GitHub API
+4. **Configures runner** with repository while clock is synced
+5. **Installs and starts service** to run runner as daemon
+6. **Verifies runner** is online via GitHub API
+7. **Restores clock drift** (if using drift-testing workflow)
+
+## Workflow Integration
+
+### Create Workflow with Self-Hosted Runner
+```yaml
+name: My Workflow
+
+on: pull_request
+
+jobs:
+  try-self-hosted:
+    runs-on: [self-hosted, your-runner-label]
+    timeout-minutes: 2
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run your task
+        run: echo "Running on self-hosted runner!"
+
+  fallback-github-hosted:
+    needs: try-self-hosted
+    if: needs.try-self-hosted.result != 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run your task
+        run: echo "Running on GitHub-hosted fallback"
+```
+
+### Key Workflow Patterns
+
+**Fallback Logic**: Use `needs.<job>.result != 'success'` to trigger GitHub-hosted fallback:
+```yaml
+fallback-job:
+  needs: try-self-hosted
+  if: needs.try-self-hosted.result != 'success'  # ✅ Correct - checks actual job result
+  runs-on: ubuntu-latest
+```
+
+**Common Mistake** (DON'T DO THIS):
+```yaml
+# ❌ WRONG - output set at job start, doesn't reflect actual success/failure
+try-self-hosted:
+  outputs:
+    success: ${{ steps.mark-success.outputs.success }}
+  steps:
+    - run: echo "success=true" >> $GITHUB_OUTPUT  # Set at START = always true!
+
+fallback-job:
+  if: needs.try-self-hosted.outputs.success != 'true'  # Never triggers on failure!
+```
+
+## Runner Management
+
+### Check Runner Status
+```bash
+cd ~/actions-runner
+./svc.sh status
+```
+
+### Stop/Start Runner
+```bash
+./svc.sh stop
+./svc.sh start
+```
+
+### View Runner Logs
+```bash
+# Service logs (macOS)
+tail -f ~/Library/Logs/actions.runner.*
+
+# Service logs (Linux)
+journalctl -u actions.runner.*
+```
+
+### Uninstall Runner
+```bash
+cd ~/actions-runner
+./svc.sh uninstall
+./config.sh remove --token $(gh api -X POST repos/OWNER/REPO/actions/runners/registration-token --jq '.token')
+```
+
+## Cost Savings
+
+Self-hosted runners can significantly reduce CI costs:
+- **GitHub-hosted**: ~$0.008/minute for Linux
+- **Self-hosted**: Free compute time + infrastructure costs
+- **Best for**: Long-running tests, frequent CI jobs, GPU/special hardware needs
+
+## Troubleshooting
+
+### Runner Shows Offline
+1. Check service status: `./svc.sh status`
+2. Verify clock sync (GitHub rejects >5min drift)
+3. Check network connectivity to GitHub
+4. Review runner logs for errors
+
+### Registration Token Expired
+Tokens expire after 1 hour. Re-run the setup script to get a fresh token.
+
+### Permission Denied Errors
+Ensure your GitHub token has `repo` and `admin:org` scopes:
+```bash
+gh auth refresh -s admin:org,repo
+```
+
+## Security Considerations
+
+- Runners execute arbitrary code from workflow files
+- Only use self-hosted runners on repositories you trust
+- Keep runner software updated
+- Use dedicated VMs/containers for isolation
+- Don't run untrusted PRs from forks on self-hosted runners
+
+For fork PRs, use the try-self-hosted + fallback pattern to run untrusted code only on GitHub-hosted runners.
+
+## References
+
+- [GitHub Self-Hosted Runners Docs](https://docs.github.com/en/actions/hosting-your-own-runners)
+- [Runner Security Hardening](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)
+- [Actions Runner Releases](https://github.com/actions/runner/releases)
+RUNNER_DOC
+fi
+
 for script_name in "${ROOT_SCRIPTS[@]}"; do
     if [[ -f "$script_name" ]]; then
         echo "Exporting infrastructure script: $script_name"

@@ -118,7 +118,7 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
@@ -136,26 +136,31 @@ jobs:
         python-version: '3.11'
 
     - name: Set up Node.js 20
-      if: matrix.test-group == 'core'
+      if: matrix.test-group == 'core-mvp-1'
       uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
       with:
         node-version: '20'
 
-    - name: Cache pip dependencies and virtual environment
+    - name: Cache pip dependencies
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
       with:
         path: |
           ~/.cache/pip
-          venv
         key: ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-${{ matrix.test-group }}
         restore-keys: |
           ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-
           ${{ runner.os }}-python-3.11-
 
+    - name: Cache virtualenv
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
+      with:
+        path: venv
+        key: ${{ runner.os }}-venv-3.11-${{ matrix.test-group }}-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
+
     - name: Install dependencies
       run: |
         # Reuse cached venv when available; otherwise create it
-        if [ -d venv ]; then
+        if [ -d venv ] && [ -x venv/bin/python ]; then
           echo "Reusing cached venv"
         else
           echo "Creating new venv"
@@ -163,23 +168,30 @@ jobs:
         fi
         source venv/bin/activate
 
-        # Upgrade pip and install resolver tools with timeout
-        timeout 300 python -m pip install --upgrade pip setuptools wheel
+        if python -c "import pydantic, pytest, xdist" 2>/dev/null; then
+          echo "Cached venv already has core dependencies"
+        else
+          # Upgrade pip and install resolver tools with timeout
+          timeout 300 python -m pip install --upgrade pip setuptools wheel
 
-        # Install core application requirements
-        timeout 600 pip install -r mvp_site/requirements.txt
+          # Install core application requirements
+          timeout 600 pip install -r mvp_site/requirements.txt
+
+          # Install pytest tooling for batched worker execution
+          timeout 300 pip install pytest pytest-xdist
+        fi
 
         # Install additional requirements for specific directories if needed
         # NOTE: Keep the group names in sync with GROUP_CONFIG in scripts/ci-detect-changes.sh (source of truth).
         case "${{ matrix.test-group }}" in
-          "core"|"claude"|"orchestration"|"automation"|"scripts"|"mcp")
+          "core-mvp-1"|"core-mvp-2"|"core-mvp-3"|"core-tests"|"claude"|"orchestration"|"automation"|"scripts"|"mcp")
             # These directories may have additional requirements
             find . -name "requirements.txt" -not -path "./venv/*" -not -path "./mvp_site/requirements.txt" | while read req_file; do
               echo "Installing $req_file (with 300s timeout)"
               timeout 300 pip install -r "$req_file" || echo "Warning: Failed to install $req_file"
             done
             # Install utility packages if testing core group (tests/ directory needs these)
-            if [ "${{ matrix.test-group }}" = "core" ]; then
+            if [[ "${{ matrix.test-group }}" == core-* ]]; then
               if [ -f "moltbook_poster/pyproject.toml" ]; then
                 echo "Installing moltbook_poster package for tests/ directory"
                 timeout 300 pip install -e "./moltbook_poster" || echo "Warning: Failed to install moltbook_poster"
@@ -197,13 +209,18 @@ jobs:
             ;;
         esac
 
+        # Install coverage for core group (data collected during test execution)
+        if [[ "${{ matrix.test-group }}" == core-* ]]; then
+          pip install coverage
+        fi
+
         # Verify key dependencies
         timeout 60 python -c "import pydantic; print(f'✅ Pydantic {pydantic.__version__} available')"
         chmod +x vpython
         timeout 60 ./vpython --version
 
     - name: Run frontend_v1 JS unit tests
-      if: matrix.test-group == 'core'
+      if: matrix.test-group == 'core-mvp-1'
       run: |
         if [ "${{ github.event_name }}" = "pull_request" ]; then
           CHANGED_FILES=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
@@ -217,8 +234,30 @@ jobs:
           echo "No frontend_v1 changes detected; skipping JS unit test."
         fi
 
+    - name: Create coverage config
+      if: startsWith(matrix.test-group, 'core-')
+      run: |
+        # Must exist BEFORE test execution so coverage stores relative paths.
+        # Without this, the coverage-report job can't resolve source files.
+        cat > .coveragerc << 'COVEOF'
+        [run]
+        relative_files = true
+        source = mvp_site
+        omit =
+            */tests/*
+            */testing_framework/*
+            */venv/*
+            */__pycache__/*
+
+        [report]
+        exclude_lines =
+            pragma: no cover
+            def __repr__
+            raise NotImplementedError
+        COVEOF
+
     - name: Run directory-based tests - ${{ matrix.test-group }}
-      timeout-minutes: 12
+      timeout-minutes: 22
       run: |
         source venv/bin/activate
 
@@ -243,9 +282,12 @@ jobs:
         export ENABLE_NETWORK_TESTS=0
         export GITHUB_ACTIONS=true
         export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/mvp_site:${PWD}/automation"
+        export TEST_SHARD_INDEX="${{ matrix.shard-index }}"
+        export TEST_SHARD_TOTAL="${{ matrix.shard-total }}"
 
         echo "🎯 Running tests for directory group: ${{ matrix.test-group }}"
         echo "📂 Test directories: ${{ matrix.test-dirs }}"
+        echo "🧩 Shard: ${TEST_SHARD_INDEX}/${TEST_SHARD_TOTAL}"
 
         # Run tests only for the specified directory/directories
         chmod +x run_tests.sh
@@ -266,7 +308,15 @@ jobs:
         if [ "$TOTAL_TESTS" -eq 0 ]; then
           echo "⚠️ No tests found in specified directories, falling back to full test suite"
           ./run_tests.sh --ci --parallel --exclude-integration --exclude-mcp
+        elif [[ "${{ matrix.test-group }}" == core-* ]] && [ "${{ github.event_name }}" = "pull_request" ]; then
+          # Core group collects coverage data for PR reports (eliminates need
+          # for a separate coverage workflow re-running all tests)
+          # Extended suite timeout: --coverage adds per-test instrumentation overhead
+          export TEST_SUITE_TIMEOUT=1080  # 18 min (vs default 15 min)
+          export TEST_MAX_WORKERS=2
+          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --coverage --exclude-integration --exclude-mcp
         else
+          export TEST_MAX_WORKERS=2
           ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp
         fi
 
@@ -277,7 +327,148 @@ jobs:
         name: test-results-${{ matrix.test-group }}
         path: |
           mvp_site/test-results/
-          /tmp/worldarchitectai/coverage/
           mvp_site/*.log
         retention-days: 30
         if-no-files-found: warn
+
+    - name: Prepare coverage data
+      if: always() && startsWith(matrix.test-group, 'core-') && github.event_name == 'pull_request'
+      run: |
+        # Copy coverage data from run_tests.sh output location to workspace
+        if [ -f /tmp/worldarchitectai/coverage/.coverage ]; then
+          cp /tmp/worldarchitectai/coverage/.coverage ".coverage.${{ matrix.test-group }}"
+          echo "✅ Coverage data copied to workspace"
+        elif compgen -G "/tmp/worldarchitectai/coverage/.coverage.*" > /dev/null; then
+          source venv/bin/activate
+          python -m coverage combine /tmp/worldarchitectai/coverage || true
+          if [ -f .coverage ]; then
+            cp .coverage ".coverage.${{ matrix.test-group }}"
+            echo "✅ Coverage data combined and copied from shard files"
+          elif [ -f /tmp/worldarchitectai/coverage/.coverage ]; then
+            cp /tmp/worldarchitectai/coverage/.coverage ".coverage.${{ matrix.test-group }}"
+            echo "✅ Coverage data combined and copied from coverage dir"
+          else
+            echo "::warning::Coverage combine did not produce .coverage output"
+          fi
+        elif [ -f .coverage ]; then
+          cp .coverage ".coverage.${{ matrix.test-group }}"
+          echo "✅ Coverage data copied from workspace"
+        else
+          echo "::warning::No coverage data found"
+        fi
+
+    - name: Upload coverage data
+      if: always() && startsWith(matrix.test-group, 'core-') && github.event_name == 'pull_request'
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+      with:
+        name: coverage-data-${{ matrix.test-group }}
+        path: .coverage.${{ matrix.test-group }}
+        if-no-files-found: warn
+
+  # Coverage reporting - processes data from core test group, no duplicate test execution
+  coverage-report:
+    name: PR Coverage Report
+    needs: [test]
+    if: always() && github.event_name == 'pull_request' && needs.test.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Download coverage data
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
+        with:
+          pattern: coverage-data-*
+          merge-multiple: true
+          path: coverage-data
+        continue-on-error: true
+
+      - name: Generate coverage report
+        id: coverage_check
+        run: |
+          pip install coverage
+
+          # Create .coveragerc matching the coverage.yml baseline config
+          cat > .coveragerc << 'COVEOF'
+          [run]
+          relative_files = true
+          source = mvp_site
+          omit =
+              */tests/*
+              */testing_framework/*
+              */venv/*
+              */__pycache__/*
+
+          [report]
+          exclude_lines =
+              pragma: no cover
+              def __repr__
+              raise NotImplementedError
+          COVEOF
+
+          if compgen -G "coverage-data/.coverage*" > /dev/null; then
+            echo "has_coverage=true" >> $GITHUB_OUTPUT
+            coverage combine coverage-data || echo "Coverage combine skipped"
+            coverage report --format=markdown > coverage_report.md || echo "Coverage report generation failed"
+            coverage xml -o coverage.xml || echo "Coverage XML generation failed"
+            coverage json -o coverage.json || echo "Coverage JSON generation failed"
+          else
+            echo "has_coverage=false" >> $GITHUB_OUTPUT
+            echo "::warning::No coverage data available from test run"
+          fi
+
+      - name: Coverage comment (PR)
+        if: steps.coverage_check.outputs.has_coverage == 'true'
+        uses: py-cov-action/python-coverage-comment-action@fb02115d6115e7b3325dc3295fe1dcfb1919248a  # v3.32
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          MINIMUM_GREEN: 80
+          MINIMUM_ORANGE: 60
+          ANNOTATE_MISSING_LINES: true
+          MAX_FILES_IN_COMMENT: 50
+
+      - name: Check coverage threshold
+        if: steps.coverage_check.outputs.has_coverage == 'true'
+        run: |
+          COVERAGE_RAW=$(coverage report 2>/dev/null | tail -1 | awk '{print $4}' | tr -d '%')
+
+          if ! [[ "$COVERAGE_RAW" =~ ^[0-9]+$ ]]; then
+            COVERAGE_RAW=$(coverage report 2>/dev/null | grep "^TOTAL" | awk '{print $NF}' | tr -d '%')
+            if ! [[ "$COVERAGE_RAW" =~ ^[0-9]+$ ]]; then
+              echo "::warning::Coverage parsing failed"
+              exit 0
+            fi
+          fi
+
+          echo "Current coverage: ${COVERAGE_RAW}%"
+
+          if [ "$COVERAGE_RAW" -lt 60 ]; then
+            echo "::error::Coverage ${COVERAGE_RAW}% is below minimum threshold of 60%"
+            exit 1
+          elif [ "$COVERAGE_RAW" -lt 80 ]; then
+            echo "::warning::Coverage ${COVERAGE_RAW}% is below recommended threshold of 80%"
+          else
+            echo "::notice::Coverage ${COVERAGE_RAW}% meets threshold requirements"
+          fi
+
+      - name: Post coverage summary
+        if: always()
+        run: |
+          echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f coverage_report.md ]; then
+            cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No coverage data available for this PR." >> $GITHUB_STEP_SUMMARY
+          fi
