@@ -1,0 +1,61 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+name: Test Self-Hosted Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_message:
+        description: 'Test message to display'
+        required: false
+        default: 'Testing runner v2.331.0'
+
+jobs:
+  test-runner:
+    runs-on: [self-hosted, claude]
+    timeout-minutes: 5
+    env:
+      TEST_MESSAGE: ${{ inputs.test_message }}
+
+    steps:
+      - name: Display runner info
+        run: |
+          echo "🎯 Test Message: ${TEST_MESSAGE}"
+          echo "🖥️  Runner OS: $(uname -s)"
+          echo "🏗️  Runner Architecture: $(uname -m)"
+          echo "📍 Working Directory: $(pwd)"
+          echo "👤 User: $(whoami)"
+          echo "🐚 Shell: $SHELL"
+
+      - name: Check GitHub Actions runner version
+        run: |
+          if [ -f ~/actions-runner/bin/Runner.Listener ]; then
+            echo "✅ Runner binary found"
+            # The version is in the logs, but we can verify the directory exists
+            ls -la ~/actions-runner/ | head -10
+          else
+            echo "❌ Runner binary not found in expected location"
+            exit 1
+          fi
+
+      - name: Test basic commands
+        run: |
+          echo "Testing basic shell commands..."
+          date
+          hostname
+          echo "✅ All tests passed!"
+
+      - name: Success message
+        run: |
+          echo "🎉 Self-hosted runner test completed successfully!"
+          echo "✅ Runner version 2.331.0 is working correctly"

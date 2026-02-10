@@ -220,6 +220,282 @@ class TestWorkflowSpecificLimits(unittest.TestCase):
         self.assertEqual(count, 1, "Should ignore comments from impostor users")
 
 
+class TestRollingWindowCommentCounting(unittest.TestCase):
+    """Test that _count_workflow_comments uses rolling 24h window, not daily cooldown.
+
+    BUG: Current implementation uses daily cooldown (midnight UTC reset).
+    FIX: Should use rolling 24-hour window (last 24 hours from now).
+
+    Bead: REV-h9w
+    """
+
+    def setUp(self):
+        """Set up test environment"""
+        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager'):
+            self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
+            self.monitor.safety_manager.fixpr_limit = 10
+
+    def test_rolling_window_includes_23_hours_ago(self):
+        """Comments from 23 hours ago should be counted (within 24h window)."""
+        from datetime import timedelta
+
+        # Create comment from 23 hours ago
+        now = datetime.now(timezone.utc)
+        comment_time = now - timedelta(hours=23)
+
+        comments = [
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:abc123 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": comment_time.isoformat(),
+            },
+        ]
+
+        count = self.monitor._count_workflow_comments(comments, "fixpr")
+        self.assertEqual(
+            count, 1,
+            "Comment from 23 hours ago should be counted (within 24h rolling window)"
+        )
+
+    def test_rolling_window_excludes_25_hours_ago(self):
+        """Comments from 25 hours ago should NOT be counted (outside 24h window)."""
+        from datetime import timedelta
+
+        # Create comment from 25 hours ago
+        now = datetime.now(timezone.utc)
+        comment_time = now - timedelta(hours=25)
+
+        comments = [
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:abc123 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": comment_time.isoformat(),
+            },
+        ]
+
+        count = self.monitor._count_workflow_comments(comments, "fixpr")
+        self.assertEqual(
+            count, 0,
+            "Comment from 25 hours ago should NOT be counted (outside 24h rolling window)"
+        )
+
+    def test_rolling_window_mixed_old_and_recent(self):
+        """Only comments within 24h window should be counted."""
+        from datetime import timedelta
+
+        now = datetime.now(timezone.utc)
+
+        comments = [
+            # 5 comments from 2 hours ago (should count)
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:abc1 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=2)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:abc2 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=2)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:abc3 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=2)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:abc4 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=2)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:abc5 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=2)).isoformat(),
+            },
+            # 10 comments from 30 hours ago (should NOT count)
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:old1 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=30)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:old2 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=30)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:old3 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=30)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:old4 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=30)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:old5 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=30)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:old6 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=30)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:old7 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=30)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:old8 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=30)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:old9 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=30)).isoformat(),
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:old10 -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": (now - timedelta(hours=30)).isoformat(),
+            },
+        ]
+
+        count = self.monitor._count_workflow_comments(comments, "fixpr")
+        self.assertEqual(
+            count, 5,
+            "Should count 5 recent comments, exclude 10 old comments (rolling 24h window)"
+        )
+
+    def test_rolling_window_boundary_exactly_24h(self):
+        """Comment at exactly 24 hours boundary should NOT be counted (exclusive)."""
+        from datetime import timedelta
+
+        now = datetime.now(timezone.utc)
+        # Exactly 24 hours ago (should be excluded - boundary is exclusive)
+        comment_time = now - timedelta(hours=24)
+
+        comments = [
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:boundary -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": comment_time.isoformat(),
+            },
+        ]
+
+        count = self.monitor._count_workflow_comments(comments, "fixpr")
+        self.assertEqual(
+            count, 0,
+            "Comment at exactly 24h boundary should NOT be counted (exclusive boundary)"
+        )
+
+    def test_rolling_window_just_inside_24h(self):
+        """Comment at 23h 59m ago should be counted (just inside window)."""
+        from datetime import timedelta
+
+        now = datetime.now(timezone.utc)
+        # 23 hours 59 minutes ago (should be included)
+        comment_time = now - timedelta(hours=23, minutes=59)
+
+        comments = [
+            {
+                "body": "<!-- fixpr-run-automation-commit:codex:inside -->",
+                "author": {"login": "test-automation-user"},
+                "createdAt": comment_time.isoformat(),
+            },
+        ]
+
+        count = self.monitor._count_workflow_comments(comments, "fixpr")
+        self.assertEqual(
+            count, 1,
+            "Comment at 23h59m ago should be counted (just inside 24h window)"
+        )
+
+
+class TestPerCommitRetryLimit(unittest.TestCase):
+    """Test per-commit retry limit to prevent wasting runs on unfixable commits.
+
+    Bug found: Same commit was processed 12 times on PR #4572 because
+    "issues persist" allowed unlimited reprocessing.
+    Fix: Add MAX_COMMIT_RETRIES (3) to limit attempts per commit.
+    """
+
+    def setUp(self):
+        """Set up test environment"""
+        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager'):
+            self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
+            self.monitor.safety_manager.fixpr_limit = 10
+
+    def test_count_commit_attempts_single_commit(self):
+        """Count attempts for a specific commit SHA"""
+        commit_sha = "abc123456789"
+        comments = [
+            {
+                "body": f"<!-- fixpr-run-automation-commit:gemini:{commit_sha} -->",
+                "author": {"login": "test-automation-user"},
+            },
+            {
+                "body": f"<!-- fixpr-run-automation-commit:codex:{commit_sha} -->",
+                "author": {"login": "test-automation-user"},
+            },
+            {
+                "body": "<!-- fixpr-run-automation-commit:gemini:differentsha -->",
+                "author": {"login": "test-automation-user"},
+            },
+        ]
+
+        count = self.monitor._count_commit_attempts(comments, "fixpr", commit_sha)
+        self.assertEqual(count, 2, "Should count 2 attempts for the specific commit")
+
+    def test_count_commit_attempts_short_sha_match(self):
+        """Should match by short SHA (first 8 chars)"""
+        full_sha = "abc1234567890def"
+        comments = [
+            {
+                "body": "<!-- fixpr-run-automation-commit:gemini:abc12345 -->",
+                "author": {"login": "test-automation-user"},
+            },
+        ]
+
+        count = self.monitor._count_commit_attempts(comments, "fixpr", full_sha)
+        self.assertEqual(count, 1, "Should match by short SHA prefix")
+
+    def test_count_commit_attempts_ignores_other_users(self):
+        """Should only count comments from automation user"""
+        commit_sha = "abc123456789"
+        comments = [
+            {
+                "body": f"<!-- fixpr-run-automation-commit:gemini:{commit_sha} -->",
+                "author": {"login": "test-automation-user"},
+            },
+            {
+                "body": f"<!-- fixpr-run-automation-commit:gemini:{commit_sha} -->",
+                "author": {"login": "some-other-user"},
+            },
+        ]
+
+        count = self.monitor._count_commit_attempts(comments, "fixpr", commit_sha)
+        self.assertEqual(count, 1, "Should only count comments from automation user")
+
+    def test_max_commit_retries_constant(self):
+        """Verify MAX_COMMIT_RETRIES is set to 3"""
+        self.assertEqual(
+            self.monitor.MAX_COMMIT_RETRIES, 3,
+            "MAX_COMMIT_RETRIES should be 3 to prevent wasting runs"
+        )
+
+    def test_count_commit_attempts_empty_sha(self):
+        """Should return 0 for empty SHA"""
+        count = self.monitor._count_commit_attempts([], "fixpr", "")
+        self.assertEqual(count, 0, "Empty SHA should return 0 attempts")
+
+        count = self.monitor._count_commit_attempts([], "fixpr", None)
+        self.assertEqual(count, 0, "None SHA should return 0 attempts")
+
 
 if __name__ == "__main__":
     unittest.main()

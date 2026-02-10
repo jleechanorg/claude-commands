@@ -404,59 +404,60 @@ class TestDailyCooldownFiltering(unittest.TestCase):
             self.monitor.logger = Mock()
 
     def test_count_workflow_comments_filters_by_date(self):
-        """Test that _count_workflow_comments only counts today's comments"""
-        # Use UTC to match production code (datetime.now(timezone.utc).date().isoformat())
-        today = datetime.now(timezone.utc).date().isoformat()
-        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+        """Test that _count_workflow_comments only counts comments within rolling 24h window"""
+        now = datetime.now(timezone.utc)
+        recent = (now - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        old = (now - timedelta(hours=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        also_recent = (now - timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        # Create comments with different dates
+        # Create comments: 2 within 24h window, 1 outside
         comments = [
             {
                 "author": {"login": "test-automation-user"},
                 "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR",
-                "createdAt": f"{today}T10:00:00Z",
+                "createdAt": recent,
             },
             {
                 "author": {"login": "test-automation-user"},
-                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR yesterday",
-                "createdAt": f"{yesterday}T10:00:00Z",
+                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR old",
+                "createdAt": old,
             },
             {
                 "author": {"login": "test-automation-user"},
-                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR today",
-                "createdAt": f"{today}T15:00:00Z",
+                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR also recent",
+                "createdAt": also_recent,
             },
         ]
 
         count = self.monitor._count_workflow_comments(comments, "fixpr")
 
-        # Should only count today's comments (2), not yesterday's (1)
-        self.assertEqual(count, 2, f"Expected 2 today's comments, got {count}")
+        # Should only count comments within 24h window (2), not old one (1)
+        self.assertEqual(count, 2, f"Expected 2 recent comments, got {count}")
 
     def test_count_workflow_comments_handles_utc_timezone(self):
-        """Test that _count_workflow_comments handles UTC timestamps correctly"""
-        # Use UTC to match production code (datetime.now(timezone.utc).date().isoformat())
-        today_utc = datetime.now(timezone.utc).date().isoformat()
-        yesterday_utc = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+        """Test that _count_workflow_comments handles UTC timestamps with rolling 24h window"""
+        now = datetime.now(timezone.utc)
+        within_window = (now - timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        outside_window = (now - timedelta(hours=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         # Create comments with UTC timestamps
         comments = [
             {
                 "author": {"login": "test-automation-user"},
-                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR UTC today",
-                "createdAt": f"{today_utc}T23:59:59Z",
+                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR UTC recent",
+                "createdAt": within_window,
             },
             {
                 "author": {"login": "test-automation-user"},
-                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR UTC yesterday",
-                "createdAt": f"{yesterday_utc}T00:00:00Z",
+                "body": "<!-- fixpr-run-automation-commit:gemini:sha --> Fix PR UTC old",
+                "createdAt": outside_window,
             },
         ]
 
         count = self.monitor._count_workflow_comments(comments, "fixpr")
 
-        # Should only count today's UTC comment (1), not yesterday's
-        self.assertEqual(count, 1, f"Expected 1 today's UTC comment, got {count}")
+        # Should only count comment within 24h window (1), not old one
+        self.assertEqual(count, 1, f"Expected 1 recent UTC comment, got {count}")
 
     def test_count_workflow_comments_handles_missing_timestamp(self):
         """Test that _count_workflow_comments handles comments without timestamps"""

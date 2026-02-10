@@ -138,6 +138,101 @@ check_dependencies() {
 # Check dependencies early
 check_dependencies
 
+# Returns 0 if the local beads daemon appears alive, 1 otherwise.
+beads_daemon_running() {
+    local repo_root="$1"
+    local pid_file="$repo_root/.beads/daemon.pid"
+    if [ ! -f "$pid_file" ]; then
+        return 1
+    fi
+
+    local daemon_pid
+    daemon_pid=$(cat "$pid_file" 2>/dev/null || true)
+    if [[ ! "$daemon_pid" =~ ^[0-9]+$ ]]; then
+        return 1
+    fi
+
+    if kill -0 "$daemon_pid" 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+# Stash helper that avoids touching active .beads runtime files while daemon is running.
+force_mode_stash() {
+    local stash_message="$1"
+    local log_file="${2:-}"
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || die 1 "Not inside a git repository"
+
+    local stash_cmd=(
+        git
+        stash
+        push
+        -u
+        -m
+        "$stash_message"
+    )
+
+    if beads_daemon_running "$repo_root"; then
+        echo -e "${YELLOW}⚠️  Beads daemon running; excluding active .beads runtime files from stash${NC}"
+        stash_cmd+=(
+            --
+            .
+            ":(exclude).beads/.jsonl.lock"
+            ":(exclude).beads/bd.sock"
+            ":(exclude).beads/daemon.lock"
+            ":(exclude).beads/daemon.pid"
+            ":(exclude).beads/beads.db-shm"
+            ":(exclude).beads/beads.db-wal"
+        )
+    fi
+
+    if [ -n "$log_file" ]; then
+        "${stash_cmd[@]}" >>"$log_file" 2>&1
+    else
+        "${stash_cmd[@]}"
+    fi
+}
+
+# Remove transient local runtime files that can block branch checkout
+# (only if they are untracked in git).
+cleanup_checkout_blockers() {
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || die 1 "Not inside a git repository"
+    local had_error=0
+    local candidates=(
+        ".beads/.jsonl.lock"
+        ".beads/bd.sock"
+        ".beads/daemon.lock"
+        ".beads/daemon.pid"
+        ".beads/beads.db-shm"
+        ".beads/beads.db-wal"
+    )
+
+    for rel_path in "${candidates[@]}"; do
+        local abs_path="$repo_root/$rel_path"
+        if [ -e "$abs_path" ] || [ -L "$abs_path" ]; then
+            if ! git -C "$repo_root" ls-files --error-unmatch "$rel_path" >/dev/null 2>&1; then
+                if [[ "$rel_path" == ".beads/beads.db-shm" || "$rel_path" == ".beads/beads.db-wal" ]]; then
+                    if beads_daemon_running "$repo_root"; then
+                        echo -e "${YELLOW}⚠️  Skipping $rel_path while beads daemon is running (DB safety)${NC}"
+                        continue
+                    fi
+                fi
+
+                echo -e "${YELLOW}⚠️  Removing untracked runtime file: $rel_path${NC}"
+                if ! rm -rf -- "$abs_path"; then
+                    echo -e "${RED}❌ Failed to remove $abs_path${NC}" >&2
+                    had_error=1
+                fi
+            fi
+        fi
+    done
+
+    return "$had_error"
+}
+
 # Utility function for safe command execution with fallback
 safe_gh_command() {
     local cmd="$*"
@@ -281,7 +376,7 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
         echo ""
         if [ "$FORCE_MODE" = true ]; then
             echo -e "${RED}🚨 FORCE MODE: Stashing uncommitted changes to proceed${NC}"
-            if git stash push -m "integrate.sh --force: auto-stash on $(date -u +"%Y-%m-%d %H:%M:%S UTC")"; then
+            if force_mode_stash "integrate.sh --force: auto-stash on $(date -u +"%Y-%m-%d %H:%M:%S UTC")"; then
                 echo "   ✅ Changes stashed successfully"
                 echo "   To recover: git stash pop"
             else
@@ -373,7 +468,36 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
 fi
 
 echo -e "\n${GREEN}1. Switching to main branch...${NC}"
-git checkout main
+checkout_err_file="$(mktemp -t integrate_checkout_err.XXXXXX)"
+if ! git checkout main 2>"$checkout_err_file"; then
+    if [ "$FORCE_MODE" = true ]; then
+        echo -e "${RED}🚨 FORCE MODE: Checkout to main failed, attempting automatic recovery${NC}"
+        if ! cleanup_checkout_blockers; then
+            echo "cleanup_checkout_blockers reported errors" >>"$checkout_err_file"
+        fi
+        if ! force_mode_stash "integrate.sh --force: pre-checkout auto-stash on $(date -u +"%Y-%m-%d %H:%M:%S UTC")" "$checkout_err_file"; then
+            echo "Pre-checkout stash failed in FORCE_MODE recovery." >>"$checkout_err_file"
+            echo "   Checkout error details:"
+            tail -n 20 "$checkout_err_file" || true
+            rm -f "$checkout_err_file"
+            die 1 "Failed to stash changes during FORCE_MODE checkout recovery"
+        fi
+        if ! git checkout main 2>>"$checkout_err_file"; then
+            echo "   Checkout error details:"
+            tail -n 20 "$checkout_err_file" || true
+            rm -f "$checkout_err_file"
+            die 1 "Failed to switch to main even after FORCE_MODE recovery"
+        fi
+    else
+        echo "   Checkout error details:"
+        tail -n 20 "$checkout_err_file" || true
+        echo ""
+        echo "   Resolve local untracked conflicts and re-run."
+        rm -f "$checkout_err_file"
+        die 1 "Failed to switch to main"
+    fi
+fi
+rm -f "$checkout_err_file"
 
 echo -e "\n${GREEN}2. Smart sync with origin/main...${NC}"
 # Skip fetch here - origin/main was already fetched at script start to ensure accurate branch comparisons

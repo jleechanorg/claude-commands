@@ -6,6 +6,8 @@ Start claude or codex CLI in an interactive tmux session for direct user interac
 Beyond slash commands, this provides a persistent terminal interface to AI assistants.
 """
 
+# ruff: noqa: E402
+
 # Allow direct script execution - add parent directory to sys.path
 import os
 import sys
@@ -15,14 +17,20 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 import argparse
+import contextlib
+import io
+import json
 import shlex
 import shutil
 import subprocess
 import time
+from importlib import metadata as importlib_metadata
 from typing import Optional
 
 # Use absolute imports with package name for __main__ compatibility
+from orchestration.orchestrate_unified import UnifiedOrchestration
 from orchestration.task_dispatcher import CLI_PROFILES
+from orchestration.task_dispatcher import TaskDispatcher
 
 
 class LiveMode:
@@ -267,38 +275,217 @@ class LiveMode:
 
 def main():
     """Main CLI entry point."""
+
+    def _get_version() -> str:
+        package_name = "jleechanorg-orchestration"
+        try:
+            return importlib_metadata.version(package_name)
+        except importlib_metadata.PackageNotFoundError:
+            return "unknown"
+
+    def _normalize_cli_chain(cli_value: Optional[str]):
+        if cli_value is None:
+            return None, False
+        cli_parts = [part.strip().lower() for part in cli_value.split(",") if part.strip()]
+        if not cli_parts:
+            raise ValueError("Agent CLI chain cannot be empty")
+        invalid = [cli for cli in cli_parts if cli not in CLI_PROFILES]
+        if invalid:
+            raise ValueError(f"Invalid agent CLI(s): {', '.join(invalid)}")
+        return ",".join(cli_parts), True
+
+    def _json_dumps_safe(payload: object) -> str:
+        try:
+            return json.dumps(payload, indent=2)
+        except TypeError:
+            return json.dumps(payload, indent=2, default=str)
+
+    def _run_unified(args) -> int:
+        try:
+            agent_cli, cli_provided = _normalize_cli_chain(args.agent_cli)
+        except ValueError as exc:
+            print(f"❌ {exc}. Valid options: {', '.join(sorted(CLI_PROFILES.keys()))}")
+            return 2
+
+        if agent_cli is None:
+            agent_cli = "gemini"
+
+        task = " ".join(args.task).strip()
+        if not task:
+            print("❌ Task description is required.")
+            return 2
+
+        options = {
+            "context": args.context,
+            "branch": args.branch,
+            "pr": args.pr,
+            "mcp_agent": args.mcp_agent,
+            "bead": args.bead,
+            "validate": args.validate,
+            "no_new_pr": args.no_new_pr,
+            "no_new_branch": args.no_new_branch,
+            "agent_cli": agent_cli,
+            "agent_cli_provided": cli_provided,
+            "model": args.model,
+        }
+
+        try:
+            orchestration = UnifiedOrchestration()
+            orchestration.orchestrate(task, options=options)
+            return 0
+        except KeyboardInterrupt:
+            print("\n👋 Orchestration interrupted.")
+            return 130
+        except Exception as exc:
+            print(f"❌ Orchestration failed: {exc}")
+            return 1
+
+    def _dispatcher_analyze(args) -> int:
+        try:
+            agent_cli, _ = _normalize_cli_chain(args.agent_cli)
+        except ValueError as exc:
+            print(f"❌ {exc}. Valid options: {', '.join(sorted(CLI_PROFILES.keys()))}")
+            return 2
+
+        task = " ".join(args.task).strip()
+        try:
+            if args.output_json:
+                captured_stdout = io.StringIO()
+                with contextlib.redirect_stdout(captured_stdout):
+                    dispatcher = TaskDispatcher()
+                    specs = dispatcher.analyze_task_and_create_agents(task, forced_cli=agent_cli)
+                dispatcher_logs = captured_stdout.getvalue().strip()
+                if dispatcher_logs:
+                    print(dispatcher_logs, file=sys.stderr)
+                print(_json_dumps_safe(specs))
+            else:
+                dispatcher = TaskDispatcher()
+                specs = dispatcher.analyze_task_and_create_agents(task, forced_cli=agent_cli)
+                print(f"Planned {len(specs)} agent(s):")
+                for idx, spec in enumerate(specs, start=1):
+                    print(f"{idx}. {spec.get('name')} ({spec.get('cli', 'default')})")
+            return 0
+        except KeyboardInterrupt:
+            print("\n👋 Dispatcher analysis interrupted.")
+            return 130
+        except Exception as exc:
+            print(f"❌ Dispatcher analyze failed: {exc}")
+            return 1
+
+    def _dispatcher_create(args) -> int:
+        try:
+            agent_cli, _ = _normalize_cli_chain(args.agent_cli)
+        except ValueError as exc:
+            print(f"❌ {exc}. Valid options: {', '.join(sorted(CLI_PROFILES.keys()))}")
+            return 2
+
+        try:
+            dispatcher = TaskDispatcher()
+            task = " ".join(args.task).strip()
+            specs = dispatcher.analyze_task_and_create_agents(task, forced_cli=agent_cli)
+
+            if args.model:
+                for spec in specs:
+                    spec["model"] = args.model
+
+            if args.dry_run:
+                print(_json_dumps_safe(specs))
+                return 0
+
+            success_count = 0
+            for spec in specs:
+                print(f"Creating agent: {spec.get('name')}")
+                if dispatcher.create_dynamic_agent(spec):
+                    success_count += 1
+                    print(f"✅ Created: {spec.get('name')}")
+                else:
+                    print(f"❌ Failed: {spec.get('name')}")
+
+            if success_count != len(specs):
+                print(f"❌ Created {success_count}/{len(specs)} agents.")
+                return 1
+            return 0
+        except KeyboardInterrupt:
+            print("\n👋 Dispatcher create interrupted.")
+            return 130
+        except Exception as exc:
+            print(f"❌ Dispatcher create failed: {exc}")
+            return 1
+
     parser = argparse.ArgumentParser(
-        description="AI Orchestration - tmux Live Mode",
+        description="AI Orchestration CLI (unified runtime + task dispatcher)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Start interactive Claude session
-  ai_orch live
+  # Unified orchestration (default mode)
+  ai_orch run --agent-cli gemini,claude "Fix failing tests"
+  ai_orch --agent-cli claude "Implement feature X"
 
-  # Start interactive Codex session
+  # TaskDispatcher helpers
+  ai_orch dispatcher analyze --agent-cli codex "Refactor API handlers"
+  ai_orch dispatcher create --agent-cli gemini "Fix PR #123 conflicts"
+
+  # Legacy interactive tmux mode
   ai_orch live --cli codex
-
-  # Start with custom session name
-  ai_orch live --name my-session
-
-  # Start in specific directory
-  ai_orch live --dir ~/my-project
-
-  # List all active sessions
-  ai_orch list
-
-  # Attach to existing session
-  ai_orch attach my-session
-
-  # Kill a session
-  ai_orch kill my-session
         """,
     )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {_get_version()}",
+    )
+
+    commands = {"run", "dispatcher", "live", "list", "attach", "kill"}
+    live_only_flags = {"--cli", "--name", "--dir", "--detached", "--model"}
+    argv = sys.argv[1:]
+    if argv and not argv[0].startswith("-") and argv[0] not in commands:
+        argv = ["run"] + argv
+    elif argv and argv[0].startswith("-") and argv[0] not in {"--version", "--help", "-h"}:
+        if any(arg in live_only_flags for arg in argv):
+            argv = ["live"] + argv
+        else:
+            argv = ["run"] + argv
 
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
-    # Live command
-    live_parser = subparsers.add_parser("live", help="Start interactive AI CLI session")
+    # Unified orchestration command
+    run_parser = subparsers.add_parser("run", help="Run unified orchestration (orchestrate_unified interface)")
+    run_parser.add_argument("task", nargs="+", help="Task description for the orchestration system")
+    run_parser.add_argument("--context", type=str, default=None, help="Path to markdown context file")
+    run_parser.add_argument("--branch", type=str, default=None, help="Force checkout of specific branch")
+    run_parser.add_argument("--pr", type=int, default=None, help="Existing PR number to update")
+    run_parser.add_argument("--mcp-agent", type=str, default=None, help="Pre-fill agent name for MCP Mail")
+    run_parser.add_argument("--bead", type=str, default=None, help="Pre-fill bead ID for tracking")
+    run_parser.add_argument("--validate", type=str, default=None, help="Validation command to run after completion")
+    run_parser.add_argument("--no-new-pr", action="store_true", help="Block new PR creation")
+    run_parser.add_argument("--no-new-branch", action="store_true", help="Block new branch creation")
+    run_parser.add_argument(
+        "--agent-cli",
+        type=str,
+        default=None,
+        help="Agent CLI to use (supports fallback chain, e.g. gemini,claude)",
+    )
+    run_parser.add_argument("--model", type=str, default=None, help="Model override for supported CLIs")
+
+    # TaskDispatcher command
+    dispatcher_parser = subparsers.add_parser("dispatcher", help="Direct TaskDispatcher utilities")
+    dispatcher_subparsers = dispatcher_parser.add_subparsers(dest="dispatcher_command", required=True)
+
+    analyze_parser = dispatcher_subparsers.add_parser("analyze", help="Analyze task and print planned agent specs")
+    analyze_parser.add_argument("task", nargs="+", help="Task description to analyze")
+    analyze_parser.add_argument("--agent-cli", type=str, default=None, help="Force a specific CLI")
+    analyze_parser.add_argument("--json", action="store_true", dest="output_json", help="Print JSON output")
+
+    create_parser = dispatcher_subparsers.add_parser(
+        "create", help="Analyze task and create dynamic agents via TaskDispatcher"
+    )
+    create_parser.add_argument("task", nargs="+", help="Task description")
+    create_parser.add_argument("--agent-cli", type=str, default=None, help="Force a specific CLI")
+    create_parser.add_argument("--model", type=str, default=None, help="Model override")
+    create_parser.add_argument("--dry-run", action="store_true", help="Print planned specs without creating agents")
+
+    # Legacy live command
+    live_parser = subparsers.add_parser("live", help="(Legacy) Start interactive AI CLI session")
     live_parser.add_argument(
         "--cli", choices=list(CLI_PROFILES.keys()), default="claude", help="AI CLI to use (default: claude)"
     )
@@ -309,37 +496,33 @@ Examples:
         "--detached", action="store_true", help="Start in detached mode (don't attach immediately)"
     )
 
-    # List command
-    subparsers.add_parser("list", help="List active sessions")
-
-    # Attach command
-    attach_parser = subparsers.add_parser("attach", help="Attach to existing session")
+    # Legacy list/attach/kill commands
+    subparsers.add_parser("list", help="(Legacy) List active tmux sessions")
+    attach_parser = subparsers.add_parser("attach", help="(Legacy) Attach to existing session")
     attach_parser.add_argument("session", help="Session name to attach to")
-
-    # Kill command
-    kill_parser = subparsers.add_parser("kill", help="Kill a session")
+    kill_parser = subparsers.add_parser("kill", help="(Legacy) Kill a session")
     kill_parser.add_argument("session", help="Session name to kill")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    # Default to live command if no command specified
-    if args.command is None:
-        args.command = "live"
-        args.cli = "claude"
-        args.name = None
-        args.dir = None
-        args.model = None
-        args.detached = False
+    if args.command == "run":
+        return _run_unified(args)
 
-    # Execute command
+    if args.command == "dispatcher":
+        if args.dispatcher_command == "analyze":
+            return _dispatcher_analyze(args)
+        if args.dispatcher_command == "create":
+            return _dispatcher_create(args)
+        return 2
+
     if args.command == "live":
         live_mode = LiveMode(cli_name=args.cli)
         live_mode.start_interactive_session(
             session_name=args.name, working_dir=args.dir, model=args.model, attach=not args.detached
         )
+        return 0
 
-    elif args.command == "list":
-        # List sessions for all CLIs
+    if args.command == "list":
         all_sessions = []
         for cli_name in CLI_PROFILES.keys():
             live_mode = LiveMode(cli_name=cli_name)
@@ -351,15 +534,14 @@ Examples:
                 print(f"   - {session}")
         else:
             print("📋 No active AI sessions.")
+        return 0
 
-    elif args.command == "attach":
-        # Try to find session across all CLIs
+    if args.command == "attach":
         session_name = args.session
         found = False
 
         for cli_name in CLI_PROFILES.keys():
             live_mode = LiveMode(cli_name=cli_name)
-            # Normalize session name before checking (add prefix if missing)
             normalized_name = (
                 session_name
                 if session_name.startswith(live_mode.session_prefix)
@@ -378,16 +560,15 @@ Examples:
                 sessions = live_mode.list_sessions()
                 for s in sessions:
                     print(f"   - {s}")
-            sys.exit(1)
+            return 1
+        return 0
 
-    elif args.command == "kill":
-        # Try to find and kill session across all CLIs
+    if args.command == "kill":
         session_name = args.session
         found = False
 
         for cli_name in CLI_PROFILES.keys():
             live_mode = LiveMode(cli_name=cli_name)
-            # Normalize session name before checking (add prefix if missing)
             normalized_name = (
                 session_name
                 if session_name.startswith(live_mode.session_prefix)
@@ -400,8 +581,12 @@ Examples:
 
         if not found:
             print(f"❌ Error: Session '{session_name}' not found.")
-            sys.exit(1)
+            return 1
+        return 0
+
+    parser.print_help()
+    return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

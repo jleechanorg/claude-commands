@@ -1,85 +1,50 @@
 ---
 description: Alias for /gstatus command
-type: llm-orchestration
+type: git
 execution_mode: immediate
 allowed-tools: Bash
 ---
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
-**This is NOT documentation - these are COMMANDS to execute right now.**
-**Use TodoWrite to track progress through multi-phase workflows.**
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 1: Execute Documented Workflow
+### Phase 1: Execute gstatus.py directly
 
 **Action Steps:**
-1. Review the reference documentation below and execute the detailed steps sequentially.
+1. Locate and execute gstatus.py from .claude/commands/ directory
+2. Display the complete GitHub status output to the user
 
-## 📋 REFERENCE DOCUMENTATION
+## Implementation
 
-# /gst - Alias for /gstatus
+Use the Bash tool to execute gstatus.py with proper path resolution:
 
-This is a short alias for the `/gstatus` command.
-
-Execute /gstatus:
-!`(
-    set -euo pipefail
-
-    candidates=()
-
-    add_candidate() {
-        local path="$1"
-        if [ -z "$path" ]; then
-            return
-        fi
-        for existing in "${candidates[@]+"${candidates[@]}"}"; do
-            if [ "$existing" = "$path" ]; then
-                return
-            fi
-        done
-        candidates+=("$path")
-    }
-
-    run_gstatus() {
-        local script="$1"
-        if [ "${ARGUMENTS+x}" = 'x' ]; then
-            if [ -n "$ARGUMENTS" ]; then
-                python3 "$script" "$ARGUMENTS"
-            else
-                python3 "$script" ""
-            fi
-        else
-            python3 "$script" ""
-        fi
-    }
-
-    add_candidate "$(pwd -P)/.claude/commands/gstatus.py"
-
-    if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
-        add_candidate "$git_root/.claude/commands/gstatus.py"
+```bash
+# Resolve gstatus.py location using git root or fallback paths
+if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+    script_path="$git_root/.claude/commands/gstatus.py"
+    if [ -f "$script_path" ]; then
+        python3 "$script_path" "$@"
+    elif [ -f "$HOME/.claude/commands/gstatus.py" ]; then
+        python3 "$HOME/.claude/commands/gstatus.py" "$@"
+    else
+        echo "❌ ERROR: Unable to locate gstatus.py"
+        echo "  Checked: git root/.claude/commands/ and ~/.claude/commands/"
+        exit 1
     fi
-
-    if [ -n "${CLAUDE_REPO_ROOT:-}" ]; then
-        add_candidate "${CLAUDE_REPO_ROOT%/}/.claude/commands/gstatus.py"
-    fi
-
-    add_candidate "$HOME/.claude/commands/gstatus.py"
-
-    for candidate in "${candidates[@]+"${candidates[@]}"}"; do
-        if [ -f "$candidate" ]; then
-            run_gstatus "$candidate"
-            exit
-        fi
-    done
-
-    {
-        echo "Error: Unable to locate gstatus.py. Checked:"
-        for candidate in "${candidates[@]+"${candidates[@]}"}"; do
-            echo "  - $candidate"
-        done
-    } >&2
+elif [ -f "$HOME/.claude/commands/gstatus.py" ]; then
+    python3 "$HOME/.claude/commands/gstatus.py" "$@"
+else
+    echo "❌ ERROR: Unable to locate gstatus.py"
+    echo "  Checked: git root/.claude/commands/ and ~/.claude/commands/"
     exit 1
-)`
+fi
+```
 
-Claude: Display the complete GitHub status output to the user including PR details, CI checks, file changes, comments, and action items.
+This provides comprehensive PR status including:
+- Current branch and PR information
+- CI/CD check status
+- File changes summary
+- Merge conflict detection
+
+**Path Resolution**: Works from any directory within a git repo or falls back to ~/.claude global installation

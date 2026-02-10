@@ -12,38 +12,23 @@
 
 name: Coverage Report
 
-# Run on PRs to show coverage delta, and on main to update baseline
+# Run on main pushes only to update coverage baseline and badge.
+# Coverage was previously also triggered on pull_request, but this duplicated
+# the full test suite execution already performed by test.yml (~14 min wasted
+# per PR push). test.yml is the primary test gatekeeper; this workflow only
+# needs to maintain the coverage baseline on main.
 on:
-  pull_request:
-    paths:
-      - 'mvp_site/**/*.py'
-      - 'coverage.sh'
-      - '.github/workflows/coverage.yml'
   push:
     branches: [main]
     paths:
       - 'mvp_site/**/*.py'
       - 'coverage.sh'
+      - '.github/workflows/coverage.yml'
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
-  limit-pr-runs:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
-      - name: Limit PR runs
-        uses: ./.github/actions/limit-pr-runs
-        with:
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
   coverage:
     name: Generate Coverage Report
     runs-on: ubuntu-latest
@@ -121,10 +106,7 @@ jobs:
           set -e
           
           if [ "${test_exit_code}" -ne 0 ]; then
-            echo "::warning::Tests failed (exit code ${test_exit_code}), but forcing success to generate coverage reports"
-            # We want the job to pass so we can see the coverage delta, relying on test.yml for verification.
-            # NOTE: test.yml is the primary gatekeeper and will fail the PR on test failures.
-            # This workflow MUST pass to allow coverage artifacts to be uploaded for analysis.
+            echo "::error::Tests failed (exit code ${test_exit_code}). Generating reports before failing."
           fi
           
           if [ ! -f .coverage ]; then
@@ -137,75 +119,30 @@ jobs:
           coverage xml -o coverage.xml || echo "Coverage XML generation failed"
           coverage json -o coverage.json || echo "Coverage JSON generation failed"
           
-          # Force step success even if tests failed
-          exit 0
-
-      - name: Coverage comment (PR)
-        id: coverage_comment
-        if: github.event_name == 'pull_request'
-        uses: py-cov-action/python-coverage-comment-action@fb02115d6115e7b3325dc3295fe1dcfb1919248a  # v3.32
-        with:
-          GITHUB_TOKEN: ${{ github.token }}
-          MINIMUM_GREEN: 80
-          MINIMUM_ORANGE: 60
-          ANNOTATE_MISSING_LINES: true
-          MAX_FILES_IN_COMMENT: 50
+          # Exit with original test failure code if tests failed
+          if [ "${test_exit_code}" -ne 0 ]; then
+            exit "${test_exit_code}"
+          fi
 
       - name: Update coverage baseline (main)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: (success() || failure()) && github.ref == 'refs/heads/main'
         uses: py-cov-action/python-coverage-comment-action@fb02115d6115e7b3325dc3295fe1dcfb1919248a  # v3.32
         with:
           GITHUB_TOKEN: ${{ github.token }}
           MINIMUM_GREEN: 80
           MINIMUM_ORANGE: 60
 
-      - name: Check coverage threshold
-        if: github.event_name == 'pull_request'
-        run: |
-          source venv/bin/activate
-
-          # Extract current coverage percentage with error handling
-          COVERAGE_RAW=$(coverage report | tail -1 | awk '{print $4}' | tr -d '%')
-
-          # Validate coverage is numeric
-          if ! [[ "$COVERAGE_RAW" =~ ^[0-9]+$ ]]; then
-            echo "::warning::Could not parse coverage value: '$COVERAGE_RAW'"
-            # Try alternative extraction from TOTAL line
-            COVERAGE_RAW=$(coverage report | grep "^TOTAL" | awk '{print $NF}' | tr -d '%')
-            if ! [[ "$COVERAGE_RAW" =~ ^[0-9]+$ ]]; then
-              echo "::error::Coverage parsing failed - cannot determine coverage percentage"
-              exit 1
-            fi
-          fi
-
-          COVERAGE=$COVERAGE_RAW
-          echo "Current coverage: ${COVERAGE}%"
-
-          # Minimum threshold - align with py-cov-action: warn if below 80%, fail if below 60%
-          MIN_WARN=80
-          MIN_FAIL=60
-
-          if [ "$COVERAGE" -lt "$MIN_FAIL" ]; then
-            echo "::error::Coverage ${COVERAGE}% is below minimum threshold of ${MIN_FAIL}%"
-            exit 1
-
-          elif [ "$COVERAGE" -lt "$MIN_WARN" ]; then
-            echo "::warning::Coverage ${COVERAGE}% is below recommended threshold of ${MIN_WARN}%"
-          else
-            echo "::notice::Coverage ${COVERAGE}% meets threshold requirements"
-          fi
-
       - name: Generate coverage badge
-        if: github.ref == 'refs/heads/main'
+        if: (success() || failure()) && github.ref == 'refs/heads/main'
         run: |
           source venv/bin/activate
 
           # Extract total coverage percentage
-          COVERAGE=$(coverage report | tail -1 | awk '{print $4}' | tr -d '%')
+          COVERAGE=$(coverage report 2>/dev/null | tail -1 | awk '{print $4}' | tr -d '%')
 
           # Validate coverage is numeric
           if ! [[ "$COVERAGE" =~ ^[0-9]+$ ]]; then
-            COVERAGE=$(coverage report | grep "^TOTAL" | awk '{print $NF}' | tr -d '%')
+            COVERAGE=$(coverage report 2>/dev/null | grep "^TOTAL" | awk '{print $NF}' | tr -d '%')
             if ! [[ "$COVERAGE" =~ ^[0-9]+$ ]]; then
               echo "::warning::Could not parse coverage for badge generation, defaulting to 0"
               COVERAGE=0

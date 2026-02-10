@@ -1057,12 +1057,15 @@ IMPORTANT INSTRUCTIONS:
 2. Make the requested changes on that branch
 3. Commit and push to update the existing PR
 4. DO NOT create a new branch or new PR
-5. Use 'git push' (not 'git push -u origin new-branch')
+5. Push using the correct refspec for your branch:
+   - If on the PR's branch (after gh pr checkout): 'git push' works
+   - If on a local fixpr_* branch: 'git push origin <local_branch>:<remote_pr_branch>'
+   - NEVER use 'git push -u origin new-branch' (creates a new remote branch)
 
 Key points:
 - This is about UPDATING an existing PR, not creating a new one
 - Stay on the PR's branch throughout your work
-- Your commits will automatically update the PR
+- If on a fixpr_* branch, you MUST use refspec: git push origin fixpr_branch:pr_branch
 
 🔧 EXECUTION GUIDELINES:
 1. **Always use /execute for your work**: Use the /execute command for all task execution to ensure proper planning and execution. This provides structured approach and prevents missing critical steps.

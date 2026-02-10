@@ -1018,8 +1018,16 @@ Examples:
 
     parser.add_argument(
         "--use-existing-browser",
+        default=True,
         action="store_true",
-        help="Connect to existing Chrome (requires start_chrome_debug.sh)"
+        help="Connect to existing Chrome (default: True, requires start_chrome_debug.sh)"
+    )
+
+    parser.add_argument(
+        "--launch-new-browser",
+        dest="use_existing_browser",
+        action="store_false",
+        help="Launch a new browser instead of using existing one"
     )
 
     parser.add_argument(
