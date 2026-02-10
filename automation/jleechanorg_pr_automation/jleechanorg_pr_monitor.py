@@ -77,6 +77,7 @@ from .codex_config import (
 from .codex_config import (
     FIXPR_MARKER_SUFFIX as SHARED_FIXPR_SUFFIX,
 )
+from .openai_automation.codex_cli_tasks import CodexCloudAPI
 from .orchestrated_pr_runner import (
     chdir,
     dispatch_agent_for_pr,
@@ -177,6 +178,8 @@ class JleechanorgPRMonitor:
     CODEX_COMMIT_MESSAGE_MARKER = "[codex-automation-commit]"
     CODEX_BOT_IDENTIFIER = "codex"
     FIX_COMMENT_COMPLETION_MARKER = "Fix-comment automation complete"
+    # Max retries per commit when issues persist (prevents wasting runs on unfixable commits)
+    MAX_COMMIT_RETRIES = 3
     # GitHub short SHAs display with a minimum of 7 characters, while full SHAs are 40 characters.
     CODEX_COMMIT_SHA_LENGTH_RANGE: tuple[int, int] = (7, 40)
     CODEX_SUMMARY_COMMIT_PATTERNS = [
@@ -2374,6 +2377,12 @@ Your response MUST follow this exact structure for clarity:
         if head_sha and pr_data.get("headRefOid") != head_sha:
             pr_data = {**pr_data, "headRefOid": head_sha}
 
+        # CRITICAL: Draft PRs must be skipped BEFORE any other processing
+        # This ensures drafts are never processed even if they have conflicts/failing checks
+        if pr_data.get("isDraft"):
+            self.logger.info(f"⏭️ Skipping draft PR {repo_full} #{pr_number} - drafts not eligible for fixpr")
+            return "skipped"
+
         # Check workflow-specific safety limits for fixpr
         fixpr_count = self._count_workflow_comments(comments, "fixpr")
         # Ensure both values are ints for comparison (defensive programming for test mocks)
@@ -2426,10 +2435,23 @@ Your response MUST follow this exact structure for clarity:
         # If status is unknown (no issues detected), fall back to history gating to avoid duplicates.
         if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
             if is_conflicting or is_failing:
+                # Check if we've already tried this commit too many times
+                commit_attempts = self._count_commit_attempts(comments, "fixpr", head_sha)
+                if commit_attempts >= self.MAX_COMMIT_RETRIES:
+                    self.logger.info(
+                        "🚫 Skipping PR #%s - commit %s already attempted %d times (max: %d); waiting for new commit",
+                        pr_number,
+                        head_sha[:8],
+                        commit_attempts,
+                        self.MAX_COMMIT_RETRIES,
+                    )
+                    return "skipped"
                 self.logger.info(
-                    "🔁 Reprocessing PR #%s - commit %s already processed but issues persist",
+                    "🔁 Reprocessing PR #%s - commit %s already processed but issues persist (attempt %d/%d)",
                     pr_number,
                     head_sha[:8],
+                    commit_attempts + 1,
+                    self.MAX_COMMIT_RETRIES,
                 )
             else:
                 self.logger.info(
@@ -2984,14 +3006,14 @@ Your response MUST follow this exact structure for clarity:
     def _count_workflow_comments(self, comments: list[dict], workflow_type: str) -> int:
         """Count automation comments for a specific workflow type.
 
-        NEW BEHAVIOR: Counts comments from TODAY only (daily cooldown, resets at midnight).
+        Uses rolling 24-hour window (last 24 hours from now), not daily cooldown.
 
         Args:
             comments: List of PR comments
             workflow_type: One of 'pr_automation', 'fix_comment', 'codex_update', 'fixpr'
 
         Returns:
-            Count of comments matching the workflow type from today
+            Count of comments matching the workflow type within last 24 hours
 
         Note: codex_update workflow operates via browser automation (not PR comments),
         so count is always 0. The limit is configured but unused, reserved for future
@@ -3002,13 +3024,13 @@ Your response MUST follow this exact structure for clarity:
         if workflow_type == "codex_update":
             return 0
 
-        # Filter to today's comments only (daily cooldown)
-        # GitHub timestamps are UTC, so compare against UTC date only
-        today_utc = datetime.now(UTC).date().isoformat()
+        # Rolling 24-hour window (not daily cooldown)
+        # Cutoff is exclusive: comments at exactly 24h ago are excluded
+        now = datetime.now(UTC)
+        cutoff = now - timedelta(hours=24)
         count = 0
         for comment in comments:
-            # Check if comment is from today (daily cooldown)
-            # GitHub API returns ISO 8601 timestamps (UTC), extract date portion
+            # Get comment timestamp from various possible field names
             created_at = comment.get("createdAt")
             if created_at is None:
                 created_at = comment.get("created_at")
@@ -3017,13 +3039,24 @@ Your response MUST follow this exact structure for clarity:
             if created_at is None:
                 created_at = comment.get("submitted_at")
             if created_at is None:
-                continue  # Skip comments without timestamps (cannot verify if from today)
+                continue  # Skip comments without timestamps
 
-            # Extract date from ISO timestamp (e.g., "2026-01-12T07:34:23Z" -> "2026-01-12")
-            comment_date = created_at.split("T")[0] if "T" in created_at else created_at[:10]
-            # Match if comment date matches UTC today (GitHub timestamps are always UTC)
-            if comment_date != today_utc:
-                continue  # Skip comments from previous days
+            # Parse ISO 8601 timestamp to datetime
+            # Handle both "Z" suffix and "+00:00" timezone formats
+            try:
+                if created_at.endswith("Z"):
+                    comment_time = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                elif "+" in created_at or created_at.count("-") > 2:
+                    comment_time = datetime.fromisoformat(created_at)
+                else:
+                    # No timezone info - assume UTC
+                    comment_time = datetime.fromisoformat(created_at).replace(tzinfo=UTC)
+            except (ValueError, AttributeError):
+                continue  # Skip comments with unparseable timestamps
+
+            # Check if comment is within rolling 24h window (exclusive boundary)
+            if comment_time <= cutoff:
+                continue  # Skip comments outside the 24h window
 
             body = comment.get("body", "")
 
@@ -3063,6 +3096,42 @@ Your response MUST follow this exact structure for clarity:
             # Fallback: count all automation comments using centralized detection
             elif is_automation_comment(body):
                 count += 1
+        return count
+
+    def _count_commit_attempts(self, comments: list[dict], workflow_type: str, commit_sha: str) -> int:
+        """Count how many times a specific commit was processed for a workflow.
+
+        This prevents wasting automation runs on commits that repeatedly fail to fix issues.
+        The marker format is: <!-- <workflow>-automation-commit:<agent>:<commit_sha>-->
+
+        Args:
+            comments: List of PR comments
+            workflow_type: One of 'fixpr', 'fix_comment', etc.
+            commit_sha: The specific commit SHA to count attempts for
+
+        Returns:
+            Number of automation attempts for this specific commit
+        """
+        if not commit_sha:
+            return 0
+
+        # Build pattern to match this commit in markers
+        # Markers look like: <!-- fixpr-run-automation-commit:gemini:abc1234... -->
+        short_sha = commit_sha[:8] if len(commit_sha) >= 8 else commit_sha
+        full_sha = commit_sha
+
+        count = 0
+        for comment in comments:
+            body = comment.get("body", "")
+
+            # Check for workflow-specific marker with this commit
+            if workflow_type == "fixpr" and self.FIXPR_MARKER_PREFIX in body:
+                # Extract SHA from marker: fixpr-run-automation-commit:<agent>:<sha>
+                if short_sha in body or full_sha in body:
+                    author = self._get_comment_author_login(comment)
+                    if author == self.automation_username:
+                        count += 1
+
         return count
 
     def _has_new_bot_comments_since_codex(self, comments: list[dict]) -> bool:
@@ -4276,7 +4345,25 @@ def main():
         "--codex-task-limit",
         type=_positive_int_arg,
         default=50,
-        help="Task limit for --codex-update (default: 50, max: 200).",
+        help="Task limit for --codex-update / --codex-api (default: 50, max: 200).",
+    )
+    parser.add_argument(
+        "--codex-api",
+        action="store_true",
+        help="List and inspect Codex cloud tasks via CLI API (read-only, no PR creation)",
+    )
+    parser.add_argument(
+        "--codex-apply-and-push",
+        default=True,
+        action="store_true",
+        help="Apply diffs and push to remote (default: True when using --codex-api)",
+    )
+
+    parser.add_argument(
+        "--no-codex-apply-and-push",
+        dest="codex_apply_and_push",
+        action="store_false",
+        help="Inspect Codex diffs without applying or pushing",
     )
 
     # Safety limits (params; no environment variables).
@@ -4331,6 +4418,10 @@ def main():
         parser.error("--fixpr and --fix-comment are mutually exclusive")
     if args.comment_validation and (args.fixpr or args.fix_comment):
         parser.error("--comment-validation is mutually exclusive with --fixpr and --fix-comment")
+    if args.codex_update and args.codex_api:
+        parser.error("--codex-update and --codex-api are mutually exclusive")
+    # Note: --codex-apply-and-push defaults to True and only applies when --codex-api is used
+    # No error check needed - flag is ignored unless --codex-api is present
     if args.fix_comment_watch and not (args.target_pr and args.target_repo):
         parser.error("--fix-comment-watch requires --target-pr and --target-repo")
 
@@ -4387,8 +4478,17 @@ def main():
             host, port = _resolve_cdp_host_port()
             # Call the codex automation module with limit
             # Use -m to run as module (works with installed package)
-            # Requires Chrome with CDP enabled on port 9222
-            timeout_seconds = max(300, int(task_limit * 12))  # ~12s/task, min 5 minutes
+            # Requires Chrome with CDP enabled (host/port resolved via _resolve_cdp_host_port)
+
+            # Determine timeout: honor --subprocess-timeout if provided, otherwise use default
+            default_timeout_seconds = max(900, int(task_limit * 30))  # ~30s/task, min 15 minutes
+            if args.subprocess_timeout is not None:
+                try:
+                    timeout_seconds = max(1, int(args.subprocess_timeout))
+                except (TypeError, ValueError):
+                    timeout_seconds = default_timeout_seconds
+            else:
+                timeout_seconds = default_timeout_seconds
             result = subprocess.run(
                 [
                     "python3",
@@ -4403,19 +4503,71 @@ def main():
                     str(task_limit),
                 ],
                 check=False,
-                capture_output=True,
                 text=True,
                 timeout=timeout_seconds,
             )
-            print(result.stdout)
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
             sys.exit(result.returncode)
         except subprocess.TimeoutExpired:
             print(f"❌ Codex automation timed out after {timeout_seconds // 60} minutes")
             sys.exit(1)
         except Exception as e:
             print(f"❌ Failed to run Codex automation: {e}")
+            sys.exit(1)
+
+    if args.codex_api:
+        task_limit = min(args.codex_task_limit, 200)
+        apply_and_push = args.codex_apply_and_push
+        if args.no_act and apply_and_push:
+            print("🧪 --no-act enabled: running codex-api in inspect-only mode")
+            apply_and_push = False
+        mode_str = "apply+push mode" if apply_and_push else "inspect mode"
+        print(f"🤖 Codex CLI API ({mode_str}): listing cloud tasks (limit: {task_limit})...")
+
+        try:
+            api = CodexCloudAPI()
+            max_pages = max(1, (task_limit + 19) // 20)
+            all_tasks = api.list_all_tasks(max_pages=max_pages)
+            github_mentions = api.filter_github_mentions(all_tasks)
+            ready_tasks = api.filter_by_status(github_mentions, "ready")
+            tasks_with_changes = api.filter_has_changes(ready_tasks)
+
+            print(f"\n📋 Total tasks fetched: {len(all_tasks)}")
+            print(f"📋 GitHub Mentions: {len(github_mentions)}")
+            print(f"📋 Ready: {len(ready_tasks)}")
+            print(f"📋 With changes: {len(tasks_with_changes)}")
+
+            if apply_and_push:
+                print(f"\n🔧 Applying and pushing {len(tasks_with_changes[:task_limit])} tasks...")
+                for task in tasks_with_changes[:task_limit]:
+                    print(f"\n  Processing: {task.get('title', '(no title)')}")
+                    result = api.apply_and_push(task)
+                    if result["success"]:
+                        print(f"    ✅ Pushed to branch: {result['branch']}")
+                    else:
+                        print(f"    ⚠️  Apply failed: {result.get('error', 'Unknown error')}")
+                        print(f"    🔄 Creating PR with conflict markers using git apply --3way...")
+                        pr_result = api.create_pr_from_diff(task)
+                        if pr_result["success"]:
+                            conflict_note = " (has conflicts)" if pr_result.get("has_conflicts") else ""
+                            action = "updated" if pr_result.get("updated_existing") else "created"
+                            print(f"    ✅ PR {action}: {pr_result['pr_url']}{conflict_note}")
+                        else:
+                            print(f"    ❌ PR creation failed: {pr_result.get('error', 'Unknown error')}")
+            else:
+                for task in tasks_with_changes[:task_limit]:
+                    summary = task.get("summary", {})
+                    print(f"\n  [{task.get('status', '?').upper()}] {task.get('title', '(no title)')}")
+                    print(f"    +{summary.get('lines_added', 0)}/-{summary.get('lines_removed', 0)} in {summary.get('files_changed', 0)} files")
+                    print(f"    {task.get('url', '')}")
+
+            print(f"\n✅ Codex CLI API complete")
+            sys.exit(0)
+        except FileNotFoundError as e:
+            print(f"❌ {e}")
+            print("💡 Install with: npm i -g @openai/codex")
+            sys.exit(1)
+        except Exception as e:
+            print(f"❌ Codex CLI API failed: {e}")
             sys.exit(1)
 
     if args.fixpr:
