@@ -5,7 +5,7 @@ Verifies that the system creates general task agents instead of hardcoded test a
 """
 
 import unittest
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import ANY, MagicMock, mock_open, patch
 
 from orchestration.task_dispatcher import TaskDispatcher
 
@@ -164,8 +164,6 @@ class TestTaskDispatcherFix(unittest.TestCase):
 
     def test_cli_specific_default_model_cursor(self):
         """Test that Cursor CLI defaults to CURSOR_MODEL when model is 'sonnet'."""
-        from orchestration.task_dispatcher import CURSOR_MODEL
-        
         agent_spec = {
             "name": "test-agent",
             "focus": "test task",
@@ -238,6 +236,341 @@ class TestTaskDispatcherFix(unittest.TestCase):
             result = self.dispatcher.create_dynamic_agent(agent_spec)
             self.assertTrue(result)
             # The explicit model should be used, not the default
+
+    def test_detects_invalid_base_ref_error(self):
+        """Invalid git base-ref errors should be recognized for interactive recovery."""
+        self.assertTrue(self.dispatcher._is_invalid_base_ref_error("fatal: not a valid object name: 'main'"))
+        self.assertTrue(self.dispatcher._is_invalid_base_ref_error("fatal: invalid reference: main"))
+        self.assertFalse(self.dispatcher._is_invalid_base_ref_error("fatal: branch already exists"))
+
+    def test_retries_worktree_with_user_base_branch_after_main_failure(self):
+        """When main is missing, dispatcher should prompt for base branch and retry once."""
+        agent_spec = {
+            "name": "test-agent",
+            "focus": "write 2+2 in a file",
+            "cli": "claude",
+            "model": "sonnet",
+        }
+
+        first_failure = MagicMock(returncode=128, stderr="fatal: not a valid object name: 'main'\n")
+        second_success = MagicMock(returncode=0, stderr="")
+
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch.object(self.dispatcher, "_create_worktree_at_location") as mock_worktree,
+            patch.object(self.dispatcher, "_prompt_for_base_branch", return_value="develop") as mock_prompt,
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+            patch("orchestration.task_dispatcher.Path.write_text"),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+        ):
+            mock_worktree.side_effect = [
+                ("/tmp/test-agent", first_failure),
+                ("/tmp/test-agent", second_success),
+            ]
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        mock_prompt.assert_called_once_with("main")
+        self.assertEqual(mock_worktree.call_count, 2)
+        self.assertEqual(mock_worktree.call_args_list[0].kwargs.get("base_ref"), "main")
+        self.assertEqual(mock_worktree.call_args_list[1].kwargs.get("base_ref"), "develop")
+        self.assertEqual(self.dispatcher._interactive_base_ref, "develop")
+
+    def test_does_not_cache_interactive_base_ref_when_retry_still_fails(self):
+        """Interactive base ref should only be cached after a successful retry."""
+        agent_spec = {
+            "name": "test-agent",
+            "focus": "write 2+2 in a file",
+            "cli": "claude",
+            "model": "sonnet",
+        }
+
+        first_failure = MagicMock(returncode=128, stderr="fatal: not a valid object name: 'main'\n")
+        second_failure = MagicMock(returncode=128, stderr="fatal: not a valid object name: 'develop'\n")
+
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch.object(self.dispatcher, "_create_worktree_at_location") as mock_worktree,
+            patch.object(self.dispatcher, "_prompt_for_base_branch", return_value="develop"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+            patch("orchestration.task_dispatcher.Path.write_text"),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+        ):
+            mock_worktree.side_effect = [
+                ("/tmp/test-agent", first_failure),
+                ("/tmp/test-agent", second_failure),
+            ]
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertFalse(result)
+        self.assertIsNone(self.dispatcher._interactive_base_ref)
+
+    def test_create_worktree_retries_in_tmp_directory_after_default_failure(self):
+        """Worktree creation should retry once in /tmp fallback directory when default location fails."""
+        failure_result = MagicMock(returncode=128, stderr="fatal: Permission denied")
+        success_result = MagicMock(returncode=0, stderr="")
+
+        with (
+            patch.object(self.dispatcher, "_calculate_agent_directory", return_value="/Users/test/orch/retry-agent"),
+            patch.object(self.dispatcher, "_ensure_directory_exists"),
+            patch.object(
+                self.dispatcher,
+                "_create_tmp_worktree_directory",
+                return_value="/tmp/orchestration_worktrees/orch_repo/retry-agent-abc123",
+            ),
+            patch.object(self.dispatcher, "_branch_exists", return_value=False),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
+            mock_run.side_effect = [failure_result, success_result]
+            agent_dir, result = self.dispatcher._create_worktree_at_location(
+                {"name": "retry-agent"},
+                "retry-agent-work",
+                base_ref="develop",
+                create_new_branch=True,
+            )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(agent_dir, "/tmp/orchestration_worktrees/orch_repo/retry-agent-abc123")
+        self.assertEqual(mock_run.call_count, 2)
+        first_cmd = mock_run.call_args_list[0][0][0]
+        second_cmd = mock_run.call_args_list[1][0][0]
+        self.assertEqual(first_cmd[:3], ["git", "worktree", "add"])
+        self.assertIn("/Users/test/orch/retry-agent", first_cmd)
+        self.assertEqual(second_cmd[:3], ["git", "worktree", "add"])
+        self.assertIn("/tmp/orchestration_worktrees/orch_repo/retry-agent-abc123", second_cmd)
+
+    def test_create_worktree_skips_tmp_retry_for_non_path_errors(self):
+        """Non-path git failures should not trigger /tmp retry."""
+        failure_result = MagicMock(returncode=128, stderr="fatal: not a valid object name: 'main'")
+
+        with (
+            patch.object(self.dispatcher, "_calculate_agent_directory", return_value="/Users/test/orch/retry-agent"),
+            patch.object(self.dispatcher, "_ensure_directory_exists"),
+            patch.object(self.dispatcher, "_create_tmp_worktree_directory") as mock_tmp_dir,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = failure_result
+            _, result = self.dispatcher._create_worktree_at_location(
+                {"name": "retry-agent"},
+                "retry-agent-work",
+                base_ref="main",
+                create_new_branch=True,
+            )
+
+        self.assertEqual(result.returncode, 128)
+        self.assertEqual(mock_run.call_count, 1)
+        mock_tmp_dir.assert_not_called()
+
+    def test_create_worktree_cleans_tmp_dir_when_retry_fails(self):
+        """Temporary fallback directory should be cleaned up when retry also fails."""
+        first_failure = MagicMock(returncode=128, stderr="fatal: Permission denied")
+        retry_failure = MagicMock(returncode=128, stderr="fatal: Permission denied")
+        tmp_dir = "/tmp/orchestration_worktrees/orch_repo/retry-agent-abc123"
+
+        with (
+            patch.object(self.dispatcher, "_calculate_agent_directory", return_value="/Users/test/orch/retry-agent"),
+            patch.object(self.dispatcher, "_ensure_directory_exists"),
+            patch.object(self.dispatcher, "_create_tmp_worktree_directory", return_value=tmp_dir),
+            patch.object(self.dispatcher, "_branch_exists", return_value=False),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch.object(self.dispatcher, "_safe_rmtree") as mock_cleanup,
+        ):
+            mock_run.side_effect = [first_failure, retry_failure]
+            _, result = self.dispatcher._create_worktree_at_location(
+                {"name": "retry-agent"},
+                "retry-agent-work",
+                base_ref="main",
+                create_new_branch=True,
+            )
+
+        self.assertEqual(result.returncode, 128)
+        mock_cleanup.assert_called_once_with(tmp_dir)
+
+    def test_no_worktree_mode_honors_existing_branch_checkout(self):
+        """No-worktree mode should checkout requested existing branch before execution."""
+        agent_spec = {
+            "name": "test-agent",
+            "focus": "task",
+            "cli": "claude",
+            "model": "sonnet",
+            "no_worktree": True,
+            "existing_branch": "develop",
+        }
+
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+            patch.object(self.dispatcher, "_checkout_branch", return_value=True) as mock_checkout,
+            patch("orchestration.task_dispatcher.Path.write_text"),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        mock_checkout.assert_called_once_with("develop", ANY)
+
+    def test_create_dynamic_agent_uses_unique_run_artifacts(self):
+        """Each run should get unique log/result/prompt files while preserving legacy pointers."""
+        agent_spec1 = {
+            "name": "test-agent",
+            "focus": "task one",
+            "cli": "claude",
+            "model": "sonnet",
+            "no_worktree": True,
+        }
+        agent_spec2 = {
+            "name": "test-agent",
+            "focus": "task two",
+            "cli": "claude",
+            "model": "sonnet",
+            "no_worktree": True,
+        }
+
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+            patch.object(self.dispatcher, "_generate_run_artifact_suffix", side_effect=["run1", "run2"]),
+            patch.object(self.dispatcher, "_set_latest_artifact_pointer") as mock_pointer,
+            patch("orchestration.task_dispatcher.Path.write_text"),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            self.assertTrue(self.dispatcher.create_dynamic_agent(agent_spec1))
+            self.assertTrue(self.dispatcher.create_dynamic_agent(agent_spec2))
+
+        self.assertIn("_run1.log", agent_spec1["log_file"])
+        self.assertIn("_run2.log", agent_spec2["log_file"])
+        self.assertIn("_run1.json", agent_spec1["result_file"])
+        self.assertIn("_run2.json", agent_spec2["result_file"])
+        self.assertIn("_run1.txt", agent_spec1["prompt_file"])
+        self.assertIn("_run2.txt", agent_spec2["prompt_file"])
+        self.assertEqual(agent_spec1["legacy_log_file"], agent_spec2["legacy_log_file"])
+        self.assertEqual(agent_spec1["legacy_result_file"], agent_spec2["legacy_result_file"])
+        self.assertGreaterEqual(mock_pointer.call_count, 4)
+
+    def test_get_active_tmux_agents_uses_dispatcher_socket(self):
+        """Active-agent discovery should query tmux on the dispatcher socket."""
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/tmux"),
+            patch.object(self.dispatcher, "_tmux_base_command", return_value=["tmux", "-L", "sockA"]),
+            patch.object(self.dispatcher, "_is_agent_actively_working", return_value=True),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="task-agent-a\n", stderr="")
+            active = self.dispatcher._get_active_tmux_agents()
+
+        self.assertEqual(active, {"task-agent-a"})
+        self.assertEqual(
+            mock_run.call_args_list[0][0][0],
+            ["tmux", "-L", "sockA", "list-sessions", "-F", "#{session_name}"],
+        )
+
+    def test_is_agent_actively_working_uses_dispatcher_socket(self):
+        """Pane capture should use the same dispatcher tmux socket."""
+        with (
+            patch.object(self.dispatcher, "_tmux_base_command", return_value=["tmux", "-L", "sockA"]),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="still working", stderr="")
+            self.assertTrue(self.dispatcher._is_agent_actively_working("task-agent-a"))
+
+        self.assertEqual(
+            mock_run.call_args_list[0][0][0],
+            ["tmux", "-L", "sockA", "capture-pane", "-t", "task-agent-a", "-p"],
+        )
+
+    def test_check_existing_agents_uses_dispatcher_socket(self):
+        """Collision checks should list tmux sessions on the dispatcher socket."""
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/tmux"),
+            patch.object(self.dispatcher, "_tmux_base_command", return_value=["tmux", "-L", "sockA"]),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.glob.glob", return_value=[]),
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="task-agent-a\n", stderr="")
+            existing = self.dispatcher._check_existing_agents()
+
+        self.assertIn("task-agent-a", existing)
+        self.assertEqual(
+            mock_run.call_args_list[0][0][0],
+            ["tmux", "-L", "sockA", "list-sessions", "-F", "#{session_name}"],
+        )
+
+    def test_no_worktree_fallback_checks_out_existing_branch(self):
+        """Fallback from failed worktree should still checkout the requested existing branch."""
+        agent_spec = {
+            "name": "test-agent",
+            "focus": "task",
+            "cli": "claude",
+            "model": "sonnet",
+            "existing_branch": "develop",
+        }
+        worktree_failure = MagicMock(returncode=128, stderr="fatal: Permission denied")
+
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch.object(self.dispatcher, "_create_worktree_at_location", return_value=("/tmp/test-agent", worktree_failure)),
+            patch.object(self.dispatcher, "_prompt_to_continue_without_worktree", return_value=True),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+            patch.object(self.dispatcher, "_checkout_branch", return_value=True) as mock_checkout,
+            patch("orchestration.task_dispatcher.Path.write_text"),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        mock_checkout.assert_called_once_with("develop", ANY)
+
+    def test_branch_exists_logs_exception_details(self):
+        """Branch-existence helper should log failures instead of silently swallowing them."""
+        with (
+            patch("orchestration.task_dispatcher.subprocess.run", side_effect=RuntimeError("boom")),
+            patch("orchestration.task_dispatcher.logger.warning") as mock_warning,
+        ):
+            self.assertFalse(TaskDispatcher._branch_exists("feature/test"))
+
+        mock_warning.assert_called_once()
 
 
 if __name__ == "__main__":

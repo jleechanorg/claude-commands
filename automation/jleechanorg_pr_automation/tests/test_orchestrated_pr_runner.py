@@ -767,6 +767,65 @@ def test_get_github_token_from_env(monkeypatch):
     assert token == "test-token-123"
 
 
+def test_get_github_token_from_gh_token_env(monkeypatch):
+    """Test get_github_token returns None when GITHUB_TOKEN is absent (GH_TOKEN not supported)."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setenv("GH_TOKEN", "gh-token-123")
+    # Mock Path.home() to return a temp directory without config file
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        monkeypatch.setattr(Path, "home", lambda: Path(tmp_dir))
+        token = runner.get_github_token()
+        # Function only checks GITHUB_TOKEN env var, not GH_TOKEN
+        assert token is None
+
+
+def test_get_github_token_env_precedence_github_over_gh(monkeypatch):
+    """GITHUB_TOKEN is the only env var checked (GH_TOKEN not supported)."""
+    monkeypatch.setenv("GITHUB_TOKEN", "github-token-123")
+    monkeypatch.setenv("GH_TOKEN", "gh-token-456")
+    token = runner.get_github_token()
+    # Only GITHUB_TOKEN is checked
+    assert token == "github-token-123"
+
+
+def test_get_github_token_from_gh_auth_token(monkeypatch, tmp_path):
+    """Test get_github_token returns None when env var absent and no config file (no subprocess fallback)."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    # No config file exists in tmp_path
+    token = runner.get_github_token()
+    # Function doesn't fall back to subprocess 'gh auth token' - returns None
+    assert token is None
+
+
+def test_get_github_token_from_token_file_raw(monkeypatch, tmp_path):
+    """Test get_github_token returns None when no config file exists (no .token fallback)."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    token_file = tmp_path / ".token"
+    token_file.write_text("plain-token-xyz\n", encoding="utf-8")
+
+    token = runner.get_github_token()
+    # Function doesn't read ~/.token - only checks gh config file
+    assert token is None
+
+
+def test_get_github_token_from_token_file_export_line(monkeypatch, tmp_path):
+    """Test get_github_token returns None when no config file exists (no .token export parsing)."""
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    token_file = tmp_path / ".token"
+    token_file.write_text(
+        '# comment\nexport GITHUB_TOKEN="token-from-export"\nexport OTHER_KEY="x"\n',
+        encoding="utf-8",
+    )
+
+    token = runner.get_github_token()
+    # Function doesn't parse ~/.token files - only checks gh config file
+    assert token is None
+
+
 def test_get_github_token_from_config_file_top_level(monkeypatch, tmp_path):
     """Test get_github_token reads token from gh config file (top-level oauth_token)."""
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)

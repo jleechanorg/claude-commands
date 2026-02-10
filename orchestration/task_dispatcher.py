@@ -14,13 +14,13 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
 from typing import Any
 
 from .cli_validation import (
-    CLI_VALIDATION_TEST_PROMPT,
     CLI_VALIDATION_TIMEOUT_SECONDS,
     validate_cli_two_phase,
 )
@@ -161,9 +161,13 @@ def get_tmux_config_path():
     return os.path.join(os.path.dirname(__file__), "tmux-agent.conf")
 
 
-def _kill_tmux_session_if_exists(name: str) -> None:
+def _kill_tmux_session_if_exists(name: str, socket_name: str | None = None) -> None:
     """Ensure tmux session name is free; kill existing session if present."""
     try:
+        tmux_base = ["tmux"]
+        if socket_name:
+            tmux_base.extend(["-L", socket_name])
+
         # Tmux converts dots to underscores in session names
         name_tmux_safe = name.replace(".", "_")
         base = name.rstrip(".")
@@ -184,11 +188,13 @@ def _kill_tmux_session_if_exists(name: str) -> None:
         # Try direct has-session matches
         for candidate in candidates:
             check = subprocess.run(
-                ["tmux", "has-session", "-t", candidate], check=False, capture_output=True, timeout=30
+                [*tmux_base, "has-session", "-t", candidate], check=False, capture_output=True, timeout=30
             )
             if check.returncode == 0:
                 print(f"🧹 Killing existing tmux session {candidate} to allow reuse")
-                subprocess.run(["tmux", "kill-session", "-t", candidate], check=False, capture_output=True, timeout=30)
+                subprocess.run(
+                    [*tmux_base, "kill-session", "-t", candidate], check=False, capture_output=True, timeout=30
+                )
     except Exception as exc:
         print(f"⚠️ Warning: unable to check/kill tmux session {name}: {exc}")
 
@@ -210,6 +216,9 @@ class TaskDispatcher:
         self.result_dir = "/tmp/orchestration_results"
         os.makedirs(self.result_dir, exist_ok=True)
         self._mock_claude_path = None
+        # Cached within this dispatcher session if user provides a non-default base branch.
+        self._interactive_base_ref: str | None = None
+        self.tmux_socket_name = self._get_tmux_socket_name()
 
         # A2A Integration with enhanced robustness
         self.a2a_enabled = A2A_AVAILABLE
@@ -229,6 +238,45 @@ class TaskDispatcher:
         # Basic safety rules only - no constraint system needed
 
         # All tasks are now dynamic - no static loading needed
+
+    @staticmethod
+    def _sanitize_tmux_socket_name(value: str) -> str:
+        sanitized = re.sub(r"[^A-Za-z0-9_.-]", "-", value)
+        return sanitized or "orchestration"
+
+    def _get_tmux_socket_name(self) -> str:
+        explicit = os.environ.get("ORCHESTRATION_TMUX_SOCKET")
+        if explicit:
+            return self._sanitize_tmux_socket_name(explicit)
+        return self._sanitize_tmux_socket_name(f"orch-{os.getpid()}-{int(time.time())}")
+
+    @staticmethod
+    def _generate_run_artifact_suffix() -> str:
+        """Generate a stable-enough per-run suffix for unique artifact filenames."""
+        return f"{int(time.time() * 1000)}-{os.getpid()}"
+
+    def _tmux_base_command(self) -> list[str]:
+        return ["tmux", "-L", self.tmux_socket_name]
+
+    def get_tmux_attach_command(self, session_name: str) -> str:
+        return f"tmux -L {self.tmux_socket_name} attach -t {session_name}"
+
+    def get_tmux_progress_hint(self) -> str:
+        return f"tmux -L {self.tmux_socket_name} attach -t [agent-name]"
+
+    @staticmethod
+    def _set_latest_artifact_pointer(legacy_path: str, target_path: str) -> None:
+        """Point legacy path at latest run artifact via symlink (best effort)."""
+        try:
+            if os.path.lexists(legacy_path):
+                os.remove(legacy_path)
+            os.symlink(target_path, legacy_path)
+        except Exception:
+            logger.warning(
+                "artifact_pointer_update_failed",
+                extra={"legacy_path": legacy_path, "target_path": target_path},
+                exc_info=True,
+            )
 
     def _get_tmp_subdirectory_names(self, tmp_root: str = "/tmp") -> list[str]:
         """Return immediate subdirectory names under tmp_root (dirs only)."""
@@ -316,8 +364,9 @@ class TaskDispatcher:
             if shutil.which("tmux") is None:
                 print("⚠️ 'tmux' command not found. Ensure tmux is installed and in PATH.")
                 return set()
+            tmux_cmd = [*self._tmux_base_command(), "list-sessions", "-F", "#{session_name}"]
             result = subprocess.run(
-                ["tmux", "list-sessions", "-F", "#{session_name}"],
+                tmux_cmd,
                 capture_output=True,
                 text=True,
                 check=False,
@@ -365,8 +414,9 @@ class TaskDispatcher:
         """Check if an agent session is actively working or idle."""
         try:
             # Capture the last few lines of the tmux session to check status
+            tmux_cmd = [*self._tmux_base_command(), "capture-pane", "-t", session_name, "-p"]
             result = subprocess.run(
-                ["tmux", "capture-pane", "-t", session_name, "-p"],
+                tmux_cmd,
                 capture_output=True,
                 text=True,
                 check=False,
@@ -419,8 +469,9 @@ class TaskDispatcher:
         try:
             if shutil.which("tmux") is None:
                 return existing
+            tmux_cmd = [*self._tmux_base_command(), "list-sessions", "-F", "#{session_name}"]
             result = subprocess.run(
-                ["tmux", "list-sessions", "-F", "#{session_name}"],
+                tmux_cmd,
                 check=False,
                 capture_output=True,
                 text=True,
@@ -449,11 +500,13 @@ class TaskDispatcher:
     def _cleanup_stale_prompt_files(self, agent_name: str):
         """Clean up stale prompt files to prevent task reuse from previous runs."""
         try:
-            # Clean up specific agent prompt file only - exact match to avoid deleting other agents' files
-            agent_prompt_file = f"/tmp/agent_prompt_{agent_name}.txt"
-            if os.path.exists(agent_prompt_file):
-                os.remove(agent_prompt_file)
-                print(f"🧹 Cleaned up stale prompt file: {agent_prompt_file}")
+            # Clean up prompt files for this agent token only.
+            agent_token = _sanitize_agent_token(agent_name)
+            prompt_pattern = f"/tmp/agent_prompt_{agent_token}*.txt"
+            for agent_prompt_file in glob.glob(prompt_pattern):
+                if os.path.exists(agent_prompt_file):
+                    os.remove(agent_prompt_file)
+                    print(f"🧹 Cleaned up stale prompt file: {agent_prompt_file}")
         except Exception as e:
             # Don't fail agent creation if cleanup fails
             print(f"⚠️ Warning: Could not clean up stale prompt files: {e}")
@@ -1169,6 +1222,126 @@ Complete the task, then use /pr to create a new pull request."""
         """Validate branch name against safe pattern to avoid injection risks."""
         return bool(re.match(r"^[A-Za-z0-9._/-]+$", branch_name))
 
+    @staticmethod
+    def _is_invalid_base_ref_error(stderr: str) -> bool:
+        """Return True when git worktree failed due to an unknown base ref."""
+        if not stderr:
+            return False
+        normalized = stderr.lower()
+        return "not a valid object name" in normalized or "invalid reference" in normalized
+
+    def _prompt_for_base_branch(self, attempted_ref: str) -> str | None:
+        """
+        Ask user for base branch when worktree creation fails on an invalid ref.
+
+        Returns a validated branch name, or None if interactive input is unavailable/invalid.
+        """
+        if not sys.stdin.isatty():
+            print("❌ Unable to prompt for base branch in non-interactive mode.")
+            print("   Re-run interactively or set AI_ORCH_WORKTREE_BASE_REF (for example: develop).")
+            return None
+
+        print(
+            f"❓ Git base ref '{attempted_ref}' is not valid in this repository."
+            " Enter the base branch to use for new worktrees (for example: develop):"
+        )
+        try:
+            user_input = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n❌ Prompt cancelled. Aborting agent creation.")
+            logger.warning("base_ref_prompt_cancelled", extra={"attempted_ref": attempted_ref})
+            return None
+        if not user_input:
+            print("❌ No base branch provided. Aborting agent creation.")
+            return None
+        if not self._is_safe_branch_name(user_input):
+            print(f"❌ Unsafe base branch name provided: {user_input!r}")
+            return None
+        return user_input
+
+    def _prompt_to_continue_without_worktree(self) -> bool:
+        """Ask user whether to continue without git worktree isolation."""
+        if not sys.stdin.isatty():
+            return False
+        print("❓ Worktree creation failed. Continue in current directory without a worktree? [y/N]")
+        try:
+            response = input("> ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("\n❌ Prompt cancelled. Aborting agent creation.")
+            logger.warning("no_worktree_prompt_cancelled")
+            return False
+        return response in {"y", "yes"}
+
+    @staticmethod
+    def _get_current_branch_name() -> str:
+        """Best-effort current branch name."""
+        try:
+            result = subprocess.run(
+                ["git", "branch", "--show-current"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                shell=False,
+            )
+            if result.returncode == 0:
+                current = result.stdout.strip()
+                if current:
+                    return current
+        except Exception:
+            # Best-effort helper: if git is unavailable or cwd is not a repo, caller handles "none".
+            logger.debug("failed_to_detect_current_branch", exc_info=True)
+        return "none"
+
+    @staticmethod
+    def _is_path_related_worktree_error(stderr: str) -> bool:
+        """Return True when git worktree failed due to filesystem/path issues."""
+        if not stderr:
+            return False
+        normalized = stderr.lower()
+        path_indicators = (
+            "permission denied",
+            "no such file or directory",
+            "not a directory",
+            "file exists",
+            "unable to create",
+            "could not create",
+            "invalid argument",
+            "read-only file system",
+            "operation not permitted",
+            "cross-device link",
+        )
+        return any(indicator in normalized for indicator in path_indicators)
+
+    @staticmethod
+    def _safe_rmtree(path: str) -> None:
+        """Best-effort cleanup for temporary directories."""
+        try:
+            shutil.rmtree(path, ignore_errors=True)
+        except Exception:
+            logger.warning("tmp_worktree_cleanup_failed", extra={"path": path}, exc_info=True)
+
+    @staticmethod
+    def _checkout_branch(branch_name: str, cwd: str) -> bool:
+        """Checkout an existing branch in cwd. Returns True on success."""
+        result = subprocess.run(
+            ["git", "checkout", branch_name],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            shell=False,
+        )
+        if result.returncode == 0:
+            return True
+        logger.error(
+            "no_worktree_checkout_failed",
+            extra={"branch": branch_name, "cwd": cwd, "stderr": result.stderr.strip()},
+        )
+        print(f"❌ Failed to checkout branch '{branch_name}' in current directory: {result.stderr.strip()}")
+        return False
+
     def _extract_repository_name(self):
         """Extract repository name from git remote origin URL or fallback to directory name."""
         try:
@@ -1233,6 +1406,39 @@ Complete the task, then use /pr to create a new pull request."""
             print(f"Error getting worktree base path: {e}")
             raise
 
+    def _get_tmp_worktree_base_path(self):
+        """Calculate /tmp fallback base path for orchestration worktrees."""
+        repo_name = _sanitize_agent_token(self._extract_repository_name())
+        return os.path.join(tempfile.gettempdir(), "orchestration_worktrees", f"orch_{repo_name}")
+
+    def _create_tmp_worktree_directory(self, agent_spec: dict) -> str:
+        """Create a unique temp directory for worktree fallback using mktemp semantics."""
+        base_path = self._get_tmp_worktree_base_path()
+        self._ensure_directory_exists(base_path)
+        prefix = f"{_sanitize_agent_token(agent_spec.get('name', 'agent'))}-"
+        return tempfile.mkdtemp(prefix=prefix, dir=base_path)
+
+    @staticmethod
+    def _branch_exists(branch_name: str) -> bool:
+        """Check whether a git branch already exists locally."""
+        try:
+            result = subprocess.run(
+                ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch_name}"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                shell=False,
+            )
+            return result.returncode == 0
+        except Exception:
+            logger.warning(
+                "branch_exists_check_failed",
+                extra={"branch_name": branch_name},
+                exc_info=True,
+            )
+            return False
+
     def _ensure_directory_exists(self, path):
         """Create directories with proper error handling."""
         try:
@@ -1284,7 +1490,17 @@ Complete the task, then use /pr to create a new pull request."""
     def _create_worktree_at_location(self, agent_spec, branch_name, base_ref="main", create_new_branch=True):
         """Create git worktree at the calculated location."""
         try:
-            agent_dir = self._calculate_agent_directory(agent_spec)
+            used_tmp_fallback = False
+            try:
+                agent_dir = self._calculate_agent_directory(agent_spec)
+            except Exception:
+                agent_dir = self._create_tmp_worktree_directory(agent_spec)
+                used_tmp_fallback = True
+                logger.warning(
+                    "worktree_default_path_failed_using_tmp",
+                    extra={"agent": agent_spec.get("name"), "tmp_agent_dir": agent_dir},
+                    exc_info=True,
+                )
 
             # Ensure parent directory exists
             parent_dir = os.path.dirname(agent_dir)
@@ -1304,6 +1520,46 @@ Complete the task, then use /pr to create a new pull request."""
                 timeout=30,
                 shell=False,
             )
+
+            if result.returncode != 0 and not used_tmp_fallback and self._is_path_related_worktree_error(result.stderr):
+                tmp_agent_dir = self._create_tmp_worktree_directory(agent_spec)
+                retry_command = ["git", "worktree", "add"]
+                if create_new_branch:
+                    if self._branch_exists(branch_name):
+                        retry_command.extend([tmp_agent_dir, branch_name])
+                    else:
+                        retry_command.extend(["-b", branch_name, tmp_agent_dir, base_ref])
+                else:
+                    retry_command.extend([tmp_agent_dir, branch_name])
+                retry_result = subprocess.run(
+                    retry_command,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=30,
+                    shell=False,
+                )
+                if retry_result.returncode == 0:
+                    print(f"🛟 Retried worktree creation in /tmp fallback directory: {tmp_agent_dir}")
+                    logger.info(
+                        "worktree_tmp_fallback_success",
+                        extra={"agent": agent_spec.get("name"), "tmp_agent_dir": tmp_agent_dir},
+                    )
+                    return tmp_agent_dir, retry_result
+                logger.warning(
+                    "worktree_tmp_fallback_failed",
+                    extra={
+                        "agent": agent_spec.get("name"),
+                        "tmp_agent_dir": tmp_agent_dir,
+                        "stderr": retry_result.stderr.strip(),
+                    },
+                )
+                self._safe_rmtree(tmp_agent_dir)
+            elif result.returncode != 0 and not used_tmp_fallback:
+                logger.info(
+                    "worktree_tmp_fallback_skipped_non_path_error",
+                    extra={"agent": agent_spec.get("name"), "stderr": result.stderr.strip()},
+                )
 
             return agent_dir, result
         except subprocess.TimeoutExpired:
@@ -1336,6 +1592,11 @@ Complete the task, then use /pr to create a new pull request."""
         model = raw_model
         no_new_pr = bool(agent_spec.get("no_new_pr"))
         no_new_branch = bool(agent_spec.get("no_new_branch"))
+        no_worktree = bool(agent_spec.get("no_worktree")) or os.environ.get("AI_ORCH_NO_WORKTREE", "").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
 
         # Refresh actively working agents count from tmux sessions (excludes idle agents)
         # This ensures we check against the actual running system state,
@@ -1517,13 +1778,26 @@ Complete the task, then use /pr to create a new pull request."""
                 # Update model in agent_spec for downstream use
                 agent_spec["model"] = model
 
+            use_worktree = not no_worktree
             # Create worktree for agent using new location logic
             try:
-                if no_new_branch and not existing_branch:
+                if use_worktree and no_new_branch and not existing_branch:
                     print("❌ Branch creation is blocked but no existing branch was provided.")
                     return False
 
-                if existing_branch:
+                if not use_worktree:
+                    agent_dir = os.getcwd()
+                    if existing_branch:
+                        if not self._is_safe_branch_name(existing_branch):
+                            print(f"❌ Unsafe branch name provided: {existing_branch}")
+                            return False
+                        if not self._checkout_branch(existing_branch, agent_dir):
+                            return False
+                        branch_name = existing_branch
+                    else:
+                        branch_name = self._get_current_branch_name()
+                    print(f"🧩 Running without worktree isolation in: {agent_dir}")
+                elif existing_branch:
                     if not self._is_safe_branch_name(existing_branch):
                         print(f"❌ Unsafe branch name provided: {existing_branch}")
                         return False
@@ -1536,64 +1810,101 @@ Complete the task, then use /pr to create a new pull request."""
                     if not self._is_safe_branch_name(branch_name):
                         print(f"❌ Unsafe branch name generated: {branch_name}")
                         return False
-                    agent_dir, git_result = self._create_worktree_at_location(agent_spec, branch_name)
-
-                print(f"🏗️ Created worktree at: {agent_dir}")
-
-                if git_result.returncode != 0:
-                    print(f"⚠️ Git worktree creation warning: {git_result.stderr}")
-                    if "already exists" in git_result.stderr:
-                        print(f"📁 Using existing worktree at {agent_dir}")
-                    else:
-                        print(f"❌ Git worktree failed: {git_result.stderr}")
-                        return False
-
-                # Pre-clean worktree to avoid dirty state issues
-                # This prevents agents from stopping to ask about staged changes from previous runs
-                print(f"🧹 Pre-cleaning worktree to ensure clean state...")
-                try:
-                    # Reset any staged changes
-                    reset_result = subprocess.run(
-                        ["git", "reset", "--hard", "HEAD"],
-                        cwd=agent_dir,
-                        capture_output=True,
-                        text=True,
-                        check=False,
-                        timeout=30,
-                        shell=False,
+                    base_ref = self._interactive_base_ref or os.environ.get("AI_ORCH_WORKTREE_BASE_REF", "main")
+                    agent_dir, git_result = self._create_worktree_at_location(
+                        agent_spec,
+                        branch_name,
+                        base_ref=base_ref,
                     )
-                    if reset_result.returncode != 0:
-                        print(f"⚠️ Git reset warning (non-fatal): {reset_result.stderr}")
 
-                    # Clean untracked files
-                    clean_result = subprocess.run(
-                        ["git", "clean", "-fd"],
-                        cwd=agent_dir,
-                        capture_output=True,
-                        text=True,
-                        check=False,
-                        timeout=30,
-                        shell=False,
-                    )
-                    if clean_result.returncode != 0:
-                        print(f"⚠️ Git clean warning (non-fatal): {clean_result.stderr}")
-                    else:
-                        cleaned_files = clean_result.stdout.strip()
-                        if cleaned_files:
-                            print(f"   Cleaned: {cleaned_files}")
-                        print(f"✅ Worktree pre-cleaned successfully")
-                except Exception as clean_error:
-                    # Non-fatal: dirty state will be handled by agent with autonomous-execution skill
-                    print(f"⚠️ Pre-clean warning (non-fatal): {clean_error}")
+                    if git_result.returncode != 0 and self._is_invalid_base_ref_error(git_result.stderr):
+                        selected_base_ref = self._prompt_for_base_branch(base_ref)
+                        if selected_base_ref:
+                            print(f"🔁 Retrying worktree creation from base branch '{selected_base_ref}'...")
+                            agent_dir, git_result = self._create_worktree_at_location(
+                                agent_spec,
+                                branch_name,
+                                base_ref=selected_base_ref,
+                            )
+                            # Cache only successful interactive base refs so subsequent agents
+                            # don't inherit an invalid branch and re-fail immediately.
+                            if git_result.returncode == 0:
+                                self._interactive_base_ref = selected_base_ref
+
+                if use_worktree:
+                    print(f"🏗️ Created worktree at: {agent_dir}")
+
+                    if git_result.returncode != 0:
+                        print(f"⚠️ Git worktree creation warning: {git_result.stderr}")
+                        if "already exists" in git_result.stderr:
+                            print(f"📁 Using existing worktree at {agent_dir}")
+                        elif self._prompt_to_continue_without_worktree():
+                            use_worktree = False
+                            no_worktree = True
+                            agent_dir = os.getcwd()
+                            if existing_branch:
+                                if not self._is_safe_branch_name(existing_branch):
+                                    print(f"❌ Unsafe branch name provided: {existing_branch}")
+                                    return False
+                                if not self._checkout_branch(existing_branch, agent_dir):
+                                    return False
+                                branch_name = existing_branch
+                            else:
+                                branch_name = self._get_current_branch_name()
+                            print(f"🧩 Continuing without worktree isolation in: {agent_dir}")
+                        else:
+                            print(f"❌ Git worktree failed: {git_result.stderr}")
+                            return False
+
+                if use_worktree:
+                    # Pre-clean worktree to avoid dirty state issues
+                    # This prevents agents from stopping to ask about staged changes from previous runs
+                    print("🧹 Pre-cleaning worktree to ensure clean state...")
+                    try:
+                        # Reset any staged changes
+                        reset_result = subprocess.run(
+                            ["git", "reset", "--hard", "HEAD"],
+                            cwd=agent_dir,
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                            timeout=30,
+                            shell=False,
+                        )
+                        if reset_result.returncode != 0:
+                            print(f"⚠️ Git reset warning (non-fatal): {reset_result.stderr}")
+
+                        # Clean untracked files
+                        clean_result = subprocess.run(
+                            ["git", "clean", "-fd"],
+                            cwd=agent_dir,
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                            timeout=30,
+                            shell=False,
+                        )
+                        if clean_result.returncode != 0:
+                            print(f"⚠️ Git clean warning (non-fatal): {clean_result.stderr}")
+                        else:
+                            cleaned_files = clean_result.stdout.strip()
+                            if cleaned_files:
+                                print(f"   Cleaned: {cleaned_files}")
+                            print("✅ Worktree pre-cleaned successfully")
+                    except Exception as clean_error:
+                        # Non-fatal: dirty state will be handled by agent with autonomous-execution skill
+                        print(f"⚠️ Pre-clean warning (non-fatal): {clean_error}")
 
             except Exception as e:
                 print(f"❌ Failed to create worktree: {e}")
                 return False
 
             agent_token = _sanitize_agent_token(agent_name)
+            run_suffix = self._generate_run_artifact_suffix()
 
             # Create result collection file
-            result_file = os.path.join(self.result_dir, f"{agent_token}_results.json")
+            result_file = os.path.join(self.result_dir, f"{agent_token}_results_{run_suffix}.json")
+            legacy_result_file = os.path.join(self.result_dir, f"{agent_token}_results.json")
 
             # Enhanced prompt with completion enforcement
             # Determine if we're in PR update mode
@@ -1675,7 +1986,28 @@ Note: PR creation is OPTIONAL - use your judgment based on:
 Trust your understanding of the task context, not keyword patterns.
 """
 
-                completion_instructions = f"""
+                if no_worktree:
+                    completion_instructions = f"""
+🚨 MANDATORY COMPLETION STEPS:
+
+1. Complete the assigned task in the current working directory
+2. Run relevant checks/tests for your changes
+3. If git operations are appropriate in this repository, commit/push as needed (on branch: {branch_name})
+4. Optional PR guidance:
+
+{pr_creation_instructions}
+
+{validation_instructions}
+
+5. Create completion report:
+   echo '{{"agent": "{agent_name}", "status": "completed", "mode": "no_worktree"}}' > {result_file}
+
+🛑 EXIT CRITERIA - AGENT MUST NOT TERMINATE UNTIL:
+1. ✓ Task completed and tested
+2. ✓ Completion report written to {result_file}
+"""
+                else:
+                    completion_instructions = f"""
 🚨 MANDATORY COMPLETION STEPS:
 
 1. Complete the assigned task
@@ -1715,16 +2047,17 @@ Agent Configuration:
 - Focus: {agent_focus}
 - Capabilities: {", ".join(capabilities)}
 - Working Directory: {agent_dir}
-- Branch: {branch_name} {"(existing branch)" if existing_branch else "(fresh from main)"}
+- Branch: {branch_name} {("(current directory branch)" if no_worktree else ("(existing branch)" if existing_branch else "(fresh from base branch)"))}
 - PR Creation: {"BLOCKED" if no_new_pr else "ALLOWED"}
 - Branch Creation: {"BLOCKED" if no_new_branch else "ALLOWED"}
+- Worktree Mode: {"DISABLED (current directory)" if no_worktree else "ENABLED (isolated worktree)"}
 {f"- Target PR: #{existing_pr}" if existing_pr else ""}
 {f"- MCP Agent Name: {mcp_agent_name}" if mcp_agent_name else ""}
 {f"- Bead ID: {bead_id}" if bead_id else ""}
 {f"- Validation Command: {validation_command}" if validation_command else ""}
 
-🚨 CRITICAL: {"You are updating an EXISTING PR" if is_update_mode else "You are starting with a FRESH BRANCH from main"}
-- {"Work on the existing PR branch" if is_update_mode else "Your branch contains ONLY the main branch code"}
+🚨 CRITICAL: {"You are updating an EXISTING PR" if is_update_mode else ("You are running WITHOUT a worktree" if no_worktree else "You are starting with a FRESH BRANCH from base branch")}
+- {"Work on the existing PR branch" if is_update_mode else ("Work carefully in the current directory; avoid unrelated changes" if no_worktree else "Your branch contains ONLY the base branch code")}
 - Make ONLY the changes needed for this specific task
 - Do NOT include unrelated changes
 
@@ -1747,14 +2080,17 @@ Agent Configuration:
 """
 
             # Write prompt to file to avoid shell quoting issues
-            prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_token}.txt")
+            prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_token}_{run_suffix}.txt")
             with open(prompt_file, "w") as f:
                 f.write(full_prompt)
 
             # Create log directory
             log_dir = "/tmp/orchestration_logs"
             os.makedirs(log_dir, exist_ok=True)
-            log_file = os.path.join(log_dir, f"{agent_token}.log")
+            log_file = os.path.join(log_dir, f"{agent_token}_{run_suffix}.log")
+            legacy_log_file = os.path.join(log_dir, f"{agent_token}.log")
+            self._set_latest_artifact_pointer(legacy_log_file, log_file)
+            self._set_latest_artifact_pointer(legacy_result_file, result_file)
 
             log_file_quoted = shlex.quote(log_file)
             result_file_quoted = shlex.quote(result_file)
@@ -1772,7 +2108,8 @@ Agent Configuration:
             agent_name_quoted = shlex.quote(agent_name)
             agent_dir_quoted = shlex.quote(agent_dir)
             log_file_display = shlex.quote(log_file)
-            monitor_hint = shlex.quote(agent_name)
+            tmux_attach_hint = self.get_tmux_attach_command(agent_name)
+            tmux_attach_hint_quoted = shlex.quote(tmux_attach_hint)
             agent_name_json = json.dumps(agent_name)
 
             # Optional multi-CLI chain support (e.g., --agent-cli=gemini,codex)
@@ -2042,7 +2379,7 @@ fi
 # Keep session alive for 1 hour for monitoring and debugging
 echo "[$(date)] Agent execution completed. Session remains active for monitoring." | tee -a {log_file_quoted}
 echo "[$(date)] Session will auto-close in 1 hour. Check log at: {log_file_display}" | tee -a {log_file_quoted}
-echo "[$(date)] Monitor with: tmux attach -t {monitor_hint}" | tee -a {log_file_quoted}
+echo "[$(date)] Monitor with: {tmux_attach_hint_quoted}" | tee -a {log_file_quoted}
 sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 """
 
@@ -2050,14 +2387,21 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             script_path.write_text(bash_cmd, encoding="utf-8")
             os.chmod(script_path, 0o700)
 
+            # Preserve run-specific artifact paths for diagnostics and tests.
+            agent_spec["prompt_file"] = prompt_file
+            agent_spec["log_file"] = log_file
+            agent_spec["result_file"] = result_file
+            agent_spec["legacy_log_file"] = legacy_log_file
+            agent_spec["legacy_result_file"] = legacy_result_file
+
             # Use agent-specific tmux config for 1-hour sessions
             tmux_config = get_tmux_config_path()
 
             # Kill existing tmux session if present to allow reuse
-            _kill_tmux_session_if_exists(agent_name)
+            _kill_tmux_session_if_exists(agent_name, socket_name=self.tmux_socket_name)
 
             # Build tmux command with optional config file
-            tmux_cmd = ["tmux"]
+            tmux_cmd = self._tmux_base_command()
             if os.path.exists(tmux_config):
                 tmux_cmd.extend(["-f", tmux_config])
             else:

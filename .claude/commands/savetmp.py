@@ -193,7 +193,7 @@ def _resolve_repo_info(
                         f"changed_files will be empty."
                     )
                 else:
-                    logging_util.debug(f"Two-dot fallback failed, keeping 3-dot result (empty).")
+                    logging_util.debug("Two-dot fallback failed, keeping 3-dot result (empty).")
             elif two_dot_output == "":
                 logging_util.debug(f"Two-dot diff succeeded but found no changes (base={base_ref})")
             else:

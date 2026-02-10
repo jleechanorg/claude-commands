@@ -324,6 +324,7 @@ def main():
             "validate": args.validate,
             "no_new_pr": args.no_new_pr,
             "no_new_branch": args.no_new_branch,
+            "no_worktree": args.no_worktree,
             "agent_cli": agent_cli,
             "agent_cli_provided": cli_provided,
             "model": args.model,
@@ -459,6 +460,7 @@ Examples:
     run_parser.add_argument("--validate", type=str, default=None, help="Validation command to run after completion")
     run_parser.add_argument("--no-new-pr", action="store_true", help="Block new PR creation")
     run_parser.add_argument("--no-new-branch", action="store_true", help="Block new branch creation")
+    run_parser.add_argument("--no-worktree", action="store_true", help="Run agents in current directory (no worktree)")
     run_parser.add_argument(
         "--agent-cli",
         type=str,
