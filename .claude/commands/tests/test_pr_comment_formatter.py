@@ -8,7 +8,6 @@ import os
 import sys
 import tempfile
 import unittest
-from unittest.mock import call, patch
 
 # Add scripts directory to path for pr_comment_formatter module
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "scripts"))
@@ -25,9 +24,6 @@ from pr_comment_formatter import (  # noqa: E402
     TaskItem,
     UserComment,
 )
-import commentreply  # noqa: E402
-
-# Import commentreply validate_comment_data - handle missing gracefully in logic
 
 
 class TestCommentStatus(unittest.TestCase):
