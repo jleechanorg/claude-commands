@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Sequence
+from contextlib import suppress
 
 
 def _safe_print(message: str) -> None:
@@ -50,9 +51,12 @@ def _load_payload() -> dict | None:
 
 
 def _get_repo_root() -> str:
+    git_bin = shutil.which("git")
+    if not git_bin:
+        return os.getcwd()
     try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
+        completed = subprocess.run(  # noqa: S603
+            [git_bin, "rev-parse", "--show-toplevel"],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -135,10 +139,8 @@ def _run_worker(payload_path: str) -> int:
         _safe_print(f"python_async_lint worker: failed to load payload: {exc}")
         return 1
     finally:
-        try:
+        with suppress(OSError):
             os.unlink(payload_path)
-        except OSError:
-            pass
 
     root = payload.get("root")
     commands = payload.get("commands") or []
@@ -153,7 +155,7 @@ def _run_worker(payload_path: str) -> int:
     exit_code = 0
     with open(log_file, "ab", buffering=0) as log_handle:
         start_msg = (
-            f"=== Async Python lint started {datetime.datetime.now().isoformat()} ===\n"
+            f"=== Async Python lint started {datetime.datetime.now(datetime.UTC).isoformat()} ===\n"
         )
         _log_write(log_handle, start_msg)
 
@@ -163,7 +165,7 @@ def _run_worker(payload_path: str) -> int:
             command = [str(part) for part in raw_command]
             display = "$ " + shlex.join(command) + "\n"
             _log_write(log_handle, display)
-            completed = subprocess.run(
+            completed = subprocess.run(  # noqa: S603
                 command,
                 check=False, cwd=root,
                 stdout=log_handle,
@@ -179,7 +181,7 @@ def _run_worker(payload_path: str) -> int:
         )
         end_msg = (
             f"=== Async Python lint {finish_status} at "
-            f"{datetime.datetime.now().isoformat()} ===\n"
+            f"{datetime.datetime.now(datetime.UTC).isoformat()} ===\n"
         )
         _log_write(log_handle, end_msg)
 
@@ -201,7 +203,7 @@ def _launch_async(commands: Sequence[Sequence[str]], root: str, log_file: str) -
     python_executable = sys.executable or shutil.which("python3") or "python3"
 
     try:
-        subprocess.Popen(  # noqa: PLW1510 - we intentionally detach the process
+        subprocess.Popen(  # noqa: S603,PLW1510 - we intentionally detach the process
             [python_executable, os.path.abspath(__file__), "--worker", payload_path],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -209,13 +211,11 @@ def _launch_async(commands: Sequence[Sequence[str]], root: str, log_file: str) -
         )
     except OSError as exc:
         _safe_print(f"python_async_lint: failed to launch async worker: {exc}")
-        try:
+        with suppress(OSError):
             os.unlink(payload_path)
-        except OSError:
-            pass
 
 
-def main() -> int:
+def main() -> int:  # noqa: PLR0911
     payload = _load_payload()
     if not payload:
         return 0
@@ -264,7 +264,7 @@ def main() -> int:
         )
         return 0
 
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S_%f")
     log_file = os.path.join(root, ".claude", "logs", f"python_lint_{timestamp}.log")
     _launch_async(commands, root, log_file)
     _safe_print(

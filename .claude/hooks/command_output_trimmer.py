@@ -600,7 +600,7 @@ class OptimizedCommandOutputTrimmer:
     def _trim_args_list(self, args_list: list[Any]) -> list[Any]:
         trimmed_list: list[Any] = []
         for arg in args_list:
-            if isinstance(arg, (list, dict)):
+            if isinstance(arg, list | dict):
                 trimmed_list.append(self.trim_args(arg))
                 continue
 
@@ -617,7 +617,7 @@ class OptimizedCommandOutputTrimmer:
         collision_counter: dict[str, int] = {}
 
         for key, value in args_dict.items():
-            if isinstance(value, (list, dict)):
+            if isinstance(value, list | dict):
                 final_value = self.trim_args(value)
             else:
                 value_str = str(value)

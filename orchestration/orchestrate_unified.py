@@ -291,12 +291,14 @@ class UnifiedOrchestration:
                     agent_spec["no_new_pr"] = True
                 if options.get("no_new_branch"):
                     agent_spec["no_new_branch"] = True
+                if options.get("no_worktree"):
+                    agent_spec["no_worktree"] = True
 
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
                 print(f"✅ Created continuation agent: {agent_spec['name']}")
                 print(f"📂 Working directory: {os.getcwd()}/agent_workspace_{agent_spec['name']}")
                 print(f"📋 Monitor logs: tail -f /tmp/orchestration_logs/{agent_spec['name']}.log")
-                print(f"⏳ Monitor with: tmux attach -t {agent_spec['name']}")
+                print(f"⏳ Monitor with: {self.task_dispatcher.get_tmux_attach_command(agent_spec['name'])}")
             else:
                 print("❌ Failed to create continuation agent")
 
@@ -320,6 +322,7 @@ class UnifiedOrchestration:
                 - model: Model to use for Claude CLI (e.g., sonnet, opus, haiku)
                 - no_new_pr: Hard block on PR creation
                 - no_new_branch: Hard block on branch creation
+                - no_worktree: Run in current directory without worktree isolation
         """
         if options is None:
             options = {}
@@ -377,6 +380,8 @@ class UnifiedOrchestration:
                 print("  └─ 🚫 New PR Creation: BLOCKED")
             if display_options.get("no_new_branch"):
                 print("  └─ 🚫 New Branch Creation: BLOCKED")
+            if display_options.get("no_worktree"):
+                print("  └─ 🧩 Worktree Isolation: DISABLED")
             logger.info(
                 "orchestration_options",
                 extra={
@@ -390,6 +395,7 @@ class UnifiedOrchestration:
                     "validate": options.get("validate"),
                     "no_new_pr": bool(options.get("no_new_pr")),
                     "no_new_branch": bool(options.get("no_new_branch")),
+                    "no_worktree": bool(options.get("no_worktree")),
                 },
             )
 
@@ -478,6 +484,8 @@ class UnifiedOrchestration:
                 agent_spec["no_new_pr"] = True
             if options.get("no_new_branch"):
                 agent_spec["no_new_branch"] = True
+            if options.get("no_worktree"):
+                agent_spec["no_worktree"] = True
 
             print(f"  📦 Creating Agent {i + 1}/{len(agents)}: {agent_spec['name']}")
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
@@ -510,7 +518,7 @@ class UnifiedOrchestration:
 
             print(f"\n⏳ {len(created_agents)} agents working... Monitor with:")
             for agent in created_agents:
-                print(f"   tmux attach -t {agent['name']}")
+                print(f"   {self.task_dispatcher.get_tmux_attach_command(agent['name'])}")
 
             print("\n📂 Agent working directories:")
             for agent in created_agents:
@@ -647,7 +655,7 @@ class UnifiedOrchestration:
                 print(f"   **Status**: {pr['state']}")
         else:
             print("\n⏳ No PRs detected yet. Agents may still be working.")
-            print("   Check agent progress with: tmux attach -t [agent-name]")
+            print(f"   Check agent progress with: {self.task_dispatcher.get_tmux_progress_hint()}")
             print("   Or wait and check manually: gh pr list --author @me")
 
 
@@ -700,6 +708,7 @@ The orchestration system will:
     parser.add_argument(
         "--no-new-branch", action="store_true", help="Hard block on branch creation (agents must use existing branch)"
     )
+    parser.add_argument("--no-worktree", action="store_true", help="Run agents in current directory (no worktree)")
 
     # CLI selection
     parser.add_argument(
@@ -750,6 +759,7 @@ The orchestration system will:
         "validate": args.validate,
         "no_new_pr": args.no_new_pr,
         "no_new_branch": args.no_new_branch,
+        "no_worktree": args.no_worktree,
         # Note: CLI flag is --agent-cli; argparse exposes it as args.agent_cli.
         "agent_cli": agent_cli,
         "agent_cli_provided": agent_cli_provided,

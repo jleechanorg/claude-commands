@@ -480,34 +480,8 @@ class JleechanorgPRMonitor:
         pr_number = pr_data.get("number", 0)
 
         if self._should_skip_pr(repo_name, branch_name, pr_number, head_ref_oid):
-            # Even if commit was processed, check for new bot comments that need attention
-            repo_full = pr_data.get("repositoryFullName") or ""
-
-            if not repo_full:
-                if repo_name:
-                    repo_full = self._normalize_repository_name(repo_name)
-                else:
-                    self.logger.warning(
-                        f"Skipping PR comment state check: missing repository information (pr_number={pr_number})"
-                    )
-                    return False
-
-            owner_repo = repo_full.split("/", 1)
-            if len(owner_repo) != 2 or not owner_repo[0].strip() or not owner_repo[1].strip():
-                self.logger.warning(
-                    "Skipping PR comment state check due to invalid repository identifier "
-                    f"repo_full='{repo_full}' (pr_number={pr_number})"
-                )
-                return False
-            _, comments = self._get_pr_comment_state(repo_full, pr_number)
-            # Handle API failures: treat None as empty list (assume no new bot comments on failure)
-            if comments is None:
-                comments = []
-            if self._has_new_bot_comments_since_codex(comments):
-                self.logger.info(
-                    f"🤖 PR {repo_name}#{pr_number} has new bot comments since last processing - marking actionable"
-                )
-                return True
+            # Option A: One comment per SHA max - don't re-ping on bot comments
+            # If PR has Codex commit, it's not actionable (already processed)
             return False
 
         # Open non-draft PRs with new commits are actionable
@@ -994,36 +968,31 @@ class JleechanorgPRMonitor:
             comments = []
 
         # Run custom skip checks if provided (e.g., Codex-specific checks)
-        force_process = False
         if skip_checks_fn:
-            should_skip, reason = skip_checks_fn(head_sha, comments, repo_full, pr_number)
+            should_skip, reason = skip_checks_fn(head_sha, comments, repo_full, pr_number, pr_data)
             if should_skip:
                 self.logger.info(reason)
                 if head_sha:
                     self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
                 return "skipped"
-            # Check if skip_checks_fn returned a special flag indicating we should force process
-            # (This is used by Codex when new bot comments require attention)
-            if reason and "forcing re-run" in reason.lower():
-                force_process = True
 
         if not head_sha:
             self.logger.warning(
                 f"⚠️ Could not determine commit SHA for PR #{pr_number}; proceeding without marker gating"
             )
-        elif not force_process:
-            # Only apply standard skip checks if we're not forcing a re-run
-            # Check if we should skip this PR based on commit-based tracking
-            if self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
-                self.logger.info(f"⏭️ Skipping PR #{pr_number} - already processed this commit")
-                return "skipped"
-
-            # Check if comment already exists for this commit
+        else:
+            # Always check if comment already exists for this commit (one comment per SHA max)
+            # This prevents posting duplicate comments for the same SHA
             if check_existing_comment_fn(comments, head_sha):
                 self.logger.info(
                     f"♻️ {log_prefix} already posted for commit {head_sha[:8]} on PR #{pr_number}, skipping"
                 )
                 self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+                return "skipped"
+
+            # Check commit-based tracking
+            if self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+                self.logger.info(f"⏭️ Skipping PR #{pr_number} - already processed this commit")
                 return "skipped"
 
         # Build comment body using provided function
@@ -1063,30 +1032,24 @@ class JleechanorgPRMonitor:
             return "failed"
 
     def _codex_skip_checks(
-        self, head_sha: str | None, comments: list[dict], repo_full: str, pr_number: int
+        self, head_sha: str | None, comments: list[dict], repo_full: str, pr_number: int, pr_data: dict = None
     ) -> tuple[bool, str]:
         """Codex-specific skip checks (checks for Codex commits and pending commits).
 
         Returns (should_skip, reason). If should_skip is False, processing should continue.
-        The reason string can include "forcing re-run" to bypass standard skip checks.
+
+        NOTE: This does NOT check branch names. Comment-only mode posts on ALL non-draft PRs.
+        The distinction between "Codex support" vs "comment validation" is determined by the
+        cron job flag (--comment-validation), not the branch name.
         """
         if not head_sha:
             return False, ""
 
         head_commit_details = self._get_head_commit_details(repo_full, pr_number, head_sha)
         if head_commit_details and self._is_head_commit_from_codex(head_commit_details):
-            # Check if there are new bot comments that need attention
-            if self._has_new_bot_comments_since_codex(comments):
-                self.logger.info(
-                    "🤖 Head commit %s for %s#%s is from Codex, but new bot comments detected - forcing re-run",
-                    head_sha[:8],
-                    repo_full,
-                    pr_number,
-                )
-                return False, "forcing re-run"  # Signal to bypass standard skip checks
             return True, (f"🆔 Head commit {head_sha[:8]} for {repo_full}#{pr_number} already attributed to Codex")
 
-        # Check for pending Codex commits (only if not forcing re-run)
+        # Check for pending Codex commits
         if self._has_pending_codex_commit(comments, head_sha):
             return True, (
                 f"⏳ Pending Codex automation commit {head_sha[:8]} detected on PR #{pr_number}; skipping re-run"
@@ -3133,54 +3096,6 @@ Your response MUST follow this exact structure for clarity:
                         count += 1
 
         return count
-
-    def _has_new_bot_comments_since_codex(self, comments: list[dict]) -> bool:
-        """Check if there are new GitHub bot comments since the last Codex automation comment.
-
-        This allows automation to run even when head commit is from Codex if
-        there are new bot comments (like CI failures, review bot comments) that
-        need attention.
-        """
-        last_codex_time = self._get_last_codex_automation_comment_time(comments)
-
-        # If no Codex automation comment exists, treat any bot comment as new
-        if not last_codex_time:
-            for comment in comments:
-                if self._is_github_bot_comment(comment):
-                    created_at = (
-                        comment.get("createdAt")
-                        or comment.get("created_at")
-                        or comment.get("updatedAt")
-                        or comment.get("updated_at")
-                    )
-                    self.logger.debug(
-                        "🤖 Found bot comment from %s at %s with no prior Codex automation comment",
-                        self._get_comment_author_login(comment),
-                        created_at,
-                    )
-                    return True
-            return False
-
-        for comment in comments:
-            if not self._is_github_bot_comment(comment):
-                continue
-
-            created_at = (
-                comment.get("createdAt")
-                or comment.get("created_at")
-                or comment.get("updatedAt")
-                or comment.get("updated_at")
-            )
-            if created_at and created_at > last_codex_time:
-                self.logger.debug(
-                    "🤖 Found new bot comment from %s at %s (after Codex comment at %s)",
-                    self._get_comment_author_login(comment),
-                    created_at,
-                    last_codex_time,
-                )
-                return True
-
-        return False
 
     def _get_comment_author_login(self, comment: dict) -> str:
         """Return normalized author login for a comment."""
