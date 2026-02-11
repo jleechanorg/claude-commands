@@ -387,6 +387,31 @@ class CommentFetch(CopilotCommandBase):
             if str(other_comment.get("in_reply_to_id", "")) == comment_id:
                 return True
 
+        # Consolidated summary mode: a single [AI responder] issue comment can address inline comments
+        # without creating a threaded in_reply_to. Detect those by reference patterns.
+        comment_created_at = str(comment.get("created_at", ""))
+        for other_comment in all_comments:
+            other_body = str(other_comment.get("body", ""))
+            other_author = other_comment.get("author", "")
+
+            # Only treat AI responder comments created after the original as replies.
+            if not self._is_ai_responder_comment(other_body, other_author):
+                continue
+            if str(other_comment.get("created_at", "")) <= comment_created_at:
+                continue
+
+            other_body_lower = other_body.lower()
+            if (
+                f"comment #{comment_id}" in other_body_lower
+                or f"#{comment_id}" in other_body_lower
+                or f"discussion_r{comment_id}" in other_body_lower
+            ):
+                return True
+
+            # Fallback: content/author similarity check.
+            if self._appears_to_be_reply_to(other_comment, comment):
+                return True
+
         return False
 
     def _check_already_replied_general(self, comment: Dict[str, Any], all_comments: List[Dict[str, Any]] = None) -> bool:
@@ -530,11 +555,6 @@ class CommentFetch(CopilotCommandBase):
             line = line.strip()
             if len(line) > 10 and line in reply_body:
                 return True
-
-        # Check for author references
-        original_author = original_comment.get("author", "")
-        if original_author and f"@{original_author}" in reply_body:
-            return True
 
         return False
 

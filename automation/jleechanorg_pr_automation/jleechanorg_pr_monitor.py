@@ -39,6 +39,7 @@ from orchestration.cli_validation import (
 )
 from orchestration.task_dispatcher import CLI_PROFILES, CURSOR_MODEL, GEMINI_MODEL, TaskDispatcher
 
+from . import __version__
 from .automation_safety_manager import AutomationSafetyManager
 from .automation_utils import AutomationUtils
 from .codex_config import (
@@ -4201,6 +4202,11 @@ def main():
     """CLI interface for jleechanorg PR monitor"""
 
     parser = argparse.ArgumentParser(description="jleechanorg PR Monitor")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
     parser.add_argument(
         "--no-act",
         action="store_true",
