@@ -44,7 +44,7 @@ STATUSLINE: [Local: <branch> | Remote: <upstream> | PR: <number> <url>]
 ### Phase 2: Build Simulation Prompt
 
 **Action Steps:**
-1. Read the simulation prompt file: `genesis/$USER_simulation_prompt.md` (from project root)
+1. Read the simulation prompt file: `genesis/${USER}_simulation_prompt.md` (from project root)
 2. Append the conversation context AND workflow state with this format:
 
 ```
@@ -97,7 +97,7 @@ PREDICTED NEXT PROMPT:
 
 ### Notes
 - Use `sonnet` model (not haiku - quality matters for this)
-- The simulation prompt is at `genesis/$USER_simulation_prompt.md` relative to project root
+- The simulation prompt is at `genesis/${USER}_simulation_prompt.md` relative to project root
 - If the JSONL conversation files aren't found, just use whatever context the user provided as args
 - Keep output minimal - user just wants to see the predicted prompt
 - The workflow state is CRITICAL for accuracy — it prevents predicting already-completed actions

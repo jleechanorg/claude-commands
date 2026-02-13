@@ -389,7 +389,7 @@ Ready to exit character creation?
 
 ## Benefits
 
-1. **Prevents accidental bypasses**: Campaign ARrfJ39LhNEi5rcGq1c7 issue would be impossible
+1. **Prevents accidental bypasses**: Campaign EXAMPLE_CAMPAIGN_ID issue would be impossible
 2. **Clear UX**: Users know they're in a modal flow and how to exit
 3. **Classifier isolation**: Semantic classifier doesn't interfere with creation flows
 4. **LLM safety net**: Python injection ensures exit choice always exists
