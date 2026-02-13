@@ -800,7 +800,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 # Centralized jq filter: Flatten responses and nested issues for proper classification
 # For multi-issue responses, preserve parent's comment_id and html_url as fallback
-JQ_FLATTEN='(if (.issues? | length) > 0 then (.comment_id as $parent_id | .html_url as $parent_url | .issues[] | .comment_id //= $parent_id | .parent_html_url //= $parent_url) else . end)'
+JQ_FLATTEN='(if (.issues? | length) > 0 then (.comment_id as \$parent_id | .html_url as \$parent_url | .issues[] | .comment_id //= \$parent_id | .parent_html_url //= \$parent_url) else . end)'
 
 # Extract comment URLs from responses.json grouped by response type.
 FIXED_URLS=$(jq -r "
