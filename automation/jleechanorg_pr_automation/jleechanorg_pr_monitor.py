@@ -39,6 +39,7 @@ from orchestration.cli_validation import (
 )
 from orchestration.task_dispatcher import CLI_PROFILES, CURSOR_MODEL, GEMINI_MODEL, TaskDispatcher
 
+from . import __version__
 from .automation_safety_manager import AutomationSafetyManager
 from .automation_utils import AutomationUtils
 from .codex_config import (
@@ -54,6 +55,7 @@ from .codex_config import (
     COMMENT_VALIDATION_MARKER_SUFFIX as SHARED_COMMENT_VALIDATION_SUFFIX,
 )
 from .codex_config import (
+    CODEX_TRACKING_INSTRUCTION,
     DEFAULT_ASSISTANT_MENTIONS,
     build_automation_marker,
     build_comment_intro,
@@ -1184,7 +1186,7 @@ class JleechanorgPRMonitor:
 - Commit: {head_sha[:8] if head_sha else "unknown"} ({head_sha or "unknown"})
 
 **Instructions:**
-Use your judgment to fix comments from everyone or explain why it should not be fixed. Use /commentreply to post ONE consolidated summary comment with all responses embedded (this avoids GitHub rate limits from posting individual replies). Address all comments on this PR. Fix any failing tests and resolve merge conflicts. Push any commits needed to remote so the PR is updated.
+Use your judgment to fix comments from everyone or explain why it should not be fixed. Use /commentreply to post ONE consolidated summary comment with all responses embedded (this avoids GitHub rate limits from posting individual replies). Address all comments on this PR. Fix any failing tests and resolve merge conflicts. Push any commits needed to remote so the PR is updated. {CODEX_TRACKING_INSTRUCTION}
 
 **Tasks:**
 1. **Address all comments** - Review and implement ALL feedback from reviewers
@@ -4202,6 +4204,11 @@ def main():
 
     parser = argparse.ArgumentParser(description="jleechanorg PR Monitor")
     parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+    parser.add_argument(
         "--no-act",
         action="store_true",
         help="Do not post comments or dispatch agents (useful for evidence/testing).",
@@ -4472,7 +4479,9 @@ def main():
                 for task in tasks_with_changes[:task_limit]:
                     summary = task.get("summary", {})
                     print(f"\n  [{task.get('status', '?').upper()}] {task.get('title', '(no title)')}")
-                    print(f"    +{summary.get('lines_added', 0)}/-{summary.get('lines_removed', 0)} in {summary.get('files_changed', 0)} files")
+                    print(
+                        f"    +{summary.get('lines_added', 0)}/-{summary.get('lines_removed', 0)} in {summary.get('files_changed', 0)} files"
+                    )
                     print(f"    {task.get('url', '')}")
 
             print(f"\n✅ Codex CLI API complete")
