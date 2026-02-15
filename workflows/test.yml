@@ -19,6 +19,7 @@ permissions:
 
 # When to run the tests (optimized - no duplication on PR branches)
 on:
+  workflow_dispatch:
   pull_request:              # Run on all PRs regardless of target branch
     paths-ignore:
       - '**/*.md'
@@ -118,7 +119,8 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Core group runs with coverage enabled and sequential execution, which can exceed 15m.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
@@ -257,7 +259,8 @@ jobs:
         COVEOF
 
     - name: Run directory-based tests - ${{ matrix.test-group }}
-      timeout-minutes: 22
+      # Keep per-step timeout aligned with the expanded suite timeout budget.
+      timeout-minutes: 25
       run: |
         source venv/bin/activate
 

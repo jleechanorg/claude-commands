@@ -12,6 +12,7 @@ from jleechanorg_pr_automation.codex_config import (
     FIX_COMMENT_RUN_MARKER_PREFIX,
     FIXPR_MARKER_PREFIX,
     build_automation_marker,
+    build_default_comment,
     parse_automation_marker,
 )
 
@@ -169,6 +170,21 @@ class TestParseAutomationMarker(unittest.TestCase):
 
             self.assertIsNotNone(result)
             self.assertEqual(result["workflow"], workflow)
+
+
+class TestCodexDefaultCommentTracking(unittest.TestCase):
+    """Test Codex default comment tracking requirements."""
+
+    def test_default_comment_mentions_html_url_tracking(self):
+        """Default comment should require html_url tracking metadata."""
+        comment = build_default_comment()
+        self.assertIn("include html_url", comment)
+
+    def test_default_comment_mentions_fixed_and_considered_tracking(self):
+        """Default comment should require fixed/considered URL bucketing."""
+        comment = build_default_comment()
+        self.assertIn("FIXED vs CONSIDERED", comment)
+        self.assertIn("[codex-automation-commit]", comment)
 
 
 if __name__ == "__main__":

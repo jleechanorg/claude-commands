@@ -1,6 +1,6 @@
 ---
 description: Launch dual-agent pair programming with LLM brainstorming and background monitoring
-argument-hint: '[--coder-cli <cli>] [--verifier-cli <cli>] "task description"'
+argument-hint: '[--coder-cli <cli>] [--verifier-cli <cli>] [--no-worktree] "task description"'
 type: llm-orchestration
 execution_mode: llm-driven
 ---
@@ -31,8 +31,18 @@ Review the brainstorm results and refine as needed to ensure:
 Execute the pair programming session:
 
 ```bash
-python3 scripts/pair_execute.py "$TASK_DESCRIPTION"
+python3 scripts/pair_execute.py --no-worktree "$TASK_DESCRIPTION"
 ```
+
+**Recommended default (`scripts/pair_execute.py --no-worktree`):**
+- Runs both agents in the current repository directory instead of separate git
+  worktrees.
+- Preserves shared access to `.beads/` for state and issue coordination.
+- Keeps file changes immediately visible between coder and verifier.
+- Avoids MCP coordination failures caused by isolated worktree environments.
+
+Use worktree isolation only when you intentionally want separate sandboxes (for
+example, risky experiments or strict branch-context separation).
 
 **This launches the full pair programming session with:**
 - Coder agent for implementation (default: Claude) - long-running tmux session
@@ -74,6 +84,9 @@ python3 scripts/pair_execute.py "$TASK_DESCRIPTION"
 - `--max-iterations`: Maximum monitor iterations (default: 10)
 - `--interval`: Monitor check interval in seconds (default: 60)
 - `--no-monitor`: Skip background monitor (agents only)
+- `--no-worktree`: Run agents in the current directory instead of separate git
+  worktrees (recommended default for shared `.beads/` access and MCP
+  coordination)
 
 ## Architecture Overview
 
@@ -85,7 +98,15 @@ python3 scripts/pair_execute.py "$TASK_DESCRIPTION"
 │  1. BRAINSTORM PHASE (Optional: /superpowers:brainstorm)         │
 │     └─> Generate comprehensive task plan via /superpowers        │
 │                                                                  │
-│  2. ORCHESTRATION PHASE (Flexible CLI Selection)                 │
+│  2. CLARIFICATION PHASE (PHASE 0 - NEW!)                         │
+│     ├─> Agent reads spec and identifies ambiguities              │
+│     ├─> Agent sends CLARIFICATION_REQUEST via MCP Mail           │
+│     ├─> Orchestrator surfaces questions to user                  │
+│     ├─> User provides answers                                    │
+│     ├─> Orchestrator sends CLARIFICATION_RESPONSE to agent       │
+│     └─> Agent proceeds with clarified requirements               │
+│                                                                  │
+│  3. ORCHESTRATION PHASE (Flexible CLI Selection)                 │
 │     ├─> Coder Agent (--coder-cli) - implements the solution      │
 │     │   Options: claude*, codex, gemini, cursor                  │
 │     │                                                            │
@@ -93,7 +114,7 @@ python3 scripts/pair_execute.py "$TASK_DESCRIPTION"
 │         Options: claude, codex*, gemini, cursor                  │
 │         (* = default)                                            │
 │                                                                  │
-│  3. MONITORING PHASE (Background via pair_monitor.py)            │
+│  4. MONITORING PHASE (Background via pair_monitor.py)            │
 │     └─> Checks agent progress every 1 minute                     │
 │     └─> Max 10 iterations per agent                              │
 │     └─> Coordinates via Beads MCP + MCP Mail                     │

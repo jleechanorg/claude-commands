@@ -106,7 +106,32 @@ When executing `/second_opinion` or `/secondo`:
 
 > **Testing note (documentation-only update):** This change clarifies routing and auth requirements for the existing workflow. No application code was modified, so no automated test suite was rerun for this documentation revision.
 
+### Execution Strategy
+
+**PRIMARY APPROACH: Use MCP CLI (Recommended)**
+
+Try the installed MCP server first using Claude Code's built-in MCP CLI:
+
+```bash
+# Check if second-opinion-tool MCP server is available
+if mcp-cli tools second-opinion-tool 2>&1 | grep -q "agent.second_opinion"; then
+  echo "✅ Using MCP CLI approach"
+  USE_MCP_CLI=true
+else
+  echo "⚠️ MCP server not available, falling back to manual CLI"
+  USE_MCP_CLI=false
+fi
+```
+
+**FALLBACK APPROACH: Manual CLI with HTTPie**
+
+If MCP CLI is not available or fails, use the manual HTTP approach with authentication.
+
+---
+
 ### Step 0: Authentication Setup (Auto-Refresh)
+
+**Note**: Only required for FALLBACK approach. MCP CLI handles auth automatically.
 ```bash
 # Verify auth-cli.mjs is installed
 if [ ! -f "$HOME/.claude/scripts/auth-cli.mjs" ]; then
@@ -215,6 +240,37 @@ The generated payload now includes the git context automatically:
 > 💡 You can still tailor the natural-language question, but you no longer need to paste diff snippets manually—the helper attaches them for you.
 
 ### Step 3: Execute Request
+
+**Option A: MCP CLI Approach (Primary)**
+
+```bash
+# First, check the MCP CLI tool schema
+mcp-cli info second-opinion-tool/agent.second_opinion
+
+# Prepare the request payload (simplified for MCP CLI)
+QUESTION="${1:-Should I land this patch set as-is?}"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Call via MCP CLI
+mcp-cli call second-opinion-tool/agent.second_opinion - <<EOF
+{
+  "question": "$QUESTION",
+  "maxOpinions": 3,
+  "gitContext": $(cat /tmp/secondo_git_context.json)
+}
+EOF > /tmp/secondo_analysis_${TIMESTAMP}.json
+
+# Check if successful
+if [ $? -eq 0 ] && [ -s /tmp/secondo_analysis_${TIMESTAMP}.json ]; then
+  echo "✅ Analysis complete via MCP CLI"
+  echo "📄 Results: /tmp/secondo_analysis_${TIMESTAMP}.json"
+else
+  echo "⚠️ MCP CLI failed, falling back to manual approach"
+  USE_MCP_CLI=false
+fi
+```
+
+**Option B: Manual HTTPie Approach (Fallback)**
 
 ```bash
 # Call MCP server with HTTPie (matches request_second_opinion.sh)

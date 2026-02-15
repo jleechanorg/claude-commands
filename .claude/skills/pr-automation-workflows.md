@@ -95,3 +95,16 @@ else:
 ```
 
 **The flag determines the comment type, NOT the branch name.**
+
+
+## Copilot Tracking Requirements (Fix-Comment)
+
+When `/copilot` fixes PR comments, require URL tracking artifacts:
+- `responses.json` entries should include `html_url` for each processed comment.
+- Tracking commits should include `[copilot-commit]` and separate URL buckets for:
+  - `FIXED`
+  - `CONSIDERED` (`ACKNOWLEDGED`/`DEFERRED`/`NOT_DONE`)
+- If `responses.json` is missing URLs, backfill from `comments.json` by matching comment IDs in a type-safe way (`(.id|tostring) == $id`).
+- **Note**: `[codex-automation-commit]` is reserved for the `automation/` system only. `/copilot` uses `[copilot-commit]`.
+
+This keeps `/copilot` workflow auditable and distinguishable from automation system commits.

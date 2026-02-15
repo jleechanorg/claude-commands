@@ -38,7 +38,8 @@ class UnifiedOrchestration:
 
     # Configuration constants
     INITIAL_DELAY = 5  # Initial delay before checking for PRs
-    POLLING_INTERVAL = 2  # Interval between PR checks
+    POLLING_INTERVAL = 30  # Interval between PR checks (longer for heartbeat monitoring)
+    HEARTBEAT_INTERVAL = 60  # Check agent health every minute
     STALE_PROMPT_FILE_AGE_SECONDS = 300  # 5 minutes
     MAX_CONTEXT_BYTES = 100 * 1024  # 100KB
 
@@ -554,9 +555,71 @@ class UnifiedOrchestration:
         else:
             print("❌ No agents were created successfully")
 
+    def _check_agent_heartbeat(self, agent_name: str) -> dict:
+        """Check if agent is still alive and making progress.
+
+        Returns dict with:
+            - alive: bool - tmux session exists and running
+            - last_commit_age: float - seconds since last commit (or None)
+            - recent_activity: bool - any activity in last 60 seconds
+        """
+        heartbeat = {
+            "alive": False,
+            "last_commit_age": None,
+            "recent_activity": False,
+        }
+
+        # Check tmux session status
+        try:
+            result = subprocess.run(
+                ["tmux", "has-session", "-t", agent_name],
+                shell=False,
+                check=False,
+                capture_output=True,
+                timeout=5,
+            )
+            heartbeat["alive"] = result.returncode == 0
+        except Exception:
+            heartbeat["alive"] = False
+
+        if not heartbeat["alive"]:
+            return heartbeat
+
+        # Check for recent git commits
+        try:
+            result = subprocess.run(
+                [
+                    "git",
+                    "log",
+                    "-1",
+                    "--format=%ct",
+                    "--all",
+                ],
+                shell=False,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                commit_timestamp = int(result.stdout.strip())
+                current_timestamp = int(time.time())
+                heartbeat["last_commit_age"] = current_timestamp - commit_timestamp
+                heartbeat["recent_activity"] = heartbeat["last_commit_age"] < 60
+        except Exception:
+            pass
+
+        return heartbeat
+
     def _check_and_display_prs(self, agents, max_wait=30):
-        """Check for PRs created by agents and display them."""
-        print(f"\n🔍 Checking for PR creation (waiting up to {max_wait}s)...")
+        """Check for PRs created by agents and display them with heartbeat monitoring.
+
+        Monitors agents for up to max_wait seconds (default 30 seconds), checking for:
+        - PR creation
+        - Agent health (tmux session alive)
+        - Progress indicators (commits, file changes, bead updates)
+        """
+        print(f"\n🔍 Checking for PR creation with heartbeat monitoring (max {max_wait}s)...")
         print(f"  └─ Total Agents: {len(agents)}")
         print(f"  └─ Agent Names: {[agent['name'] for agent in agents]}")
 
@@ -567,21 +630,45 @@ class UnifiedOrchestration:
         print(f"  └─ Initial Delay: {self.INITIAL_DELAY}s")
         time.sleep(self.INITIAL_DELAY)
 
-        # ENHANCED LOGGING: Track PR search progress
+        # ENHANCED LOGGING: Track PR search progress with heartbeat monitoring
         search_iteration = 0
+        last_heartbeat_check = start_time
 
         while time.time() - start_time < max_wait and len(prs_found) < len(agents):
             search_iteration += 1
             elapsed = time.time() - start_time
+
+            # Heartbeat check every HEARTBEAT_INTERVAL seconds
+            if time.time() - last_heartbeat_check >= self.HEARTBEAT_INTERVAL:
+                print(f"\n  💓 HEARTBEAT CHECK (Elapsed: {elapsed:.1f}s)")
+                for agent in agents:
+                    if agent["name"] in [pr["agent"] for pr in prs_found]:
+                        print(f"    ✅ {agent['name']}: PR created")
+                        continue
+
+                    heartbeat = self._check_agent_heartbeat(agent["name"])
+                    if heartbeat["alive"]:
+                        activity = "✨ active" if heartbeat["recent_activity"] else "⏳ idle"
+                        commit_info = f" (last commit {heartbeat['last_commit_age']:.0f}s ago)" if heartbeat["last_commit_age"] is not None else ""
+                        print(f"    💓 {agent['name']}: {activity}{commit_info}")
+                    else:
+                        print(f"    ⚠️  {agent['name']}: session ended")
+                last_heartbeat_check = time.time()
+
             print(
-                f"  🔄 Search Iteration {search_iteration} - Elapsed: {elapsed:.1f}s - PRs Found: {len(prs_found)}/{len(agents)}"
+                f"\n  🔄 Iteration {search_iteration} - Elapsed: {elapsed:.1f}s - PRs Found: {len(prs_found)}/{len(agents)}"
             )
 
             for agent in agents:
                 if agent["name"] in [pr["agent"] for pr in prs_found]:
                     continue  # Already found PR for this agent
 
-                print(f"    🔍 Checking {agent['name']}...")
+                # Check if agent session is still alive (informational only)
+                heartbeat = self._check_agent_heartbeat(agent["name"])
+                if not heartbeat["alive"]:
+                    print(f"    ⚠️  {agent['name']}: tmux session ended (may have completed) - checking for PR anyway")
+                else:
+                    print(f"    🔍 Checking {agent['name']} for PR...")
 
                 # Check agent workspace for PR
                 workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent['name']}")
@@ -643,7 +730,14 @@ class UnifiedOrchestration:
                             )
 
             if len(prs_found) < len(agents):
-                time.sleep(self.POLLING_INTERVAL)  # Wait before checking again
+                # Keep polling responsive for short wait budgets (e.g. max_wait=30s)
+                # so PRs created shortly after startup are still detected.
+                elapsed_after_checks = time.time() - start_time
+                remaining_time = max_wait - elapsed_after_checks
+                if remaining_time <= 0:
+                    break
+                sleep_seconds = min(self.POLLING_INTERVAL, 5, remaining_time)
+                time.sleep(sleep_seconds)
 
         # Display results
         if prs_found:

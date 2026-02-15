@@ -217,7 +217,75 @@ All MCP mail messages follow this JSON structure:
 }
 ```
 
-### 10. TIMEOUT_WARNING
+### 10. CLARIFICATION_REQUEST
+
+**Sender:** Either agent
+**Recipient:** Orchestrator (User)
+**Purpose:** Request clarification on ambiguous specifications or design decisions
+
+```json
+{
+  "to": "orchestrator",
+  "subject": "CLARIFICATION_REQUEST",
+  "body": {
+    "phase": "CLARIFICATION",
+    "questions": [
+      {
+        "id": "q1",
+        "question": "Should I use environment variables or hardcoded constants for configuration?",
+        "context": "Spec suggests COPILOT_USE_PAIR env var, but CLAUDE.md prohibits creating new env vars",
+        "options": [
+          "Use hardcoded constants per CLAUDE.md",
+          "Use environment variables per spec",
+          "Use configuration file"
+        ]
+      },
+      {
+        "id": "q2",
+        "question": "Which phase should /pair integration run in?",
+        "context": "Current copilot has 4 phases. /pair could run in Phase 2 or new Phase 2.5",
+        "options": [
+          "Replace existing Phase 2 implementation",
+          "Add new Phase 2.5 between categorization and response",
+          "Run in parallel with Phase 2"
+        ]
+      }
+    ],
+    "status": "AWAITING_USER_INPUT"
+  }
+}
+```
+
+### 11. CLARIFICATION_RESPONSE
+
+**Sender:** Orchestrator (User)
+**Recipient:** Requesting agent
+**Purpose:** Provide answers to clarification questions
+
+```json
+{
+  "to": "agent-123",
+  "subject": "CLARIFICATION_RESPONSE",
+  "body": {
+    "phase": "CLARIFICATION_COMPLETE",
+    "answers": [
+      {
+        "question_id": "q1",
+        "answer": "Use hardcoded constants per CLAUDE.md",
+        "reasoning": "CLAUDE.md rules take precedence. Env vars add operational complexity."
+      },
+      {
+        "question_id": "q2",
+        "answer": "Add new Phase 2.5 between categorization and response",
+        "reasoning": "Preserves existing workflow while adding /pair integration cleanly"
+      }
+    ],
+    "status": "PROCEED_WITH_IMPLEMENTATION"
+  }
+}
+```
+
+### 12. TIMEOUT_WARNING
 
 **Sender:** Either agent
 **Recipient:** Partner agent (not responding)
@@ -285,7 +353,21 @@ All MCP mail messages follow this JSON structure:
 14-16. [Continue as Happy Path steps 9-12]
 ```
 
-### Pattern 4: Abort
+### Pattern 4: With Clarification Phase (PHASE 0)
+
+```
+1. User → /pair alice bob "Task"
+2. Alice: Read spec and brainstorm
+3. Alice: Identify ambiguities (e.g., env vars vs CLAUDE.md conflict)
+4. Alice → Orchestrator: CLARIFICATION_REQUEST
+5. Orchestrator: Surface questions to user
+6. User: Provide answers
+7. Orchestrator → Alice: CLARIFICATION_RESPONSE
+8. Alice: Proceed with clarified requirements
+9-12. [Continue as Happy Path steps 2-12]
+```
+
+### Pattern 5: Abort
 
 ```
 1-5. [Any point in workflow]

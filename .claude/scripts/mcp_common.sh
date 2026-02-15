@@ -301,7 +301,9 @@ declare -a ALL_SERVER_NAMES=(
     "perplexity-ask"
     "react-mcp"
     "beads"
+    "openclaw"
     "mcp_mail"
+    "second-opinion-tool"
 )
 
 SERVER_FILTER_ACTIVE=false
@@ -1299,6 +1301,7 @@ setup_second_opinion_mcp_server() {
     else
         local json_payload
         json_payload=$(printf '{"type":"http","url":"%s"}' "${second_opinion_mcp_url}")
+        # Install to user scope (globally available across all projects)
         capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "$server_name" "$json_payload"
     fi
 
@@ -2174,10 +2177,9 @@ fi
 # fi
 
 # Setup Second Opinion MCP Server
-# DISABLED: Second Opinion Tool (using direct curl instead via /secondo command)
-# if should_install_server "second-opinion-tool"; then
-#     setup_second_opinion_mcp_server
-# fi
+if should_install_server "second-opinion-tool"; then
+    setup_second_opinion_mcp_server
+fi
 
 
 # Setup Beads MCP Server
@@ -2262,6 +2264,120 @@ if should_install_server "mcp_mail"; then
             echo -e "${YELLOW}  💡 Installation: git clone https://github.com/jleechanorg/mcp_mail ~/mcp_mail${NC}"
             log_with_timestamp "MCP Mail bearer token not found, skipping server installation"
             INSTALL_RESULTS["mcp_mail"]="API_KEY_MISSING"
+        fi
+    fi
+fi
+
+# Setup OpenClaw MCP Server
+if should_install_server "openclaw"; then
+    display_step "Setting up OpenClaw MCP Server..."
+    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+    echo -e "${BLUE}  🦞 Configuring OpenClaw MCP server...${NC}"
+
+    # Check if server already exists
+    if server_already_exists "openclaw"; then
+        echo -e "${GREEN}  ✅ Server openclaw already exists, skipping installation${NC}"
+        log_with_timestamp "Server openclaw already exists, skipping"
+        INSTALL_RESULTS["openclaw"]="ALREADY_EXISTS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        # OpenClaw requires gateway running locally on port 18789
+        # Check if OPENCLAW_GATEWAY_TOKEN is set
+        local openclaw_token="${OPENCLAW_GATEWAY_TOKEN:-}"
+        local openclaw_url="${OPENCLAW_URL:-http://127.0.0.1:18789}"
+        log_with_timestamp "Setting up MCP server: openclaw (Gateway: ${openclaw_url})"
+
+        # Try to read token from ~/.openclaw/openclaw.json if not set
+        if [[ -z "$openclaw_token" ]] && [[ -f "$HOME/.openclaw/openclaw.json" ]]; then
+            if command -v jq >/dev/null 2>&1; then
+                openclaw_token=$(jq -r '.gateway.token // empty' "$HOME/.openclaw/openclaw.json" 2>/dev/null | head -n1 || true)
+            else
+                # Fallback for systems without jq: extract token from multi-line JSON
+                # Fallback for systems without jq (supports pretty-printed JSON)
+                openclaw_token=$(
+                    awk '
+                        /"gateway"[[:space:]]*:/ { in_gateway=1 }
+                        in_gateway && /"token"[[:space:]]*:/ {
+                            match($0, /"token"[[:space:]]*:[[:space:]]*"([^"]*)"/, match_groups)
+                            if (match_groups[1] != "") { print match_groups[1]; exit 0 }
+                        }
+                        in_gateway && /^[[:space:]]*}/ { in_gateway=0 }
+                    ' "$HOME/.openclaw/openclaw.json" 2>/dev/null | head -n1 || true
+                )
+            fi
+            if [[ "$openclaw_token" == "null" ]]; then
+                openclaw_token=""
+            fi
+        fi
+
+        if [[ -n "$openclaw_token" ]]; then
+            echo -e "${GREEN}  ✅ OpenClaw gateway token found${NC}"
+            echo -e "${BLUE}  📋 Features: WhatsApp/Slack messaging, agent orchestration${NC}"
+
+            safe_remove_dual_if_enabled "openclaw"
+
+            # Add OpenClaw MCP server
+            echo -e "${BLUE}  🔗 Adding OpenClaw MCP server...${NC}"
+            log_with_timestamp "Attempting to add OpenClaw MCP server with gateway token"
+
+            local add_output=""
+            local add_exit_code=0
+
+            # Build environment flags for OpenClaw
+            local openclaw_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+            openclaw_env_flags+=(--env "OPENCLAW_URL=$openclaw_url")
+            openclaw_env_flags+=(--env "OPENCLAW_GATEWAY_TOKEN=$openclaw_token")
+
+            # Add OpenClaw MCP server using npx openclaw-mcp
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "openclaw" "${openclaw_env_flags[@]}" -- "$NPX_PATH" openclaw-mcp
+
+            if [ $add_exit_code -eq 0 ]; then
+                if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [ "${MCP_CLI_BIN}" != "codex" ]; then
+                    echo -e "${BLUE}  🔄 Also adding OpenClaw MCP server to user scope...${NC}"
+                    local user_add_output=""
+                    local user_add_exit_code=0
+                    local user_scope_args=()
+                    local skip_next=0
+                    for arg in "${MCP_SCOPE_ARGS[@]}"; do
+                        if [ "$skip_next" -eq 1 ]; then
+                            skip_next=0
+                            continue
+                        fi
+                        if [ "$arg" = "--scope" ]; then
+                            skip_next=1
+                            continue
+                        fi
+                        user_scope_args+=("$arg")
+                    done
+                    capture_command_output user_add_output user_add_exit_code "${MCP_CLI_BIN}" mcp add --scope user "${user_scope_args[@]}" "openclaw" "${openclaw_env_flags[@]}" -- "$NPX_PATH" openclaw-mcp
+                    if [ "$user_add_exit_code" -ne 0 ]; then
+                        local user_add_output_redacted="${user_add_output//${openclaw_token}/<OPENCLAW_GATEWAY_TOKEN>}"
+                        echo -e "${YELLOW}  ⚠️ Local scope installed, but user-scope install failed${NC}"
+                        log_with_timestamp "OpenClaw MCP user-scope install failed: $user_add_output_redacted"
+                    else
+                        echo -e "${GREEN}  ✅ Added OpenClaw MCP server to user scope${NC}"
+                    fi
+                fi
+
+                echo -e "${GREEN}  ✅ Successfully added OpenClaw MCP server${NC}"
+                log_with_timestamp "Successfully added OpenClaw MCP server with gateway token"
+                INSTALL_RESULTS["openclaw"]="SUCCESS"
+                SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+            else
+                echo -e "${RED}  ❌ Failed to add OpenClaw MCP server${NC}"
+                local add_output_redacted="${add_output//${openclaw_token}/<OPENCLAW_GATEWAY_TOKEN>}"
+                log_error_details "${MCP_CLI_BIN} mcp add openclaw" "openclaw" "$add_output_redacted"
+                echo -e "${RED}  📋 Add error: $add_output_redacted${NC}"
+                INSTALL_RESULTS["openclaw"]="ADD_FAILED"
+                FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+            fi
+        else
+            echo -e "${YELLOW}  ⚠️ OpenClaw gateway token not found - skipping installation${NC}"
+            echo -e "${YELLOW}  💡 OpenClaw provides WhatsApp/Slack messaging and agent orchestration${NC}"
+            echo -e "${YELLOW}  💡 Set OPENCLAW_GATEWAY_TOKEN or check ~/.openclaw/openclaw.json${NC}"
+            echo -e "${YELLOW}  💡 Installation: npm install -g openclaw@latest && openclaw onboard${NC}"
+            log_with_timestamp "OpenClaw gateway token not found, skipping server installation"
+            INSTALL_RESULTS["openclaw"]="API_KEY_MISSING"
         fi
     fi
 fi
