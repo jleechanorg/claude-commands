@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   deploy-production:
@@ -151,6 +152,15 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Review the workflow logs for details and retry after fixing the issue." >> $GITHUB_STEP_SUMMARY
 
+      - name: Fetch PR details from commit
+        id: pr-details
+        if: always()
+        uses: ./.github/actions/fetch-pr-details
+        with:
+          commit_sha: ${{ github.sha }}
+          github_token: ${{ github.token }}
+          fallback_pr_url: ${{ github.event.pull_request.html_url || '' }}
+
       - name: Send failure email notification
         if: failure()
         uses: ./.github/actions/send-deploy-notification
@@ -163,8 +173,9 @@ jobs:
           branch: ${{ github.ref_name }}
           commit_sha: ${{ github.sha }}
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-          # pr_url will normally be empty here because this workflow is triggered manually (workflow_dispatch), not by pull request events.
-          pr_url: ${{ github.event.pull_request.html_url || '' }}
+          pr_url: ${{ steps.pr-details.outputs.pr_url || '' }}
+          pr_title: ${{ steps.pr-details.outputs.pr_title || '' }}
+          pr_description: ${{ steps.pr-details.outputs.pr_description || '' }}
           deployment_url: ${{ steps.get-url.outputs.url }}
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           email_user: ${{ secrets.EMAIL_USER }}
@@ -182,8 +193,9 @@ jobs:
           branch: ${{ github.ref_name }}
           commit_sha: ${{ github.sha }}
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-          # pr_url will normally be empty here because this workflow is triggered manually (workflow_dispatch), not by pull request events.
-          pr_url: ${{ github.event.pull_request.html_url || '' }}
+          pr_url: ${{ steps.pr-details.outputs.pr_url || '' }}
+          pr_title: ${{ steps.pr-details.outputs.pr_title || '' }}
+          pr_description: ${{ steps.pr-details.outputs.pr_description || '' }}
           deployment_url: ${{ steps.get-url.outputs.url }}
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           email_user: ${{ secrets.EMAIL_USER }}

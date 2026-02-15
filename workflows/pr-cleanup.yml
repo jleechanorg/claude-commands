@@ -89,7 +89,7 @@ jobs:
           gcloud run services update "$SERVICE_NAME" \
             --project="${{ env.GCP_PROJECT }}" \
             --region="${{ env.GCP_REGION }}" \
-            --remove-labels=pr-number \
+            --remove-labels=pr-number,commit-sha \
             --quiet && {
             echo "✅ Server $SERVER released back to pool"
           } || {
@@ -213,7 +213,7 @@ jobs:
           gcloud run services update "$SERVICE_NAME" \
             --project="${{ env.GCP_PROJECT }}" \
             --region="${{ env.GCP_REGION }}" \
-            --remove-labels=pr-number \
+            --remove-labels=pr-number,commit-sha \
             --quiet && {
             echo "✅ Server $SERVER released back to pool"
           } || {

@@ -519,6 +519,10 @@ class ClaudeCommandsExporter:
         # Secondo command scripts (multi-model AI feedback system)
         secondo_scripts = ["auth-cli.mjs", "secondo-cli.sh", "test_secondo_pr.sh"]
 
+        # GitHub runner setup scripts (from self-hosted/scripts/ top-level directory)
+        # Now exported from top-level self-hosted/ directory, not scripts/ subdirectory
+        runner_scripts_dir = os.path.join(self.project_root, "self-hosted", "scripts")
+
         # Get scripts referenced in settings.json
         settings_scripts = self._get_scripts_from_settings()
 
@@ -560,6 +564,24 @@ class ClaudeCommandsExporter:
                 self.scripts_count += 1
             else:
                 print(f"   ⚠️  Warning: Secondo script not found: scripts/{script_name}")
+
+        # Export all runner setup scripts from self-hosted/scripts/ directory
+        if os.path.exists(runner_scripts_dir):
+            for script_name in os.listdir(runner_scripts_dir):
+                if script_name.endswith(('.sh', '.md', '.txt')):
+                    script_path = os.path.join(runner_scripts_dir, script_name)
+                    if os.path.isfile(script_path):
+                        # Create self-hosted/scripts/ subdirectory in target
+                        runner_target_dir = os.path.join(target_dir, "self-hosted", "scripts")
+                        os.makedirs(runner_target_dir, exist_ok=True)
+                        target_path = os.path.join(runner_target_dir, script_name)
+                        shutil.copy2(script_path, target_path)
+                        self._apply_content_filtering(target_path)
+
+                        print(f"   • self-hosted/scripts/{script_name} (runner setup)")
+                        self.scripts_count += 1
+        else:
+            print(f"   ⚠️  Warning: self-hosted/scripts/ directory not found")
 
         # Export scripts referenced in settings.json from scripts/ subdirectory
         for script_name in settings_scripts:

@@ -116,7 +116,7 @@ jobs:
         env:
           SERVICE_NAME: ${{ steps.server_pool.outputs.service_name }}
           SERVER: ${{ steps.server_pool.outputs.server }}
-          GITHUB_SHA: ${{ github.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.number }}
         timeout-minutes: 20
         run: |
@@ -126,7 +126,7 @@ jobs:
           echo "Service name: $SERVICE_NAME"
 
           # Build and push Docker image with unique tag
-          IMAGE_TAG="gcr.io/${{ env.GCP_PROJECT }}/$SERVICE_NAME:$GITHUB_SHA"
+          IMAGE_TAG="gcr.io/${{ env.GCP_PROJECT }}/$SERVICE_NAME:$PR_HEAD_SHA"
 
           echo "Building Docker image: $IMAGE_TAG"
           # Create inline cloudbuild.yaml to build from project root with Dockerfile in mvp_site/
@@ -167,7 +167,7 @@ jobs:
             --cpu="$WORLDARCH_CPU" \
             --max-instances=2 \
             --timeout="$WORLDARCH_TIMEOUT_SECONDS" \
-            --update-labels="pr-number=$PR_NUMBER" \
+            --update-labels="pr-number=$PR_NUMBER,commit-sha=$PR_HEAD_SHA" \
             --quiet
 
           echo "✅ Deployment complete!"
@@ -178,6 +178,7 @@ jobs:
           GCP_REGION: ${{ env.GCP_REGION }}
           SERVICE_NAME: ${{ steps.server_pool.outputs.service_name }}
           PR_NUMBER: ${{ github.event.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           echo "🏷️  Verifying service labels"
 
@@ -187,12 +188,23 @@ jobs:
             --format='value(metadata.labels.pr-number)' \
             --quiet || echo "none")
 
-          if [ "$ACTUAL_PR" = "$PR_NUMBER" ]; then
-            echo "✅ Service correctly labeled: pr-number=$PR_NUMBER"
-          else
-            echo "⚠️  Warning: Label mismatch. Expected: $PR_NUMBER, Got: $ACTUAL_PR"
-            echo "   (This is non-critical - deployment succeeded)"
+          ACTUAL_COMMIT=$(gcloud run services describe "$SERVICE_NAME" \
+            --project="$GCP_PROJECT" \
+            --region="$GCP_REGION" \
+            --format='value(metadata.labels.commit-sha)' \
+            --quiet || echo "none")
+
+          if [ "$ACTUAL_PR" != "$PR_NUMBER" ]; then
+            echo "❌ Service label mismatch: expected pr-number=$PR_NUMBER, got $ACTUAL_PR"
+            exit 1
           fi
+
+          if [ "$ACTUAL_COMMIT" != "$PR_HEAD_SHA" ]; then
+            echo "❌ Service label mismatch: expected commit-sha=$PR_HEAD_SHA, got $ACTUAL_COMMIT"
+            exit 1
+          fi
+
+          echo "✅ Service correctly labeled: pr-number=$PR_NUMBER, commit-sha=$PR_HEAD_SHA"
 
       - name: Fetch deployed service URL
         if: success()
@@ -272,7 +284,7 @@ jobs:
           ASSIGNED_SERVER: ${{ steps.server_pool.outputs.server }}
           EVICTION_MESSAGE: ${{ steps.server_pool.outputs.eviction_message }}
           GCP_REGION: ${{ env.GCP_REGION }}
-          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
           BRANCH_NAME: ${{ github.head_ref }}
           WORKFLOW_NAME: ${{ github.workflow }}
           RUN_ID: ${{ github.run_id }}
@@ -392,7 +404,7 @@ jobs:
           SERVICE_NAME: ${{ steps.server_pool.outputs.service_name }}
           ASSIGNED_SERVER: ${{ steps.server_pool.outputs.server }}
           GCP_REGION: ${{ env.GCP_REGION }}
-          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
           BRANCH_NAME: ${{ github.head_ref }}
           RUN_ID: ${{ github.run_id }}
           GITHUB_SERVER_URL: ${{ github.server_url }}

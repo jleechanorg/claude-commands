@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 DEFAULT_ASSISTANT_HANDLE = "coderabbitai"
+AUTOMATION_MARKER_NEW_FORMAT_COLONS = 2
+AUTOMATION_MARKER_LEGACY_FORMAT_COLONS = 1
 
 
 def compose_assistant_mentions(assistant_handle: str) -> str:
@@ -20,13 +22,21 @@ CODEX_COMMENT_INTRO_BODY = (
     "review support. Please make the following changes to this PR."
 )
 
+# Shared tracking instruction text (used in both comment templates and monitor functions)
+CODEX_TRACKING_INSTRUCTION = (
+    "For comment tracking and auditability, include html_url for each response item in responses.json and "
+    "generate a [codex-automation-commit] tracking commit message that separates FIXED vs CONSIDERED "
+    "(ACKNOWLEDGED/DEFERRED/NOT_DONE) comment URLs."
+)
+
 # Core instruction template with shared AI assistant intro text
 CODEX_COMMENT_TEMPLATE = (
     "{comment_intro}\n\n"
     "Use your judgment to fix comments from everyone or explain why it should not be fixed. "
     "Use /commentreply to post ONE consolidated summary with all responses (avoids GitHub rate limits). "
     "Address all comments on this PR. Fix any failing tests and "
-    "resolve merge conflicts. Push any commits needed to remote so the PR is updated."
+    "resolve merge conflicts. Push any commits needed to remote so the PR is updated.\n\n"
+    f"{CODEX_TRACKING_INSTRUCTION}"
 )
 
 CODEX_COMMIT_MARKER_PREFIX = "<!-- codex-automation-commit:"
@@ -102,31 +112,23 @@ def parse_automation_marker(marker: str) -> dict[str, str] | None:
         >>> parse_automation_marker('<!-- fix-comment-automation-commit:gemini:abc123-->')
         {'workflow': 'fix-comment', 'agent': 'gemini', 'commit': 'abc123'}
     """
-    if not marker.startswith('<!--') or not marker.endswith('-->'):
+    if not marker.startswith("<!--") or not marker.endswith("-->"):
         return None
 
     # Remove HTML comment markers (slice off "<!--" and "-->")
     content = marker[4:-3].strip()
 
     # Try new format first: workflow-automation-commit:agent:sha
-    if '-automation-commit:' in content and content.count(':') == 2:
-        parts = content.split(':')
-        workflow = parts[0].replace('-automation-commit', '')
-        return {
-            'workflow': workflow,
-            'agent': parts[1],
-            'commit': parts[2]
-        }
+    if "-automation-commit:" in content and content.count(":") == AUTOMATION_MARKER_NEW_FORMAT_COLONS:
+        parts = content.split(":")
+        workflow = parts[0].replace("-automation-commit", "")
+        return {"workflow": workflow, "agent": parts[1], "commit": parts[2]}
 
     # Legacy format: workflow-automation-commit:sha (no agent)
-    if '-automation-commit:' in content and content.count(':') == 1:
-        parts = content.split(':')
-        workflow = parts[0].replace('-automation-commit', '')
-        return {
-            'workflow': workflow,
-            'agent': 'unknown',
-            'commit': parts[1]
-        }
+    if "-automation-commit:" in content and content.count(":") == AUTOMATION_MARKER_LEGACY_FORMAT_COLONS:
+        parts = content.split(":")
+        workflow = parts[0].replace("-automation-commit", "")
+        return {"workflow": workflow, "agent": "unknown", "commit": parts[1]}
 
     return None
 
@@ -147,11 +149,7 @@ def _extract_review_assistants(assistant_mentions: str) -> list[str]:
     """Return the assistant mentions that participate in review support."""
 
     tokens = assistant_mentions.split()
-    return [
-        token
-        for token in tokens
-        if token.startswith("@") and token.lower() != "@codex"
-    ]
+    return [token for token in tokens if token.startswith("@") and token.lower() != "@codex"]
 
 
 def _format_review_assistants(review_assistants: list[str]) -> str:
@@ -183,13 +181,8 @@ def build_comment_intro(
         mentions = compose_assistant_mentions(normalise_handle(assistant_handle))
     review_assistants = _extract_review_assistants(mentions)
     assistants_text = _format_review_assistants(review_assistants)
-    if len(review_assistants) == 1:
-        clause = f"{assistants_text} focuses on"
-    else:
-        clause = f"{assistants_text} focus on"
-    intro_body = CODEX_COMMENT_INTRO_BODY.format(
-        review_assistants_clause=clause
-    )
+    clause = f"{assistants_text} focuses on" if len(review_assistants) == 1 else f"{assistants_text} focus on"
+    intro_body = CODEX_COMMENT_INTRO_BODY.format(review_assistants_clause=clause)
     intro_prefix = f"{mentions} " if mentions else ""
     return f"{intro_prefix}{intro_body}"
 
@@ -197,9 +190,7 @@ def build_comment_intro(
 def build_default_comment(assistant_handle: str | None = None) -> str:
     """Return the default Codex instruction text for the given handle."""
 
-    return CODEX_COMMENT_TEMPLATE.format(
-        comment_intro=build_comment_intro(assistant_handle=assistant_handle)
-    )
+    return CODEX_COMMENT_TEMPLATE.format(comment_intro=build_comment_intro(assistant_handle=assistant_handle))
 
 
 @dataclass(frozen=True)
