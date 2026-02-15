@@ -102,7 +102,7 @@ def generate_pair_task_spec(comment: Dict, pr_context: Dict) -> str:
 ## Comment Details
 **Category:** {category}
 **File:** {file_line}
-**Reviewer:** {comment.get('user', 'unknown')}
+**Reviewer:** {comment.get('author', 'unknown')}
 
 ## Issue Description
 {body}
