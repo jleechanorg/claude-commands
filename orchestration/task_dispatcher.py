@@ -1604,8 +1604,13 @@ Complete the task, then use /pr to create a new pull request."""
         self.active_agents = self._get_active_tmux_agents()
 
         # 1. Determine the authoritative base name
-        # If workspace_name is specified, it takes precedence as the intended name
-        if workspace_config and workspace_config.get("workspace_name"):
+        # Priority: mcp_agent_name > workspace_name > original_agent_name
+        # mcp_agent_name is critical for MCP Mail coordination in pair programming
+        if mcp_agent_name:
+            base_name = mcp_agent_name
+            if base_name != original_agent_name:
+                print(f"🔄 Using MCP agent name: {original_agent_name} → {base_name} (MCP Mail coordination)")
+        elif workspace_config and workspace_config.get("workspace_name"):
             base_name = workspace_config["workspace_name"]
             if base_name != original_agent_name:
                 print(f"🔄 Aligning agent name: {original_agent_name} → {base_name} (workspace alignment)")

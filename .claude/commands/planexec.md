@@ -48,6 +48,57 @@ aliases: [plan]
 3. **Focused Implementation** - Claude direct based on task size
 4. **Context Preservation** - Reserve capacity for execution and validation
 
+### Phase 1.5: Beads Creation (Conditional)
+
+**Action Steps:**
+**🎯 Create Beads for Work Items**: Apply judgment to determine if beads are needed:
+
+**Create Beads When:**
+- Task complexity is **Medium** or **Large** (multi-step, architectural changes, feature implementation)
+- Context remaining is **< 35%** (limited context requires external tracking)
+- Work items exceed **3+ discrete tasks** in TodoWrite checklist
+- User explicitly requests bead tracking
+
+**Skip Beads When:**
+- Simple, single-step tasks (e.g., "fix typo", "update variable name")
+- Context remaining is **> 35%** AND task is trivial
+- Only 1-2 quick tasks in the plan
+
+**Bead Creation Hierarchy**: For each work item identified in the plan, create a bead using the following explicit fallback chain:
+
+```bash
+# Try Beads MCP first (preferred), then BD CLI, then direct file creation
+if mcp-cli list-tools 2>/dev/null | grep -q beads; then
+  # Use Beads MCP (via printf to avoid newline issues)
+  printf '{"title":"[TASK] Work item title","description":"Detailed description","status":"open","priority":1,"issue_type":"task"}' | mcp-cli call beads/create -
+elif command -v bd >/dev/null 2>&1; then
+  # Fallback to BD CLI
+  bd create "Work item title" --description "Detailed description" --priority 1
+else
+  # Fallback to direct file creation
+  mkdir -p .beads
+  printf '{"id":"unique-id","title":"[TASK] Work item title","description":"Detailed description","status":"open","priority":1,"issue_type":"task","created_at":"%s","updated_at":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .beads/issues.jsonl
+fi
+```
+
+**Bead Structure**:
+- **id**: Unique identifier (e.g., `session-id-task-name` or auto-generated)
+- **title**: `[TASK]` prefix + concise work item title (max 60 chars)
+- **description**: Full description of the work item from the plan
+- **status**: `open` (initial status) - valid values: `open`, `in_progress`, `closed`
+- **priority**: 1-5 (1 = highest, 5 = lowest)
+- **issue_type**: `task`, `bug`, `feature`, or `enhancement`
+- **created_at**: ISO 8601 timestamp
+- **updated_at**: ISO 8601 timestamp
+
+**Note**: If a bead is blocked by dependencies, keep status as `open` or `in_progress` and add blocking information in the description or notes field rather than using a separate "blocked" status.
+
+**Critical Rules**:
+- Create ONE bead per discrete work item in the TodoWrite checklist
+- Use descriptive titles that indicate the specific work (not generic "Implement feature")
+- Include the bead IDs in the execution plan output so they can be tracked
+- Always include `.beads/` changes in git commits/PRs per CLAUDE.md rules
+
 ### Phase 2: Execution Plan Presentation
 
 **Action Steps:**
@@ -80,6 +131,16 @@ aliases: [plan]
 16. **Smart Generation**: Claude for code generation and integration
 17. **Efficient Validation**: Context-appropriate testing and verification
 18. **Clean Integration**: Minimal overhead for final steps
+
+**📋 Beads Tracking** (Work Item Management):
+19. **Created Beads**: List bead IDs created for this work
+   - Format: `[TASK] bead-id-1: Work item title`
+   - Status: All beads start as `open`
+   - Updates: Use beads MCP/CLI to update status during execution
+20. **Bead Updates**: Throughout execution, update bead status:
+   - `open` → `in_progress` (when starting work)
+   - `in_progress` → `closed` (when completed)
+   - If blocked: Keep as `open` or `in_progress`, add blocking info to description/notes
 
 **Timeline**: _____ minutes (context-optimized approach)
 

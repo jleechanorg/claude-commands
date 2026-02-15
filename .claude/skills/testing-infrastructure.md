@@ -30,6 +30,47 @@ from testing_mcp.lib.campaign_utils import create_campaign, process_action
 ### Anti-Pattern
 Writing custom `capture_provenance()`, `get_evidence_dir()`, `save_evidence()`, or any function that duplicates `testing_mcp/lib/` functionality.
 
+## Browser Testing Tools
+
+**MANDATORY GUIDANCE: Choose the right tool for the task**
+
+### chrome-superpower (MCP Tool)
+**Use for**: Exploratory manual browsing and interactive testing
+- Quick browser exploration during development
+- Manual testing workflows that need human guidance
+- Inspecting page state and debugging UI issues
+- Taking screenshots and reading page content
+
+**DON'T use for**: Deterministic automated tests (async operations don't complete reliably)
+
+### Playwright
+**Use for**: Deterministic browser tests with validation
+- Automated end-to-end test suites
+- Tests that submit forms and verify streaming responses
+- Tests that need to wait for async operations to complete
+- CI-ready browser automation
+
+**Pattern**:
+```python
+from playwright.sync_api import sync_playwright
+
+playwright = sync_playwright().start()
+browser = playwright.chromium.launch(headless=True)
+context = browser.new_context()
+page = context.new_page()
+
+# Navigate and interact
+page.goto(url)
+page.fill("#input", "text")
+page.click("button[type='submit']")
+
+# Validate results
+elements = page.query_selector_all(".story-entry")
+assert len(elements) > 0, "Expected story content"
+```
+
+**Why this matters**: chrome-superpower returns immediately from async JavaScript operations (shows `[object Promise]`), making it unsuitable for tests that need to validate streaming responses. Playwright properly waits for events and async operations.
+
 ## CI/Local Parity
 
 Mock external dependencies to ensure tests pass in both CI and local environments:

@@ -379,24 +379,58 @@ def has_failing_checks(repo_full: str, pr_number: int) -> bool:
 
 
 def _reset_base_clone_to_main(base_dir: Path) -> None:
-    """Reset base clone to main branch with clean state.
+    """Reset base clone to default branch with clean state.
 
-    Handles: untracked files, detached HEAD, dirty working tree, missing main branch.
+    Handles: untracked files, detached HEAD, dirty working tree, missing default branch.
+    Detects the repository's default branch dynamically (main, master, etc.).
     Raises subprocess.CalledProcessError on failure.
     """
     # Clean untracked files FIRST - must happen before checkout to avoid
     # "untracked working tree files would be overwritten" errors
     run_cmd(["git", "clean", "-fdx"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-    # Ensure we're on main branch (create if doesn't exist locally)
-    result = run_cmd(["git", "rev-parse", "--verify", "main"], cwd=base_dir, check=False, timeout=DEFAULT_TIMEOUT)
-    if result.returncode != 0:
-        # Local main doesn't exist - checkout from remote tracking branch
-        run_cmd(["git", "checkout", "-B", "main", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+    
+    # Detect the actual default branch from remote HEAD
+    result = run_cmd(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+        cwd=base_dir,
+        check=False,
+        timeout=DEFAULT_TIMEOUT,
+    )
+    if result.returncode == 0:
+        # Output is like "refs/remotes/origin/main" or "refs/remotes/origin/master"
+        ref_output = result.stdout.strip()
+        prefix = "refs/remotes/origin/"
+        if ref_output.startswith(prefix):
+            default_branch = ref_output[len(prefix):]
+        else:
+            # Fallback to last segment if format is unexpected
+            default_branch = ref_output.split("/")[-1]
     else:
-        # Local main exists - discard local changes first, then switch and reset
+        # Fallback to common defaults if symbolic-ref fails
+        default_branch = None
+        for candidate in ["main", "master"]:
+            result = run_cmd(
+                ["git", "rev-parse", "--verify", f"origin/{candidate}"],
+                cwd=base_dir,
+                check=False,
+                timeout=DEFAULT_TIMEOUT,
+            )
+            if result.returncode == 0:
+                default_branch = candidate
+                break
+        if not default_branch:
+            raise RuntimeError("Could not detect default branch for base clone")
+    
+    # Ensure we're on default branch (create if doesn't exist locally)
+    result = run_cmd(["git", "rev-parse", "--verify", default_branch], cwd=base_dir, check=False, timeout=DEFAULT_TIMEOUT)
+    if result.returncode != 0:
+        # Local branch doesn't exist - checkout from remote tracking branch
+        run_cmd(["git", "checkout", "-B", default_branch, f"origin/{default_branch}"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+    else:
+        # Local branch exists - discard local changes first, then switch and reset
         run_cmd(["git", "reset", "--hard"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-        run_cmd(["git", "checkout", "main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-        run_cmd(["git", "reset", "--hard", "origin/main"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        run_cmd(["git", "checkout", default_branch], cwd=base_dir, timeout=FETCH_TIMEOUT)
+        run_cmd(["git", "reset", "--hard", f"origin/{default_branch}"], cwd=base_dir, timeout=FETCH_TIMEOUT)
 
 
 def _fresh_clone(base_dir: Path, repo_full: str, github_host: str) -> None:
@@ -421,9 +455,12 @@ def ensure_base_clone(repo_full: str) -> Path:
         raise ValueError(f"Invalid repository format: {repo_full}")
 
     github_host = os.environ.get("GH_HOST", "github.com")
-    repo_name = repo_full.split("/")[-1]
-    base_dir = BASE_CLONE_ROOT / repo_name
-    BASE_CLONE_ROOT.mkdir(parents=True, exist_ok=True)
+    # Use full owner/repo path to avoid collisions between repos with same name
+    # Use directory structure (owner/repo) instead of string replacement to prevent collisions
+    # (e.g., "owner_repo/project" and "owner/repo_project" would both become "owner_repo_project")
+    owner, repo = repo_full.split("/", 1)
+    base_dir = BASE_CLONE_ROOT / owner / repo
+    base_dir.parent.mkdir(parents=True, exist_ok=True)
 
     if not base_dir.exists():
         log(f"Cloning base repo for {repo_full} into {base_dir}")
@@ -443,7 +480,7 @@ def ensure_base_clone(repo_full: str) -> Path:
     # Reset base clone to main - with automatic recovery on any failure
     try:
         _reset_base_clone_to_main(base_dir)
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, RuntimeError) as exc:
         # Proactive recovery: ANY reset failure means corrupted state - nuke and re-clone
         stderr_msg = getattr(exc, "stderr", "") or str(exc) or "No stderr available"
         # Normalize cmd handling: list/tuple -> join, str -> as-is, else -> "unknown"
@@ -459,7 +496,7 @@ def ensure_base_clone(repo_full: str) -> Path:
         # After fresh clone, we should be on main already, but ensure clean state
         try:
             _reset_base_clone_to_main(base_dir)
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as retry_exc:
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, RuntimeError) as retry_exc:
             # If it fails after fresh clone, something is fundamentally wrong
             retry_stderr = getattr(retry_exc, "stderr", "") or str(retry_exc) or "No stderr"
             raise RuntimeError(

@@ -181,6 +181,73 @@ class SafeJSONManager:
 json_manager = SafeJSONManager()
 
 
+def detect_repo_path() -> Optional[Path]:
+    """Detect a local git repository path using shared automation conventions.
+
+    Checks in order:
+    1. `~/.config/worldarchitect/repo_path`
+    2. current working directory
+    3. `~/projects/worldarchitect.ai`
+    """
+    config_file = Path.home() / ".config" / "worldarchitect" / "repo_path"
+    if config_file.exists():
+        repo_path = config_file.read_text().strip()
+        if repo_path:
+            expanded_path = Path(repo_path).expanduser()
+            if expanded_path.exists() and (expanded_path / ".git").exists():
+                return expanded_path
+
+    cwd_path = Path.cwd()
+    if (cwd_path / ".git").exists():
+        return cwd_path
+
+    default_path = Path.home() / "projects" / "worldarchitect.ai"
+    if (default_path / ".git").exists():
+        return default_path
+
+    return None
+
+
+def resolve_repo_path(repo_path: Optional[str | Path], logger: Optional[logging.Logger] = None) -> Optional[Path]:
+    """Normalize and validate a repository path, with optional auto-detection.
+
+    Returns a resolved path only when it exists and has a `.git` directory.
+    """
+    candidate: Optional[Path]
+    if repo_path is None:
+        candidate = detect_repo_path()
+    else:
+        candidate = Path(repo_path).expanduser().resolve()
+
+    if candidate is None:
+        if logger:
+            logger.info("No repo_path configured - git operations will use fallback clone strategy")
+        return None
+
+    if not candidate.exists():
+        if logger:
+            logger.warning("Specified repo_path does not exist: %s", candidate)
+        return None
+
+    if not (candidate / ".git").exists():
+        if logger:
+            logger.warning("Specified repo_path is not a git repository: %s", candidate)
+        return None
+
+    return candidate
+
+
+def resolve_repo_full_from_environment_label(task: Mapping[str, Any]) -> Optional[str]:
+    """Resolve `owner/repo` from a task's `environment_label`."""
+    label = str(task.get("environment_label") or "").strip()
+    if "/" not in label:
+        return None
+    owner, repo = label.split("/", 1)
+    if not owner or not repo:
+        return None
+    return f"{owner}/{repo}"
+
+
 def get_env_config(prefix: str = "AUTOMATION_") -> Dict[str, str]:
     """Get all environment variables with specified prefix"""
     config = {}
