@@ -122,8 +122,13 @@ environment. Evidence from `--start-local --evidence` is valid proof.
 | `methodology.md` | Test methodology | Environment, steps, validation |
 | `README.md` | Package manifest | Git commit, branch, collection time |
 | `request_responses.jsonl` | Raw MCP captures | Full request/response pairs |
+| `llm_request_responses.jsonl` | Raw LLM request/response payloads | `type` field (`request` or `response`) |
 
 **DEPRECATED:** `evidence.json` - use `run.json` + `metadata.json` instead.
+
+**Required for base-class local-server traces:**
+- `request_responses.jsonl` - MCP client ↔ local server (`/mcp`) request/response pairs
+- `llm_request_responses.jsonl` - raw LLM-layer request/response capture stream
 
 ### Mandatory Scenarios Array
 
@@ -548,6 +553,13 @@ When proving LLM or API behavior, evidence MUST capture the full request/respons
 2. **Raw response payload** - The exact output returned, before any parsing or transformation
 3. **System instructions/prompts** - Prompt filenames; char count optional; full text only when explicitly requested
 4. **Timestamps** - When each request was made and response received
+
+**Mandatory 2-layer trace set for `testing_mcp/lib/base_test.py` runs:**
+1. `request_responses.jsonl` - MCP client ↔ local server (`/mcp`) request/response pairs
+2. `llm_request_responses.jsonl` (+ `artifacts/server.log`) - local server LLM handling traces
+
+For base-class runs, these artifact files must be full and untrimmed.
+When `REQUIRE_FULL_TRACE_LOGS=true`, missing/invalid trace artifacts are a hard failure.
 
 **Why raw capture matters:**
 - Parsed/transformed responses may hide LLM misbehavior

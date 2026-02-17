@@ -72,6 +72,23 @@ class CommentFetch(CopilotCommandBase):
         self.cache_metadata_file = self.cache_dir / "cache_metadata.json"
         self.per_comment_cache = PerCommentCache(self.cache_dir)
 
+        # Fetch PR author for filtering out own coordination comments
+        self.pr_author = self._get_pr_author()
+
+    def _get_pr_author(self) -> str | None:
+        """Fetch the PR author's username.
+
+        Returns:
+            PR author's username, or None if unable to fetch
+        """
+        try:
+            cmd = ['gh', 'pr', 'view', self.pr_number, '--repo', self.repo, '--json', 'author', '--jq', '.author.login']
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
+            return result.stdout.strip()
+        except Exception as e:
+            self.log(f"Warning: Could not fetch PR author: {e}")
+            return None
+
     def _get_inline_comments(self, since: str = None) -> List[Dict[str, Any]]:
         """Fetch inline code review comments.
 
@@ -348,6 +365,36 @@ class CommentFetch(CopilotCommandBase):
         if not text:
             return False
 
+        # Skip PR author's coordination/command comments (like /smoke or @bot mentions)
+        # but keep substantive review responses and code discussion questions.
+        if self.pr_author and author and str(author) == self.pr_author:
+            # Only filter if it matches command/coordination patterns
+            text_lower = text.lower()
+            # Check for slash commands (e.g., /smoke, /test, /deploy)
+            if text_lower.startswith('/'):
+                return False
+            # Check for bot mention patterns (e.g., @coderabbit-ai, @bot)
+            # Only check the first @-mention, not the entire comment body
+            if text_lower.startswith('@'):
+                # Extract first @-mention (first word starting with @)
+                first_mention = text_lower.split()[0] if text_lower.split() else ''
+                # Structural markers — unambiguous, safe for substring matching
+                if '[bot]' in first_mention or '-bot' in first_mention:
+                    return False
+                # Known bot service names — use word-boundary regex to avoid
+                # false positives (e.g. @precursor_dev matching 'cursor')
+                bot_service_names = ['coderabbit', 'copilot', 'codex', 'cursor', 'bugbot', 'greptile']
+                bot_pattern = re.compile(
+                    r'@(?:.*[\W_])?(' + '|'.join(bot_service_names) + r')(?:[\W_]|$)',
+                    re.IGNORECASE,
+                )
+                if bot_pattern.match(first_mention):
+                    return False
+                # Also catch @user-bot, @user_bot patterns (separator required
+                # to avoid @abbott, @robotnik false positives)
+                if re.match(r'^@\w+[-_.]bot$', first_mention, re.IGNORECASE):
+                    return False
+
         # Skip our own AI responder comments
         if self._is_ai_responder_comment(body, author):
             return False
@@ -391,30 +438,25 @@ class CommentFetch(CopilotCommandBase):
             if str(other_comment.get("in_reply_to_id", "")) == comment_id:
                 return True
 
-        # Consolidated summary mode: a single [AI responder] issue comment can address inline comments
-        # without creating a threaded in_reply_to. Detect those by reference patterns.
-        comment_created_at = str(comment.get("created_at", ""))
+        # Consolidated reply mode: treat a later [AI responder] summary comment that explicitly
+        # references this comment ID (e.g. "Re: [Comment #<id>]") as a response. This avoids
+        # requiring hundreds of per-inline threaded replies when commentreply runs in
+        # anti-spam consolidated mode.
+        created_at = comment.get("created_at", "")
         for other_comment in all_comments:
             other_body = str(other_comment.get("body", ""))
             other_author = other_comment.get("author", "")
-
-            # Only treat AI responder comments created after the original as replies.
-            if not self._is_ai_responder_comment(other_body, other_author):
-                continue
-            if str(other_comment.get("created_at", "")) <= comment_created_at:
-                continue
-
-            other_body_lower = other_body.lower()
             if (
-                f"comment #{comment_id}" in other_body_lower
-                or f"#{comment_id}" in other_body_lower
-                or f"discussion_r{comment_id}" in other_body_lower
+                self._is_ai_responder_comment(other_body, other_author)
+                and other_comment.get("created_at", "") > created_at
             ):
-                return True
-
-            # Fallback: content/author similarity check.
-            if self._appears_to_be_reply_to(other_comment, comment):
-                return True
+                # Check for comment ID references (case-insensitive)
+                other_body_lower = other_body.lower()
+                if f"comment #{comment_id}" in other_body_lower or f"#{comment_id}" in other_body_lower or f"discussion_r{comment_id}" in other_body_lower:
+                    return True
+                # Check for content similarity or reply patterns (consistent with general/review)
+                if self._appears_to_be_reply_to(other_comment, comment):
+                    return True
 
         return False
 

@@ -145,6 +145,7 @@ export COPILOT_PAIR_VERIFIER=claude
 - Analyze every comment (bot + human)
 - Generate ACTION_ACCOUNTABILITY responses
 - Document: action_taken, files_modified, commit, verification
+- **MANDATORY**: Include `tracking_reason` (2-3 sentences) for each response explaining the decision
 - Create responses.json with all metadata
 
 ### Phase 3: Consolidated Response
@@ -157,6 +158,13 @@ export COPILOT_PAIR_VERIFIER=claude
 - Verify 100% comment coverage (80/80, etc.)
 - Ensure consolidated comment posted successfully
 - Check for any missed or unacknowledged feedback
+
+### Phase 4.5: PR Description Comment Tracking
+- Update PR description with comment tracking table at the bottom
+- Categorize each comment as: **Fixed**, **Deferred**, **Ignored**, or **Unresolved**
+- Include 2-3 sentence `tracking_reason` for each comment explaining the decision
+- Uses `<!-- COPILOT_TRACKING_START -->` / `<!-- COPILOT_TRACKING_END -->` markers for idempotent updates
+- Automatically handled by `commentreply.py` after posting consolidated summary
 
 ### Phase 5: Completion
 - Push responses and any fixes to PR
@@ -217,6 +225,7 @@ A /copilot execution is successful when:
 - ✅ All PR comments fetched and analyzed
 - ✅ Consolidated summary comment posted
 - ✅ 100% comment coverage verified (via /commentcheck)
+- ✅ PR description updated with comment tracking table (fixed/deferred/ignored/unresolved)
 - ✅ CI status checked and documented
 - ✅ Changes pushed to PR (if applicable)
 - ✅ Orchestration agent exits cleanly

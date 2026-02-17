@@ -67,10 +67,10 @@ jobs:
           WEEK4_WAU_P99=$(echo "$WEEK4_SECTION" | grep "P99:" | tail -1 | awk '{print $2}')
           WEEK4_USERS=$(echo "$WEEK4_SECTION" | grep "Total Unique Users:" | awk '{print $4}')
 
-          # Extract top users for each period
-          # Skip header line and separator, then take up to 10 user lines
-          TOP_WEEK=$(grep -A 12 "Top 10 Users (Last Week):" /tmp/report.txt | tail -n +3 | head -10)
-          TOP_4WEEKS=$(grep -A 12 "Top 10 Users (Last 4 Weeks):" /tmp/report.txt | tail -n +3 | head -10)
+          # Extract top users for each period.
+          # Bound each section so low-user reports don't bleed into the next header.
+          TOP_WEEK=$(sed -n '/Top 10 Users (Last Week):/,/📅 LAST 4 WEEKS STATS/p' /tmp/report.txt | grep -E '^  [0-9]+ ' || true)
+          TOP_4WEEKS=$(sed -n '/Top 10 Users (Last 4 Weeks):/,$p' /tmp/report.txt | grep -E '^  [0-9]+ ' || true)
 
           # Set outputs
           echo "week1_dau_avg=$WEEK1_DAU_AVG" >> $GITHUB_OUTPUT

@@ -469,6 +469,344 @@ def get_git_commit_hash() -> str:
 
 
 
+TRACKING_START_MARKER = "<!-- COPILOT_TRACKING_START -->"
+TRACKING_END_MARKER = "<!-- COPILOT_TRACKING_END -->"
+
+TRACKING_STATUS_MAP = {
+    "FIXED": ("✅ Fixed", "fixed"),
+    "ALREADY_IMPLEMENTED": ("✅ Fixed", "fixed"),
+    "DEFERRED": ("🔄 Deferred", "deferred"),
+    "ACKNOWLEDGED": ("⏭️ Ignored", "ignored"),
+    "SKIPPED": ("⏭️ Ignored", "ignored"),
+    "NOT_DONE": ("⏭️ Ignored", "ignored"),
+}
+
+
+def _get_comment_url(
+    owner: str, repo: str, pr_number: str, comment: Dict, comment_type: str
+) -> str:
+    """Build the GitHub URL for a comment based on its type and ID."""
+    html_url = comment.get("html_url")
+    if html_url:
+        return html_url
+
+    comment_id = comment.get("id", "unknown")
+    if comment_type == "review":
+        anchor = f"pullrequestreview-{comment_id}"
+    elif comment_type in ("inline", "copilot"):
+        anchor = f"discussion_r{comment_id}"
+    else:
+        anchor = f"issuecomment-{comment_id}"
+    return f"https://github.com/{owner}/{repo}/pull/{pr_number}#{anchor}"
+
+
+def _get_comment_author(comment: Dict) -> str:
+    """Extract author from comment, supporting both user.login and author formats."""
+    user_dict = comment.get("user")
+    if isinstance(user_dict, dict) and user_dict.get("login"):
+        return user_dict["login"]
+    return comment.get("author", "unknown")
+
+
+def build_tracking_section(
+    owner: str,
+    repo: str,
+    pr_number: str,
+    responses_data: Dict,
+    all_comments: List[Dict],
+    already_replied_ids: set,
+) -> str:
+    """Build the PR description tracking section with categorized comment URLs.
+
+    Categorizes each comment as fixed, deferred, ignored, or unresolved based
+    on the response type in responses.json.  Includes a 2-3 sentence
+    tracking_reason for each entry.
+
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        pr_number: PR number
+        responses_data: Loaded responses.json with ACTION_ACCOUNTABILITY format
+        all_comments: All fetched PR comments
+        already_replied_ids: Set of comment IDs already replied to (for context)
+
+    Returns:
+        Markdown string for the tracking section
+    """
+    responses = responses_data.get("responses", [])
+
+    # Build a lookup: comment_id (str) -> response entry
+    response_lookup: Dict[str, Dict] = {}
+    for resp in responses:
+        cid = str(resp.get("comment_id", ""))
+        if cid:
+            response_lookup[cid] = resp
+
+    # Determine current actor to skip self-comments
+    ok_actor, actor_login, _ = run_command(
+        ["gh", "api", "user", "-q", ".login"], description="current actor"
+    )
+    actor_login = (actor_login or "").strip() or os.environ.get("GITHUB_ACTOR", "")
+
+    # Categorize each top-level comment
+    fixed_entries: List[str] = []
+    deferred_entries: List[str] = []
+    ignored_entries: List[str] = []
+    unresolved_entries: List[str] = []
+
+    # Sort comments chronologically
+    sorted_comments = sorted(all_comments, key=lambda c: c.get("created_at", ""))
+
+    for comment in sorted_comments:
+        comment_id = str(comment.get("id", ""))
+        if not comment_id:
+            continue
+
+        # Skip replies (only track top-level comments)
+        if comment.get("in_reply_to_id"):
+            continue
+
+        # Skip our own comments
+        author = _get_comment_author(comment)
+        if author == actor_login:
+            continue
+
+        # Skip [AI responder] tagged comments only if authored by current actor
+        body = comment.get("body", "")
+        if "[AI responder]" in body and author == actor_login:
+            continue
+
+        comment_type = comment.get("type") or detect_comment_type(comment)
+        url = _get_comment_url(owner, repo, pr_number, comment, comment_type)
+        link_text = f"[#{comment_id}]({url}) by @{author}"
+
+        resp = response_lookup.get(comment_id)
+
+        if resp:
+            response_type = resp.get("response", "ACKNOWLEDGED")
+            tracking_reason = resp.get("tracking_reason", "")
+
+            # Coerce to string to guard against non-string values in responses.json
+            if not isinstance(tracking_reason, str):
+                tracking_reason = str(tracking_reason) if tracking_reason else ""
+
+            # Fallback: derive reason from existing fields if tracking_reason is missing
+            if not tracking_reason:
+                tracking_reason = _derive_tracking_reason(resp)
+
+            # Escape pipe characters in reason for markdown table
+            tracking_reason = tracking_reason.replace("|", "\\|").replace("\n", " ")
+
+            status_label, category = TRACKING_STATUS_MAP.get(
+                response_type, ("⏭️ Ignored", "ignored")
+            )
+            row = f"| {status_label} | {link_text} | {tracking_reason} |"
+
+            if category == "fixed":
+                fixed_entries.append(row)
+            elif category == "deferred":
+                deferred_entries.append(row)
+            else:
+                ignored_entries.append(row)
+        elif comment_id in {str(x) for x in already_replied_ids}:
+            # Already replied in a prior run - not unresolved
+            reason = "Previously addressed in an earlier copilot run. Response already posted to this comment."
+            row = f"| ✅ Fixed | {link_text} | {reason} |"
+            fixed_entries.append(row)
+        else:
+            # No response entry and not already replied = unresolved
+            reason = "Comment was not processed in this copilot run. No response entry found in responses.json."
+            row = f"| ❓ Unresolved | {link_text} | {reason} |"
+            unresolved_entries.append(row)
+
+    # Build stats
+    total = len(fixed_entries) + len(deferred_entries) + len(ignored_entries) + len(unresolved_entries)
+    fixed_count = len(fixed_entries)
+    deferred_count = len(deferred_entries)
+    ignored_count = len(ignored_entries)
+    unresolved_count = len(unresolved_entries)
+    coverage = total - unresolved_count
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Combine all rows in order: fixed, deferred, ignored, unresolved
+    all_rows = fixed_entries + deferred_entries + ignored_entries + unresolved_entries
+
+    if not all_rows:
+        return ""
+
+    table_header = "| Status | Comment | Reason |\n|--------|---------|--------|"
+    table_body = "\n".join(all_rows)
+
+    section = f"""{TRACKING_START_MARKER}
+---
+## Copilot Comment Tracking
+
+{table_header}
+{table_body}
+
+**Last processed**: {timestamp} | **Coverage**: {coverage}/{total} ({coverage * 100 // total if total > 0 else 100}%) | **Fixed**: {fixed_count} | **Deferred**: {deferred_count} | **Ignored**: {ignored_count} | **Unresolved**: {unresolved_count}
+{TRACKING_END_MARKER}"""
+
+    return section
+
+
+def _ensure_period(text: str) -> str:
+    """Ensure text ends with a period, without creating double punctuation."""
+    text = text.rstrip()
+    if text and text[-1] in ".!?":
+        return text
+    return text + "."
+
+
+def _derive_tracking_reason(resp: Dict) -> str:
+    """Derive a tracking reason from existing response fields when tracking_reason is missing.
+
+    Args:
+        resp: A single response entry from responses.json
+
+    Returns:
+        A derived reason string
+    """
+    response_type = resp.get("response", "")
+
+    if response_type == "FIXED":
+        action = resp.get("action_taken", "Fix applied")
+        verification = resp.get("verification", "")
+        files = resp.get("files_modified", [])
+        if not isinstance(files, list):
+            files = [str(files)] if files else []
+        parts = [_ensure_period(action)]
+        if files:
+            parts.append(f"Modified {', '.join(files[:3])}{'...' if len(files) > 3 else ''}.")
+        if verification:
+            parts.append(_ensure_period(verification.lstrip("✅ ").strip()))
+        return " ".join(parts[:3])
+
+    if response_type == "ALREADY_IMPLEMENTED":
+        evidence = resp.get("evidence", {})
+        if isinstance(evidence, dict):
+            return f"Already implemented at {evidence.get('file', 'unknown')}:{evidence.get('line', '?')}. No changes needed."
+        return "Feature already exists in the codebase. No changes needed."
+
+    if response_type == "DEFERRED":
+        reason = resp.get("reason", "Deferred for future implementation")
+        bead_id = resp.get("bead_id", "")
+        parts = [_ensure_period(reason)]
+        if bead_id:
+            parts.append(f"Tracked in bead {bead_id}.")
+        return " ".join(parts)
+
+    if response_type == "NOT_DONE":
+        reason = resp.get("reason", "Could not implement the requested change")
+        return _ensure_period(reason)
+
+    if response_type == "ACKNOWLEDGED":
+        explanation = resp.get("explanation", "Noted for context")
+        return _ensure_period(explanation)
+
+    if response_type == "SKIPPED":
+        reason = resp.get("reason", "Out of scope for this copilot run")
+        return _ensure_period(reason)
+
+    return "Processed without specific tracking reason."
+
+
+def update_pr_description_with_tracking(
+    owner: str,
+    repo: str,
+    pr_number: str,
+    responses_data: Dict,
+    all_comments: List[Dict],
+    already_replied_ids: set,
+) -> bool:
+    """Update the PR description with a comment tracking section at the bottom.
+
+    Builds a categorized table of all PR comments (fixed, deferred, ignored,
+    unresolved) with reasons, and appends or replaces it at the bottom of the
+    PR description using idempotent HTML comment markers.
+
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        pr_number: PR number
+        responses_data: Loaded responses.json
+        all_comments: All fetched PR comments
+        already_replied_ids: Set of comment IDs already replied to
+
+    Returns:
+        True if PR description was updated successfully
+    """
+    print("📋 TRACKING: Building PR description comment tracking section")
+
+    tracking_section = build_tracking_section(
+        owner, repo, pr_number, responses_data, all_comments, already_replied_ids
+    )
+
+    if not tracking_section:
+        print("   ℹ️  No trackable comments found, skipping PR description update")
+        return True
+
+    # Fetch current PR body
+    repo_flag = f"{owner}/{repo}"
+    success, pr_body, stderr = run_command(
+        ["gh", "pr", "view", pr_number, "--repo", repo_flag, "--json", "body", "--jq", ".body // \"\""],
+        description="fetch PR body",
+        timeout=30,
+    )
+    if not success:
+        print(f"   ❌ Failed to fetch PR body: {stderr}")
+        return False
+
+    pr_body = pr_body.rstrip("\n")
+
+    # Replace existing tracking section or append
+    if TRACKING_START_MARKER in pr_body and TRACKING_END_MARKER in pr_body:
+        # Idempotent replacement
+        start_idx = pr_body.index(TRACKING_START_MARKER)
+        end_idx = pr_body.index(TRACKING_END_MARKER) + len(TRACKING_END_MARKER)
+        updated_body = pr_body[:start_idx] + tracking_section + pr_body[end_idx:]
+        print("   🔄 Replacing existing tracking section in PR description")
+    else:
+        # Append new section
+        updated_body = pr_body + "\n\n" + tracking_section
+        print("   ➕ Appending new tracking section to PR description")
+
+    # Write updated body to PR via REST API (avoids GraphQL Projects Classic errors)
+    temp_file_path = None
+    try:
+        payload = json.dumps({"body": updated_body})
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as temp_file:
+            temp_file_path = temp_file.name
+            temp_file.write(payload)
+
+        success, stdout, stderr = run_command(
+            [
+                "gh", "api",
+                f"repos/{owner}/{repo}/pulls/{pr_number}",
+                "--method", "PATCH",
+                "--input", temp_file_path,
+                "--jq", ".html_url",
+            ],
+            description="update PR description with tracking via REST API",
+            timeout=30,
+        )
+    except Exception as e:
+        print(f"   ❌ Failed to create temp file for PR body: {e}")
+        return False
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
+
+    if success:
+        print("   ✅ PR description updated with comment tracking section")
+        return True
+    else:
+        print(f"   ❌ Failed to update PR description: {stderr}")
+        return False
+
+
 def detect_comment_type(comment: Dict) -> str:
     """Detect comment kind: inline (code), review (review body), or issue"""
     html_url = comment.get("html_url") or ""
@@ -1134,6 +1472,19 @@ def main():
     if not summary_posted:
         print("\n❌ CRITICAL: Failed to post consolidated summary comment")
         sys.exit(1)
+
+    # Step 6b: Update PR description with comment tracking table
+    print("\n📋 TRACKING: Updating PR description with comment tracking")
+    tracking_updated = update_pr_description_with_tracking(
+        owner,
+        repo,
+        pr_number,
+        responses_data,
+        all_comments,
+        already_replied_ids,
+    )
+    if not tracking_updated:
+        print("⚠️ WARNING: Failed to update PR description with tracking (non-fatal)")
 
     # Step 7: Final report
     print("\n✅ COMPLETE: Comment processing finished")

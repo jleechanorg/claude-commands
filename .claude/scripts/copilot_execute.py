@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -26,6 +27,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 ORCHESTRATE_SCRIPT = str(PROJECT_ROOT / "orchestration" / "orchestrate_unified.py")
 COPILOT_SKILL = str(PROJECT_ROOT / ".codex" / "skills" / "copilot-pr-processing" / "SKILL.md")
+
+# Prefer PyPI package CLI (`orch`) over local script for portability.
+# Falls back to local orchestrate_unified.py when the package isn't installed.
+ORCH_CLI = shutil.which("orch")
 PAIR_INTEGRATION_MODULE = str(PROJECT_ROOT / ".claude" / "commands" / "_copilot_modules")
 PAIR_EXECUTE_SCRIPT = str(PROJECT_ROOT / "scripts" / "pair_execute.py")
 
@@ -286,13 +291,24 @@ COMMENT URL TRACKING (MANDATORY):
     agent_cli = os.environ.get("COPILOT_AGENT_CLI", "codex")
     log(f"🤖 Using agent CLI: {agent_cli}")
 
-    cmd = [
-        "python3",
-        ORCHESTRATE_SCRIPT,
-        "--agent-cli", agent_cli,
-        "--no-worktree",  # Stay in current worktree
-        task_description,  # Positional argument, not --task flag
-    ]
+    # Prefer PyPI `orch` CLI; fall back to local script for development
+    if ORCH_CLI:
+        cmd = [
+            ORCH_CLI, "run",
+            "--agent-cli", agent_cli,
+            "--no-worktree",
+            task_description,
+        ]
+        log(f"🔧 Using PyPI package: {ORCH_CLI}")
+    else:
+        cmd = [
+            "python3",
+            ORCHESTRATE_SCRIPT,
+            "--agent-cli", agent_cli,
+            "--no-worktree",
+            task_description,
+        ]
+        log(f"🔧 Falling back to local script: {ORCHESTRATE_SCRIPT}")
 
     log(f"🔧 Command: {' '.join(cmd[:4])}... [task truncated]")
 

@@ -41,6 +41,10 @@ logger = logging.getLogger(__name__)
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 # Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
+# MiniMax model can be overridden via MINIMAX_MODEL; default to MiniMax-M2.5
+MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL", "MiniMax-M2.5")
+# MiniMax key can be provided via MINIMAX_API_KEY and propagated to Anthropic SDK var
+MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 
 # CLI validation constants imported from centralized validation library
 # CLI_VALIDATION_TEST_PROMPT, CLI_VALIDATION_TIMEOUT_SECONDS
@@ -63,6 +67,8 @@ CLI_PROFILES = {
         "quote_prompt": False,
         # Unset API key to force OAuth/interactive auth (consistent with other CLIs)
         "env_unset": ["ANTHROPIC_API_KEY"],
+        # Empty env_set for consistency with other profiles (only minimax uses it)
+        "env_set": {},
         "detection_keywords": ["claude", "anthropic"],
     },
     "codex": {
@@ -79,6 +85,8 @@ CLI_PROFILES = {
         "quote_prompt": True,
         # Unset API key to force OAuth/interactive auth (consistent with other CLIs)
         "env_unset": ["OPENAI_API_KEY"],
+        # Empty env_set for consistency with other profiles
+        "env_set": {},
         "detection_keywords": [
             "codex",
             "codex exec",
@@ -105,6 +113,8 @@ CLI_PROFILES = {
         # Unset GEMINI_API_KEY to force OAuth authentication (higher quotas than API key)
         # See: https://github.com/google-gemini/gemini-cli/blob/main/docs/get-started/authentication.md
         "env_unset": ["GEMINI_API_KEY"],
+        # Empty env_set for consistency with other profiles
+        "env_set": {},
         "detection_keywords": [
             "gemini",
             "gemini cli",
@@ -129,6 +139,8 @@ CLI_PROFILES = {
         "quote_prompt": False,
         # No known API key to unset for Cursor (uses its own auth)
         "env_unset": [],
+        # Empty env_set for consistency with other profiles
+        "env_set": {},
         "detection_keywords": [
             "cursor",
             "cursor-agent",
@@ -138,6 +150,35 @@ CLI_PROFILES = {
             "use the cursor cli",
             "cursor ai",
         ],
+    },
+    "minimax": {
+        "binary": "claude",
+        "display_name": "MiniMax",
+        "generated_with": "🤖 Generated with [Claude Code](https://claude.ai/code) via MiniMax API",
+        "co_author": "Claude <noreply@anthropic.com>",
+        "supports_continue": True,
+        "conversation_dir": "~/.claude/conversations",
+        "continue_flag": "--continue",
+        "restart_env": "MINIMAX_RESTART",
+        # MiniMax uses Claude Code with MiniMax API endpoint and model
+        # Sets ANTHROPIC_BASE_URL to MiniMax proxy, auth via MINIMAX_API_KEY
+        "command_template": (
+            "{binary} --model {model} -p @{prompt_file} "
+            "--output-format stream-json --verbose{continue_flag} --dangerously-skip-permissions"
+        ),
+        "stdin_template": "/dev/null",
+        "quote_prompt": False,
+        # Unset default Anthropic API key to force MiniMax auth
+        "env_unset": ["ANTHROPIC_API_KEY"],
+        # Set MiniMax-specific env vars (ANTHROPIC_API_KEY added at runtime if set)
+        "env_set": {
+            "ANTHROPIC_BASE_URL": "https://api.minimax.io/anthropic",
+            "ANTHROPIC_MODEL": MINIMAX_MODEL,
+            "ANTHROPIC_SMALL_FAST_MODEL": MINIMAX_MODEL,
+            "API_TIMEOUT_MS": "3000000",
+            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+        },
+        "detection_keywords": ["minimax", "mini max", "minimax-m2"],
     },
 }
 
@@ -850,6 +891,14 @@ class TaskDispatcher:
         try:
             profile = CLI_PROFILES.get(cli_name, {})
             env = {k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
+            # Apply env_set overrides (e.g., for MiniMax)
+            for key, value in profile.get("env_set", {}).items():
+                env[key] = value
+            # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
+            if cli_name == "minimax":
+                runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
+                if runtime_minimax_key:
+                    env["ANTHROPIC_API_KEY"] = runtime_minimax_key
 
             # Determine help args and execution cmd based on CLI type
             help_args = []
@@ -888,6 +937,18 @@ class TaskDispatcher:
                 # For Cursor, we need to create a prompt file (handled in execution phase)
                 # Use --approve-mcps to auto-approve MCP servers (Cursor doesn't have a skip-MCP flag)
                 execution_cmd = ["-f", "-p", "@PROMPT_FILE", "--model", test_model, "--output-format", "text", "--approve-mcps"]
+                skip_help = True  # Skip help for OAuth CLIs (may require auth)
+            elif cli_name == "minimax":
+                # MiniMax runs through Claude CLI with MiniMax endpoint and model env overrides.
+                if not os.access(cli_path, os.X_OK):
+                    print(f"   ⚠️ MiniMax CLI binary not executable: {cli_path} (agent {agent_name})")
+                    return False
+                help_args = ["--help"]
+                # Always use MINIMAX_MODEL for MiniMax - never use chain-wide model
+                # This ensures preflight validates with the correct model for MiniMax API
+                test_model = MINIMAX_MODEL
+                # Use prompt file mode and strict MCP config to keep preflight lightweight.
+                execution_cmd = ["--model", test_model, "-p", "@PROMPT_FILE", "--output-format", "text", "--strict-mcp-config"]
                 skip_help = True  # Skip help for OAuth CLIs (may require auth)
             else:
                 # Unknown CLI type - assume available
@@ -1025,12 +1086,18 @@ class TaskDispatcher:
         except Exception as e:
             return {"a2a_enabled": True, "error": str(e), "timestamp": time.time()}
 
-    def analyze_task_and_create_agents(self, task_description: str, forced_cli: str | None = None) -> list[dict]:
+    def analyze_task_and_create_agents(self, task_description: str, wrap_prompt: bool = True, forced_cli: str | None = None) -> list[dict]:
         """
         Create appropriate agent for the given task with PR context awareness.
 
         Args:
             task_description: The task description to analyze and create agents for.
+            wrap_prompt: When True (default), wraps prompt with PR mode instructions,
+                including PR context detection (subprocess calls to ``gh``), PR mode
+                prompt templates, ``pr_context`` injection into agent spec, and
+                execution guidelines. When False, all of that is skipped: no subprocess
+                calls to ``gh``, prompt is the raw ``task_description``, and
+                ``pr_context`` is not injected into the agent spec.
             forced_cli: Optional; the CLI to force agent selection (e.g., from --fixpr-agent flag).
                 When provided, this overrides any CLI detection logic and forces the use of the specified CLI.
 
@@ -1051,41 +1118,57 @@ class TaskDispatcher:
         elif agent_cli != "claude":
             print(f"🤖 Selected {agent_cli.capitalize()} CLI based on task request")
 
-        # Detect PR context
-        pr_number, mode = self._detect_pr_context(task_description)
+        if wrap_prompt:
+            # Detect PR context
+            pr_number, mode = self._detect_pr_context(task_description)
 
-        # Show user what was detected
-        if mode == "update":
-            if pr_number:
-                print(f"\n🔍 Detected PR context: #{pr_number} - Agent will UPDATE existing PR")
-                # Get PR details for better context
-                try:
-                    result = subprocess.run(
-                        [
-                            "gh",
-                            "pr",
-                            "view",
-                            pr_number,
-                            "--json",
-                            "title,state,headRefName",
-                        ],
-                        check=False,
-                        capture_output=True,
-                        text=True,
-                        timeout=30,
-                    )
-                    if result.returncode == 0:
-                        pr_data = json.loads(result.stdout)
-                        print(f"   Branch: {pr_data['headRefName']}")
-                        print(f"   Status: {pr_data['state']}")
-                except Exception:
-                    pass
+            # Show user what was detected
+            if mode == "update":
+                if pr_number:
+                    print(f"\n🔍 Detected PR context: #{pr_number} - Agent will UPDATE existing PR")
+                    # Get PR details for better context
+                    try:
+                        result = subprocess.run(
+                            [
+                                "gh",
+                                "pr",
+                                "view",
+                                pr_number,
+                                "--json",
+                                "title,state,headRefName",
+                            ],
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                        )
+                        if result.returncode == 0:
+                            pr_data = json.loads(result.stdout)
+                            print(f"   Branch: {pr_data['headRefName']}")
+                            print(f"   Status: {pr_data['state']}")
+                        else:
+                            logger.debug(
+                                "gh_pr_view_nonzero_exit",
+                                extra={
+                                    "pr_number": pr_number,
+                                    "returncode": result.returncode,
+                                    "stderr": result.stderr.strip()[:200],
+                                },
+                            )
+                    except Exception:
+                        logger.debug(
+                            "gh_pr_view_failed",
+                            extra={"pr_number": pr_number},
+                            exc_info=True,
+                        )
+                else:
+                    print("\n🔍 Detected PR update request but no specific PR number")
+                    print("   Agent will check for recent PRs and ask for clarification if needed")
             else:
-                print("\n🔍 Detected PR update request but no specific PR number")
-                print("   Agent will check for recent PRs and ask for clarification if needed")
+                print("\n🆕 No PR context detected - Agent will create NEW PR")
+                print("   New branch will be created from main")
         else:
-            print("\n🆕 No PR context detected - Agent will create NEW PR")
-            print("   New branch will be created from main")
+            pr_number, mode = None, "create"
 
         # Use the same unique name generation as other methods
         agent_name = self._generate_unique_name("task-agent", task_description)
@@ -1094,9 +1177,10 @@ class TaskDispatcher:
         capabilities = list(self.agent_capabilities.keys())
 
         # Build appropriate prompt based on mode
-        if mode == "update":
-            if pr_number:
-                prompt = f"""Task: {task_description}
+        if wrap_prompt:
+            if mode == "update":
+                if pr_number:
+                    prompt = f"""Task: {task_description}
 
 🔄 PR UPDATE MODE - You must UPDATE existing PR #{pr_number}
 
@@ -1134,8 +1218,8 @@ Key points:
    - Testing tasks: Separate agents for different test types
    - Documentation: Dedicated agents for complex documentation needs
    - Code analysis: Parallel analysis of multiple files/systems"""
-            else:
-                prompt = f"""Task: {task_description}
+                else:
+                    prompt = f"""Task: {task_description}
 
 🔄 PR UPDATE MODE - You need to update an existing PR
 
@@ -1165,8 +1249,8 @@ The user referenced "the PR" but didn't specify which one. You must:
    - Testing tasks: Separate agents for different test types
    - Documentation: Dedicated agents for complex documentation needs
    - Code analysis: Parallel analysis of multiple files/systems"""
-        else:
-            prompt = f"""Task: {task_description}
+            else:
+                prompt = f"""Task: {task_description}
 
 🆕 NEW PR MODE - Create a fresh pull request
 
@@ -1194,6 +1278,8 @@ Execute the task exactly as requested. Key points:
    - Code analysis: Parallel analysis of multiple files/systems
 
 Complete the task, then use /pr to create a new pull request."""
+        else:
+            prompt = task_description
 
         agent_spec = {
             "name": agent_name,
@@ -1206,8 +1292,8 @@ Complete the task, then use /pr to create a new pull request."""
         if len(cli_chain) > 1:
             agent_spec["cli_chain"] = cli_chain
 
-        # Add PR context if updating existing PR
-        if mode == "update":
+        # Add PR context if updating existing PR (only when wrapping is enabled)
+        if wrap_prompt and mode == "update":
             agent_spec["pr_context"] = {"mode": mode, "pr_number": pr_number}
 
         # Add workspace configuration if specified
@@ -1695,6 +1781,8 @@ Complete the task, then use /pr to create a new pull request."""
                 model = GEMINI_MODEL
             elif model == "sonnet" and agent_cli == "cursor":
                 model = CURSOR_MODEL
+            elif model == "sonnet" and agent_cli == "minimax":
+                model = MINIMAX_MODEL
 
             # Persist chain for downstream script-generation
             agent_spec["cli"] = agent_cli
@@ -1774,11 +1862,16 @@ Complete the task, then use /pr to create a new pull request."""
                     model = GEMINI_MODEL
                 elif model == "sonnet" and agent_cli == "cursor":
                     model = CURSOR_MODEL
+                elif model == "sonnet" and agent_cli == "minimax":
+                    model = MINIMAX_MODEL
                 elif model == GEMINI_MODEL and agent_cli != "gemini":
                     # If switching away from Gemini, reset to sonnet default
                     model = "sonnet"
                 elif model == CURSOR_MODEL and agent_cli != "cursor":
                     # If switching away from Cursor, reset to sonnet default
+                    model = "sonnet"
+                elif model == MINIMAX_MODEL and agent_cli != "minimax":
+                    # If switching away from MiniMax, reset to sonnet default
                     model = "sonnet"
                 # Update model in agent_spec for downstream use
                 agent_spec["model"] = model
@@ -2168,6 +2261,10 @@ Agent Configuration:
                     attempt_prompt_value_quoted if attempt_profile.get("quote_prompt") else attempt_prompt_value_raw
                 )
 
+                # For MiniMax, always use MINIMAX_MODEL - never use chain-wide model
+                # This ensures runtime execution uses the correct model for MiniMax API
+                runtime_model = MINIMAX_MODEL if attempt_cli == "minimax" else model
+
                 attempt_cli_command = (
                     attempt_profile["command_template"]
                     .format(
@@ -2177,7 +2274,7 @@ Agent Configuration:
                         prompt_file_path=attempt_prompt_value_raw,
                         prompt_file_quoted=attempt_prompt_value_quoted,
                         continue_flag=attempt_continue_segment,
-                        model=model,
+                        model=runtime_model,
                     )
                     .strip()
                 )
@@ -2205,6 +2302,33 @@ Agent Configuration:
                     "\n".join(f"unset {var}" for var in attempt_env_unset_list) if attempt_env_unset_list else ""
                 )
 
+                # Build env_set commands (e.g., for MiniMax to set ANTHROPIC_BASE_URL)
+                attempt_env_set_commands = ""
+                attempt_env_set_dict = attempt_profile.get("env_set", {})
+                if attempt_env_set_dict:
+                    for key, value in attempt_env_set_dict.items():
+                        if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                            raise ValueError(
+                                f"Invalid environment variable name in env_set for CLI profile "
+                                f"'{attempt_profile.get('display_name', attempt_cli)}': {key!r}"
+                            )
+                        attempt_env_set_commands += f"export {key}={shlex.quote(value)}\n"
+                # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
+                if attempt_cli == "minimax":
+                    runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
+                    if runtime_minimax_key:
+                        attempt_env_set_commands += f"export ANTHROPIC_API_KEY={shlex.quote(runtime_minimax_key)}\n"
+
+                # Build cleanup commands to prevent env vars from leaking between CLI attempts
+                # MiniMax sets ANTHROPIC_BASE_URL, ANTHROPIC_MODEL, etc. which must be cleaned up
+                # before other CLIs run (especially Claude which would otherwise call MiniMax endpoint)
+                env_cleanup_vars = ["ANTHROPIC_BASE_URL", "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL", "API_TIMEOUT_MS", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"]
+                # Only add cleanup for non-MiniMax attempts; MiniMax sets these intentionally
+                attempt_env_cleanup_commands = ""
+                if attempt_cli != "minimax":
+                    for var in env_cleanup_vars:
+                        attempt_env_cleanup_commands += f"unset {var} 2>/dev/null || true\n"
+
                 attempt_display_name = attempt_profile.get("display_name", attempt_cli)
 
                 # All CLIs use OAuth and may need time for complex tasks
@@ -2220,6 +2344,9 @@ Agent Configuration:
                     preflight_cmd = f'{attempt_binary_value} -f -p - --model {shlex.quote(CURSOR_MODEL)} --output-format text'
                 elif attempt_cli == "claude":
                     preflight_cmd = f'{attempt_binary_value} -p - --model {shlex.quote(model)} --output-format text'
+                elif attempt_cli == "minimax":
+                    # MiniMax uses Claude Code with MiniMax API
+                    preflight_cmd = f'{attempt_binary_value} -p - --model {shlex.quote(MINIMAX_MODEL)} --output-format text'
                 else:
                     preflight_cmd = f'{attempt_binary_value}'
 
@@ -2239,6 +2366,10 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
     {prompt_env_export}
     {github_token_export}
     {attempt_env_unset_commands}
+    {attempt_env_set_commands}
+    # Clean up env vars from previous CLI attempts to prevent leakage
+    # (e.g., MiniMax env vars must not persist to Claude fallback)
+    {attempt_env_cleanup_commands}
 
     # Quick pre-flight check: Test CLI can actually run before full execution
     # This catches quota exhaustion that happened between dispatch and execution
@@ -2280,7 +2411,9 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
     RATE_LIMITED=0
     ASKED_QUESTION=0
     if [ "$LOG_END_LINE" -ge "$LOG_START_LINE" ]; then
-        if sed -n "$((LOG_START_LINE+1)),$LOG_END_LINE p" {log_file_quoted} 2>/dev/null | grep -Eqi "{rate_limit_pattern}"; then
+        # Only detect rate limit as failure if there's a non-zero exit code
+        # This prevents false positives from informational messages (e.g., CodeRabbit comments)
+        if [ $ATTEMPT_EXIT -ne 0 ] && sed -n "$((LOG_START_LINE+1)),$LOG_END_LINE p" {log_file_quoted} 2>/dev/null | grep -Eqi "{rate_limit_pattern}"; then
             RATE_LIMITED=1
             RATE_LIMITED_SEEN=1
             echo "[$(date)] ⚠️  Detected rate limit/quota output (treating as failure)" | tee -a {log_file_quoted}
