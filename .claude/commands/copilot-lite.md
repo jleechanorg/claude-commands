@@ -127,6 +127,8 @@ For EACH **top-level (non-reply)** comment in `/tmp/{branch}/comments.json` (inc
   - Examples: Bot status updates like "Merge conflict detected", "CI pending"
   - **NOTE**: Bot comments requesting actual code changes should NOT be skipped - treat them like human comments
 
+**MANDATORY for ALL response types**: Include `tracking_reason` field - a 2-3 sentence justification explaining WHY this response type was chosen and WHAT was done/decided. This appears in the PR description's comment tracking table.
+
 ### Phase 4: Build responses.json
 
 **🚨 Claude MUST write responses to `/tmp/{branch}/responses.json`:**
@@ -143,6 +145,7 @@ For EACH **top-level (non-reply)** comment in `/tmp/{branch}/comments.json` (inc
       "files_modified": ["testing_integration/test_file.py:171"],
       "commit": "946958873",
       "verification": "✅ Tests pass, Python 3.8+ compatible",
+      "tracking_reason": "Removed strict=True parameter from zip() call to restore Python 3.8 compatibility. The strict parameter was added in Python 3.10 and breaks CI on older runtimes. Tests pass on both 3.8 and 3.11.",
       "reply_text": "[AI responder] ✅ **FIXED**\n\n**Category**: CRITICAL\n**Action**: Removed strict=True from zip() for Python 3.8 compatibility\n**Files**: testing_integration/test_file.py:171\n**Commit**: 946958873\n**Verification**: ✅ Tests pass",
       "in_reply_to": null
     },
@@ -151,6 +154,7 @@ For EACH **top-level (non-reply)** comment in `/tmp/{branch}/comments.json` (inc
       "category": "BLOCKING",
       "response": "NOT_DONE",
       "reason": "cast() is required for mypy type inference - removing it causes 'object has no attribute append' error",
+      "tracking_reason": "Attempted to remove cast() as requested but mypy type inference fails without it. The cast() call is necessary because mypy cannot infer the append attribute on the base object type. Needs upstream type stub fix first.",
       "reply_text": "[AI responder] ❌ **NOT DONE**\n\n**Category**: BLOCKING\n**Reason**: cast() is required for mypy type inference. Attempted removal, but mypy fails with: 'object has no attribute append'\n**Evidence**: Ran `mypy src/file.py` - exit code 1",
       "in_reply_to": null
     },
@@ -159,6 +163,7 @@ For EACH **top-level (non-reply)** comment in `/tmp/{branch}/comments.json` (inc
       "category": "ROUTINE",
       "response": "ACKNOWLEDGED",
       "explanation": "Good suggestion for code clarity, will apply in next refactoring cycle",
+      "tracking_reason": "Style suggestion for improving variable naming clarity. Current naming follows existing codebase convention and changing it would require a broader refactoring effort beyond this PR's scope.",
       "reply_text": "[AI responder] 📝 **ACKNOWLEDGED**\n\n**Category**: ROUTINE\n**Note**: Good suggestion for code clarity. Noting for future refactoring.",
       "in_reply_to": null
     },
@@ -171,6 +176,7 @@ For EACH **top-level (non-reply)** comment in `/tmp/{branch}/comments.json` (inc
         "line": 45,
         "code": "branch_name = branch_name.replace('/', '_').replace('\\\\', '_')"
       },
+      "tracking_reason": "Branch sanitization already exists at src/utils.py:45 using replace() for path separators. The existing implementation covers the requested functionality with both forward and backslash handling.",
       "reply_text": "[AI responder] ✅ **ALREADY IMPLEMENTED**\n\n**Category**: IMPORTANT\n**Evidence**: Branch sanitization exists at src/utils.py:45\n```python\nbranch_name = branch_name.replace('/', '_').replace('\\\\', '_')\n```\n**Verified**: Actual code shows path-safe character replacement",
       "in_reply_to": null
     },
@@ -183,6 +189,7 @@ For EACH **top-level (non-reply)** comment in `/tmp/{branch}/comments.json` (inc
       "files_modified": ["src/auth.py:45"],
       "commit": "abc123def",
       "verification": "✅ Syntax valid, null pointer exception prevented",
+      "tracking_reason": "Added null check before accessing user.name property as flagged by codex-bot. The missing guard caused NullPointerException when unauthenticated users hit the endpoint. Fix verified with syntax check.",
       "reply_text": "[AI responder] ✅ **FIXED**\n\n**Category**: IMPORTANT\n**Action**: Added null check before accessing user.name property (from @codex-bot comment)\n**Files**: src/auth.py:45\n**Commit**: abc123def\n**Verification**: ✅ Syntax valid, null pointer exception prevented",
       "in_reply_to": null
     },
@@ -192,6 +199,7 @@ For EACH **top-level (non-reply)** comment in `/tmp/{branch}/comments.json` (inc
       "category": "SKIP",
       "response": "SKIPPED",
       "reason": "Bot status update about merge conflicts - use /fixpr command",
+      "tracking_reason": "Automated bot notification about merge conflict status. Not actionable by /copilot-lite - merge conflicts should be resolved using /fixpr command separately.",
       "reply_text": "[AI responder] ⏭️ **SKIPPED**\n\n**Reason**: This is a bot status update about merge conflicts, which is out of scope for /copilot-lite.\n**Action**: Please run `/fixpr` to resolve merge conflicts separately.",
       "in_reply_to": null
     }
@@ -389,11 +397,11 @@ response = "ALREADY IMPLEMENTED - branch is sanitized"
 
 | Response | When to Use | Required Fields |
 |----------|-------------|-----------------|
-| `FIXED` | Successfully implemented change (human or bot comment) | `action_taken`, `files_modified`, `commit`, `verification` |
-| `NOT_DONE` | Attempted but couldn't implement (human or bot comment) | `reason` (from actual failure) |
-| `ACKNOWLEDGED` | Style/non-blocking suggestion (human or bot comment) | `explanation` |
-| `ALREADY_IMPLEMENTED` | Code already has this feature (human or bot comment) | `evidence` (file, line, code snippet) |
-| `SKIPPED` | Bot status updates, merge conflicts, tests, or CI | `reason` (brief explanation + command to use) |
+| `FIXED` | Successfully implemented change (human or bot comment) | `action_taken`, `files_modified`, `commit`, `verification`, `tracking_reason` |
+| `NOT_DONE` | Attempted but couldn't implement (human or bot comment) | `reason` (from actual failure), `tracking_reason` |
+| `ACKNOWLEDGED` | Style/non-blocking suggestion (human or bot comment) | `explanation`, `tracking_reason` |
+| `ALREADY_IMPLEMENTED` | Code already has this feature (human or bot comment) | `evidence` (file, line, code snippet), `tracking_reason` |
+| `SKIPPED` | Bot status updates, merge conflicts, tests, or CI | `reason` (brief explanation + command to use), `tracking_reason` |
 
 ## 🔧 Integration with Existing Commands
 
@@ -440,10 +448,11 @@ This command composes with:
 
 **What happens:**
 1. Fetches ALL PR comments (human + bot)
-2. For EACH comment: attempts fix → verifies → generates truthful response
+2. For EACH comment: attempts fix → verifies → generates truthful response (with `tracking_reason`)
 3. Posts ALL responses with proper threading
 4. Verifies 100% coverage
-5. Pushes all committed fixes
+5. Updates PR description with comment tracking table (fixed/deferred/ignored/unresolved with reasons)
+6. Pushes all committed fixes
 
 **What this does NOT handle:**
 - ❌ Merge conflicts (use `/fixpr`)

@@ -37,7 +37,13 @@ from orchestration.cli_validation import (
     CLI_VALIDATION_TIMEOUT_SECONDS,
     validate_cli_two_phase,
 )
-from orchestration.task_dispatcher import CLI_PROFILES, CURSOR_MODEL, GEMINI_MODEL, TaskDispatcher
+from orchestration.task_dispatcher import (
+    CLI_PROFILES,
+    CURSOR_MODEL,
+    GEMINI_MODEL,
+    MINIMAX_MODEL,
+    TaskDispatcher,
+)
 
 from . import __version__
 from .automation_safety_manager import AutomationSafetyManager
@@ -1810,6 +1816,27 @@ Your response MUST follow this exact structure for clarity:
                 "text",
                 "--approve-mcps",
             ]
+        elif cli_name == "minimax":
+            # MiniMax uses Claude Code with MiniMax API
+            # Use profile-based env_set from CLI_PROFILES instead of hardcoding
+            execution_cmd = [
+                "--model",
+                MINIMAX_MODEL,
+                "-p",
+                "@PROMPT_FILE",
+                "--output-format",
+                "text",
+                "--strict-mcp-config",
+            ]
+            # Use env_set from CLI_PROFILES for consistency with task_dispatcher
+            profile = CLI_PROFILES.get(cli_name, {})
+            for key, value in profile.get("env_set", {}).items():
+                env[key] = value
+            # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
+            if cli_name == "minimax":
+                runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
+                if runtime_minimax_key:
+                    env["ANTHROPIC_API_KEY"] = runtime_minimax_key
 
         try:
             result = validate_cli_two_phase(

@@ -573,6 +573,143 @@ class TestTaskDispatcherFix(unittest.TestCase):
         mock_warning.assert_called_once()
 
 
+class TestWrapPromptParameter(unittest.TestCase):
+    """TDD RED tests: verify wrap_prompt parameter controls prompt wrapping behavior."""
+
+    def setUp(self):
+        """Set up test dispatcher."""
+        self.dispatcher = TaskDispatcher()
+
+    def test_wrap_prompt_false_returns_raw_task_description(self):
+        """RED: wrap_prompt=False should return raw task_description as prompt."""
+        task = "Run integration tests on the auth module"
+        agents = self.dispatcher.analyze_task_and_create_agents(task, wrap_prompt=False)
+
+        self.assertEqual(len(agents), 1)
+        agent = agents[0]
+        self.assertEqual(agent["prompt"], task,
+                         f"FAIL: prompt should be raw task but got: {agent['prompt'][:100]}")
+
+    def test_wrap_prompt_false_no_pr_mode_in_prompt(self):
+        """RED: wrap_prompt=False should have no PR MODE instructions."""
+        task = "Fix bug in login handler"
+        agents = self.dispatcher.analyze_task_and_create_agents(task, wrap_prompt=False)
+
+        agent = agents[0]
+        self.assertNotIn("PR UPDATE MODE", agent["prompt"],
+                         "FAIL: PR UPDATE MODE found in prompt when wrap_prompt=False")
+        self.assertNotIn("NEW PR MODE", agent["prompt"],
+                         "FAIL: NEW PR MODE found in prompt when wrap_prompt=False")
+        self.assertNotIn("EXECUTION GUIDELINES", agent["prompt"],
+                         "FAIL: EXECUTION GUIDELINES found in prompt when wrap_prompt=False")
+
+    def test_wrap_prompt_false_no_pr_context_injected(self):
+        """RED: wrap_prompt=False should not inject pr_context even for PR-mentioning tasks."""
+        task = "Fix the tests on PR #42"
+        agents = self.dispatcher.analyze_task_and_create_agents(task, wrap_prompt=False)
+
+        agent = agents[0]
+        self.assertNotIn("pr_context", agent,
+                         "FAIL: pr_context injected when wrap_prompt=False")
+
+    def test_wrap_prompt_true_default_preserves_wrapping(self):
+        """GREEN baseline: default behavior (wrap_prompt=True) still wraps prompt."""
+        task = "Add a new feature to the dashboard"
+        agents = self.dispatcher.analyze_task_and_create_agents(task)
+
+        agent = agents[0]
+        self.assertIn("NEW PR MODE", agent["prompt"],
+                       "FAIL: Default wrapping should include NEW PR MODE")
+
+    def test_wrap_prompt_false_preserves_other_agent_spec_fields(self):
+        """RED: wrap_prompt=False should still set name, type, focus, capabilities, cli."""
+        task = "Deploy the staging server"
+        agents = self.dispatcher.analyze_task_and_create_agents(task, wrap_prompt=False)
+
+        agent = agents[0]
+        self.assertIn("task-agent", agent["name"])
+        self.assertEqual(agent["type"], "development")
+        self.assertEqual(agent["focus"], task)
+        self.assertIsInstance(agent["capabilities"], list)
+        self.assertIn("cli", agent)
+
+    def test_wrap_prompt_false_with_pr_task_still_detects_cli(self):
+        """RED: wrap_prompt=False should still detect the correct CLI."""
+        task = "Use codex to fix the bug"
+        agents = self.dispatcher.analyze_task_and_create_agents(task, wrap_prompt=False)
+
+        agent = agents[0]
+        self.assertEqual(agent["prompt"], task)
+        self.assertEqual(agent["cli"], "codex",
+                         f"FAIL: CLI should be 'codex' but got '{agent.get('cli')}'")
+
+
+class TestGhPrViewLogging(unittest.TestCase):
+    """Tests for structured logging when gh pr view subprocess fails."""
+
+    def setUp(self):
+        """Set up test dispatcher."""
+        self.dispatcher = TaskDispatcher()
+
+    def test_gh_pr_view_exception_logs_debug(self):
+        """Exception during gh pr view should emit logger.debug with gh_pr_view_failed."""
+        task = "Fix tests on PR #123"
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.logger") as mock_logger,
+        ):
+            # First call is _detect_pr_context → _find_recent_pr which calls subprocess
+            # The gh pr view call is the one that should raise
+            def run_side_effect(cmd, **kwargs):
+                if "pr" in cmd and "view" in cmd:
+                    raise OSError("gh not found")
+                return MagicMock(returncode=0, stdout="", stderr="")
+
+            mock_run.side_effect = run_side_effect
+            agents = self.dispatcher.analyze_task_and_create_agents(task)
+
+        # Verify logger.debug was called with gh_pr_view_failed event
+        debug_calls = [
+            call for call in mock_logger.debug.call_args_list
+            if call[0][0] == "gh_pr_view_failed"
+        ]
+        self.assertEqual(len(debug_calls), 1, "Expected exactly one gh_pr_view_failed log")
+        self.assertTrue(
+            debug_calls[0][1].get("exc_info"),
+            "gh_pr_view_failed should be logged with exc_info=True",
+        )
+        extra = debug_calls[0][1].get("extra", {})
+        self.assertEqual(extra["pr_number"], "123")
+
+    def test_gh_pr_view_nonzero_exit_logs_debug(self):
+        """Non-zero exit from gh pr view should emit logger.debug with gh_pr_view_nonzero_exit."""
+        task = "Fix tests on PR #456"
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.logger") as mock_logger,
+        ):
+            def run_side_effect(cmd, **kwargs):
+                if "pr" in cmd and "view" in cmd:
+                    return MagicMock(returncode=1, stdout="", stderr="not found")
+                return MagicMock(returncode=0, stdout="", stderr="")
+
+            mock_run.side_effect = run_side_effect
+            agents = self.dispatcher.analyze_task_and_create_agents(task)
+
+        # Verify logger.debug was called with gh_pr_view_nonzero_exit event
+        debug_calls = [
+            call for call in mock_logger.debug.call_args_list
+            if call[0][0] == "gh_pr_view_nonzero_exit"
+        ]
+        self.assertEqual(len(debug_calls), 1, "Expected exactly one gh_pr_view_nonzero_exit log")
+        extra = debug_calls[0][1].get("extra", {})
+        self.assertEqual(extra["pr_number"], "456")
+        self.assertEqual(extra["returncode"], 1)
+        self.assertEqual(extra["stderr"], "not found")
+
+
 if __name__ == "__main__":
     # Run tests with verbose output
     unittest.main(verbosity=2)

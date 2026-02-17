@@ -39,7 +39,7 @@ Execute tests in this order, **stopping only when blocker is conclusively reprod
 
 1. **Identify blocker** - Determine which feature/component is failing
 2. **Start at Layer 1** - Run unit tests first
-3. **Climb ladder** - Continue to next layer until blocker is conclusively reproduced
+3. **Climb ladder** - Progress to next layer only if current layer passes
 4. **Collect evidence** - Record full absolute paths to evidence bundles
 5. **Report results** - Document which layer reproduced the issue
 
@@ -90,7 +90,7 @@ This command implements the minimal repro protocol from `.claude/skills/pr-block
 
 ### Layer 3: MCP/HTTP API Tests (Real Local Server)
 - **Location**: `testing_mcp/`
-- **Purpose**: Real server with MCP/HTTP API calls
+- - **Purpose**: Real server with MCP/HTTP API calls
 - **Speed**: Medium (minutes)
 - **Example**: `./vpython testing_mcp/faction/test_faction_settings_real.py`
 
@@ -98,12 +98,12 @@ This command implements the minimal repro protocol from `.claude/skills/pr-block
 - **Location**: `testing_ui/`
 - **Purpose**: Full UI automation with real browser
 - **Speed**: Slowest (minutes to tens of minutes)
-- **Example**: `./vpython testing_ui/test_llm_settings_browser.py`
+- **Example**: `./vpython testing_ui/streaming/test_streaming_byok_browser.py`
 
 ## Key Principles
 
 1. **Stop climbing when blocker is reproduced** - Don't waste time on higher layers
-2. **Keep provider/user isolation** - Ensure test data and state are isolated per test run so parallel executions don't interfere with each other
+2. **Keep provider/user isolation** - Ensure test data and state are isolated per run so parallel executions do not interfere
 3. **Always attach concrete evidence** - Full paths, log lines, screenshots
 4. **Classify by layer** - Failure layer indicates root cause location
 
@@ -113,3 +113,4 @@ This command implements the minimal repro protocol from `.claude/skills/pr-block
 - **Precision**: Identify exact layer where bug manifests
 - **Evidence**: Concrete paths and logs for debugging
 - **Speed**: Avoid slow browser tests when unit tests suffice
+>>>>>>> origin/main
