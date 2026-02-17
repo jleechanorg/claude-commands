@@ -1045,7 +1045,10 @@ Claude Code can assist with adapting these workflows to your specific project. J
                 pass
             else:
                 if not skip_mvp_transform:
-                    content = re.sub(r"mvp_site/", "$PROJECT_ROOT/", content)
+                    # Replace mvp_site/ with $PROJECT_ROOT/ only if not already prefixed with $PROJECT_ROOT
+                    # This prevents: $PROJECT_ROOT/mvp_site/ → $PROJECT_ROOT/$PROJECT_ROOT/
+                    if "$PROJECT_ROOT/" not in content:
+                        content = re.sub(r"mvp_site/", "$PROJECT_ROOT/", content)
                 content = re.sub(r"worldarchitect\.ai", "your-project.com", content)
                 content = re.sub(r"\bjleechan\b", "$USER", content)
                 content = re.sub(

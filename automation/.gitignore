@@ -13,6 +13,9 @@ htmlcov/
 .coverage
 .tox/
 
+# Runtime backup artifacts
+.cron_backups/
+
 # IDE
 .vscode/
 .idea/
