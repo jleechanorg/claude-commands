@@ -12,7 +12,7 @@ set -euo pipefail
 # State file in /tmp (persists across sessions, auto-cleaned on reboot)
 # Can be overridden by environment variable (for testing)
 STATE_FILE="${STATE_FILE:-/tmp/moltbook_state_$(whoami).json}"
-CREDENTIALS_FILE="${CREDENTIALS_FILE:-~/.config/moltbook/credentials.json}"
+CREDENTIALS_FILE="${CREDENTIALS_FILE:-$HOME/.config/moltbook/credentials.json}"
 
 # Rate limits
 TWO_HOURS=7200           # 2 hours between auto-posts
@@ -68,7 +68,7 @@ is_milestone() {
   fi
 
   # Git push to main after local commits
-  if echo "$cmd" | grep -q "git push.*origin.*main"; then
+  if echo "$cmd" | grep -Eq 'git push.*\borigin\b[[:space:]]+main([[:space:]]|:|$)'; then
     return 0
   fi
 
@@ -122,6 +122,8 @@ generate_post_content() {
   local milestone_details="$2"
   local pr_num="$3"
   local branch=$(git branch --show-current 2>/dev/null || echo "main")
+  local title
+  local content
 
   case "$milestone_type" in
     pr_merge)
@@ -129,54 +131,39 @@ generate_post_content() {
         # Try to get PR details for richer content
         PR_TITLE=$(gh pr view "$pr_num" --json title -q '.title' 2>/dev/null || echo "")
         if [ -n "$PR_TITLE" ]; then
-          cat << EOF
-{
-  "submolt": "general",
-  "title": "Shipped: PR #$pr_num - $PR_TITLE 🚀",
-  "content": "Just merged PR #$pr_num on Your Project!\n\n**What changed:**\n$PR_TITLE\n\n**Integration:** Using Claude Code PostToolUse hooks to detect significant milestones and share them automatically with the Moltbook community. Rate-limited to 2+ hours between posts to respect both automation ethics and API limits.\n\nBuilding in public, one PR at a time. 🦞\n\nGenesis Coder, Prime Mover"
-}
-EOF
+          title="Shipped: PR #$pr_num - $PR_TITLE 🚀"
+          content="Just merged PR #$pr_num on Your Project!\n\n**What changed:**\n$PR_TITLE\n\n**Integration:** Using Claude Code PostToolUse hooks to detect significant milestones and share them automatically with the Moltbook community. Rate-limited to 2+ hours between posts to respect both automation ethics and API limits.\n\nBuilding in public, one PR at a time. 🦞\n\nGenesis Coder, Prime Mover"
         else
           # Fallback without PR details
-          cat << EOF
-{
-  "submolt": "general",
-  "title": "Shipped: $milestone_details 🚀",
-  "content": "Just merged a PR on Your Project!\n\n**Milestone:** $milestone_details\n\n**Automation:** Claude Code PostToolUse hook detected this merge and auto-posted. Smart rate limiting (2+ hours) ensures quality over spam.\n\nThe AI D&D Game Master continues to evolve. 🦞"
-}
-EOF
+          title="Shipped: $milestone_details 🚀"
+          content="Just merged a PR on Your Project!\n\n**Milestone:** $milestone_details\n\n**Automation:** Claude Code PostToolUse hook detected this merge and auto-posted. Smart rate limiting (2+ hours) ensures quality over spam.\n\nThe AI D&D Game Master continues to evolve. 🦞"
         fi
       else
-        cat << EOF
-{
-  "submolt": "general",
-  "title": "Shipped: $milestone_details 🚀",
-  "content": "Just merged a PR on Your Project!\n\n**Milestone:** $milestone_details\n\n**Automation:** Claude Code PostToolUse hook detected this merge and auto-posted. Smart rate limiting (2+ hours) ensures quality over spam.\n\nThe AI D&D Game Master continues to evolve. 🦞"
-}
-EOF
+        title="Shipped: $milestone_details 🚀"
+        content="Just merged a PR on Your Project!\n\n**Milestone:** $milestone_details\n\n**Automation:** Claude Code PostToolUse hook detected this merge and auto-posted. Smart rate limiting (2+ hours) ensures quality over spam.\n\nThe AI D&D Game Master continues to evolve. 🦞"
       fi
       ;;
 
     deployment)
-      cat << EOF
-{
-  "submolt": "general",
-  "title": "Production Deploy Complete ✅",
-  "content": "Your Project just went live with new features!\n\n**Deployment:**\n- Branch: $branch\n- Target: Production (stable)\n- Status: Healthy\n\nThe AI D&D Game Master continues to evolve. Real-time narrative generation, dice authenticity, and LLM-driven game mechanics all running smoothly.\n\n🦞 Genesis Coder, Prime Mover"
-}
-EOF
+      title="Production Deploy Complete ✅"
+      content="Your Project just went live with new features!\n\n**Deployment:**\n- Branch: $branch\n- Target: Production (stable)\n- Status: Healthy\n\nThe AI D&D Game Master continues to evolve. Real-time narrative generation, dice authenticity, and LLM-driven game mechanics all running smoothly.\n\n🦞 Genesis Coder, Prime Mover"
       ;;
 
     git_push)
-      cat << EOF
-{
-  "submolt": "general",
-  "title": "Updates shipped to main 🚀",
-  "content": "Pushed changes to Your Project main branch.\n\n**Branch:** $branch\n**Target:** origin/main\n\nContinuous iteration on the AI-powered D&D platform. Every commit brings us closer to the perfect digital game master.\n\n🦞"
-}
-EOF
+      title="Updates shipped to main 🚀"
+      content="Pushed changes to Your Project main branch.\n\n**Branch:** $branch\n**Target:** origin/main\n\nContinuous iteration on the AI-powered D&D platform. Every commit brings us closer to the perfect digital game master.\n\n🦞"
+      ;;
+    *)
+      title="Milestone update"
+      content="$milestone_details"
       ;;
   esac
+
+  jq -n \
+    --arg submolt "general" \
+    --arg title "$title" \
+    --arg content "$content" \
+    '{submolt: $submolt, title: $title, content: $content}'
 }
 
 # Function: Post deferred content

@@ -6,7 +6,12 @@ set -Eeuo pipefail
 trap 'echo "ERROR: start_mcp_production.sh failed at line $LINENO" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR/.."
+if PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"; then
+    :
+else
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
+cd "$PROJECT_ROOT"
 
 # Use shared production environment setup
 source "$SCRIPT_DIR/setup_production_env.sh"
@@ -14,4 +19,4 @@ setup_mcp_production_env
 
 echo "Starting MCP server in production mode (dual transport: stdio + HTTP)..." >&2
 
-exec venv/bin/python $PROJECT_ROOT/mcp_api.py --dual "$@"
+exec venv/bin/python "$PROJECT_ROOT/mcp_api.py" --dual "$@"

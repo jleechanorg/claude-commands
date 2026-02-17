@@ -10,6 +10,7 @@ Usage:
 """
 
 import sys
+import traceback
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -118,7 +119,6 @@ def main():
         sys.exit(1)
     except Exception as e:
         print(f"\n❌ Test failed: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
 

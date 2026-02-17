@@ -12,22 +12,3 @@ def calculate_shipping_cost(weight, distance, express=False):
         base_rate *= 1.5
 
     return round(base_rate, 2)
-
-
-class DatabaseConnection:
-    def __init__(self, host, port, database):
-        self.host = host
-        self.port = port
-        self.database = database
-        self.connection = None
-
-    def connect(self):
-        try:
-            import psycopg2
-
-            self.connection = psycopg2.connect(
-                host=self.host, port=self.port, database=self.database
-            )
-            return self.connection
-        except Exception as e:
-            raise ConnectionError(f"Failed to connect: {e}")

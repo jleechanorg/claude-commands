@@ -33,8 +33,8 @@ echo "   ... ($(grep -r "mvp_site" .claude/commands --include="*.md" --include="
 
 echo ""
 echo "🏠 Personal/project references:"
-grep -r "worldarchitect\.ai\|$USER\|WorldArchitect\.AI" .claude/commands --include="*.md" --include="*.py" | head -3
-echo "   ... ($(grep -r "worldarchitect\.ai\|$USER\|WorldArchitect\.AI" .claude/commands --include="*.md" --include="*.py" | wc -l) total references found)"
+grep -r "worldarchitect\.ai\|\$USER\|WorldArchitect\.AI" .claude/commands --include="*.md" --include="*.py" | head -3
+echo "   ... ($(grep -r "worldarchitect\.ai\|\$USER\|WorldArchitect\.AI" .claude/commands --include="*.md" --include="*.py" | wc -l) total references found)"
 
 echo ""
 echo "🐍 Python sys.path modifications:"
@@ -42,13 +42,13 @@ grep -r "sys\.path\.insert.*mvp_site" .claude/commands --include="*.py"
 
 echo ""
 echo "🧪 Project-specific test commands:"
-grep -r "TESTING=true python\|$PROJECT_ROOT/test" .claude/commands --include="*.md" --include="*.sh" | head -3
+grep -r "TESTING=true python\|\$PROJECT_ROOT/test" .claude/commands --include="*.md" --include="*.sh" | head -3
 
 echo ""
 echo "✅ Export filtering validation complete!"
 echo "📊 Summary:"
 echo "   - Found $(find .claude/commands -name "*.sh" -not -path "*/tests/*" | wc -l) shell scripts"
 echo "   - Found $(grep -r "mvp_site" .claude/commands --include="*.md" --include="*.py" | wc -l) mvp_site references"
-echo "   - Found $(grep -r "worldarchitect\.ai\|$USER" .claude/commands --include="*.md" --include="*.py" | wc -l) personal references"
+echo "   - Found $(grep -r "worldarchitect\.ai\|\$USER\|WorldArchitect\.AI" .claude/commands --include="*.md" --include="*.py" | wc -l) personal references"
 
 # Note: No cleanup needed since TEST_DIR was removed

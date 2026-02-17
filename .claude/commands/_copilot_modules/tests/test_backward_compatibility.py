@@ -3,6 +3,7 @@
 Tests for backward compatibility with legacy cache format.
 """
 
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,7 +24,6 @@ class TestBackwardCompatibility(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test fixtures."""
-        import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_load_all_comments_handles_missing_index(self):

@@ -125,10 +125,11 @@ image_path = "/tmp/worldai-browser-evidence/screenshot.png"
 img = Image.open(image_path)
 text = pytesseract.image_to_string(img)
 
-# Verify login success
-if "$USER@gmail.com" in text or "<your-email@gmail.com>" in text:
+# Verify login success - check for @gmail.com to detect any logged-in user
+if "@gmail.com" in text:
     print("SUCCESS: User is logged in")
 
+# Also check for expected page content
 if "My Campaigns" in text:
     print("SUCCESS: Campaigns page visible")
 
