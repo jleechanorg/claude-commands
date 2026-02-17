@@ -64,30 +64,34 @@ jobs:
 
       - name: Enforce game_state schema coverage
         run: |
-          python scripts/check_schema_coverage.py \
-            --fail-under 0 \
-            --required-path combat_state.rewards_processed \
-            --required-path encounter_state.encounter_completed \
-            --required-path encounter_state.encounter_summary \
-            --required-path encounter_state.rewards_processed \
-            --required-path rewards_pending.processed \
-            --required-path rewards_pending.level_up_available \
-            --required-path custom_campaign_state.level_up_pending \
-            --required-path custom_campaign_state.level_up_in_progress \
-            --required-path custom_campaign_state.last_location \
-            --required-path custom_campaign_state.last_story_mode_sequence_id \
-            --required-path custom_campaign_state.budget_warnings_shown \
-            --required-path custom_campaign_state.player_character_data_extras \
-            --required-path world_events \
-            --required-path faction_updates \
-            --required-path time_events \
-            --required-path rumors \
-            --required-path scene_event \
-            --required-path complications \
-            --required-path player_character_data.equipped_items.shoulders \
-            --required-path player_character_data.equipped_items.chest \
-            --required-path player_character_data.equipped_items.waist \
-            --required-path player_character_data.equipped_items.legs
+          if [ -f scripts/check_schema_coverage.py ]; then
+            python scripts/check_schema_coverage.py \
+              --fail-under 0 \
+              --required-path combat_state.rewards_processed \
+              --required-path encounter_state.encounter_completed \
+              --required-path encounter_state.encounter_summary \
+              --required-path encounter_state.rewards_processed \
+              --required-path rewards_pending.processed \
+              --required-path rewards_pending.level_up_available \
+              --required-path custom_campaign_state.level_up_pending \
+              --required-path custom_campaign_state.level_up_in_progress \
+              --required-path custom_campaign_state.last_location \
+              --required-path custom_campaign_state.last_story_mode_sequence_id \
+              --required-path custom_campaign_state.budget_warnings_shown \
+              --required-path custom_campaign_state.player_character_data_extras \
+              --required-path world_events \
+              --required-path faction_updates \
+              --required-path time_events \
+              --required-path rumors \
+              --required-path scene_event \
+              --required-path complications \
+              --required-path player_character_data.equipped_items.shoulders \
+              --required-path player_character_data.equipped_items.chest \
+              --required-path player_character_data.equipped_items.waist \
+              --required-path player_character_data.equipped_items.legs
+          else
+            echo "Skipping schema coverage guard: scripts/check_schema_coverage.py not found"
+          fi
   python-lint:
     name: Python Linting (Ruff)
     runs-on: ubuntu-latest

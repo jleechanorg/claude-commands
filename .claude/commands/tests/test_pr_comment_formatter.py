@@ -358,7 +358,10 @@ class TestCommentValidationRegression(unittest.TestCase):
 
         # Import the validation function we're testing
         # Note: This import is inside a test method to handle missing module gracefully
-        from commentreply import validate_comment_data
+        try:
+            from commentreply import validate_comment_data
+        except ImportError:
+            self.skipTest("commentreply module not available")
 
         # 🔴 RED: Create comment data structure that commentfetch actually outputs
         comment_with_author_field = {

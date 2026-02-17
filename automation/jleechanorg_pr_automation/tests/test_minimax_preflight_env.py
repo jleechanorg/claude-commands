@@ -33,9 +33,9 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
 
         # Set MINIMAX_API_KEY in environment
         test_api_key = "test-minimax-key-12345"
-        with patch.dict(os.environ, {"MINIMAX_API_KEY": test_api_key}, clear=False):
+        with patch.dict(os.environ, {"MINIMAX_API_KEY": test_api_key}, clear=True):
             # Call the validation method
-            result = self.monitor._run_two_phase_cli_validation(
+            _ = self.monitor._run_two_phase_cli_validation(
                 cli_name="minimax",
                 agent_name="test-agent",
             )
@@ -68,12 +68,9 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
         mock_which.return_value = "/usr/bin/claude"
         mock_validate.return_value = MagicMock(success=True, output_file=None)
 
-        # Ensure MINIMAX_API_KEY is NOT in environment
-        env_without_key = os.environ.copy()
-        env_without_key.pop("MINIMAX_API_KEY", None)
-
-        with patch.dict(os.environ, env_without_key, clear=False):
-            result = self.monitor._run_two_phase_cli_validation(
+        # Use a clean environment so host API keys cannot leak into the test.
+        with patch.dict(os.environ, {}, clear=True):
+            _ = self.monitor._run_two_phase_cli_validation(
                 cli_name="minimax",
                 agent_name="test-agent",
             )
@@ -84,6 +81,16 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
 
         # ANTHROPIC_API_KEY should NOT be set if MINIMAX_API_KEY is not provided
         # (it would use whatever is in the parent environment or be unset)
+        self.assertNotIn(
+            "ANTHROPIC_API_KEY",
+            env,
+            "ANTHROPIC_API_KEY should not be injected when MINIMAX_API_KEY is missing",
+        )
+        self.assertNotEqual(
+            env.get("ANTHROPIC_API_KEY"),
+            "",
+            "ANTHROPIC_API_KEY must not be set to an empty string",
+        )
 
     @patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.validate_cli_two_phase")
     @patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.shutil.which")
@@ -95,8 +102,8 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
         mock_validate.return_value = MagicMock(success=True, output_file=None)
 
         # Set MINIMAX_API_KEY but test with gemini
-        with patch.dict(os.environ, {"MINIMAX_API_KEY": "some-key"}, clear=False):
-            result = self.monitor._run_two_phase_cli_validation(
+        with patch.dict(os.environ, {"MINIMAX_API_KEY": "some-key"}, clear=True):
+            _ = self.monitor._run_two_phase_cli_validation(
                 cli_name="gemini",
                 agent_name="test-agent",
             )
@@ -108,6 +115,11 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
         # For non-minimax, ANTHROPIC_API_KEY should NOT be added
         # (may exist from parent env, but shouldn't be added by our code)
         # The key test is that we didn't add it based on MINIMAX_API_KEY
+        self.assertNotIn(
+            "ANTHROPIC_API_KEY",
+            env,
+            "ANTHROPIC_API_KEY should not be added for non-MiniMax CLIs",
+        )
 
 
 if __name__ == "__main__":
