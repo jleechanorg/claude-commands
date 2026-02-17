@@ -667,7 +667,7 @@ class TestGhPrViewLogging(unittest.TestCase):
                 return MagicMock(returncode=0, stdout="", stderr="")
 
             mock_run.side_effect = run_side_effect
-            agents = self.dispatcher.analyze_task_and_create_agents(task)
+            self.dispatcher.analyze_task_and_create_agents(task)
 
         # Verify logger.debug was called with gh_pr_view_failed event
         debug_calls = [
@@ -696,7 +696,7 @@ class TestGhPrViewLogging(unittest.TestCase):
                 return MagicMock(returncode=0, stdout="", stderr="")
 
             mock_run.side_effect = run_side_effect
-            agents = self.dispatcher.analyze_task_and_create_agents(task)
+            self.dispatcher.analyze_task_and_create_agents(task)
 
         # Verify logger.debug was called with gh_pr_view_nonzero_exit event
         debug_calls = [

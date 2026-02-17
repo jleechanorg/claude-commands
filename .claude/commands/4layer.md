@@ -90,7 +90,7 @@ This command implements the minimal repro protocol from `.claude/skills/pr-block
 
 ### Layer 3: MCP/HTTP API Tests (Real Local Server)
 - **Location**: `testing_mcp/`
-- - **Purpose**: Real server with MCP/HTTP API calls
+- **Purpose**: Real server with MCP/HTTP API calls
 - **Speed**: Medium (minutes)
 - **Example**: `./vpython testing_mcp/faction/test_faction_settings_real.py`
 
@@ -113,4 +113,3 @@ This command implements the minimal repro protocol from `.claude/skills/pr-block
 - **Precision**: Identify exact layer where bug manifests
 - **Evidence**: Concrete paths and logs for debugging
 - **Speed**: Avoid slow browser tests when unit tests suffice
->>>>>>> origin/main

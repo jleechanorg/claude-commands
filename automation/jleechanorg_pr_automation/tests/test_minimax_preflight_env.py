@@ -84,6 +84,11 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
 
         # ANTHROPIC_API_KEY should NOT be set if MINIMAX_API_KEY is not provided
         # (it would use whatever is in the parent environment or be unset)
+        self.assertNotEqual(
+            env.get("ANTHROPIC_API_KEY"),
+            "",  # empty string means it was explicitly set to ""
+            "ANTHROPIC_API_KEY should not be set to empty when MINIMAX_API_KEY missing"
+        )
 
     @patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.validate_cli_two_phase")
     @patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.shutil.which")
@@ -108,6 +113,11 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
         # For non-minimax, ANTHROPIC_API_KEY should NOT be added
         # (may exist from parent env, but shouldn't be added by our code)
         # The key test is that we didn't add it based on MINIMAX_API_KEY
+        self.assertNotIn(
+            "ANTHROPIC_API_KEY",
+            env,
+            "ANTHROPIC_API_KEY should not be added for non-minimax CLIs"
+        )
 
 
 if __name__ == "__main__":
