@@ -21,6 +21,7 @@ The orchestrator MUST generate responses.json in this exact format:
       "tests_added": ["backend/src/test/rate-limit-uid-fallback.test.ts"],
       "commit": "53702d91",
       "verification": "✅ Tests pass, admin UIDs now recognized",
+      "tracking_reason": "Implemented UID-based admin check to fix critical authentication bypass. Admin UIDs are now recognized in isAuthenticatedNonVIP() with full test coverage. Verified all rate limit tests pass.",
       "reply_text": "[AI responder] ✅ **CRITICAL BUG FIXED**\n\n**Category**: CRITICAL\n**Action**: Implemented UID-based admin check in isAuthenticatedNonVIP()\n**Files Modified**: shared-libs/packages/mcp-server-utils/src/RateLimitTool.ts:145\n**Tests Added**: backend/src/test/rate-limit-uid-fallback.test.ts\n**Commit**: 53702d91\n**Verification**: ✅ Tests pass, admin UIDs now recognized",
       "in_reply_to": "optional_parent_id"
     }
@@ -40,6 +41,7 @@ When a SINGLE comment contains MULTIPLE issues (e.g., CodeRabbit summary with 11
       "comment_id": "3675347161",
       "category": "BLOCKING",
       "response": "FIXED",
+      "tracking_reason": "Addressed all 11 issues from CodeRabbit review including 6 actionable items and 5 nitpicks. Removed phrase-scanning triggers, added edge case validation, and fixed documentation typos across multiple files.",
       "analysis": {
         "total_issues": 11,
         "actionable": 6,
@@ -106,6 +108,12 @@ When a SINGLE comment contains MULTIPLE issues (e.g., CodeRabbit summary with 11
 - `response` MUST be one of: FIXED, DEFERRED, ACKNOWLEDGED, NOT_DONE
   - **Multi-issue format**: Top-level `response` represents the overall status (typically FIXED if all fixed)
   - **Single-issue format**: Top-level `response` represents the issue's status
+- `tracking_reason` **MANDATORY** - 2-3 sentence justification for the decision. This appears in the PR description's comment tracking table. Must explain WHY this response type was chosen and WHAT was done or decided. Examples:
+  - FIXED: "Implemented the requested null check at the API boundary. Added validation in auth.py:45 to prevent NullPointerException in production. Verified with unit tests."
+  - DEFERRED: "Requires architectural changes spanning 3 services that cannot be safely done in this PR. Created bead worktree_worker4-xyz to track the cross-service refactoring effort."
+  - ACKNOWLEDGED: "Style suggestion for variable naming consistency. Current naming follows the existing codebase convention and changing it would require a broader refactoring effort."
+  - NOT_DONE: "Attempted the fix but it breaks the public API contract used by 3 downstream consumers. Needs a design discussion to determine the migration path."
+  - SKIPPED: "Bot status update about CI pipeline status. Not actionable - informational notification only."
 - `reply_text` MUST contain formatted action details for GitHub (example above shows the auto-generated output)
 - `files_modified` should list repo-relative paths with optional `:line` suffixes for precision
 - `commit` values must use the standard 7-8 character `git rev-parse --short` format for traceability
@@ -193,3 +201,38 @@ When a reviewer asks for a change (refactoring, extraction, improvement):
 - FIXED: "Extracted to settings_validation.py (Commit: abc123)"
 - NOT_DONE: "Would require changing public API, needs design discussion"
 - DEFERRED: "Created bead worktree_worker4-xyz for this refactoring"
+
+### PR DESCRIPTION COMMENT TRACKING
+
+After processing all comments, `/copilot` updates the PR description with a tracking table at the bottom. The table uses HTML comment markers for idempotent updates.
+
+**Tracking Categories:**
+
+| Category | Maps From | Icon | Meaning |
+|----------|-----------|------|---------|
+| **Fixed** | `FIXED`, `ALREADY_IMPLEMENTED` | ✅ | Issue was resolved in this PR |
+| **Deferred** | `DEFERRED` | 🔄 | Tracked for future implementation |
+| **Ignored** | `ACKNOWLEDGED`, `SKIPPED`, `NOT_DONE` | ⏭️ | Intentionally not acting on this |
+| **Unresolved** | No response entry | ❓ | Comment was not processed |
+
+**Each entry requires a 2-3 sentence `tracking_reason`** explaining the decision. This is populated from the response's `tracking_reason` field.
+
+**Example PR Description Section:**
+
+```markdown
+<!-- COPILOT_TRACKING_START -->
+---
+## Copilot Comment Tracking
+
+| Status | Comment | Reason |
+|--------|---------|--------|
+| ✅ Fixed | [#123456](url) by @reviewer | Implemented null check at API boundary. Added validation in auth.py:45. Verified with unit tests. |
+| 🔄 Deferred | [#789012](url) by @reviewer | Requires cross-service refactoring spanning 3 services. Created bead worktree_worker4-xyz to track. |
+| ⏭️ Ignored | [#345678](url) by @bot | Bot status update about CI pipeline. Not actionable - informational notification only. |
+| ❓ Unresolved | [#901234](url) by @reviewer | Comment was not processed in this copilot run. No response entry found in responses.json. |
+
+**Last processed**: 2026-02-16T12:00:00Z | **Coverage**: 15/18 (83%) | **Fixed**: 10 | **Deferred**: 2 | **Ignored**: 3 | **Unresolved**: 3
+<!-- COPILOT_TRACKING_END -->
+```
+
+**Implementation**: `commentreply.py` calls `update_pr_description_with_tracking()` after posting the consolidated summary comment. Uses `<!-- COPILOT_TRACKING_START -->` / `<!-- COPILOT_TRACKING_END -->` markers for idempotent replacement on re-runs.

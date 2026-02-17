@@ -49,6 +49,11 @@ jobs:
         uses: ./.github/actions/limit-pr-runs
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
+
+  # NOTE: schema-coverage job removed from reference export
+  # It references project-specific schema paths and scripts/check_schema_coverage.py
+  # Add back for project-specific deployments if needed
+
   python-lint:
     name: Python Linting (Ruff)
     runs-on: ubuntu-latest

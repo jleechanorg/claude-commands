@@ -19,8 +19,8 @@ permissions:
   issues: write
 
 # Smoke coverage:
-# - Mock API smoke tests on PR/push to main/dev
-# - Real E2E preview smoke tests on /smoke comments, workflow_dispatch, or preview deploy completion
+# - Mock API smoke tests on PR/push to main/dev, or after preview deploy completion (workflow_run)
+# - Real E2E preview smoke tests on /smoke comments or workflow_dispatch only
 on:
   issue_comment:
     types: [created]
@@ -43,6 +43,10 @@ on:
       - 'mvp_site/mcp_*.py'
       - 'mvp_site/tests/mcp_*.py'
       - 'mvp_site/tests/test_mcp_*.py'
+      - 'mvp_site/firestore_service.py'
+      - 'mvp_site/world_logic.py'
+      - 'mvp_site/game_state.py'
+      - 'mvp_site/llm_service.py'
       - '.github/workflows/mcp-smoke-tests.yml'
       - 'scripts/mcp_smoke_test.sh'
       - 'testing_mcp/test_smoke.py'
@@ -54,6 +58,10 @@ on:
       - 'mvp_site/mcp_*.py'
       - 'mvp_site/tests/mcp_*.py'
       - 'mvp_site/tests/test_mcp_*.py'
+      - 'mvp_site/firestore_service.py'
+      - 'mvp_site/world_logic.py'
+      - 'mvp_site/game_state.py'
+      - 'mvp_site/llm_service.py'
       - '.github/workflows/mcp-smoke-tests.yml'
       - 'scripts/mcp_smoke_test.sh'
       - 'testing_mcp/test_smoke.py'
@@ -78,12 +86,12 @@ jobs:
 
   try-self-hosted:
     name: MCP Server Smoke Tests [Mock APIs]
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: [self-hosted, claude]
-    timeout-minutes: 10
     continue-on-error: true
     outputs:
       success: ${{ steps.mark-success.outputs.success }}
+    timeout-minutes: 10
     env:
       PYTHON_VERSION: '3.11'
       TESTING: true
@@ -93,9 +101,50 @@ jobs:
 
     steps:
 
+    - name: Get PR ref for workflow_run trigger
+      if: github.event_name == 'workflow_run'
+      id: pr_ref
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+      with:
+        result-encoding: string
+        script: |
+          const workflowRun = context.payload.workflow_run;
+          let prNumber;
+          let fallbackSha = workflowRun?.head_sha || '';
+
+          if (workflowRun?.pull_requests && workflowRun.pull_requests.length > 0) {
+            prNumber = workflowRun.pull_requests[0].number;
+          } else if (workflowRun?.head_branch) {
+            const match = workflowRun.head_branch.match(/pr-(\d+)/);
+            if (match) {
+              prNumber = Number(match[1]);
+            }
+          }
+
+          if (!prNumber || Number.isNaN(prNumber)) {
+            // Use fallback SHA from workflow_run event
+            core.setOutput('pr_number', '');
+            return fallbackSha || context.sha;
+          }
+
+          const pr = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: prNumber
+          });
+
+          // Export PR number and tested SHA for comment posting
+          const testedSha = fallbackSha || pr.data.head.sha || context.sha;
+          core.setOutput('pr_number', String(prNumber));
+          core.setOutput('tested_sha', testedSha);
+
+          // Use SHA from completed deployment run to match deployed code
+          return testedSha;
+
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
       with:
+        ref: ${{ github.event_name == 'workflow_run' && steps.pr_ref.outputs.result || '' }}
         submodules: recursive
 
     - name: Set up Python
@@ -121,7 +170,7 @@ jobs:
     - name: Setup test environment
       run: |
         # Create necessary directories
-        mkdir -p tmp/your-project.com/test
+        mkdir -p /tmp/your-project.com/test
 
     - name: Run MCP smoke tests
       run: |
@@ -134,9 +183,9 @@ jobs:
       with:
         name: mcp-smoke-test-results-mock-apis
         path: |
-          tmp/your-project.com/test/*.log
-          tmp/your-project.com/test/smoke-test-results.json
-          tmp/your-project.com/test/mcp-requests-responses.json
+          /tmp/your-project.com/test/*.log
+          /tmp/your-project.com/test/smoke-test-results.json
+          /tmp/your-project.com/test/mcp-requests-responses.json
         retention-days: 7
 
     - name: Mark successful completion
@@ -144,10 +193,40 @@ jobs:
       if: success()
       run: echo "success=true" >> $GITHUB_OUTPUT
 
+    - name: Read test results
+      id: test-results
+      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && always()
+      run: |
+        if [ -f /tmp/your-project.com/test/smoke-test-results.json ]; then
+          if command -v jq >/dev/null 2>&1; then
+            TEST_DETAILS=$(cat /tmp/your-project.com/test/smoke-test-results.json | jq -c '.test_details // []' 2>&1) || {
+              echo "⚠️  Warning: jq parse failed, defaulting to empty array" >&2
+              TEST_DETAILS="[]"
+            }
+          else
+            echo "⚠️  Warning: jq not found, defaulting to empty array" >&2
+            TEST_DETAILS="[]"
+          fi
+          echo "test_details=$TEST_DETAILS" >> $GITHUB_OUTPUT
+        else
+          echo "test_details=[]" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Post workflow_run comment
+      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && success()
+      uses: ./.github/actions/post-workflow-run-comment
+      with:
+        pr_number: ${{ steps.pr_ref.outputs.pr_number }}
+        test_result: ${{ job.status }}
+        job_name: 'MCP Server Smoke Tests [Mock APIs]'
+        tested_sha: ${{ steps.pr_ref.outputs.tested_sha }}
+        test_details: ${{ steps.test-results.outputs.test_details }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
   fallback-github-hosted:
     name: MCP Server Smoke Tests [Mock APIs] (Fallback)
     needs: try-self-hosted
-    if: (github.event_name == 'pull_request' || github.event_name == 'push') && needs.try-self-hosted.outputs.success != 'true'
+    if: (github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')) && needs.try-self-hosted.outputs.success != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -158,9 +237,50 @@ jobs:
       MOCK_SERVICES_MODE: true
 
     steps:
+    - name: Get PR ref for workflow_run trigger
+      if: github.event_name == 'workflow_run'
+      id: pr_ref
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+      with:
+        result-encoding: string
+        script: |
+          const workflowRun = context.payload.workflow_run;
+          let prNumber;
+          let fallbackSha = workflowRun?.head_sha || '';
+
+          if (workflowRun?.pull_requests && workflowRun.pull_requests.length > 0) {
+            prNumber = workflowRun.pull_requests[0].number;
+          } else if (workflowRun?.head_branch) {
+            const match = workflowRun.head_branch.match(/pr-(\d+)/);
+            if (match) {
+              prNumber = Number(match[1]);
+            }
+          }
+
+          if (!prNumber || Number.isNaN(prNumber)) {
+            // Use fallback SHA from workflow_run event
+            core.setOutput('pr_number', '');
+            return fallbackSha || context.sha;
+          }
+
+          const pr = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: prNumber
+          });
+
+          // Export PR number and tested SHA for comment posting
+          const testedSha = fallbackSha || pr.data.head.sha || context.sha;
+          core.setOutput('pr_number', String(prNumber));
+          core.setOutput('tested_sha', testedSha);
+
+          // Use SHA from completed deployment run to match deployed code
+          return testedSha;
+
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
       with:
+        ref: ${{ github.event_name == 'workflow_run' && steps.pr_ref.outputs.result || '' }}
         submodules: recursive
 
     - name: Set up Python
@@ -184,7 +304,7 @@ jobs:
     - name: Setup test environment
       run: |
         # Create necessary directories
-        mkdir -p tmp/your-project.com/test
+        mkdir -p /tmp/your-project.com/test
 
     - name: Run MCP smoke tests
       run: |
@@ -198,14 +318,44 @@ jobs:
       with:
         name: mcp-smoke-test-results-fallback
         path: |
-          tmp/your-project.com/test/*.log
-          tmp/your-project.com/test/smoke-test-results.json
-          tmp/your-project.com/test/mcp-requests-responses.json
+          /tmp/your-project.com/test/*.log
+          /tmp/your-project.com/test/smoke-test-results.json
+          /tmp/your-project.com/test/mcp-requests-responses.json
         retention-days: 7
+
+    - name: Read test results (fallback)
+      id: test-results-fallback
+      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && always()
+      run: |
+        if [ -f /tmp/your-project.com/test/smoke-test-results.json ]; then
+          if command -v jq >/dev/null 2>&1; then
+            TEST_DETAILS=$(cat /tmp/your-project.com/test/smoke-test-results.json | jq -c '.test_details // []' 2>&1) || {
+              echo "⚠️  Warning: jq parse failed, defaulting to empty array" >&2
+              TEST_DETAILS="[]"
+            }
+          else
+            echo "⚠️  Warning: jq not found, defaulting to empty array" >&2
+            TEST_DETAILS="[]"
+          fi
+          echo "test_details=$TEST_DETAILS" >> $GITHUB_OUTPUT
+        else
+          echo "test_details=[]" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Post workflow_run comment (fallback)
+      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && always()
+      uses: ./.github/actions/post-workflow-run-comment
+      with:
+        pr_number: ${{ steps.pr_ref.outputs.pr_number }}
+        test_result: ${{ job.status }}
+        job_name: 'MCP Server Smoke Tests [Mock APIs] (Fallback)'
+        tested_sha: ${{ steps.pr_ref.outputs.tested_sha }}
+        test_details: ${{ steps.test-results-fallback.outputs.test_details }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
 
   preview-smoke-tests:
     name: MCP Smoke Tests [Preview E2E]
-    if: (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/smoke')) || github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    if: (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/smoke')) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       GCP_REGION: us-central1
@@ -234,7 +384,6 @@ jobs:
           result-encoding: string
           script: |
             let prNumber;
-            let fallbackSha = '';
             if (context.eventName === 'workflow_dispatch') {
               const rawInput = context.payload?.inputs?.pr_number;
               if (rawInput) {
@@ -246,19 +395,6 @@ jobs:
                 return '';
               }
               prNumber = context.payload.issue.number;
-            } else if (context.eventName === 'workflow_run') {
-              const workflowRun = context.payload.workflow_run;
-              if (workflowRun?.head_sha) {
-                fallbackSha = workflowRun.head_sha;
-              }
-              if (workflowRun?.pull_requests && workflowRun.pull_requests.length > 0) {
-                prNumber = workflowRun.pull_requests[0].number;
-              } else if (workflowRun?.head_branch) {
-                const match = workflowRun.head_branch.match(/pr-(\d+)/);
-                if (match) {
-                  prNumber = Number(match[1]);
-                }
-              }
             }
 
             if (!prNumber || Number.isNaN(prNumber)) {
@@ -272,8 +408,7 @@ jobs:
               pull_number: prNumber
             });
 
-            // For workflow_run, use the SHA from the completed deployment run, not current PR head
-            const headSha = (context.eventName === 'workflow_run' && fallbackSha) ? fallbackSha : (pr.data.head.sha || '');
+            const headSha = pr.data.head.sha || '';
             // CRITICAL: Checkout must match the SHA used for service lookup to avoid version mismatch
             const headRef = headSha ? headSha : `refs/pull/${pr.data.number}/head`;
             core.setOutput('pr_number', String(pr.data.number));
