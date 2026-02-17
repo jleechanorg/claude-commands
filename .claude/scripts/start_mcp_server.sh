@@ -70,7 +70,7 @@ if PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)";
 else
     PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 fi
-MCP_SERVER_PATH="$PROJECT_ROOT/mcp_api.py"
+MCP_SERVER_PATH="$PROJECT_ROOT/mvp_site/mcp_api.py"
 
 # Validate MCP server exists
 if [ ! -f "$MCP_SERVER_PATH" ]; then

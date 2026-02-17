@@ -2,6 +2,19 @@
 
 **Autonomous PR fixing and code review automation for the jleechanorg organization**
 
+## 🚀 Quick Start
+
+```bash
+# 1. Install the automation packages from PyPI
+pip install jleechanorg-orchestration jleechanorg-pr-automation
+
+# 2. Install cron entries (sets up automated workflows)
+cd automation
+./install_cron_entries.sh
+```
+
+> **Important:** Ensure `MINIMAX_API_KEY` is set in your environment for MiniMax CLI support.
+
 ## Overview
 
 This automation system provides three core workflows:
@@ -632,10 +645,12 @@ crontab ~/.crontab_backup_YYYYMMDD_HHMMSS
 
 | Schedule | Command | Purpose |
 |----------|---------|---------|
-| Every hour (`:00`) | `jleechanorg-pr-monitor` | Workflow 1: Post @codex comments |
-| Every hour (`:15`) | `jleechanorg-pr-monitor --codex-update` | Workflow 3: Process Codex tasks |
-| Every 30 minutes | `jleechanorg-pr-monitor --fixpr` | Workflow 2: Fix PRs autonomously |
-| Every 4 hours | `claude_backup_cron.sh` | Backup Claude conversations |
+| Every 2 hours (`:00`) | `jleechanorg-pr-monitor --max-prs 10` | Workflow 1: PR monitoring |
+| Every hour (`:45`) | `jleechanorg-pr-monitor --fix-comment --cli-agent minimax,gemini,cursor --max-prs 3` | Workflow 2: Fix-comment automation |
+| Every 30 minutes | `jleechanorg-pr-monitor --comment-validation --max-prs 10` | Workflow 3: Comment validation |
+| Every hour (`:15`) | `jleechanorg-pr-monitor --codex-update --codex-task-limit 10` | Workflow 4: Codex update automation |
+| Every hour (`:30`) | `jleechanorg-pr-monitor --codex-api --codex-apply-and-push --codex-task-limit 10` | Workflow 5: Codex API automation |
+| Every 30 minutes | `jleechanorg-pr-monitor --fixpr --max-prs 10 --cli-agent minimax,gemini,cursor` | Workflow 6: Fix PRs autonomously |
 
 ---
 

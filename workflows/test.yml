@@ -292,6 +292,12 @@ jobs:
         echo "📂 Test directories: ${{ matrix.test-dirs }}"
         echo "🧩 Shard: ${TEST_SHARD_INDEX}/${TEST_SHARD_TOTAL}"
 
+        if [ "${{ matrix.test-group }}" = "automation" ]; then
+          echo "🧪 Running automation shell regression tests"
+          bash automation/tests/test_install_cron_entries.sh
+          bash automation/tests/test_crontab_restore_safety.sh
+        fi
+
         # Run tests only for the specified directory/directories
         chmod +x run_tests.sh
         # CI_TEST_LIMIT removed to run all discovered tests (prevents skipping critical tests)
