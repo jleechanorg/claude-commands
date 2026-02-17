@@ -49,11 +49,49 @@ jobs:
         uses: ./.github/actions/limit-pr-runs
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
+  schema-coverage:
+    name: Schema Coverage Guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
 
-  # NOTE: schema-coverage job removed from reference export
-  # It references project-specific schema paths and scripts/check_schema_coverage.py
-  # Add back for project-specific deployments if needed
+      - name: Set up Python 3.11
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d  # v5.1.0
+        with:
+          python-version: '3.11'
 
+      - name: Enforce game_state schema coverage
+        run: |
+          if [ -f scripts/check_schema_coverage.py ]; then
+            python scripts/check_schema_coverage.py \
+              --fail-under 0 \
+              --required-path combat_state.rewards_processed \
+              --required-path encounter_state.encounter_completed \
+              --required-path encounter_state.encounter_summary \
+              --required-path encounter_state.rewards_processed \
+              --required-path rewards_pending.processed \
+              --required-path rewards_pending.level_up_available \
+              --required-path custom_campaign_state.level_up_pending \
+              --required-path custom_campaign_state.level_up_in_progress \
+              --required-path custom_campaign_state.last_location \
+              --required-path custom_campaign_state.last_story_mode_sequence_id \
+              --required-path custom_campaign_state.budget_warnings_shown \
+              --required-path custom_campaign_state.player_character_data_extras \
+              --required-path world_events \
+              --required-path faction_updates \
+              --required-path time_events \
+              --required-path rumors \
+              --required-path scene_event \
+              --required-path complications \
+              --required-path player_character_data.equipped_items.shoulders \
+              --required-path player_character_data.equipped_items.chest \
+              --required-path player_character_data.equipped_items.waist \
+              --required-path player_character_data.equipped_items.legs
+          else
+            echo "Skipping schema coverage guard: scripts/check_schema_coverage.py not found"
+          fi
   python-lint:
     name: Python Linting (Ruff)
     runs-on: ubuntu-latest

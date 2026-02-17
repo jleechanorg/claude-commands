@@ -38,6 +38,8 @@ PAIR_EXECUTE_SCRIPT = str(PROJECT_ROOT / "scripts" / "pair_execute.py")
 sys.path.insert(0, PAIR_INTEGRATION_MODULE)
 from pair_integration import generate_pair_task_spec, should_trigger_pair
 
+DEFAULT_REPO_SLUG = "jleechanorg/your-project.com"
+
 
 def log(message: str):
     """Log message with timestamp."""
@@ -60,6 +62,32 @@ def get_current_pr() -> str | None:
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
     return None
+
+
+def get_repo_slug() -> str:
+    """Resolve GitHub owner/repo slug from origin remote."""
+    try:
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if result.returncode != 0:
+            return DEFAULT_REPO_SLUG
+
+        remote_url = result.stdout.strip()
+        if "github.com/" in remote_url:
+            return remote_url.split("github.com/", 1)[1].replace(".git", "")
+        if remote_url.startswith("git@github.com:"):
+            return remote_url.replace("git@github.com:", "").replace(".git", "")
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    return DEFAULT_REPO_SLUG
+
+
+REPO_SLUG = get_repo_slug()
 
 
 def get_cache_dir() -> Path:
@@ -133,7 +161,7 @@ def run_pair_integration(pr_number: str) -> None:
         "number": pr_number,
         "branch": os.environ.get("GITHUB_HEAD_REF", "unknown"),
         "base": os.environ.get("GITHUB_BASE_REF", "main"),
-        "url": f"https://github.com/jleechanorg/your-project.com/pull/{pr_number}",
+        "url": f"https://github.com/{REPO_SLUG}/pull/{pr_number}",
     }
 
     # Process comments and launch /pair sessions
@@ -257,7 +285,7 @@ Phase 2: Generate responses for ALL comments
   (Note: /pair sessions already launched by copilot_execute.py before this agent started)
 
 Phase 3: Post consolidated response
-/commentreply jleechanorg your-project.com {pr_number}
+/commentreply {REPO_SLUG.split('/')[0]} {REPO_SLUG.split('/')[1]} {pr_number}
 
 Phase 4: Verify coverage
 /commentcheck {pr_number}
@@ -274,12 +302,12 @@ IMPORTANT:
 
 COMMENT URL TRACKING (MANDATORY):
 - When making code fixes, include PR comment URL in commit message
-- Format: "Comment: https://github.com/jleechanorg/your-project.com/pull/{pr_number}#discussion_r{{comment_id}}"
+- Format: "Comment: https://github.com/{REPO_SLUG}/pull/{pr_number}#discussion_r{{comment_id}}"
 - Extract html_url from comments.json for the comment that triggered the fix
 - Example commit message:
   Fix: Address CodeRabbit security concern
 
-  Comment: https://github.com/jleechanorg/your-project.com/pull/{pr_number}#discussion_r123456
+  Comment: https://github.com/{REPO_SLUG}/pull/{pr_number}#discussion_r123456
 
   Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 """
