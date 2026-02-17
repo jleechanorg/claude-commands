@@ -14,11 +14,12 @@ from unittest.mock import Mock, patch
 # Add the parent directory ('.claude/commands') to path for importing
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-try:
+# Import using importlib to avoid try/except pattern
+import importlib.util
+spec = importlib.util.find_spec("exportcommands")
+if spec is not None:
     from exportcommands import ClaudeCommandsExporter
-except ImportError as e:
-    print(f"Import error: {e}")
-    # Create a mock for testing if import fails
+else:
     ClaudeCommandsExporter = None
 
 class TestExportCommandsMatrix(unittest.TestCase):

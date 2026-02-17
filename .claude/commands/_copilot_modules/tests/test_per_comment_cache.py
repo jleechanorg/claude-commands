@@ -6,7 +6,9 @@ TDD: Tests written first, implementation follows.
 """
 
 import json
+import shutil
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -29,7 +31,6 @@ class TestPerCommentCache(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test fixtures."""
-        import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_save_single_comment(self):
@@ -159,7 +160,6 @@ class TestPerCommentCache(unittest.TestCase):
         self.cache.save_comments(comments, "123", "2026-01-16T00:00:00Z", {})
         
         # Get initial modification times
-        import time
         time.sleep(0.1)  # Ensure different timestamps
         initial_mtimes = {}
         for i in range(10):
@@ -192,7 +192,6 @@ class TestHandledTracking(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test fixtures."""
-        import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_mark_handled_adds_handled_field(self):

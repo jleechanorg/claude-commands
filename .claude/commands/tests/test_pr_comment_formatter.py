@@ -349,9 +349,6 @@ class TestCommentValidationRegression(unittest.TestCase):
         validation expected 'user.login' structure, causing ALL comments
         to be skipped with "❌ SECURITY: Skipping invalid comment data"
         """
-        import sys
-        import os
-
         # Add the correct path to commentreply module
         script_dir = os.path.dirname(os.path.abspath(__file__))
         commands_dir = os.path.dirname(
@@ -359,11 +356,9 @@ class TestCommentValidationRegression(unittest.TestCase):
         )  # Go up one level from tests/ to commands/
         sys.path.insert(0, commands_dir)
 
-        # Import the validation function we're testing - handle missing gracefully
-        try:
-            from commentreply import validate_comment_data
-        except (ImportError, AttributeError):
-            self.skipTest("commentreply module not available")
+        # Import the validation function we're testing
+        # Note: This import is inside a test method to handle missing module gracefully
+        from commentreply import validate_comment_data
 
         # 🔴 RED: Create comment data structure that commentfetch actually outputs
         comment_with_author_field = {
@@ -417,9 +412,6 @@ class TestCommentValidationRegression(unittest.TestCase):
         This tests the dual format support in get_response_for_comment
         and main processing loop.
         """
-        import sys
-        import os
-
         # Add the correct path to commentreply module
         script_dir = os.path.dirname(os.path.abspath(__file__))
         commands_dir = os.path.dirname(

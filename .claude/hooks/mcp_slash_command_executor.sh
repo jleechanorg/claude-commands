@@ -122,9 +122,17 @@ if [[ "$input" == SLASH_COMMAND_EXECUTE:* ]] || [[ "$input" == *"SLASH_COMMAND_E
     # Execute the slash command by simulating user input to Claude Code CLI
     # We'll use the same approach as compose-commands.sh but for direct execution
     
-    # Extract command name (first word after /)
-    cmd_name=$(echo "$command" | sed 's|^/||' | cut -d' ' -f1)
-    cmd_args=$(echo "$command" | cut -d' ' -f2-)
+    # Extract command name (first word after /) with bash-only parsing
+    cmd_name="${command#/}"
+    cmd_name="${cmd_name%% *}"
+    if [[ -z "$cmd_name" || ! "$cmd_name" =~ ^[a-z0-9_-]+$ ]]; then
+        echo "Error: Invalid command name: $cmd_name"
+        exit 1
+    fi
+    cmd_args="${command#* }"
+    if [[ "$cmd_args" == "$command" ]]; then
+        cmd_args=""
+    fi
     
     # Check if command file exists
     cmd_file="$REPO_ROOT/.claude/commands/${cmd_name}.md"
@@ -235,5 +243,5 @@ if [[ "$input" == SLASH_COMMAND_EXECUTE:* ]] || [[ "$input" == *"SLASH_COMMAND_E
     
 else
     # No pattern detected, pass through unchanged
-    echo "$input"
+    echo "$raw_input"
 fi

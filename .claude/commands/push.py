@@ -128,6 +128,15 @@ def start_test_server(branch):
 
     print(f"🚀 Starting test server on port {port}...")
 
+    # Get project root dynamically
+    try:
+        project_root = subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"], text=True
+        ).strip()
+    except subprocess.CalledProcessError:
+        print("⚠️  Could not determine project root")
+        return None
+
     # Create log directory - use standardized logging directory with branch isolation
     current_branch = subprocess.check_output(
         ["git", "branch", "--show-current"], text=True
@@ -140,7 +149,7 @@ def start_test_server(branch):
     try:
         with open(log_file, "w") as log:
             subprocess.Popen(
-                ["python", "$PROJECT_ROOT/main.py"],
+                ["python", f"{project_root}/$PROJECT_ROOT/main.py"],
                 env={**os.environ, "PORT": str(port)},
                 stdout=log,
                 stderr=subprocess.STDOUT,

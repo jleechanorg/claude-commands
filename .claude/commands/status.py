@@ -6,36 +6,39 @@ Shows complete PR overview including files, CI status, merge conflicts, and GitH
 Integrates with /header and provides authoritative GitHub data.
 """
 
-import os
 import sys
 import json
 import subprocess
 import datetime
 from pathlib import Path
 
-def run_command(cmd, capture_output=True, shell=True):
-    """Run shell command and return result"""
+def run_command(cmd, capture_output=True):
+    """Run command and return stdout on success."""
     try:
         result = subprocess.run(
-            cmd, 
-            shell=shell, 
-            capture_output=capture_output, 
+            cmd,
+            shell=False,
+            capture_output=capture_output,
             text=True,
             timeout=30
         )
-        return result.stdout.strip() if result.returncode == 0 else None
+        if result.returncode != 0:
+            return None
+        if capture_output and result.stdout is not None:
+            return result.stdout.strip()
+        return ""
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
         return None
 
 def get_repo_info():
     """Extract repository owner and name from git remote"""
-    remote_url = run_command("git remote get-url origin")
+    remote_url = run_command(["git", "remote", "get-url", "origin"])
     if not remote_url:
         return None, None
     
-    # Handle both HTTPS and SSH formats
-    if remote_url.startswith('https://github.com/'):
-        repo_part = remote_url.replace('https://github.com/', '').replace('.git', '')
+    # Handle HTTPS (with or without credentials) and SSH formats
+    if 'github.com/' in remote_url:
+        repo_part = remote_url.split('github.com/', 1)[1].replace('.git', '')
     elif remote_url.startswith('git@github.com:'):
         repo_part = remote_url.replace('git@github.com:', '').replace('.git', '')
     else:
@@ -48,12 +51,12 @@ def get_repo_info():
 
 def get_current_pr():
     """Get PR number for current branch"""
-    branch = run_command("git branch --show-current")
+    branch = run_command(["git", "branch", "--show-current"])
     if not branch:
-        return None
+        return None, None
     
     # Try to get PR from gh CLI
-    pr_data = run_command(f'gh pr list --head "{branch}" --json number,url')
+    pr_data = run_command(["gh", "pr", "list", "--head", branch, "--json", "number,url"])
     if pr_data:
         try:
             prs = json.loads(pr_data)
@@ -69,7 +72,7 @@ def get_pr_files(pr_number, limit=15):
     if not pr_number:
         return []
     
-    files_data = run_command(f'gh pr view {pr_number} --json files')
+    files_data = run_command(["gh", "pr", "view", str(pr_number), "--json", "files"])
     if not files_data:
         return []
     
@@ -89,7 +92,7 @@ def get_ci_status(pr_number):
     if not pr_number:
         return []
     
-    status_data = run_command(f'gh pr view {pr_number} --json statusCheckRollup')
+    status_data = run_command(["gh", "pr", "view", str(pr_number), "--json", "statusCheckRollup"])
     if not status_data:
         return []
     
@@ -112,7 +115,7 @@ def get_merge_status(pr_number):
     if not pr_number:
         return {}
     
-    merge_data = run_command(f'gh pr view {pr_number} --json mergeable,mergeableState,state')
+    merge_data = run_command(["gh", "pr", "view", str(pr_number), "--json", "mergeable,mergeStateStatus,state"])
     if not merge_data:
         return {}
     
@@ -126,7 +129,7 @@ def get_review_status(pr_number):
     if not pr_number:
         return [], []
     
-    review_data = run_command(f'gh pr view {pr_number} --json reviews,comments')
+    review_data = run_command(["gh", "pr", "view", str(pr_number), "--json", "reviews,comments"])
     if not review_data:
         return [], []
     
@@ -154,7 +157,7 @@ def format_file_changes(files):
     output.append("")
     
     for i, file in enumerate(files, 1):
-        filename = file.get('filename', 'unknown')
+        filename = file.get('path', file.get('filename', 'unknown'))
         additions = file.get('additions', 0)
         deletions = file.get('deletions', 0)
         status = file.get('status', 'modified')
@@ -188,7 +191,8 @@ def format_ci_status(checks):
             continue
             
         name = check.get('context', check.get('name', 'unknown'))
-        state = check.get('state', 'unknown').upper()
+        raw_state = check.get('conclusion') or check.get('status') or check.get('state') or 'unknown'
+        state = str(raw_state).upper()
         description = check.get('description', '')
         url = check.get('targetUrl', check.get('url', ''))
         
@@ -229,7 +233,7 @@ def format_merge_status(merge_info):
     output.append("")
     
     mergeable = merge_info.get('mergeable')
-    mergeable_state = merge_info.get('mergeableState', 'unknown')
+    mergeable_state = merge_info.get('mergeStateStatus', merge_info.get('mergeableState', 'unknown'))
     pr_state = merge_info.get('state', 'unknown')
     
     # Merge status icon
@@ -275,7 +279,7 @@ def format_review_status(reviews, comments):
             continue
             
         state = review.get('state', 'unknown')
-        author = review.get('user', {}).get('login', 'unknown')
+        author = review.get('author', {}).get('login') or review.get('user', {}).get('login', 'unknown')
         
         if state == 'APPROVED':
             approved += 1
@@ -283,7 +287,7 @@ def format_review_status(reviews, comments):
         elif state == 'CHANGES_REQUESTED':
             requested_changes += 1
             review_details.append(f"❌ **@{author}**: Changes requested")
-        elif state == 'REVIEW_REQUESTED':
+        elif state in ('PENDING', 'REVIEW_REQUESTED'):
             pending += 1
             review_details.append(f"⏳ **@{author}**: Review pending")
         elif state == 'COMMENTED':
@@ -305,7 +309,7 @@ def format_review_status(reviews, comments):
             if not isinstance(comment, dict):
                 continue
                 
-            author = comment.get('user', {}).get('login', 'unknown')
+            author = comment.get('author', {}).get('login') or comment.get('user', {}).get('login', 'unknown')
             body = comment.get('body', '')[:100]  # Truncate long comments
             if len(comment.get('body', '')) > 100:
                 body += '...'
@@ -321,14 +325,20 @@ def generate_action_items(merge_info, checks, reviews):
     # Check for failing CI
     failing_checks = []
     for check in checks:
-        if isinstance(check, dict) and check.get('state') in ['FAILURE', 'ERROR']:
+        if not isinstance(check, dict):
+            continue
+
+        raw_state = check.get('conclusion') or check.get('status') or check.get('state') or 'unknown'
+        state = str(raw_state).upper()
+        if state in ['FAILURE', 'ERROR', 'CANCELLED']:
             failing_checks.append(check.get('context', check.get('name', 'unknown')))
     
     if failing_checks:
         action_items.append(f"🔧 **Fix failing CI checks**: {', '.join(failing_checks)}")
     
     # Check for merge conflicts
-    if merge_info.get('mergeableState') == 'CONFLICTING':
+    merge_state = merge_info.get('mergeStateStatus', merge_info.get('mergeableState'))
+    if merge_state == 'CONFLICTING':
         action_items.append("⚔️ **Resolve merge conflicts** - run `/fixpr` for assistance")
     
     # Check for requested changes
@@ -342,7 +352,7 @@ def generate_action_items(merge_info, checks, reviews):
     
     # Check for pending reviews
     pending_reviews = any(
-        review.get('state') == 'REVIEW_REQUESTED' 
+        review.get('state') in ('PENDING', 'REVIEW_REQUESTED')
         for review in reviews 
         if isinstance(review, dict)
     )
