@@ -147,7 +147,11 @@ fetch.execute()
 
 BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
 REPO_NAME=$(basename "$(git rev-parse --show-toplevel)" | tr -cd '[:alnum:]._-')
-COMMENTS_FILE="/tmp/$REPO_NAME/$BRANCH_NAME/comments.json"
+# Use copilot subdirectory for all copilot workflow files
+COPILOT_DIR="/tmp/$REPO_NAME/$BRANCH_NAME/copilot"
+COMMENTS_FILE="$COPILOT_DIR/comments.json"
+# REV-qcu3t-counting: Also read responses.json for standardized counts
+RESPONSES_FILE="$COPILOT_DIR/responses.json"
 
 if [ ! -f "$COMMENTS_FILE" ]; then
   echo "🚨 CRITICAL: COPILOT EXECUTION HALTED" >&2
@@ -158,6 +162,28 @@ if [ ! -f "$COMMENTS_FILE" ]; then
 fi
 
 echo "✅ DATA SOURCE: Using commentfetch structured output from $COMMENTS_FILE"
+
+# REV-qcu3t-counting: Read responses.json for standardized count stages
+if [ -f "$RESPONSES_FILE" ]; then
+  echo "✅ STANDARDIZED COUNTS: Using responses.json for metrics (single source of truth)"
+
+  # Compute metrics from responses.json (matches compute_metrics/get_all_issues in commentreply.py)
+  # Handles both single-issue (.response on entry) and multi-issue (.issues[] array) formats
+  TOTAL_ISSUES=$(jq '[.responses[] | if (.issues and .analysis) then .issues[] else . end] | length' "$RESPONSES_FILE" 2>/dev/null || echo "0")
+  FIXED_COUNT=$(jq '[.responses[] | if (.issues and .analysis) then .issues[] else . end | select(.response == "FIXED" or .response == "ALREADY_IMPLEMENTED")] | length' "$RESPONSES_FILE" 2>/dev/null || echo "0")
+  ACKNOWLEDGED_COUNT=$(jq '[.responses[] | if (.issues and .analysis) then .issues[] else . end | select((.response // "") as $r | $r == "ACKNOWLEDGED" or $r == "SKIPPED" or ($r != "FIXED" and $r != "ALREADY_IMPLEMENTED" and $r != "DEFERRED" and $r != "NOT_DONE"))] | length' "$RESPONSES_FILE" 2>/dev/null || echo "0")
+  DEFERRED_COUNT=$(jq '[.responses[] | if (.issues and .analysis) then .issues[] else . end | select(.response == "DEFERRED")] | length' "$RESPONSES_FILE" 2>/dev/null || echo "0")
+  NOT_DONE_COUNT=$(jq '[.responses[] | if (.issues and .analysis) then .issues[] else . end | select(.response == "NOT_DONE")] | length' "$RESPONSES_FILE" 2>/dev/null || echo "0")
+
+  echo "📊 STANDARDIZED METRICS (from responses.json):"
+  echo "   Total issues: $TOTAL_ISSUES"
+  echo "   Fixed: $FIXED_COUNT"
+  echo "   Acknowledged: $ACKNOWLEDGED_COUNT"
+  echo "   Deferred: $DEFERRED_COUNT"
+  echo "   Not Done: $NOT_DONE_COUNT"
+else
+  echo "⚠️ WARNING: responses.json not found - cannot compute standardized metrics"
+fi
 
 # 4. Extract comprehensive comment statistics from commentfetch JSON
 

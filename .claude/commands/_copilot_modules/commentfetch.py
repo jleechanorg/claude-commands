@@ -67,7 +67,7 @@ class CommentFetch(CopilotCommandBase):
         self.repo_name = sanitized_repo or "unknown-repo"
 
         # Set cache directory and initialize per-comment cache
-        self.cache_dir = Path(f"/tmp/{self.repo_name}/{self.branch_name}")
+        self.cache_dir = Path(f"/tmp/{self.repo_name}/{self.branch_name}/copilot")
         self.output_file = self.cache_dir / "comments.json"  # Keep for backward compatibility
         self.cache_metadata_file = self.cache_dir / "cache_metadata.json"
         self.per_comment_cache = PerCommentCache(self.cache_dir)
@@ -840,8 +840,28 @@ class CommentFetch(CopilotCommandBase):
                 comment["already_replied"] = self._check_already_replied_general(comment, self.comments)
 
         # Count comments needing responses that haven't been replied to yet
-        unresponded_count = sum(1 for c in self.comments
-                               if c.get("requires_response") and not c.get("already_replied", False))
+        unresponded_count = sum(
+            1
+            for c in self.comments
+            if c.get("requires_response", True)
+            and not c.get("already_replied", False)
+        )
+
+        # FIX REV-qcu3t-counting: Add standardized counts for single source of truth
+        # Count unique comment IDs (deduplicated)
+        unique_comment_ids = set(c.get("id") for c in self.comments if c.get("id"))
+        unique_count = len(unique_comment_ids)
+
+        # Count [AI responder] comments (these are skipped in requires_response)
+        ai_responder_count = sum(
+            1
+            for c in self.comments
+            if c.get("requires_response") == False
+            and c.get("body", "").lstrip().startswith("[AI responder]")
+        )
+
+        # Count already replied (only comments that require response)
+        already_replied_count = sum(1 for c in self.comments if c.get("already_replied", False) and c.get("requires_response", True))
 
         # Prepare data to save
         data = {
@@ -850,7 +870,19 @@ class CommentFetch(CopilotCommandBase):
             "comments": self.comments,
             "ci_status": ci_status or {'overall_state': 'UNKNOWN', 'error': 'CI status not fetched'},
             "metadata": {
+                # FIX REV-qcu3t-counting: Single source of truth for counts
+                # All raw API comments from all sources
                 "total": len(self.comments),
+                # Unique comment IDs (deduplicated)
+                "unique_count": unique_count,
+                # Comments requiring response (excludes [AI responder] and meta-comments)
+                "requires_response_count": sum(1 for c in self.comments if c.get("requires_response", True)),
+                # Comments already replied to by current actor
+                "already_replied_count": already_replied_count,
+                # Comments still needing response
+                "unresponded_count": unresponded_count,
+                # [AI responder] comments count
+                "ai_responder_count": ai_responder_count,
                 "by_type": {
                     "inline": len(
                         [c for c in self.comments if c["type"] == "inline"]
@@ -865,10 +897,25 @@ class CommentFetch(CopilotCommandBase):
                         [c for c in self.comments if c["type"] == "copilot"]
                     ),
                 },
-                "unresponded_count": unresponded_count,
                 "repo": self.repo,
+                # Documentation of count expectations
+                "count_documentation": {
+                    "total": "All raw API comments from inline + general + review + copilot sources",
+                    "unique_count": "Deduplicated by comment ID - removes duplicate entries",
+                    "requires_response_count": "Comments needing response - excludes [AI responder] and meta-comments",
+                    "already_replied_count": "Comments that have replies from current actor",
+                    "unresponded_count": "requires_response_count - already_replied_count",
+                    "ai_responder_count": "Comments authored by current actor starting with [AI responder]",
+                },
             },
         }
+
+        # FIX REV-qcu3t-counting: Add validation that counts are consistent
+        expected_unresponded = data["metadata"]["requires_response_count"] - already_replied_count
+        if expected_unresponded != unresponded_count:
+            self.log(f"⚠️  WARNING: Count mismatch detected!")
+            self.log(f"   requires_response ({data['metadata']['requires_response_count']}) - already_replied ({already_replied_count}) = {expected_unresponded}")
+            self.log(f"   But unresponded_count = {unresponded_count}")
 
         # Create directory if it doesn't exist
         self.cache_dir.mkdir(parents=True, exist_ok=True)

@@ -438,6 +438,72 @@ class TestCommentReplyProcessing(unittest.TestCase):
         # Should not raise exception
         self.assertIsNotNone(response)  # Returns empty string, not None
 
+    def test_tracking_table_labels_preserve_not_done_and_acknowledged(self):
+        """NOT_DONE must remain distinct from ACKNOWLEDGED in tracking output."""
+        responses_data = {
+            "responses": [
+                {"comment_id": 9001, "response": "NOT_DONE", "tracking_reason": "Invalid suggestion."},
+                {"comment_id": 9002, "response": "ACKNOWLEDGED", "tracking_reason": "Valid but no code change."},
+            ]
+        }
+        all_comments = [
+            {"id": 9001, "body": "n/a", "user": {"login": "reviewer1"}, "created_at": "2024-01-01T10:00:00Z"},
+            {"id": 9002, "body": "n/a", "user": {"login": "reviewer2"}, "created_at": "2024-01-01T11:00:00Z"},
+        ]
+        with patch("commentreply.run_command", return_value=(True, "actor-bot", "")):
+            section = commentreply.build_tracking_section(
+                "o", "r", "1", responses_data, all_comments, set(), existing_tracking={}
+            )
+        self.assertIn("| ⏭️ Not Done |", section)
+        self.assertIn("| ⏭️ Acknowledged |", section)
+
+    def test_already_replied_without_tracking_stays_unresolved(self):
+        """Already-replied items without prior tracking must not inflate fixed counts."""
+        responses_data = {"responses": []}
+        all_comments = [
+            {"id": 9010, "body": "n/a", "user": {"login": "reviewer1"}, "created_at": "2024-01-01T10:00:00Z"}
+        ]
+        with patch("commentreply.run_command", return_value=(True, "actor-bot", "")):
+            section = commentreply.build_tracking_section(
+                "o", "r", "1", responses_data, all_comments, {9010}, existing_tracking={}
+            )
+        self.assertIn("| ❓ Unresolved | [#9010]", section)
+        self.assertIn("**Fixed**: 0", section)
+        self.assertIn("**Unresolved**: 1", section)
+
+    def test_replace_tracking_section_rebuilds_malformed_markers(self):
+        """Malformed marker state should be normalized to a single bounded section."""
+        malformed = (
+            "Intro\n\n"
+            "<!-- COPILOT_TRACKING_START -->\n"
+            "<!-- COPILOT_TRACKING_START -->\n"
+            "old table\n"
+            "<!-- COPILOT_TRACKING_END -->\n"
+            "\nFooter"
+        )
+        new_section = (
+            "<!-- COPILOT_TRACKING_START -->\n"
+            "new table\n"
+            "<!-- COPILOT_TRACKING_END -->"
+        )
+        updated, mode = commentreply._replace_tracking_section_in_pr_body(
+            malformed, new_section
+        )
+        self.assertEqual(mode, "rebuild")
+        self.assertEqual(updated.count("<!-- COPILOT_TRACKING_START -->"), 1)
+        self.assertEqual(updated.count("<!-- COPILOT_TRACKING_END -->"), 1)
+        self.assertIn("new table", updated)
+
+    def test_compute_metrics_unknown_response_defaults_to_acknowledged(self):
+        """Unknown responses should be counted as acknowledged for parity across tools."""
+        responses = [{"comment_id": 9101, "response": "SOMETHING_NEW", "category": "STYLE"}]
+        metrics = commentreply.compute_metrics(responses)
+        self.assertEqual(metrics["total"], 1)
+        self.assertEqual(metrics["acknowledged"], 1)
+        self.assertEqual(metrics["fixed"], 0)
+        self.assertEqual(metrics["deferred"], 0)
+        self.assertEqual(metrics["not_done"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
