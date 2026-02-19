@@ -27,5 +27,6 @@
   ],
   "commands": [".claude/commands/"],
   "agents": [".claude/agents/"],
+  "scripts": [".claude/scripts/"],
   "skills": [".claude/skills/"]
 }
