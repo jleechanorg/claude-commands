@@ -180,13 +180,94 @@ def test_dispatch_agent_for_pr_injects_workspace(monkeypatch, tmp_path):
             return True
 
     pr = {"repo_full": "org/repo", "repo": "repo", "number": 5, "branch": "feature/x"}
-    assert runner.dispatch_agent_for_pr(FakeDispatcher(), pr)
+    assert runner.dispatch_agent_for_pr(FakeDispatcher(), pr, agent_cli="codex")
     assert created_specs
     workspace_config = created_specs[0].get("workspace_config")
     assert workspace_config
     assert "pr-5" in workspace_config["workspace_name"]
     # commit prefix guidance should be present in task description with agent CLI
     assert captured_desc and "-automation-commit]" in captured_desc[0]
+
+
+def test_dispatch_agent_for_pr_with_task_uses_fixpr_slash_for_claude(monkeypatch, tmp_path):
+    runner.WORKSPACE_ROOT_BASE = tmp_path
+    captured_desc = []
+
+    class FakeDispatcher:
+        def analyze_task_and_create_agents(self, task_description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
+            captured_desc.append(task_description)
+            return [{"id": "agent"}]
+
+        def create_dynamic_agent(self, spec):
+            return True
+
+    monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
+    monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
+
+    pr = {"repo_full": "org/repo", "repo": "repo", "number": 11, "branch": "feature/x"}
+    success = runner.dispatch_agent_for_pr_with_task(
+        FakeDispatcher(),
+        pr,
+        task_description="manual task",
+        agent_cli="claude",
+        job_mode="fixpr",
+    )
+
+    assert success is True
+    assert captured_desc == ["/fixpr 11"]
+
+
+def test_dispatch_agent_for_pr_with_task_requires_description_for_non_slash_cli(monkeypatch, tmp_path):
+    runner.WORKSPACE_ROOT_BASE = tmp_path
+
+    class FakeDispatcher:
+        def analyze_task_and_create_agents(self, task_description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
+            return [{"id": "agent"}]
+
+        def create_dynamic_agent(self, spec):
+            return True
+
+    monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
+    monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
+
+    pr = {"repo_full": "org/repo", "repo": "repo", "number": 12, "branch": "feature/x"}
+    success = runner.dispatch_agent_for_pr_with_task(
+        FakeDispatcher(),
+        pr,
+        task_description="",
+        agent_cli="codex",
+        job_mode="fix_comment",
+    )
+
+    assert success is False
+
+
+def test_dispatch_agent_for_pr_uses_copilot_slash_for_fix_comment(monkeypatch, tmp_path):
+    runner.WORKSPACE_ROOT_BASE = tmp_path
+    captured_desc = []
+
+    class FakeDispatcher:
+        def analyze_task_and_create_agents(self, task_description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
+            captured_desc.append(task_description)
+            return [{"id": "agent"}]
+
+        def create_dynamic_agent(self, spec):
+            return True
+
+    monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
+    monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
+    monkeypatch.setattr(runner, "get_automation_user", lambda: "tester")
+
+    pr = {"repo_full": "org/repo", "repo": "repo", "number": 13, "branch": "feature/x"}
+    success = runner.dispatch_agent_for_pr(
+        FakeDispatcher(),
+        pr,
+        agent_cli="minimax",
+        job_mode="fix_comment",
+    )
+
+    assert success is True
+    assert captured_desc == ["/copilot 13"]
 
 
 def test_has_failing_checks_uses_conclusion_field(monkeypatch):

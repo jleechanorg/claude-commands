@@ -618,6 +618,16 @@ def kill_tmux_session_if_exists(name: str) -> None:
         log(f"Warning: unable to check/kill tmux session {name}: {exc}")
 
 
+def _cli_chain_parts(agent_cli: str) -> list[str]:
+    """Normalize an agent CLI chain into lowercased parts."""
+    return [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+
+
+def _slash_command_for_pr(pr_number: int, job_mode: str) -> str:
+    """Return canonical slash command for PR automation job mode."""
+    return f"/fixpr {pr_number}" if job_mode == "fixpr" else f"/copilot {pr_number}"
+
+
 def dispatch_agent_for_pr_with_task(
     dispatcher: TaskDispatcher,
     pr: dict,
@@ -625,14 +635,21 @@ def dispatch_agent_for_pr_with_task(
     agent_cli: str = "claude",
     model: str | None = None,
     return_cli_used: bool = False,
+    job_mode: str = "fix_comment",  # "fixpr" or "fix_comment"
 ) -> bool | tuple[bool, str | None]:
-    """Dispatch an agent for a PR using a custom task description."""
+    """Dispatch an agent for a PR using a custom task description or slash command."""
     repo_full = pr.get("repo_full")
     repo = pr.get("repo")
     pr_number = pr.get("number")
     branch = pr.get("branch")
 
-    if not task_description:
+    # Check if we should use slash commands (claude or minimax CLI) - do this early for guard check
+    cli_chain_parts = _cli_chain_parts(agent_cli)
+    primary_cli = cli_chain_parts[0] if cli_chain_parts else "claude"
+    use_slash_command = primary_cli in ("claude", "minimax")
+
+    # Allow empty task_description when using slash commands (auto-generated below)
+    if not task_description and not use_slash_command:
         log("Skipping PR dispatch: missing task description")
         return False
 
@@ -640,6 +657,9 @@ def dispatch_agent_for_pr_with_task(
         log(f"Skipping PR with missing required fields: {pr}")
         return False
     assert branch is not None and pr_number is not None
+
+    if use_slash_command:
+        task_description = _slash_command_for_pr(pr_number, job_mode)
 
     workspace_name = sanitize_workspace_name(branch or f"pr-{pr_number}", pr_number)
     workspace_root = WORKSPACE_ROOT_BASE / repo
@@ -721,6 +741,7 @@ def dispatch_agent_for_pr(
     agent_cli: str = "claude",
     model: str | None = None,
     return_cli_used: bool = False,
+    job_mode: str = "fixpr",  # "fixpr" or "fix_comment"
 ) -> bool | tuple[bool, str | None]:
     repo_full = pr.get("repo_full")
     repo = pr.get("repo")
@@ -739,7 +760,7 @@ def dispatch_agent_for_pr(
     workspace_root = WORKSPACE_ROOT_BASE / repo
     prepare_workspace_dir(repo, workspace_name)
 
-    cli_chain_parts = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
+    cli_chain_parts = _cli_chain_parts(agent_cli)
     commit_marker_cli = cli_chain_parts[0] if cli_chain_parts else str(agent_cli).strip().lower() or "claude"
 
     normalized_model: str | None = None
@@ -753,7 +774,19 @@ def dispatch_agent_for_pr(
     # Get automation user for cleanup instructions (before building task description)
     automation_user = get_automation_user()
 
-    task_description = (
+    # Extract primary CLI for slash command determination
+    primary_cli = cli_chain_parts[0] if cli_chain_parts else "claude"
+
+    # Use slash commands for Claude and MiniMax CLIs
+    # - fixpr job → use /fixpr
+    # - fix-comment job → use /copilot
+    use_slash_command = primary_cli in ("claude", "minimax")
+
+    if use_slash_command:
+        task_description = _slash_command_for_pr(pr_number, job_mode)
+    else:
+        # Custom prompt for other CLIs (codex, gemini, cursor, etc.)
+        task_description = (
         f"FIXPR TASK (SELF-CONTAINED): Update PR #{pr_number} in {repo_full} (branch {branch}). "
         "Goal: resolve merge conflicts FIRST, then fix failing tests. Also review and address any reviewer feedback that is blocking CI or mergeability. "
         f"CLI chain: {agent_cli}. DO NOT wait for additional input—start immediately.\n\n"
@@ -882,7 +915,7 @@ def dispatch_agent_for_pr(
         "   - `add_comment_to_pending_review` MCP tool (DISABLED - DO NOT USE)\n"
         "   - `POST /repos/.../pulls/.../reviews` endpoint (DISABLED - DO NOT USE)\n"
         "   ⚠️⚠️⚠️ USE ONLY THE ALLOWED METHODS LISTED ABOVE. ANY ATTEMPT TO CREATE A PENDING REVIEW WILL RESULT IN IMMEDIATE TERMINATION.\n"
-    )
+    )  # end of custom prompt for non-slash-command CLIs
 
     # Agent is responsible for cleaning up pending reviews after posting comments
     # No background monitor script needed - eliminates macOS permission prompts

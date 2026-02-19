@@ -9,74 +9,66 @@ execution_mode: llm-driven
 
 # /pair - Dual-Agent Pair Programming
 
-**⚠️ MANDATORY: NEVER implement the task yourself. Launch TWO agents.**
+Use Claude Agent Teams behavior that Claude understands natively.
 
-## Logging Convention
+## Design note: native teams first, Task(...) fallback
 
-All pair agents MUST write timestamped logs throughout their session:
+`/pair` now prefers native Agent Teams language instead of always forcing explicit `Task(...)` calls in the default path. This keeps default behavior aligned with teams-capable runtimes while preserving a deterministic custom fallback for runtimes that do not expose native team controls.
 
-**Log directory:** `/tmp/{repo_name}/{branch}/pair_logs/`
+## Default: Native Agent Teams (teams-aware)
 
-Example: `/tmp/worktree_pair2/pair_followup/pair_logs/`
+When `/pair <task>` is invoked in a Teams-capable runtime:
 
-| Agent | Log file | Contents |
-|-------|----------|----------|
-| Coder | `coder.log` | Task start, RED phase (tests written), GREEN phase (impl done), test results, IMPLEMENTATION_READY sent |
-| Verifier | `verifier.log` | Waiting start, IMPLEMENTATION_READY received, checks run (tests, lint, review), verdict, messages sent |
+1. Ask Claude to create a two-teammate pair for the task in natural language.
+2. Specify two roles clearly:
+   - **Coder**: implements the task and updates tests as needed.
+   - **Verifier**: independently reviews code and validates correctness.
+3. Keep coordination in normal team workflows (task list, teammate messages, lead synthesis).
+4. Gate completion on explicit handoff signals:
+   - coder publishes `IMPLEMENTATION_READY` before verifier final pass;
+   - verifier publishes `VERIFICATION_COMPLETE` before lead synthesis.
+5. Report final result back to the user after both signals are observed.
 
-**Format:** `[YYYY-MM-DD HH:MM:SS] [PHASE] message`
+### Recommended natural-language prompt pattern
 
-The leader MUST include the log directory path in the prompt when spawning agents. Agents create the directory if it doesn't exist. This provides a persistent audit trail for debugging pair sessions.
+Use wording like:
 
-## Default: Claude Teams (Recommended)
+- "Create an agent team for pair programming on this task. One teammate is the coder, one is the verifier. Require coder to emit IMPLEMENTATION_READY and verifier to emit VERIFICATION_COMPLETE."
+- "Coder should implement; verifier should review and validate before completion. Do not implement inline in the lead session."
+- "Use shared logs at LOG_DIR=/tmp/{repo_name}/{branch}/pair_logs/ with timestamped entries."
 
-When `/pair` is invoked, use Claude Teams to spawn a coder and a verifier:
+#### Coordination parameters
 
-### Step 1: Create the team
+When creating a pair session, include:
 
-```
-Teammate({
-  operation: "spawnTeam",
-  team_name: "pair-<short-task-slug>",
-  description: "Pair programming: <task>"
-})
-```
+- **Shared team identifier** (for example `team_name`) so both roles are tracked as one session.
+- **Explicit role names** (`coder` and `verifier`) for directed teammate messages.
+- **Shared task context** (`task_id` or equivalent task summary) so verifier can validate coder output against the same scope.
+- **Expected turn-taking**: coder implements and signals readiness; verifier validates and signals completion.
 
-### Step 2: Create tasks
+## Pair-specific behavior (policy)
 
-Create two tasks:
-1. **Implementation task** - The actual work (assigned to coder)
-2. **Verification task** - Review and test the work (assigned to verifier, blocked by task 1)
+The `/pair` command enforces pair discipline at the prompt/policy layer:
 
-### Step 3: Spawn coder agent
+- Do not do the implementation inline in the lead session.
+- Keep coder/verifier responsibilities separate.
+- Require independent verification before declaring done.
 
-```
-Task({
-  subagent_type: "pair-coder",
-  team_name: "<team-name>",
-  name: "coder",
-  prompt: "<task description with full context>",
-  mode: "bypassPermissions"
-})
-```
+This is policy guidance, not a hard runtime sandbox. If strict machine enforcement is required, use the custom scripted fallback below.
 
-### Step 4: Spawn verifier agent (Codex-powered by default)
+## Non-native fallback (only when needed)
 
-```
-Task({
-  subagent_type: "codex-pair-verifier",
-  team_name: "<team-name>",
-  name: "verifier",
-  prompt: "Wait for coder's IMPLEMENTATION_READY message, then verify the implementation.",
-  mode: "bypassPermissions"
-})
+Use explicit custom orchestration only when the runtime does not expose native Agent Teams controls or when the user explicitly requests custom scripted behavior.
+
+For scripted/custom environments, use existing project tooling:
+
+```bash
+python3 .claude/scripts/pair_execute.py --no-worktree "Your task description here"
 ```
 
-> Uses Codex CLI (`codex exec --yolo`) for independent verification, falls back to Claude if Codex is unavailable. To use Claude-only verifier instead, use `subagent_type: "pair-verifier"`.
+## CLI-Specific Agents (custom/runtime-dependent)
 
-### CLI-Specific Agents
-
-To use a specific CLI for coder or verifier, swap the `subagent_type`:
+If using custom scripted orchestration, these agent types are available:
 
 | CLI | Coder subagent_type | Verifier subagent_type |
 |-----|---------------------|----------------------|
@@ -87,62 +79,33 @@ To use a specific CLI for coder or verifier, swap the `subagent_type`:
 | Cursor | `cursor-pair-coder` | `cursor-pair-verifier` |
 | MiniMax | `minimax-pair-coder` | `minimax-pair-verifier` |
 
-CLI-specific agents delegate work to the external CLI binary (commands from `orchestration/task_dispatcher.py` CLI_PROFILES). If the CLI is unavailable, they fall back to native Claude Code tools.
+These mappings are for custom orchestration paths, not required by native Agent Teams.
 
-Example: Cross-CLI pair (Gemini coder + Codex verifier):
-```
-Task({ subagent_type: "gemini-pair-coder", ... })
-Task({ subagent_type: "codex-pair-verifier", ... })
-```
+## Logging Convention
 
-### Step 5: Coordinate
+Native teams and scripted pair runs should both write timestamped logs:
 
-- Assign tasks to agents via TaskUpdate
-- Wait for both to complete
-- Report results to user
-- Shut down teammates and clean up team
-
-## Script Mode (Only When Explicitly Requested)
-
-Use `pair_execute.py` ONLY when the user explicitly asks for:
-- Multi-CLI sessions (e.g., `--coder-cli minimax --verifier-cli codex`)
-- tmux-based observability (`tmux attach` to watch agents)
-- Background monitoring with pair_monitor.py
-
-```bash
-python3 .claude/scripts/pair_execute.py --no-worktree "Your task description here"
-```
-
-### Script Arguments
-
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `task` | (required) | Task description in quotes |
-| `--coder-cli` | claude | CLI for coder (claude/codex/gemini/cursor/minimax) |
-| `--verifier-cli` | codex | CLI for verifier |
-| `--claude-provider` | (none) | Override claude-family backend |
-| `--no-worktree` | false | Run in current directory |
-| `--max-iterations` | 60 | Monitor safety ceiling (60 x 60s = 1h max) |
-| `--interval` | 60 | Monitor check interval (seconds) |
-
-## Success Criteria
-
-Session completes when:
-- ✅ Coder completes implementation with tests passing
-- ✅ Verifier independently verifies code quality and test coverage
-- ✅ Both agents agree work is done (VERIFICATION_COMPLETE)
+- Directory: `/tmp/{repo_name}/{branch}/pair_logs/`
+- Files: `coder.log`, `verifier.log`
+- Format: `[YYYY-MM-DD HH:MM:SS] [PHASE] message`
 
 ## Troubleshooting
 
-**Claude Teams mode:**
-- Check TaskList for stuck tasks
-- Send messages to agents via SendMessage
-- Shut down via shutdown_request if stuck
+- If Teams mode is available, stay in natural-language team control and avoid non-native orchestration syntax.
+- If Teams mode is unavailable, use `pair_execute.py`.
 
-**Script mode:**
-```bash
-tmux ls | grep pair          # Check agent sessions
-tmux kill-session -t <name>  # Kill stuck session
-```
+### Agent cleanup
 
-**Protocol Version:** 5.0 (Claude Teams default)
+- Native Teams mode: Claude manages teammate lifecycle after completion.
+- Scripted mode: ensure `pair_execute.py` terminates both agents, including interrupted sessions.
+- If a session is interrupted, check for orphaned processes and terminate stale pair agents before rerun.
+
+## Completion criteria
+
+A pair session is complete only when all are true:
+
+1. Coder signals `IMPLEMENTATION_READY`.
+2. Verifier signals `VERIFICATION_COMPLETE`.
+3. Lead session synthesizes both outputs and reports final result.
+
+**Protocol Version:** 8.1 (native teams default with explicit coordination, logging, and completion guidance)

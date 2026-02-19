@@ -1,0 +1,368 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+name: Self-Hosted MVP Shards
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    paths:
+      - "mvp_site/**"
+      - "tests/**"
+      - "run_tests.sh"
+      - "scripts/venv_utils.sh"
+      - ".github/workflows/self-hosted-mvp-shard1.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: self-hosted-mvp-shards-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: write
+  pull-requests: read
+
+jobs:
+  mvp-shard-1:
+    name: Directory tests (core-mvp-1(self hosted))
+    # Never run untrusted fork PR code on self-hosted infrastructure.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: [self-hosted, claude]
+    timeout-minutes: 20
+    outputs:
+      success: ${{ steps.mark-success.outputs.success }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+
+    - name: Run core-mvp-1 tests (self-hosted)
+      env:
+        TEST_SHARD_INDEX: 0
+        TEST_SHARD_TOTAL: 3
+        TESTING: "true"
+        TESTING_AUTH_BYPASS: "true"
+        MOCK_SERVICES_MODE: "true"
+        FAST_TESTS: "1"
+        GEMINI_API_KEY: "test-ci-key-only"
+        CEREBRAS_API_KEY: "test-ci-key-only"
+        OPENROUTER_API_KEY: "test-ci-key-only"
+        TEST_GEMINI_API_KEY: "test-ci-key-only"
+        GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+        ENABLE_SEMANTIC_ROUTING: "false"
+        ENABLE_BROWSER_TESTS: "0"
+        ENABLE_BUILD_TESTS: "0"
+        ENABLE_NETWORK_TESTS: "0"
+        GITHUB_ACTIONS: "true"
+        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
+        TEST_MAX_WORKERS: 2
+      run: |
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
+        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-1)"
+        chmod +x run_tests.sh
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      with:
+        name: mvp-shard1-test-results
+        path: mvp_site/test-results/
+        retention-days: 30
+        if-no-files-found: ignore
+
+    - name: Mark successful completion
+      id: mark-success
+      if: success()
+      run: echo "success=true" >> $GITHUB_OUTPUT
+
+  fallback-shard-1:
+    name: Directory tests (core-mvp-1(fallback))
+    needs: mvp-shard-1
+    if: always() && needs.mvp-shard-1.outputs.success != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      with:
+        python-version: '3.11'
+
+    - name: Run core-mvp-1 tests (fallback)
+      env:
+        TEST_SHARD_INDEX: 0
+        TEST_SHARD_TOTAL: 3
+        TESTING: "true"
+        TESTING_AUTH_BYPASS: "true"
+        MOCK_SERVICES_MODE: "true"
+        FAST_TESTS: "1"
+        GEMINI_API_KEY: "test-ci-key-only"
+        CEREBRAS_API_KEY: "test-ci-key-only"
+        OPENROUTER_API_KEY: "test-ci-key-only"
+        TEST_GEMINI_API_KEY: "test-ci-key-only"
+        GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+        ENABLE_SEMANTIC_ROUTING: "false"
+        ENABLE_BROWSER_TESTS: "0"
+        ENABLE_BUILD_TESTS: "0"
+        ENABLE_NETWORK_TESTS: "0"
+        GITHUB_ACTIONS: "true"
+        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
+        TEST_MAX_WORKERS: 2
+      run: |
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
+        echo "🔄 Running core-mvp-1 fallback on GitHub-hosted runner"
+        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-1)"
+        chmod +x run_tests.sh
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+
+    - name: Upload test results (fallback)
+      if: always()
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      with:
+        name: mvp-shard1-test-results-fallback
+        path: mvp_site/test-results/
+        retention-days: 30
+        if-no-files-found: ignore
+
+  mvp-shard-2:
+    name: Directory tests (core-mvp-2(self hosted))
+    # Never run untrusted fork PR code on self-hosted infrastructure.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: [self-hosted, claude]
+    timeout-minutes: 20
+    outputs:
+      success: ${{ steps.mark-success.outputs.success }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+
+    - name: Run core-mvp-2 tests (self-hosted)
+      env:
+        TEST_SHARD_INDEX: 1
+        TEST_SHARD_TOTAL: 3
+        TESTING: "true"
+        TESTING_AUTH_BYPASS: "true"
+        MOCK_SERVICES_MODE: "true"
+        FAST_TESTS: "1"
+        GEMINI_API_KEY: "test-ci-key-only"
+        CEREBRAS_API_KEY: "test-ci-key-only"
+        OPENROUTER_API_KEY: "test-ci-key-only"
+        TEST_GEMINI_API_KEY: "test-ci-key-only"
+        GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+        ENABLE_SEMANTIC_ROUTING: "false"
+        ENABLE_BROWSER_TESTS: "0"
+        ENABLE_BUILD_TESTS: "0"
+        ENABLE_NETWORK_TESTS: "0"
+        GITHUB_ACTIONS: "true"
+        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
+        TEST_MAX_WORKERS: 2
+      run: |
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
+        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-2)"
+        chmod +x run_tests.sh
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      with:
+        name: mvp-shard2-test-results
+        path: mvp_site/test-results/
+        retention-days: 30
+        if-no-files-found: ignore
+
+    - name: Mark successful completion
+      id: mark-success
+      if: success()
+      run: echo "success=true" >> $GITHUB_OUTPUT
+
+  fallback-shard-2:
+    name: Directory tests (core-mvp-2(fallback))
+    needs: mvp-shard-2
+    if: always() && needs.mvp-shard-2.outputs.success != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      with:
+        python-version: '3.11'
+
+    - name: Run core-mvp-2 tests (fallback)
+      env:
+        TEST_SHARD_INDEX: 1
+        TEST_SHARD_TOTAL: 3
+        TESTING: "true"
+        TESTING_AUTH_BYPASS: "true"
+        MOCK_SERVICES_MODE: "true"
+        FAST_TESTS: "1"
+        GEMINI_API_KEY: "test-ci-key-only"
+        CEREBRAS_API_KEY: "test-ci-key-only"
+        OPENROUTER_API_KEY: "test-ci-key-only"
+        TEST_GEMINI_API_KEY: "test-ci-key-only"
+        GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+        ENABLE_SEMANTIC_ROUTING: "false"
+        ENABLE_BROWSER_TESTS: "0"
+        ENABLE_BUILD_TESTS: "0"
+        ENABLE_NETWORK_TESTS: "0"
+        GITHUB_ACTIONS: "true"
+        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
+        TEST_MAX_WORKERS: 2
+      run: |
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
+        echo "🔄 Running core-mvp-2 fallback on GitHub-hosted runner"
+        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-2)"
+        chmod +x run_tests.sh
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+
+    - name: Upload test results (fallback)
+      if: always()
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      with:
+        name: mvp-shard2-test-results-fallback
+        path: mvp_site/test-results/
+        retention-days: 30
+        if-no-files-found: ignore
+
+  mvp-shard-3:
+    name: Directory tests (core-mvp-3(self hosted))
+    # Never run untrusted fork PR code on self-hosted infrastructure.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: [self-hosted, claude]
+    timeout-minutes: 20
+    outputs:
+      success: ${{ steps.mark-success.outputs.success }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+
+    - name: Run core-mvp-3 tests (self-hosted)
+      env:
+        TEST_SHARD_INDEX: 2
+        TEST_SHARD_TOTAL: 3
+        TESTING: "true"
+        TESTING_AUTH_BYPASS: "true"
+        MOCK_SERVICES_MODE: "true"
+        FAST_TESTS: "1"
+        GEMINI_API_KEY: "test-ci-key-only"
+        CEREBRAS_API_KEY: "test-ci-key-only"
+        OPENROUTER_API_KEY: "test-ci-key-only"
+        TEST_GEMINI_API_KEY: "test-ci-key-only"
+        GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+        ENABLE_SEMANTIC_ROUTING: "false"
+        ENABLE_BROWSER_TESTS: "0"
+        ENABLE_BUILD_TESTS: "0"
+        ENABLE_NETWORK_TESTS: "0"
+        GITHUB_ACTIONS: "true"
+        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
+        TEST_MAX_WORKERS: 2
+      run: |
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
+        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-3)"
+        chmod +x run_tests.sh
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      with:
+        name: mvp-shard3-test-results
+        path: mvp_site/test-results/
+        retention-days: 30
+        if-no-files-found: ignore
+
+    - name: Mark successful completion
+      id: mark-success
+      if: success()
+      run: echo "success=true" >> $GITHUB_OUTPUT
+
+  fallback-shard-3:
+    name: Directory tests (core-mvp-3(fallback))
+    needs: mvp-shard-3
+    if: always() && needs.mvp-shard-3.outputs.success != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      with:
+        python-version: '3.11'
+
+    - name: Run core-mvp-3 tests (fallback)
+      env:
+        TEST_SHARD_INDEX: 2
+        TEST_SHARD_TOTAL: 3
+        TESTING: "true"
+        TESTING_AUTH_BYPASS: "true"
+        MOCK_SERVICES_MODE: "true"
+        FAST_TESTS: "1"
+        GEMINI_API_KEY: "test-ci-key-only"
+        CEREBRAS_API_KEY: "test-ci-key-only"
+        OPENROUTER_API_KEY: "test-ci-key-only"
+        TEST_GEMINI_API_KEY: "test-ci-key-only"
+        GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+        ENABLE_SEMANTIC_ROUTING: "false"
+        ENABLE_BROWSER_TESTS: "0"
+        ENABLE_BUILD_TESTS: "0"
+        ENABLE_NETWORK_TESTS: "0"
+        GITHUB_ACTIONS: "true"
+        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
+        TEST_MAX_WORKERS: 2
+      run: |
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
+        echo "🔄 Running core-mvp-3 fallback on GitHub-hosted runner"
+        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-3)"
+        chmod +x run_tests.sh
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+
+    - name: Upload test results (fallback)
+      if: always()
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      with:
+        name: mvp-shard3-test-results-fallback
+        path: mvp_site/test-results/
+        retention-days: 30
+        if-no-files-found: ignore

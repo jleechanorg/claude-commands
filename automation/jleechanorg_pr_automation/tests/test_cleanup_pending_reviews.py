@@ -310,14 +310,9 @@ class TestPromptAPIEndpoint(unittest.TestCase):
         assert dispatcher.task_description is not None, "Task description should be set"
         prompt = dispatcher.task_description
 
-        # Should contain correct endpoint: /comments with in_reply_to parameter (Python requests syntax)
-        assert "/pulls/123/comments" in prompt or "pulls/123/comments" in prompt, "Prompt should contain /comments endpoint"
-        assert "in_reply_to" in prompt, "Prompt should contain in_reply_to parameter"
-        # Should use Python requests POST syntax specifically (not just GET)
-        assert "post_pr_comment_python" in prompt or "requests.post" in prompt, "Prompt should use Python requests POST for posting comments, not gh CLI"
-        
-        # Should NOT contain incorrect endpoint
-        assert "/comments/{comment_id}/replies" not in prompt, "Prompt should NOT contain incorrect /replies endpoint"
+        # Slash command behavior: Claude/MiniMax use /fixpr or /copilot slash commands
+        # The old custom prompt with /comments endpoint is only used for non-slash CLIs
+        assert "/fixpr 123" in prompt or "/copilot 123" in prompt, "Slash command CLI should generate /fixpr or /copilot command"
 
 
 class TestCleanupBeforeEligibilityChecks(unittest.TestCase):
@@ -329,6 +324,7 @@ class TestCleanupBeforeEligibilityChecks(unittest.TestCase):
             self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
             self.monitor.logger = Mock()
 
+    @patch.dict(os.environ, {"TESTING": "true"})
     def test_cleanup_runs_before_eligibility_checks(self):
         """Test that cleanup is called before eligibility checks in run_monitoring_cycle"""
         repo_full = "owner/repo"
@@ -344,52 +340,50 @@ class TestCleanupBeforeEligibilityChecks(unittest.TestCase):
         # Setup order tracking mock
         manager = Mock()
         manager.attach_mock(self.monitor, "monitor")
-        
-        # We want to verify that _cleanup_pending_reviews is called before is_pr_actionable
-        # in run_monitoring_cycle loop.
-        
+
+        # Set TESTING=true to skip preflight validation in run_monitoring_cycle
         with patch.object(self.monitor, "discover_open_prs", return_value=[pr]):
             with patch.object(self.monitor, "is_pr_actionable", return_value=False) as mock_actionable:
                 with patch.object(self.monitor, "_cleanup_pending_reviews") as mock_cleanup:
                     # Run monitoring cycle in fixpr mode (which triggers cleanup)
                     self.monitor.run_monitoring_cycle(fixpr=True)
-                    
+
                     # Verify cleanup was called
                     mock_cleanup.assert_called_once_with(repo_full, pr_number)
                     # Verify actionable check was called
                     mock_actionable.assert_called_once()
-                    
-                    # Verify order using call_args_list or similar if needed, 
+
+                    # Verify order using call_args_list or similar if needed,
                     # but since we mocked both we can check their call order if we patch them on same object
                     
         # Verification of order via a shared mock object
-        # Re-run with shared mock to verify order
+        # Re-run with shared mock to verify order (reuse the TESTING env var from decorator)
         with patch.object(self.monitor, "discover_open_prs", return_value=[pr]):
             with patch.object(self.monitor, "is_pr_actionable", return_value=False) as mock_actionable:
                 with patch.object(self.monitor, "_cleanup_pending_reviews") as mock_cleanup:
                     # Shared mock to track call order
                     order_mock = Mock()
-                    
+
                     # Define side_effect functions that track calls AND return correct values
                     def cleanup_side_effect(*args, **kwargs):
                         order_mock.cleanup()
                         return None  # _cleanup_pending_reviews returns None
-                    
+
                     def actionable_side_effect(*args, **kwargs):
                         order_mock.actionable()
                         return False  # is_pr_actionable should return False for this test
-                    
+
                     mock_cleanup.side_effect = cleanup_side_effect
                     mock_actionable.side_effect = actionable_side_effect
-                    
+
                     self.monitor.run_monitoring_cycle(fixpr=True)
-                    
+
                     # Check order: cleanup should be before actionable
                     calls = [call[0] for call in order_mock.method_calls]
                     self.assertIn("cleanup", calls)
                     self.assertIn("actionable", calls)
                     self.assertLess(calls.index("cleanup"), calls.index("actionable"))
-                    
+
                     # Verify is_pr_actionable returned False (PR should be skipped)
                     self.assertFalse(mock_actionable.return_value if not mock_actionable.called else mock_actionable.side_effect())
 
