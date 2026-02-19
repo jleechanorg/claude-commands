@@ -26,7 +26,29 @@ Example: `/tmp/worktree_pair2/pair_followup/pair_logs/`
 
 **Format:** `[YYYY-MM-DD HH:MM:SS] [PHASE] message`
 
-The leader MUST include the log directory path in the prompt when spawning agents. Agents create the directory if it doesn't exist. This provides a persistent audit trail for debugging pair sessions.
+### ⚠️ Mandatory Redaction Guidance
+
+Before writing ANY log file, agents MUST scan for and redact sensitive data:
+
+1. **NEVER log raw secrets** - API keys, tokens, passwords, bearer credentials
+2. **Mask sensitive values** - Replace with placeholders like `[REDACTED]`, `***`, `[TOKEN]`
+3. **Strip known patterns** - Detect and remove:
+   - `token=*`, `key=*`, `password=*`, `secret=*`
+   - `Bearer *`, `API-Key *`, `api_key:*`
+   - Environment-derived credentials
+4. **Checklist before persisting** - Apply final scan before writing `/tmp/.../pair_logs/`
+
+**Example log entry (safe):**
+```
+[2026-02-18 10:30:00] [GREEN] Tests passed. API call to service completed with status [SUCCESS], response time: 150ms
+```
+
+**Example what NOT to log:**
+```
+[2026-02-18 10:30:00] [GREEN] API key abc123xyz-token-789 used successfully  ❌ BAD
+```
+
+The leader MUST include the log directory path AND redaction requirements in the prompt when spawning agents. Agents create the directory if it doesn't exist. This provides a persistent audit trail for debugging pair sessions.
 
 ## Default: Claude Teams (Recommended)
 
@@ -50,25 +72,35 @@ Create two tasks:
 
 ### Step 3: Spawn coder agent
 
+**⚠️ IMPORTANT: `bypassPermissions` requires explicit user approval.**
+
+Before using `mode: "bypassPermissions"`, you MUST:
+1. Get explicit user consent OR
+2. Verify a scoped permission token is present
+
+If neither condition is met, use a safer default mode (e.g., `mode: "read"` or omit the mode field).
+
 ```
 Task({
   subagent_type: "pair-coder",
   team_name: "<team-name>",
   name: "coder",
   prompt: "<task description with full context>",
-  mode: "bypassPermissions"
+  mode: "bypassPermissions"  # ⚠️ ONLY with explicit user approval
 })
 ```
 
 ### Step 4: Spawn verifier agent (Codex-powered by default)
+
+**⚠️ IMPORTANT: `bypassPermissions` requires explicit user approval.**
 
 ```
 Task({
   subagent_type: "codex-pair-verifier",
   team_name: "<team-name>",
   name: "verifier",
-  prompt: "Wait for coder's IMPLEMENTATION_READY message, then verify the implementation.",
-  mode: "bypassPermissions"
+  prompt: "<task description with full context> - Wait for coder's IMPLEMENTATION_READY message, then verify the implementation against these requirements.",
+  mode: "bypassPermissions"  # ⚠️ ONLY with explicit user approval
 })
 ```
 
