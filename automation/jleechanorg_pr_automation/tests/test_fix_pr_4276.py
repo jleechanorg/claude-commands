@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from automation.jleechanorg_pr_automation import orchestrated_pr_runner
+from jleechanorg_pr_automation import orchestrated_pr_runner
 
 def test_dispatch_agent_includes_worktree_fix_and_push_refspec(tmp_path, monkeypatch):
     """Verify that worktree fallback uses -b and git push uses refspec."""
@@ -36,9 +36,10 @@ def test_dispatch_agent_includes_worktree_fix_and_push_refspec(tmp_path, monkeyp
         "number": 123,
         "branch": "feature/test",
     }
-    
-    # Run
-    orchestrated_pr_runner.dispatch_agent_for_pr(FakeDispatcher(), pr)
+
+    # Use codex CLI to get the old detailed prompt behavior
+    # (claude/minimax now use slash commands instead of detailed prompts)
+    orchestrated_pr_runner.dispatch_agent_for_pr(FakeDispatcher(), pr, agent_cli="codex")
     
     assert len(captured_desc) == 1
     desc = captured_desc[0]
