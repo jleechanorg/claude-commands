@@ -18,145 +18,164 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-# Configuration
-CLAUDE_COMMANDS_DIR=".claude/commands"
+# Source directory (where plugin files live)
+PLUGIN_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Active Claude Code directories (system-level)
+CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
+CLAUDE_AGENTS_DIR="$CLAUDE_HOME/agents"
+CLAUDE_COMMANDS_DIR="$CLAUDE_HOME/commands"
+CLAUDE_SCRIPTS_DIR="$CLAUDE_HOME/scripts"
+CLAUDE_SKILLS_DIR="$CLAUDE_HOME/skills"
+
+# Source directories in plugin repo
+SRC_AGENTS_DIR="$PLUGIN_SRC_DIR/.claude/agents"
+SRC_COMMANDS_DIR="$PLUGIN_SRC_DIR/.claude/commands"
+SRC_SCRIPTS_DIR="$PLUGIN_SRC_DIR/.claude/scripts"
+SRC_SKILLS_DIR="$PLUGIN_SRC_DIR/.claude/skills"
+
+# Legacy config
 ORCHESTRATION_DIR="orchestration"
 AUTOMATION_DIR="automation"
 CLAUDE_BOT_DIR="claude-bot-commands"
-SCRIPTS_DIR="claude_command_scripts"
 INFRASTRUCTURE_DIR="infrastructure-scripts"
 
 # Installation checks
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     # Check for required tools
     local missing_tools=()
-    
+
     command -v git >/dev/null 2>&1 || missing_tools+=("git")
     command -v python3 >/dev/null 2>&1 || missing_tools+=("python3")
     command -v pip >/dev/null 2>&1 || missing_tools+=("pip")
-    
+
     if [ ${#missing_tools[@]} -ne 0 ]; then
         log_error "Missing required tools: ${missing_tools[*]}"
         log_info "Please install the missing tools and run this script again."
         exit 1
     fi
-    
+
     # Check for Claude Code CLI
     if ! command -v claude >/dev/null 2>&1; then
         log_warning "Claude Code CLI not found. Install from: https://claude.ai/code"
         log_info "The commands will still be installed but may require Claude Code CLI for full functionality."
     fi
-    
+
     log_success "Prerequisites check completed"
 }
 
 # Directory setup
 setup_directories() {
-    log_info "Setting up directory structure..."
-    
-    # Create main directories
+    log_info "Setting up ~/.claude directory structure..."
+
+    mkdir -p "$CLAUDE_AGENTS_DIR"
     mkdir -p "$CLAUDE_COMMANDS_DIR"
-    mkdir -p "$SCRIPTS_DIR"
-    
-    # Create optional directories if content exists
-    [ -d "$ORCHESTRATION_DIR" ] && log_info "Orchestration system detected"
-    [ -d "$AUTOMATION_DIR" ] && log_info "Automation system detected"
-    [ -d "$CLAUDE_BOT_DIR" ] && log_info "Claude Bot system detected"
-    [ -d "$INFRASTRUCTURE_DIR" ] && log_info "Infrastructure scripts detected"
-    
-    log_success "Directory structure created"
+    mkdir -p "$CLAUDE_SCRIPTS_DIR"
+    mkdir -p "$CLAUDE_SKILLS_DIR"
+
+    # Detect optional systems
+    [ -d "$PLUGIN_SRC_DIR/$ORCHESTRATION_DIR" ] && log_info "Orchestration system detected"
+    [ -d "$PLUGIN_SRC_DIR/$AUTOMATION_DIR" ] && log_info "Automation system detected"
+    [ -d "$PLUGIN_SRC_DIR/$CLAUDE_BOT_DIR" ] && log_info "Claude Bot system detected"
+    [ -d "$PLUGIN_SRC_DIR/$INFRASTRUCTURE_DIR" ] && log_info "Infrastructure scripts detected"
+
+    log_success "Directory structure ready"
 }
 
-# Command installation
+# Shared installer helper
+install_component() {
+    local name="$1"
+    local src="$2"
+    local dest="$3"
+    local make_executable="${4:-false}"
+
+    log_info "Installing $name to $dest ..."
+
+    if [ -d "$src" ]; then
+        mkdir -p "$dest"
+        # Copy contents recursively including subdirectories
+        # Using /. ensures we copy the contents of the directory, not the directory itself
+        cp -rf "$src/." "$dest/"
+        
+        if [ "$make_executable" = "true" ]; then
+            # Make only files executable, not directories
+            find "$dest" -type f -exec chmod +x {} + 2>/dev/null || true
+        fi
+        
+        local count
+        count=$(find "$src" -type f | wc -l | tr -d ' ')
+        log_success "Installed $count $name files"
+    else
+        log_warning "No $name source directory found at $src"
+    fi
+}
+
+# Copy agents to ~/.claude/agents/
+install_agents() {
+    install_component "agents" "$SRC_AGENTS_DIR" "$CLAUDE_AGENTS_DIR"
+}
+
+# Copy commands to ~/.claude/commands/
 install_commands() {
-    log_info "Installing command definitions..."
-    
-    local command_count=0
-    
-    if [ -d "$CLAUDE_COMMANDS_DIR" ]; then
-        for file in "$CLAUDE_COMMANDS_DIR"/*.md "$CLAUDE_COMMANDS_DIR"/*.py; do
-            if [ -f "$file" ]; then
-                log_info "  Installing: $(basename "$file")"
-                ((command_count++))
-            fi
-        done
-    fi
-    
-    log_success "Installed $command_count command definitions"
+    install_component "commands" "$SRC_COMMANDS_DIR" "$CLAUDE_COMMANDS_DIR"
 }
 
-# Script installation
+# Copy scripts to ~/.claude/scripts/
 install_scripts() {
-    log_info "Installing command scripts..."
-    
-    local script_count=0
-    
-    if [ -d "$SCRIPTS_DIR" ]; then
-        for script in "$SCRIPTS_DIR"/*.sh "$SCRIPTS_DIR"/*.py; do
-            if [ -f "$script" ]; then
-                chmod +x "$script" 2>/dev/null || true
-                log_info "  Installing: $(basename "$script")"
-                ((script_count++))
-            fi
-        done
-    fi
-    
-    log_success "Installed $script_count command scripts"
+    install_component "scripts" "$SRC_SCRIPTS_DIR" "$CLAUDE_SCRIPTS_DIR" "true"
 }
 
-# Infrastructure installation
+# Copy skills to ~/.claude/skills/
+install_skills() {
+    install_component "skills" "$SRC_SKILLS_DIR" "$CLAUDE_SKILLS_DIR"
+}
+
+# Infrastructure installation (root-level scripts, not copied to ~/.claude)
 install_infrastructure() {
-    log_info "Installing infrastructure scripts..."
-    
+    log_info "Making infrastructure scripts executable..."
+
     local infra_count=0
-    
-    # Install root-level infrastructure scripts
+
     for script in claude_start.sh claude_mcp.sh start-claude-bot.sh integrate.sh resolve_conflicts.sh sync_branch.sh setup-github-runner.sh test_server_manager.sh; do
-        if [ -f "$script" ]; then
-            chmod +x "$script" 2>/dev/null || true
-            log_info "  Installing: $script"
-            ((infra_count++))
+        if [ -f "$PLUGIN_SRC_DIR/$script" ]; then
+            chmod +x "$PLUGIN_SRC_DIR/$script" 2>/dev/null || true
+            infra_count=$((infra_count + 1))
         fi
     done
-    
-    # Install infrastructure-scripts directory if it exists
-    if [ -d "$INFRASTRUCTURE_DIR" ]; then
-        for script in "$INFRASTRUCTURE_DIR"/*.sh; do
+
+    if [ -d "$PLUGIN_SRC_DIR/$INFRASTRUCTURE_DIR" ]; then
+        for script in "$PLUGIN_SRC_DIR/$INFRASTRUCTURE_DIR"/*.sh; do
             if [ -f "$script" ]; then
                 chmod +x "$script" 2>/dev/null || true
-                log_info "  Installing: $(basename "$script")"
-                ((infra_count++))
+                infra_count=$((infra_count + 1))
             fi
         done
     fi
-    
-    log_success "Installed $infra_count infrastructure scripts"
+
+    log_success "Made $infra_count infrastructure scripts executable"
 }
 
 # Optional system installation
 install_optional_systems() {
     log_info "Installing optional systems..."
-    
-    # Orchestration system
-    if [ -d "$ORCHESTRATION_DIR" ]; then
-        log_info "  Installing orchestration system (WIP prototype)"
-        log_warning "    Orchestration requires: Redis, tmux, Python venv"
+
+    if [ -d "$PLUGIN_SRC_DIR/$ORCHESTRATION_DIR" ]; then
+        log_info "  Orchestration system (WIP prototype)"
+        log_warning "    Requires: Redis, tmux, Python venv"
         log_info "    See orchestration/README.md for setup instructions"
     fi
-    
-    # Automation system
-    if [ -d "$AUTOMATION_DIR" ]; then
-        log_info "  Installing automation system (production ready)"
-        log_warning "    Automation requires: cron access, email configuration"
+
+    if [ -d "$PLUGIN_SRC_DIR/$AUTOMATION_DIR" ]; then
+        log_info "  Automation system (production ready)"
+        log_warning "    Requires: cron access, email configuration"
         log_info "    See automation/README.md for setup instructions"
     fi
-    
-    # Claude Bot system
-    if [ -d "$CLAUDE_BOT_DIR" ]; then
-        log_info "  Installing Claude Bot system (production ready)"
-        log_warning "    Claude Bot requires: GitHub repository, self-hosted runner"
+
+    if [ -d "$PLUGIN_SRC_DIR/$CLAUDE_BOT_DIR" ]; then
+        log_info "  Claude Bot system (production ready)"
+        log_warning "    Requires: GitHub repository, self-hosted runner"
         log_info "    See claude-bot-commands/README.md for setup instructions"
     fi
 }
@@ -164,24 +183,25 @@ install_optional_systems() {
 # Environment validation
 validate_installation() {
     log_info "Validating installation..."
-    
-    # Check command availability
+
+    local agents_found=0
     local commands_found=0
-    if [ -d "$CLAUDE_COMMANDS_DIR" ]; then
-        commands_found=$(find "$CLAUDE_COMMANDS_DIR" -name "*.md" -o -name "*.py" | wc -l)
-    fi
-    
-    # Check scripts availability
     local scripts_found=0
-    if [ -d "$SCRIPTS_DIR" ]; then
-        scripts_found=$(find "$SCRIPTS_DIR" -name "*.sh" -o -name "*.py" | wc -l)
-    fi
-    
+    local skills_found=0
+
+    # Recursive count to verify all files are present
+    [ -d "$CLAUDE_AGENTS_DIR" ] && agents_found=$(find "$CLAUDE_AGENTS_DIR" -type f | wc -l)
+    [ -d "$CLAUDE_COMMANDS_DIR" ] && commands_found=$(find "$CLAUDE_COMMANDS_DIR" -type f | wc -l)
+    [ -d "$CLAUDE_SCRIPTS_DIR" ] && scripts_found=$(find "$CLAUDE_SCRIPTS_DIR" -type f | wc -l)
+    [ -d "$CLAUDE_SKILLS_DIR" ] && skills_found=$(find "$CLAUDE_SKILLS_DIR" -type f | wc -l)
+
     log_info "Installation summary:"
-    log_info "  Commands: $commands_found"
-    log_info "  Scripts: $scripts_found"
-    
-    if [ "$commands_found" -gt 0 ] && [ "$scripts_found" -gt 0 ]; then
+    log_info "  Agents:   $agents_found  → $CLAUDE_AGENTS_DIR"
+    log_info "  Commands: $commands_found  → $CLAUDE_COMMANDS_DIR"
+    log_info "  Scripts:  $scripts_found  → $CLAUDE_SCRIPTS_DIR"
+    log_info "  Skills:   $skills_found  → $CLAUDE_SKILLS_DIR"
+
+    if [ "$agents_found" -gt 0 ] && [ "$commands_found" -gt 0 ] && [ "$scripts_found" -gt 0 ]; then
         log_success "Claude Commands installation completed successfully!"
     else
         log_warning "Installation completed but some components may be missing"
@@ -192,13 +212,13 @@ validate_installation() {
 show_usage() {
     log_info "Next steps:"
     echo
-    echo "1. 📚 Read CLAUDE.md for complete usage instructions"
-    echo "2. 🚀 Try basic commands: /help, /list, /execute"
-    echo "3. 🔧 Configure systems as needed:"
+    echo "1. Read CLAUDE.md for complete usage instructions"
+    echo "2. Try basic commands: /help, /list, /execute"
+    echo "3. Configure systems as needed:"
     echo "   - Orchestration: See orchestration/README.md"
     echo "   - Automation: See automation/README.md"
     echo "   - Claude Bot: See claude-bot-commands/README.md"
-    echo "4. 🎯 Start with cognitive commands: /think, /arch, /debug"
+    echo "4. Start with cognitive commands: /think, /arch, /debug"
     echo
     log_info "For support, see: https://github.com/jleechanorg/claude-commands"
 }
@@ -206,22 +226,26 @@ show_usage() {
 # Main installation flow
 main() {
     echo
-    log_info "🚀 Claude Commands Installation Script"
+    log_info "Claude Commands Installation Script"
     log_info "Installing complete Claude Code command system..."
+    log_info "Source: $PLUGIN_SRC_DIR"
+    log_info "Target: $CLAUDE_HOME"
     echo
-    
+
     check_prerequisites
     setup_directories
+    install_agents
     install_commands
     install_scripts
+    install_skills
     install_infrastructure
     install_optional_systems
     validate_installation
-    
+
     echo
     show_usage
     echo
-    log_success "Installation complete! 🎉"
+    log_success "Installation complete!"
 }
 
 # Error handling
