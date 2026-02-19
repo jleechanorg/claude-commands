@@ -1,0 +1,122 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
+name: Documentation Size Check
+
+on:
+  pull_request:
+    paths:
+      - '.cursor/rules/*.md*'
+      - 'CLAUDE.md'
+      - 'mvp_site/tests/test_documentation_performance.py'
+      - 'mvp_site/monitor_doc_sizes.sh'
+  push:
+    branches:
+      - main
+    paths:
+      - '.cursor/rules/*.md*'
+      - 'CLAUDE.md'
+      - 'mvp_site/tests/test_documentation_performance.py'
+      - 'mvp_site/monitor_doc_sizes.sh'
+
+jobs:
+  limit-pr-runs:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+      - name: Limit PR runs
+        uses: ./.github/actions/limit-pr-runs
+        with:
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+  try-self-hosted:
+    runs-on: [self-hosted, claude]
+    timeout-minutes: 10
+    continue-on-error: true
+    outputs:
+      success: ${{ steps.mark-success.outputs.success }}
+
+    steps:
+
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      if: runner.os == 'Linux'
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+      with:
+        python-version: '3.11'
+
+    - name: Run documentation size check
+      run: |
+        python3 mvp_site/tests/test_documentation_performance.py
+
+    - name: Quick size monitor
+      run: |
+        chmod +x mvp_site/monitor_doc_sizes.sh
+        ./mvp_site/monitor_doc_sizes.sh
+
+    - name: Comment PR if files too large
+      if: failure() && github.event_name == 'pull_request'
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '⚠️ **Documentation Size Warning**\n\nSome documentation files exceed recommended size limits and may cause API timeouts.\n\nPlease run `python3 mvp_site/tests/test_documentation_performance.py` locally to see which files need reduction.'
+          })
+
+    - name: Mark successful completion
+      id: mark-success
+      if: success()
+      run: echo "success=true" >> $GITHUB_OUTPUT
+
+  fallback-github-hosted:
+    needs: try-self-hosted
+    if: needs.try-self-hosted.outputs.success != 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+      with:
+        python-version: '3.11'
+
+    - name: Run documentation size check
+      run: |
+        echo "🔄 Running on GitHub-hosted fallback..."
+        python3 mvp_site/test_documentation_performance.py
+
+    - name: Quick size monitor
+      run: |
+        chmod +x mvp_site/monitor_doc_sizes.sh
+        ./mvp_site/monitor_doc_sizes.sh
+
+    - name: Comment PR if files too large
+      if: failure() && github.event_name == 'pull_request'
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '⚠️ **Documentation Size Warning** (via GitHub-hosted fallback)\n\nSome documentation files exceed recommended size limits and may cause API timeouts.\n\nPlease run `python3 mvp_site/test_documentation_performance.py` locally to see which files need reduction.'
+          })

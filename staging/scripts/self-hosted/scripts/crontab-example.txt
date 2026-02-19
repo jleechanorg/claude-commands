@@ -1,0 +1,60 @@
+# GITHUB_TOKEN=<REDACTED>
+
+# NOTE: This is an EXAMPLE file for reference only.
+# For production use, run: automation/install_cron_entries.sh or automation/restore_crontab.sh
+# Those scripts properly expand $HOME variables when installing to crontab.
+# Direct copy/paste of this file will NOT work due to $HOME not expanding in cron env assignments.
+
+# Set PATH to include necessary binaries (use $HOME for portability - requires install script)
+PATH=$HOME/.pyenv/shims:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+
+# Authentication / secrets:
+# - Do NOT put tokens directly in crontab (it tends to become long-lived plaintext).
+# - Prefer: `gh auth login` (stores credentials securely, used automatically by `gh`).
+# - Alternative: have each cron command invoke a small wrapper script that sources a
+#   locked-down env file (e.g., chmod 0600) containing `GITHUB_TOKEN=...`.
+# GITHUB_TOKEN=YOUR_GITHUB_TOKEN_HERE
+
+# Run PR monitoring (comment-only mode) every 2 hours
+0 */2 * * * jleechanorg-pr-monitor --max-prs 10 >> ~/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log 2>&1
+
+# Run fix-comment workflow with Gemini (fallback to cursor) every hour at :45
+#45 * * * * jleechanorg-pr-monitor --fix-comment --cli-agent gemini,cursor --max-prs 3 >> ~/Library/Logs/worldarchitect-automation/gemini_fix_comment.log 2>&1
+
+# Run comment validation workflow every 30 minutes - asks AI bots to review PRs
+# Posts @coderabbit-ai @greptileai @bugbot @copilot review requests on up to 10 PRs
+*/30 * * * * jleechanorg-pr-monitor --comment-validation --max-prs 10 >> ~/Library/Logs/worldarchitect-automation/comment_validation.log 2>&1
+
+# Run Codex automation (limit 10 tasks) every hour, 15 minutes after PR monitor
+15 * * * * jleechanorg-pr-monitor --codex-update --codex-task-limit 10 >> ~/Library/Logs/worldarchitect-automation/codex_automation.log 2>&1
+
+# Run Codex API automation (using API instead of browser) every hour, 30 minutes after PR monitor
+30 * * * * jleechanorg-pr-monitor --codex-api --codex-apply-and-push --codex-task-limit 10 >> ~/Library/Logs/worldarchitect-automation/codex_automation_api.log 2>&1
+
+# Run orchestrated PR fixes (conflicts + failing checks) every 30 minutes - ACTIVE
+# Uses PyPI-installed binary directly (no wrapper needed after v0.1.8 with orchestration dependency)
+*/30 * * * * jleechanorg-pr-monitor --fixpr --max-prs 10 --cli-agent gemini,cursor >> ~/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log 2>&1
+
+# Backup Claude and Codex conversations to Dropbox every 4 hours
+0 */4 * * * "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox" 2>&1
+
+# Moltbook LLM Poster - Batch PR analysis every 4 hours
+0 */4 * * * moltbook-poster
+
+# AI Universe daily user activity report - NOW RUNS VIA GITHUB ACTIONS
+# See: .github/workflows/daily-user-report.yml in ai_universe repo
+# Workflow runs at 9am UTC daily and stores reports as artifacts
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GitHub Actions Runner Configuration (lines 44-48)
+# ═══════════════════════════════════════════════════════════════════════════════
+# NOTE: Lines 13-38 above are organization-specific automation jobs unrelated to
+#       GitHub Actions runner configuration. For a minimal runner-only crontab,
+#       use only lines 44-48 below.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# GitHub Actions Runner - Heartbeat (HOURLY, only if not already running)
+5 * * * * pgrep -f "Runner.Listener.*$HOME/actions-runner" > /dev/null || (cd ~/actions-runner && ./run.sh --once >> ~/actions-runner/heartbeat.log 2>&1)
+
+# GitHub Actions Runner - Monitor (every 15 minutes)
+*/15 * * * * ~/actions-runner/monitor.sh

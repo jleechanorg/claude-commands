@@ -1,0 +1,2776 @@
+#!/usr/bin/env python3
+"""
+A2A-Enhanced Task Dispatcher for Multi-Agent Orchestration
+Handles dynamic agent creation with Agent-to-Agent communication support
+"""
+
+from __future__ import annotations
+
+import glob
+import hashlib
+import json
+import logging
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+from typing import Any
+
+from .cli_validation import (
+    CLI_VALIDATION_TIMEOUT_SECONDS,
+    validate_cli_two_phase,
+)
+
+from .a2a_integration import TaskPool, get_a2a_status
+from .a2a_monitor import get_monitor
+from .constants import (
+    AGENT_SESSION_TIMEOUT_SECONDS,
+    DEFAULT_MAX_CONCURRENT_AGENTS,
+    MAX_AGENT_NAME_LENGTH,
+    RUNTIME_CLI_TIMEOUT_SECONDS,
+    TIMESTAMP_MODULO,
+)
+
+A2A_AVAILABLE = True
+logger = logging.getLogger(__name__)
+
+# Default Gemini model can be overridden via GEMINI_MODEL; default to gemini-3-flash-preview (Gemini 3 Flash)
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
+# Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
+CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
+# MiniMax model can be overridden via MINIMAX_MODEL; default to MiniMax-M2.5
+MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL", "MiniMax-M2.5")
+# MiniMax key can be provided via MINIMAX_API_KEY and propagated to Anthropic SDK var
+MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
+PREFLIGHT_CACHE_TTL_SECONDS = 3600
+
+# CLI validation constants imported from centralized validation library
+# CLI_VALIDATION_TEST_PROMPT, CLI_VALIDATION_TIMEOUT_SECONDS
+
+CLI_PROFILES = {
+    "claude": {
+        "binary": "claude",
+        "display_name": "Claude",
+        "generated_with": "🤖 Generated with [Claude Code](https://claude.ai/code)",
+        "co_author": "Claude <noreply@anthropic.com>",
+        "supports_continue": True,
+        "conversation_dir": "~/.claude/conversations",
+        "continue_flag": "--continue",
+        "restart_env": "CLAUDE_RESTART",
+        # If model is not specified, omit --model and let the CLI choose its default.
+        "command_template": (
+            "{binary}{model_arg} -p @{prompt_file} "
+            "--output-format stream-json --verbose{continue_flag} --dangerously-skip-permissions"
+        ),
+        "stdin_template": "/dev/null",
+        "quote_prompt": False,
+        # Unset API key and Base URL to force OAuth (not MiniMax proxy)
+        "env_unset": ["ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL"],
+        # Empty env_set for consistency with other profiles (only minimax uses it)
+        "env_set": {},
+        "detection_keywords": ["claude", "anthropic"],
+    },
+    "codex": {
+        "binary": "codex",
+        "display_name": "Codex",
+        "generated_with": "🤖 Generated with [Codex CLI](https://openai.com/)",
+        "co_author": "Codex <noreply@openai.com>",
+        "supports_continue": False,
+        "conversation_dir": None,
+        "continue_flag": "",
+        "restart_env": "CODEX_RESTART",
+        # If model is not specified, omit --model and let the CLI choose its default.
+        "command_template": "{binary} exec --yolo --skip-git-repo-check{model_arg}",
+        "stdin_template": "{prompt_file}",
+        "quote_prompt": True,
+        # Unset API key to force OAuth/interactive auth (consistent with other CLIs)
+        "env_unset": ["OPENAI_API_KEY"],
+        # Empty env_set for consistency with other profiles
+        "env_set": {},
+        "detection_keywords": [
+            "codex",
+            "codex exec",
+            "codex cli",
+            "use codex",
+            "use the codex cli",
+        ],
+    },
+    "gemini": {
+        "binary": "gemini",
+        "display_name": "Gemini",
+        "generated_with": "🤖 Generated with [Gemini CLI](https://github.com/google-gemini/gemini-cli)",
+        "co_author": "Gemini <noreply@google.com>",
+        "supports_continue": False,
+        "conversation_dir": None,
+        "continue_flag": "",
+        "restart_env": "GEMINI_RESTART",
+        # Model can be overridden via agent_spec["model"] (defaults to GEMINI_MODEL)
+        # YOLO mode enabled to allow file access outside workspace (user directive)
+        # NOTE: Prompt must come via stdin (not -p flag which is deprecated and only appends to stdin)
+        # Gemini CLI generally expects a model; default to GEMINI_MODEL when not specified.
+        "command_template": "{binary} -m {model} --yolo",
+        "stdin_template": "{prompt_file}",
+        "quote_prompt": False,
+        # Unset GEMINI_API_KEY to force OAuth authentication (higher quotas than API key)
+        # See: https://github.com/google-gemini/gemini-cli/blob/main/docs/get-started/authentication.md
+        "env_unset": ["GEMINI_API_KEY"],
+        # Empty env_set for consistency with other profiles
+        "env_set": {},
+        "detection_keywords": [
+            "gemini",
+            "gemini cli",
+            "google ai",
+            "use gemini",
+            "use the gemini cli",
+            "google gemini",
+        ],
+    },
+    "cursor": {
+        "binary": "cursor-agent",
+        "display_name": "Cursor",
+        "generated_with": "🤖 Generated with [Cursor Agent](https://www.cursor.com/)",
+        "co_author": "Cursor <noreply@cursor.com>",
+        "supports_continue": False,
+        "conversation_dir": None,
+        "continue_flag": "",
+        "restart_env": "CURSOR_RESTART",
+        # Cursor Agent CLI with -f (force) for non-interactive execution.
+        # We pass an explicit model: requested model if provided, otherwise CURSOR_MODEL.
+        "command_template": "{binary} -f -p @{prompt_file} --model {model} --output-format text",
+        "stdin_template": "/dev/null",
+        "quote_prompt": False,
+        # No known API key to unset for Cursor (uses its own auth)
+        "env_unset": [],
+        # Empty env_set for consistency with other profiles
+        "env_set": {},
+        "detection_keywords": [
+            "cursor",
+            "cursor-agent",
+            "cursor agent",
+            "cursor cli",
+            "use cursor",
+            "use the cursor cli",
+            "cursor ai",
+        ],
+    },
+    "minimax": {
+        "binary": "claude",
+        "display_name": "MiniMax",
+        "generated_with": "🤖 Generated with [Claude Code](https://claude.ai/code) via MiniMax API",
+        "co_author": "Claude <noreply@anthropic.com>",
+        "supports_continue": True,
+        "conversation_dir": "~/.claude/conversations",
+        "continue_flag": "--continue",
+        "restart_env": "MINIMAX_RESTART",
+        # MiniMax uses Claude Code with MiniMax API endpoint and model
+        # Sets ANTHROPIC_BASE_URL to MiniMax proxy, auth via MINIMAX_API_KEY
+        "command_template": (
+            "{binary} --model {model} -p @{prompt_file} "
+            "--output-format stream-json --verbose{continue_flag} --dangerously-skip-permissions"
+        ),
+        "stdin_template": "/dev/null",
+        "quote_prompt": False,
+        # Unset default Anthropic API key to force MiniMax auth
+        "env_unset": ["ANTHROPIC_API_KEY"],
+        # Set MiniMax-specific env vars (ANTHROPIC_API_KEY added at runtime if set)
+        "env_set": {
+            "ANTHROPIC_BASE_URL": "https://api.minimax.io/anthropic",
+            "ANTHROPIC_MODEL": MINIMAX_MODEL,
+            "ANTHROPIC_SMALL_FAST_MODEL": MINIMAX_MODEL,
+            "API_TIMEOUT_MS": "3000000",
+            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+        },
+        "detection_keywords": ["minimax", "mini max", "minimax-m2"],
+    },
+}
+
+
+# Shared sanitization helper
+def _sanitize_agent_token(name: str) -> str:
+    """Return a filesystem-safe token for agent-derived file paths."""
+    sanitized = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
+    return sanitized or "agent"
+
+
+# Constraint system removed - using simple safety rules only
+
+# Production safety limits - only counts actively working agents (not idle)
+MAX_CONCURRENT_AGENTS = int(os.environ.get("MAX_CONCURRENT_AGENTS", DEFAULT_MAX_CONCURRENT_AGENTS))
+
+
+# Shared configuration paths
+def get_tmux_config_path():
+    """Get the path to the tmux agent configuration file."""
+    return os.path.join(os.path.dirname(__file__), "tmux-agent.conf")
+
+
+def _kill_tmux_session_if_exists(name: str, socket_name: str | None = None) -> None:
+    """Ensure tmux session name is free; kill existing session if present."""
+    try:
+        tmux_base = ["tmux"]
+        if socket_name:
+            tmux_base.extend(["-L", socket_name])
+
+        # Tmux converts dots to underscores in session names
+        name_tmux_safe = name.replace(".", "_")
+        base = name.rstrip(".")
+        base_tmux_safe = base.replace(".", "_")
+
+        # Check all possible variants
+        candidates = [
+            name,
+            f"{name}_",  # Original name
+            base,
+            f"{base}_",  # Without trailing dot
+            name_tmux_safe,
+            f"{name_tmux_safe}_",  # Tmux-safe version
+            base_tmux_safe,
+            f"{base_tmux_safe}_",  # Tmux-safe without trailing dot
+        ]
+
+        # Try direct has-session matches
+        for candidate in candidates:
+            check = subprocess.run(
+                [*tmux_base, "has-session", "-t", candidate], check=False, capture_output=True, timeout=30
+            )
+            if check.returncode == 0:
+                print(f"🧹 Killing existing tmux session {candidate} to allow reuse")
+                subprocess.run(
+                    [*tmux_base, "kill-session", "-t", candidate], check=False, capture_output=True, timeout=30
+                )
+    except Exception as exc:
+        print(f"⚠️ Warning: unable to check/kill tmux session {name}: {exc}")
+
+
+class TaskDispatcher:
+    """Creates and manages dynamic agents for orchestration tasks"""
+
+    def __init__(self, orchestration_dir: str = None, log_dir: str = None):
+        self.orchestration_dir = orchestration_dir or os.path.dirname(__file__)
+        self.tasks_dir = os.path.join(self.orchestration_dir, "tasks")
+        # Removed complex task management - system just creates agents on demand
+        # Default agent capabilities - all agents have these basic capabilities
+        # Dynamic capability registration can be added in the future via Redis/file system
+        self.agent_capabilities = self._get_default_agent_capabilities()
+
+        # LLM-driven enhancements - lazy loading to avoid subprocess overhead
+        self._active_agents = None  # Will be loaded lazily when needed
+        self._last_agent_check = 0  # Track when agents were last refreshed
+        self.result_dir = "/tmp/orchestration_results"
+        os.makedirs(self.result_dir, exist_ok=True)
+        # Normalize user-provided log_dir (expand ~ and make absolute)
+        if log_dir:
+            self.log_dir = os.path.abspath(os.path.expanduser(log_dir))
+        else:
+            self.log_dir = "/tmp/orchestration_logs"
+        os.makedirs(self.log_dir, exist_ok=True)
+        self.preflight_cache_dir = os.path.join(self.log_dir, "preflight_cache")
+        os.makedirs(self.preflight_cache_dir, exist_ok=True)
+        self._mock_claude_path = None
+        # Cached within this dispatcher session if user provides a non-default base branch.
+        self._interactive_base_ref: str | None = None
+        self.tmux_socket_name = self._get_tmux_socket_name()
+
+        # A2A Integration with enhanced robustness
+        self.a2a_enabled = A2A_AVAILABLE
+        if self.a2a_enabled:
+            try:
+                self.task_pool = TaskPool()
+                print("A2A task broadcasting enabled")
+            except Exception as e:
+                print(f"A2A TaskPool initialization failed: {e}")
+                print("Falling back to legacy mode")
+                self.a2a_enabled = False
+                self.task_pool = None
+        else:
+            self.task_pool = None
+            print("A2A not available - running in legacy mode")
+
+        # Basic safety rules only - no constraint system needed
+
+        # All tasks are now dynamic - no static loading needed
+
+    @staticmethod
+    def _sanitize_tmux_socket_name(value: str) -> str:
+        sanitized = re.sub(r"[^A-Za-z0-9_.-]", "-", value)
+        return sanitized or "orchestration"
+
+    def _get_tmux_socket_name(self) -> str:
+        explicit = os.environ.get("ORCHESTRATION_TMUX_SOCKET")
+        if explicit:
+            return self._sanitize_tmux_socket_name(explicit)
+        return self._sanitize_tmux_socket_name(f"orch-{os.getpid()}-{int(time.time())}")
+
+    @staticmethod
+    def _generate_run_artifact_suffix() -> str:
+        """Generate a stable-enough per-run suffix for unique artifact filenames."""
+        return f"{int(time.time() * 1000)}-{os.getpid()}"
+
+    def _tmux_base_command(self) -> list[str]:
+        return ["tmux", "-L", self.tmux_socket_name]
+
+    @staticmethod
+    def _normalize_model_for_preflight_cache(cli_name: str, model: str | None) -> str:
+        if cli_name == "gemini":
+            return model if model and model != "sonnet" else GEMINI_MODEL
+        if cli_name == "cursor":
+            return model if model and model != "sonnet" else CURSOR_MODEL
+        if cli_name == "claude":
+            return model or "sonnet"
+        if cli_name == "minimax":
+            return MINIMAX_MODEL
+        return model or "<cli-default>"
+
+    def _preflight_cache_path(self, cli_name: str, cli_path: str, model: str | None) -> str:
+        model_token = self._normalize_model_for_preflight_cache(cli_name, model)
+        payload = {
+            "cli_name": cli_name,
+            "cli_path": cli_path,
+            "model": model_token,
+        }
+        key = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()[:24]
+        return os.path.join(self.preflight_cache_dir, f"{cli_name}-{key}.json")
+
+    def _read_preflight_cache(self, cli_name: str, cli_path: str, model: str | None) -> bool:
+        cache_path = self._preflight_cache_path(cli_name, cli_path, model)
+        if not os.path.exists(cache_path):
+            return False
+        try:
+            with open(cache_path, encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            print(f"   ⚠️ preflight cache invalid for {cli_name} at {cache_path} (cache_miss)")
+            return False
+
+        validated_at = data.get("validated_at")
+        if not isinstance(validated_at, (int, float)):
+            print(f"   ⚠️ preflight cache missing timestamp for {cli_name} at {cache_path} (cache_miss)")
+            return False
+
+        age_seconds = time.time() - float(validated_at)
+        if age_seconds > PREFLIGHT_CACHE_TTL_SECONDS:
+            print(
+                f"   ⏱️ preflight cache expired for {cli_name} at {cache_path} "
+                f"(age={age_seconds:.0f}s, ttl={PREFLIGHT_CACHE_TTL_SECONDS}s)"
+            )
+            return False
+
+        print(f"   ♻️ preflight cache hit for {cli_name} at {cache_path} (age={age_seconds:.0f}s)")
+        return True
+
+    def _write_preflight_cache(self, cli_name: str, cli_path: str, model: str | None) -> None:
+        cache_path = self._preflight_cache_path(cli_name, cli_path, model)
+        os.makedirs(self.preflight_cache_dir, exist_ok=True)
+        payload = {
+            "cli_name": cli_name,
+            "cli_path": cli_path,
+            "model": self._normalize_model_for_preflight_cache(cli_name, model),
+            "validated_at": time.time(),
+            "ttl_seconds": PREFLIGHT_CACHE_TTL_SECONDS,
+        }
+        tmp_path = f"{cache_path}.tmp"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f)
+            os.replace(tmp_path, cache_path)
+            print(f"   💾 preflight cache write for {cli_name}: {cache_path}")
+        except OSError:
+            try:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except OSError:
+                pass
+            print(f"   ⚠️ preflight cache write failed for {cli_name}: {cache_path}")
+
+    def get_tmux_attach_command(self, session_name: str) -> str:
+        return f"tmux -L {self.tmux_socket_name} attach -t {session_name}"
+
+    def get_tmux_progress_hint(self) -> str:
+        return f"tmux -L {self.tmux_socket_name} attach -t [agent-name]"
+
+    @staticmethod
+    def _set_latest_artifact_pointer(legacy_path: str, target_path: str) -> None:
+        """Point legacy path at latest run artifact via symlink (best effort)."""
+        try:
+            if os.path.lexists(legacy_path):
+                os.remove(legacy_path)
+            os.symlink(target_path, legacy_path)
+        except Exception:
+            logger.warning(
+                "artifact_pointer_update_failed",
+                extra={"legacy_path": legacy_path, "target_path": target_path},
+                exc_info=True,
+            )
+
+    def _get_tmp_subdirectory_names(self, tmp_root: str = "/tmp") -> list[str]:
+        """Return immediate subdirectory names under tmp_root (dirs only)."""
+        try:
+            root = Path(tmp_root)
+            if not root.exists():
+                return []
+            names: list[str] = []
+            for entry in root.iterdir():
+                try:
+                    if entry.is_dir():
+                        names.append(entry.name)
+                except OSError:
+                    # Ignore unreadable entries; this is best-effort diagnostics.
+                    continue
+            return names
+        except OSError:
+            return []
+
+    def _print_tmp_subdirectories(
+        self,
+        tmp_root: str = "/tmp",
+        max_entries: int = 25,
+        *,
+        correlation_id: str | None = None,
+    ) -> None:
+        """Best-effort diagnostic: log a bounded listing of /tmp subdirectories."""
+        names = self._get_tmp_subdirectory_names(tmp_root=tmp_root)
+        log_extra = {"correlation_id": correlation_id}
+        if not names:
+            logger.info("   📁 %s subdirectories: (none found)", tmp_root, extra=log_extra)
+            return
+
+        def is_interesting(name: str) -> bool:
+            lowered = name.lower()
+            return any(
+                token in lowered
+                for token in (
+                    "orchestration",
+                    "worldarchitect",
+                    "pytest",
+                    "coverage",
+                    "agent",
+                    "playwright",
+                    "browser",
+                )
+            )
+
+        names_sorted = sorted(names, key=lambda n: (0 if is_interesting(n) else 1, n))
+        shown = names_sorted[:max_entries]
+        omitted = max(len(names_sorted) - len(shown), 0)
+
+        logger.info(
+            "   📁 %s subdirectories (showing %s/%s):",
+            tmp_root,
+            len(shown),
+            len(names_sorted),
+            extra=log_extra,
+        )
+        for name in shown:
+            logger.info("      - %s", name, extra=log_extra)
+        if omitted:
+            logger.info("      … and %s more", omitted, extra=log_extra)
+
+    @property
+    def active_agents(self) -> set:
+        """Lazy loading property for active agents with 30-second caching."""
+        current_time = time.time()
+        # Cache for 30 seconds to avoid excessive subprocess calls
+        if self._active_agents is None or (current_time - self._last_agent_check) > 30:
+            self._active_agents = self._get_active_tmux_agents()
+            self._last_agent_check = current_time
+        return self._active_agents
+
+    @active_agents.setter
+    def active_agents(self, value: set):
+        """Setter for active agents."""
+        self._active_agents = value
+        self._last_agent_check = time.time()
+
+    def _get_active_tmux_agents(self) -> set:
+        """Get set of actively working task-agent tmux sessions (not idle)."""
+        try:
+            # Check if tmux is available
+            if shutil.which("tmux") is None:
+                print("⚠️ 'tmux' command not found. Ensure tmux is installed and in PATH.")
+                return set()
+            tmux_cmd = [*self._tmux_base_command(), "list-sessions", "-F", "#{session_name}"]
+            result = subprocess.run(
+                tmux_cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                return set()
+
+            sessions = result.stdout.strip().split("\n")
+            # Get all task-agent-* sessions
+            all_agent_sessions = {s for s in sessions if s.startswith("task-agent-")}
+
+            # Filter to only actively working agents (not idle)
+            active_agents = set()
+            idle_agents = set()
+
+            for session in all_agent_sessions:
+                if self._is_agent_actively_working(session):
+                    active_agents.add(session)
+                else:
+                    idle_agents.add(session)
+
+            # Print current status with breakdown
+            total_count = len(all_agent_sessions)
+            active_count = len(active_agents)
+            idle_count = len(idle_agents)
+
+            if total_count > 0:
+                print(f"📊 Found {active_count} actively working agent(s) (limit: {MAX_CONCURRENT_AGENTS})")
+                if active_count > 0:
+                    for agent in sorted(active_agents):
+                        print(f"   • {agent}")
+                    # Compute script path relative to module directory
+                    script_path = Path(__file__).resolve().parent / "stream_logs.sh"
+                    print(f"📺 View agent logs: {script_path} <agent_name>")
+                if idle_count > 0:
+                    print(f"   Plus {idle_count} idle agent(s) (completed but monitoring)")
+
+            return active_agents
+        except Exception as e:
+            print(f"⚠️ Error checking tmux sessions: {e}")
+            return set()
+
+    def _is_agent_actively_working(self, session_name: str) -> bool:
+        """Check if an agent session is actively working or idle."""
+        try:
+            # Capture the last few lines of the tmux session to check status
+            tmux_cmd = [*self._tmux_base_command(), "capture-pane", "-t", session_name, "-p"]
+            result = subprocess.run(
+                tmux_cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                return False
+
+            output = result.stdout.strip()
+
+            # Check for completion indicators in the output
+            completion_indicators = [
+                "Agent completed successfully",
+                "Agent execution completed. Session remains active for monitoring",
+                "Session will auto-close in 1 hour",
+                "Monitor with: tmux attach",
+            ]
+
+            # If any completion indicator is found, agent is idle
+            for indicator in completion_indicators:
+                if indicator in output:
+                    return False
+
+            # If no completion indicators found, assume agent is actively working
+            return True
+
+        except Exception:
+            # If we can't determine, assume it's active to be safe
+            return True
+
+    def _get_default_agent_capabilities(self) -> dict:
+        """Get default capabilities that all dynamic agents should have."""
+        return {
+            "task_execution": "Execute assigned development tasks",
+            "command_acceptance": "Accept and process commands",
+            "status_reporting": "Report task progress and completion status",
+            "git_operations": "Perform git operations (commit, push, PR creation)",
+            "development": "General software development capabilities",
+            "testing": "Run and debug tests",
+            "server_management": "Start/stop servers and services",
+        }
+
+    # =================== LLM-DRIVEN ENHANCEMENTS ===================
+
+    def _check_existing_agents(self) -> set:
+        """Check for existing tmux sessions and worktrees to avoid collisions."""
+        existing = set()
+
+        # Check tmux sessions
+        try:
+            if shutil.which("tmux") is None:
+                return existing
+            tmux_cmd = [*self._tmux_base_command(), "list-sessions", "-F", "#{session_name}"]
+            result = subprocess.run(
+                tmux_cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode == 0:
+                existing.update(result.stdout.strip().split("\n"))
+        except subprocess.SubprocessError:
+            pass
+
+        # Check worktrees
+        try:
+            # Look for workspaces in the orchestration directory
+            workspace_pattern = os.path.join("orchestration", "agent_workspaces", "agent_workspace_*")
+            workspaces = glob.glob(workspace_pattern)
+            for ws in workspaces:
+                ws_name = os.path.basename(ws)
+                agent_name = ws_name.replace("agent_workspace_", "")
+                existing.add(agent_name)
+        except Exception as e:
+            # Log specific error for debugging
+            print(f"Warning: Failed to check existing workspaces due to error: {e}")
+
+        return existing
+
+    def _cleanup_stale_prompt_files(self, agent_name: str):
+        """Clean up stale prompt files to prevent task reuse from previous runs."""
+        try:
+            # Clean up prompt files for this agent token only.
+            agent_token = _sanitize_agent_token(agent_name)
+            prompt_pattern = f"/tmp/agent_prompt_{agent_token}*.txt"
+            for agent_prompt_file in glob.glob(prompt_pattern):
+                if os.path.exists(agent_prompt_file):
+                    os.remove(agent_prompt_file)
+                    print(f"🧹 Cleaned up stale prompt file: {agent_prompt_file}")
+        except Exception as e:
+            # Don't fail agent creation if cleanup fails
+            print(f"⚠️ Warning: Could not clean up stale prompt files: {e}")
+
+    def _generate_unique_name(self, base_name: str, task_description: str = "", role_suffix: str = "") -> str:
+        """Generate meaningful agent name based on task content with collision detection."""
+
+        # Extract meaningful components from task description
+        task_suffix = ""
+        if task_description:
+            # Check for PR references first
+            pr_match = re.search(r"(?:PR|pull request)\s*#?(\d+)", task_description, re.IGNORECASE)
+            if pr_match:
+                task_suffix = f"pr{pr_match.group(1)}"
+            else:
+                # Extract key action words for general tasks
+                action_words = re.findall(
+                    r"\b(?:implement|create|build|fix|test|deploy|analyze|review|update|add|remove|refactor|optimize)\b",
+                    task_description.lower(),
+                )
+                if action_words:
+                    # Use first action word + key object words
+                    action = action_words[0]
+                    # Extract key nouns/objects after cleaning
+                    clean_desc = re.sub(r"[^a-zA-Z0-9\s]", "", task_description.lower())
+                    words = [
+                        word
+                        for word in clean_desc.split()
+                        if word
+                        not in [
+                            "the",
+                            "and",
+                            "or",
+                            "for",
+                            "with",
+                            "in",
+                            "on",
+                            "at",
+                            "to",
+                            "from",
+                            "by",
+                            "of",
+                            "a",
+                            "an",
+                        ]
+                    ]
+
+                    # Skip action word and take next meaningful words
+                    content_words = [w for w in words if w != action][:2]
+                    if content_words:
+                        desc_part = "-".join(word[:6] for word in content_words)
+                        task_suffix = f"{action}-{desc_part}"
+                    else:
+                        task_suffix = action
+                else:
+                    # Fallback to first few meaningful words
+                    clean_desc = re.sub(r"[^a-zA-Z0-9\s]", "", task_description.lower())
+                    words = [word for word in clean_desc.split() if len(word) > 2][:2]
+                    if words:
+                        task_suffix = "-".join(word[:6] for word in words)
+                    else:
+                        task_suffix = "task"
+
+        # Limit task_suffix length for readability
+        if len(task_suffix) > 20:
+            task_suffix = task_suffix[:20]
+
+        # Use microsecond precision for uniqueness only as fallback
+        timestamp = int(time.time() * 1000000) % 10000  # 4 digits for brevity
+
+        # Get existing agents
+        existing = self._check_existing_agents()
+        existing.update(self.active_agents)
+
+        # Build candidate name
+        if task_suffix:
+            if role_suffix:
+                candidate = f"{base_name}-{task_suffix}-{role_suffix}"
+            else:
+                candidate = f"{base_name}-{task_suffix}"
+        else:
+            # Fallback to timestamp-based
+            if role_suffix:
+                candidate = f"{base_name}-{role_suffix}-{timestamp}"
+            else:
+                candidate = f"{base_name}-{timestamp}"
+
+        candidate = self._truncate_agent_name(candidate)
+
+        # If collision, add timestamp suffix
+        original_candidate = candidate
+        counter = 1
+        tried_timestamp_only = False
+        while candidate in existing:
+            if task_suffix:
+                # Only try timestamp-only once, then use counter suffix
+                if not tried_timestamp_only:
+                    candidate = self._truncate_agent_name(original_candidate, str(timestamp))
+                    tried_timestamp_only = True
+                else:
+                    candidate = self._truncate_agent_name(
+                        original_candidate, f"{timestamp}-{counter}"
+                    )
+                    counter += 1
+            else:
+                candidate = self._truncate_agent_name(original_candidate, str(counter))
+                counter += 1
+
+        self.active_agents.add(candidate)
+        return candidate
+
+    @staticmethod
+    def _truncate_agent_name(name: str, suffix: str = "") -> str:
+        """Enforce backend-safe agent name length while preserving collision suffixes."""
+        if not suffix and len(name) <= MAX_AGENT_NAME_LENGTH:
+            return name
+
+        if suffix:
+            suffix_token = f"-{suffix}"
+            available = MAX_AGENT_NAME_LENGTH - len(suffix_token)
+            if available <= 0:
+                return suffix_token[-MAX_AGENT_NAME_LENGTH:]
+            return f"{name[:available]}{suffix_token}"
+
+        return name[:MAX_AGENT_NAME_LENGTH]
+
+    def _extract_workspace_config(self, task_description: str):
+        """Extract workspace configuration from task description if present.
+
+        Looks for patterns like:
+        - --workspace-name tmux-pr123
+        - --workspace-root /path/to/.worktrees
+        """
+
+        workspace_config = {}
+
+        # Extract workspace name
+        workspace_name_match = re.search(r"--workspace-name\s+([^\s]+)", task_description)
+        if workspace_name_match:
+            workspace_config["workspace_name"] = workspace_name_match.group(1)
+
+        # Extract workspace root
+        workspace_root_match = re.search(r"--workspace-root\s+([^\s]+)", task_description)
+        if workspace_root_match:
+            workspace_config["workspace_root"] = workspace_root_match.group(1)
+
+        # Extract PR number from workspace name if it follows tmux-pr pattern
+        if "workspace_name" in workspace_config:
+            pr_match = re.search(r"tmux-pr(\d+)", workspace_config["workspace_name"])
+            if pr_match:
+                workspace_config["pr_number"] = pr_match.group(1)
+
+        return workspace_config if workspace_config else None
+
+    def _detect_agent_cli(self, task_description: str, forced_cli: str | None = None) -> str:
+        """
+        Determine which CLI should be used for the agent.
+
+        Args:
+            task_description: The task description which may contain CLI preferences.
+            forced_cli: If provided, forces the use of this CLI (e.g., from --fixpr-agent).
+                Takes highest precedence over all other selection methods.
+
+        Returns:
+            The CLI name to use (e.g., 'claude', 'codex', 'gemini', 'cursor').
+
+        Raises:
+            ValueError: If an invalid forced_cli value is supplied.
+            RuntimeError: If no CLI is available in PATH.
+
+        Selection precedence (highest to lowest):
+            1. forced_cli parameter
+            2. --agent-cli flag in task_description
+            3. Keyword detection (CLI profile detection_keywords / binary names)
+            4. Auto-select if only one CLI is installed
+            5. Default to 'gemini' if multiple CLIs available
+        """
+
+        cli_flag = re.search(r"--agent-cli(?:=|\s+)(\w+)", task_description, re.IGNORECASE)
+
+        # Hard override when explicitly provided by caller (e.g., --fixpr-agent)
+        if forced_cli is not None:
+            forced_cli = forced_cli.lower()
+            if forced_cli not in CLI_PROFILES:
+                raise ValueError(f"Invalid forced_cli: {forced_cli}. Must be one of {list(CLI_PROFILES.keys())}")
+
+            if cli_flag:
+                requested_cli = cli_flag.group(1).lower()
+                if requested_cli != forced_cli:
+                    print(f"⚠️ Forced CLI '{forced_cli}' overrides --agent-cli request for '{requested_cli}'.")
+
+            return forced_cli
+
+        # Explicit override via flag (--agent-cli codex) or (--agent-cli=codex)
+        if cli_flag:
+            requested_cli = cli_flag.group(1).lower()
+            if requested_cli in CLI_PROFILES:
+                return requested_cli
+
+        task_lower = task_description.lower()
+
+        # Keyword and binary-name detection sourced from CLI profiles
+        for cli_name, profile in CLI_PROFILES.items():
+            keywords = profile.get("detection_keywords", [])
+            binary_name = profile.get("binary")
+
+            if any(keyword and keyword.lower() in task_lower for keyword in keywords):
+                return cli_name
+
+            if binary_name:
+                pattern = rf"\b{re.escape(binary_name.lower())}\b"
+                if re.search(pattern, task_lower):
+                    return cli_name
+
+        # Auto-select an available CLI if only one is installed
+        available_clis = []
+        for cli_name, profile in CLI_PROFILES.items():
+            cli_binary = profile.get("binary")
+            if cli_binary and shutil.which(cli_binary):
+                available_clis.append(cli_name)
+
+        if len(available_clis) == 0:
+            if self._is_testing_mode():
+                return "claude"
+            raise RuntimeError(
+                "No agent CLI is available. Please install at least one supported CLI "
+                "(e.g., 'claude', 'codex', 'gemini', or 'cursor-agent') and ensure it is in your PATH."
+            )
+
+        if len(available_clis) == 1:
+            return available_clis[0]
+
+        # Default to Gemini when multiple CLIs are available
+        # Fallback logic: Prioritize Gemini CLI as the default orchestration agent.
+        # If Gemini is not available, fall back to Claude, then the first available CLI.
+        if "gemini" in available_clis:
+            return "gemini"
+        if "claude" in available_clis:
+            return "claude"
+        return available_clis[0]
+
+    def _parse_cli_chain(self, cli_value: str) -> list[str]:
+        """Parse a comma-separated CLI chain string (e.g., 'gemini,codex') into validated CLI keys."""
+        if not isinstance(cli_value, str):
+            raise ValueError("CLI chain value must be a string")
+
+        parts = [part.strip().lower() for part in cli_value.split(",")]
+        chain = [part for part in parts if part]
+        if not chain:
+            raise ValueError("CLI chain is empty")
+
+        invalid = [cli for cli in chain if cli not in CLI_PROFILES]
+        if invalid:
+            raise ValueError(f"Invalid CLI(s) in chain: {invalid}. Must be subset of {list(CLI_PROFILES.keys())}")
+
+        # De-duplicate while preserving order
+        seen = set()
+        ordered = []
+        for cli in chain:
+            if cli not in seen:
+                ordered.append(cli)
+                seen.add(cli)
+        return ordered
+
+    def _detect_agent_cli_chain(self, task_description: str, forced_cli: str | None = None) -> list[str]:
+        """
+        Determine which CLI (or CLI chain) should be used for the agent.
+
+        Supports comma-separated chains via:
+        - forced_cli (e.g., "gemini,codex")
+        - --agent-cli flag in task_description (e.g., --agent-cli=gemini,codex)
+        """
+
+        cli_flag = re.search(r"--agent-cli(?:=|\s+)([A-Za-z0-9_,]+)", task_description, re.IGNORECASE)
+
+        if forced_cli is not None:
+            forced_cli = forced_cli.strip().lower()
+            chain = self._parse_cli_chain(forced_cli) if "," in forced_cli else [forced_cli]
+            if len(chain) == 1 and chain[0] not in CLI_PROFILES:
+                raise ValueError(f"Invalid forced_cli: {forced_cli}. Must be one of {list(CLI_PROFILES.keys())}")
+            if cli_flag:
+                requested = cli_flag.group(1).strip().lower()
+                if requested != forced_cli:
+                    print(f"⚠️ Forced CLI '{forced_cli}' overrides --agent-cli request for '{requested}'.")
+            return chain
+
+        if cli_flag:
+            requested = cli_flag.group(1).strip().lower()
+            if "," in requested:
+                return self._parse_cli_chain(requested)
+            if requested in CLI_PROFILES:
+                return [requested]
+            raise ValueError(f"Invalid --agent-cli: {requested}. Must be one of {list(CLI_PROFILES.keys())}")
+
+        return [self._detect_agent_cli(task_description, forced_cli=None)]
+
+    def _detect_pr_context(self, task_description: str) -> tuple[str | None, str]:
+        """Detect if task is about updating an existing PR.
+        Returns: (pr_number, mode) where mode is 'update' or 'create'
+        """
+        # Patterns that indicate PR update mode
+        pr_update_patterns = [
+            # Action + anything + PR number
+            r"(?:fix|adjust|update|modify|enhance|improve)\s+.*?(?:PR|pull request)\s*#?(\d+)",
+            # PR number + needs/should/must
+            r"PR\s*#?(\d+)\s+(?:needs|should|must)",
+            # Add/apply to PR number
+            r"(?:add|apply)\s+.*?to\s+(?:PR|pull request)\s*#?(\d+)",
+            # Direct PR number reference
+            r"(?:PR|pull request)\s*#(\d+)",
+        ]
+
+        # Check for explicit PR number
+        for pattern in pr_update_patterns:
+            match = re.search(pattern, task_description, re.IGNORECASE)
+            if match:
+                pr_number = match.group(1)
+                return pr_number, "update"
+
+        # Check for contextual PR reference without number
+        contextual_patterns = [
+            r"(?:the|that|this)\s+PR",
+            r"(?:the|that)\s+pull\s+request",
+            r"existing\s+PR",
+            r"current\s+(?:PR|pull request)",
+        ]
+
+        for pattern in contextual_patterns:
+            if re.search(pattern, task_description, re.IGNORECASE):
+                # Try to find recent PR from current branch or user
+                recent_pr = self._find_recent_pr()
+                if recent_pr:
+                    return recent_pr, "update"
+                print("🤔 Ambiguous PR reference detected. Agent will ask for clarification.")
+                return None, "update"  # Signal update mode but need clarification
+
+        return None, "create"
+
+    def _resolve_cli_binary(self, cli_name: str) -> str | None:
+        """Locate the CLI binary for the requested agent type."""
+
+        profile = CLI_PROFILES.get(cli_name, {})
+        cli_binary = profile.get("binary")
+        if not cli_binary:
+            return None
+
+        cli_path = shutil.which(cli_binary) or ""
+        if not cli_path and cli_name == "claude":
+            cli_path = self._ensure_mock_claude_binary() or ""
+        if not cli_path and self._is_testing_mode():
+            cli_path = self._ensure_mock_cli_binary(cli_name) or ""
+
+        return cli_path or None
+
+    def _validate_cli_availability(self, cli_name: str, cli_path: str, agent_name: str, model: str | None = None) -> bool:
+        """
+        Pre-flight validation: Two-phase validation using centralized validation library.
+        Phase 1: --help check (cheap sanity check)
+        Phase 2: Execution test (2+2) with file output
+        
+        Returns True if CLI is available and working, False if quota/rate limit detected or execution fails.
+        Timeouts are treated as "unknown" and return True (will rely on runtime fallback).
+        """
+        try:
+            profile = CLI_PROFILES.get(cli_name, {})
+            env = {k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
+            # Apply env_set overrides (e.g., for MiniMax)
+            for key, value in profile.get("env_set", {}).items():
+                env[key] = value
+            # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
+            if cli_name == "minimax":
+                runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
+                if runtime_minimax_key:
+                    env["ANTHROPIC_API_KEY"] = runtime_minimax_key
+
+            # Determine help args and execution cmd based on CLI type
+            help_args = []
+            execution_cmd = []
+            execution_timeout = CLI_VALIDATION_TIMEOUT_SECONDS
+            skip_help = False
+
+            if cli_name == "gemini":
+                help_args = ["--help"]
+                test_model = model if model and model != "sonnet" else GEMINI_MODEL
+                # Use --allowed-mcp-server-names none to skip MCP server loading during validation (2s vs 6s+)
+                execution_cmd = ["-m", test_model, "--yolo", "--allowed-mcp-server-names", "none"]
+            elif cli_name == "codex":
+                help_args = ["exec", "--help"]
+                execution_cmd = ["exec", "--yolo", "--skip-git-repo-check"]
+            elif cli_name == "claude":
+                # OAuth CLI - check executable first, then use prompt file for execution
+                if not os.access(cli_path, os.X_OK):
+                    print(f"   ⚠️ Claude CLI binary not executable: {cli_path} (agent {agent_name})")
+                    return False
+                help_args = ["--help"]
+                test_model = model if model else "sonnet"
+                # For Claude, we need to create a prompt file (handled in execution phase)
+                # Use a special marker to indicate prompt file needed
+                # Use --strict-mcp-config without --mcp-config to skip MCP server loading during validation
+                execution_cmd = ["--model", test_model, "-p", "@PROMPT_FILE", "--output-format", "text", "--strict-mcp-config"]
+                skip_help = True  # Skip help for OAuth CLIs (may require auth)
+            elif cli_name == "cursor":
+                # OAuth CLI - check executable first, then use prompt file for execution
+                if not os.access(cli_path, os.X_OK):
+                    print(f"   ⚠️ Cursor CLI binary not executable: {cli_path} (agent {agent_name})")
+                    return False
+                help_args = ["--help"]
+                # Use CURSOR_MODEL when model is "sonnet" or None to match runtime command_template
+                test_model = model if model and model != "sonnet" else CURSOR_MODEL
+                # For Cursor, we need to create a prompt file (handled in execution phase)
+                # Use --approve-mcps to auto-approve MCP servers (Cursor doesn't have a skip-MCP flag)
+                execution_cmd = ["-f", "-p", "@PROMPT_FILE", "--model", test_model, "--output-format", "text", "--approve-mcps"]
+                skip_help = True  # Skip help for OAuth CLIs (may require auth)
+            elif cli_name == "minimax":
+                # MiniMax runs through Claude CLI with MiniMax endpoint and model env overrides.
+                if not os.access(cli_path, os.X_OK):
+                    print(f"   ⚠️ MiniMax CLI binary not executable: {cli_path} (agent {agent_name})")
+                    return False
+                help_args = ["--help"]
+                # Always use MINIMAX_MODEL for MiniMax - never use chain-wide model
+                # This ensures preflight validates with the correct model for MiniMax API
+                test_model = MINIMAX_MODEL
+                # Use prompt file mode and strict MCP config to keep preflight lightweight.
+                execution_cmd = ["--model", test_model, "-p", "@PROMPT_FILE", "--output-format", "text", "--strict-mcp-config"]
+                skip_help = True  # Skip help for OAuth CLIs (may require auth)
+            else:
+                # Unknown CLI type - assume available
+                print(f"   ⚠️ Unknown CLI type '{cli_name}' for {agent_name} - assuming available (runtime fallback will catch failures)")
+                return True
+
+            if self._read_preflight_cache(cli_name, cli_path, model):
+                return True
+
+            # Use centralized two-phase validation
+            result = validate_cli_two_phase(
+                cli_name=cli_name,
+                cli_path=cli_path,
+                help_args=help_args,
+                execution_cmd=execution_cmd,
+                env=env,
+                execution_timeout=execution_timeout,
+                retain_output=False,  # Clean up temp dirs after validation
+                skip_help=skip_help,
+                agent_name=agent_name,
+            )
+            if result.success:
+                self._write_preflight_cache(cli_name, cli_path, model)
+            return result.success
+        except Exception as e:
+            # DESIGN DECISION: Unknown exceptions are treated as FAILURE (return False) for fail-safe behavior.
+            # Rationale: If we can't even run validation, the CLI is likely broken. Better to skip this CLI
+            # and try the next one in the fallback chain than to optimistically assume it works.
+            # This matches the fail-safe behavior in cli_validation.py for timeouts and exceptions.
+            print(f"   ⚠️ CLI validation failed for {cli_name} (agent {agent_name}): {e}")
+            return False
+
+    def _find_recent_pr(self) -> str | None:
+        """Try to find a recent PR from current branch or user."""
+        try:
+            # Try to get PR from current branch
+            # Get current branch name first for better readability
+            branch_result = subprocess.run(
+                ["git", "branch", "--show-current"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            current_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
+
+            if current_branch:
+                result = subprocess.run(
+                    [
+                        "gh",
+                        "pr",
+                        "list",
+                        "--head",
+                        current_branch,
+                        "--json",
+                        "number",
+                        "--limit",
+                        "1",
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    data = json.loads(result.stdout)
+                    if data:
+                        return str(data[0]["number"])
+
+            # Fallback: get most recent PR by current user
+            result = subprocess.run(
+                [
+                    "gh",
+                    "pr",
+                    "list",
+                    "--author",
+                    "@me",
+                    "--json",
+                    "number",
+                    "--limit",
+                    "1",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                data = json.loads(result.stdout)
+                if data:
+                    return str(data[0]["number"])
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+            # Silently handle errors as this is a fallback mechanism
+            pass
+
+        return None
+
+    def broadcast_task_to_a2a(self, task_description: str, requirements: list[str] | None = None) -> str | None:
+        """Broadcast task to A2A system for agent claiming"""
+        if not self.a2a_enabled or self.task_pool is None:
+            return None
+
+        try:
+            task_id = self.task_pool.publish_task(
+                task_id=f"orch-{int(time.time() * 1000000) % TIMESTAMP_MODULO}",
+                task_description=task_description,
+                requirements=requirements or [],
+            )
+            if task_id:
+                print(f"Task broadcast to A2A system: {task_id}")
+                return task_id
+        except Exception as e:
+            print(f"Error broadcasting task to A2A: {e}")
+
+        return None
+
+    def get_a2a_status(self) -> dict[str, Any]:
+        """Get A2A system status including agents and tasks"""
+        if not self.a2a_enabled:
+            return {"a2a_enabled": False, "message": "A2A system not available"}
+
+        try:
+            # Get overall A2A status - only if A2A is available
+            if not A2A_AVAILABLE:
+                return {"a2a_enabled": False, "message": "A2A system not available"}
+
+            status = get_a2a_status()
+
+            # Get monitor health
+            monitor = get_monitor()
+            health = monitor.get_system_health()
+
+            return {
+                "a2a_enabled": True,
+                "system_status": status,
+                "health": health,
+                "timestamp": time.time(),
+            }
+        except Exception as e:
+            return {"a2a_enabled": True, "error": str(e), "timestamp": time.time()}
+
+    def analyze_task_and_create_agents(
+        self,
+        task_description: str,
+        wrap_prompt: bool = False,
+        forced_cli: str | None = None,
+        pr_update_mode: bool = False,
+    ) -> list[dict]:
+        """
+        Create appropriate agent for the given task with PR context awareness.
+
+        Args:
+            task_description: The task description to analyze and create agents for.
+            wrap_prompt: When True, wraps prompt with PR mode instructions,
+                including PR context detection (subprocess calls to ``gh``), PR mode
+                prompt templates, ``pr_context`` injection into agent spec, and
+                execution guidelines. When False (default), all of that is skipped: no subprocess
+                calls to ``gh``, prompt is the raw ``task_description``, and
+                ``pr_context`` is not injected into the agent spec.
+            forced_cli: Optional; the CLI to force agent selection (e.g., from --fixpr-agent flag).
+                When provided, this overrides any CLI detection logic and forces the use of the specified CLI.
+            pr_update_mode: When True, enables PR context detection and "PR UPDATE MODE" prompt wrapping.
+                When False (default), PR context detection is skipped and the task stays in "NEW PR MODE".
+
+        Returns:
+            List of agent specification dictionaries.
+        """
+        print("\n🧠 Processing task request...")
+
+        # Extract workspace configuration if present
+        workspace_config = self._extract_workspace_config(task_description)
+        if workspace_config:
+            print(f"🏗️ Extracted workspace config: {workspace_config}")
+
+        cli_chain = self._detect_agent_cli_chain(task_description, forced_cli=forced_cli)
+        agent_cli = cli_chain[0]
+        if len(cli_chain) > 1:
+            print(f"🤖 Selected CLI chain based on task request: {', '.join(cli_chain)}")
+        elif agent_cli != "claude":
+            print(f"🤖 Selected {agent_cli.capitalize()} CLI based on task request")
+
+        if wrap_prompt and pr_update_mode:
+            # Detect PR context only when explicitly enabled.
+            pr_number, mode = self._detect_pr_context(task_description)
+
+            # Show user what was detected
+            if mode == "update":
+                if pr_number:
+                    print(f"\n🔍 Detected PR context: #{pr_number} - Agent will UPDATE existing PR")
+                    # Get PR details for better context
+                    try:
+                        result = subprocess.run(
+                            [
+                                "gh",
+                                "pr",
+                                "view",
+                                pr_number,
+                                "--json",
+                                "title,state,headRefName",
+                            ],
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                        )
+                        if result.returncode == 0:
+                            pr_data = json.loads(result.stdout)
+                            print(f"   Branch: {pr_data['headRefName']}")
+                            print(f"   Status: {pr_data['state']}")
+                        else:
+                            logger.debug(
+                                "gh_pr_view_nonzero_exit",
+                                extra={
+                                    "pr_number": pr_number,
+                                    "returncode": result.returncode,
+                                    "stderr": result.stderr.strip()[:200],
+                                },
+                            )
+                    except Exception:
+                        logger.debug(
+                            "gh_pr_view_failed",
+                            extra={"pr_number": pr_number},
+                            exc_info=True,
+                        )
+                else:
+                    print("\n🔍 Detected PR update request but no specific PR number")
+                    print("   Agent will check for recent PRs and ask for clarification if needed")
+            else:
+                print("\n🆕 No PR context detected - Agent will create NEW PR")
+                print("   New branch will be created from main")
+        elif wrap_prompt:
+            pr_number, mode = None, "create"
+        else:
+            pr_number, mode = None, "create"
+
+        # Use the same unique name generation as other methods
+        agent_name = self._generate_unique_name("task-agent", task_description)
+
+        # Get default capabilities from discovery method
+        capabilities = list(self.agent_capabilities.keys())
+
+        # Build appropriate prompt based on mode
+        if wrap_prompt:
+            if mode == "update":
+                if pr_number:
+                    prompt = f"""Task: {task_description}
+
+🔄 PR UPDATE MODE - You must UPDATE existing PR #{pr_number}
+
+🚧 Checkout rule:
+- If `gh pr checkout {pr_number}` fails because the branch is already checked out elsewhere, create a fresh worktree and use it:
+  git worktree add /private/tmp/{self._extract_repository_name()}/pr-{pr_number}-rerun {pr_number}
+  cd /private/tmp/{self._extract_repository_name()}/pr-{pr_number}-rerun
+
+IMPORTANT INSTRUCTIONS:
+1. First, checkout the PR branch: gh pr checkout {pr_number}
+2. Make the requested changes on that branch
+3. Commit and push to update the existing PR
+4. DO NOT create a new branch or new PR
+5. Push using the correct refspec for your branch:
+   - If on the PR's branch (after gh pr checkout): 'git push' works
+   - If on a local fixpr_* branch: 'git push origin <local_branch>:<remote_pr_branch>'
+   - NEVER use 'git push -u origin new-branch' (creates a new remote branch)
+
+Key points:
+- This is about UPDATING an existing PR, not creating a new one
+- Stay on the PR's branch throughout your work
+- If on a fixpr_* branch, you MUST use refspec: git push origin fixpr_branch:pr_branch
+
+🔧 EXECUTION GUIDELINES:
+1. **Always use /execute for your work**: Use the /execute command for all task execution to ensure proper planning and execution. This provides structured approach and prevents missing critical steps.
+
+2. **Consider subagents for complex tasks**: For complex or multi-part tasks, always evaluate if subagents would help:
+   - Use Task() tool to spawn subagents for parallel work
+   - Consider subagents when task has 3+ independent components
+   - Use subagents for different skill areas (testing, documentation, research)
+   - Example: Task(description="Run comprehensive tests", prompt="Execute all test suites and report results")
+
+3. **Task delegation patterns**:
+   - Research tasks: Delegate investigation of large codebases
+   - Testing tasks: Separate agents for different test types
+   - Documentation: Dedicated agents for complex documentation needs
+   - Code analysis: Parallel analysis of multiple files/systems"""
+                else:
+                    prompt = f"""Task: {task_description}
+
+🔄 PR UPDATE MODE - You need to update an existing PR
+
+🚧 Checkout rule:
+- If `gh pr checkout` fails because the branch is already checked out elsewhere, create a fresh worktree and use it:
+  git worktree add /private/tmp/{self._extract_repository_name()}/pr-update-rerun <branch-or-pr-number>
+  cd /private/tmp/{self._extract_repository_name()}/pr-update-rerun
+
+The user referenced "the PR" but didn't specify which one. You must:
+1. List recent PRs: gh pr list --author @me --limit 5
+2. Identify which PR the user meant based on the task context
+3. If unclear, show the PRs and ask: "Which PR should I update? Please specify the PR number."
+4. Once identified, checkout that PR's branch and make the requested changes
+5. DO NOT create a new PR
+
+🔧 EXECUTION GUIDELINES:
+1. **Always use /execute for your work**: Use the /execute command for all task execution to ensure proper planning and execution. This provides structured approach and prevents missing critical steps.
+
+2. **Consider subagents for complex tasks**: For complex or multi-part tasks, always evaluate if subagents would help:
+   - Use Task() tool to spawn subagents for parallel work
+   - Consider subagents when task has 3+ independent components
+   - Use subagents for different skill areas (testing, documentation, research)
+   - Example: Task(description="Run comprehensive tests", prompt="Execute all test suites and report results")
+
+3. **Task delegation patterns**:
+   - Research tasks: Delegate investigation of large codebases
+   - Testing tasks: Separate agents for different test types
+   - Documentation: Dedicated agents for complex documentation needs
+   - Code analysis: Parallel analysis of multiple files/systems"""
+            else:
+                prompt = f"""Task: {task_description}
+
+🆕 NEW PR MODE - Create a fresh pull request
+
+Execute the task exactly as requested. Key points:
+- Create a new branch from main for your work
+- If asked to start a server, start it on the specified port
+- If asked to modify files, make those exact modifications
+- If asked to run commands, execute them
+- If asked to test, run the appropriate tests
+- Always follow the specific instructions given
+
+🔧 EXECUTION GUIDELINES:
+1. **Always use /execute for your work**: Use the /execute command for all task execution to ensure proper planning and execution. This provides structured approach and prevents missing critical steps.
+
+2. **Consider subagents for complex tasks**: For complex or multi-part tasks, always evaluate if subagents would help:
+   - Use Task() tool to spawn subagents for parallel work
+   - Consider subagents when task has 3+ independent components
+   - Use subagents for different skill areas (testing, documentation, research)
+   - Example: Task(description="Run comprehensive tests", prompt="Execute all test suites and report results")
+
+3. **Task delegation patterns**:
+   - Research tasks: Delegate investigation of large codebases
+   - Testing tasks: Separate agents for different test types
+   - Documentation: Dedicated agents for complex documentation needs
+   - Code analysis: Parallel analysis of multiple files/systems
+
+Complete the task, then use /pr to create a new pull request."""
+        else:
+            prompt = task_description
+
+        agent_spec = {
+            "name": agent_name,
+            "type": "development",
+            "focus": task_description,
+            "capabilities": capabilities,
+            "prompt": prompt,
+            "cli": agent_cli,
+        }
+        if len(cli_chain) > 1:
+            agent_spec["cli_chain"] = cli_chain
+
+        # Add PR context only when explicitly enabled.
+        if wrap_prompt and pr_update_mode and mode == "update":
+            agent_spec["pr_context"] = {"mode": mode, "pr_number": pr_number}
+
+        # Add workspace configuration if specified
+        if workspace_config:
+            agent_spec["workspace_config"] = workspace_config
+            print(f"🏗️ Custom workspace config: {workspace_config}")
+
+        return [agent_spec]
+
+    @staticmethod
+    def _is_safe_branch_name(branch_name: str) -> bool:
+        """Validate branch name against safe pattern to avoid injection risks."""
+        return bool(re.match(r"^[A-Za-z0-9._/-]+$", branch_name))
+
+    @staticmethod
+    def _is_invalid_base_ref_error(stderr: str) -> bool:
+        """Return True when git worktree failed due to an unknown base ref."""
+        if not stderr:
+            return False
+        normalized = stderr.lower()
+        return "not a valid object name" in normalized or "invalid reference" in normalized
+
+    def _prompt_for_base_branch(self, attempted_ref: str) -> str | None:
+        """
+        Ask user for base branch when worktree creation fails on an invalid ref.
+
+        Returns a validated branch name, or None if interactive input is unavailable/invalid.
+        """
+        if not sys.stdin.isatty():
+            print("❌ Unable to prompt for base branch in non-interactive mode.")
+            print("   Re-run interactively or set AI_ORCH_WORKTREE_BASE_REF (for example: develop).")
+            return None
+
+        print(
+            f"❓ Git base ref '{attempted_ref}' is not valid in this repository."
+            " Enter the base branch to use for new worktrees (for example: develop):"
+        )
+        try:
+            user_input = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n❌ Prompt cancelled. Aborting agent creation.")
+            logger.warning("base_ref_prompt_cancelled", extra={"attempted_ref": attempted_ref})
+            return None
+        if not user_input:
+            print("❌ No base branch provided. Aborting agent creation.")
+            return None
+        if not self._is_safe_branch_name(user_input):
+            print(f"❌ Unsafe base branch name provided: {user_input!r}")
+            return None
+        return user_input
+
+    def _prompt_to_continue_without_worktree(self) -> bool:
+        """Ask user whether to continue without git worktree isolation."""
+        if not sys.stdin.isatty():
+            return False
+        print("❓ Worktree creation failed. Continue in current directory without a worktree? [y/N]")
+        try:
+            response = input("> ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("\n❌ Prompt cancelled. Aborting agent creation.")
+            logger.warning("no_worktree_prompt_cancelled")
+            return False
+        return response in {"y", "yes"}
+
+    @staticmethod
+    def _get_current_branch_name() -> str:
+        """Best-effort current branch name."""
+        try:
+            result = subprocess.run(
+                ["git", "branch", "--show-current"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                shell=False,
+            )
+            if result.returncode == 0:
+                current = result.stdout.strip()
+                if current:
+                    return current
+        except Exception:
+            # Best-effort helper: if git is unavailable or cwd is not a repo, caller handles "none".
+            logger.debug("failed_to_detect_current_branch", exc_info=True)
+        return "none"
+
+    @staticmethod
+    def _is_path_related_worktree_error(stderr: str) -> bool:
+        """Return True when git worktree failed due to filesystem/path issues."""
+        if not stderr:
+            return False
+        normalized = stderr.lower()
+        path_indicators = (
+            "permission denied",
+            "no such file or directory",
+            "not a directory",
+            "file exists",
+            "unable to create",
+            "could not create",
+            "invalid argument",
+            "read-only file system",
+            "operation not permitted",
+            "cross-device link",
+        )
+        return any(indicator in normalized for indicator in path_indicators)
+
+    @staticmethod
+    def _safe_rmtree(path: str) -> None:
+        """Best-effort cleanup for temporary directories."""
+        try:
+            shutil.rmtree(path, ignore_errors=True)
+        except Exception:
+            logger.warning("tmp_worktree_cleanup_failed", extra={"path": path}, exc_info=True)
+
+    @staticmethod
+    def _checkout_branch(branch_name: str, cwd: str) -> bool:
+        """Checkout an existing branch in cwd. Returns True on success."""
+        result = subprocess.run(
+            ["git", "checkout", branch_name],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            shell=False,
+        )
+        if result.returncode == 0:
+            return True
+        logger.error(
+            "no_worktree_checkout_failed",
+            extra={"branch": branch_name, "cwd": cwd, "stderr": result.stderr.strip()},
+        )
+        print(f"❌ Failed to checkout branch '{branch_name}' in current directory: {result.stderr.strip()}")
+        return False
+
+    def _extract_repository_name(self):
+        """Extract repository name from git remote origin URL or fallback to directory name."""
+        try:
+            # Get the remote origin URL
+            result = subprocess.run(
+                ["git", "remote", "get-url", "origin"],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=30,
+                shell=False,
+            )
+            remote_url = result.stdout.strip()
+
+            # Parse SSH format: git@github.com:user/repo.git → repo
+            ssh_pattern = r"git@[^:]+:(?P<user>[^/]+)/(?P<repo>[^/]+)\.git"
+            ssh_match = re.match(ssh_pattern, remote_url)
+            if ssh_match:
+                return ssh_match.group("repo")
+
+            # Parse HTTPS format: https://github.com/user/repo.git → repo
+            https_pattern = r"https://[^/]+/(?P<user>[^/]+)/(?P<repo>[^/]+)\.git"
+            https_match = re.match(https_pattern, remote_url)
+            if https_match:
+                return https_match.group("repo")
+
+            # If we can't parse the URL, fallback to current directory name
+            current_dir = os.getcwd()
+            return os.path.basename(current_dir)
+        except subprocess.CalledProcessError:
+            # If there's no remote origin, fallback to current directory name
+            current_dir = os.getcwd()
+            return os.path.basename(current_dir)
+        except subprocess.TimeoutExpired:
+            print("Timeout while extracting repository name")
+            # Fallback to current directory name like other errors
+            current_dir = os.getcwd()
+            return os.path.basename(current_dir)
+        except Exception as e:
+            print(f"Error extracting repository name: {e}")
+            # Fallback to current directory name
+            current_dir = os.getcwd()
+            return os.path.basename(current_dir)
+
+    def _expand_path(self, path):
+        """Expand ~ and resolve paths."""
+        try:
+            expanded_path = os.path.expanduser(path)
+            resolved_path = os.path.realpath(expanded_path)
+            return resolved_path
+        except Exception as e:
+            print(f"Error expanding path {path}: {e}")
+            raise
+
+    def _get_worktree_base_path(self):
+        """Calculate ~/projects/orch_{repo_name}/ base path."""
+        try:
+            repo_name = self._extract_repository_name()
+            base_path = os.path.join("~", "projects", f"orch_{repo_name}")
+            return self._expand_path(base_path)
+        except Exception as e:
+            print(f"Error getting worktree base path: {e}")
+            raise
+
+    def _get_tmp_worktree_base_path(self):
+        """Calculate /tmp fallback base path for orchestration worktrees."""
+        repo_name = _sanitize_agent_token(self._extract_repository_name())
+        return os.path.join(tempfile.gettempdir(), "orchestration_worktrees", f"orch_{repo_name}")
+
+    def _create_tmp_worktree_directory(self, agent_spec: dict) -> str:
+        """Create a unique temp directory for worktree fallback using mktemp semantics."""
+        base_path = self._get_tmp_worktree_base_path()
+        self._ensure_directory_exists(base_path)
+        prefix = f"{_sanitize_agent_token(agent_spec.get('name', 'agent'))}-"
+        return tempfile.mkdtemp(prefix=prefix, dir=base_path)
+
+    @staticmethod
+    def _branch_exists(branch_name: str) -> bool:
+        """Check whether a git branch already exists locally."""
+        try:
+            result = subprocess.run(
+                ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch_name}"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                shell=False,
+            )
+            return result.returncode == 0
+        except Exception:
+            logger.warning(
+                "branch_exists_check_failed",
+                extra={"branch_name": branch_name},
+                exc_info=True,
+            )
+            return False
+
+    def _ensure_directory_exists(self, path):
+        """Create directories with proper error handling."""
+        try:
+            expanded_path = self._expand_path(path)
+            Path(expanded_path).mkdir(parents=True, exist_ok=True)
+            return expanded_path
+        except PermissionError as e:
+            print(f"Permission denied creating directory {path}: {e}")
+            raise
+        except Exception as e:
+            print(f"Error creating directory {path}: {e}")
+            raise
+
+    def _calculate_agent_directory(self, agent_spec):
+        """Calculate final agent directory path based on configuration."""
+        try:
+            # Get workspace configuration if it exists
+            workspace_config = agent_spec.get("workspace_config", {})
+
+            # Check if custom workspace_root is specified
+            if "workspace_root" in workspace_config:
+                workspace_root = workspace_config["workspace_root"]
+                # If workspace_name is also specified, use it
+                if "workspace_name" in workspace_config:
+                    agent_dir = os.path.join(workspace_root, workspace_config["workspace_name"])
+                else:
+                    agent_name = agent_spec.get("name", "agent")
+                    agent_dir = os.path.join(workspace_root, agent_name)
+                return self._expand_path(agent_dir)
+
+            # Check if custom workspace_name is specified
+            if "workspace_name" in workspace_config:
+                base_path = self._get_worktree_base_path()
+                self._ensure_directory_exists(base_path)
+                agent_dir = os.path.join(base_path, workspace_config["workspace_name"])
+                return self._expand_path(agent_dir)
+
+            # Default case: ~/projects/orch_{repo_name}/{agent_name}
+            base_path = self._get_worktree_base_path()
+            self._ensure_directory_exists(base_path)
+            agent_name = agent_spec.get("name", "agent")
+            agent_dir = os.path.join(base_path, agent_name)
+            return self._expand_path(agent_dir)
+
+        except Exception as e:
+            print(f"Error calculating agent directory: {e}")
+            raise
+
+    def _create_worktree_at_location(self, agent_spec, branch_name, base_ref="main", create_new_branch=True):
+        """Create git worktree at the calculated location."""
+        try:
+            used_tmp_fallback = False
+            try:
+                agent_dir = self._calculate_agent_directory(agent_spec)
+            except Exception:
+                agent_dir = self._create_tmp_worktree_directory(agent_spec)
+                used_tmp_fallback = True
+                logger.warning(
+                    "worktree_default_path_failed_using_tmp",
+                    extra={"agent": agent_spec.get("name"), "tmp_agent_dir": agent_dir},
+                    exc_info=True,
+                )
+
+            # Ensure parent directory exists
+            parent_dir = os.path.dirname(agent_dir)
+            self._ensure_directory_exists(parent_dir)
+
+            # Create the worktree
+            command = ["git", "worktree", "add"]
+            if create_new_branch:
+                command.extend(["-b", branch_name, agent_dir, base_ref])
+            else:
+                command.extend([agent_dir, branch_name])
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+                shell=False,
+            )
+
+            if result.returncode != 0 and not used_tmp_fallback and self._is_path_related_worktree_error(result.stderr):
+                tmp_agent_dir = self._create_tmp_worktree_directory(agent_spec)
+                retry_command = ["git", "worktree", "add"]
+                if create_new_branch:
+                    if self._branch_exists(branch_name):
+                        retry_command.extend([tmp_agent_dir, branch_name])
+                    else:
+                        retry_command.extend(["-b", branch_name, tmp_agent_dir, base_ref])
+                else:
+                    retry_command.extend([tmp_agent_dir, branch_name])
+                retry_result = subprocess.run(
+                    retry_command,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=30,
+                    shell=False,
+                )
+                if retry_result.returncode == 0:
+                    print(f"🛟 Retried worktree creation in /tmp fallback directory: {tmp_agent_dir}")
+                    logger.info(
+                        "worktree_tmp_fallback_success",
+                        extra={"agent": agent_spec.get("name"), "tmp_agent_dir": tmp_agent_dir},
+                    )
+                    return tmp_agent_dir, retry_result
+                logger.warning(
+                    "worktree_tmp_fallback_failed",
+                    extra={
+                        "agent": agent_spec.get("name"),
+                        "tmp_agent_dir": tmp_agent_dir,
+                        "stderr": retry_result.stderr.strip(),
+                    },
+                )
+                self._safe_rmtree(tmp_agent_dir)
+            elif result.returncode != 0 and not used_tmp_fallback:
+                logger.info(
+                    "worktree_tmp_fallback_skipped_non_path_error",
+                    extra={"agent": agent_spec.get("name"), "stderr": result.stderr.strip()},
+                )
+
+            return agent_dir, result
+        except subprocess.TimeoutExpired:
+            print("Timeout while creating worktree")
+            raise
+        except Exception as e:
+            print(f"Error creating worktree at location: {e}")
+            raise
+
+    def create_dynamic_agent(self, agent_spec: dict) -> bool:
+        """Create agent with enhanced Redis coordination and worktree management."""
+        original_agent_name = agent_spec.get("name")
+        agent_focus = agent_spec.get("focus", "general task completion")
+        agent_prompt = agent_spec.get("prompt", "Complete the assigned task")
+        agent_type = agent_spec.get("type", "general")
+        capabilities = agent_spec.get("capabilities", [])
+        workspace_config = agent_spec.get("workspace_config", {})
+        existing_branch = agent_spec.get("existing_branch")
+        existing_pr = agent_spec.get("existing_pr")
+        mcp_agent_name = agent_spec.get("mcp_agent_name")
+        bead_id = agent_spec.get("bead_id")
+        validation_command = agent_spec.get("validation_command")
+        # Model is optional. If absent, do NOT force a default here; let each CLI choose its own default.
+        model = agent_spec.get("model")
+        if model is not None:
+            # Sanitize model to prevent injection
+            raw_model = str(model)
+            if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
+                print(f"❌ Invalid model name requested: {raw_model!r}")
+                return False
+            model = raw_model
+        no_new_pr = bool(agent_spec.get("no_new_pr"))
+        no_new_branch = bool(agent_spec.get("no_new_branch"))
+        no_worktree = bool(agent_spec.get("no_worktree")) or os.environ.get("AI_ORCH_NO_WORKTREE", "").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+
+        # Refresh actively working agents count from tmux sessions (excludes idle agents)
+        # This ensures we check against the actual running system state,
+        # clearing any temporary reservations from analysis phase.
+        self.active_agents = self._get_active_tmux_agents()
+
+        # 1. Determine the authoritative base name
+        # Priority: mcp_agent_name > workspace_name > original_agent_name
+        # mcp_agent_name is critical for MCP Mail coordination in pair programming
+        if mcp_agent_name:
+            base_name = mcp_agent_name
+            if base_name != original_agent_name:
+                print(f"🔄 Using MCP agent name: {original_agent_name} → {base_name} (MCP Mail coordination)")
+        elif workspace_config and workspace_config.get("workspace_name"):
+            base_name = workspace_config["workspace_name"]
+            if base_name != original_agent_name:
+                print(f"🔄 Aligning agent name: {original_agent_name} → {base_name} (workspace alignment)")
+        else:
+            base_name = original_agent_name
+
+        # 2. Ensure uniqueness
+        existing = self._check_existing_agents()
+        existing.update(self.active_agents)
+
+        agent_name = base_name
+        # If collision detected, generate a unique variation
+        if agent_name in existing:
+            timestamp = int(time.time() * 1000000) % 10000
+            counter = 1
+            original_candidate = f"{base_name}-{timestamp}"
+            agent_name = original_candidate
+
+            while agent_name in existing:
+                agent_name = f"{original_candidate}-{counter}"
+                counter += 1
+
+            print(f"⚠️ Name collision resolved: {base_name} → {agent_name}")
+
+        # 3. Update agent_spec to reflect the final unique name
+        # This ensures _create_worktree_at_location uses the correct, unique name
+        agent_spec["name"] = agent_name
+        if workspace_config:
+            # Keep workspace name in sync with agent name
+            workspace_config["workspace_name"] = agent_name
+
+        # Clean up any existing stale prompt files for this agent to prevent task reuse
+        # Use final agent name for cleanup (after workspace alignment)
+        self._cleanup_stale_prompt_files(agent_name)
+
+        # Check concurrent active agent limit
+        if len(self.active_agents) >= MAX_CONCURRENT_AGENTS:
+            print(f"❌ Active agent limit reached ({MAX_CONCURRENT_AGENTS} max). Cannot create {agent_name}")
+            print(f"   Currently working agents: {sorted(self.active_agents)}")
+            return False
+
+        # Initialize A2A protocol integration if available
+        # File-based A2A protocol is always available
+        print(f"📁 File-based A2A protocol available for {agent_name}")
+
+        try:
+            # Support optional comma-separated CLI chains (preferred order)
+            raw_cli_chain = agent_spec.get("cli_chain")
+            if raw_cli_chain is None:
+                raw_cli_chain = agent_spec.get("cli")
+
+            cli_chain = []
+            if isinstance(raw_cli_chain, str):
+                value = raw_cli_chain.strip().lower()
+                cli_chain = self._parse_cli_chain(value) if "," in value else [value or "claude"]
+            elif isinstance(raw_cli_chain, list):
+                cli_chain = [str(item).strip().lower() for item in raw_cli_chain if str(item).strip()]
+                if not cli_chain:
+                    cli_chain = ["claude"]
+            else:
+                cli_chain = ["claude"]
+
+            invalid_chain = [cli for cli in cli_chain if cli not in CLI_PROFILES]
+            if invalid_chain:
+                print(f"❌ Unsupported agent CLI requested: {invalid_chain}")
+                return False
+
+            # Resolve the first available CLI in the chain (keeps behavior predictable)
+            agent_cli = cli_chain[0]
+            cli_profile = CLI_PROFILES[agent_cli]
+            cli_path = None
+            for candidate in cli_chain:
+                candidate_path = self._resolve_cli_binary(candidate)
+                if candidate_path:
+                    agent_cli = candidate
+                    cli_profile = CLI_PROFILES[agent_cli]
+                    cli_path = candidate_path
+                    break
+
+            # Set CLI-specific default model when using the Claude default ('sonnet')
+            if model == "sonnet" and agent_cli == "gemini":
+                model = GEMINI_MODEL
+            elif model == "sonnet" and agent_cli == "cursor":
+                model = CURSOR_MODEL
+            elif model == "sonnet" and agent_cli == "minimax":
+                model = MINIMAX_MODEL
+
+            # Persist chain for downstream script-generation
+            agent_spec["cli"] = agent_cli
+            if len(cli_chain) > 1:
+                agent_spec["cli_chain"] = cli_chain
+
+            if not cli_path:
+                print(f"❌ Required CLI '{cli_profile['binary']}' not found for agent {agent_name}")
+                if agent_cli == "claude":
+                    print("   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code")
+                elif agent_cli == "codex":
+                    print("   Install Codex CLI and ensure the 'codex' command is available on your PATH")
+                elif agent_cli == "gemini":
+                    print("   Install Gemini CLI and ensure the 'gemini' command is available on your PATH")
+                elif agent_cli == "cursor":
+                    print(
+                        "   Install Cursor Agent CLI and ensure the 'cursor-agent' command is available on your PATH"
+                    )
+                return False
+
+            print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
+
+            # Pre-flight validation: Test if CLI can actually work (API connectivity/quota check)
+            # Validate ALL CLIs in chain to ensure fallback options are ready
+            model_label = model if model is not None else "<cli-default>"
+            print(
+                f"🔍 Starting pre-flight validation for {agent_name} (CLI chain: {', '.join(cli_chain)}, model: {model_label})"
+            )
+            self._print_tmp_subdirectories(correlation_id=agent_name)
+            validated_clis = []  # List of (cli_name, cli_path) tuples that passed validation
+            validated_cli = None
+            validated_path = None
+            
+            # Validate all CLIs in the chain
+            for candidate_cli in cli_chain:
+                candidate_path = self._resolve_cli_binary(candidate_cli)
+                if not candidate_path:
+                    print(f"⚠️ CLI '{candidate_cli}' binary not found, skipping validation")
+                    continue
+                
+                print(
+                    f"   🧪 Validating {CLI_PROFILES[candidate_cli]['display_name']} CLI at {candidate_path} (model: {model_label})..."
+                )
+                if self._validate_cli_availability(candidate_cli, candidate_path, agent_name, model=model):
+                    validated_clis.append((candidate_cli, candidate_path))
+                    print(f"   ✅ {CLI_PROFILES[candidate_cli]['display_name']} CLI validation passed for {agent_name}")
+                    # Use first validated CLI as primary, but keep others as fallbacks
+                    if not validated_cli:
+                        validated_cli = candidate_cli
+                        validated_path = candidate_path
+                else:
+                    print(f"   ❌ CLI '{candidate_cli}' failed pre-flight validation")
+            
+            # If no CLIs in chain passed validation, fail (no automatic fallback)
+            if not validated_cli:
+                print(f"❌ All CLIs in chain failed validation for {agent_name} - no fallback available")
+            
+            # Log validation summary
+            if validated_clis:
+                print(f"   📊 Validation summary: {len(validated_clis)} CLI(s) passed validation:")
+                for cli_name, cli_path in validated_clis:
+                    print(f"      ✅ {CLI_PROFILES[cli_name]['display_name']} ({cli_path})")
+                if len(validated_clis) > 1:
+                    print(f"   💡 Using {CLI_PROFILES[validated_cli]['display_name']} as primary, {len(validated_clis) - 1} fallback(s) available")
+            
+            if not validated_cli or not validated_path:
+                print(f"❌ No available CLI passed pre-flight validation for {agent_name} - agent creation aborted")
+                return False
+            
+            print(f"✅ Pre-flight validation complete for {agent_name}: using {CLI_PROFILES[validated_cli]['display_name']} CLI")
+            
+            # Update agent_cli to use validated CLI
+            if validated_cli != agent_cli:
+                print(f"🔄 Switching to validated CLI: {CLI_PROFILES[validated_cli]['display_name']}")
+                agent_cli = validated_cli
+                cli_profile = CLI_PROFILES[agent_cli]
+                agent_spec["cli"] = agent_cli
+                # Update cli_chain to prioritize validated CLI
+                agent_spec["cli_chain"] = [validated_cli] + [c for c in cli_chain if c != validated_cli]
+                # Update model to match the new CLI (if using default 'sonnet')
+                if model == "sonnet" and agent_cli == "gemini":
+                    model = GEMINI_MODEL
+                elif model == "sonnet" and agent_cli == "cursor":
+                    model = CURSOR_MODEL
+                elif model == "sonnet" and agent_cli == "minimax":
+                    model = MINIMAX_MODEL
+                elif model == GEMINI_MODEL and agent_cli != "gemini":
+                    # If switching away from Gemini, reset to sonnet default
+                    model = "sonnet"
+                elif model == CURSOR_MODEL and agent_cli != "cursor":
+                    # If switching away from Cursor, reset to sonnet default
+                    model = "sonnet"
+                elif model == MINIMAX_MODEL and agent_cli != "minimax":
+                    # If switching away from MiniMax, reset to sonnet default
+                    model = "sonnet"
+                agent_spec["model"] = model
+
+            use_worktree = not no_worktree
+            # Create worktree for agent using new location logic
+            try:
+                if use_worktree and no_new_branch and not existing_branch:
+                    print("❌ Branch creation is blocked but no existing branch was provided.")
+                    return False
+
+                if not use_worktree:
+                    agent_dir = os.getcwd()
+                    if existing_branch:
+                        if not self._is_safe_branch_name(existing_branch):
+                            print(f"❌ Unsafe branch name provided: {existing_branch}")
+                            return False
+                        if not self._checkout_branch(existing_branch, agent_dir):
+                            return False
+                        branch_name = existing_branch
+                    else:
+                        branch_name = self._get_current_branch_name()
+                    print(f"🧩 Running without worktree isolation in: {agent_dir}")
+                elif existing_branch:
+                    if not self._is_safe_branch_name(existing_branch):
+                        print(f"❌ Unsafe branch name provided: {existing_branch}")
+                        return False
+                    branch_name = existing_branch
+                    agent_dir, git_result = self._create_worktree_at_location(
+                        agent_spec, branch_name, create_new_branch=False
+                    )
+                else:
+                    branch_name = f"{agent_name}-work"
+                    if not self._is_safe_branch_name(branch_name):
+                        print(f"❌ Unsafe branch name generated: {branch_name}")
+                        return False
+                    base_ref = self._interactive_base_ref or os.environ.get("AI_ORCH_WORKTREE_BASE_REF", "main")
+                    agent_dir, git_result = self._create_worktree_at_location(
+                        agent_spec,
+                        branch_name,
+                        base_ref=base_ref,
+                    )
+
+                    if git_result.returncode != 0 and self._is_invalid_base_ref_error(git_result.stderr):
+                        selected_base_ref = self._prompt_for_base_branch(base_ref)
+                        if selected_base_ref:
+                            print(f"🔁 Retrying worktree creation from base branch '{selected_base_ref}'...")
+                            agent_dir, git_result = self._create_worktree_at_location(
+                                agent_spec,
+                                branch_name,
+                                base_ref=selected_base_ref,
+                            )
+                            # Cache only successful interactive base refs so subsequent agents
+                            # don't inherit an invalid branch and re-fail immediately.
+                            if git_result.returncode == 0:
+                                self._interactive_base_ref = selected_base_ref
+
+                if use_worktree:
+                    print(f"🏗️ Created worktree at: {agent_dir}")
+
+                    if git_result.returncode != 0:
+                        print(f"⚠️ Git worktree creation warning: {git_result.stderr}")
+                        if "already exists" in git_result.stderr:
+                            print(f"📁 Using existing worktree at {agent_dir}")
+                        elif self._prompt_to_continue_without_worktree():
+                            use_worktree = False
+                            no_worktree = True
+                            agent_dir = os.getcwd()
+                            if existing_branch:
+                                if not self._is_safe_branch_name(existing_branch):
+                                    print(f"❌ Unsafe branch name provided: {existing_branch}")
+                                    return False
+                                if not self._checkout_branch(existing_branch, agent_dir):
+                                    return False
+                                branch_name = existing_branch
+                            else:
+                                branch_name = self._get_current_branch_name()
+                            print(f"🧩 Continuing without worktree isolation in: {agent_dir}")
+                        else:
+                            print(f"❌ Git worktree failed: {git_result.stderr}")
+                            return False
+
+                if use_worktree:
+                    # Pre-clean worktree to avoid dirty state issues
+                    # This prevents agents from stopping to ask about staged changes from previous runs
+                    print("🧹 Pre-cleaning worktree to ensure clean state...")
+                    try:
+                        # Reset any staged changes
+                        reset_result = subprocess.run(
+                            ["git", "reset", "--hard", "HEAD"],
+                            cwd=agent_dir,
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                            timeout=30,
+                            shell=False,
+                        )
+                        if reset_result.returncode != 0:
+                            print(f"⚠️ Git reset warning (non-fatal): {reset_result.stderr}")
+
+                        # Clean untracked files
+                        clean_result = subprocess.run(
+                            ["git", "clean", "-fd"],
+                            cwd=agent_dir,
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                            timeout=30,
+                            shell=False,
+                        )
+                        if clean_result.returncode != 0:
+                            print(f"⚠️ Git clean warning (non-fatal): {clean_result.stderr}")
+                        else:
+                            cleaned_files = clean_result.stdout.strip()
+                            if cleaned_files:
+                                print(f"   Cleaned: {cleaned_files}")
+                            print("✅ Worktree pre-cleaned successfully")
+                    except Exception as clean_error:
+                        # Non-fatal: dirty state will be handled by agent with autonomous-execution skill
+                        print(f"⚠️ Pre-clean warning (non-fatal): {clean_error}")
+
+            except Exception as e:
+                print(f"❌ Failed to create worktree: {e}")
+                return False
+
+            agent_token = _sanitize_agent_token(agent_name)
+            run_suffix = self._generate_run_artifact_suffix()
+
+            # Create result collection file
+            result_file = os.path.join(self.result_dir, f"{agent_token}_results_{run_suffix}.json")
+            legacy_result_file = os.path.join(self.result_dir, f"{agent_token}_results.json")
+
+            # Enhanced prompt with completion enforcement
+            # Determine if we're in PR update mode
+            pr_context = agent_spec.get("pr_context", {})
+            if existing_pr and not pr_context:
+                pr_context = {"mode": "update", "pr_number": existing_pr}
+                agent_spec["pr_context"] = pr_context
+            is_update_mode = pr_context and pr_context.get("mode") == "update"
+            if existing_pr is None and pr_context.get("pr_number"):
+                existing_pr = pr_context.get("pr_number")
+
+            attribution_line = cli_profile["generated_with"]
+            co_author_line = cli_profile["co_author"]
+            attribution_block = f"   {attribution_line}\n\n   Co-Authored-By: {co_author_line}"
+
+            validation_instructions = ""
+            if validation_command:
+                validation_instructions = f"""
+✅ Validation command:
+- Run: {validation_command}
+- Report results in your completion summary.
+"""
+
+            if is_update_mode:
+                completion_instructions = f"""
+🚨 MANDATORY COMPLETION STEPS FOR PR UPDATE:
+
+1. Complete the assigned task on the existing PR branch
+2. Commit and push your changes:
+
+   git add -A
+   git commit -m "Update PR #{pr_context.get("pr_number", "unknown")}: {agent_focus}
+
+   Agent: {agent_name}
+   Task: {agent_focus}
+
+{attribution_block}"
+
+   git push
+
+3. Verify the PR was updated (if PR number exists):
+   {f"gh pr view {pr_context.get('pr_number')} --json state,mergeable" if pr_context.get("pr_number") else "echo 'No PR number provided, skipping verification'"}
+
+{validation_instructions}
+
+4. Create completion report:
+   echo '{{"agent": "{agent_name}", "status": "completed", "pr_updated": "{pr_context.get("pr_number", "none")}"}}' > {result_file}
+
+🛑 EXIT CRITERIA - AGENT MUST NOT TERMINATE UNTIL:
+1. ✓ Task completed and tested
+2. ✓ All changes committed and pushed
+3. ✓ PR #{pr_context.get("pr_number", "unknown")} successfully updated
+4. ✓ Completion report written to {result_file}
+"""
+            else:
+                if no_new_pr:
+                    pr_creation_instructions = "4. Do NOT create a PR. PR creation is blocked by orchestration."
+                    pr_creation_note = "PR creation is BLOCKED."
+                else:
+                    pr_creation_instructions = """
+4. Decide if a PR is needed based on the context and nature of the work:
+
+   # Use your judgment to determine if a PR is appropriate:
+   # - Did the user ask for review or collaboration?
+   # - Are the changes significant enough to warrant review?
+   # - Would a PR help with tracking or documentation?
+   # - Is this experimental work that needs feedback?
+
+   # If you determine a PR is needed:
+   /pr  # Or use gh pr create with appropriate title and body
+"""
+                    pr_creation_note = """
+Note: PR creation is OPTIONAL - use your judgment based on:
+- User intent: Did they ask for review, collaboration, or visibility?
+- Change significance: Are these substantial modifications?
+- Work nature: Is this exploratory, fixing issues, or adding features?
+- Context: Would a PR help track this work or get feedback?
+
+Trust your understanding of the task context, not keyword patterns.
+"""
+
+                if no_worktree:
+                    completion_instructions = f"""
+🚨 MANDATORY COMPLETION STEPS:
+
+1. Complete the assigned task in the current working directory
+2. Run relevant checks/tests for your changes
+3. If git operations are appropriate in this repository, commit/push as needed (on branch: {branch_name})
+4. Optional PR guidance:
+
+{pr_creation_instructions}
+
+{validation_instructions}
+
+5. Create completion report:
+   echo '{{"agent": "{agent_name}", "status": "completed", "mode": "no_worktree"}}' > {result_file}
+
+🛑 EXIT CRITERIA - AGENT MUST NOT TERMINATE UNTIL:
+1. ✓ Task completed and tested
+2. ✓ Completion report written to {result_file}
+"""
+                else:
+                    completion_instructions = f"""
+🚨 MANDATORY COMPLETION STEPS:
+
+1. Complete the assigned task
+2. Commit your changes:
+
+   git add -A
+   git commit -m "Complete: {agent_focus}
+
+   Agent: {agent_name}
+   Task: {agent_focus}
+
+{attribution_block}"
+
+3. Push your branch:
+   git push -u origin {branch_name}
+
+{pr_creation_instructions}
+{validation_instructions}
+
+5. Create completion report:
+   echo '{{"agent": "{agent_name}", "status": "completed", "branch": "{branch_name}"}}' > {result_file}
+
+🛑 EXIT CRITERIA - AGENT MUST NOT TERMINATE UNTIL:
+1. ✓ Task completed and tested
+2. ✓ All changes committed
+3. ✓ Branch pushed to origin
+4. ✓ Completion report written to {result_file}
+
+{pr_creation_note}
+"""
+
+            full_prompt = f"""{agent_prompt}
+
+Agent Configuration:
+- Name: {agent_name}
+- Type: {agent_type}
+- Focus: {agent_focus}
+- Capabilities: {", ".join(capabilities)}
+- Working Directory: {agent_dir}
+- Branch: {branch_name} {("(current directory branch)" if no_worktree else ("(existing branch)" if existing_branch else "(fresh from base branch)"))}
+- PR Creation: {"BLOCKED" if no_new_pr else "ALLOWED"}
+- Branch Creation: {"BLOCKED" if no_new_branch else "ALLOWED"}
+- Worktree Mode: {"DISABLED (current directory)" if no_worktree else "ENABLED (isolated worktree)"}
+{f"- Target PR: #{existing_pr}" if existing_pr else ""}
+{f"- MCP Agent Name: {mcp_agent_name}" if mcp_agent_name else ""}
+{f"- Bead ID: {bead_id}" if bead_id else ""}
+{f"- Validation Command: {validation_command}" if validation_command else ""}
+
+🚨 CRITICAL: {"You are updating an EXISTING PR" if is_update_mode else ("You are running WITHOUT a worktree" if no_worktree else "You are starting with a FRESH BRANCH from base branch")}
+- {"Work on the existing PR branch" if is_update_mode else ("Work carefully in the current directory; avoid unrelated changes" if no_worktree else "Your branch contains ONLY the base branch code")}
+- Make ONLY the changes needed for this specific task
+- Do NOT include unrelated changes
+
+🔧 EXECUTION GUIDELINES:
+1. **Always use /execute for your work**: Use the /execute command for all task execution to ensure proper planning and execution. This provides structured approach and prevents missing critical steps.
+
+2. **Consider subagents for complex tasks**: For complex or multi-part tasks, always evaluate if subagents would help:
+   - Use Task() tool to spawn subagents for parallel work
+   - Consider subagents when task has 3+ independent components
+   - Use subagents for different skill areas (testing, documentation, research)
+   - Example: Task(description="Run comprehensive tests", prompt="Execute all test suites and report results")
+
+3. **Task delegation patterns**:
+   - Research tasks: Delegate investigation of large codebases
+   - Testing tasks: Separate agents for different test types
+   - Documentation: Dedicated agents for complex documentation needs
+   - Code analysis: Parallel analysis of multiple files/systems
+
+{completion_instructions}
+"""
+
+            # Write prompt to file to avoid shell quoting issues
+            prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_token}_{run_suffix}.txt")
+            with open(prompt_file, "w") as f:
+                f.write(full_prompt)
+
+            # Create log directory
+            log_dir = self.log_dir
+            os.makedirs(log_dir, exist_ok=True)
+            log_file = os.path.join(log_dir, f"{agent_token}_{run_suffix}.log")
+            legacy_log_file = os.path.join(log_dir, f"{agent_token}.log")
+            self._set_latest_artifact_pointer(legacy_log_file, log_file)
+            self._set_latest_artifact_pointer(legacy_result_file, result_file)
+
+            log_file_quoted = shlex.quote(log_file)
+            result_file_quoted = shlex.quote(result_file)
+            prompt_file_quoted = shlex.quote(prompt_file)
+
+            prompt_env_export = f"export ORCHESTRATION_PROMPT_FILE={prompt_file_quoted}"
+
+            # Token handling: never inline the token value into generated scripts.
+            # Prefer env GITHUB_TOKEN; if missing, fall back to $HOME/.token at runtime.
+            # Strip trailing whitespace/newlines to prevent authentication failures.
+            github_token_export = r"""
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -f "$HOME/.token" ]; then
+    token="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/\r$//' "$HOME/.token")"
+    case "$token" in
+        *[![:space:]]*) export GITHUB_TOKEN="$token" ;;
+    esac
+fi
+""".strip()
+
+            agent_name_quoted = shlex.quote(agent_name)
+            agent_dir_quoted = shlex.quote(agent_dir)
+            log_file_display = shlex.quote(log_file)
+            tmux_attach_hint = self.get_tmux_attach_command(agent_name)
+            tmux_attach_hint_quoted = shlex.quote(tmux_attach_hint)
+            agent_name_json = json.dumps(agent_name)
+
+            # Optional multi-CLI chain support (e.g., --agent-cli=gemini,codex)
+            raw_cli_chain = agent_spec.get("cli_chain")
+            cli_chain = []
+            if isinstance(raw_cli_chain, str):
+                cli_chain = (
+                    self._parse_cli_chain(raw_cli_chain) if "," in raw_cli_chain else [raw_cli_chain.strip().lower()]
+                )
+            elif isinstance(raw_cli_chain, list):
+                cli_chain = [str(item).strip().lower() for item in raw_cli_chain if str(item).strip()]
+            if not cli_chain:
+                cli_chain = [agent_cli]
+
+            # Validate chain entries
+            invalid_chain = [cli for cli in cli_chain if cli not in CLI_PROFILES]
+            if invalid_chain:
+                raise ValueError(f"Invalid CLI(s) in cli_chain for {agent_name}: {invalid_chain}")
+
+            # Compute per-CLI execution blocks (command + stdin + env unsets)
+            cli_chain_str = ",".join(cli_chain)
+            cli_chain_json = json.dumps(cli_chain_str)
+            rate_limit_pattern = "exhausted your daily quota|rate limit|quota exceeded|resource_exhausted"
+
+            attempt_blocks = ""
+            for idx, attempt_cli in enumerate(cli_chain, start=1):
+                attempt_profile = CLI_PROFILES[attempt_cli]
+                attempt_path = self._resolve_cli_binary(attempt_cli) or attempt_profile.get("binary") or attempt_cli
+                attempt_binary_value = shlex.quote(attempt_path)
+
+                # Continue logic per CLI (only meaningful for CLIs that support it)
+                attempt_continue_flag = ""
+                if attempt_profile.get("supports_continue"):
+                    conversation_file = None
+                    conversation_dir = attempt_profile.get("conversation_dir")
+                    if conversation_dir:
+                        conversation_path = os.path.join(os.path.expanduser(conversation_dir), f"{agent_name}.json")
+                        conversation_file = conversation_path
+                    restart_env = attempt_profile.get("restart_env")
+                    restart_requested = bool(
+                        restart_env and os.environ.get(restart_env, "false").strip().lower() == "true"
+                    )
+                    if (conversation_file and os.path.exists(conversation_file)) or restart_requested:
+                        attempt_continue_flag = attempt_profile.get("continue_flag", "")
+
+                attempt_continue_segment = f" {attempt_continue_flag}" if attempt_continue_flag else ""
+
+                attempt_prompt_value_raw = prompt_file
+                attempt_prompt_value_quoted = shlex.quote(prompt_file)
+                attempt_prompt_value = (
+                    attempt_prompt_value_quoted if attempt_profile.get("quote_prompt") else attempt_prompt_value_raw
+                )
+
+                # Resolve runtime model per CLI so optional model=None never renders as "None".
+                if attempt_cli == "minimax":
+                    runtime_model = MINIMAX_MODEL
+                elif attempt_cli == "gemini":
+                    runtime_model = model or GEMINI_MODEL
+                elif attempt_cli == "cursor":
+                    runtime_model = model or CURSOR_MODEL
+                elif attempt_cli == "claude":
+                    runtime_model = model or "sonnet"
+                else:
+                    runtime_model = model
+
+                # Build model_arg for CLIs that use --model flag (claude, codex)
+                model_arg = f" --model {shlex.quote(runtime_model)}" if runtime_model and attempt_cli in {"claude", "codex"} else ""
+
+                attempt_cli_command = (
+                    attempt_profile["command_template"]
+                    .format(
+                        binary=attempt_binary_value,
+                        binary_path=attempt_path,
+                        prompt_file=attempt_prompt_value,
+                        prompt_file_path=attempt_prompt_value_raw,
+                        prompt_file_quoted=attempt_prompt_value_quoted,
+                        continue_flag=attempt_continue_segment,
+                        model=runtime_model,
+                        model_arg=model_arg,
+                    )
+                    .strip()
+                )
+
+                attempt_stdin_template = attempt_profile.get("stdin_template", "/dev/null")
+                if attempt_stdin_template == "{prompt_file}":
+                    attempt_stdin_target = prompt_file
+                else:
+                    attempt_stdin_target = attempt_stdin_template
+
+                attempt_stdin_redirect = ""
+                if attempt_stdin_target:
+                    attempt_stdin_redirect = f" < {shlex.quote(attempt_stdin_target)}"
+
+                attempt_execution_line = attempt_cli_command + attempt_stdin_redirect
+
+                attempt_env_unset_list = attempt_profile.get("env_unset", [])
+                for var in attempt_env_unset_list:
+                    if not isinstance(var, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", var):
+                        raise ValueError(
+                            f"Invalid environment variable name in env_unset for CLI profile "
+                            f"'{attempt_profile.get('display_name', attempt_cli)}': {var!r}"
+                        )
+                attempt_env_unset_commands = (
+                    "\n".join(f"unset {var}" for var in attempt_env_unset_list) if attempt_env_unset_list else ""
+                )
+
+                # Build env_set commands (e.g., for MiniMax to set ANTHROPIC_BASE_URL)
+                attempt_env_set_commands = ""
+                attempt_env_set_dict = attempt_profile.get("env_set", {})
+                if attempt_env_set_dict:
+                    for key, value in attempt_env_set_dict.items():
+                        if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                            raise ValueError(
+                                f"Invalid environment variable name in env_set for CLI profile "
+                                f"'{attempt_profile.get('display_name', attempt_cli)}': {key!r}"
+                            )
+                        attempt_env_set_commands += f"export {key}={shlex.quote(value)}\n"
+                # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
+                if attempt_cli == "minimax":
+                    runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
+                    if runtime_minimax_key:
+                        attempt_env_set_commands += f"export ANTHROPIC_API_KEY={shlex.quote(runtime_minimax_key)}\n"
+
+                # Build cleanup commands to prevent env vars from leaking between CLI attempts
+                env_cleanup_vars = ["ANTHROPIC_BASE_URL", "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL", "API_TIMEOUT_MS", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"]
+                # Only add cleanup for non-MiniMax attempts; MiniMax sets these intentionally
+                attempt_env_cleanup_commands = ""
+                if attempt_cli != "minimax":
+                    for var in env_cleanup_vars:
+                        attempt_env_cleanup_commands += f"unset {var} 2>/dev/null || true\n"
+
+                attempt_display_name = attempt_profile.get("display_name", attempt_cli)
+
+                # All CLIs use OAuth and may need time for complex tasks
+                attempt_timeout_seconds = RUNTIME_CLI_TIMEOUT_SECONDS
+
+                # Build runtime pre-flight check command based on CLI type
+                # This is a quick test to verify CLI can run before the full task
+                # Note: Each CLI uses its own model - cursor uses CURSOR_MODEL, gemini uses GEMINI_MODEL
+                if attempt_cli == "gemini":
+                    preflight_model = model or GEMINI_MODEL
+                    preflight_cmd = (
+                        f'{attempt_binary_value} -m {shlex.quote(preflight_model)} --yolo --allowed-mcp-server-names none'
+                    )
+                elif attempt_cli == "cursor":
+                    preflight_model = model or CURSOR_MODEL
+                    preflight_cmd = (
+                        f'{attempt_binary_value} -f -p - --model {shlex.quote(preflight_model)} --output-format text'
+                    )
+                elif attempt_cli == "claude":
+                    preflight_model = runtime_model or "sonnet"
+                    preflight_cmd = (
+                        f'{attempt_binary_value} -p - --model {shlex.quote(preflight_model)} --output-format text'
+                    )
+                elif attempt_cli == "minimax":
+                    # MiniMax uses Claude Code with MiniMax API
+                    preflight_cmd = f'{attempt_binary_value} -p - --model {shlex.quote(MINIMAX_MODEL)} --output-format text'
+                else:
+                    preflight_cmd = f'{attempt_binary_value}'
+
+                attempt_blocks += f"""
+if [ $RESULT_WRITTEN -eq 0 ]; then
+    ATTEMPT_NUM={idx}
+    ATTEMPT_CLI={shlex.quote(attempt_cli)}
+    if [ -z "$FIRST_ATTEMPT_CLI" ]; then FIRST_ATTEMPT_CLI="$ATTEMPT_CLI"; fi
+    if [ "$ATTEMPT_CLI" != "$FIRST_ATTEMPT_CLI" ]; then
+        FALLBACK_ATTEMPTED=1
+        FALLBACK_FROM="$FIRST_ATTEMPT_CLI"
+        FALLBACK_TO="$ATTEMPT_CLI"
+    fi
+
+    echo "[$(date)] 🔁 Attempt $ATTEMPT_NUM: {attempt_display_name}" | tee -a {log_file_quoted}
+
+    {prompt_env_export}
+    {github_token_export}
+    {attempt_env_unset_commands}
+    {attempt_env_set_commands}
+    # Clean up env vars from previous CLI attempts to prevent leakage
+    # (e.g., MiniMax env vars must not persist to Claude fallback)
+    {attempt_env_cleanup_commands}
+
+    # Quick pre-flight check: Test CLI can actually run before full execution
+    # This catches quota exhaustion that happened between dispatch and execution
+    echo "[$(date)] 🧪 Runtime pre-flight check for {attempt_display_name}..." | tee -a {log_file_quoted}
+    PREFLIGHT_OUTPUT=$(echo "What is 2+2? Reply with just the number." | timeout 30 {preflight_cmd} 2>&1 || true)
+
+    # Check for quota/rate limit errors in pre-flight output
+    if echo "$PREFLIGHT_OUTPUT" | grep -Eqi "{rate_limit_pattern}|hit your usage limit|authentication required"; then
+        echo "[$(date)] ❌ Runtime pre-flight check FAILED - quota/rate limit detected" | tee -a {log_file_quoted}
+        echo "[$(date)] Pre-flight output: $PREFLIGHT_OUTPUT" | tee -a {log_file_quoted}
+        RATE_LIMITED_SEEN=1
+        CLI_LAST="$ATTEMPT_CLI"
+        FINAL_EXIT_CODE=1
+        # Skip to next CLI in chain without running full task
+        echo "[$(date)] ❌ Attempt failed via {attempt_display_name} (exit=1 rate_limited=1 asked_question=0)" | tee -a {log_file_quoted}
+    else
+        echo "[$(date)] ✅ Runtime pre-flight check passed for {attempt_display_name}" | tee -a {log_file_quoted}
+
+        echo "[$(date)] Executing: {attempt_execution_line}" | tee -a {log_file_quoted}
+        echo "[$(date)] Timeout: {attempt_timeout_seconds}s" | tee -a {log_file_quoted}
+
+        LOG_START_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo 0)
+
+        # Wrap execution with timeout to prevent hangs and allow prompt fallback
+        # Exit code 124 = timeout, which should trigger fallback to next CLI
+        timeout {attempt_timeout_seconds} sh -c '{attempt_execution_line}' 2>&1 | tee -a {log_file_quoted}
+    ATTEMPT_EXIT=${{PIPESTATUS[0]}}
+    
+    # Handle timeout exit code (124) - treat as failure to trigger fallback
+    if [ $ATTEMPT_EXIT -eq 124 ]; then
+        echo "[$(date)] ⏱️  CLI execution timed out after {attempt_timeout_seconds}s (will try fallback)" | tee -a {log_file_quoted}
+        ATTEMPT_EXIT=1  # Treat timeout as failure to trigger fallback
+    fi
+
+    LOG_END_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo "$LOG_START_LINE")
+
+    echo "[$(date)] {attempt_display_name} exit code: $ATTEMPT_EXIT" | tee -a {log_file_quoted}
+
+    RATE_LIMITED=0
+    ASKED_QUESTION=0
+    if [ "$LOG_END_LINE" -ge "$LOG_START_LINE" ]; then
+        # Only detect rate limit as failure if there's a non-zero exit code
+        # This prevents false positives from informational messages (e.g., CodeRabbit comments)
+        if [ $ATTEMPT_EXIT -ne 0 ] && sed -n "$((LOG_START_LINE+1)),$LOG_END_LINE p" {log_file_quoted} 2>/dev/null | grep -Eqi "{rate_limit_pattern}"; then
+            RATE_LIMITED=1
+            RATE_LIMITED_SEEN=1
+            echo "[$(date)] ⚠️  Detected rate limit/quota output (treating as failure)" | tee -a {log_file_quoted}
+        fi
+
+        # Detect if agent asked a question instead of proceeding (autonomous execution violation)
+        if sed -n "$((LOG_START_LINE+1)),$LOG_END_LINE p" {log_file_quoted} 2>/dev/null | grep -Eq "Per instructions.*stop|Do you want me to:|Question \\(required before|Should I keep|stash.*discard"; then
+            ASKED_QUESTION=1
+            echo "[$(date)] ⚠️  Agent asked question instead of proceeding autonomously (treating as failure)" | tee -a {log_file_quoted}
+            ATTEMPT_EXIT=1  # Override exit code to trigger fallback CLI
+        fi
+    fi
+
+    if [ $ATTEMPT_EXIT -eq 0 ] && [ $RATE_LIMITED -eq 0 ] && [ $ASKED_QUESTION -eq 0 ]; then
+        RESULT_STATUS="completed"
+        FINAL_EXIT_CODE=0
+        CLI_USED="$ATTEMPT_CLI"
+        RESULT_WRITTEN=1
+        echo "[$(date)] ✅ Agent completed successfully via {attempt_display_name}" | tee -a {log_file_quoted}
+    else
+        CLI_LAST="$ATTEMPT_CLI"
+        FINAL_EXIT_CODE=$ATTEMPT_EXIT
+        echo "[$(date)] ❌ Attempt failed via {attempt_display_name} (exit=$ATTEMPT_EXIT rate_limited=$RATE_LIMITED asked_question=$ASKED_QUESTION)" | tee -a {log_file_quoted}
+    fi
+    fi  # End of runtime pre-flight check passed block
+fi
+"""
+
+            # Enhanced bash command with error handling and logging
+            # Ensure PATH includes common CLI locations for tmux sessions
+            path_setup = """
+# Ensure PATH includes common CLI binary locations
+export PATH="$HOME/.local/bin:$HOME/.nvm/versions/node/$(nvm version 2>/dev/null || echo 'v20.19.4')/bin:$PATH"
+"""
+            bash_cmd = f"""#!/bin/bash
+
+# Signal handler to log interruptions
+trap 'echo "[$(date)] Agent interrupted with signal SIGINT" | tee -a {log_file_quoted}; exit 130' SIGINT
+trap 'echo "[$(date)] Agent terminated with signal SIGTERM" | tee -a {log_file_quoted}; exit 143' SIGTERM
+
+{path_setup}
+
+echo "[$(date)] Starting agent {agent_name_quoted}" | tee -a {log_file_quoted}
+echo "[$(date)] Working directory: {agent_dir_quoted}" | tee -a {log_file_quoted}
+echo "[$(date)] CLI chain: {cli_chain_str}" | tee -a {log_file_quoted}
+echo "[$(date)] PATH: $PATH" | tee -a {log_file_quoted}
+
+RESULT_WRITTEN=0
+RESULT_STATUS="failed"
+FINAL_EXIT_CODE=1
+CLI_USED=""
+CLI_LAST=""
+FALLBACK_ATTEMPTED=0
+FALLBACK_FROM=""
+FALLBACK_TO=""
+FIRST_ATTEMPT_CLI=""
+RATE_LIMITED_SEEN=0
+
+{attempt_blocks}
+
+if [ "$RESULT_STATUS" = "completed" ]; then
+    if [ $FALLBACK_ATTEMPTED -eq 1 ]; then
+        if [ $RATE_LIMITED_SEEN -eq 1 ]; then
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{CLI_USED}}", "fallback_attempted": true, "rate_limited": true}}
+EOF
+        else
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{CLI_USED}}", "fallback_attempted": true}}
+EOF
+        fi
+    else
+        cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "completed", "exit_code": 0, "cli_used": "${{CLI_USED}}", "cli_chain": {cli_chain_json}}}
+EOF
+    fi
+else
+    if [ $FALLBACK_ATTEMPTED -eq 1 ]; then
+        if [ $RATE_LIMITED_SEEN -eq 1 ]; then
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{FALLBACK_TO}}", "fallback_attempted": true, "rate_limited": true}}
+EOF
+        else
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "fallback_from": "${{FALLBACK_FROM}}", "fallback_to": "${{FALLBACK_TO}}", "fallback_attempted": true}}
+EOF
+        fi
+    else
+        if [ $RATE_LIMITED_SEEN -eq 1 ]; then
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}, "rate_limited": true}}
+EOF
+        else
+            cat > {result_file_quoted} <<EOF
+{{"agent": {agent_name_json}, "status": "failed", "exit_code": $FINAL_EXIT_CODE, "cli_last": "${{CLI_LAST}}", "cli_chain": {cli_chain_json}}}
+EOF
+        fi
+    fi
+fi
+
+# Keep session alive for 1 hour for monitoring and debugging
+echo "[$(date)] Agent execution completed. Session remains active for monitoring." | tee -a {log_file_quoted}
+echo "[$(date)] Session will auto-close in 1 hour. Check log at: {log_file_display}" | tee -a {log_file_quoted}
+echo "[$(date)] Monitor with: {tmux_attach_hint_quoted}" | tee -a {log_file_quoted}
+sleep {AGENT_SESSION_TIMEOUT_SECONDS}
+"""
+
+            script_path = Path("/tmp") / f"{agent_token}_run.sh"
+            script_path.write_text(bash_cmd, encoding="utf-8")
+            os.chmod(script_path, 0o700)
+
+            # Preserve run-specific artifact paths for diagnostics and tests.
+            agent_spec["prompt_file"] = prompt_file
+            agent_spec["log_file"] = log_file
+            agent_spec["result_file"] = result_file
+            agent_spec["legacy_log_file"] = legacy_log_file
+            agent_spec["legacy_result_file"] = legacy_result_file
+
+            # Use agent-specific tmux config for 1-hour sessions
+            tmux_config = get_tmux_config_path()
+
+            # Kill existing tmux session if present to allow reuse
+            _kill_tmux_session_if_exists(agent_name, socket_name=self.tmux_socket_name)
+
+            # Build tmux command with optional config file
+            tmux_cmd = self._tmux_base_command()
+            if os.path.exists(tmux_config):
+                tmux_cmd.extend(["-f", tmux_config])
+            else:
+                print(f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config")
+
+            tmux_cmd.extend(
+                [
+                    "new-session",
+                    "-d",
+                    "-s",
+                    agent_name,
+                    "-c",
+                    agent_dir,
+                    str(script_path),
+                ]
+            )
+
+            result = subprocess.run(tmux_cmd, check=False, capture_output=True, text=True, timeout=30)
+            if result.returncode != 0:
+                print(f"⚠️ Error creating tmux session: {result.stderr}")
+                return False
+
+            # A2A registration happens automatically via file system
+            # Agent will register itself when it starts using A2AAgentWrapper
+
+            print(f"✅ Created {agent_name} - Focus: {agent_focus}")
+            # Compute script path relative to module directory
+            script_path = Path(__file__).resolve().parent / "stream_logs.sh"
+            print(f"📺 View logs: {script_path} {agent_name}")
+            return True
+
+        except Exception as e:
+            print(f"❌ Failed to create {agent_name}: {e}")
+            return False
+
+    def _is_testing_mode(self) -> bool:
+        """Return True when running in a testing/CI context."""
+
+        def _is_truthy(value: str | None) -> bool:
+            return (value or "").strip().lower() in {"1", "true", "yes"}
+
+        return any(_is_truthy(os.environ.get(env_var)) for env_var in ("MOCK_SERVICES_MODE", "TESTING", "FAST_TESTS"))
+
+    def _ensure_mock_cli_binary(self, cli_name: str) -> str:
+        """Provide a lightweight mock CLI binary when running in testing mode."""
+
+        if not self._is_testing_mode():
+            return ""
+
+        if cli_name == "claude" and self._mock_claude_path and os.path.exists(self._mock_claude_path):
+            return self._mock_claude_path
+
+        try:
+            mock_dir = Path(tempfile.gettempdir()) / "worldarchitect_ai"
+            mock_dir.mkdir(parents=True, exist_ok=True)
+            mock_path = mock_dir / f"mock_{cli_name}.sh"
+
+            # Simple shim that echoes the call for logging and exits successfully
+            script_contents = f"""#!/usr/bin/env bash
+echo "[mock {cli_name}] $@"
+exit 0
+"""
+            mock_path.write_text(script_contents, encoding="utf-8")
+            os.chmod(mock_path, 0o755)
+            if cli_name == "claude":
+                self._mock_claude_path = str(mock_path)
+            print(f"⚠️ '{cli_name}' command not found. Using mock binary for testing.")
+            return str(mock_path)
+        except Exception as exc:
+            print(f"⚠️ Failed to create mock {cli_name} binary: {exc}")
+            return ""
+
+    def _ensure_mock_claude_binary(self) -> str:
+        """Provide a lightweight mock Claude binary when running in testing mode."""
+        return self._ensure_mock_cli_binary("claude")
+
+
+if __name__ == "__main__":
+    # Simple test mode - create single agent
+    dispatcher = TaskDispatcher()
+    print("Task Dispatcher ready for dynamic agent creation")
