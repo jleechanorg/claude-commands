@@ -29,9 +29,8 @@ def test_prepare_base_clone_handles_dirty_repo(tmp_path, monkeypatch):
     """
     base_clone_root = tmp_path / "pr-orch-bases"
     repo_full = "jleechanorg/test-repo"
-    # ensure_base_clone uses only the repo name (last part after /)
-    repo_name = repo_full.split("/")[-1]
-    base_dir = base_clone_root / repo_name
+    owner, repo_name = repo_full.split("/", 1)
+    base_dir = base_clone_root / owner / repo_name
 
     # Mock environment
     monkeypatch.setattr(runner, "BASE_CLONE_ROOT", base_clone_root)
@@ -50,6 +49,8 @@ def test_prepare_base_clone_handles_dirty_repo(tmp_path, monkeypatch):
         # Simulate git rev-parse --verify main (main branch exists)
         if cmd == ["git", "rev-parse", "--verify", "main"]:
             return SimpleNamespace(returncode=0, stdout="", stderr="")
+        if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
+            return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main\n", stderr="")
 
         # Simulate git checkout main failing on dirty repo (BEFORE the fix)
         # This is what would happen without `git reset --hard` first
@@ -120,8 +121,8 @@ def test_prepare_base_clone_error_message_includes_command(tmp_path, monkeypatch
     """
     base_clone_root = tmp_path / "pr-orch-bases"
     repo_full = "jleechanorg/test-repo"
-    repo_name = repo_full.split("/")[-1]
-    base_dir = base_clone_root / repo_name
+    owner, repo_name = repo_full.split("/", 1)
+    base_dir = base_clone_root / owner / repo_name
 
     monkeypatch.setattr(runner, "BASE_CLONE_ROOT", base_clone_root)
     monkeypatch.setattr(runner, "get_github_token", lambda: "test-token")
@@ -135,6 +136,8 @@ def test_prepare_base_clone_error_message_includes_command(tmp_path, monkeypatch
         """Mock run_cmd that fails on git clean persistently (even after re-clone)."""
         if cmd == ["git", "rev-parse", "--verify", "main"]:
             return SimpleNamespace(returncode=0, stdout="", stderr="")
+        if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
+            return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main\n", stderr="")
 
         if cmd == ["git", "clean", "-fdx"]:
             clean_call_count[0] += 1
@@ -170,8 +173,8 @@ def test_prepare_base_clone_handles_detached_head(tmp_path, monkeypatch):
     """Test handling of detached HEAD state (common after automation runs)."""
     base_clone_root = tmp_path / "pr-orch-bases"
     repo_full = "jleechanorg/test-repo"
-    repo_name = repo_full.split("/")[-1]
-    base_dir = base_clone_root / repo_name
+    owner, repo_name = repo_full.split("/", 1)
+    base_dir = base_clone_root / owner / repo_name
 
     monkeypatch.setattr(runner, "BASE_CLONE_ROOT", base_clone_root)
     monkeypatch.setattr(runner, "get_github_token", lambda: "test-token")
@@ -187,6 +190,8 @@ def test_prepare_base_clone_handles_detached_head(tmp_path, monkeypatch):
 
         if cmd == ["git", "rev-parse", "--verify", "main"]:
             return SimpleNamespace(returncode=0, stdout="", stderr="")
+        if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
+            return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main\n", stderr="")
 
         if cmd == ["git", "reset", "--hard"]:
             # reset --hard works in detached HEAD

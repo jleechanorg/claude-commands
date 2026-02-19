@@ -41,7 +41,7 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
   try-self-hosted:
     runs-on: [self-hosted, claude]
-    timeout-minutes: 2
+    timeout-minutes: 10
     continue-on-error: true
     outputs:
       success: ${{ steps.mark-success.outputs.success }}

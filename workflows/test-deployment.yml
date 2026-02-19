@@ -12,6 +12,9 @@
 
 name: Test Deployment Build
 
+# Note: No concurrency limit - deployment workflows interact with external
+# infrastructure (Cloud Build/Run). Cancellation can orphan remote builds.
+
 on:
   push:
     branches: [ main ]

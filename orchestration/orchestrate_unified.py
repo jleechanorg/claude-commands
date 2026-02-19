@@ -28,6 +28,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 # Use absolute imports with package name for __main__ compatibility
+from orchestration.constants import AGENT_TIMEOUT_SECONDS
 from orchestration.task_dispatcher import CLI_PROFILES, TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
@@ -43,8 +44,8 @@ class UnifiedOrchestration:
     STALE_PROMPT_FILE_AGE_SECONDS = 300  # 5 minutes
     MAX_CONTEXT_BYTES = 100 * 1024  # 100KB
 
-    def __init__(self):
-        self.task_dispatcher = TaskDispatcher()
+    def __init__(self, log_dir: str = None):
+        self.task_dispatcher = TaskDispatcher(log_dir=log_dir)
         # Simple safety boundaries only - no complex constraint parsing needed
         print("📁 File-based A2A coordination initialized")
 
@@ -115,11 +116,22 @@ class UnifiedOrchestration:
         except Exception as e:
             print(f"⚠️ Warning: Could not clean tmux sessions: {e}")
 
-    def _is_session_completed(self, session_name: str) -> bool:
-        """Check if a tmux session has completed its work."""
+    def _is_session_completed(self, session_name: str, tmux_socket: str | None = None, for_cleanup: bool = True) -> bool:
+        """Check if a tmux session has completed its work.
+        
+        Args:
+            session_name: Name of the tmux session to check
+            tmux_socket: Optional tmux socket name
+            for_cleanup: If True (default), returns True on errors (safe for cleanup).
+                        If False, returns False on errors (safe for monitoring).
+        """
         try:
+            cmd = ["tmux"]
+            if tmux_socket:
+                cmd.extend(["-L", tmux_socket])
+            cmd.extend(["capture-pane", "-t", session_name, "-p"])
             result = subprocess.run(
-                ["tmux", "capture-pane", "-t", session_name, "-p"],
+                cmd,
                 shell=False,
                 capture_output=True,
                 text=True,
@@ -127,7 +139,14 @@ class UnifiedOrchestration:
                 timeout=30,
             )
             if result.returncode != 0:
-                return True  # Session might be dead already
+                # Session might be dead/missing - behavior depends on context
+                if for_cleanup:
+                    # Safe for cleanup: assume ended
+                    return True
+                else:
+                    # Safe for monitoring: don't treat probe errors as completion
+                    # Transient failures shouldn't end monitoring early
+                    return False
 
             output = result.stdout.strip()
             completion_indicators = [
@@ -143,7 +162,7 @@ class UnifiedOrchestration:
 
             return False
         except (subprocess.SubprocessError, OSError):
-            return True  # If we can't check, assume it's safe to clean
+            return for_cleanup  # If we can't check - for cleanup: safe to clean, for monitoring: keep checking
 
     @staticmethod
     def _is_safe_branch_name(branch_name: str) -> bool:
@@ -262,8 +281,12 @@ class UnifiedOrchestration:
             print(f"⚠️  Could not check recent agent work: {e}")
         return None
 
-    def _continue_existing_agent_work(self, existing_agent: dict, task_description: str, options: dict | None = None):
-        """Continue work on existing agent branch."""
+    def _continue_existing_agent_work(self, existing_agent: dict, task_description: str, options: dict | None = None) -> int:
+        """Continue work on existing agent branch.
+
+        Returns:
+            1 if continuation agent was created successfully, 0 otherwise
+        """
         try:
             # Create new agent session on existing branch
             agent_spec = {
@@ -298,16 +321,19 @@ class UnifiedOrchestration:
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
                 print(f"✅ Created continuation agent: {agent_spec['name']}")
                 print(f"📂 Working directory: {os.getcwd()}/agent_workspace_{agent_spec['name']}")
-                print(f"📋 Monitor logs: tail -f /tmp/orchestration_logs/{agent_spec['name']}.log")
+                print(f"📋 Monitor logs: tail -f {self.task_dispatcher.log_dir}/{agent_spec['name']}.log")
                 print(f"⏳ Monitor with: {self.task_dispatcher.get_tmux_attach_command(agent_spec['name'])}")
+                return 1
             else:
                 print("❌ Failed to create continuation agent")
+                return 0
 
         except Exception as e:
             print(f"❌ Failed to continue existing work: {e}")
             print("🔄 Falling back to new agent creation")
+            return 0
 
-    def orchestrate(self, task_description: str, options: dict = None):
+    def orchestrate(self, task_description: str, options: dict = None) -> int:
         """Main orchestration method with LLM-driven agent creation.
 
         Args:
@@ -383,6 +409,8 @@ class UnifiedOrchestration:
                 print("  └─ 🚫 New Branch Creation: BLOCKED")
             if display_options.get("no_worktree"):
                 print("  └─ 🧩 Worktree Isolation: DISABLED")
+            if display_options.get("lite_mode"):
+                print("  └─ ⚡ Lite Mode: ENABLED (no monitoring loop)")
             logger.info(
                 "orchestration_options",
                 extra={
@@ -397,6 +425,7 @@ class UnifiedOrchestration:
                     "no_new_pr": bool(options.get("no_new_pr")),
                     "no_new_branch": bool(options.get("no_new_branch")),
                     "no_worktree": bool(options.get("no_worktree")),
+                    "lite_mode": bool(options.get("lite_mode")),
                 },
             )
 
@@ -429,7 +458,7 @@ class UnifiedOrchestration:
         # Pre-flight checks
         if not self._check_dependencies():
             print("\n❌ Cannot proceed without required dependencies")
-            return
+            return 0
 
         print(f"📋 Task: {task_description}")
 
@@ -438,10 +467,81 @@ class UnifiedOrchestration:
             existing_agent = self._find_recent_agent_work(task_description)
             if existing_agent:
                 print(f"🔄 Continuing work from {existing_agent['name']} on branch {existing_agent['branch']}")
-                self._continue_existing_agent_work(existing_agent, task_description, options=options)
-                return
+                agents_created = self._continue_existing_agent_work(existing_agent, task_description, options=options)
+                return agents_created
 
-        # LLM-driven task analysis and agent creation with constraints
+        # Default: direct prompt mode - pass task directly to agent without LLM analysis
+        if not options.get("wrap_prompt"):
+            print("🧾 DIRECT PROMPT MODE: passing task directly to agent (wrap_prompt=False)")
+            creation_start = time.time()
+
+            agent_cli = options.get("agent_cli") or "gemini"
+            agent_name = options.get("mcp_agent") or self.task_dispatcher._generate_unique_name("task-agent", task_description)
+
+            # Build prompt - include context if provided
+            prompt_with_context = task_description
+            if context_content:
+                normalized = context_content.strip()
+                if normalized:
+                    prompt_with_context = f"{task_description.rstrip()}\n\n---\n## Pre-computed Context\n{normalized}"
+
+            agent_spec = {
+                "name": agent_name,
+                "type": "development",
+                "focus": task_description[:200],
+                "capabilities": list(self.task_dispatcher.agent_capabilities.keys()),
+                "prompt": prompt_with_context,
+                "cli": agent_cli,
+            }
+            if options.get("bead"):
+                agent_spec["bead_id"] = options["bead"]
+            if options.get("model"):
+                agent_spec["model"] = options["model"]
+            if options.get("no_worktree"):
+                agent_spec["no_worktree"] = True
+            if options.get("no_new_pr"):
+                agent_spec["no_new_pr"] = True
+            if options.get("no_new_branch"):
+                agent_spec["no_new_branch"] = True
+            if options.get("branch"):
+                agent_spec["existing_branch"] = options["branch"]
+            if options.get("pr"):
+                agent_spec["existing_pr"] = options["pr"]
+            if options.get("validate"):
+                agent_spec["validation_command"] = options["validate"]
+            if options.get("mcp_agent"):
+                agent_spec["mcp_agent_name"] = options["mcp_agent"]
+
+            print(f"  📦 Creating Agent: {agent_spec['name']}")
+            created = self.task_dispatcher.create_dynamic_agent(agent_spec)
+            creation_duration = time.time() - creation_start
+            print("\n📊 AGENT CREATION RESULTS:")
+            print(f"  └─ Creation Duration: {creation_duration:.2f}s")
+            print(f"  └─ Successful: {1 if created else 0}/1")
+            print(f"  └─ Failed: {0 if created else 1}/1")
+            if not created:
+                print("❌ No agents were created successfully")
+                return 0
+
+            print(f"\n⏳ 1 agent working... Monitor with:")
+            print(f"   {self.task_dispatcher.get_tmux_attach_command(agent_spec['name'])}")
+            print("\n📋 Monitor agent logs:")
+            print(f"   tail -f {self.task_dispatcher.log_dir}/{agent_spec['name']}.log")
+            print(f"\n🏠 You remain in: {os.getcwd()}")
+            print("\n📁 File-based A2A coordination - check orchestration/results/")
+
+            if options.get("lite_mode"):
+                print("\n⚡ LITE MODE: Agents launched, skipping monitoring loop")
+                print("  └─ Agents are running independently")
+                print("  └─ Caller is responsible for coordination/polling")
+            else:
+                self._check_and_display_prs([agent_spec], max_wait=120)
+            return 1  # Agent created successfully in direct_prompt mode
+
+        # wrap_prompt=True: LLM-driven task analysis and agent creation
+        print("🧠 WRAP PROMPT MODE: LLM-driven task analysis and prompt wrapping enabled")
+        if options.get("pr_update_mode"):
+            print("  └─ PR update mode enabled: will detect PR context and augment prompt")
         print("🧠 TASK ANALYSIS PHASE:")
         analysis_start = time.time()
 
@@ -452,7 +552,11 @@ class UnifiedOrchestration:
             if normalized_context:
                 enhanced_task = f"{task_description.rstrip()}\n\n---\n## Pre-computed Context\n{normalized_context}"
 
-        agents = self.task_dispatcher.analyze_task_and_create_agents(enhanced_task)
+        agents = self.task_dispatcher.analyze_task_and_create_agents(
+            enhanced_task,
+            wrap_prompt=True,  # Explicitly enable wrapping for analysis mode
+            pr_update_mode=bool(options.get("pr_update_mode", False)),
+        )
         analysis_duration = time.time() - analysis_start
         print(f"  └─ Analysis Duration: {analysis_duration:.2f}s")
         print(f"  └─ Agents Planned: {len(agents)}")
@@ -531,16 +635,24 @@ class UnifiedOrchestration:
 
             print("\n📋 Monitor agent logs:")
             for agent in created_agents:
-                print(f"   tail -f /tmp/orchestration_logs/{agent['name']}.log")
+                print(f"   tail -f {self.task_dispatcher.log_dir}/{agent['name']}.log")
 
             print(f"\n🏠 You remain in: {os.getcwd()}")
             print("\n📁 File-based A2A coordination - check orchestration/results/")
 
-            # Wait briefly and check for PR creation
-            print("\n🔍 MONITORING PHASE:")
-            monitoring_start = time.time()
-            self._check_and_display_prs(created_agents)
-            monitoring_duration = time.time() - monitoring_start
+            # Check if lite-mode is enabled
+            if options.get("lite_mode"):
+                print("\n⚡ LITE MODE: Agents launched, skipping monitoring loop")
+                print("  └─ Agents are running independently")
+                print("  └─ Caller is responsible for coordination/polling")
+                monitoring_duration = 0
+            else:
+                # Wait briefly and check for PR creation
+                print("\n🔍 MONITORING PHASE:")
+                monitoring_start = time.time()
+                # Use shorter timeout for PR monitoring (2 minutes instead of full agent timeout)
+                self._check_and_display_prs(created_agents, max_wait=120)
+                monitoring_duration = time.time() - monitoring_start
 
             # SESSION COMPLETION SUMMARY
             total_duration = time.time() - start_time
@@ -555,7 +667,9 @@ class UnifiedOrchestration:
         else:
             print("❌ No agents were created successfully")
 
-    def _check_agent_heartbeat(self, agent_name: str) -> dict:
+        return len(created_agents)
+
+    def _check_agent_heartbeat(self, agent_name: str, tmux_socket: str | None = None) -> dict:
         """Check if agent is still alive and making progress.
 
         Returns dict with:
@@ -571,15 +685,23 @@ class UnifiedOrchestration:
 
         # Check tmux session status
         try:
+            cmd = ["tmux"]
+            if tmux_socket:
+                cmd.extend(["-L", tmux_socket])
+            cmd.extend(["has-session", "-t", agent_name])
             result = subprocess.run(
-                ["tmux", "has-session", "-t", agent_name],
+                cmd,
                 shell=False,
                 check=False,
                 capture_output=True,
-                timeout=5,
+                timeout=30,
             )
             heartbeat["alive"] = result.returncode == 0
-        except Exception:
+        except (subprocess.SubprocessError, OSError, FileNotFoundError, TimeoutError) as exc:
+            print(
+                f"⚠️ Heartbeat check failed for {agent_name} "
+                f"(socket={tmux_socket or 'default'}): {exc}"
+            )
             heartbeat["alive"] = False
 
         if not heartbeat["alive"]:
@@ -599,31 +721,36 @@ class UnifiedOrchestration:
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=5,
+                timeout=30,
             )
             if result.returncode == 0 and result.stdout.strip():
                 commit_timestamp = int(result.stdout.strip())
                 current_timestamp = int(time.time())
                 heartbeat["last_commit_age"] = current_timestamp - commit_timestamp
                 heartbeat["recent_activity"] = heartbeat["last_commit_age"] < 60
-        except Exception:
+        except (subprocess.SubprocessError, OSError, FileNotFoundError, ValueError) as exc:
+            print(f"⚠️ Heartbeat progress check failed for {agent_name}: {exc}")
             pass
 
         return heartbeat
 
-    def _check_and_display_prs(self, agents, max_wait=30):
+    def _check_and_display_prs(self, agents, max_wait=AGENT_TIMEOUT_SECONDS):
         """Check for PRs created by agents and display them with heartbeat monitoring.
 
-        Monitors agents for up to max_wait seconds (default 30 seconds), checking for:
+        Monitors agents for up to max_wait seconds (default AGENT_TIMEOUT_SECONDS), checking for:
         - PR creation
         - Agent health (tmux session alive)
+        - Agent completion (via tmux pane output)
         - Progress indicators (commits, file changes, bead updates)
         """
+        tmux_socket = self.task_dispatcher.tmux_socket_name
+
         print(f"\n🔍 Checking for PR creation with heartbeat monitoring (max {max_wait}s)...")
         print(f"  └─ Total Agents: {len(agents)}")
         print(f"  └─ Agent Names: {[agent['name'] for agent in agents]}")
 
         prs_found = []
+        completed_agents = set()
         start_time = time.time()
 
         # Give agents some time to create PRs
@@ -646,7 +773,7 @@ class UnifiedOrchestration:
                         print(f"    ✅ {agent['name']}: PR created")
                         continue
 
-                    heartbeat = self._check_agent_heartbeat(agent["name"])
+                    heartbeat = self._check_agent_heartbeat(agent["name"], tmux_socket=tmux_socket)
                     if heartbeat["alive"]:
                         activity = "✨ active" if heartbeat["recent_activity"] else "⏳ idle"
                         commit_info = f" (last commit {heartbeat['last_commit_age']:.0f}s ago)" if heartbeat["last_commit_age"] is not None else ""
@@ -664,7 +791,7 @@ class UnifiedOrchestration:
                     continue  # Already found PR for this agent
 
                 # Check if agent session is still alive (informational only)
-                heartbeat = self._check_agent_heartbeat(agent["name"])
+                heartbeat = self._check_agent_heartbeat(agent["name"], tmux_socket=tmux_socket)
                 if not heartbeat["alive"]:
                     print(f"    ⚠️  {agent['name']}: tmux session ended (may have completed) - checking for PR anyway")
                 else:
@@ -729,8 +856,23 @@ class UnifiedOrchestration:
                                 f"⚠️ Unexpected error while checking PRs for agent '{agent['name']}' with branch '{branch_pattern}': {e}"
                             )
 
+            # Check if all agents have completed (via tmux pane output)
+            all_done = True
+            for agent in agents:
+                if agent["name"] in completed_agents:
+                    continue
+                if self._is_session_completed(agent["name"], tmux_socket=tmux_socket, for_cleanup=False):
+                    completed_agents.add(agent["name"])
+                    print(f"    ✅ {agent['name']}: agent completed")
+                else:
+                    all_done = False
+
+            if all_done and completed_agents:
+                print(f"\n  🏁 All {len(completed_agents)} agents completed - exiting monitoring loop")
+                break
+
             if len(prs_found) < len(agents):
-                # Keep polling responsive for short wait budgets (e.g. max_wait=30s)
+                # Keep polling responsive for wait budgets
                 # so PRs created shortly after startup are still detected.
                 elapsed_after_checks = time.time() - start_time
                 remaining_time = max_wait - elapsed_after_checks
@@ -748,9 +890,12 @@ class UnifiedOrchestration:
                 print(f"   **URL**: {pr['url']}")
                 print(f"   **Status**: {pr['state']}")
         else:
-            print("\n⏳ No PRs detected yet. Agents may still be working.")
-            print(f"   Check agent progress with: {self.task_dispatcher.get_tmux_progress_hint()}")
-            print("   Or wait and check manually: gh pr list --author @me")
+            if completed_agents and len(completed_agents) == len(agents):
+                print("\nℹ️  No PRs created. All agents completed.")
+            else:
+                print("\n⏳ No PRs detected yet. Agents may still be working.")
+                print(f"   Check agent progress with: {self.task_dispatcher.get_tmux_progress_hint()}")
+                print("   Or wait and check manually: gh pr list --author @me")
 
 
 def main():
@@ -803,6 +948,9 @@ The orchestration system will:
         "--no-new-branch", action="store_true", help="Hard block on branch creation (agents must use existing branch)"
     )
     parser.add_argument("--no-worktree", action="store_true", help="Run agents in current directory (no worktree)")
+    parser.add_argument(
+        "--lite-mode", action="store_true", help="Lite mode: launch agent and exit immediately (no monitoring loop)"
+    )
 
     # CLI selection
     parser.add_argument(
@@ -818,6 +966,32 @@ The orchestration system will:
         type=str,
         default=None,
         help="Model to use for Claude CLI (e.g., sonnet, opus, haiku). Only applies when using claude CLI.",
+    )
+    # Note: wrap_prompt is now False by default (direct prompt mode)
+    # Use --wrap-prompt to enable LLM-driven task analysis
+    parser.add_argument(
+        "--wrap-prompt",
+        dest="wrap_prompt",
+        action="store_true",
+        help="Enable LLM-driven task analysis and prompt wrapping.",
+    )
+    parser.add_argument(
+        "--no-wrap-prompt",
+        dest="wrap_prompt",
+        action="store_false",
+        help="Disable prompt wrapping (pass task directly to agent).",
+    )
+    parser.set_defaults(wrap_prompt=False)
+    parser.add_argument(
+        "--pr-update-mode",
+        action="store_true",
+        help="Enable PR context auto-detection and PR update prompt augmentation in task dispatcher.",
+    )
+    parser.add_argument(
+        "--log-dir",
+        type=str,
+        default=None,
+        help="Custom log directory for orchestration logs (default: /tmp/orchestration_logs)",
     )
 
     args = parser.parse_args()
@@ -854,16 +1028,23 @@ The orchestration system will:
         "no_new_pr": args.no_new_pr,
         "no_new_branch": args.no_new_branch,
         "no_worktree": args.no_worktree,
+        "lite_mode": args.lite_mode,
         # Note: CLI flag is --agent-cli; argparse exposes it as args.agent_cli.
         "agent_cli": agent_cli,
         "agent_cli_provided": agent_cli_provided,
         "model": args.model,
+        "wrap_prompt": args.wrap_prompt,
+        "pr_update_mode": args.pr_update_mode,
+        "log_dir": args.log_dir,
     }
 
-    orchestration = UnifiedOrchestration()
-    orchestration.orchestrate(task, options=options)
+    orchestration = UnifiedOrchestration(log_dir=options.get("log_dir"))
+    agents_created = orchestration.orchestrate(task, options=options)
 
-    return 0
+    # Return non-zero if no agents were created
+    if agents_created is None:
+        agents_created = 0
+    return 0 if agents_created > 0 else 1
 
 
 if __name__ == "__main__":

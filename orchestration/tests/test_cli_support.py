@@ -1,8 +1,10 @@
 """Tests for multi-CLI support in the task dispatcher."""
 
 import logging
+import os
 import re
 import shlex
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -673,10 +675,20 @@ class TestGeminiCliIntegration(unittest.TestCase):
 
     def test_env_unset_expected_values(self):
         """Integration: Verify expected env_unset values for each CLI profile."""
-        self.assertEqual(CLI_PROFILES["claude"]["env_unset"], ["ANTHROPIC_API_KEY"])
+        self.assertEqual(
+            CLI_PROFILES["claude"]["env_unset"],
+            [
+                "ANTHROPIC_API_KEY",
+                "ANTHROPIC_BASE_URL",
+            ],
+        )
         self.assertEqual(CLI_PROFILES["codex"]["env_unset"], ["OPENAI_API_KEY"])
         self.assertEqual(CLI_PROFILES["gemini"]["env_unset"], ["GEMINI_API_KEY"])
         self.assertEqual(CLI_PROFILES["cursor"]["env_unset"], [])
+
+    def test_claude_env_unset_preserves_auth_token(self):
+        """Claude profile should preserve ANTHROPIC_AUTH_TOKEN for non-interactive auth."""
+        self.assertNotIn("ANTHROPIC_AUTH_TOKEN", CLI_PROFILES["claude"]["env_unset"])
 
 
 class TestCursorCliIntegration(unittest.TestCase):
@@ -715,12 +727,12 @@ class TestCursorCliIntegration(unittest.TestCase):
         self.assertEqual(cursor["binary"], "cursor-agent")
 
     def test_cursor_command_template(self):
-        """Cursor command template should include -f flag, configured model and output format."""
+        """Cursor command template should include -f flag, model placeholder and output format."""
         cursor = CLI_PROFILES["cursor"]
         template = cursor["command_template"]
         tokens = shlex.split(template)
         self.assertIn("-f", tokens, "Missing -f flag for non-interactive execution")
-        self.assertIn(f"--model {CURSOR_MODEL}", template)
+        self.assertIn("--model {model}", template, "Missing model placeholder for runtime substitution")
         self.assertIn("--output-format text", template)
         self.assertIn("-p @{prompt_file}", template)
 
@@ -792,6 +804,121 @@ class TestCliValidation(unittest.TestCase):
 
     def setUp(self):
         self.dispatcher = TaskDispatcher()
+        # Clear preflight cache to prevent test interference
+        cache_dir = getattr(self.dispatcher, "preflight_cache_dir", "/tmp/orchestration_logs/preflight_cache")
+        if os.path.exists(cache_dir):
+            import shutil
+            shutil.rmtree(cache_dir)
+        os.makedirs(cache_dir, exist_ok=True)
+
+    def _set_temp_log_root(self, tmp_root: str) -> None:
+        """Point dispatcher artifacts at a temporary orchestration log root."""
+        self.dispatcher.log_dir = os.path.join(tmp_root, "orchestration_logs")
+        self.dispatcher.preflight_cache_dir = os.path.join(self.dispatcher.log_dir, "preflight_cache")
+        os.makedirs(self.dispatcher.preflight_cache_dir, exist_ok=True)
+
+    def test_preflight_cache_is_under_orchestration_logs_tmp_dir(self):
+        """Preflight cache should live under the same /tmp log directory used by orchestration."""
+        self.assertEqual(self.dispatcher.log_dir, "/tmp/orchestration_logs")
+        self.assertEqual(
+            self.dispatcher.preflight_cache_dir,
+            "/tmp/orchestration_logs/preflight_cache",
+        )
+
+    def test_preflight_cache_hit_skips_validation_within_ttl(self):
+        """Successful validation should be cached and reused for one hour."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._set_temp_log_root(tmpdir)
+
+            with (
+                patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate,
+                patch("orchestration.task_dispatcher.time.time", return_value=1000.0),
+            ):
+                mock_validate.return_value = ValidationResult(
+                    success=True,
+                    phase="execution",
+                    message="gemini execution test passed",
+                    output_file=MagicMock(),
+                )
+                first = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
+                self.assertTrue(first)
+                mock_validate.assert_called_once()
+
+            cache_files = list(Path(self.dispatcher.preflight_cache_dir).glob("*.json"))
+            self.assertTrue(cache_files, "Expected preflight cache file to be written")
+
+            with (
+                patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate_again,
+                patch("orchestration.task_dispatcher.time.time", return_value=1200.0),
+            ):
+                second = self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent")
+                self.assertTrue(second)
+                mock_validate_again.assert_not_called()
+
+    def test_preflight_cache_expires_after_one_hour(self):
+        """Expired cache entries should trigger a fresh validation run."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._set_temp_log_root(tmpdir)
+
+            with (
+                patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate,
+                patch("orchestration.task_dispatcher.time.time", return_value=1000.0),
+            ):
+                mock_validate.return_value = ValidationResult(
+                    success=True,
+                    phase="execution",
+                    message="gemini execution test passed",
+                    output_file=MagicMock(),
+                )
+                self.assertTrue(self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent"))
+                mock_validate.assert_called_once()
+
+            with (
+                patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate_again,
+                patch("orchestration.task_dispatcher.time.time", return_value=5000.0),
+            ):
+                mock_validate_again.return_value = ValidationResult(
+                    success=True,
+                    phase="execution",
+                    message="gemini execution test passed",
+                    output_file=MagicMock(),
+                )
+                self.assertTrue(self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent"))
+                mock_validate_again.assert_called_once()
+
+    def test_preflight_cache_corrupt_file_falls_back_to_validation(self):
+        """Corrupt cache files should be ignored safely and revalidated."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._set_temp_log_root(tmpdir)
+
+            with (
+                patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate,
+                patch("orchestration.task_dispatcher.time.time", return_value=1000.0),
+            ):
+                mock_validate.return_value = ValidationResult(
+                    success=True,
+                    phase="execution",
+                    message="gemini execution test passed",
+                    output_file=MagicMock(),
+                )
+                self.assertTrue(self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent"))
+
+            cache_files = list(Path(self.dispatcher.preflight_cache_dir).glob("*.json"))
+            self.assertTrue(cache_files, "Expected preflight cache file to exist for corruption test")
+            cache_files[0].write_text("{not valid json", encoding="utf-8")
+
+            with (
+                patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate_again,
+                patch("orchestration.task_dispatcher.time.time", return_value=1200.0),
+            ):
+                mock_validate_again.return_value = ValidationResult(
+                    success=True,
+                    phase="execution",
+                    message="gemini execution test passed",
+                    output_file=MagicMock(),
+                )
+                self.assertTrue(self.dispatcher._validate_cli_availability("gemini", "/usr/bin/gemini", "test-agent"))
+                mock_validate_again.assert_called_once()
 
     def test_gemini_validation_success_with_exit_code_0(self):
         """Gemini validation should succeed when exit code is 0 and output file is created."""

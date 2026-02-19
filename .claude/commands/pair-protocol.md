@@ -233,7 +233,7 @@ All MCP mail messages follow this JSON structure:
       {
         "id": "q1",
         "question": "Should I use environment variables or hardcoded constants for configuration?",
-        "context": "Spec suggests COPILOT_USE_PAIR env var, but CLAUDE.md prohibits creating new env vars",
+        "context": "Spec suggests using environment variables, but CLAUDE.md recommends avoiding new env var creation",
         "options": [
           "Use hardcoded constants per CLAUDE.md",
           "Use environment variables per spec",

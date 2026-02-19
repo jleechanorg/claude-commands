@@ -30,6 +30,7 @@ orchestration_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, orchestration_dir)
 
 from orchestration import orchestrate_unified
+from orchestration import live_mode
 
 
 class TestOrchestrateUnifiedArguments(unittest.TestCase):
@@ -207,6 +208,51 @@ class TestContextFileLoading(unittest.TestCase):
         """Test handling of missing context file."""
         context_path = "/nonexistent/path/context.md"
         self.assertFalse(os.path.exists(context_path))
+
+
+class TestLiveModeDispatcherWrapPrompt(unittest.TestCase):
+    """Ensure live-mode dispatcher commands keep wrapped PR-aware behavior."""
+
+    def test_dispatcher_analyze_enables_wrap_and_pr_update_mode(self):
+        with (
+            patch("sys.argv", ["ai_orch", "dispatcher", "analyze", "Fix PR #123"]),
+            patch("orchestration.live_mode.TaskDispatcher") as mock_dispatcher_cls,
+        ):
+            dispatcher = mock_dispatcher_cls.return_value
+            dispatcher.analyze_task_and_create_agents.return_value = [
+                {"name": "task-agent-1", "cli": "claude"}
+            ]
+
+            rc = live_mode.main()
+
+        self.assertEqual(rc, 0)
+        dispatcher.analyze_task_and_create_agents.assert_called_once_with(
+            "Fix PR #123",
+            forced_cli=None,
+            wrap_prompt=True,
+            pr_update_mode=True,
+        )
+
+    def test_dispatcher_create_enables_wrap_and_pr_update_mode(self):
+        with (
+            patch("sys.argv", ["ai_orch", "dispatcher", "create", "Update PR #99"]),
+            patch("orchestration.live_mode.TaskDispatcher") as mock_dispatcher_cls,
+        ):
+            dispatcher = mock_dispatcher_cls.return_value
+            dispatcher.analyze_task_and_create_agents.return_value = [
+                {"name": "task-agent-1", "cli": "claude"}
+            ]
+            dispatcher.create_dynamic_agent.return_value = True
+
+            rc = live_mode.main()
+
+        self.assertEqual(rc, 0)
+        dispatcher.analyze_task_and_create_agents.assert_called_once_with(
+            "Update PR #99",
+            forced_cli=None,
+            wrap_prompt=True,
+            pr_update_mode=True,
+        )
 
 
 class TestAgentSpecInjection(unittest.TestCase):
@@ -491,6 +537,17 @@ class TestGhCommandMocking(unittest.TestCase):
         self.assertEqual(pr_created_at.month, 1)
         self.assertEqual(pr_created_at.day, 1)
         self.assertEqual(pr_created_at.hour, 12)
+
+
+class TestOrchestrateReturnConsistency(unittest.TestCase):
+    """Regression tests for consistent int return values from orchestrate()."""
+
+    def test_orchestrate_returns_zero_when_dependencies_missing(self):
+        """Dependency failure path should return int 0, not None."""
+        orchestration = orchestrate_unified.UnifiedOrchestration()
+        with patch.object(orchestration, "_check_dependencies", return_value=False):
+            result = orchestration.orchestrate("test task")
+        self.assertEqual(result, 0)
 
 
 if __name__ == "__main__":
