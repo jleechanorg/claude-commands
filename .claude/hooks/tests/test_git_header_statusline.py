@@ -12,11 +12,13 @@ Matrix Coverage:
 - Remote states: upstream, no upstream
 """
 
+import glob
 import os
 import shutil
 import subprocess
 import tempfile
 import time
+import uuid
 from pathlib import Path
 
 import pytest
@@ -132,18 +134,30 @@ class TestGitHeaderStatusline:
 
     def test_red_ahead_commits_status(self, temp_git_repo, git_header_script):
         """RED: Test ahead commits show (ahead N)"""
-        # Set up remote tracking
+        # Determine current branch name (may be 'main' or 'master')
+        current_branch = (
+            subprocess.check_output(["git", "symbolic-ref", "--short", "HEAD"])
+            .decode()
+            .strip()
+        )
+        # Set up a real bare remote so upstream tracking works correctly
+        remote_dir = os.path.join(temp_git_repo, "remote_bare")
+        os.makedirs(remote_dir)
+        subprocess.run(["git", "init", "--bare", remote_dir], check=True, capture_output=True)
         subprocess.run(
-            ["git", "remote", "add", "origin", "https://github.com/test/test.git"],
+            ["git", "remote", "add", "origin", remote_dir],
             check=True,
         )
-        subprocess.run(["git", "branch", "--set-upstream-to=origin/main"], check=True)
+        subprocess.run(
+            ["git", "push", "-u", "origin", current_branch],
+            check=True, capture_output=True,
+        )
 
-        # Create local commits ahead of remote (simulate)
+        # Create local commits ahead of remote
         with open("local_commit.txt", "w") as f:
             f.write("local change")
         subprocess.run(["git", "add", "local_commit.txt"], check=True)
-        subprocess.run(["git", "commit", "-m", "Local commit"], check=True)
+        subprocess.run(["git", "commit", "-m", "Local commit"], check=True, capture_output=True)
 
         stdout, stderr, returncode = run_git_header(git_header_script)
 
@@ -232,6 +246,8 @@ class TestGitHeaderPRCache:
 
         repos = []
 
+        cache_files = []
+
         def _make(remote_name: str = "origin"):
             temp_dir = tmp_path_factory.mktemp("repo")
             os.chdir(temp_dir)
@@ -240,8 +256,12 @@ class TestGitHeaderPRCache:
             subprocess.run(["git", "config", "user.email", "test@test.com"], check=True)
             subprocess.run(["git", "config", "user.name", "Test User"], check=True)
 
+            # Use a unique marker per repo to guarantee a unique commit hash.
+            # Without this, all test repos produce the same commit hash (same
+            # content + message) and share a single /tmp/git-header-pr-* cache
+            # file, causing cross-test pollution when tests run out of order.
             with open("README.md", "w") as f:
-                f.write("# Test Repo\n")
+                f.write(f"# Test Repo {uuid.uuid4()}\n")
             subprocess.run(["git", "add", "README.md"], check=True)
             subprocess.run(["git", "commit", "-m", "Initial commit"], check=True)
             current_branch = (
@@ -263,12 +283,24 @@ class TestGitHeaderPRCache:
             )
 
             repos.append(temp_dir)
+
+            # Track cache files for cleanup
+            commit_hash = (
+                subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=temp_dir)
+                .decode()
+                .strip()
+            )
+            cache_files.append(Path("/tmp") / f"git-header-pr-{commit_hash[:8]}")
+
             return Path(temp_dir), current_branch, remote_name
 
         def cleanup():
             os.chdir("/")
             for repo in repos:
                 shutil.rmtree(repo, ignore_errors=True)
+            # Clean up cache files to prevent pollution across test classes
+            for cache_file in cache_files:
+                cache_file.unlink(missing_ok=True)
 
         request.addfinalizer(cleanup)
         return _make

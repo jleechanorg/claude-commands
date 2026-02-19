@@ -292,7 +292,7 @@ class TestPromptAPIEndpoint(unittest.TestCase):
             def __init__(self):
                 self.task_description = None
 
-            def analyze_task_and_create_agents(self, task_description, forced_cli=None):
+            def analyze_task_and_create_agents(self, task_description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
                 self.task_description = task_description
                 return [{"id": "agent"}]
 

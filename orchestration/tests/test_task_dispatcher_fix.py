@@ -572,6 +572,39 @@ class TestTaskDispatcherFix(unittest.TestCase):
 
         mock_warning.assert_called_once()
 
+    def test_claude_launcher_script_does_not_unset_anthropic_auth_token(self):
+        """Generated launcher script should preserve ANTHROPIC_AUTH_TOKEN for Claude auth."""
+        agent_spec = {
+            "name": "test-agent",
+            "focus": "test auth token preservation",
+            "cli": "claude",
+            "model": "sonnet",
+        }
+
+        with (
+            patch("orchestration.task_dispatcher.shutil.which", return_value="/usr/bin/claude"),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch.object(self.dispatcher, "_create_worktree_at_location") as mock_worktree,
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_check_existing_agents", return_value=set()),
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+        ):
+            mock_worktree.return_value = ("/tmp/test", MagicMock(returncode=0))
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        self.assertTrue(mock_write_text.called)
+        script_content = mock_write_text.call_args[0][0]
+        self.assertNotIn("unset ANTHROPIC_AUTH_TOKEN", script_content)
+
 
 class TestWrapPromptParameter(unittest.TestCase):
     """TDD RED tests: verify wrap_prompt parameter controls prompt wrapping behavior."""
@@ -612,14 +645,24 @@ class TestWrapPromptParameter(unittest.TestCase):
         self.assertNotIn("pr_context", agent,
                          "FAIL: pr_context injected when wrap_prompt=False")
 
-    def test_wrap_prompt_true_default_preserves_wrapping(self):
-        """GREEN baseline: default behavior (wrap_prompt=True) still wraps prompt."""
+    def test_wrap_prompt_true_enables_wrapping(self):
+        """GREEN baseline: wrap_prompt=True enables prompt wrapping."""
+        task = "Add a new feature to the dashboard"
+        agents = self.dispatcher.analyze_task_and_create_agents(task, wrap_prompt=True)
+
+        agent = agents[0]
+        self.assertIn("NEW PR MODE", agent["prompt"],
+                       "FAIL: wrap_prompt=True should include NEW PR MODE")
+
+    def test_wrap_prompt_default_is_false(self):
+        """Default wrap_prompt=False passes task directly without LLM analysis."""
         task = "Add a new feature to the dashboard"
         agents = self.dispatcher.analyze_task_and_create_agents(task)
 
         agent = agents[0]
-        self.assertIn("NEW PR MODE", agent["prompt"],
-                       "FAIL: Default wrapping should include NEW PR MODE")
+        # Default is now False (direct prompt mode)
+        self.assertEqual(agent["prompt"], task,
+                        "FAIL: Default should pass task directly")
 
     def test_wrap_prompt_false_preserves_other_agent_spec_fields(self):
         """RED: wrap_prompt=False should still set name, type, focus, capabilities, cli."""
@@ -667,7 +710,7 @@ class TestGhPrViewLogging(unittest.TestCase):
                 return MagicMock(returncode=0, stdout="", stderr="")
 
             mock_run.side_effect = run_side_effect
-            agents = self.dispatcher.analyze_task_and_create_agents(task)
+            agents = self.dispatcher.analyze_task_and_create_agents(task, pr_update_mode=True, wrap_prompt=True)
 
         # Verify logger.debug was called with gh_pr_view_failed event
         debug_calls = [
@@ -696,7 +739,7 @@ class TestGhPrViewLogging(unittest.TestCase):
                 return MagicMock(returncode=0, stdout="", stderr="")
 
             mock_run.side_effect = run_side_effect
-            agents = self.dispatcher.analyze_task_and_create_agents(task)
+            agents = self.dispatcher.analyze_task_and_create_agents(task, pr_update_mode=True, wrap_prompt=True)
 
         # Verify logger.debug was called with gh_pr_view_nonzero_exit event
         debug_calls = [

@@ -646,7 +646,12 @@ def dispatch_agent_for_pr_with_task(
     prepare_workspace_dir(repo, workspace_name)
 
     cli = agent_cli.strip().lower() if isinstance(agent_cli, str) and agent_cli.strip() else "claude"
-    agent_specs = dispatcher.analyze_task_and_create_agents(task_description, forced_cli=cli)
+    agent_specs = dispatcher.analyze_task_and_create_agents(
+        task_description,
+        wrap_prompt=True,
+        pr_update_mode=True,
+        forced_cli=cli,
+    )
     success = False
     cli_used = None
     for spec in agent_specs:
@@ -886,7 +891,7 @@ def dispatch_agent_for_pr(
     else:
         log("⚠️ GITHUB_ACTOR/AUTOMATION_USERNAME not set; agent cleanup instructions may be incomplete")
 
-    agent_specs = dispatcher.analyze_task_and_create_agents(task_description, forced_cli=agent_cli)
+    agent_specs = dispatcher.analyze_task_and_create_agents(task_description, wrap_prompt=True, pr_update_mode=True, forced_cli=agent_cli)
     success = False
     cli_used = None
     for spec in agent_specs:

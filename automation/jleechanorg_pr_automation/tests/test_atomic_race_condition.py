@@ -223,6 +223,7 @@ def test_release_pr_slot_concurrent_releases(tmp_path, monkeypatch):
     # Setup: Reserve 2 slots for the same PR
     limits = {"pr_automation_limit": 10, "pr_limit": 10}
     manager = AutomationSafetyManager(str(safety_data_dir), limits=limits)
+    manager.concurrent_limit = 10
 
     pr_number = 9999
     repo = "test-repo"
