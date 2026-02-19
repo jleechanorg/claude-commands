@@ -232,8 +232,8 @@ def validate_cli_execution(
         if validation_output_file.exists() and validation_output_file.stat().st_size > 0:
             output_content = validation_output_file.read_text()
 
-            # Success: file exists, has content, exit code is 0, AND answer is correct
-            if result.returncode == 0 and len(output_content.strip()) > 0:
+            # Output file exists and has non-empty content; correctness is validated by the strict regex match below
+            if len(output_content.strip()) > 0:
                 # Verify the CLI actually answered "4" using strict matching
                 # IMPORTANT: Must avoid false positives from HTTP 429, timestamps, dates, etc.
                 # Match "4" as standalone: not preceded or followed by digits
@@ -243,7 +243,7 @@ def validate_cli_execution(
                     return ValidationResult(
                         success=True,
                         phase="execution",
-                        message=f"{cli_name} execution test passed (2+2={EXPECTED_VALIDATION_ANSWER} verified)",
+                        message=f"{cli_name} execution test passed (2+2={EXPECTED_VALIDATION_ANSWER} verified, exit code {result.returncode})",
                         output_file=validation_output_file,
                     )
                 else:

@@ -2478,6 +2478,7 @@ Your response MUST follow this exact structure for clarity:
                     agent_cli=agent_cli,
                     model=model,
                     return_cli_used=True,
+                    job_mode="fixpr",
                 )
                 if isinstance(dispatch_result, tuple):
                     agent_success, dispatched_cli = dispatch_result

@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from automation.jleechanorg_pr_automation import orchestrated_pr_runner as runner
+from jleechanorg_pr_automation import orchestrated_pr_runner as runner
 
 
 class _FakeDispatcher:
@@ -67,7 +67,8 @@ class TestFixprPrompt(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch.object(runner, "WORKSPACE_ROOT_BASE", Path(tmpdir)):
                 with patch.object(runner, "kill_tmux_session_if_exists", lambda _: None):
-                    ok = runner.dispatch_agent_for_pr(dispatcher, pr_payload, agent_cli="claude")
+                    # Use codex to get detailed prompt (claude/minimax use slash commands now)
+                    ok = runner.dispatch_agent_for_pr(dispatcher, pr_payload, agent_cli="codex")
 
         self.assertTrue(ok)
         self.assertIsNotNone(dispatcher.task_description)
@@ -105,7 +106,8 @@ class TestFixprPrompt(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch.object(runner, "WORKSPACE_ROOT_BASE", Path(tmpdir)):
                 with patch.object(runner, "kill_tmux_session_if_exists", lambda _: None):
-                    ok = runner.dispatch_agent_for_pr(dispatcher, pr_payload, agent_cli="claude")
+                    # Use codex to get detailed prompt (claude/minimax use slash commands now)
+                    ok = runner.dispatch_agent_for_pr(dispatcher, pr_payload, agent_cli="codex")
 
         self.assertTrue(ok)
         self.assertIsNotNone(dispatcher.task_description)
