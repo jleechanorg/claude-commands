@@ -174,8 +174,9 @@ def test_multiple_workflows_dont_interfere(tmp_path):
     inflight_file.write_text("{}")
     pr_attempts_file.write_text("{}")
 
-    # Two workflow instances
+    # Two workflow instances with concurrent_limit=2 to allow parallel processing
     workflow1 = AutomationSafetyManager(str(history_dir))
+    workflow1.concurrent_limit = 2
     workflow2 = AutomationSafetyManager(str(history_dir))
     workflow1.concurrent_limit = 50
     workflow2.concurrent_limit = 50
@@ -191,7 +192,7 @@ def test_multiple_workflows_dont_interfere(tmp_path):
     # BUG: This will FAIL if cache is not reloaded
     result = workflow2.try_process_pr(pr_number, repo=repo)
 
-    # Should still succeed (count would be 2, limit is 50)
+    # Should still succeed (count would be 2, concurrent_limit is 2)
     assert result == True, "Second workflow should see first workflow's reservation"
 
     # Verify both reservations persisted
