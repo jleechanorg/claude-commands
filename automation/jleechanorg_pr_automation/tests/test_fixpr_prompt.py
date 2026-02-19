@@ -13,7 +13,7 @@ class _FakeDispatcher:
     def __init__(self) -> None:
         self.task_description = None
 
-    def analyze_task_and_create_agents(self, task_description: str, forced_cli: str = "claude"):
+    def analyze_task_and_create_agents(self, task_description: str, forced_cli: str = "claude", wrap_prompt: bool = False, **kwargs):
         self.task_description = task_description
         return [{"name": "test-agent"}]
 

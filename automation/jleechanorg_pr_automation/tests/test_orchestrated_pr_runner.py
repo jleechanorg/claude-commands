@@ -102,8 +102,8 @@ def test_query_recent_prs_skips_incomplete_data(monkeypatch):
 def test_ensure_base_clone_recovers_from_fetch_failure(monkeypatch, tmp_path, capsys, exc_factory, expected_fragment):
     repo_full = "org/repo"
     runner.BASE_CLONE_ROOT = tmp_path
-    base_dir = tmp_path / "repo"
-    base_dir.mkdir()
+    base_dir = tmp_path / "org" / "repo"
+    base_dir.mkdir(parents=True)
     (base_dir / "stale.txt").write_text("stale")
 
     def fake_run_cmd(cmd, cwd=None, check=True, timeout=None):
@@ -155,7 +155,7 @@ def test_dispatch_agent_for_pr_validates_fields(tmp_path, monkeypatch):
     runner.WORKSPACE_ROOT_BASE = tmp_path
 
     class FakeDispatcher:
-        def analyze_task_and_create_agents(self, _description, forced_cli=None):
+        def analyze_task_and_create_agents(self, _description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
             return []
 
         def create_dynamic_agent(self, _spec):
@@ -171,7 +171,7 @@ def test_dispatch_agent_for_pr_injects_workspace(monkeypatch, tmp_path):
     captured_desc = []
 
     class FakeDispatcher:
-        def analyze_task_and_create_agents(self, _description, forced_cli=None):
+        def analyze_task_and_create_agents(self, _description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
             captured_desc.append(_description)
             return [{"id": "agent"}]
 
@@ -587,7 +587,7 @@ def test_dispatch_agent_for_pr_missing_repo(tmp_path, monkeypatch):
     runner.WORKSPACE_ROOT_BASE = tmp_path
 
     class FakeDispatcher:
-        def analyze_task_and_create_agents(self, _description, forced_cli=None):
+        def analyze_task_and_create_agents(self, _description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
             return []
 
         def create_dynamic_agent(self, _spec):
@@ -602,7 +602,7 @@ def test_dispatch_agent_for_pr_missing_number(tmp_path, monkeypatch):
     runner.WORKSPACE_ROOT_BASE = tmp_path
 
     class FakeDispatcher:
-        def analyze_task_and_create_agents(self, _description, forced_cli=None):
+        def analyze_task_and_create_agents(self, _description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
             return []
 
         def create_dynamic_agent(self, _spec):
@@ -635,7 +635,7 @@ def test_multiple_repos_same_pr_number_no_collision(tmp_path, monkeypatch):
     captured_configs = []
 
     class FakeDispatcher:
-        def analyze_task_and_create_agents(self, _description, forced_cli=None):
+        def analyze_task_and_create_agents(self, _description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
             return [{"id": "agent-spec"}]
 
         def create_dynamic_agent(self, spec):
@@ -692,7 +692,7 @@ def test_dispatch_agent_for_pr_accepts_model_for_all_clis(monkeypatch, tmp_path)
     captured_model = None
 
     class FakeDispatcher:
-        def analyze_task_and_create_agents(self, task_description, forced_cli=None):
+        def analyze_task_and_create_agents(self, task_description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
             return [{"id": "agent-spec"}]
 
         def create_dynamic_agent(self, spec):
@@ -729,7 +729,7 @@ def test_dispatch_agent_for_pr_rejects_invalid_model(monkeypatch, tmp_path):
     runner.WORKSPACE_ROOT_BASE = tmp_path
 
     class FakeDispatcher:
-        def analyze_task_and_create_agents(self, task_description, forced_cli=None):
+        def analyze_task_and_create_agents(self, task_description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
             return [{"id": "agent-spec"}]
 
         def create_dynamic_agent(self, spec):

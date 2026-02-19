@@ -12,6 +12,11 @@
 
 name: Coverage Report
 
+# Cancel in-progress runs when new commits are pushed to same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Run on main pushes only to update coverage baseline and badge.
 # Coverage was previously also triggered on pull_request, but this duplicated
 # the full test suite execution already performed by test.yml (~14 min wasted

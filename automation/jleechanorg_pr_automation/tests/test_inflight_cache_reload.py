@@ -177,6 +177,8 @@ def test_multiple_workflows_dont_interfere(tmp_path):
     # Two workflow instances
     workflow1 = AutomationSafetyManager(str(history_dir))
     workflow2 = AutomationSafetyManager(str(history_dir))
+    workflow1.concurrent_limit = 50
+    workflow2.concurrent_limit = 50
 
     pr_number = 1111
     repo = "test/concurrent"

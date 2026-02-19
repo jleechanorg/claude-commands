@@ -23,7 +23,7 @@ def test_dispatch_agent_includes_worktree_fix_and_push_refspec(tmp_path, monkeyp
     captured_desc = []
     
     class FakeDispatcher:
-        def analyze_task_and_create_agents(self, description, forced_cli=None):
+        def analyze_task_and_create_agents(self, description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
             captured_desc.append(description)
             return [{"id": "agent-spec", "name": "test-agent"}]
             

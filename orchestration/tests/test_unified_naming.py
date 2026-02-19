@@ -114,6 +114,12 @@ class TestUnifiedNaming(unittest.TestCase):
         # Should add timestamp suffix to resolve collision while keeping meaningful base
         self.assertRegex(name, r"task-agent-fix-bug-authen-\d+")
 
+    def test_generated_name_respects_backend_length_limit(self):
+        """Generated names must stay within backend-safe limits."""
+        long_base_name = "taskagent" * 20
+        name = self.dispatcher._generate_unique_name(long_base_name, task_description="")
+        self.assertLessEqual(len(name), 128)
+
 
 class TestWorkspaceConfiguration(unittest.TestCase):
     """Test workspace configuration and integration"""

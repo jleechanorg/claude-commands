@@ -36,6 +36,8 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: read
 
 jobs:
   deploy:
@@ -47,6 +49,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      pull-requests: read
 
   # Run smoke tests after deployment to validate the release
   # Can be skipped for emergency manual deploys via workflow_dispatch

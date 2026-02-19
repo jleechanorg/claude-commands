@@ -219,7 +219,7 @@ See bottom of README for complete version history.
 ### Latest Release: v1.1.0 (2025-12-30)
 
 **Export Statistics**:
-- **229 Commands**: Complete workflow orchestration system
+- **230 Commands**: Complete workflow orchestration system
 - **50 Hooks**: Claude Code automation and workflow hooks
 - **26 Scripts**: Development and automation tools
 - **77 Skills**: Shared knowledge references
