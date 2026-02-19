@@ -177,6 +177,26 @@ done < "$CRON_FILE"
 
 echo "$MANAGED_END" >> "$TEMP_CRON"
 
+# Install wrapper script to ~/.local/bin if it exists in the repo
+WRAPPER_SRC="$SCRIPT_DIR/jleechanorg-pr-monitor-wrapper.sh"
+WRAPPER_DST="$HOME/.local/bin/jleechanorg-pr-monitor-wrapper.sh"
+if [ -f "$WRAPPER_SRC" ]; then
+    mkdir -p "$HOME/.local/bin"
+    cp "$WRAPPER_SRC" "$WRAPPER_DST"
+    chmod +x "$WRAPPER_DST"
+    echo "=== Installed wrapper script to $WRAPPER_DST ==="
+fi
+
+# Warn if .automation_env is missing
+if [ ! -f "$HOME/.automation_env" ]; then
+    echo "=== WARNING: ~/.automation_env not found ==="
+    echo "Create ~/.automation_env with MINIMAX_API_KEY and ANTHROPIC_BASE_URL for automation to work"
+    echo "Example:"
+    echo '  echo "export MINIMAX_API_KEY=\$MINIMAX_API_KEY" > ~/.automation_env'
+    echo '  echo "export ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic" >> ~/.automation_env'
+    echo ""
+fi
+
 # Apply the crontab
 crontab "$TEMP_CRON"
 echo ""

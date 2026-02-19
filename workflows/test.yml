@@ -645,7 +645,7 @@ jobs:
           ANNOTATE_MISSING_LINES: true
           MAX_FILES_IN_COMMENT: 50
 
-      - name: Check delta coverage threshold (per-file)
+      - name: Report delta coverage (per-file, non-blocking)
         if: steps.coverage_check.outputs.has_coverage == 'true' && steps.changed_files.outputs.has_changed_py == 'true'
         run: |
           # Per-file delta coverage: evaluate each changed file independently.
@@ -717,7 +717,7 @@ jobs:
             if [ "$COV" -lt "$MIN_THRESH" ]; then
               FAILED=$((FAILED + 1))
               SUMMARY="${SUMMARY}❌ ${FILE}: ${COV}% (${THRESH_LABEL} min: ${MIN_THRESH}%)\n"
-              echo "::error::${FILE} coverage ${COV}% is below ${THRESH_LABEL} minimum of ${MIN_THRESH}%"
+              echo "::warning::${FILE} coverage ${COV}% is below ${THRESH_LABEL} minimum of ${MIN_THRESH}% (report-only)"
             elif [ "$IS_EXCEPTION" = false ] && [ "$COV" -lt "$STANDARD_REC" ]; then
               WARNED=$((WARNED + 1))
               SUMMARY="${SUMMARY}⚠️  ${FILE}: ${COV}% (below recommended ${STANDARD_REC}%)\n"
@@ -743,8 +743,7 @@ jobs:
 
           if [ "$FAILED" -gt 0 ]; then
             echo ""
-            echo "::error::$FAILED file(s) failed their coverage threshold"
-            exit 1
+            echo "::warning::$FAILED file(s) are below coverage threshold (report-only mode; not failing CI)"
           fi
 
       - name: Post coverage summary

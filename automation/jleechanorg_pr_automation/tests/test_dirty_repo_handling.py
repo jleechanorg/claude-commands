@@ -46,11 +46,13 @@ def test_prepare_base_clone_handles_dirty_repo(tmp_path, monkeypatch):
         """Mock run_cmd to track git commands and simulate dirty repo scenario."""
         git_commands.append(cmd)
 
+        # Detect default branch via symbolic-ref
+        if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
+            return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main", stderr="")
+
         # Simulate git rev-parse --verify main (main branch exists)
         if cmd == ["git", "rev-parse", "--verify", "main"]:
             return SimpleNamespace(returncode=0, stdout="", stderr="")
-        if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
-            return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main\n", stderr="")
 
         # Simulate git checkout main failing on dirty repo (BEFORE the fix)
         # This is what would happen without `git reset --hard` first
@@ -134,10 +136,11 @@ def test_prepare_base_clone_error_message_includes_command(tmp_path, monkeypatch
 
     def mock_run_cmd_fail(cmd, cwd=None, check=True, timeout=None):
         """Mock run_cmd that fails on git clean persistently (even after re-clone)."""
+        if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
+            return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main", stderr="")
+
         if cmd == ["git", "rev-parse", "--verify", "main"]:
             return SimpleNamespace(returncode=0, stdout="", stderr="")
-        if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
-            return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main\n", stderr="")
 
         if cmd == ["git", "clean", "-fdx"]:
             clean_call_count[0] += 1
@@ -188,10 +191,12 @@ def test_prepare_base_clone_handles_detached_head(tmp_path, monkeypatch):
         """Mock that simulates detached HEAD state."""
         git_commands.append(cmd)
 
+        # Detect default branch via symbolic-ref
+        if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
+            return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main", stderr="")
+
         if cmd == ["git", "rev-parse", "--verify", "main"]:
             return SimpleNamespace(returncode=0, stdout="", stderr="")
-        if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
-            return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main\n", stderr="")
 
         if cmd == ["git", "reset", "--hard"]:
             # reset --hard works in detached HEAD

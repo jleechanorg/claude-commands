@@ -44,34 +44,44 @@ Task({
 - **Anti-Pattern**: Prevents "performative fixes" - requires actual file modifications
 - **When to Use**: Implementing fixes for security, runtime errors, test failures, merge conflicts
 
-### **3. `long-runner.md` - Extended Task Execution Specialist**
+### **3. `copilot-verifier.md` - Copilot Run Quality Auditor**
+- **Focus**: Independent post-run verification of `/copilot` work against KPIs (REV-962a7)
+- **Independence**: Zero execution context from copilot - only artifacts and git history
+- **Tools**: Read-only (Read, Glob, Grep, Bash for git/gh, WebFetch) - cannot modify files
+- **Checks**: 7 verification checks: closure rate, scope discipline, tracking_reason quality, status truthfulness, /pair compliance, STYLE budget, reply consistency
+- **Output**: `verification_report.json` with PASS/FAIL/PARTIAL verdict per check
+- **Model**: Sonnet recommended (judgment checks 3/4), haiku acceptable for mechanical-only checks (1/2/5/6/7)
+- **When to Use**: After `/copilot` Step 9 (push) as a blocking gate before tracking table update
+- **Pattern**: Mirrors testexecutor → testvalidator separation applied to the copilot workflow
+
+### **4. `long-runner.md` - Extended Task Execution Specialist**
 - **Focus**: Tasks >5 minutes with 10-minute timeout enforcement and forced summarization
 - **Output**: File-based results in `/tmp/long-runner/{branch}/task_{timestamp}_{uuid}.md`
 - **Timeout**: Hard 10-minute limit with progress tracking and partial result preservation
 - **Context Optimization**: Detailed logs to files, 3-sentence summaries to main conversation
 - **When to Use**: Complex analysis, research, multi-step workflows, large codebase operations
 
-### **4. `testexecutor.md` - Evidence Collection Testing Specialist**
+### **5. `testexecutor.md` - Evidence Collection Testing Specialist**
 - **Focus**: **Evidence collection ONLY** - NO success/failure judgments
 - **Constraint**: Pure documentation robot - captures observations without interpretation
 - **Tools**: Playwright MCP browser automation, real authentication testing
 - **Output**: Structured JSON evidence packages with screenshots, logs, console output
 - **When to Use**: Systematic testing with evidence collection for later validation
 
-### **5. `testvalidator.md` - Independent Test Assessment Specialist**
+### **6. `testvalidator.md` - Independent Test Assessment Specialist**
 - **Focus**: Critical auditor analyzing evidence against original specifications
 - **Independence**: Zero context from TestExecutor - fresh eyes evaluation only
 - **Authority**: Validator assessment is final in case of disagreements
 - **Output**: Pass/Fail decisions with confidence ratings based on evidence quality
 - **When to Use**: Independent validation of test results, evidence quality assessment
 
-### **6. `codex-consultant.md` - External AI Analysis Specialist**
+### **7. `codex-consultant.md` - External AI Analysis Specialist**
 - **Focus**: Deep code analysis using external Codex CLI (`codex exec`)
 - **CRITICAL**: Must execute actual `codex exec` command - no self-analysis allowed
 - **Methodology**: Multi-stage analysis (static, security, performance, architectural)
 - **When to Use**: Claude gets stuck, needs alternative perspective, complex pattern analysis
 
-### **7. `gemini-consultant.md` - External Consultation Specialist**
+### **8. `gemini-consultant.md` - External Consultation Specialist**
 - **Focus**: External AI guidance using Gemini CLI (`gemini -p`)
 - **CRITICAL**: Must execute actual `gemini -p` command - no self-analysis allowed
 - **Analysis**: Correctness, architecture, security, performance, PR goal alignment
@@ -86,6 +96,7 @@ Task({
 
 ### **Sequential Workflows**
 - **Testing Pipeline**: testexecutor (evidence) → testvalidator (assessment)
+- **Copilot Pipeline**: /copilot (fix + respond) → copilot-verifier (audit) → tracking table update
 - **PR Review**: code-review → copilot-fixpr → external consultants (if needed)
 - **Complex Analysis**: long-runner → specialized agents for deep investigation
 
@@ -142,6 +153,7 @@ Task({
 |-----------|--------|---------|
 | Code Review | code-review | Comprehensive analysis with severity categorization |
 | Implement Fixes | copilot-fixpr | Actual file modifications with protocol compliance |
+| Copilot Run Audit | copilot-verifier | Post-run quality verification (sonnet for judgment, haiku for mechanical) |
 | Complex Research | long-runner | Extended analysis with timeout management |
 | Test Evidence | testexecutor | Systematic evidence collection without judgment |
 | Test Validation | testvalidator | Independent assessment with fresh context |

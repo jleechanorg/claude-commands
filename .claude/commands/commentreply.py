@@ -17,6 +17,7 @@ import tempfile
 import html
 import re
 import time
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -120,8 +121,9 @@ def load_claude_responses(branch_name: str, repo_name: str) -> Dict:
     safe_branch = sanitize_branch_name(branch_name) or "unknown-branch"
 
     base_dir = Path("/tmp").resolve()
-    responses_path = (base_dir / safe_repo / safe_branch / "responses.json").resolve()
-    expected_dir = (base_dir / safe_repo / safe_branch).resolve()
+    copilot_dir = "copilot"
+    responses_path = (base_dir / safe_repo / safe_branch / copilot_dir / "responses.json").resolve()
+    expected_dir = (base_dir / safe_repo / safe_branch / copilot_dir).resolve()
 
     # Verify the resolved path stays within /tmp (symlink-safe) and matches expected dir
     if (
@@ -133,19 +135,24 @@ def load_claude_responses(branch_name: str, repo_name: str) -> Dict:
         return {}
 
     if not responses_path.exists():
-        print(f"⚠️  RESPONSES FILE NOT FOUND: {responses_path}")
-        print("⚠️  Claude should have generated responses.json after analyzing comments")
-        return {}
+        # Fallback to legacy path for backward compatibility during migration
+        legacy_path = (base_dir / safe_repo / safe_branch / "responses.json").resolve()
+        if _is_relative_to(legacy_path, base_dir) and legacy_path.exists():
+            print(f"⚠️  Using legacy path: {legacy_path}")
+            responses_path = legacy_path
+        else:
+            print(f"⚠️  RESPONSES FILE NOT FOUND: {responses_path}")
+            print("⚠️  Claude should have generated responses.json after analyzing comments")
+            return {}
 
     try:
         # Additional security: check file size before reading
-        if responses_path.exists():
-            file_size = responses_path.stat().st_size
-            if file_size > 10 * 1024 * 1024:  # 10MB limit
-                print(
-                    f"⚠️ SECURITY: File too large: {responses_path} ({file_size} bytes)"
-                )
-                return {}
+        file_size = responses_path.stat().st_size
+        if file_size > 10 * 1024 * 1024:  # 10MB limit
+            print(
+                f"⚠️ SECURITY: File too large: {responses_path} ({file_size} bytes)"
+            )
+            return {}
 
         with responses_path.open("r") as f:
             responses_data = json.load(f)
@@ -177,7 +184,8 @@ def load_comments_with_staleness_check(
     safe_branch = sanitize_branch_name(branch_name) or "unknown-branch"
 
     base_dir = Path("/tmp").resolve()
-    cache_dir = (base_dir / safe_repo / safe_branch).resolve()
+    copilot_dir = "copilot"
+    cache_dir = (base_dir / safe_repo / safe_branch / copilot_dir).resolve()
     comments_path = (cache_dir / "comments.json").resolve()
 
     # Security check
@@ -466,6 +474,42 @@ def get_git_commit_hash() -> str:
     return commit_hash.strip() if success else "unknown"
 
 
+def get_files_modified() -> str:
+    """Get files modified in current branch compared to main, using git diff --stat.
+
+    Returns:
+        A formatted string with the number of files changed and the file list.
+        Returns empty string if git command fails.
+    """
+    # Get diff against main branch
+    success, diff_output, _ = run_command(
+        ["git", "diff", "--stat", "main...", "--no-color"],
+        description="get files modified since main",
+    )
+    if not success or not diff_output.strip():
+        # Fallback: try against origin/main
+        success, diff_output, _ = run_command(
+            ["git", "diff", "--stat", "origin/main...", "--no-color"],
+            description="get files modified since origin/main",
+        )
+
+    if success and diff_output.strip():
+        # Parse the output to get a clean summary
+        lines = diff_output.strip().split("\n")
+        # Last line typically contains the summary (e.g., "5 files changed, 100 insertions(+)")
+        if lines:
+            # Extract file names from all lines (excluding the summary line)
+            file_names = []
+            for line in lines[:-1]:
+                # Each line looks like: "path/to/file.py | 10 ++++"
+                if "|" in line:
+                    file_path = line.split("|")[0].strip()
+                    if file_path:
+                        file_names.append(file_path)
+            return f"{len(file_names)} file(s) changed - {', '.join(file_names[:10])}{'...' if len(file_names) > 10 else ''}"
+    return ""
+
+
 
 
 
@@ -476,10 +520,219 @@ TRACKING_STATUS_MAP = {
     "FIXED": ("✅ Fixed", "fixed"),
     "ALREADY_IMPLEMENTED": ("✅ Fixed", "fixed"),
     "DEFERRED": ("🔄 Deferred", "deferred"),
-    "ACKNOWLEDGED": ("⏭️ Ignored", "ignored"),
-    "SKIPPED": ("⏭️ Ignored", "ignored"),
-    "NOT_DONE": ("⏭️ Ignored", "ignored"),
+    "ACKNOWLEDGED": ("⏭️ Acknowledged", "ignored"),
+    "SKIPPED": ("⏭️ Acknowledged", "ignored"),
+    "NOT_DONE": ("⏭️ Not Done", "not_done"),
 }
+
+
+def parse_existing_tracking_table(owner: str, repo: str, pr_number: str) -> Dict[str, Dict]:
+    """Parse existing tracking table from PR description to preserve original reasons.
+
+    This function fetches the PR description and extracts the tracking table
+    to preserve original tracking reasons for comments that were already resolved
+    in prior copilot runs. This prevents using boilerplate reasons.
+
+    Args:
+        owner: Repository owner
+        repo: Repository name
+        pr_number: PR number
+
+    Returns:
+        Dict mapping comment_id -> {status, reason} for all entries in tracking table
+    """
+    tracking_lookup: Dict[str, Dict] = {}
+
+    # Fetch current PR body
+    repo_flag = f"{owner}/{repo}"
+    success, pr_body, stderr = run_command(
+        ["gh", "pr", "view", pr_number, "--repo", repo_flag, "--json", "body", "--jq", ".body // \"\""],
+        description="fetch PR body for tracking table parsing",
+        timeout=30,
+    )
+    if not success:
+        print(f"   ⚠️  Could not fetch PR description: {stderr}")
+        return tracking_lookup
+
+    pr_body = pr_body.rstrip("\n")
+
+    # Check if tracking markers exist and are in correct order
+    if TRACKING_START_MARKER not in pr_body or TRACKING_END_MARKER not in pr_body:
+        print("   ℹ️  No existing tracking table found in PR description")
+        return tracking_lookup
+
+    start_count = pr_body.count(TRACKING_START_MARKER)
+    end_count = pr_body.count(TRACKING_END_MARKER)
+    if start_count != 1 or end_count != 1:
+        print(
+            f"   ⚠️  Malformed tracking markers in PR body (start={start_count}, end={end_count})"
+        )
+
+    # Extract tracking section
+    start_idx = pr_body.find(TRACKING_START_MARKER) + len(TRACKING_START_MARKER)
+    end_idx = pr_body.rfind(TRACKING_END_MARKER)
+
+    # Validate marker order to prevent empty slice
+    if start_idx > end_idx:
+        print("   ⚠️  Tracking markers in wrong order - START after END")
+        return tracking_lookup
+
+    tracking_section = pr_body[start_idx:end_idx]
+
+    # Parse markdown table rows
+    # Format: | Status | Comment | Reason |
+    lines = tracking_section.split('\n')
+    for line in lines:
+        line = line.strip()
+        # Skip header and separator lines
+        if not line or not line.startswith('|'):
+            continue
+        # Skip separator lines (e.g., |---|---|---|)
+        if '---' in line:
+            continue
+            
+        # Parse row: | Status | [Comment #id](url) by @author | Reason |
+        # Use more robust split to handle escaped pipes (\|) in tracking reasons
+        raw_parts = [p for p in line.split('|')]
+        # Row starts and ends with |, so raw_parts[0] and raw_parts[-1] are typically empty
+        if len(raw_parts) < 4:
+            continue
+
+        status_text = raw_parts[1].strip()
+        comment_link = raw_parts[2].strip()
+        
+        # Skip header row
+        if 'Status' in status_text and 'Comment' in comment_link:
+            continue
+
+        # Reason is everything from 3rd column onwards (handle extra pipes in reason)
+        # Markdown tables typically end with a |
+        reason_raw = '|'.join(raw_parts[3:-1]) if raw_parts[-1].strip() == "" else '|'.join(raw_parts[3:])
+        reason_text = reason_raw.replace('\\|', '|').strip()
+
+        # Extract comment ID from link like "[#123](url) by @author"
+        comment_id = None
+        if '#' in comment_link and ']' in comment_link:
+            try:
+                # Extract ID between # and ]
+                id_start = comment_link.index('#') + 1
+                id_end = comment_link.index(']', id_start)
+                comment_id = comment_link[id_start:id_end]
+            except (ValueError, IndexError):
+                continue
+
+        if not comment_id:
+            continue
+
+        # Map status text to response type
+        status_to_response = {
+            "✅ Fixed": "FIXED",
+            "🔄 Deferred": "DEFERRED",
+            "⏭️ Ignored": "ACKNOWLEDGED",
+            "⏭️ Acknowledged": "ACKNOWLEDGED",
+            "⏭️ Not Done": "NOT_DONE",
+            "❓ Unresolved": "UNRESOLVED",
+        }
+        response_type = status_to_response.get(status_text, "ACKNOWLEDGED")
+
+        tracking_lookup[comment_id] = {
+            "status": status_text,
+            "response": response_type,
+            "reason": reason_text,
+        }
+
+    print(f"   📋 Parsed {len(tracking_lookup)} entries from existing tracking table")
+    return tracking_lookup
+
+
+def compute_metrics(responses: List[Dict]) -> Dict[str, int]:
+    """Compute metrics from responses.json - single source of truth.
+
+    This function computes ALL metrics from responses.json to ensure consistency
+    between tracking table footer and consolidated reply metrics.
+    Handles both single-issue and multi-issue response formats.
+
+    Args:
+        responses: List of response entries from responses.json
+
+    Returns:
+        Dict with computed metrics: total, fixed, acknowledged, deferred, not_done, already_implemented,
+        plus category counts: critical, blocking, important, style, routine
+    """
+    fixed = 0
+    acknowledged = 0
+    deferred = 0
+    not_done = 0
+    already_implemented = 0
+    critical = 0
+    blocking = 0
+    important = 0
+    style = 0  # STYLE category (renamed from ROUTINE)
+    routine = 0
+
+    # Helper to get all issues from a response (handles both single and multi-issue formats)
+    def get_all_issues(resp):
+        """Extract all issues from response, handling both single-issue and multi-issue formats."""
+        if "issues" in resp and "analysis" in resp:
+            # Multi-issue format: return list of issues
+            return resp.get("issues", [])
+        else:
+            # Single-issue format: treat entire response as one issue
+            return [resp]
+
+    for resp in responses:
+        # Handle both single-issue and multi-issue response formats
+        issues = get_all_issues(resp)
+
+        for issue in issues:
+            response_type = issue.get("response", "")
+            category = issue.get("category", "")
+
+            # Count by response type
+            if response_type == "FIXED":
+                fixed += 1
+            elif response_type == "ALREADY_IMPLEMENTED":
+                already_implemented += 1
+                fixed += 1  # Count as fixed for display purposes
+            elif response_type == "DEFERRED":
+                deferred += 1
+            elif response_type == "ACKNOWLEDGED":
+                acknowledged += 1
+            elif response_type == "NOT_DONE":
+                not_done += 1
+            elif response_type == "SKIPPED":
+                acknowledged += 1  # Count as acknowledged for display
+            else:
+                # Default to acknowledged for unknown types to match tracking table logic
+                # This ensures compute_metrics and build_tracking_section totals match
+                acknowledged += 1
+
+            # Count by category
+            if category == "CRITICAL":
+                critical += 1
+            elif category == "BLOCKING":
+                blocking += 1
+            elif category == "IMPORTANT":
+                important += 1
+            elif category == "STYLE":
+                style += 1  # STYLE renamed from ROUTINE in copilot.md
+            elif category == "ROUTINE":
+                routine += 1
+                style += 1  # Also count ROUTINE in style for backwards compatibility
+
+    return {
+        "total": fixed + acknowledged + deferred + not_done,
+        "fixed": fixed,
+        "acknowledged": acknowledged,
+        "deferred": deferred,
+        "not_done": not_done,
+        "already_implemented": already_implemented,
+        "critical": critical,
+        "blocking": blocking,
+        "important": important,
+        "style": style,  # STYLE + ROUTINE combined
+        "routine": routine,
+    }
 
 
 def _get_comment_url(
@@ -515,6 +768,7 @@ def build_tracking_section(
     responses_data: Dict,
     all_comments: List[Dict],
     already_replied_ids: set,
+    existing_tracking: Dict[str, Dict] = None,
 ) -> str:
     """Build the PR description tracking section with categorized comment URLs.
 
@@ -529,18 +783,36 @@ def build_tracking_section(
         responses_data: Loaded responses.json with ACTION_ACCOUNTABILITY format
         all_comments: All fetched PR comments
         already_replied_ids: Set of comment IDs already replied to (for context)
+        existing_tracking: Optional dict from parse_existing_tracking_table to preserve original reasons
 
     Returns:
         Markdown string for the tracking section
     """
     responses = responses_data.get("responses", [])
 
+    # Pre-compute string set for O(1) lookups instead of recreating on each loop iteration
+    already_replied_ids_str = {str(x) for x in already_replied_ids}
+
     # Build a lookup: comment_id (str) -> response entry
+    # Handle both single-issue and multi-issue response formats
     response_lookup: Dict[str, Dict] = {}
     for resp in responses:
-        cid = str(resp.get("comment_id", ""))
-        if cid:
-            response_lookup[cid] = resp
+        if "issues" in resp and "analysis" in resp:
+            # Multi-issue format: store individual issue dict (not parent)
+            # so tracking table reads per-issue response/tracking_reason
+            for issue in resp.get("issues", []):
+                cid = str(issue.get("comment_id", ""))
+                if cid:
+                    response_lookup[cid] = issue
+        else:
+            # Single-issue format: use comment_id directly
+            cid = str(resp.get("comment_id", ""))
+            if cid:
+                response_lookup[cid] = resp
+
+    # If no existing_tracking provided, parse from PR description
+    if existing_tracking is None:
+        existing_tracking = parse_existing_tracking_table(owner, repo, pr_number)
 
     # Determine current actor to skip self-comments
     ok_actor, actor_login, _ = run_command(
@@ -551,6 +823,7 @@ def build_tracking_section(
     # Categorize each top-level comment
     fixed_entries: List[str] = []
     deferred_entries: List[str] = []
+    not_done_entries: List[str] = []
     ignored_entries: List[str] = []
     unresolved_entries: List[str] = []
 
@@ -569,11 +842,6 @@ def build_tracking_section(
         # Skip our own comments
         author = _get_comment_author(comment)
         if author == actor_login:
-            continue
-
-        # Skip [AI responder] tagged comments only if authored by current actor
-        body = comment.get("body", "")
-        if "[AI responder]" in body and author == actor_login:
             continue
 
         comment_type = comment.get("type") or detect_comment_type(comment)
@@ -598,7 +866,7 @@ def build_tracking_section(
             tracking_reason = tracking_reason.replace("|", "\\|").replace("\n", " ")
 
             status_label, category = TRACKING_STATUS_MAP.get(
-                response_type, ("⏭️ Ignored", "ignored")
+                response_type, ("⏭️ Acknowledged", "ignored")
             )
             row = f"| {status_label} | {link_text} | {tracking_reason} |"
 
@@ -606,30 +874,60 @@ def build_tracking_section(
                 fixed_entries.append(row)
             elif category == "deferred":
                 deferred_entries.append(row)
+            elif category == "not_done":
+                not_done_entries.append(row)
             else:
                 ignored_entries.append(row)
-        elif comment_id in {str(x) for x in already_replied_ids}:
-            # Already replied in a prior run - not unresolved
-            reason = "Previously addressed in an earlier copilot run. Response already posted to this comment."
-            row = f"| ✅ Fixed | {link_text} | {reason} |"
-            fixed_entries.append(row)
+        elif comment_id in already_replied_ids_str:
+            # Already replied in a prior run - preserve original status
+            # FIX: Use original status from existing tracking table, NOT hardcoded "Fixed"
+            existing_entry = existing_tracking.get(comment_id)
+            if existing_entry:
+                # Preserve original status and reason from prior tracking table
+                original_status = existing_entry.get("status", "✅ Fixed")
+                if existing_entry.get("reason"):
+                    # RE-ESCAPE: existing_entry["reason"] was un-escaped by parser, must re-escape for table
+                    reason = existing_entry["reason"].replace("|", "\\|").replace("\n", " ")
+                else:
+                    reason = "[Original tracking reason not found in PR description - comment was already addressed]"
+            else:
+                # No existing entry found - mark as unknown rather than assuming Fixed
+                original_status = "❓ Unresolved"
+                reason = "[Already replied but no tracking entry found - status unknown]"
+            
+            row = f"| {original_status} | {link_text} | {reason} |"
+            
+            # Add to appropriate list based on original status
+            if "Deferred" in original_status:
+                deferred_entries.append(row)
+            elif "Not Done" in original_status:
+                not_done_entries.append(row)
+            elif "Ignored" in original_status or "Acknowledged" in original_status:
+                ignored_entries.append(row)
+            elif "Unresolved" in original_status or "❓" in original_status:
+                unresolved_entries.append(row)
+            else:
+                # Default to fixed if no other keywords match (likely "Fixed")
+                fixed_entries.append(row)
         else:
             # No response entry and not already replied = unresolved
             reason = "Comment was not processed in this copilot run. No response entry found in responses.json."
             row = f"| ❓ Unresolved | {link_text} | {reason} |"
             unresolved_entries.append(row)
 
-    # Build stats
-    total = len(fixed_entries) + len(deferred_entries) + len(ignored_entries) + len(unresolved_entries)
+    # FIX REV-qcu3t-numbers: Footer stats must match actual table rows
+    # Derive counts directly from row lists so footer always matches visible table
     fixed_count = len(fixed_entries)
     deferred_count = len(deferred_entries)
-    ignored_count = len(ignored_entries)
+    not_done_count = len(not_done_entries)
+    acknowledged_count = len(ignored_entries)
     unresolved_count = len(unresolved_entries)
+    total = fixed_count + deferred_count + not_done_count + acknowledged_count + unresolved_count
     coverage = total - unresolved_count
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    # Combine all rows in order: fixed, deferred, ignored, unresolved
-    all_rows = fixed_entries + deferred_entries + ignored_entries + unresolved_entries
+    # Combine all rows in order: fixed, deferred, not_done, ignored, unresolved
+    all_rows = fixed_entries + deferred_entries + not_done_entries + ignored_entries + unresolved_entries
 
     if not all_rows:
         return ""
@@ -644,7 +942,7 @@ def build_tracking_section(
 {table_header}
 {table_body}
 
-**Last processed**: {timestamp} | **Coverage**: {coverage}/{total} ({coverage * 100 // total if total > 0 else 100}%) | **Fixed**: {fixed_count} | **Deferred**: {deferred_count} | **Ignored**: {ignored_count} | **Unresolved**: {unresolved_count}
+**Last processed**: {timestamp} | **Coverage**: {coverage}/{total} ({coverage * 100 // total if total > 0 else 100}%) | **Fixed**: {fixed_count} | **Deferred**: {deferred_count} | **Not Done**: {not_done_count} | **Acknowledged**: {acknowledged_count} | **Unresolved**: {unresolved_count}
 {TRACKING_END_MARKER}"""
 
     return section
@@ -652,6 +950,8 @@ def build_tracking_section(
 
 def _ensure_period(text: str) -> str:
     """Ensure text ends with a period, without creating double punctuation."""
+    if not isinstance(text, str):
+        text = str(text) if text is not None else ""
     text = text.rstrip()
     if text and text[-1] in ".!?":
         return text
@@ -711,6 +1011,55 @@ def _derive_tracking_reason(resp: Dict) -> str:
     return "Processed without specific tracking reason."
 
 
+def _replace_tracking_section_in_pr_body(pr_body: str, tracking_section: str) -> Tuple[str, str]:
+    """Replace, append, or rebuild the tracking section in a PR body.
+
+    Returns:
+        Tuple[updated_body, mode], where mode is "replace", "append", or "rebuild".
+    """
+    start_count = pr_body.count(TRACKING_START_MARKER)
+    end_count = pr_body.count(TRACKING_END_MARKER)
+
+    if start_count == 0 and end_count == 0:
+        separator = "\n\n" if pr_body.strip() else ""
+        return pr_body + separator + tracking_section, "append"
+
+    # Normal case: exactly one bounded section.
+    if start_count == 1 and end_count == 1:
+        start_idx = pr_body.find(TRACKING_START_MARKER)
+        end_idx = pr_body.find(TRACKING_END_MARKER)
+        if start_idx < end_idx:
+            end_idx += len(TRACKING_END_MARKER)
+            return pr_body[:start_idx] + tracking_section + pr_body[end_idx:], "replace"
+
+    # Malformed markers (duplicates, mismatch, wrong order): rebuild deterministically.
+    first_start = pr_body.find(TRACKING_START_MARKER)
+    last_end = pr_body.rfind(TRACKING_END_MARKER)
+    if first_start != -1:
+        prefix = pr_body[:first_start].rstrip()
+        if last_end != -1 and last_end > first_start:
+            suffix = pr_body[last_end + len(TRACKING_END_MARKER):].lstrip()
+            if prefix and suffix:
+                cleaned_body = f"{prefix}\n\n{suffix}"
+            else:
+                cleaned_body = prefix or suffix
+        else:
+            cleaned_body = prefix
+    elif last_end != -1:
+        # Orphaned END marker: keep content before it too
+        prefix = pr_body[:last_end].rstrip()
+        suffix = pr_body[last_end + len(TRACKING_END_MARKER):].lstrip()
+        if prefix and suffix:
+            cleaned_body = f"{prefix}\n\n{suffix}"
+        else:
+            cleaned_body = prefix or suffix
+    else:
+        cleaned_body = pr_body
+
+    separator = "\n\n" if cleaned_body.strip() else ""
+    return cleaned_body + separator + tracking_section, "rebuild"
+
+
 def update_pr_description_with_tracking(
     owner: str,
     repo: str,
@@ -759,17 +1108,15 @@ def update_pr_description_with_tracking(
 
     pr_body = pr_body.rstrip("\n")
 
-    # Replace existing tracking section or append
-    if TRACKING_START_MARKER in pr_body and TRACKING_END_MARKER in pr_body:
-        # Idempotent replacement
-        start_idx = pr_body.index(TRACKING_START_MARKER)
-        end_idx = pr_body.index(TRACKING_END_MARKER) + len(TRACKING_END_MARKER)
-        updated_body = pr_body[:start_idx] + tracking_section + pr_body[end_idx:]
+    updated_body, replacement_mode = _replace_tracking_section_in_pr_body(
+        pr_body, tracking_section
+    )
+    if replacement_mode == "replace":
         print("   🔄 Replacing existing tracking section in PR description")
-    else:
-        # Append new section
-        updated_body = pr_body + "\n\n" + tracking_section
+    elif replacement_mode == "append":
         print("   ➕ Appending new tracking section to PR description")
+    else:
+        print("   ⚠️  Rebuilding malformed tracking section in PR description")
 
     # Write updated body to PR via REST API (avoids GraphQL Projects Classic errors)
     temp_file_path = None
@@ -840,6 +1187,10 @@ def post_consolidated_summary(
     containing all responses organized by comment, making it easier to review
     and reducing notification spam.
 
+    .. deprecated::
+        Use LLM-generated consolidated reply instead. This function will be
+        removed in a future version in favor of direct LLM-generated responses.
+
     Args:
         owner: Repository owner
         repo: Repository name
@@ -853,75 +1204,38 @@ def post_consolidated_summary(
     Returns:
         True if summary was posted successfully
     """
+    # REV-hg6ce: Deprecation warning for this function
+    warnings.warn(
+        "post_consolidated_summary is deprecated. Use LLM-generated consolidated reply instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
     print(f"📝 POSTING: Consolidated summary comment to PR #{pr_number}")
+
+    # REV-hyn6w: Get files modified from git
+    files_modified = get_files_modified()
 
     responses = responses_data.get("responses", [])
 
-    # Helper function to get all issues from a response (handles both single and multi-issue formats)
-    def get_all_issues(response):
-        """Extract all issues from response, handling both single-issue and multi-issue formats."""
-        if "issues" in response and "analysis" in response:
-            # Multi-issue format: return list of issues
-            return response.get("issues", [])
-        else:
-            # Single-issue format: treat entire response as one issue
-            return [response]
+    # FIX REV-qcu3t-numbers: Use compute_metrics for SINGLE SOURCE OF TRUTH
+    # This ensures tracking table and consolidated reply have consistent numbers
+    # All metrics (response types AND categories) now come from one function
+    metrics = compute_metrics(responses)
+    fixed_count = metrics.get("fixed", 0)
+    deferred_count = metrics.get("deferred", 0)
+    acknowledged_count = metrics.get("acknowledged", 0)
+    not_done_count = metrics.get("not_done", 0)
+    total_issues = metrics.get("total", 0)
 
-    # Count by category (aggregate across all issues in all responses)
-    critical_count = sum(
-        1
-        for r in responses
-        for issue in get_all_issues(r)
-        if issue.get("category") == "CRITICAL"
-    )
-    blocking_count = sum(
-        1
-        for r in responses
-        for issue in get_all_issues(r)
-        if issue.get("category") == "BLOCKING"
-    )
-    important_count = sum(
-        1
-        for r in responses
-        for issue in get_all_issues(r)
-        if issue.get("category") == "IMPORTANT"
-    )
-    routine_count = sum(
-        1
-        for r in responses
-        for issue in get_all_issues(r)
-        if issue.get("category") == "ROUTINE"
-    )
+    # Category counts from compute_metrics (single source of truth)
+    critical_count = metrics.get("critical", 0)
+    blocking_count = metrics.get("blocking", 0)
+    important_count = metrics.get("important", 0)
+    routine_count = metrics.get("style", 0)  # style includes both STYLE and ROUTINE categories
 
-    # Count by response type (aggregate across all issues in all responses)
-    fixed_count = sum(
-        1
-        for r in responses
-        for issue in get_all_issues(r)
-        if issue.get("response") == "FIXED"
-    )
-    deferred_count = sum(
-        1
-        for r in responses
-        for issue in get_all_issues(r)
-        if issue.get("response") == "DEFERRED"
-    )
-    acknowledged_count = sum(
-        1
-        for r in responses
-        for issue in get_all_issues(r)
-        if issue.get("response") == "ACKNOWLEDGED"
-    )
-    not_done_count = sum(
-        1
-        for r in responses
-        for issue in get_all_issues(r)
-        if issue.get("response") == "NOT_DONE"
-    )
-
-    # Count multi-issue responses and total issues
+    # Count multi-issue responses for display
     multi_issue_count = sum(1 for r in responses if "issues" in r and "analysis" in r)
-    total_issues = sum(len(get_all_issues(r)) for r in responses)
 
     # Build category breakdown
     category_breakdown = []
@@ -1001,6 +1315,7 @@ def post_consolidated_summary(
 - 📈 **Total Issues**: {total_issues} distinct issue(s) identified
 - 🔀 **Multi-Issue Comments**: {multi_issue_count} comment(s) contain multiple issues
 - 📝 **Commit**: {commit_hash}
+- 📁 **Files Modified**: {files_modified}
 
 **Category Breakdown**:
 {chr(10).join(category_breakdown) if category_breakdown else "  - No categorized responses"}
@@ -1120,7 +1435,19 @@ Please re-review this PR and confirm whether all prior issues are resolved.
 
 
 def main():
-    """Main execution function"""
+    """Main execution function.
+
+    .. deprecated::
+        Use LLM-generated consolidated reply instead. This function will be
+        removed in a future version in favor of direct LLM-generated responses.
+    """
+    # REV-hg6ce: Deprecation warning for main function
+    warnings.warn(
+        "main() is deprecated. Use LLM-generated consolidated reply instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
     print("🚀 STARTING: /commentreply systematic comment processing")
     print(
         "🎯 PURPOSE: Process ALL PR comments with proper threading to prevent missed comment bugs"
