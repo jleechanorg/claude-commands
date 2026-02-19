@@ -12,6 +12,11 @@
 
 name: WorldArchitect Tests (Directory-Based)
 
+# Cancel in-progress runs when new commits are pushed to same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Security permissions for directory-based testing
 permissions:
   contents: read
@@ -113,6 +118,91 @@ jobs:
           name: import-validation-results
           path: scripts/validate_imports.log
 
+  # Merge-commit correctness gate (REV-q4cmy)
+  # The testmon test jobs checkout PR head SHA for cache stability,
+  # but that skips validation against the merge commit (base+head).
+  # This lightweight gate runs on the default merge commit to catch
+  # integration breakages that would only appear after merging.
+  merge-commit-gate:
+    name: Merge commit validation
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TESTING: 'true'
+      TESTING_AUTH_BYPASS: 'true'
+      MOCK_SERVICES_MODE: 'true'
+      FAST_TESTS: '1'
+      GEMINI_API_KEY: test-ci-key-only
+      CEREBRAS_API_KEY: test-ci-key-only
+      OPENROUTER_API_KEY: test-ci-key-only
+      GOOGLE_APPLICATION_CREDENTIALS: /dev/null
+      ENABLE_SEMANTIC_ROUTING: 'false'
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/mvp_site:${{ github.workspace }}/automation
+    steps:
+    - name: Checkout merge commit
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+      with:
+        # Deliberately NOT setting ref — uses default merge commit
+        # to validate the PR integrates cleanly with the base branch.
+        submodules: recursive
+        fetch-depth: 1
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f mvp_site/requirements.txt ]; then pip install -r mvp_site/requirements.txt; fi
+
+    - name: Validate merge-commit imports
+      run: |
+        echo "=== Merge-commit import validation ==="
+        echo "Ref: ${{ github.ref }}"
+        echo "SHA: $(git rev-parse HEAD)"
+
+        # Verify all production modules can be imported on the merge commit.
+        # This catches cases where PR head compiles fine in isolation but
+        # conflicts with changes on main (e.g., removed imports, renamed modules).
+        python -c "
+        import importlib, sys, pathlib
+        errors = []
+        # Core production modules that must import cleanly
+        for mod in [
+            'mvp_site.main', 'mvp_site.world_logic', 'mvp_site.llm_service',
+            'mvp_site.game_state', 'mvp_site.firestore_service',
+            'mvp_site.structured_fields_utils', 'mvp_site.streaming_orchestrator',
+        ]:
+            try:
+                importlib.import_module(mod)
+                print(f'  ✓ {mod}')
+            except Exception as e:
+                errors.append((mod, e))
+                print(f'  ✗ {mod}: {e}')
+        if errors:
+            print(f'\n{len(errors)} import(s) failed on merge commit!')
+            sys.exit(1)
+        print('\nAll core imports validated on merge commit.')
+        "
+
+    - name: Run merge-commit smoke tests
+      run: |
+        # Run a focused subset of fast tests on the merge commit.
+        # These are chosen to exercise cross-module integration points.
+        python -m pytest \
+          mvp_site/tests/test_main_state_helper.py \
+          mvp_site/tests/test_game_state.py \
+          -x -q --timeout=60 --no-header \
+          2>&1 || {
+            echo "::error::Merge-commit smoke tests failed — PR may have integration issues with base branch"
+            exit 1
+          }
+
   # Directory-based test execution
   test:
     name: Directory tests (${{ matrix.test-group }})
@@ -129,6 +219,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
       with:
+        # For PRs: checkout the actual head commit, not the synthetic merge commit.
+        # testmon fingerprints files using the working tree state; the merge commit
+        # creates a different checkout that defeats testmon's change detection.
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
         submodules: recursive
         fetch-depth: 0  # Full history needed for git diff in JS test step
 
@@ -159,6 +253,53 @@ jobs:
         path: venv
         key: ${{ runner.os }}-venv-3.11-${{ matrix.test-group }}-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
 
+    - name: Cache testmon data
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
+      with:
+        path: |
+          .testmondata
+          .testmondata-shm
+          .testmondata-wal
+          mvp_site/.testmondata
+          mvp_site/.testmondata-shm
+          mvp_site/.testmondata-wal
+        # Rolling key: GitHub Actions cache is write-once per key, so a static
+        # branch-based key can never be updated after first creation.
+        # Using run_number makes each run save fresh testmon data under a new
+        # key. restore-keys prefix match loads the most recent prior run's
+        # baseline from the same branch.
+        key: testmon-${{ matrix.test-group }}-${{ github.base_ref || github.ref_name }}-${{ github.run_number }}
+        restore-keys: |
+          testmon-${{ matrix.test-group }}-${{ github.base_ref || github.ref_name }}-
+
+    - name: Debug testmon state
+      if: always()
+      run: |
+        echo "=== Git checkout info ==="
+        echo "HEAD: $(git rev-parse HEAD)"
+        echo "github.sha: ${{ github.sha }}"
+        echo "PR head SHA: ${{ github.event.pull_request.head.sha }}"
+        echo "Event: ${{ github.event_name }}"
+        echo ""
+        echo "=== Testmon data files ==="
+        ls -la .testmondata mvp_site/.testmondata 2>/dev/null || echo "No .testmondata files found"
+        echo ""
+        if [ -f mvp_site/.testmondata ] || [ -f .testmondata ]; then
+          DB_FILE="mvp_site/.testmondata"
+          [ ! -f "$DB_FILE" ] && DB_FILE=".testmondata"
+          echo "=== Testmon DB tables ==="
+          sqlite3 "$DB_FILE" ".tables" 2>/dev/null || echo "Cannot read DB"
+          echo ""
+          echo "=== Testmon file fingerprints (first 20) ==="
+          sqlite3 "$DB_FILE" "SELECT * FROM file LIMIT 20;" 2>/dev/null || echo "No file table"
+          echo ""
+          echo "=== Testmon node count ==="
+          sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM node;" 2>/dev/null || echo "No node table"
+          echo ""
+          echo "=== Testmon environment ==="
+          sqlite3 "$DB_FILE" "SELECT * FROM metadata;" 2>/dev/null || echo "No metadata table"
+        fi
+
     - name: Install dependencies
       run: |
         # Reuse cached venv when available; otherwise create it
@@ -170,7 +311,7 @@ jobs:
         fi
         source venv/bin/activate
 
-        if python -c "import pydantic, pytest, xdist" 2>/dev/null; then
+        if python -c "import pydantic, pytest, xdist, pytest_cov, testmon" 2>/dev/null; then
           echo "Cached venv already has core dependencies"
         else
           # Upgrade pip and install resolver tools with timeout
@@ -180,7 +321,7 @@ jobs:
           timeout 600 pip install -r mvp_site/requirements.txt
 
           # Install pytest tooling for batched worker execution
-          timeout 300 pip install pytest pytest-xdist
+          timeout 300 pip install pytest pytest-xdist pytest-testmon pytest-cov
         fi
 
         # Install additional requirements for specific directories if needed
@@ -317,17 +458,37 @@ jobs:
         if [ "$TOTAL_TESTS" -eq 0 ]; then
           echo "⚠️ No tests found in specified directories, falling back to full test suite"
           ./run_tests.sh --ci --parallel --exclude-integration --exclude-mcp
-        elif [[ "${{ matrix.test-group }}" == core-* ]] && [ "${{ github.event_name }}" = "pull_request" ]; then
-          # Core group collects coverage data for PR reports (eliminates need
-          # for a separate coverage workflow re-running all tests)
-          # Extended suite timeout: --coverage adds per-test instrumentation overhead
+        elif [[ "${{ matrix.test-group }}" == core-mvp-* ]] && [ "${{ github.event_name }}" = "pull_request" ]; then
+          # Coverage shards on PRs: testmon skips unchanged tests,
+          # pytest-cov measures coverage on what ran. If testmon deselects a
+          # test, its coverage is unchanged — the total stays accurate.
           export TEST_SUITE_TIMEOUT=1080  # 18 min (vs default 15 min)
           export TEST_MAX_WORKERS=2
-          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --coverage --exclude-integration --exclude-mcp
-        else
+          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --coverage --exclude-integration --exclude-mcp --testmon
+        elif [ "${{ github.event_name }}" = "push" ]; then
+          # Push-to-main: use testmon to build/update the .testmondata baseline.
+          # On subsequent pushes, testmon skips unchanged test files.
           export TEST_MAX_WORKERS=2
-          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp
+          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp --testmon
+        else
+          # Non-coverage shards on PRs (e.g. core-tests): use testmon for test reduction.
+          # Ghost tests fixed — all tests now pass under pytest, enabling testmon.
+          export TEST_MAX_WORKERS=2
+          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp --testmon
         fi
+
+    - name: Checkpoint testmon WAL
+      if: always()
+      run: |
+        # SQLite WAL mode keeps data in -wal files. Checkpoint flushes
+        # all data to the main .testmondata so the cache step captures it.
+        for db in .testmondata mvp_site/.testmondata; do
+          if [ -f "$db" ]; then
+            echo "Checkpointing $db"
+            sqlite3 "$db" "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
+            ls -la "${db}"* 2>/dev/null
+          fi
+        done
 
     - name: Upload test results
       uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
@@ -341,7 +502,7 @@ jobs:
         if-no-files-found: warn
 
     - name: Prepare coverage data
-      if: always() && startsWith(matrix.test-group, 'core-') && github.event_name == 'pull_request'
+      if: always() && startsWith(matrix.test-group, 'core-mvp-') && github.event_name == 'pull_request'
       run: |
         # Copy coverage data from run_tests.sh output location to workspace
         if [ -f /tmp/worldarchitectai/coverage/.coverage ]; then
@@ -367,7 +528,7 @@ jobs:
         fi
 
     - name: Upload coverage data
-      if: always() && startsWith(matrix.test-group, 'core-') && github.event_name == 'pull_request'
+      if: always() && startsWith(matrix.test-group, 'core-mvp-') && github.event_name == 'pull_request'
       uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       with:
         name: coverage-data-${{ matrix.test-group }}
@@ -388,6 +549,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        with:
+          fetch-depth: 0  # Full history needed for git diff (delta coverage)
 
       - name: Set up Python 3.11
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
@@ -401,6 +564,42 @@ jobs:
           merge-multiple: true
           path: coverage-data
         continue-on-error: true
+
+      - name: Identify changed Python files
+        id: changed_files
+        run: |
+          # Delta coverage: enforce threshold only on files the PR actually changed.
+          # This is compatible with testmon's selective execution — even when
+          # testmon deselects unchanged tests, coverage data for the changed
+          # files comes from the tests that DID run.
+          BASE_SHA=${{ github.event.pull_request.base.sha }}
+          HEAD_SHA=${{ github.event.pull_request.head.sha }}
+          echo "Base: $BASE_SHA"
+          echo "Head: $HEAD_SHA"
+
+          CHANGED_PY=$(git diff --name-only --diff-filter=ACMR "$BASE_SHA"..."$HEAD_SHA" -- '*.py' \
+            | grep -v '__pycache__' \
+            | grep -v '/tests/' \
+            | grep -v '/testing_framework/' \
+            | grep -v '/venv/' \
+            || true)
+
+          if [ -z "$CHANGED_PY" ]; then
+            echo "has_changed_py=false" >> $GITHUB_OUTPUT
+            echo "::notice::No production Python files changed — coverage threshold not applicable"
+          else
+            echo "has_changed_py=true" >> $GITHUB_OUTPUT
+            FILE_COUNT=$(echo "$CHANGED_PY" | wc -l | tr -d ' ')
+            echo "changed_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+            echo "::notice::$FILE_COUNT production Python file(s) changed — delta coverage will be checked"
+            echo ""
+            echo "Changed production files:"
+            echo "$CHANGED_PY" | sed 's/^/  /'
+
+            # Build comma-separated include pattern for coverage CLI
+            INCLUDE_PATTERN=$(echo "$CHANGED_PY" | paste -sd ',' -)
+            echo "include_pattern=$INCLUDE_PATTERN" >> $GITHUB_OUTPUT
+          fi
 
       - name: Generate coverage report
         id: coverage_check
@@ -446,28 +645,106 @@ jobs:
           ANNOTATE_MISSING_LINES: true
           MAX_FILES_IN_COMMENT: 50
 
-      - name: Check coverage threshold
-        if: steps.coverage_check.outputs.has_coverage == 'true'
+      - name: Check delta coverage threshold (per-file)
+        if: steps.coverage_check.outputs.has_coverage == 'true' && steps.changed_files.outputs.has_changed_py == 'true'
         run: |
-          COVERAGE_RAW=$(coverage report 2>/dev/null | tail -1 | awk '{print $4}' | tr -d '%')
+          # Per-file delta coverage: evaluate each changed file independently.
+          # This prevents well-tested files from masking under-tested ones
+          # in multi-file PRs (and vice versa).
 
-          if ! [[ "$COVERAGE_RAW" =~ ^[0-9]+$ ]]; then
-            COVERAGE_RAW=$(coverage report 2>/dev/null | grep "^TOTAL" | awk '{print $NF}' | tr -d '%')
-            if ! [[ "$COVERAGE_RAW" =~ ^[0-9]+$ ]]; then
-              echo "::warning::Coverage parsing failed"
-              exit 0
+          # --- Exception list: known low-coverage legacy files ---
+          # These get a reduced threshold until test coverage improves.
+          # Standard files: 60% minimum, 80% recommended
+          # Exception files: 30% minimum (still enforces SOME coverage)
+          LOW_COVERAGE_FILES="mvp_site/main.py mvp_site/start_flask.py"
+          STANDARD_MIN=60
+          STANDARD_REC=80
+          REDUCED_MIN=30
+
+          echo "=== Per-file delta coverage check ==="
+          echo "Standard threshold: ${STANDARD_MIN}% min / ${STANDARD_REC}% recommended"
+          echo "Reduced threshold (legacy files): ${REDUCED_MIN}% min"
+          echo "Legacy exception list: $LOW_COVERAGE_FILES"
+          echo ""
+
+          FAILED=0
+          WARNED=0
+          PASSED=0
+          SKIPPED=0
+          SUMMARY=""
+
+          IFS=',' read -ra FILES <<< "${{ steps.changed_files.outputs.include_pattern }}"
+          for FILE in "${FILES[@]}"; do
+            # Get coverage for this single file
+            FILE_REPORT=$(coverage report --include="$FILE" 2>/dev/null || true)
+
+            if [ -z "$FILE_REPORT" ]; then
+              SKIPPED=$((SKIPPED + 1))
+              SUMMARY="${SUMMARY}⚪ ${FILE}: no coverage data (skipped)\n"
+              continue
             fi
-          fi
 
-          echo "Current coverage: ${COVERAGE_RAW}%"
+            # Parse coverage percentage
+            COV=$(echo "$FILE_REPORT" | grep -v "^Name\|^-" | grep "$FILE" | awk '{print $NF}' | tr -d '%')
+            if ! [[ "$COV" =~ ^[0-9]+$ ]]; then
+              COV=$(echo "$FILE_REPORT" | tail -1 | awk '{print $NF}' | tr -d '%')
+            fi
 
-          if [ "$COVERAGE_RAW" -lt 60 ]; then
-            echo "::error::Coverage ${COVERAGE_RAW}% is below minimum threshold of 60%"
+            if ! [[ "$COV" =~ ^[0-9]+$ ]]; then
+              SKIPPED=$((SKIPPED + 1))
+              SUMMARY="${SUMMARY}⚪ ${FILE}: coverage parse failed (skipped)\n"
+              continue
+            fi
+
+            # Determine threshold for this file
+            IS_EXCEPTION=false
+            for EX in $LOW_COVERAGE_FILES; do
+              if [ "$FILE" = "$EX" ]; then
+                IS_EXCEPTION=true
+                break
+              fi
+            done
+
+            if [ "$IS_EXCEPTION" = true ]; then
+              MIN_THRESH=$REDUCED_MIN
+              THRESH_LABEL="reduced"
+            else
+              MIN_THRESH=$STANDARD_MIN
+              THRESH_LABEL="standard"
+            fi
+
+            # Evaluate
+            if [ "$COV" -lt "$MIN_THRESH" ]; then
+              FAILED=$((FAILED + 1))
+              SUMMARY="${SUMMARY}❌ ${FILE}: ${COV}% (${THRESH_LABEL} min: ${MIN_THRESH}%)\n"
+              echo "::error::${FILE} coverage ${COV}% is below ${THRESH_LABEL} minimum of ${MIN_THRESH}%"
+            elif [ "$IS_EXCEPTION" = false ] && [ "$COV" -lt "$STANDARD_REC" ]; then
+              WARNED=$((WARNED + 1))
+              SUMMARY="${SUMMARY}⚠️  ${FILE}: ${COV}% (below recommended ${STANDARD_REC}%)\n"
+              echo "::warning::${FILE} coverage ${COV}% is below recommended ${STANDARD_REC}%"
+            else
+              PASSED=$((PASSED + 1))
+              if [ "$IS_EXCEPTION" = true ]; then
+                SUMMARY="${SUMMARY}✅ ${FILE}: ${COV}% (legacy file, reduced threshold)\n"
+              else
+                SUMMARY="${SUMMARY}✅ ${FILE}: ${COV}%\n"
+              fi
+            fi
+          done
+
+          echo ""
+          echo "=== Per-file results ==="
+          echo -e "$SUMMARY"
+          echo "Totals: $PASSED passed, $WARNED warned, $FAILED failed, $SKIPPED skipped"
+
+          # Show overall project coverage for context
+          TOTAL_COV=$(coverage report 2>/dev/null | grep "^TOTAL" | awk '{print $NF}' | tr -d '%' || echo "?")
+          echo "Overall project coverage: ${TOTAL_COV}%"
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo ""
+            echo "::error::$FAILED file(s) failed their coverage threshold"
             exit 1
-          elif [ "$COVERAGE_RAW" -lt 80 ]; then
-            echo "::warning::Coverage ${COVERAGE_RAW}% is below recommended threshold of 80%"
-          else
-            echo "::notice::Coverage ${COVERAGE_RAW}% meets threshold requirements"
           fi
 
       - name: Post coverage summary

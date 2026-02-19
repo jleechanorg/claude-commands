@@ -353,7 +353,11 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict) -> bool:
         f"Work directly on the PR branch (gh pr checkout {pr_number}) and push changes when done."
     )
 
-    agent_specs = dispatcher.analyze_task_and_create_agents(task_description)
+    agent_specs = dispatcher.analyze_task_and_create_agents(
+        task_description,
+        wrap_prompt=True,
+        pr_update_mode=True,
+    )
     success = False
     for spec in agent_specs:
         agent_spec = {

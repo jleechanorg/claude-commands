@@ -6,8 +6,8 @@ Launches an orchestration agent to handle PR comment analysis, categorization,
 fixes, and responses using the /copilot workflow.
 
 Usage:
-    python3 scripts/copilot_execute.py [PR_NUMBER]
-    python3 scripts/copilot_execute.py --pr 5368
+    python3 .claude/scripts/copilot_execute.py [PR_NUMBER]
+    python3 .claude/scripts/copilot_execute.py --pr 5368
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ COPILOT_SKILL = str(PROJECT_ROOT / ".codex" / "skills" / "copilot-pr-processing"
 # Falls back to local orchestrate_unified.py when the package isn't installed.
 ORCH_CLI = shutil.which("orch")
 PAIR_INTEGRATION_MODULE = str(PROJECT_ROOT / ".claude" / "commands" / "_copilot_modules")
-PAIR_EXECUTE_SCRIPT = str(PROJECT_ROOT / "scripts" / "pair_execute.py")
+PAIR_EXECUTE_SCRIPT = str(PROJECT_ROOT / ".claude" / "scripts" / "pair_execute.py")
 
 # Ensure local copilot modules are importable without inline/dynamic imports.
 sys.path.insert(0, PAIR_INTEGRATION_MODULE)
@@ -254,7 +254,7 @@ def main():
             log(f"Auto-detected PR #{pr_number} from current branch")
         else:
             log("❌ ERROR: Could not determine PR number")
-            log("Usage: python3 scripts/copilot_execute.py [PR_NUMBER]")
+            log("Usage: python3 .claude/scripts/copilot_execute.py [PR_NUMBER]")
             sys.exit(1)
 
     log(f"🚀 Launching /copilot orchestration for PR #{pr_number}")
@@ -319,24 +319,32 @@ COMMENT URL TRACKING (MANDATORY):
     agent_cli = os.environ.get("COPILOT_AGENT_CLI", "codex")
     log(f"🤖 Using agent CLI: {agent_cli}")
 
-    # Prefer PyPI `orch` CLI; fall back to local script for development
-    if ORCH_CLI:
-        cmd = [
-            ORCH_CLI, "run",
-            "--agent-cli", agent_cli,
-            "--no-worktree",
-            task_description,
-        ]
-        log(f"🔧 Using PyPI package: {ORCH_CLI}")
-    else:
+    # Prefer local orchestration script so /copilot uses in-repo behavior.
+    # Fall back to PyPI `orch` only when local script is unavailable.
+    if Path(ORCHESTRATE_SCRIPT).exists():
         cmd = [
             "python3",
             ORCHESTRATE_SCRIPT,
             "--agent-cli", agent_cli,
             "--no-worktree",
+            "--wrap-prompt",
+            "--pr-update-mode",
             task_description,
         ]
-        log(f"🔧 Falling back to local script: {ORCHESTRATE_SCRIPT}")
+        log(f"🔧 Using local script: {ORCHESTRATE_SCRIPT}")
+    elif ORCH_CLI:
+        cmd = [
+            ORCH_CLI, "run",
+            "--agent-cli", agent_cli,
+            "--no-worktree",
+            "--wrap-prompt",
+            "--pr-update-mode",
+            task_description,
+        ]
+        log(f"🔧 Falling back to PyPI package: {ORCH_CLI}")
+    else:
+        log("❌ Neither local orchestrator script nor 'orch' CLI is available")
+        sys.exit(1)
 
     log(f"🔧 Command: {' '.join(cmd[:4])}... [task truncated]")
 

@@ -332,8 +332,10 @@ def main():
 
         try:
             orchestration = UnifiedOrchestration()
-            orchestration.orchestrate(task, options=options)
-            return 0
+            agents_created = orchestration.orchestrate(task, options=options)
+            if agents_created is None:
+                agents_created = 0
+            return 0 if agents_created > 0 else 1
         except KeyboardInterrupt:
             print("\n👋 Orchestration interrupted.")
             return 130
@@ -354,14 +356,24 @@ def main():
                 captured_stdout = io.StringIO()
                 with contextlib.redirect_stdout(captured_stdout):
                     dispatcher = TaskDispatcher()
-                    specs = dispatcher.analyze_task_and_create_agents(task, forced_cli=agent_cli)
+                    specs = dispatcher.analyze_task_and_create_agents(
+                        task,
+                        forced_cli=agent_cli,
+                        wrap_prompt=True,
+                        pr_update_mode=True,
+                    )
                 dispatcher_logs = captured_stdout.getvalue().strip()
                 if dispatcher_logs:
                     print(dispatcher_logs, file=sys.stderr)
                 print(_json_dumps_safe(specs))
             else:
                 dispatcher = TaskDispatcher()
-                specs = dispatcher.analyze_task_and_create_agents(task, forced_cli=agent_cli)
+                specs = dispatcher.analyze_task_and_create_agents(
+                    task,
+                    forced_cli=agent_cli,
+                    wrap_prompt=True,
+                    pr_update_mode=True,
+                )
                 print(f"Planned {len(specs)} agent(s):")
                 for idx, spec in enumerate(specs, start=1):
                     print(f"{idx}. {spec.get('name')} ({spec.get('cli', 'default')})")
@@ -383,7 +395,12 @@ def main():
         try:
             dispatcher = TaskDispatcher()
             task = " ".join(args.task).strip()
-            specs = dispatcher.analyze_task_and_create_agents(task, forced_cli=agent_cli)
+            specs = dispatcher.analyze_task_and_create_agents(
+                task,
+                forced_cli=agent_cli,
+                wrap_prompt=True,
+                pr_update_mode=True,
+            )
 
             if args.model:
                 for spec in specs:

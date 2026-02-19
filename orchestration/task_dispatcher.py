@@ -7,6 +7,7 @@ Handles dynamic agent creation with Agent-to-Agent communication support
 from __future__ import annotations
 
 import glob
+import hashlib
 import json
 import logging
 import os
@@ -30,6 +31,7 @@ from .a2a_monitor import get_monitor
 from .constants import (
     AGENT_SESSION_TIMEOUT_SECONDS,
     DEFAULT_MAX_CONCURRENT_AGENTS,
+    MAX_AGENT_NAME_LENGTH,
     RUNTIME_CLI_TIMEOUT_SECONDS,
     TIMESTAMP_MODULO,
 )
@@ -45,6 +47,7 @@ CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
 MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL", "MiniMax-M2.5")
 # MiniMax key can be provided via MINIMAX_API_KEY and propagated to Anthropic SDK var
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
+PREFLIGHT_CACHE_TTL_SECONDS = 3600
 
 # CLI validation constants imported from centralized validation library
 # CLI_VALIDATION_TEST_PROMPT, CLI_VALIDATION_TIMEOUT_SECONDS
@@ -59,14 +62,15 @@ CLI_PROFILES = {
         "conversation_dir": "~/.claude/conversations",
         "continue_flag": "--continue",
         "restart_env": "CLAUDE_RESTART",
+        # If model is not specified, omit --model and let the CLI choose its default.
         "command_template": (
-            "{binary} --model {model} -p @{prompt_file} "
+            "{binary}{model_arg} -p @{prompt_file} "
             "--output-format stream-json --verbose{continue_flag} --dangerously-skip-permissions"
         ),
         "stdin_template": "/dev/null",
         "quote_prompt": False,
-        # Unset API key to force OAuth/interactive auth (consistent with other CLIs)
-        "env_unset": ["ANTHROPIC_API_KEY"],
+        # Unset API key and Base URL to force OAuth (not MiniMax proxy)
+        "env_unset": ["ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL"],
         # Empty env_set for consistency with other profiles (only minimax uses it)
         "env_set": {},
         "detection_keywords": ["claude", "anthropic"],
@@ -80,7 +84,8 @@ CLI_PROFILES = {
         "conversation_dir": None,
         "continue_flag": "",
         "restart_env": "CODEX_RESTART",
-        "command_template": "{binary} exec --yolo --skip-git-repo-check",
+        # If model is not specified, omit --model and let the CLI choose its default.
+        "command_template": "{binary} exec --yolo --skip-git-repo-check{model_arg}",
         "stdin_template": "{prompt_file}",
         "quote_prompt": True,
         # Unset API key to force OAuth/interactive auth (consistent with other CLIs)
@@ -107,6 +112,7 @@ CLI_PROFILES = {
         # Model can be overridden via agent_spec["model"] (defaults to GEMINI_MODEL)
         # YOLO mode enabled to allow file access outside workspace (user directive)
         # NOTE: Prompt must come via stdin (not -p flag which is deprecated and only appends to stdin)
+        # Gemini CLI generally expects a model; default to GEMINI_MODEL when not specified.
         "command_template": "{binary} -m {model} --yolo",
         "stdin_template": "{prompt_file}",
         "quote_prompt": False,
@@ -133,8 +139,9 @@ CLI_PROFILES = {
         "conversation_dir": None,
         "continue_flag": "",
         "restart_env": "CURSOR_RESTART",
-        # Cursor Agent CLI with -f (force) for non-interactive execution, configurable model
-        "command_template": f"{{binary}} -f -p @{{prompt_file}} --model {CURSOR_MODEL} --output-format text",
+        # Cursor Agent CLI with -f (force) for non-interactive execution.
+        # We pass an explicit model: requested model if provided, otherwise CURSOR_MODEL.
+        "command_template": "{binary} -f -p @{prompt_file} --model {model} --output-format text",
         "stdin_template": "/dev/null",
         "quote_prompt": False,
         # No known API key to unset for Cursor (uses its own auth)
@@ -243,7 +250,7 @@ def _kill_tmux_session_if_exists(name: str, socket_name: str | None = None) -> N
 class TaskDispatcher:
     """Creates and manages dynamic agents for orchestration tasks"""
 
-    def __init__(self, orchestration_dir: str = None):
+    def __init__(self, orchestration_dir: str = None, log_dir: str = None):
         self.orchestration_dir = orchestration_dir or os.path.dirname(__file__)
         self.tasks_dir = os.path.join(self.orchestration_dir, "tasks")
         # Removed complex task management - system just creates agents on demand
@@ -256,6 +263,14 @@ class TaskDispatcher:
         self._last_agent_check = 0  # Track when agents were last refreshed
         self.result_dir = "/tmp/orchestration_results"
         os.makedirs(self.result_dir, exist_ok=True)
+        # Normalize user-provided log_dir (expand ~ and make absolute)
+        if log_dir:
+            self.log_dir = os.path.abspath(os.path.expanduser(log_dir))
+        else:
+            self.log_dir = "/tmp/orchestration_logs"
+        os.makedirs(self.log_dir, exist_ok=True)
+        self.preflight_cache_dir = os.path.join(self.log_dir, "preflight_cache")
+        os.makedirs(self.preflight_cache_dir, exist_ok=True)
         self._mock_claude_path = None
         # Cached within this dispatcher session if user provides a non-default base branch.
         self._interactive_base_ref: str | None = None
@@ -298,6 +313,79 @@ class TaskDispatcher:
 
     def _tmux_base_command(self) -> list[str]:
         return ["tmux", "-L", self.tmux_socket_name]
+
+    @staticmethod
+    def _normalize_model_for_preflight_cache(cli_name: str, model: str | None) -> str:
+        if cli_name == "gemini":
+            return model if model and model != "sonnet" else GEMINI_MODEL
+        if cli_name == "cursor":
+            return model if model and model != "sonnet" else CURSOR_MODEL
+        if cli_name == "claude":
+            return model or "sonnet"
+        if cli_name == "minimax":
+            return MINIMAX_MODEL
+        return model or "<cli-default>"
+
+    def _preflight_cache_path(self, cli_name: str, cli_path: str, model: str | None) -> str:
+        model_token = self._normalize_model_for_preflight_cache(cli_name, model)
+        payload = {
+            "cli_name": cli_name,
+            "cli_path": cli_path,
+            "model": model_token,
+        }
+        key = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()[:24]
+        return os.path.join(self.preflight_cache_dir, f"{cli_name}-{key}.json")
+
+    def _read_preflight_cache(self, cli_name: str, cli_path: str, model: str | None) -> bool:
+        cache_path = self._preflight_cache_path(cli_name, cli_path, model)
+        if not os.path.exists(cache_path):
+            return False
+        try:
+            with open(cache_path, encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            print(f"   ⚠️ preflight cache invalid for {cli_name} at {cache_path} (cache_miss)")
+            return False
+
+        validated_at = data.get("validated_at")
+        if not isinstance(validated_at, (int, float)):
+            print(f"   ⚠️ preflight cache missing timestamp for {cli_name} at {cache_path} (cache_miss)")
+            return False
+
+        age_seconds = time.time() - float(validated_at)
+        if age_seconds > PREFLIGHT_CACHE_TTL_SECONDS:
+            print(
+                f"   ⏱️ preflight cache expired for {cli_name} at {cache_path} "
+                f"(age={age_seconds:.0f}s, ttl={PREFLIGHT_CACHE_TTL_SECONDS}s)"
+            )
+            return False
+
+        print(f"   ♻️ preflight cache hit for {cli_name} at {cache_path} (age={age_seconds:.0f}s)")
+        return True
+
+    def _write_preflight_cache(self, cli_name: str, cli_path: str, model: str | None) -> None:
+        cache_path = self._preflight_cache_path(cli_name, cli_path, model)
+        os.makedirs(self.preflight_cache_dir, exist_ok=True)
+        payload = {
+            "cli_name": cli_name,
+            "cli_path": cli_path,
+            "model": self._normalize_model_for_preflight_cache(cli_name, model),
+            "validated_at": time.time(),
+            "ttl_seconds": PREFLIGHT_CACHE_TTL_SECONDS,
+        }
+        tmp_path = f"{cache_path}.tmp"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f)
+            os.replace(tmp_path, cache_path)
+            print(f"   💾 preflight cache write for {cli_name}: {cache_path}")
+        except OSError:
+            try:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except OSError:
+                pass
+            print(f"   ⚠️ preflight cache write failed for {cli_name}: {cache_path}")
 
     def get_tmux_attach_command(self, session_name: str) -> str:
         return f"tmux -L {self.tmux_socket_name} attach -t {session_name}"
@@ -635,21 +723,44 @@ class TaskDispatcher:
             else:
                 candidate = f"{base_name}-{timestamp}"
 
+        candidate = self._truncate_agent_name(candidate)
+
         # If collision, add timestamp suffix
         original_candidate = candidate
         counter = 1
+        tried_timestamp_only = False
         while candidate in existing:
             if task_suffix:
-                candidate = f"{original_candidate}-{timestamp}"
-                if candidate in existing:
-                    candidate = f"{original_candidate}-{timestamp}-{counter}"
+                # Only try timestamp-only once, then use counter suffix
+                if not tried_timestamp_only:
+                    candidate = self._truncate_agent_name(original_candidate, str(timestamp))
+                    tried_timestamp_only = True
+                else:
+                    candidate = self._truncate_agent_name(
+                        original_candidate, f"{timestamp}-{counter}"
+                    )
                     counter += 1
             else:
-                candidate = f"{original_candidate}-{counter}"
+                candidate = self._truncate_agent_name(original_candidate, str(counter))
                 counter += 1
 
         self.active_agents.add(candidate)
         return candidate
+
+    @staticmethod
+    def _truncate_agent_name(name: str, suffix: str = "") -> str:
+        """Enforce backend-safe agent name length while preserving collision suffixes."""
+        if not suffix and len(name) <= MAX_AGENT_NAME_LENGTH:
+            return name
+
+        if suffix:
+            suffix_token = f"-{suffix}"
+            available = MAX_AGENT_NAME_LENGTH - len(suffix_token)
+            if available <= 0:
+                return suffix_token[-MAX_AGENT_NAME_LENGTH:]
+            return f"{name[:available]}{suffix_token}"
+
+        return name[:MAX_AGENT_NAME_LENGTH]
 
     def _extract_workspace_config(self, task_description: str):
         """Extract workspace configuration from task description if present.
@@ -955,6 +1066,9 @@ class TaskDispatcher:
                 print(f"   ⚠️ Unknown CLI type '{cli_name}' for {agent_name} - assuming available (runtime fallback will catch failures)")
                 return True
 
+            if self._read_preflight_cache(cli_name, cli_path, model):
+                return True
+
             # Use centralized two-phase validation
             result = validate_cli_two_phase(
                 cli_name=cli_name,
@@ -967,7 +1081,8 @@ class TaskDispatcher:
                 skip_help=skip_help,
                 agent_name=agent_name,
             )
-
+            if result.success:
+                self._write_preflight_cache(cli_name, cli_path, model)
             return result.success
         except Exception as e:
             # DESIGN DECISION: Unknown exceptions are treated as FAILURE (return False) for fail-safe behavior.
@@ -1086,20 +1201,28 @@ class TaskDispatcher:
         except Exception as e:
             return {"a2a_enabled": True, "error": str(e), "timestamp": time.time()}
 
-    def analyze_task_and_create_agents(self, task_description: str, wrap_prompt: bool = True, forced_cli: str | None = None) -> list[dict]:
+    def analyze_task_and_create_agents(
+        self,
+        task_description: str,
+        wrap_prompt: bool = False,
+        forced_cli: str | None = None,
+        pr_update_mode: bool = False,
+    ) -> list[dict]:
         """
         Create appropriate agent for the given task with PR context awareness.
 
         Args:
             task_description: The task description to analyze and create agents for.
-            wrap_prompt: When True (default), wraps prompt with PR mode instructions,
+            wrap_prompt: When True, wraps prompt with PR mode instructions,
                 including PR context detection (subprocess calls to ``gh``), PR mode
                 prompt templates, ``pr_context`` injection into agent spec, and
-                execution guidelines. When False, all of that is skipped: no subprocess
+                execution guidelines. When False (default), all of that is skipped: no subprocess
                 calls to ``gh``, prompt is the raw ``task_description``, and
                 ``pr_context`` is not injected into the agent spec.
             forced_cli: Optional; the CLI to force agent selection (e.g., from --fixpr-agent flag).
                 When provided, this overrides any CLI detection logic and forces the use of the specified CLI.
+            pr_update_mode: When True, enables PR context detection and "PR UPDATE MODE" prompt wrapping.
+                When False (default), PR context detection is skipped and the task stays in "NEW PR MODE".
 
         Returns:
             List of agent specification dictionaries.
@@ -1118,8 +1241,8 @@ class TaskDispatcher:
         elif agent_cli != "claude":
             print(f"🤖 Selected {agent_cli.capitalize()} CLI based on task request")
 
-        if wrap_prompt:
-            # Detect PR context
+        if wrap_prompt and pr_update_mode:
+            # Detect PR context only when explicitly enabled.
             pr_number, mode = self._detect_pr_context(task_description)
 
             # Show user what was detected
@@ -1167,6 +1290,8 @@ class TaskDispatcher:
             else:
                 print("\n🆕 No PR context detected - Agent will create NEW PR")
                 print("   New branch will be created from main")
+        elif wrap_prompt:
+            pr_number, mode = None, "create"
         else:
             pr_number, mode = None, "create"
 
@@ -1292,8 +1417,8 @@ Complete the task, then use /pr to create a new pull request."""
         if len(cli_chain) > 1:
             agent_spec["cli_chain"] = cli_chain
 
-        # Add PR context if updating existing PR (only when wrapping is enabled)
-        if wrap_prompt and mode == "update":
+        # Add PR context only when explicitly enabled.
+        if wrap_prompt and pr_update_mode and mode == "update":
             agent_spec["pr_context"] = {"mode": mode, "pr_number": pr_number}
 
         # Add workspace configuration if specified
@@ -1668,14 +1793,15 @@ Complete the task, then use /pr to create a new pull request."""
         mcp_agent_name = agent_spec.get("mcp_agent_name")
         bead_id = agent_spec.get("bead_id")
         validation_command = agent_spec.get("validation_command")
-        model = agent_spec.get("model", "sonnet")  # Default to sonnet if not specified
-
-        # Sanitize model to prevent injection
-        raw_model = str(model)
-        if not re.fullmatch(r"[A-Za-z0-9_.\-]+", raw_model):
-            print(f"❌ Invalid model name requested: {raw_model!r}")
-            return False
-        model = raw_model
+        # Model is optional. If absent, do NOT force a default here; let each CLI choose its own default.
+        model = agent_spec.get("model")
+        if model is not None:
+            # Sanitize model to prevent injection
+            raw_model = str(model)
+            if not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
+                print(f"❌ Invalid model name requested: {raw_model!r}")
+                return False
+            model = raw_model
         no_new_pr = bool(agent_spec.get("no_new_pr"))
         no_new_branch = bool(agent_spec.get("no_new_branch"))
         no_worktree = bool(agent_spec.get("no_worktree")) or os.environ.get("AI_ORCH_NO_WORKTREE", "").lower() in {
@@ -1807,7 +1933,10 @@ Complete the task, then use /pr to create a new pull request."""
 
             # Pre-flight validation: Test if CLI can actually work (API connectivity/quota check)
             # Validate ALL CLIs in chain to ensure fallback options are ready
-            print(f"🔍 Starting pre-flight validation for {agent_name} (CLI chain: {', '.join(cli_chain)}, model: {model})")
+            model_label = model if model is not None else "<cli-default>"
+            print(
+                f"🔍 Starting pre-flight validation for {agent_name} (CLI chain: {', '.join(cli_chain)}, model: {model_label})"
+            )
             self._print_tmp_subdirectories(correlation_id=agent_name)
             validated_clis = []  # List of (cli_name, cli_path) tuples that passed validation
             validated_cli = None
@@ -1820,7 +1949,9 @@ Complete the task, then use /pr to create a new pull request."""
                     print(f"⚠️ CLI '{candidate_cli}' binary not found, skipping validation")
                     continue
                 
-                print(f"   🧪 Validating {CLI_PROFILES[candidate_cli]['display_name']} CLI at {candidate_path} (model: {model})...")
+                print(
+                    f"   🧪 Validating {CLI_PROFILES[candidate_cli]['display_name']} CLI at {candidate_path} (model: {model_label})..."
+                )
                 if self._validate_cli_availability(candidate_cli, candidate_path, agent_name, model=model):
                     validated_clis.append((candidate_cli, candidate_path))
                     print(f"   ✅ {CLI_PROFILES[candidate_cli]['display_name']} CLI validation passed for {agent_name}")
@@ -1873,7 +2004,6 @@ Complete the task, then use /pr to create a new pull request."""
                 elif model == MINIMAX_MODEL and agent_cli != "minimax":
                     # If switching away from MiniMax, reset to sonnet default
                     model = "sonnet"
-                # Update model in agent_spec for downstream use
                 agent_spec["model"] = model
 
             use_worktree = not no_worktree
@@ -2183,7 +2313,7 @@ Agent Configuration:
                 f.write(full_prompt)
 
             # Create log directory
-            log_dir = "/tmp/orchestration_logs"
+            log_dir = self.log_dir
             os.makedirs(log_dir, exist_ok=True)
             log_file = os.path.join(log_dir, f"{agent_token}_{run_suffix}.log")
             legacy_log_file = os.path.join(log_dir, f"{agent_token}.log")
@@ -2195,13 +2325,18 @@ Agent Configuration:
             prompt_file_quoted = shlex.quote(prompt_file)
 
             prompt_env_export = f"export ORCHESTRATION_PROMPT_FILE={prompt_file_quoted}"
-            
-            # Export GITHUB_TOKEN for cursor-agent authentication if available
-            github_token = os.environ.get("GITHUB_TOKEN")
-            github_token_export = ""
-            if github_token:
-                github_token_quoted = shlex.quote(github_token)
-                github_token_export = f"export GITHUB_TOKEN={github_token_quoted}"
+
+            # Token handling: never inline the token value into generated scripts.
+            # Prefer env GITHUB_TOKEN; if missing, fall back to $HOME/.token at runtime.
+            # Strip trailing whitespace/newlines to prevent authentication failures.
+            github_token_export = r"""
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -f "$HOME/.token" ]; then
+    token="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/\r$//' "$HOME/.token")"
+    case "$token" in
+        *[![:space:]]*) export GITHUB_TOKEN="$token" ;;
+    esac
+fi
+""".strip()
 
             agent_name_quoted = shlex.quote(agent_name)
             agent_dir_quoted = shlex.quote(agent_dir)
@@ -2261,9 +2396,20 @@ Agent Configuration:
                     attempt_prompt_value_quoted if attempt_profile.get("quote_prompt") else attempt_prompt_value_raw
                 )
 
-                # For MiniMax, always use MINIMAX_MODEL - never use chain-wide model
-                # This ensures runtime execution uses the correct model for MiniMax API
-                runtime_model = MINIMAX_MODEL if attempt_cli == "minimax" else model
+                # Resolve runtime model per CLI so optional model=None never renders as "None".
+                if attempt_cli == "minimax":
+                    runtime_model = MINIMAX_MODEL
+                elif attempt_cli == "gemini":
+                    runtime_model = model or GEMINI_MODEL
+                elif attempt_cli == "cursor":
+                    runtime_model = model or CURSOR_MODEL
+                elif attempt_cli == "claude":
+                    runtime_model = model or "sonnet"
+                else:
+                    runtime_model = model
+
+                # Build model_arg for CLIs that use --model flag (claude, codex)
+                model_arg = f" --model {shlex.quote(runtime_model)}" if runtime_model and attempt_cli in {"claude", "codex"} else ""
 
                 attempt_cli_command = (
                     attempt_profile["command_template"]
@@ -2275,6 +2421,7 @@ Agent Configuration:
                         prompt_file_quoted=attempt_prompt_value_quoted,
                         continue_flag=attempt_continue_segment,
                         model=runtime_model,
+                        model_arg=model_arg,
                     )
                     .strip()
                 )
@@ -2320,8 +2467,6 @@ Agent Configuration:
                         attempt_env_set_commands += f"export ANTHROPIC_API_KEY={shlex.quote(runtime_minimax_key)}\n"
 
                 # Build cleanup commands to prevent env vars from leaking between CLI attempts
-                # MiniMax sets ANTHROPIC_BASE_URL, ANTHROPIC_MODEL, etc. which must be cleaned up
-                # before other CLIs run (especially Claude which would otherwise call MiniMax endpoint)
                 env_cleanup_vars = ["ANTHROPIC_BASE_URL", "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL", "API_TIMEOUT_MS", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"]
                 # Only add cleanup for non-MiniMax attempts; MiniMax sets these intentionally
                 attempt_env_cleanup_commands = ""
@@ -2338,12 +2483,20 @@ Agent Configuration:
                 # This is a quick test to verify CLI can run before the full task
                 # Note: Each CLI uses its own model - cursor uses CURSOR_MODEL, gemini uses GEMINI_MODEL
                 if attempt_cli == "gemini":
-                    preflight_cmd = f'{attempt_binary_value} -m {shlex.quote(GEMINI_MODEL)} --yolo --allowed-mcp-server-names none'
+                    preflight_model = model or GEMINI_MODEL
+                    preflight_cmd = (
+                        f'{attempt_binary_value} -m {shlex.quote(preflight_model)} --yolo --allowed-mcp-server-names none'
+                    )
                 elif attempt_cli == "cursor":
-                    # Use CURSOR_MODEL to match the actual command_template which hardcodes this model
-                    preflight_cmd = f'{attempt_binary_value} -f -p - --model {shlex.quote(CURSOR_MODEL)} --output-format text'
+                    preflight_model = model or CURSOR_MODEL
+                    preflight_cmd = (
+                        f'{attempt_binary_value} -f -p - --model {shlex.quote(preflight_model)} --output-format text'
+                    )
                 elif attempt_cli == "claude":
-                    preflight_cmd = f'{attempt_binary_value} -p - --model {shlex.quote(model)} --output-format text'
+                    preflight_model = runtime_model or "sonnet"
+                    preflight_cmd = (
+                        f'{attempt_binary_value} -p - --model {shlex.quote(preflight_model)} --output-format text'
+                    )
                 elif attempt_cli == "minimax":
                     # MiniMax uses Claude Code with MiniMax API
                     preflight_cmd = f'{attempt_binary_value} -p - --model {shlex.quote(MINIMAX_MODEL)} --output-format text'
