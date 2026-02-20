@@ -2,7 +2,7 @@
 # /teste - Run End2End Tests (Mock Mode)
 # Runs end2end tests using mocked services (current behavior)
 
-set -e
+set -euo pipefail
 
 # Set test mode environment
 export TEST_MODE=mock
@@ -19,7 +19,7 @@ echo "💰 Cost: $0 (no real services)"
 echo ""
 
 # Run tests with pattern if provided
-if [ -n "$1" ]; then
+if [ -n "${1:-}" ]; then
     echo "🔍 Pattern filtering not yet implemented in run_e2e_tests.sh"
     echo "🔍 Running all end-to-end tests..."
 fi

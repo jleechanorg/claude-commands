@@ -2,13 +2,13 @@
 # /tester - Run End2End Tests (Real Mode)
 # Runs end2end tests using actual services (Firestore, Gemini)
 
-set -e
+set -euo pipefail
 
 # Set test mode environment
 export TEST_MODE=real
 
 # Check for required environment variables
-if [[ -z "$GEMINI_API_KEY" ]]; then
+if [[ -z "${GEMINI_API_KEY:-}" ]]; then
     echo "❌ ERROR: GEMINI_API_KEY not set"
     echo "💡 Set up test environment:"
     echo "   export GEMINI_API_KEY=your_api_key"
@@ -44,7 +44,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 # Run tests with pattern if provided
-if [ -n "$1" ]; then
+if [ -n "${1:-}" ]; then
     echo "🔍 Pattern filtering not yet implemented in run_e2e_tests.sh"
     echo "🔍 Running all end-to-end tests..."
 fi

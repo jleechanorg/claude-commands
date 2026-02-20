@@ -3,7 +3,7 @@
 # PR Comment Formatter - CLI script for generating structured PR comment responses
 # Usage: ./pr-comment-format.sh [template|interactive|json <file>]
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -45,7 +45,7 @@ show_usage() {
 # Function to run the formatter
 run_formatter() {
     local mode=$1
-    local file=$2
+    local file=${2:-}
 
     cd "$PROJECT_ROOT"
 
@@ -97,8 +97,10 @@ run_interactive_mode() {
     # Get summary title
     read -p "Enter summary title: " summary_title
 
-    # Create temporary Python script for interactive mode
-    cat > /tmp/pr_interactive.py << 'EOF'
+    # Create temporary Python script for interactive mode (use mktemp to avoid symlink attacks)
+    temp_script=$(mktemp) || { echo "Failed to create temp file"; exit 1; }
+    trap 'rm -f "$temp_script"' EXIT
+    cat > "$temp_script" << 'EOF'
 import sys
 sys.path.insert(0, 'scripts')
 from pr_comment_formatter import PRCommentFormatter, CommentStatus
@@ -192,15 +194,15 @@ EOF
 
     # Run the interactive script
     cd "$PROJECT_ROOT"
-    python3 /tmp/pr_interactive.py "$summary_title"
-
-    # Clean up
-    rm -f /tmp/pr_interactive.py
+    python3 "$temp_script" "$summary_title"
 }
 
 # Function to create example JSON file
 create_example_json() {
-    cat > /tmp/example_pr_response.json << 'EOF'
+    # Use mktemp to avoid symlink attacks
+    temp_json=$(mktemp --suffix=.json) || { echo "Failed to create temp file"; exit 1; }
+    trap 'rm -f "$temp_json"' EXIT
+    cat > "$temp_json" << 'EOF'
 {
     "summary_title": "Example PR Response",
     "tasks": [
@@ -257,8 +259,8 @@ create_example_json() {
 }
 EOF
 
-    print_color $GREEN "Example JSON file created at: /tmp/example_pr_response.json"
-    echo "You can use it with: $0 json /tmp/example_pr_response.json"
+    print_color $GREEN "Example JSON file created at: $temp_json"
+    echo "You can use it with: $0 json $temp_json"
 }
 
 # Main script logic

@@ -2,13 +2,13 @@
 # /testerc - Run End2End Tests (Real Mode + Capture)
 # Runs end2end tests using real services AND captures data for mock generation
 
-set -e
+set -euo pipefail
 
 # Set test mode environment
 export TEST_MODE=capture
 
 # Check for required environment variables (updated naming)
-if [[ -z "$TEST_GEMINI_API_KEY" ]]; then
+if [[ -z "${TEST_GEMINI_API_KEY:-}" ]]; then
     echo "❌ ERROR: TEST_GEMINI_API_KEY not set"
     echo "💡 Set up test environment:"
     echo "   export TEST_GEMINI_API_KEY=your_test_api_key"
@@ -51,7 +51,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 # Run tests with pattern if provided
-if [ -n "$1" ]; then
+if [ -n "${1:-}" ]; then
     echo "🔍 Pattern filtering not yet implemented in run_e2e_tests.sh"
     echo "🔍 Running all end-to-end tests..."
 fi

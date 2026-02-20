@@ -86,5 +86,7 @@ case "$COMMAND" in
     *)
         echo "Command $COMMAND not yet implemented in wrapper"
         echo "Memory context was retrieved but command execution skipped"
+        read -r -p "Press Enter to continue..." _
+        exit 1
         ;;
 esac

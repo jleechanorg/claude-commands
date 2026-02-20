@@ -11,8 +11,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Get the root of the working tree
-git_root=$(git rev-parse --show-toplevel 2>/dev/null)
-if [ $? -ne 0 ]; then
+if ! git_root=$(git rev-parse --show-toplevel 2>/dev/null) || [[ -z "$git_root" ]]; then
     echo "[Unable to find git root]"
     exit 1
 fi
