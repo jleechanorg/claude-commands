@@ -18,6 +18,17 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# Failure handler
+handle_failure() {
+    local lineno="$1"
+    log_error "Installation failed at line $lineno. Check the output above for details."
+    if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+        return 1
+    else
+        exit 1
+    fi
+}
+
 # Source directory (where plugin files live)
 PLUGIN_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -54,7 +65,11 @@ check_prerequisites() {
     if [ ${#missing_tools[@]} -ne 0 ]; then
         log_error "Missing required tools: ${missing_tools[*]}"
         log_info "Please install the missing tools and run this script again."
-        exit 1
+        if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+            return 1
+        else
+            exit 1
+        fi
     fi
 
     # Check for Claude Code CLI
@@ -68,7 +83,7 @@ check_prerequisites() {
 
 # Directory setup
 setup_directories() {
-    log_info "Setting up ~/.claude directory structure..."
+    log_info "Setting up $CLAUDE_HOME directory structure..."
 
     mkdir -p "$CLAUDE_AGENTS_DIR"
     mkdir -p "$CLAUDE_COMMANDS_DIR"
@@ -201,7 +216,7 @@ validate_installation() {
     log_info "  Scripts:  $scripts_found  → $CLAUDE_SCRIPTS_DIR"
     log_info "  Skills:   $skills_found  → $CLAUDE_SKILLS_DIR"
 
-    if [ "$agents_found" -gt 0 ] && [ "$commands_found" -gt 0 ] && [ "$scripts_found" -gt 0 ]; then
+    if [ "$agents_found" -gt 0 ] && [ "$commands_found" -gt 0 ] && [ "$scripts_found" -gt 0 ] && [ "$skills_found" -gt 0 ]; then
         log_success "Claude Commands installation completed successfully!"
     else
         log_warning "Installation completed but some components may be missing"
@@ -249,7 +264,7 @@ main() {
 }
 
 # Error handling
-trap 'log_error "Installation failed at line $LINENO. Check the output above for details."; exit 1' ERR
+trap 'handle_failure $LINENO' ERR
 
 # Run main installation if script is executed directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

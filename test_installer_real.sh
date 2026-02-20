@@ -1,12 +1,18 @@
 #!/bin/bash
 set -e
 
-# Mock CLAUDE_HOME
-MOCK_CLAUDE_HOME="$(mktemp -d)"
+# Resolve script directory for absolute path invocation
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Mock CLAUDE_HOME with portable mktemp
+MOCK_CLAUDE_HOME="$(mktemp -d -t claudetest.XXXXXX 2>/dev/null || mktemp -d /tmp/claudetest.XXXXXX)"
 export CLAUDE_HOME="$MOCK_CLAUDE_HOME"
 
+# Ensure cleanup on exit
+trap 'rm -rf "$MOCK_CLAUDE_HOME"' EXIT
+
 echo "🧪 Testing REAL installation to $MOCK_CLAUDE_HOME"
-./install-claude-commands.sh
+"$SCRIPT_DIR/install-claude-commands.sh"
 
 echo "🔍 Verifying installation..."
 
@@ -36,22 +42,33 @@ else
 fi
 
 SCRIPT_COUNT=$(find "$MOCK_CLAUDE_HOME/scripts" -type f | wc -l | tr -d ' ')
+
 echo "✅ Found $SCRIPT_COUNT scripts"
 
+
+
 # Verify scripts are executable
-for script in $(find "$MOCK_CLAUDE_HOME/scripts" -type f); do
-    if [ -x "$script" ]; then
-        :
-    else
+
+while IFS= read -r -d '' script; do
+
+    if [ ! -x "$script" ]; then
+
         echo "❌ Script $(basename "$script") is NOT executable"
+
         exit 1
+
     fi
-done
+
+done < <(find "$MOCK_CLAUDE_HOME/scripts" -type f -print0)
+
 echo "✅ All scripts are executable"
 
+
+
 SKILL_COUNT=$(find "$MOCK_CLAUDE_HOME/skills" -type f | wc -l | tr -d ' ')
+
 echo "✅ Found $SKILL_COUNT skills"
 
-# Clean up
-rm -rf "$MOCK_CLAUDE_HOME"
+
+
 echo "✨ Test PASSED!"
