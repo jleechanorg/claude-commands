@@ -18,8 +18,27 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# Failure handler - avoids hard exits by prompting user
+handle_failure() {
+    local lineno="$1"
+    log_error "Installation failed at line $lineno. Check the output above for details."
+    if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+        return 1
+    else
+        if [ -t 1 ]; then
+            read -p "Press Enter to exit..."
+        fi
+        exit 1
+    fi
+}
+
 # Source directory (where plugin files live)
-PLUGIN_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Try script directory first, then fall back to parent
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_SRC_DIR="$SCRIPT_DIR"
+if [ ! -d "$PLUGIN_SRC_DIR/.claude" ]; then
+    PLUGIN_SRC_DIR="$(dirname "$SCRIPT_DIR")"
+fi
 
 # Active Claude Code directories (system-level)
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
@@ -33,8 +52,6 @@ SRC_AGENTS_DIR="$PLUGIN_SRC_DIR/.claude/agents"
 SRC_COMMANDS_DIR="$PLUGIN_SRC_DIR/.claude/commands"
 SRC_SCRIPTS_DIR="$PLUGIN_SRC_DIR/.claude/scripts"
 SRC_SKILLS_DIR="$PLUGIN_SRC_DIR/.claude/skills"
-
-# Legacy config
 ORCHESTRATION_DIR="orchestration"
 AUTOMATION_DIR="automation"
 CLAUDE_BOT_DIR="claude-bot-commands"
@@ -54,7 +71,14 @@ check_prerequisites() {
     if [ ${#missing_tools[@]} -ne 0 ]; then
         log_error "Missing required tools: ${missing_tools[*]}"
         log_info "Please install the missing tools and run this script again."
-        exit 1
+        if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+            return 1
+        else
+            if [ -t 1 ]; then
+                read -p "Press Enter to exit..."
+            fi
+            exit 1
+        fi
     fi
 
     # Check for Claude Code CLI
@@ -84,92 +108,63 @@ setup_directories() {
     log_success "Directory structure ready"
 }
 
-# Shared install function
+# Shared installer helper with validation
 install_component() {
-    local src_dir="$1"
-    local dest_dir="$2"
-    local pattern="$3"
-    local component_name="$4"
-    local make_executable="${5:-false}"
+    local name="$1"
+    local src="$2"
+    local dest="$3"
+    local make_executable="${4:-false}"
 
-    log_info "Installing $component_name to $dest_dir ..."
-    local count=0
+    log_info "Installing $name to $dest ..."
 
-    if [ -d "$src_dir" ]; then
-        # Use find to match the pattern but avoid subdirectories initially for basic components
-        for file in "$src_dir"/$pattern; do
-            # The pattern might not match anything, which leaves the literal string with *
-            [ -e "$file" ] || continue
-            
-            if [ -f "$file" ]; then
-                cp -f "$file" "$dest_dir/"
-                
-                if [ "$make_executable" = "true" ]; then
-                    chmod +x "$dest_dir/$(basename "$file")" 2>/dev/null || true
-                fi
-                
-                log_info "  Installed: $(basename "$file")"
-                count=$((count + 1))
-            fi
-        done
+    if [ -d "$src" ]; then
+        mkdir -p "$dest"
+        # Copy contents recursively including subdirectories
+        # Using /. ensures we copy the contents of the directory, not the directory itself
+        if ! cp -rf "$src/." "$dest/"; then
+            log_error "Failed to copy $name from $src to $dest"
+            return 1
+        fi
+
+        # Validate copy by comparing file counts
+        local src_count dest_count
+        src_count=$(find "$src" -type f 2>/dev/null | wc -l | tr -d ' ')
+        dest_count=$(find "$dest" -type f 2>/dev/null | wc -l | tr -d ' ')
+
+        if [ "$src_count" -ne "$dest_count" ]; then
+            log_error "File count mismatch for $name: expected $src_count, got $dest_count"
+            return 1
+        fi
+
+        if [ "$make_executable" = "true" ]; then
+            # Make only files executable, not directories
+            find "$dest" -type f -exec chmod +x {} + 2>/dev/null || true
+        fi
+
+        log_success "Installed $src_count $name files"
     else
-        log_warning "No $component_name source directory found at $src_dir"
+        log_warning "No $name source directory found at $src"
     fi
-
-    log_success "Installed $count $component_name"
-    return 0
 }
 
 # Copy agents to ~/.claude/agents/
 install_agents() {
-    install_component "$SRC_AGENTS_DIR" "$CLAUDE_AGENTS_DIR" "*.md" "agents" "false"
+    install_component "agents" "$SRC_AGENTS_DIR" "$CLAUDE_AGENTS_DIR"
 }
 
 # Copy commands to ~/.claude/commands/
 install_commands() {
-    log_info "Installing commands to $CLAUDE_COMMANDS_DIR ..."
-
-    local command_count=0
-
-    if [ -d "$SRC_COMMANDS_DIR" ]; then
-        # Copy all top-level files (including scripts and extensionless files)
-        for file in "$SRC_COMMANDS_DIR"/*; do
-            [ -e "$file" ] || continue
-            if [ -f "$file" ]; then
-                cp -f "$file" "$CLAUDE_COMMANDS_DIR/"
-                # Set executable if it's a script or has no extension
-                if [[ "$file" == *.sh ]] || [[ "$file" == *.py ]] || [[ ! "$(basename "$file")" == *.* ]]; then
-                    chmod +x "$CLAUDE_COMMANDS_DIR/$(basename "$file")" 2>/dev/null || true
-                fi
-                log_info "  Installed: $(basename "$file")"
-                command_count=$((command_count + 1))
-            fi
-        done
-        
-        # Copy subdirectories (e.g. _copilot_modules, _shared, cerebras)
-        for subdir in "$SRC_COMMANDS_DIR"/*/; do
-            [ -e "$subdir" ] || continue
-            if [ -d "$subdir" ]; then
-                local subdir_name
-                subdir_name="$(basename "$subdir")"
-                mkdir -p "$CLAUDE_COMMANDS_DIR/$subdir_name"
-                if ! cp -a "$subdir." "$CLAUDE_COMMANDS_DIR/$subdir_name/" 2>/dev/null; then
-                    log_error "  Failed to install command subdir: $subdir_name"
-                    continue
-                fi
-                log_info "  Installed command subdir: $subdir_name"
-            fi
-        done
-    else
-        log_warning "No commands source directory found at $SRC_COMMANDS_DIR"
-    fi
-
-    log_success "Installed $command_count command files"
+    install_component "commands" "$SRC_COMMANDS_DIR" "$CLAUDE_COMMANDS_DIR"
 }
 
 # Copy scripts to ~/.claude/scripts/
 install_scripts() {
-    install_component "$SRC_SCRIPTS_DIR" "$CLAUDE_SCRIPTS_DIR" "*" "scripts" "true"
+    install_component "scripts" "$SRC_SCRIPTS_DIR" "$CLAUDE_SCRIPTS_DIR" "true"
+}
+
+# Copy skills to ~/.claude/skills/
+install_skills() {
+    install_component "skills" "$SRC_SKILLS_DIR" "$CLAUDE_SKILLS_DIR"
 }
 
 # Copy skills to ~/.claude/skills/
@@ -192,7 +187,6 @@ install_infrastructure() {
 
     if [ -d "$PLUGIN_SRC_DIR/$INFRASTRUCTURE_DIR" ]; then
         for script in "$PLUGIN_SRC_DIR/$INFRASTRUCTURE_DIR"/*.sh; do
-            [ -e "$script" ] || continue
             if [ -f "$script" ]; then
                 chmod +x "$script" 2>/dev/null || true
                 infra_count=$((infra_count + 1))
@@ -235,10 +229,11 @@ validate_installation() {
     local scripts_found=0
     local skills_found=0
 
-    [ -d "$CLAUDE_AGENTS_DIR" ] && agents_found=$(find "$CLAUDE_AGENTS_DIR" -name "*.md" | wc -l | tr -d ' ')
-    [ -d "$CLAUDE_COMMANDS_DIR" ] && commands_found=$(find "$CLAUDE_COMMANDS_DIR" -type f | wc -l | tr -d ' ')
-    [ -d "$CLAUDE_SCRIPTS_DIR" ] && scripts_found=$(find "$CLAUDE_SCRIPTS_DIR" -type f | wc -l | tr -d ' ')
-    [ -d "$CLAUDE_SKILLS_DIR" ] && skills_found=$(find "$CLAUDE_SKILLS_DIR" -name "*.md" | wc -l | tr -d ' ')
+    # Recursive count to verify all files are present
+    [ -d "$CLAUDE_AGENTS_DIR" ] && agents_found=$(find "$CLAUDE_AGENTS_DIR" -type f | wc -l)
+    [ -d "$CLAUDE_COMMANDS_DIR" ] && commands_found=$(find "$CLAUDE_COMMANDS_DIR" -type f | wc -l)
+    [ -d "$CLAUDE_SCRIPTS_DIR" ] && scripts_found=$(find "$CLAUDE_SCRIPTS_DIR" -type f | wc -l)
+    [ -d "$CLAUDE_SKILLS_DIR" ] && skills_found=$(find "$CLAUDE_SKILLS_DIR" -type f | wc -l)
 
     log_info "Installation summary:"
     log_info "  Agents:   $agents_found  → $CLAUDE_AGENTS_DIR"
@@ -294,7 +289,7 @@ main() {
 }
 
 # Error handling
-trap 'log_error "Installation failed at line $LINENO. Check the output above for details."; exit 1' ERR
+trap 'handle_failure $LINENO' ERR
 
 # Run main installation if script is executed directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
