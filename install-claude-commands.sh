@@ -3,7 +3,18 @@
 # 🚨 Claude Commands Installation Script
 # Installs the complete Claude Code command system for development workflows
 
-set -euo pipefail
+# Detect whether this script is sourced or executed directly
+IS_SOURCED=false
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    IS_SOURCED=true
+fi
+
+# Use strict mode for executed scripts; keep sourced mode safe for parent shells
+if [[ "$IS_SOURCED" == "false" ]]; then
+    set -euo pipefail
+else
+    set -uo pipefail
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -22,15 +33,18 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 handle_failure() {
     local lineno="$1"
     log_error "Installation failed at line $lineno. Check the output above for details."
-    if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
-        return 1
-    else
-        exit 1
+    if [ -t 0 ]; then
+        read -r -p "Press Enter to continue..."
     fi
+    return 1
 }
 
 # Source directory (where plugin files live)
-PLUGIN_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_SRC_DIR="$SCRIPT_DIR"
+if [ ! -d "$PLUGIN_SRC_DIR/.claude" ] && [ -d "$SCRIPT_DIR/../.claude" ]; then
+    PLUGIN_SRC_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
 
 # Active Claude Code directories (system-level)
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
@@ -65,11 +79,10 @@ check_prerequisites() {
     if [ ${#missing_tools[@]} -ne 0 ]; then
         log_error "Missing required tools: ${missing_tools[*]}"
         log_info "Please install the missing tools and run this script again."
-        if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
-            return 1
-        else
-            exit 1
+        if [ -t 0 ]; then
+            read -r -p "Press Enter to continue..."
         fi
+        return 1
     fi
 
     # Check for Claude Code CLI
@@ -112,16 +125,35 @@ install_component() {
         mkdir -p "$dest"
         # Copy contents recursively including subdirectories
         # Using /. ensures we copy the contents of the directory, not the directory itself
-        cp -rf "$src/." "$dest/"
-        
+        if ! cp -rf "$src/." "$dest/"; then
+            log_error "Failed to copy $name from $src to $dest"
+            return 1
+        fi
+
+        local src_count dest_count
+        if ! src_count=$(find "$src" -type f | wc -l | tr -d ' '); then
+            log_error "Failed to count source $name files in $src"
+            return 1
+        fi
+        if ! dest_count=$(find "$dest" -type f | wc -l | tr -d ' '); then
+            log_error "Failed to count destination $name files in $dest"
+            return 1
+        fi
+
+        if [ "$dest_count" -lt "$src_count" ]; then
+            log_warning "Installed $dest_count/$src_count $name files in $dest"
+            return 1
+        fi
+
         if [ "$make_executable" = "true" ]; then
             # Make only files executable, not directories
-            find "$dest" -type f -exec chmod +x {} + 2>/dev/null || true
+            if ! find "$dest" -type f -exec chmod +x {} +; then
+                log_error "Failed to set executable bit on $name files in $dest"
+                return 1
+            fi
         fi
-        
-        local count
-        count=$(find "$src" -type f | wc -l | tr -d ' ')
-        log_success "Installed $count $name files"
+
+        log_success "Installed $dest_count $name files"
     else
         log_warning "No $name source directory found at $src"
     fi
