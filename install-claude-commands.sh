@@ -68,7 +68,7 @@ check_prerequisites() {
 
 # Directory setup
 setup_directories() {
-    log_info "Setting up ~/.claude directory structure..."
+    log_info "Setting up $CLAUDE_HOME directory structure..."
 
     mkdir -p "$CLAUDE_AGENTS_DIR"
     mkdir -p "$CLAUDE_COMMANDS_DIR"
@@ -84,25 +84,45 @@ setup_directories() {
     log_success "Directory structure ready"
 }
 
-# Copy agents to ~/.claude/agents/
-install_agents() {
-    log_info "Installing agents to $CLAUDE_AGENTS_DIR ..."
+# Shared install function
+install_component() {
+    local src_dir="$1"
+    local dest_dir="$2"
+    local pattern="$3"
+    local component_name="$4"
+    local make_executable="${5:-false}"
 
-    local agent_count=0
+    log_info "Installing $component_name to $dest_dir ..."
+    local count=0
 
-    if [ -d "$SRC_AGENTS_DIR" ]; then
-        for file in "$SRC_AGENTS_DIR"/*.md; do
+    if [ -d "$src_dir" ]; then
+        # Use find to match the pattern but avoid subdirectories initially for basic components
+        for file in "$src_dir"/$pattern; do
+            # The pattern might not match anything, which leaves the literal string with *
+            [ -e "$file" ] || continue
+            
             if [ -f "$file" ]; then
-                cp -f "$file" "$CLAUDE_AGENTS_DIR/"
-                log_info "  Installed agent: $(basename "$file")"
-                agent_count=$((agent_count + 1))
+                cp -f "$file" "$dest_dir/"
+                
+                if [ "$make_executable" = "true" ]; then
+                    chmod +x "$dest_dir/$(basename "$file")" 2>/dev/null || true
+                fi
+                
+                log_info "  Installed: $(basename "$file")"
+                count=$((count + 1))
             fi
         done
     else
-        log_warning "No agents source directory found at $SRC_AGENTS_DIR"
+        log_warning "No $component_name source directory found at $src_dir"
     fi
 
-    log_success "Installed $agent_count agents"
+    log_success "Installed $count $component_name"
+    return 0
+}
+
+# Copy agents to ~/.claude/agents/
+install_agents() {
+    install_component "$SRC_AGENTS_DIR" "$CLAUDE_AGENTS_DIR" "*.md" "agents" "false"
 }
 
 # Copy commands to ~/.claude/commands/
@@ -112,20 +132,31 @@ install_commands() {
     local command_count=0
 
     if [ -d "$SRC_COMMANDS_DIR" ]; then
-        # Copy top-level .md and .py files
-        for file in "$SRC_COMMANDS_DIR"/*.md "$SRC_COMMANDS_DIR"/*.py; do
+        # Copy all top-level files (including scripts and extensionless files)
+        for file in "$SRC_COMMANDS_DIR"/*; do
+            [ -e "$file" ] || continue
             if [ -f "$file" ]; then
                 cp -f "$file" "$CLAUDE_COMMANDS_DIR/"
+                # Set executable if it's a script or has no extension
+                if [[ "$file" == *.sh ]] || [[ "$file" == *.py ]] || [[ ! "$(basename "$file")" == *.* ]]; then
+                    chmod +x "$CLAUDE_COMMANDS_DIR/$(basename "$file")" 2>/dev/null || true
+                fi
+                log_info "  Installed: $(basename "$file")"
                 command_count=$((command_count + 1))
             fi
         done
+        
         # Copy subdirectories (e.g. _copilot_modules, _shared, cerebras)
         for subdir in "$SRC_COMMANDS_DIR"/*/; do
+            [ -e "$subdir" ] || continue
             if [ -d "$subdir" ]; then
                 local subdir_name
                 subdir_name="$(basename "$subdir")"
                 mkdir -p "$CLAUDE_COMMANDS_DIR/$subdir_name"
-                cp -rf "$subdir"* "$CLAUDE_COMMANDS_DIR/$subdir_name/" 2>/dev/null || true
+                if ! cp -a "$subdir." "$CLAUDE_COMMANDS_DIR/$subdir_name/" 2>/dev/null; then
+                    log_error "  Failed to install command subdir: $subdir_name"
+                    continue
+                fi
                 log_info "  Installed command subdir: $subdir_name"
             fi
         done
@@ -138,44 +169,12 @@ install_commands() {
 
 # Copy scripts to ~/.claude/scripts/
 install_scripts() {
-    log_info "Installing scripts to $CLAUDE_SCRIPTS_DIR ..."
-
-    local script_count=0
-
-    if [ -d "$SRC_SCRIPTS_DIR" ]; then
-        for file in "$SRC_SCRIPTS_DIR"/*; do
-            if [ -f "$file" ]; then
-                cp -f "$file" "$CLAUDE_SCRIPTS_DIR/"
-                chmod +x "$CLAUDE_SCRIPTS_DIR/$(basename "$file")" 2>/dev/null || true
-                log_info "  Installed script: $(basename "$file")"
-                script_count=$((script_count + 1))
-            fi
-        done
-    else
-        log_warning "No scripts source directory found at $SRC_SCRIPTS_DIR"
-    fi
-
-    log_success "Installed $script_count scripts"
+    install_component "$SRC_SCRIPTS_DIR" "$CLAUDE_SCRIPTS_DIR" "*" "scripts" "true"
 }
 
 # Copy skills to ~/.claude/skills/
 install_skills() {
-    log_info "Installing skills to $CLAUDE_SKILLS_DIR ..."
-
-    local skill_count=0
-
-    if [ -d "$SRC_SKILLS_DIR" ]; then
-        for file in "$SRC_SKILLS_DIR"/*.md; do
-            if [ -f "$file" ]; then
-                cp -f "$file" "$CLAUDE_SKILLS_DIR/"
-                skill_count=$((skill_count + 1))
-            fi
-        done
-    else
-        log_warning "No skills source directory found at $SRC_SKILLS_DIR"
-    fi
-
-    log_success "Installed $skill_count skills"
+    install_component "$SRC_SKILLS_DIR" "$CLAUDE_SKILLS_DIR" "*.md" "skills" "false"
 }
 
 # Infrastructure installation (root-level scripts, not copied to ~/.claude)
@@ -193,6 +192,7 @@ install_infrastructure() {
 
     if [ -d "$PLUGIN_SRC_DIR/$INFRASTRUCTURE_DIR" ]; then
         for script in "$PLUGIN_SRC_DIR/$INFRASTRUCTURE_DIR"/*.sh; do
+            [ -e "$script" ] || continue
             if [ -f "$script" ]; then
                 chmod +x "$script" 2>/dev/null || true
                 infra_count=$((infra_count + 1))
@@ -233,17 +233,20 @@ validate_installation() {
     local agents_found=0
     local commands_found=0
     local scripts_found=0
+    local skills_found=0
 
-    [ -d "$CLAUDE_AGENTS_DIR" ] && agents_found=$(find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -name "*.md" | wc -l)
-    [ -d "$CLAUDE_COMMANDS_DIR" ] && commands_found=$(find "$CLAUDE_COMMANDS_DIR" -maxdepth 1 \( -name "*.md" -o -name "*.py" \) | wc -l)
-    [ -d "$CLAUDE_SCRIPTS_DIR" ] && scripts_found=$(find "$CLAUDE_SCRIPTS_DIR" -maxdepth 1 -type f | wc -l)
+    [ -d "$CLAUDE_AGENTS_DIR" ] && agents_found=$(find "$CLAUDE_AGENTS_DIR" -name "*.md" | wc -l | tr -d ' ')
+    [ -d "$CLAUDE_COMMANDS_DIR" ] && commands_found=$(find "$CLAUDE_COMMANDS_DIR" -type f | wc -l | tr -d ' ')
+    [ -d "$CLAUDE_SCRIPTS_DIR" ] && scripts_found=$(find "$CLAUDE_SCRIPTS_DIR" -type f | wc -l | tr -d ' ')
+    [ -d "$CLAUDE_SKILLS_DIR" ] && skills_found=$(find "$CLAUDE_SKILLS_DIR" -name "*.md" | wc -l | tr -d ' ')
 
     log_info "Installation summary:"
     log_info "  Agents:   $agents_found  → $CLAUDE_AGENTS_DIR"
     log_info "  Commands: $commands_found  → $CLAUDE_COMMANDS_DIR"
     log_info "  Scripts:  $scripts_found  → $CLAUDE_SCRIPTS_DIR"
+    log_info "  Skills:   $skills_found  → $CLAUDE_SKILLS_DIR"
 
-    if [ "$agents_found" -gt 0 ] && [ "$commands_found" -gt 0 ] && [ "$scripts_found" -gt 0 ]; then
+    if [ "$agents_found" -gt 0 ] && [ "$commands_found" -gt 0 ] && [ "$scripts_found" -gt 0 ] && [ "$skills_found" -gt 0 ]; then
         log_success "Claude Commands installation completed successfully!"
     else
         log_warning "Installation completed but some components may be missing"
