@@ -166,7 +166,7 @@ jobs:
             --project="${{ env.GCP_PROJECT }}" \
             --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview" \
+            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview,PRODUCTION_MODE=true,TESTING_AUTH_BYPASS=true,ALLOW_TEST_AUTH_BYPASS=true" \
             --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
             --memory="$WORLDARCH_MEMORY" \
             --cpu="$WORLDARCH_CPU" \

@@ -42,6 +42,7 @@ from orchestration.task_dispatcher import (
     CURSOR_MODEL,
     GEMINI_MODEL,
     MINIMAX_MODEL,
+    apply_minimax_auth_env,
     TaskDispatcher,
 )
 
@@ -61,11 +62,15 @@ from .codex_config import (
     COMMENT_VALIDATION_MARKER_SUFFIX as SHARED_COMMENT_VALIDATION_SUFFIX,
 )
 from .codex_config import (
+    AUTOMATION_COMMIT_MESSAGE_PATTERN,
+    AUTOMATION_WORKFLOW_NAMES,
     CODEX_TRACKING_INSTRUCTION,
     DEFAULT_ASSISTANT_MENTIONS,
     build_automation_marker,
+    build_automation_commit_message_pattern,
     build_comment_intro,
     is_automation_comment,
+    is_automation_commit_message,
 )
 from .codex_config import (
     FIX_COMMENT_MARKER_PREFIX as SHARED_FIX_COMMENT_PREFIX,
@@ -549,20 +554,30 @@ class JleechanorgPRMonitor:
             repo_full = f"{owner}/{repo}"
 
             mergeable = pr.get("mergeable")
-            if mergeable is None:
+            # Handle both legacy REST API field (mergeableState) and GraphQL field (mergeStateStatus)
+            merge_state_status = pr.get("mergeStateStatus") or pr.get("mergeableState")
+            if mergeable is None and merge_state_status is None:
                 try:
                     result = AutomationUtils.execute_subprocess_with_timeout(
-                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable,mergeStateStatus"],
                         timeout=30,
                         check=False,
                     )
                     if result.returncode == 0:
                         data = json.loads(result.stdout or "{}")
                         mergeable = data.get("mergeable")
-                except Exception:
+                        merge_state_status = data.get("mergeStateStatus")
+                except Exception as e:
+                    self.logger.warning(f"Failed to fetch mergeable status for PR {pr_number}: {e}")
                     mergeable = None
+                    merge_state_status = None
 
-            if mergeable == "CONFLICTING":
+            # GitHub API: mergeable can be Boolean (false=conflicts) or String ("CONFLICTING"/"MERGEABLE")
+            # mergeStateStatus: "DIRTY"/"CONFLICTING" means conflicts, "CLEAN" means mergeable
+            is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
+            is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
+            is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+            if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                 actionable.append({**pr, "repo_full": repo_full})
                 continue
 
@@ -1826,6 +1841,7 @@ Your response MUST follow this exact structure for clarity:
                 "@PROMPT_FILE",
                 "--output-format",
                 "text",
+                "--dangerously-skip-permissions",
                 "--strict-mcp-config",
             ]
             # Use env_set from CLI_PROFILES for consistency with task_dispatcher
@@ -1834,9 +1850,7 @@ Your response MUST follow this exact structure for clarity:
                 env[key] = value
             # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
             if cli_name == "minimax":
-                runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
-                if runtime_minimax_key:
-                    env["ANTHROPIC_API_KEY"] = runtime_minimax_key
+                env = apply_minimax_auth_env(env)
 
         try:
             result = validate_cli_two_phase(
@@ -2097,14 +2111,24 @@ Your response MUST follow this exact structure for clarity:
         try:
             # Fetch mergeable status
             result = AutomationUtils.execute_subprocess_with_timeout(
-                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable,mergeStateStatus"],
                 timeout=30,
                 check=False,
             )
             if result.returncode == 0:
                 data = json.loads(result.stdout or "{}")
-                if data.get("mergeable") == "CONFLICTING":
+                # GitHub CLI: mergeable can be Boolean (false) or String ("CONFLICTING"/"MERGEABLE")
+                # mergeStateStatus: "DIRTY"/"CONFLICTING" means conflicts, "CLEAN" means mergeable
+                mergeable = data.get("mergeable")
+                merge_state_status = data.get("mergeStateStatus", "")
+                is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
+                is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
+                is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+                if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                     is_conflicting = True
+            else:
+                self.logger.warning(f"gh pr view failed for PR #{pr_number} with returncode {result.returncode}")
+                status_unknown = True
 
             # Check for failing checks
             is_failing = has_failing_checks(repo_full, pr_number)
@@ -2399,14 +2423,24 @@ Your response MUST follow this exact structure for clarity:
         try:
             # Fetch mergeable status
             result = AutomationUtils.execute_subprocess_with_timeout(
-                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable,mergeStateStatus"],
                 timeout=30,
                 check=False,
             )
             if result.returncode == 0:
                 data = json.loads(result.stdout or "{}")
-                if data.get("mergeable") == "CONFLICTING":
+                # GitHub CLI: mergeable can be Boolean (false) or String ("CONFLICTING"/"MERGEABLE")
+                # mergeStateStatus: "DIRTY"/"CONFLICTING" means conflicts, "CLEAN" means mergeable
+                mergeable = data.get("mergeable")
+                merge_state_status = data.get("mergeStateStatus", "")
+                is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
+                is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
+                is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+                if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                     is_conflicting = True
+            else:
+                self.logger.warning(f"gh pr view failed for PR #{pr_number} with returncode {result.returncode}")
+                status_unknown = True
 
             # Check for failing checks
             is_failing = has_failing_checks(repo_full, pr_number)
@@ -2892,11 +2926,20 @@ Your response MUST follow this exact structure for clarity:
         return None
 
     def _is_head_commit_from_codex(self, commit_details: dict[str, str | None] | None) -> bool:
-        """Determine if the head commit was authored or marked by Codex."""
+        """Determine if the head commit was authored or marked by any automation workflow.
+
+        This method checks for automation-authored commits using:
+        1. Actor fields (author_login, committer_login, etc.) matching automation bot names
+        2. Commit message markers from ANY workflow (codex, fixpr, fixcomment, comment-validation)
+
+        The message detection is centralized via is_automation_commit_message() which
+        automatically supports all workflows defined in AUTOMATION_WORKFLOW_NAMES.
+        """
 
         if not commit_details:
             return False
 
+        # Check actor fields for automation bot names
         actor_fields = [
             commit_details.get("author_login"),
             commit_details.get("author_email"),
@@ -2911,15 +2954,16 @@ Your response MUST follow this exact structure for clarity:
                 if any(pattern.search(field) for pattern in self._codex_actor_patterns):
                     return True
 
+        # Check commit messages for ANY automation workflow marker
+        # This uses centralized detection that supports all workflows automatically
         message_values = [
             commit_details.get("message_headline"),
             commit_details.get("message"),
         ]
 
         for message in message_values:
-            if message and isinstance(message, str):
-                if self._codex_commit_message_pattern.search(message):
-                    return True
+            if is_automation_commit_message(message):
+                return True
 
         return False
 
@@ -3862,23 +3906,37 @@ Your response MUST follow this exact structure for clarity:
                 # Check for conflicts or failing checks first
                 is_conflicting = False
                 is_failing = False
+                status_unknown = False
 
                 try:
                     result = AutomationUtils.execute_subprocess_with_timeout(
-                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full_name, "--json", "mergeable"],
+                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full_name, "--json", "mergeable,mergeStateStatus"],
                         timeout=30,
                         check=False,
                     )
                     if result.returncode == 0:
                         data = json.loads(result.stdout or "{}")
-                        if data.get("mergeable") == "CONFLICTING":
+                        # GitHub CLI: mergeable can be Boolean (false) or String ("CONFLICTING"/"MERGEABLE")
+                        # mergeStateStatus: "DIRTY"/"CONFLICTING" means conflicts, "CLEAN" means mergeable
+                        mergeable = data.get("mergeable")
+                        merge_state_status = data.get("mergeStateStatus", "")
+                        is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
+                        is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
+                        is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+                        if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                             is_conflicting = True
+                    else:
+                        # Treat status as unknown; don't assume the PR is clean
+                        self.logger.warning(f"gh pr view failed for PR #{pr_number} with returncode {result.returncode}")
+                        status_unknown = True
 
                     is_failing = has_failing_checks(repo_full_name, pr_number)
                 except Exception as e:
+                    # Treat status as unknown; don't assume the PR is clean
                     self.logger.warning(
                         f"⚠️ Error checking fixpr eligibility for #{pr_number} ({type(e).__name__}): {e}"
                     )
+                    status_unknown = True
 
                 # If PR has conflicts or failing checks, mark as actionable (bypass is_pr_actionable skip)
                 if is_conflicting or is_failing:
@@ -3886,7 +3944,12 @@ Your response MUST follow this exact structure for clarity:
                         f"🔄 PR #{pr_number} has conflicts or failing checks - marking actionable for fixpr"
                     )
                     # Skip is_pr_actionable check and proceed directly to processing
-                # Only check is_pr_actionable if no issues found
+                # If status is unknown due to API failure, don't skip - process conservatively
+                elif status_unknown:
+                    self.logger.info(
+                        f"ℹ️ PR #{pr_number} status unknown (API failure) - proceeding conservatively"
+                    )
+                # Only check is_pr_actionable if no issues found and status is known
                 elif not self.is_pr_actionable(pr):
                     skipped_count += 1
                     continue

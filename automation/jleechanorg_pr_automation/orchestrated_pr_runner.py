@@ -796,7 +796,7 @@ def dispatch_agent_for_pr(
         f"   ```bash\n"
         f"   gh pr view {pr_number} --json mergeable,mergeStateStatus\n"
         f"   ```\n\n"
-        f'   STEP 2 - If mergeable == "CONFLICTING" or mergeStateStatus == "DIRTY", resolve conflicts:\n'
+        f'   STEP 2 - If mergeable is False or mergeStateStatus == "DIRTY", resolve conflicts:\n'
         f"   ```bash\n"
         f"   # Fetch the remote PR branch and create/reset local fixpr branch\n"
         f"   git fetch origin {branch}\n"
@@ -828,7 +828,7 @@ def dispatch_agent_for_pr(
         f"   STEP 4 - Verify merge succeeded:\n"
         f"   ```bash\n"
         f"   gh pr view {pr_number} --json mergeable,mergeStateStatus\n"
-        f'   # Should now show mergeable: "MERGEABLE" or "UNKNOWN" (not "CONFLICTING")\n'
+        f'   # Should now show mergeable: true or null (not false)\n'
         f"   ```\n\n"
         f"   ⚠️ DO NOT PROCEED TO TEST FIXES UNTIL MERGE CONFLICTS ARE RESOLVED AND PUSHED.\n\n"
         "🚨🚨🚨 PRE-FLIGHT CHECK - VERIFY TOOL AVAILABILITY (MANDATORY FIRST STEP):\n"
@@ -972,12 +972,15 @@ def run_fixpr_batch(
         return
 
     # Filter to PRs that need action (merge conflicts or failing checks)
+    # Note: GitHub GraphQL API returns mergeable as Boolean (null/unknown, true, false)
+    # False means conflicts, null means mergeability is being computed
     actionable = []
     for pr in prs:
         repo_full = pr["repo_full"]
         pr_number = pr["number"]
         mergeable = pr.get("mergeable")
-        if mergeable == "CONFLICTING":
+        # mergeable is Boolean: false = conflicts, true = can merge, null = unknown/computing
+        if mergeable is False:
             actionable.append(pr)
             continue
         if has_failing_checks(repo_full, pr_number):
