@@ -48,6 +48,71 @@ MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL", "MiniMax-M2.5")
 # MiniMax key can be provided via MINIMAX_API_KEY and propagated to Anthropic SDK var
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 PREFLIGHT_CACHE_TTL_SECONDS = 3600
+MINIMAX_KEY_PATTERN = re.compile(r"^sk-(?!ant-)[A-Za-z0-9._-]{12,}$")
+
+
+def _read_exported_shell_var(path: Path, var_name: str) -> str:
+    """Read `export VAR=...` style values from shell env files."""
+    try:
+        content = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+    assignment_pattern = re.compile(rf"^(?:export\s+)?{re.escape(var_name)}=(.*)$")
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        match = assignment_pattern.match(stripped)
+        if not match:
+            continue
+
+        value = match.group(1).strip()
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+        value = value.strip()
+        if value:
+            return value
+
+    return ""
+
+
+def resolve_minimax_api_key() -> str:
+    """Resolve MiniMax API key with env-first and shell-file fallback.
+
+    Only considers sources that are explicitly MiniMax keys. Anthropic API keys
+    (ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN) are intentionally excluded: the
+    MINIMAX_KEY_PATTERN matches Anthropic's sk-ant-... format, which would cause
+    Anthropic credentials to be sent to MiniMax's API endpoint.
+    """
+    candidates = [
+        os.environ.get("MINIMAX_API_KEY", ""),
+        _read_exported_shell_var(Path.home() / ".bashrc", "MINIMAX_API_KEY"),
+        _read_exported_shell_var(Path.home() / ".automation_env", "MINIMAX_API_KEY"),
+    ]
+    normalized = [candidate.strip() for candidate in candidates if isinstance(candidate, str) and candidate.strip()]
+
+    for candidate in normalized:
+        if MINIMAX_KEY_PATTERN.match(candidate):
+            return candidate
+
+    return ""
+
+
+def apply_minimax_auth_env(env: dict[str, str]) -> dict[str, str]:
+    """Apply MiniMax auth variables in the same shape used by `claudem`."""
+    minimax_key = resolve_minimax_api_key()
+    if minimax_key:
+        # Primary auth path is ANTHROPIC_AUTH_TOKEN; keep API_KEY for compatibility.
+        env["ANTHROPIC_AUTH_TOKEN"] = minimax_key
+        env["ANTHROPIC_API_KEY"] = minimax_key
+        env["ANTHROPIC_BASE_URL"] = "https://api.minimax.io/anthropic"
+        env["ANTHROPIC_MODEL"] = MINIMAX_MODEL
+        env["ANTHROPIC_SMALL_FAST_MODEL"] = MINIMAX_MODEL
+        env["API_TIMEOUT_MS"] = "3000000"
+        env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
+    return env
 
 # CLI validation constants imported from centralized validation library
 # CLI_VALIDATION_TEST_PROMPT, CLI_VALIDATION_TIMEOUT_SECONDS
@@ -176,7 +241,7 @@ CLI_PROFILES = {
         "stdin_template": "/dev/null",
         "quote_prompt": False,
         # Unset default Anthropic API key to force MiniMax auth
-        "env_unset": ["ANTHROPIC_API_KEY"],
+        "env_unset": ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"],
         # Set MiniMax-specific env vars (ANTHROPIC_API_KEY added at runtime if set)
         "env_set": {
             "ANTHROPIC_BASE_URL": "https://api.minimax.io/anthropic",
@@ -1007,9 +1072,7 @@ class TaskDispatcher:
                 env[key] = value
             # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
             if cli_name == "minimax":
-                runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
-                if runtime_minimax_key:
-                    env["ANTHROPIC_API_KEY"] = runtime_minimax_key
+                env = apply_minimax_auth_env(env)
 
             # Determine help args and execution cmd based on CLI type
             help_args = []
@@ -1059,7 +1122,16 @@ class TaskDispatcher:
                 # This ensures preflight validates with the correct model for MiniMax API
                 test_model = MINIMAX_MODEL
                 # Use prompt file mode and strict MCP config to keep preflight lightweight.
-                execution_cmd = ["--model", test_model, "-p", "@PROMPT_FILE", "--output-format", "text", "--strict-mcp-config"]
+                execution_cmd = [
+                    "--model",
+                    test_model,
+                    "-p",
+                    "@PROMPT_FILE",
+                    "--output-format",
+                    "text",
+                    "--dangerously-skip-permissions",
+                    "--strict-mcp-config",
+                ]
                 skip_help = True  # Skip help for OAuth CLIs (may require auth)
             else:
                 # Unknown CLI type - assume available
@@ -1650,6 +1722,51 @@ Complete the task, then use /pr to create a new pull request."""
             )
             return False
 
+    @staticmethod
+    def _remote_branch_exists(branch_name: str) -> bool:
+        """Check whether a git branch exists under origin."""
+        try:
+            result = subprocess.run(
+                ["git", "show-ref", "--verify", "--quiet", f"refs/remotes/origin/{branch_name}"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                shell=False,
+            )
+            return result.returncode == 0
+        except Exception:
+            logger.warning(
+                "remote_branch_exists_check_failed",
+                extra={"branch_name": branch_name},
+                exc_info=True,
+            )
+            return False
+
+    def _build_worktree_add_command(
+        self,
+        agent_dir: str,
+        branch_name: str,
+        base_ref: str = "main",
+        create_new_branch: bool = True,
+    ) -> list[str]:
+        """Build a git worktree add command for both new and existing branches."""
+        command = ["git", "worktree", "add"]
+        if create_new_branch:
+            command.extend(["-b", branch_name, agent_dir, base_ref])
+            return command
+
+        if self._branch_exists(branch_name):
+            command.extend([agent_dir, branch_name])
+            return command
+
+        if self._remote_branch_exists(branch_name):
+            command.extend(["-b", branch_name, agent_dir, f"origin/{branch_name}"])
+            return command
+
+        command.extend([agent_dir, branch_name])
+        return command
+
     def _ensure_directory_exists(self, path):
         """Create directories with proper error handling."""
         try:
@@ -1718,11 +1835,12 @@ Complete the task, then use /pr to create a new pull request."""
             self._ensure_directory_exists(parent_dir)
 
             # Create the worktree
-            command = ["git", "worktree", "add"]
-            if create_new_branch:
-                command.extend(["-b", branch_name, agent_dir, base_ref])
-            else:
-                command.extend([agent_dir, branch_name])
+            command = self._build_worktree_add_command(
+                agent_dir=agent_dir,
+                branch_name=branch_name,
+                base_ref=base_ref,
+                create_new_branch=create_new_branch,
+            )
             result = subprocess.run(
                 command,
                 capture_output=True,
@@ -1734,14 +1852,12 @@ Complete the task, then use /pr to create a new pull request."""
 
             if result.returncode != 0 and not used_tmp_fallback and self._is_path_related_worktree_error(result.stderr):
                 tmp_agent_dir = self._create_tmp_worktree_directory(agent_spec)
-                retry_command = ["git", "worktree", "add"]
-                if create_new_branch:
-                    if self._branch_exists(branch_name):
-                        retry_command.extend([tmp_agent_dir, branch_name])
-                    else:
-                        retry_command.extend(["-b", branch_name, tmp_agent_dir, base_ref])
-                else:
-                    retry_command.extend([tmp_agent_dir, branch_name])
+                retry_command = self._build_worktree_add_command(
+                    agent_dir=tmp_agent_dir,
+                    branch_name=branch_name,
+                    base_ref=base_ref,
+                    create_new_branch=create_new_branch,
+                )
                 retry_result = subprocess.run(
                     retry_command,
                     capture_output=True,
@@ -2366,6 +2482,7 @@ fi
             cli_chain_str = ",".join(cli_chain)
             cli_chain_json = json.dumps(cli_chain_str)
             rate_limit_pattern = "exhausted your daily quota|rate limit|quota exceeded|resource_exhausted"
+            minimax_runtime_auth_token = ""
 
             attempt_blocks = ""
             for idx, attempt_cli in enumerate(cli_chain, start=1):
@@ -2460,19 +2577,39 @@ fi
                                 f"'{attempt_profile.get('display_name', attempt_cli)}': {key!r}"
                             )
                         attempt_env_set_commands += f"export {key}={shlex.quote(value)}\n"
-                # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
+                # Add MiniMax auth at runtime if set (not captured at import time).
                 if attempt_cli == "minimax":
-                    runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
+                    runtime_minimax_key = resolve_minimax_api_key()
                     if runtime_minimax_key:
-                        attempt_env_set_commands += f"export ANTHROPIC_API_KEY={shlex.quote(runtime_minimax_key)}\n"
+                        minimax_runtime_auth_token = runtime_minimax_key
+                        # Unset CLAUDECODE to prevent "nested session" error
+                        attempt_env_set_commands += f"unset CLAUDECODE 2>/dev/null || true\n"
+                        attempt_env_set_commands += 'export ANTHROPIC_AUTH_TOKEN="${MINIMAX_AUTH_TOKEN}"\n'
+                        attempt_env_set_commands += 'export ANTHROPIC_API_KEY="${MINIMAX_AUTH_TOKEN}"\n'
+                        attempt_env_set_commands += f"export ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic\n"
+                        attempt_env_set_commands += f"export ANTHROPIC_MODEL={shlex.quote(MINIMAX_MODEL)}\n"
+                        attempt_env_set_commands += f"export ANTHROPIC_SMALL_FAST_MODEL={shlex.quote(MINIMAX_MODEL)}\n"
+                        attempt_env_set_commands += f"export API_TIMEOUT_MS=3000000\n"
+                        attempt_env_set_commands += f"export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1\n"
 
-                # Build cleanup commands to prevent env vars from leaking between CLI attempts
-                env_cleanup_vars = ["ANTHROPIC_BASE_URL", "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL", "API_TIMEOUT_MS", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"]
-                # Only add cleanup for non-MiniMax attempts; MiniMax sets these intentionally
+                # Build cleanup commands to prevent env vars from leaking between CLI attempts.
+                # This runs before executing each attempt to clear values from prior attempts.
+                env_cleanup_vars = [
+                    "ANTHROPIC_BASE_URL",
+                    "ANTHROPIC_MODEL",
+                    "ANTHROPIC_SMALL_FAST_MODEL",
+                    "API_TIMEOUT_MS",
+                    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+                    "ANTHROPIC_API_KEY",
+                ]
+                # ANTHROPIC_AUTH_TOKEN is only cleared if a prior MiniMax attempt could have
+                # set it to the MiniMax key. For Claude-only chains, unsetting it would break
+                # Claude's OAuth authentication.
+                if "minimax" in cli_chain[: idx - 1]:
+                    env_cleanup_vars.append("ANTHROPIC_AUTH_TOKEN")
                 attempt_env_cleanup_commands = ""
-                if attempt_cli != "minimax":
-                    for var in env_cleanup_vars:
-                        attempt_env_cleanup_commands += f"unset {var} 2>/dev/null || true\n"
+                for var in env_cleanup_vars:
+                    attempt_env_cleanup_commands += f"unset {var} 2>/dev/null || true\n"
 
                 attempt_display_name = attempt_profile.get("display_name", attempt_cli)
 
@@ -2499,7 +2636,10 @@ fi
                     )
                 elif attempt_cli == "minimax":
                     # MiniMax uses Claude Code with MiniMax API
-                    preflight_cmd = f'{attempt_binary_value} -p - --model {shlex.quote(MINIMAX_MODEL)} --output-format text'
+                    preflight_cmd = (
+                        f"{attempt_binary_value} -p - --model {shlex.quote(MINIMAX_MODEL)} "
+                        "--output-format text --dangerously-skip-permissions"
+                    )
                 else:
                     preflight_cmd = f'{attempt_binary_value}'
 
@@ -2518,11 +2658,9 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
 
     {prompt_env_export}
     {github_token_export}
+    {attempt_env_cleanup_commands}
     {attempt_env_unset_commands}
     {attempt_env_set_commands}
-    # Clean up env vars from previous CLI attempts to prevent leakage
-    # (e.g., MiniMax env vars must not persist to Claude fallback)
-    {attempt_env_cleanup_commands}
 
     # Quick pre-flight check: Test CLI can actually run before full execution
     # This catches quota exhaustion that happened between dispatch and execution
@@ -2710,7 +2848,18 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                 ]
             )
 
-            result = subprocess.run(tmux_cmd, check=False, capture_output=True, text=True, timeout=30)
+            run_kwargs = {
+                "check": False,
+                "capture_output": True,
+                "text": True,
+                "timeout": 30,
+            }
+            if minimax_runtime_auth_token:
+                run_env = os.environ.copy()
+                run_env["MINIMAX_AUTH_TOKEN"] = minimax_runtime_auth_token
+                run_kwargs["env"] = run_env
+
+            result = subprocess.run(tmux_cmd, **run_kwargs)
             if result.returncode != 0:
                 print(f"⚠️ Error creating tmux session: {result.stderr}")
                 return False
