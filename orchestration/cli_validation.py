@@ -225,7 +225,7 @@ def validate_cli_execution(
                 timeout=timeout,
                 env=env,
             )
-        
+
         stderr_output = result.stderr or ""
         
         # Check output file
@@ -255,70 +255,9 @@ def validate_cli_execution(
                         output_file=validation_output_file,
                     )
         
-        # Check for quota/rate limit errors in stderr or stdout
-        # CRITICAL: Cursor returns "authentication required" when quota exhausted, NOT for real auth issues
-        # This check must run BEFORE auth error detection to catch quota exhaustion properly
-        combined_output = f"{stderr_output}\n{validation_output_file.read_text() if validation_output_file.exists() else ''}"
-        quota_phrases = [
-            "exhausted your capacity",
-            "exhausted your daily quota",
-            "rate limit",
-            "quota exceeded",
-            "resource_exhausted",
-            "hit your usage limit",  # Cursor uses this phrase
-            "usage limit",
-        ]
-
-        # Cursor-specific: "authentication required" is actually quota exhaustion
-        # User confirmed Cursor CLI is authenticated and working, so these are quota errors
-        cursor_quota_phrases = [
-            "authentication required",
-            "please run agent login first",
-        ]
-
-        # Check Cursor-specific quota patterns if this is Cursor CLI
-        if cli_name.lower() == "cursor":
-            if any(phrase in combined_output.lower() for phrase in cursor_quota_phrases):
-                return ValidationResult(
-                    success=False,
-                    phase="execution",
-                    message=f"{cli_name} quota/rate limit detected (Cursor returns auth errors when quota exhausted)",
-                    output_file=validation_output_file if validation_output_file.exists() else None,
-                )
-
-        # Check general quota patterns for all CLIs
-        if any(phrase in combined_output.lower() for phrase in quota_phrases):
-            return ValidationResult(
-                success=False,
-                phase="execution",
-                message=f"{cli_name} quota/rate limit detected",
-                output_file=validation_output_file if validation_output_file.exists() else None,
-            )
-        
-        # Check for auth/permission errors for OAuth CLIs (Claude/Cursor)
-        # DESIGN DECISION: Auth errors are treated as "available" (success=True) for OAuth CLIs.
-        # Rationale: OAuth CLIs require interactive login that may not be available during preflight.
-        # Runtime will handle auth (user may be logged in, or CLI will prompt interactively).
-        # Tradeoff: A CLI needing interactive login in non-interactive runs could "validate" but
-        # hang/fail at runtime. This is acceptable because OAuth CLIs are fallback options.
-        if prompt_file_needed:  # OAuth CLIs use prompt files
-            auth_patterns = [
-                r"\bauth\b",
-                r"\bpermission\b",
-                r"\bauthenticate\b",
-                r"\bnot authenticated\b",
-                r"\bnot authorized\b",
-            ]
-            if any(re.search(pattern, combined_output, re.IGNORECASE) for pattern in auth_patterns):
-                return ValidationResult(
-                    success=True,
-                    phase="execution",
-                    message=f"{cli_name} execution test detected auth issue (will try anyway, runtime will handle)",
-                    output_file=validation_output_file if validation_output_file.exists() else None,
-                )
-        
-        # NOTE: Removed help/version fallback - it caused false positives when CLIs
-        # output "Usage:" in error messages. If CLI can't answer 2+2, it should fail.
+        # NOTE: Removed help/version and error classification fallback - it caused false positives
+        # when CLIs output generic phrases like "does not exist" or "invalid_request_error".
+        # If CLI can't answer 2+2, it should fail. The final fallback reports exit code and raw output.
         
         return ValidationResult(
             success=False,
