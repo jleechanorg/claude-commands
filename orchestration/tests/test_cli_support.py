@@ -16,7 +16,10 @@ from orchestration.cli_validation import ValidationResult
 from orchestration.task_dispatcher import (
     CLI_PROFILES,
     CURSOR_MODEL,
+    CODEX_MODEL,
     GEMINI_MODEL,
+    apply_minimax_auth_env,
+    resolve_minimax_api_key,
     TaskDispatcher,
 )
 
@@ -137,6 +140,7 @@ class TestAgentCliSelection(unittest.TestCase):
         self.assertGreater(len(mock_write_text.call_args_list), 0)
         script_contents = mock_write_text.call_args_list[0][0][0]  # First positional arg is the content
         self.assertIn("codex exec --yolo", script_contents)
+        self.assertIn(f"--model {CODEX_MODEL}", script_contents)
         self.assertRegex(
             script_contents,
             r"< /tmp/agent_prompt_task-agent-codex-test[_0-9-]*\.txt",
@@ -680,6 +684,7 @@ class TestGeminiCliIntegration(unittest.TestCase):
             [
                 "ANTHROPIC_API_KEY",
                 "ANTHROPIC_BASE_URL",
+                "CLAUDECODE",
             ],
         )
         self.assertEqual(CLI_PROFILES["codex"]["env_unset"], ["OPENAI_API_KEY"])
@@ -689,6 +694,314 @@ class TestGeminiCliIntegration(unittest.TestCase):
     def test_claude_env_unset_preserves_auth_token(self):
         """Claude profile should preserve ANTHROPIC_AUTH_TOKEN for non-interactive auth."""
         self.assertNotIn("ANTHROPIC_AUTH_TOKEN", CLI_PROFILES["claude"]["env_unset"])
+
+    def test_claude_env_unset_includes_claudecode(self):
+        """Claude profile must unset CLAUDECODE to avoid nested-session guard when spawned from Claude Code."""
+        self.assertIn("CLAUDECODE", CLI_PROFILES["claude"]["env_unset"])
+
+class TestMinimaxCliEnvironment(unittest.TestCase):
+    """MiniMax uses claude CLI with MiniMax API endpoint — env isolation must be correct.
+
+    The minimax profile runs `claude --model MiniMax-M2.5 -p @prompt`.
+    When that subprocess is spawned from inside a Claude Code session, the parent's
+    CLAUDECODE env var is inherited and claude refuses to start:
+      'Claude Code cannot be launched inside another Claude Code session.'
+    CLAUDECODE must therefore be in env_unset so the preflight strips it.
+    """
+
+    def test_minimax_env_unset_includes_claudecode(self):
+        """MiniMax profile must unset CLAUDECODE so claude child avoids nested-session guard."""
+        self.assertIn(
+            "CLAUDECODE",
+            CLI_PROFILES["minimax"]["env_unset"],
+            "CLAUDECODE must be in minimax env_unset to prevent nested-session preflight failure",
+        )
+
+    def test_minimax_preflight_env_strips_claudecode(self):
+        """The env dict built for the minimax preflight subprocess must not contain CLAUDECODE.
+
+        Simulates jleechanorg_pr_monitor.py:1795:
+            env = {k: v for k, v in os.environ.items() if k not in profile.get('env_unset', [])}
+        """
+        profile = CLI_PROFILES["minimax"]
+        env_unset = profile.get("env_unset", [])
+        simulated_os_env = {
+            "PATH": "/usr/bin",
+            "HOME": "/Users/test",
+            "CLAUDECODE": "1",
+            "ANTHROPIC_API_KEY": "sk-ant-test",
+            "ANTHROPIC_AUTH_TOKEN": "sk-ant-auth-test",
+            "MINIMAX_API_KEY": "sk-minimax-test",
+        }
+        preflight_env = {k: v for k, v in simulated_os_env.items() if k not in env_unset}
+        self.assertNotIn(
+            "CLAUDECODE",
+            preflight_env,
+            "CLAUDECODE must be stripped from preflight env to prevent nested-session error",
+        )
+
+    def test_minimax_preflight_env_strips_anthropic_keys(self):
+        """The preflight env must also strip both ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN."""
+        profile = CLI_PROFILES["minimax"]
+        env_unset = profile.get("env_unset", [])
+        simulated_os_env = {
+            "ANTHROPIC_API_KEY": "sk-ant-key",
+            "ANTHROPIC_AUTH_TOKEN": "sk-ant-auth",
+            "CLAUDECODE": "1",
+        }
+        preflight_env = {k: v for k, v in simulated_os_env.items() if k not in env_unset}
+        self.assertNotIn("ANTHROPIC_API_KEY", preflight_env)
+        self.assertNotIn("ANTHROPIC_AUTH_TOKEN", preflight_env)
+
+    def test_minimax_binary_is_claude(self):
+        """MiniMax must use the claude binary (not a separate minimax binary)."""
+        self.assertEqual(CLI_PROFILES["minimax"]["binary"], "claude")
+
+    def test_minimax_env_set_points_to_minimax_endpoint(self):
+        """MiniMax env_set must redirect to MiniMax API proxy, not Anthropic."""
+        env_set = CLI_PROFILES["minimax"]["env_set"]
+        self.assertEqual(env_set["ANTHROPIC_BASE_URL"], "https://api.minimax.io/anthropic")
+
+
+class TestMinimaxAuthResolution(unittest.TestCase):
+    """MiniMax auth resolution should mirror the working local shell flow."""
+
+    def setUp(self):
+        self.dispatcher = TaskDispatcher()
+
+    def test_resolve_minimax_api_key_prefers_valid_env_key(self):
+        valid_key = "sk-env-key-1234567890"
+        with patch.dict(os.environ, {"MINIMAX_API_KEY": valid_key}, clear=True):
+            self.assertEqual(resolve_minimax_api_key(), valid_key)
+
+    def test_resolve_minimax_api_key_falls_back_to_bashrc_when_env_invalid(self):
+        fallback_key = "sk-bashrc-key-1234567890"
+        with (
+            patch.dict(os.environ, {"MINIMAX_API_KEY": "not-a-real-key"}, clear=True),
+            patch("orchestration.task_dispatcher._read_exported_shell_var") as mock_read_shell_var,
+        ):
+            mock_read_shell_var.side_effect = [fallback_key, ""]
+            self.assertEqual(resolve_minimax_api_key(), fallback_key)
+
+    def test_resolve_minimax_api_key_does_not_use_anthropic_keys(self):
+        """Anthropic API keys must never be returned as MiniMax keys (credential leak)."""
+        anthropic_key = "sk-ant-api03-abcdefghijklmnopqrstuvwxyz123456"
+        with (
+            patch.dict(
+                os.environ,
+                {"ANTHROPIC_API_KEY": anthropic_key, "ANTHROPIC_AUTH_TOKEN": anthropic_key},
+                clear=True,
+            ),
+            patch("orchestration.task_dispatcher._read_exported_shell_var", return_value=""),
+        ):
+            result = resolve_minimax_api_key()
+            self.assertNotEqual(result, anthropic_key, "Anthropic API key must not be used as MiniMax key")
+            self.assertEqual(result, "", "Should return empty string when no MiniMax key is available")
+
+    def test_resolve_minimax_api_key_rejects_anthropic_key_in_minimax_var(self):
+        """Anthropic-format sk-ant-... keys must be rejected even if stored in MINIMAX_API_KEY."""
+        anthropic_key = "sk-ant-api03-abcdefghijklmnopqrstuvwxyz123456"
+        with (
+            patch.dict(os.environ, {"MINIMAX_API_KEY": anthropic_key}, clear=True),
+            patch("orchestration.task_dispatcher._read_exported_shell_var", return_value=""),
+        ):
+            result = resolve_minimax_api_key()
+            self.assertEqual(result, "", "Anthropic sk-ant- key must be rejected even when set as MINIMAX_API_KEY")
+
+    def test_resolve_minimax_api_key_accepts_valid_minimax_format(self):
+        """Valid non-Anthropic sk- keys should be accepted."""
+        valid_key = "sk-mm-1234567890abc"
+        with (
+            patch.dict(os.environ, {"MINIMAX_API_KEY": valid_key}, clear=True),
+            patch("orchestration.task_dispatcher._read_exported_shell_var", return_value=""),
+        ):
+            self.assertEqual(resolve_minimax_api_key(), valid_key)
+
+    def test_apply_minimax_auth_env_sets_both_anthropic_keys(self):
+        minimax_key = "sk-auth-key-1234567890"
+        with patch("orchestration.task_dispatcher.resolve_minimax_api_key", return_value=minimax_key):
+            env = {}
+            updated = apply_minimax_auth_env(env)
+
+        self.assertIs(updated, env)
+        self.assertEqual(updated["ANTHROPIC_API_KEY"], minimax_key)
+        self.assertEqual(updated["ANTHROPIC_AUTH_TOKEN"], minimax_key)
+
+    def test_minimax_command_uses_token_env_placeholder(self):
+        agent_spec = {
+            "name": "task-agent-minimax-secret-test",
+            "focus": "Validate MiniMax token handling",
+            "prompt": "Do the work",
+            "capabilities": [],
+            "type": "development",
+            "cli": "minimax",
+        }
+        minimax_key = "sk-auth-key-1234567890"
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_print_tmp_subdirectories"),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=(
+                    "/tmp/task-agent-minimax-secret-test",
+                    MagicMock(returncode=0, stderr=""),
+                ),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+            patch("orchestration.task_dispatcher.resolve_minimax_api_key", return_value=minimax_key),
+        ):
+
+            def which_side_effect(command):
+                known_binaries = {
+                    "claude": "/usr/bin/claude",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        self.assertGreater(len(mock_write_text.call_args_list), 0)
+        script_contents = mock_write_text.call_args_list[0][0][0]
+        self.assertIn('export ANTHROPIC_AUTH_TOKEN="${MINIMAX_AUTH_TOKEN}"', script_contents)
+        self.assertIn('export ANTHROPIC_API_KEY="${MINIMAX_AUTH_TOKEN}"', script_contents)
+        self.assertNotIn(minimax_key, script_contents)
+
+        run_kwargs = mock_run.call_args.kwargs
+        self.assertIn("env", run_kwargs)
+        self.assertEqual(run_kwargs["env"].get("MINIMAX_AUTH_TOKEN"), minimax_key)
+
+    def test_non_minimax_cli_path_does_not_inject_minimax_placeholder(self):
+        agent_spec = {
+            "name": "task-agent-non-minimax-path-test",
+            "focus": "Ensure non-minimax CLI path unchanged",
+            "prompt": "Do the work",
+            "capabilities": [],
+            "type": "development",
+            "cli": "codex",
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_print_tmp_subdirectories"),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=(
+                    "/tmp/task-agent-non-minimax-path-test",
+                    MagicMock(returncode=0, stderr=""),
+                ),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+            patch("orchestration.task_dispatcher.resolve_minimax_api_key", return_value="sk-auth-key-1234567890"),
+        ):
+
+            def which_side_effect(command):
+                known_binaries = {
+                    "codex": "/usr/bin/codex",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        self.assertGreater(len(mock_write_text.call_args_list), 0)
+        script_contents = mock_write_text.call_args_list[0][0][0]
+        self.assertIn("codex exec --yolo", script_contents)
+        self.assertNotIn("MINIMAX_AUTH_TOKEN", script_contents)
+
+    def test_cli_chain_clears_minimax_env_before_non_minimax_fallback(self):
+        """MiniMax env vars must be unset before non-MiniMax fallback attempts."""
+        agent_spec = {
+            "name": "task-agent-minimax-fallback-test",
+            "focus": "Validate cleanup between CLI attempts",
+            "prompt": "Do the work",
+            "capabilities": [],
+            "type": "development",
+            "cli": "minimax",
+            "cli_chain": ["minimax", "codex"],
+        }
+        minimax_key = "sk-auth-key-1234567890"
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_print_tmp_subdirectories"),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=(
+                    "/tmp/task-agent-minimax-fallback-test",
+                    MagicMock(returncode=0, stderr=""),
+                ),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+            patch("orchestration.task_dispatcher.resolve_minimax_api_key", return_value=minimax_key),
+        ):
+
+            def which_side_effect(command):
+                known_binaries = {
+                    "codex": "/usr/bin/codex",
+                    "claude": "/usr/bin/claude",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        self.assertGreater(len(mock_write_text.call_args_list), 0)
+        script_contents = mock_write_text.call_args_list[0][0][0]
+
+        attempt2_idx = script_contents.find("ATTEMPT_NUM=2")
+        self.assertNotEqual(attempt2_idx, -1)
+        attempt2_block = script_contents[attempt2_idx : attempt2_idx + 1200]
+        self.assertIn("ATTEMPT_CLI=codex", attempt2_block)
+        self.assertIn("unset ANTHROPIC_BASE_URL 2>/dev/null || true", attempt2_block)
+        self.assertIn("unset ANTHROPIC_AUTH_TOKEN 2>/dev/null || true", attempt2_block)
+        self.assertIn("unset ANTHROPIC_API_KEY 2>/dev/null || true", attempt2_block)
+
+    def test_resolve_minimax_api_key_rejects_invalid_candidates(self):
+        with (
+            patch.dict(os.environ, {"MINIMAX_API_KEY": "bad-key", "OTHER_ENV": "also-bad"}, clear=True),
+            patch("orchestration.task_dispatcher._read_exported_shell_var", return_value="still-bad"),
+        ):
+            self.assertEqual(resolve_minimax_api_key(), "")
 
 
 class TestCursorCliIntegration(unittest.TestCase):
@@ -1051,6 +1364,29 @@ class TestCliValidation(unittest.TestCase):
             )
             result = self.dispatcher._validate_cli_availability("codex", "/usr/bin/codex", "test-agent")
             self.assertFalse(result)
+
+    def test_codex_validation_uses_default_model_when_unspecified(self):
+        """Codex preflight should validate with the default codex model when model is omitted."""
+        with patch("orchestration.task_dispatcher.validate_cli_two_phase") as mock_validate:
+            mock_validate.return_value = ValidationResult(
+                success=True,
+                phase="execution",
+                message="codex execution test passed",
+            )
+            result = self.dispatcher._validate_cli_availability(
+                "codex",
+                "/usr/bin/codex",
+                "test-agent",
+                model=None,
+            )
+
+            self.assertTrue(result)
+            call_args = mock_validate.call_args
+            execution_cmd = call_args[1].get("execution_cmd", call_args[0][3] if len(call_args[0]) > 3 else [])
+            self.assertEqual(
+                execution_cmd,
+                ["exec", "--yolo", "--skip-git-repo-check", "--model", CODEX_MODEL],
+            )
 
     def test_claude_validation_success_with_executable(self):
         """Claude validation should succeed when binary is executable and can write output."""

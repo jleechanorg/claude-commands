@@ -48,6 +48,10 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Absolute path to git hooks dir — used to bypass Husky during scripted checkouts
+# (relative paths in -c core.hooksPath can misbehave when invoked from a subdirectory)
+GIT_HOOKS_PATH="$(git rev-parse --show-toplevel)/.git/hooks"
+
 # Function to detect if commits were squash-merged into origin/main
 detect_squash_merged_commits() {
     local commit_count=$1
@@ -75,7 +79,7 @@ detect_squash_merged_commits() {
             # Search for similar commit message in recent origin/main commits (configurable depth)
             local search_depth="${DETECT_SQUASH_SEARCH_DEPTH:-200}"
             local similar_commit
-            similar_commit=$(git log origin/main --oneline "-${search_depth}" --fixed-strings --grep="$base_subject" 2>/dev/null | head -1)
+            similar_commit=$(git log origin/main --oneline "-${search_depth}" --fixed-strings --grep="$base_subject" 2>/dev/null | head -1 || true)
 
             if [ -n "$similar_commit" ]; then
                 local main_commit_hash=$(echo "$similar_commit" | cut -d' ' -f1)
@@ -231,6 +235,17 @@ cleanup_checkout_blockers() {
     done
 
     return "$had_error"
+}
+
+clear_tracked_beads_index_flags() {
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
+    local tracked_file=.beads/issues.jsonl
+
+    if git -C "$repo_root" ls-files --error-unmatch "$tracked_file" >/dev/null 2>&1; then
+        git -C "$repo_root" update-index --no-assume-unchanged "$tracked_file" 2>/dev/null || true
+        git -C "$repo_root" update-index --no-skip-worktree "$tracked_file" 2>/dev/null || true
+    fi
 }
 
 # Utility function for safe command execution with fallback
@@ -408,13 +423,13 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
             echo ""
             if [ "$local_commits" -gt 0 ]; then
                 echo "   📋 LOCAL-ONLY COMMITS:"
-                git log --oneline "$git_upstream"..HEAD | head -5 | sed 's/^/     /'
+                git log --oneline "$git_upstream"..HEAD | head -5 | sed 's/^/     /' || true
                 [ "$local_commits" -gt 5 ] && echo "     ...and $((local_commits - 5)) more commits"
                 echo ""
             fi
             if [ "$remote_commits" -gt 0 ]; then
                 echo "   📋 REMOTE-ONLY COMMITS:"
-                git log --oneline HEAD.."$git_upstream" | head -5 | sed 's/^/     /'
+                git log --oneline HEAD.."$git_upstream" | head -5 | sed 's/^/     /' || true
                 [ "$remote_commits" -gt 5 ] && echo "     ...and $((remote_commits - 5)) more commits"
                 echo ""
             fi
@@ -438,14 +453,17 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
             echo -e "${RED}❌ HARD STOP: Branch '$current_branch' has $commit_count commit(s) not in origin/main:${NC}"
             echo ""
             echo "   📋 COMMIT SUMMARY:"
-            git log --oneline origin/main..HEAD | head -10 | sed 's/^/     /'
+            git log --oneline origin/main..HEAD | head -10 | sed 's/^/     /' || true
             echo ""
             echo "   📊 FILES CHANGED:"
-            git diff --name-only origin/main..HEAD | head -10 | sed 's/^/     /'
+            git diff --name-only origin/main..HEAD | head -10 | sed 's/^/     /' || true
             echo ""
 
-            # Check if commits were squash-merged before requiring --force
-            if detect_squash_merged_commits $commit_count; then
+            # Check if commits were squash-merged before requiring --force (skip in very large unmerged sets to avoid expensive O(n^2) scans)
+            if [ "$FORCE_MODE" = true ] && [ "$commit_count" -gt "${FORCE_SQUASH_CHECK_MAX:-1000}" ]; then
+                echo -e "${YELLOW}⚠️  FORCE MODE: Skipping squash merge detection for $commit_count commits (threshold ${FORCE_SQUASH_CHECK_MAX:-1000}).${NC}"
+                should_delete_branch=false
+            elif detect_squash_merged_commits "$commit_count"; then
                 echo -e "${GREEN}✅ Proceeding automatically - all commits were squash-merged into origin/main${NC}"
                 should_delete_branch=true
             elif [ "$FORCE_MODE" = true ]; then
@@ -469,7 +487,9 @@ fi
 
 echo -e "\n${GREEN}1. Switching to main branch...${NC}"
 checkout_err_file="$(mktemp -t integrate_checkout_err.XXXXXX)"
-if ! git checkout main 2>"$checkout_err_file"; then
+force_mode_checkout_restored=false
+force_mode_checkout_message=""
+if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout main 2>"$checkout_err_file"; then
     if [ "$FORCE_MODE" = true ]; then
         echo -e "${RED}🚨 FORCE MODE: Checkout to main failed, attempting automatic recovery${NC}"
         if ! cleanup_checkout_blockers; then
@@ -482,11 +502,61 @@ if ! git checkout main 2>"$checkout_err_file"; then
             rm -f "$checkout_err_file"
             die 1 "Failed to stash changes during FORCE_MODE checkout recovery"
         fi
-        if ! git checkout main 2>>"$checkout_err_file"; then
-            echo "   Checkout error details:"
-            tail -n 20 "$checkout_err_file" || true
-            rm -f "$checkout_err_file"
-            die 1 "Failed to switch to main even after FORCE_MODE recovery"
+        if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout main 2>>"$checkout_err_file"; then
+            echo -e "${YELLOW}⚠️  FORCE MODE: Normal checkout retry failed; trying forced checkout to override remaining blockers${NC}"
+            if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -f main 2>>"$checkout_err_file"; then
+                repo_root="$(git rev-parse --show-toplevel)"
+                clean_cmd=(
+                    git
+                    -c
+                    core.hooksPath="$GIT_HOOKS_PATH"
+                    -C
+                    "$repo_root"
+                    clean
+                    -fd
+                )
+                echo -e "${RED}🚨 FORCE MODE: Destructive recovery is about to run${NC}"
+                echo -e "${RED}   This can permanently discard uncommitted local changes and delete untracked files.${NC}"
+                echo -e "${YELLOW}⚠️  FORCE MODE: Forced checkout failed; attempting hard reset + clean before one final forced attempt${NC}"
+                if ! clear_tracked_beads_index_flags; then
+                    echo "Could not clear tracked index flags for .beads/issues.jsonl during FORCE_MODE recovery." >>"$checkout_err_file"
+                fi
+
+                main_target=$(git rev-parse --verify origin/main 2>/dev/null || git rev-parse --verify main 2>/dev/null || echo HEAD)
+                if ! git -c core.hooksPath="$GIT_HOOKS_PATH" reset --hard "$main_target" 2>>"$checkout_err_file"; then
+                    echo "Failed to hard reset current branch to $main_target during FORCE_MODE recovery."
+                    echo "   Checkout error details:"
+                    tail -n 20 "$checkout_err_file" || true
+                    rm -f "$checkout_err_file"
+                    die 1 "Failed to switch to main even after FORCE_MODE recovery"
+                fi
+                if beads_daemon_running "$repo_root"; then
+                    clean_cmd+=( -e '.beads/beads.db-shm' -e '.beads/beads.db-wal' )
+                fi
+                if ! "${clean_cmd[@]}" 2>>"$checkout_err_file"; then
+                    echo "Failed to clean untracked files during FORCE_MODE recovery."
+                    echo "   Checkout error details:"
+                    tail -n 20 "$checkout_err_file" || true
+                    rm -f "$checkout_err_file"
+                    die 1 "Failed to switch to main even after FORCE_MODE recovery"
+                fi
+                if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -f main 2>>"$checkout_err_file"; then
+                    echo "   Checkout error details:"
+                    tail -n 20 "$checkout_err_file" || true
+                    rm -f "$checkout_err_file"
+                    die 1 "Failed to switch to main even after FORCE_MODE recovery"
+                fi
+                force_mode_checkout_message="✅ FORCE MODE: Hard reset + clean + forced checkout to main completed"
+            else
+                force_mode_checkout_message="✅ FORCE MODE: Forced checkout to main completed"
+            fi
+            force_mode_checkout_restored=true
+        else
+            force_mode_checkout_restored=true
+            force_mode_checkout_message="✅ FORCE MODE: Checkout to main completed"
+        fi
+        if [ "$force_mode_checkout_restored" = true ]; then
+            echo -e "${GREEN}${force_mode_checkout_message}${NC}"
         fi
     else
         echo "   Checkout error details:"
@@ -628,7 +698,7 @@ elif git merge-base --is-ancestor origin/main HEAD; then
         sync_branch="sync-main-$timestamp"
         echo "   Creating sync branch: $sync_branch"
 
-        if ! git checkout -b "$sync_branch"; then
+        if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -b "$sync_branch"; then
             die 1 "Failed to create sync branch"
         fi
 
@@ -644,7 +714,7 @@ elif git merge-base --is-ancestor origin/main HEAD; then
             if [ "$commit_count" -le "$commit_limit" ]; then
                 commit_list=$(git log --oneline origin/main..HEAD)
             else
-                commit_list=$(git log --oneline origin/main..HEAD | head -"$commit_limit")
+                commit_list=$(git log --oneline origin/main..HEAD | head -"$commit_limit" || true)
                 commit_list="$commit_list
    ...and $((commit_count - commit_limit)) more commits not shown"
             fi
@@ -696,14 +766,14 @@ else
 
     if [ "$local_only" -gt 0 ]; then
         echo "🔍 Recent local-only commits:"
-        git log --oneline origin/main..HEAD | head -5 | sed 's/^/   /'
+        git log --oneline origin/main..HEAD | head -5 | sed 's/^/   /' || true
         [ "$local_only" -gt 5 ] && echo "   ...and $((local_only - 5)) more commits"
         echo ""
     fi
 
     if [ "$remote_only" -gt 0 ]; then
         echo "🔍 Recent remote-only commits:"
-        git log --oneline HEAD..origin/main | head -5 | sed 's/^/   /'
+        git log --oneline HEAD..origin/main | head -5 | sed 's/^/   /' || true
         [ "$remote_only" -gt 5 ] && echo "   ...and $((remote_only - 5)) more commits"
         echo ""
     fi
@@ -765,7 +835,7 @@ else
 fi
 
 echo -e "\n${GREEN}5. Creating fresh branch from main...${NC}"
-git checkout -b "$branch_name"
+git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -b "$branch_name"
 
 # Delete the old branch if it was clean (and not in --new-branch mode)
 if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then

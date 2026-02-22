@@ -132,6 +132,155 @@ class TestCodexActorMatching(unittest.TestCase):
         result = self.monitor._is_head_commit_from_codex(commit_details)
         self.assertFalse(result, "Should treat empty strings as no Codex markers")
 
+    # =========================================================================
+    # Tests for centralized workflow detection (fixcomment, fixpr, codex, etc.)
+    # These tests verify that ALL automation workflows are detected via commit messages
+    # =========================================================================
+
+    def test_detects_fixcomment_via_message_marker(self) -> None:
+        """Test that fixcomment workflow commits are detected via message marker."""
+        commit_details = {
+            "author_login": "regular-user",
+            "author_email": "dev@example.com",
+            "author_name": "Regular User",
+            "committer_login": "regular-user",
+            "committer_email": "dev@example.com",
+            "committer_name": "Regular User",
+            "message_headline": "[fixcomment-automation-commit] Fix PR review comments",
+            "message": "Fix PR review comments and address feedback",
+        }
+
+        self.assertTrue(
+            self.monitor._is_head_commit_from_codex(commit_details),
+            "Expected fixcomment detection from commit message marker",
+        )
+
+    def test_detects_fixcomment_with_actor_via_message_marker(self) -> None:
+        """Test that fixcomment workflow commits with actor are detected."""
+        commit_details = {
+            "author_login": "regular-user",
+            "author_email": "dev@example.com",
+            "author_name": "Regular User",
+            "committer_login": "claude-bot",
+            "committer_email": "claude@example.com",
+            "committer_name": "Claude Bot",
+            "message_headline": "[fixcomment claude-automation-commit] Fix PR review comments",
+            "message": "Fix PR review comments",
+        }
+
+        self.assertTrue(
+            self.monitor._is_head_commit_from_codex(commit_details),
+            "Expected fixcomment with actor detection from commit message marker",
+        )
+
+    def test_detects_fixpr_with_gemini_actor_via_message_marker(self) -> None:
+        """Test that fixpr workflow commits with gemini actor are detected."""
+        commit_details = {
+            "author_login": "regular-user",
+            "author_email": "dev@example.com",
+            "author_name": "Regular User",
+            "committer_login": "gemini-bot",
+            "committer_email": "gemini@example.com",
+            "committer_name": "Gemini Bot",
+            "message_headline": "[fixpr gemini-automation-commit] Resolve conflicts",
+            "message": "Merge main to resolve conflicts",
+        }
+
+        self.assertTrue(
+            self.monitor._is_head_commit_from_codex(commit_details),
+            "Expected fixpr with gemini actor detection from commit message marker",
+        )
+
+    def test_detects_codex_with_cursor_actor_via_message_marker(self) -> None:
+        """Test that codex workflow commits with cursor actor are detected."""
+        commit_details = {
+            "author_login": "regular-user",
+            "author_email": "dev@example.com",
+            "author_name": "Regular User",
+            "committer_login": "cursor-bot",
+            "committer_email": "cursor@example.com",
+            "committer_name": "Cursor Bot",
+            "message_headline": "[codex cursor-automation-commit] Update tests",
+            "message": "Update tests for new functionality",
+        }
+
+        self.assertTrue(
+            self.monitor._is_head_commit_from_codex(commit_details),
+            "Expected codex with cursor actor detection from commit message marker",
+        )
+
+    def test_detects_comment_validation_via_message_marker(self) -> None:
+        """Test that comment-validation workflow commits are detected via message marker."""
+        commit_details = {
+            "author_login": "regular-user",
+            "author_email": "dev@example.com",
+            "author_name": "Regular User",
+            "committer_login": "regular-user",
+            "committer_email": "dev@example.com",
+            "committer_name": "Regular User",
+            "message_headline": "[comment-validation-automation-commit] Request reviews",
+            "message": "Request AI bot reviews on PR",
+        }
+
+        self.assertTrue(
+            self.monitor._is_head_commit_from_codex(commit_details),
+            "Expected comment-validation detection from commit message marker",
+        )
+
+    def test_detects_automation_via_message_body_not_headline(self) -> None:
+        """Test that automation markers in message body (not just headline) are detected."""
+        commit_details = {
+            "author_login": "regular-user",
+            "author_email": "dev@example.com",
+            "author_name": "Regular User",
+            "committer_login": "regular-user",
+            "committer_email": "dev@example.com",
+            "committer_name": "Regular User",
+            "message_headline": "Update functionality",
+            "message": "Update functionality and fix issues [fixcomment-automation-commit]",
+        }
+
+        self.assertTrue(
+            self.monitor._is_head_commit_from_codex(commit_details),
+            "Expected detection from commit body marker",
+        )
+
+    def test_detects_coderabbitai_legacy_marker(self) -> None:
+        """Legacy compatibility: coderabbitai automation markers should still be recognized."""
+        commit_details = {
+            "author_login": "regular-user",
+            "author_email": "dev@example.com",
+            "author_name": "Regular User",
+            "committer_login": "regular-user",
+            "committer_email": "dev@example.com",
+            "committer_name": "Regular User",
+            "message_headline": "[coderabbitai-automation-commit] Apply review fixes",
+            "message": "Apply review fixes",
+        }
+
+        self.assertTrue(
+            self.monitor._is_head_commit_from_codex(commit_details),
+            "Expected coderabbitai legacy marker detection",
+        )
+
+    def test_detects_fixpr_coderabbit_legacy_marker(self) -> None:
+        """Legacy compatibility: fixpr + coderabbit markers should still be recognized."""
+        commit_details = {
+            "author_login": "regular-user",
+            "author_email": "dev@example.com",
+            "author_name": "Regular User",
+            "committer_login": "regular-user",
+            "committer_email": "dev@example.com",
+            "committer_name": "Regular User",
+            "message_headline": "[fixpr coderabbit-automation-commit] Resolve conflicts",
+            "message": "Resolve conflicts",
+        }
+
+        self.assertTrue(
+            self.monitor._is_head_commit_from_codex(commit_details),
+            "Expected fixpr coderabbit legacy marker detection",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

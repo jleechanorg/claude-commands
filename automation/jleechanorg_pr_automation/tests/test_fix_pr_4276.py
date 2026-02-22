@@ -43,7 +43,7 @@ def test_dispatch_agent_includes_worktree_fix_and_push_refspec(tmp_path, monkeyp
     
     assert len(captured_desc) == 1
     desc = captured_desc[0]
-    local_branch = "fixpr_feature-test"
+    local_branch = "fixpr/feature/test"
     remote_branch = "feature/test"
     workspace_root = str(tmp_path / "repo")
     

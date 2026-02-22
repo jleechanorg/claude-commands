@@ -173,7 +173,6 @@ jobs:
       - name: Run ESLint
         run: |
           # ESLint installed via npm ci from package.json
-          # .eslintignore excludes frontend_v2 (has its own TypeScript ESLint config)
           # Lints both .js and .mjs files (ES modules)
           # Non-blocking for incremental adoption - shows errors but doesn't fail CI
           npx eslint . --ext .js,.mjs || true

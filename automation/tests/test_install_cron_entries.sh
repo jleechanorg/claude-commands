@@ -13,6 +13,7 @@ CRONTAB_CALL_LOG="$TEST_DIR/crontab_calls.log"
 export HOME="$TEST_DIR/home"
 mkdir -p "$TEST_BIN_DIR"
 mkdir -p "$HOME"
+export CANONICAL_HOME="$HOME"
 
 cat >"$TEST_BIN_DIR/crontab" <<'EOF'
 #!/bin/bash
@@ -52,6 +53,12 @@ esac
 EOF
 
 chmod +x "$TEST_BIN_DIR/crontab"
+
+cat >"$TEST_BIN_DIR/jleechanorg-pr-monitor" <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+chmod +x "$TEST_BIN_DIR/jleechanorg-pr-monitor"
 export FAKE_CRONTAB_FILE
 export CRONTAB_CALL_LOG
 export PATH="$TEST_BIN_DIR:$PATH"
@@ -94,13 +101,14 @@ MANAGED_END="# === End automation entries ==="
 # Helper function to run the script with mock crontab
 run_script_with_mock() {
     local existing_crontab="$1"
+    local run_every_minute="${2:-0}"
     echo "$existing_crontab" | crontab -
     # Debug: show what we set up
     echo "=== SETUP CRONTAB ==="
     crontab -l
     echo "=== RUNNING SCRIPT ==="
     # Run script and capture TEMP_CRON location from output
-    CRON_FILE="$TEST_DIR/crontab.template" "$SCRIPT_DIR/install_cron_entries.sh" 2>&1
+    CANONICAL_HOME="$CANONICAL_HOME" CRON_FILE="$TEST_DIR/crontab.template" CRON_RUN_EVERY_MINUTE="$run_every_minute" "$SCRIPT_DIR/install_cron_entries.sh" 2>&1
     # Show what's actually in the crontab
     echo "=== FINAL CRONTAB ==="
     crontab -l
@@ -164,7 +172,7 @@ CRON
 
     # Should have only one equivalent pr-monitor entry (quoted or unquoted)
     local pr_monitor_count
-    pr_monitor_count=$(echo "$final_crontab" | grep -Ec '^0 \*/2 \* \* \* "?jleechanorg-pr-monitor"? --max-prs 10$' || true)
+    pr_monitor_count=$(echo "$final_crontab" | grep -Ec '^0 \*/2 \* \* \* .*jleechanorg-pr-monitor --max-prs 10$' || true)
     if [[ "$pr_monitor_count" -eq 1 ]]; then
         echo "  PASS: Only one pr-monitor entry found"
     else
@@ -241,7 +249,7 @@ CRON
 
     # Should not duplicate the 0 */2 pr-monitor job.
     local pm_count
-    pm_count=$(echo "$final_crontab" | grep -Ec '^0 \*/2 \* \* \* "?jleechanorg-pr-monitor"? --max-prs 10$' || true)
+    pm_count=$(echo "$final_crontab" | grep -Ec '^0 \*/2 \* \* \* .*jleechanorg-pr-monitor --max-prs 10$' || true)
     if [[ "$pm_count" -eq 1 ]]; then
         echo "  PASS: No duplicate 0 */2 pr-monitor entry"
     else
@@ -271,11 +279,82 @@ CRON
         echo "$result"
         return 1
     fi
+
+    if echo "$final_crontab" | grep -Fq "$TEST_BIN_DIR/jleechanorg-pr-monitor --max-prs 10"; then
+        echo "  PASS: Managed jobs include absolute monitor binary path"
+    else
+        echo "  FAIL: Expected an absolute jleechanorg-pr-monitor path in managed jobs"
+        echo "$result"
+        return 1
+    fi
+
+    if echo "$final_crontab" | grep -q '^SHELL=/bin/bash$'; then
+        echo "  PASS: Managed block forces Bash for cron jobs"
+    else
+        echo "  FAIL: Managed block missing SHELL=/bin/bash"
+        return 1
+    fi
+
+    if echo "$final_crontab" | grep -q "^BASH_ENV=$CANONICAL_HOME/.codex/cron_bash_env.sh$"; then
+        echo "  PASS: Managed block uses codex cron bootstrap BASH_ENV"
+    else
+        echo "  FAIL: Managed block missing BASH_ENV=$CANONICAL_HOME/.codex/cron_bash_env.sh"
+        return 1
+    fi
+    if [[ -f "$HOME/.codex/cron_bash_env.sh" ]]; then
+        echo "  PASS: Cron BASH_ENV bootstrap file created"
+    else
+        echo "  FAIL: Expected cron BASH_ENV bootstrap file to be created"
+        return 1
+    fi
 }
 
-# Test 6: README quick-start should reference published package names
+# Test 6: One-minute run mode should rewrite all schedule fields to '*'
+test_every_minute_schedule_rewrites_all_fields() {
+    echo "Test 6: RUN_EVERY_MINUTE should rewrite all cron fields"
+    crontab -r
+    local existing_crontab=$(cat <<'CRON'
+0 8 * * * /usr/bin/curl https://example.com/health
+CRON
+)
+
+    local result=$(run_script_with_mock "$existing_crontab" 1)
+    local final_crontab
+    final_crontab="$(echo "$result" | extract_final_crontab)"
+
+    if echo "$final_crontab" | grep -Fq "* */2 * * * $TEST_BIN_DIR/jleechanorg-pr-monitor --max-prs 10"; then
+        echo "  FAIL: Pr-monitor schedule still contains */2 after every-minute rewrite"
+        echo "$result"
+        return 1
+    fi
+
+    if echo "$final_crontab" | grep -Fq "* * * * * $TEST_BIN_DIR/jleechanorg-pr-monitor --max-prs 10"; then
+        echo "  PASS: Pr-monitor schedule was rewritten to every minute"
+    else
+        echo "  FAIL: Pr-monitor schedule was not fully rewritten to every minute"
+        echo "$final_crontab"
+        return 1
+    fi
+
+    if echo "$final_crontab" | awk '
+        $0 !~ /^#/ && $0 !~ /^PATH=/ && $0 !~ /^SHELL=/ && $0 !~ /^BASH_ENV=/ && $0 !~ /^$/ && $0 !~ /^'"$MANAGED_START"'$/ && $0 !~ /^'"$MANAGED_END"'$/ {
+            if ($6 ~ /jleechanorg-pr-monitor/ && !($1 == "*" && $2 == "*" && $3 == "*" && $4 == "*" && $5 == "*")) {
+                exit 1
+            }
+        }
+        END { exit 0 }
+    '; then
+        echo "  PASS: All managed monitor schedules were fully rewritten"
+    else
+        echo "  FAIL: Found a monitor line that did not have all five '*' fields"
+        echo "$final_crontab"
+        return 1
+    fi
+}
+
+# Test 7: README quick-start should reference published package names
 test_readme_uses_published_package_names() {
-    echo "Test 6: README quick-start should use jleechanorg-orchestration package name"
+    echo "Test 7: README quick-start should use jleechanorg-orchestration package name"
     if grep -Eq '^pip install jleechanorg-orchestration jleechanorg-pr-automation$' "$SCRIPT_DIR/README.md"; then
         echo "  PASS: README uses published package names"
     else
@@ -286,7 +365,7 @@ test_readme_uses_published_package_names() {
 
 # Test 7: Installer must operate through fake crontab only (non-real crontab unit test)
 test_non_real_crontab_harness_is_used() {
-    echo "Test 7: Installer uses fake crontab harness only"
+    echo "Test 8: Installer uses fake crontab harness only"
     : >"$CRONTAB_CALL_LOG"
 
     local existing_crontab
@@ -321,6 +400,7 @@ test_quoted_command_deduplication
 test_unclosed_managed_block_preserves_entries
 test_mixed_user_and_managed_entries
 test_clean_install
+test_every_minute_schedule_rewrites_all_fields
 test_readme_uses_published_package_names
 test_non_real_crontab_harness_is_used
 
