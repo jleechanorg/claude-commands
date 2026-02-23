@@ -18,6 +18,7 @@ from pathlib import Path
 
 import requests
 import yaml
+from jleechanorg_pr_automation.codex_config import build_automation_commit_marker
 from orchestration import task_dispatcher
 from orchestration.task_dispatcher import TaskDispatcher
 
@@ -518,11 +519,11 @@ def generate_local_branch_name(remote_branch: str) -> str:
         remote_branch: The remote PR branch name (e.g., 'feature/add-cool-feature')
 
     Returns:
-        Local branch name with fixpr_ prefix (e.g., 'fixpr_feature-add-cool-feature')
+        Local branch name with fixpr/ prefix (e.g., 'fixpr/feature/add-cool-feature')
     """
-    # Sanitize branch name: replace non-alphanumeric chars (except . _ -) with hyphen
-    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", remote_branch).strip("-")
-    return f"fixpr_{sanitized}"
+    # Sanitize branch name: replace non-alphanumeric chars (except . _ - /) with hyphen
+    sanitized = re.sub(r"[^A-Za-z0-9./_-]+", "-", remote_branch).strip("-")
+    return f"fixpr/{sanitized}"
 
 
 def prepare_workspace_dir(repo: str, workspace_name: str) -> Path:
@@ -658,7 +659,7 @@ def dispatch_agent_for_pr_with_task(
         return False
     assert branch is not None and pr_number is not None
 
-    if use_slash_command:
+    if use_slash_command and job_mode == "fixpr":
         task_description = _slash_command_for_pr(pr_number, job_mode)
 
     workspace_name = sanitize_workspace_name(branch or f"pr-{pr_number}", pr_number)
@@ -691,6 +692,7 @@ def dispatch_agent_for_pr_with_task(
             if not raw_model or not re.fullmatch(r"[A-Za-z0-9_.-]+", raw_model):
                 log(f"❌ Invalid model name requested: {raw_model!r}")
                 return False
+            agent_spec["model"] = raw_model
         ok = dispatcher.create_dynamic_agent(agent_spec)
         if ok:
             log(f"Spawned agent for {repo_full}#{pr_number} at /tmp/{repo}/{workspace_name}")
@@ -753,7 +755,7 @@ def dispatch_agent_for_pr(
         return False
     assert branch is not None and pr_number is not None
 
-    # Generate local branch name (fixpr_remotebranch) for isolation from remote branch
+    # Generate local branch name (fixpr/<remote_branch>) for isolation from remote branch
     local_branch = generate_local_branch_name(branch)
 
     workspace_name = sanitize_workspace_name(branch or f"pr-{pr_number}", pr_number)
@@ -785,6 +787,8 @@ def dispatch_agent_for_pr(
     if use_slash_command:
         task_description = _slash_command_for_pr(pr_number, job_mode)
     else:
+        fixpr_conflict_marker = build_automation_commit_marker("fixpr", automation_user or "claude")
+        fixpr_final_marker = build_automation_commit_marker("fixpr", commit_marker_cli)
         # Custom prompt for other CLIs (codex, gemini, cursor, etc.)
         task_description = (
         f"FIXPR TASK (SELF-CONTAINED): Update PR #{pr_number} in {repo_full} (branch {branch}). "
@@ -796,7 +800,7 @@ def dispatch_agent_for_pr(
         f"   ```bash\n"
         f"   gh pr view {pr_number} --json mergeable,mergeStateStatus\n"
         f"   ```\n\n"
-        f'   STEP 2 - If mergeable == "CONFLICTING" or mergeStateStatus == "DIRTY", resolve conflicts:\n'
+        f'   STEP 2 - If mergeable is False or mergeStateStatus == "DIRTY", resolve conflicts:\n'
         f"   ```bash\n"
         f"   # Fetch the remote PR branch and create/reset local fixpr branch\n"
         f"   git fetch origin {branch}\n"
@@ -822,13 +826,13 @@ def dispatch_agent_for_pr(
         f"   - After resolving all conflicts:\n"
         f"     ```bash\n"
         f"     git add -A\n"
-        f'     git commit -m "[fixpr {automation_user or "claude"}-automation-commit] Merge main into {branch} to resolve conflicts"\n'
+        f'     git commit -m "{fixpr_conflict_marker} Merge main into {branch} to resolve conflicts"\n'
         f"     git push origin {local_branch}:{branch}\n"
         f"     ```\n\n"
         f"   STEP 4 - Verify merge succeeded:\n"
         f"   ```bash\n"
         f"   gh pr view {pr_number} --json mergeable,mergeStateStatus\n"
-        f'   # Should now show mergeable: "MERGEABLE" or "UNKNOWN" (not "CONFLICTING")\n'
+        f'   # Should now show mergeable: true or null (not false)\n'
         f"   ```\n\n"
         f"   ⚠️ DO NOT PROCEED TO TEST FIXES UNTIL MERGE CONFLICTS ARE RESOLVED AND PUSHED.\n\n"
         "🚨🚨🚨 PRE-FLIGHT CHECK - VERIFY TOOL AVAILABILITY (MANDATORY FIRST STEP):\n"
@@ -898,11 +902,11 @@ def dispatch_agent_for_pr(
         "   a) FIRST: Check and resolve merge conflicts (see PRIORITY 1 section above for detailed steps)\n"
         "      - git fetch origin main && git merge origin/main --no-edit\n"
         "      - Resolve any conflicts (.beads/issues.jsonl: use --ours, test files: use --theirs, code: manual)\n"
-        f"      - git add -A && git commit && git push origin {local_branch}:{branch}\n"
+        f'      - git add -A && git commit -m "{fixpr_conflict_marker} Resolve conflicts after merge main" && git push origin {local_branch}:{branch}\n'
         "   b) SECOND: Fix failing tests after merge conflicts are resolved\n"
         "      - Run tests locally to identify failures\n"
         "      - Apply code fixes to make tests pass\n"
-        f'7) git add -A && git commit -m "[fixpr {commit_marker_cli}-automation-commit] fix PR #{pr_number}" && git push origin {local_branch}:{branch}\n'
+        f'7) git add -A && git commit -m "{fixpr_final_marker} fix PR #{pr_number}" && git push origin {local_branch}:{branch}\n'
         "8) Verify PR status using Python requests (DO NOT use gh pr view)\n"
         f"9) Write completion report to {workspace_root}/{workspace_name}/orchestration_results.json summarizing actions and test results\n\n"
         f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
@@ -972,12 +976,18 @@ def run_fixpr_batch(
         return
 
     # Filter to PRs that need action (merge conflicts or failing checks)
+    # GitHub API: mergeable can be Boolean (false=conflicts) or String ("CONFLICTING"/"MERGEABLE")
+    # mergeStateStatus: "DIRTY"/"CONFLICTING" means conflicts
     actionable = []
     for pr in prs:
         repo_full = pr["repo_full"]
         pr_number = pr["number"]
         mergeable = pr.get("mergeable")
-        if mergeable == "CONFLICTING":
+        is_conflicting = (
+            (isinstance(mergeable, bool) and mergeable is False)
+            or (isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING")
+        )
+        if is_conflicting:
             actionable.append(pr)
             continue
         if has_failing_checks(repo_full, pr_number):

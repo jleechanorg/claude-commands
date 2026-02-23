@@ -11,8 +11,10 @@ import unittest
 from jleechanorg_pr_automation.codex_config import (
     FIX_COMMENT_RUN_MARKER_PREFIX,
     FIXPR_MARKER_PREFIX,
+    build_automation_commit_marker,
     build_automation_marker,
     build_default_comment,
+    is_automation_commit_message,
     parse_automation_marker,
 )
 
@@ -40,6 +42,36 @@ class TestBuildAutomationMarker(unittest.TestCase):
             self.assertIn(f":{agent}:", marker)
             self.assertTrue(marker.startswith("<!-- fix-comment-run-automation-commit:"))
             self.assertTrue(marker.endswith("-->"))
+
+    def test_build_automation_commit_marker_matrix(self):
+        """Matrix test for workflow + optional actor commit marker generation."""
+        matrix = [
+            ("codex", None),
+            ("codex", "claude"),
+            ("codex-api", None),
+            ("fixpr", None),
+            ("fixpr", "codex"),
+            ("fixcomment", None),
+            ("fixcomment", "claude"),
+            ("fix-comment", "minimax"),
+            ("comment-validation", "copilot"),
+        ]
+
+        expected = {
+            ("codex", None): "[codex-automation-commit]",
+            ("codex", "claude"): "[codex claude-automation-commit]",
+            ("codex-api", None): "[codex-api-automation-commit]",
+            ("fixpr", None): "[fixpr-automation-commit]",
+            ("fixpr", "codex"): "[fixpr codex-automation-commit]",
+            ("fixcomment", None): "[fixcomment-automation-commit]",
+            ("fixcomment", "claude"): "[fixcomment claude-automation-commit]",
+            ("fix-comment", "minimax"): "[fix-comment minimax-automation-commit]",
+            ("comment-validation", "copilot"): "[comment-validation copilot-automation-commit]",
+        }
+
+        for workflow, actor in matrix:
+            marker = build_automation_commit_marker(workflow, actor)
+            self.assertEqual(marker, expected[(workflow, actor)])
 
     def test_short_commit_sha(self):
         """Test marker generation with short commit SHA"""
@@ -162,7 +194,7 @@ class TestParseAutomationMarker(unittest.TestCase):
 
     def test_parse_with_different_workflows(self):
         """Test parsing markers with different workflow types"""
-        workflows = ["fix-comment-run", "fixpr-run", "codex", "pr-automation"]
+        workflows = ["fix-comment-run", "fixpr-run", "codex", "pr-automation", "codex-api"]
 
         for workflow in workflows:
             marker = build_automation_marker(workflow, "gemini", "abc123")
@@ -184,7 +216,16 @@ class TestCodexDefaultCommentTracking(unittest.TestCase):
         """Default comment should require fixed/considered URL bucketing."""
         comment = build_default_comment()
         self.assertIn("FIXED vs CONSIDERED", comment)
-        self.assertIn("[codex-automation-commit]", comment)
+        self.assertIn("[codex-api-automation-commit]", comment)
+
+    def test_matrix_commit_marker_strings_are_detected(self):
+        """Long-marker matrix values should still match the automation detector."""
+        commit_shas = ["123423432432432", "234329473243234334"]
+
+        for sha in commit_shas:
+            marker = build_automation_commit_marker("codex-api")
+            commit_message = f"{marker} codex: test workflow update\\n\\n{sha}"
+            self.assertTrue(is_automation_commit_message(commit_message))
 
 
 if __name__ == "__main__":

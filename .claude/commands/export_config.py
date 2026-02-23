@@ -50,7 +50,10 @@ EXCLUDED_COMPONENTS = [
     "learnings.md",      # Project-specific learnings file
     "principal_engineer_review_prompt.md",  # Project-specific prompts
     "settings.toml",     # Deprecated/alternative config format
-    "settings.json.backup"  # Backup files
+    "settings.json.backup",  # Backup files
+    "pairv2",           # Pair v2 command - project-specific workflow
+    "pairv2.md",        # Pair v2 command file
+    "pairv2-usage.md"   # Pair v2 usage guide
 ]
 
 # Component descriptions for documentation

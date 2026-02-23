@@ -22,8 +22,10 @@ This command delegates to `/header` using Claude's natural workflow orchestratio
 ### Example Output
 
 ```
-[Local: feature-branch | Remote: origin/main | PR: #123 https://github.com/user/repo/pull/123]
+[Local: feature-branch | Remote: upstream/main | PR: #123 https://github.com/user/repo/pull/123]
 ```
+
+**NOTE**: Remote must NEVER be `origin/main`. Use actual remote name (e.g., `upstream/main`, `origin/branch-name`).
 
 ## Command Execution
 

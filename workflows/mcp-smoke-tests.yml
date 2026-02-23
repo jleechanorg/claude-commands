@@ -21,6 +21,7 @@ permissions:
 # Smoke coverage:
 # - Mock API smoke tests on PR/push to main/dev, or after preview deploy completion (workflow_run)
 # - Real E2E preview smoke tests on /smoke comments or workflow_dispatch only
+# CI trigger noop: 2026-02-22T14:44:00Z
 on:
   issue_comment:
     types: [created]
@@ -355,7 +356,7 @@ jobs:
 
   preview-smoke-tests:
     name: MCP Smoke Tests [Preview E2E]
-    if: (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/smoke')) || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/smoke') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       GCP_REGION: us-central1
@@ -363,6 +364,8 @@ jobs:
       MCP_TEST_TIMEOUT_MS: ${{ vars.MCP_TEST_TIMEOUT_MS || '120000' }}
       MCP_TEST_MAX_ATTEMPTS: ${{ vars.MCP_TEST_MAX_ATTEMPTS || '3' }}
       MCP_TEST_RETRY_DELAY_MS: ${{ vars.MCP_TEST_RETRY_DELAY_MS || '2000' }}
+      STREAM_RESPONSE_SIGNING_SECRET: ${{ secrets.STREAM_RESPONSE_SIGNING_SECRET }}
+      SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
 
     steps:
       - name: Post acknowledgment comment

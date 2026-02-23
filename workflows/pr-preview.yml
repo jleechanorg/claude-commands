@@ -12,6 +12,8 @@
 
 name: Deploy PR Preview (Rotating Pool)
 
+# CI trigger noop: 2026-02-22T14:57:00Z
+
 # Cancel in-progress runs when new commits are pushed to same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -166,7 +168,7 @@ jobs:
             --project="${{ env.GCP_PROJECT }}" \
             --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview" \
+            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview,PRODUCTION_MODE=true" \
             --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
             --memory="$WORLDARCH_MEMORY" \
             --cpu="$WORLDARCH_CPU" \

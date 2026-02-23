@@ -42,6 +42,7 @@ from orchestration.task_dispatcher import (
     CURSOR_MODEL,
     GEMINI_MODEL,
     MINIMAX_MODEL,
+    apply_minimax_auth_env,
     TaskDispatcher,
 )
 
@@ -61,11 +62,14 @@ from .codex_config import (
     COMMENT_VALIDATION_MARKER_SUFFIX as SHARED_COMMENT_VALIDATION_SUFFIX,
 )
 from .codex_config import (
+    AUTOMATION_ACTOR_KEYWORDS,
     CODEX_TRACKING_INSTRUCTION,
     DEFAULT_ASSISTANT_MENTIONS,
+    build_automation_commit_marker,
     build_automation_marker,
     build_comment_intro,
     is_automation_comment,
+    is_automation_commit_message,
 )
 from .codex_config import (
     FIX_COMMENT_MARKER_PREFIX as SHARED_FIX_COMMENT_PREFIX,
@@ -183,7 +187,7 @@ class JleechanorgPRMonitor:
     FIXPR_MARKER_SUFFIX = SHARED_FIXPR_SUFFIX
     COMMENT_VALIDATION_MARKER_PREFIX = SHARED_COMMENT_VALIDATION_PREFIX
     COMMENT_VALIDATION_MARKER_SUFFIX = SHARED_COMMENT_VALIDATION_SUFFIX
-    CODEX_COMMIT_MESSAGE_MARKER = "[codex-automation-commit]"
+    CODEX_COMMIT_MESSAGE_MARKER = build_automation_commit_marker("codex-api")
     CODEX_BOT_IDENTIFIER = "codex"
     FIX_COMMENT_COMPLETION_MARKER = "Fix-comment automation complete"
     # Max retries per commit when issues persist (prevents wasting runs on unfixable commits)
@@ -230,28 +234,14 @@ class JleechanorgPRMonitor:
         }
         """
 
-    _codex_actor_keywords = [
-        "codex",
-        "coderabbitai",
-        "coderabbit",
-        "copilot",
-        "cursor",
-    ]
-    _codex_actor_patterns = [re.compile(rf"\b{keyword}\b", re.IGNORECASE) for keyword in _codex_actor_keywords]
-    _codex_commit_message_pattern_str = (
-        r"\[(?:fixpr\s+)?(?:" + "|".join(_codex_actor_keywords) + r")-automation-commit\]"
-    )
-    _codex_commit_message_pattern = re.compile(
-        _codex_commit_message_pattern_str,
-        re.IGNORECASE,
-    )
+    _codex_actor_patterns = [re.compile(rf"\b{keyword}\b", re.IGNORECASE) for keyword in AUTOMATION_ACTOR_KEYWORDS]
 
     # Known GitHub review bots that may appear without [bot] suffix in API responses.
     # Note: Some bots (e.g., "coderabbitai", "copilot") appear in both this list and
-    # _codex_actor_keywords. This is intentional:
+    # AUTOMATION_ACTOR_KEYWORDS. This is intentional:
     # - KNOWN_GITHUB_BOTS: Detects the review service (e.g., "coderabbitai" or "coderabbitai[bot]")
     #   whose comments should trigger PR re-processing.
-    # - _codex_actor_keywords: Used to exclude our own automation bots from being
+    # - AUTOMATION_ACTOR_KEYWORDS: Used to exclude our own automation bots from being
     #   treated as external review bots when they have the [bot] suffix.
     # The detection order in _is_github_bot_comment() ensures known bots are detected first.
     KNOWN_GITHUB_BOTS = frozenset(
@@ -285,9 +275,11 @@ class JleechanorgPRMonitor:
         safety_limits: dict[str, int] | None = None,
         no_act: bool = False,
         automation_username: str | None = None,
+        fixpr_bypass_commit_limit: bool = False,
     ):
         self.logger = setup_logging(__name__)
         self._explicit_automation_username = automation_username
+        self._fixpr_bypass_commit_limit = bool(fixpr_bypass_commit_limit)
 
         self.assistant_mentions = os.environ.get(
             "AI_ASSISTANT_MENTIONS",
@@ -547,22 +539,31 @@ class JleechanorgPRMonitor:
             if not repo or pr_number is None:
                 continue
             repo_full = f"{owner}/{repo}"
-
+            # Handle both legacy REST API field (mergeableState) and GraphQL field (mergeStateStatus)
             mergeable = pr.get("mergeable")
-            if mergeable is None:
+            merge_state_status = pr.get("mergeStateStatus") or pr.get("mergeableState")
+            if mergeable is None and merge_state_status is None:
                 try:
                     result = AutomationUtils.execute_subprocess_with_timeout(
-                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable,mergeStateStatus"],
                         timeout=30,
                         check=False,
                     )
                     if result.returncode == 0:
                         data = json.loads(result.stdout or "{}")
                         mergeable = data.get("mergeable")
-                except Exception:
+                        merge_state_status = data.get("mergeStateStatus")
+                except Exception as e:
+                    self.logger.warning(f"Failed to fetch mergeable status for PR {pr_number}: {e}")
                     mergeable = None
+                    merge_state_status = None
 
-            if mergeable == "CONFLICTING":
+            # GitHub API: mergeable can be Boolean (false=conflicts) or String ("CONFLICTING"/"MERGEABLE")
+            # mergeStateStatus: "DIRTY"/"CONFLICTING" means conflicts, "CLEAN" means mergeable
+            is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
+            is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
+            is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+            if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                 actionable.append({**pr, "repo_full": repo_full})
                 continue
 
@@ -1299,6 +1300,14 @@ Your response MUST follow this exact structure for clarity:
             mentions.append("@greptileai")
         return " ".join(mentions)
 
+    @staticmethod
+    def _build_fix_comment_commit_marker(actor: str | None = None) -> str:
+        """Build the fix-comment workflow commit marker used for agent follow-up commits."""
+        if not actor:
+            return build_automation_commit_marker("fix-comment")
+        normalized_actor = actor.strip().lower() or "claude"
+        return build_automation_commit_marker("fix-comment", normalized_actor)
+
     def _build_fix_comment_prompt_body(
         self,
         repository: str,
@@ -1393,9 +1402,9 @@ Your response MUST follow this exact structure for clarity:
             "        * .beads/issues.jsonl: git checkout --ours .beads/issues.jsonl\n"
             "        * test files (mvp_site/tests/*, testing_mcp/lib/*): git checkout --theirs <file>\n"
             "        * code files: manually resolve, keeping both changes where appropriate\n"
-            '      - git add -A && git commit -m "[fixcomment-automation-commit] Merge main to resolve conflicts" && git push\n'
+            f'      - git add -A && git commit -m "{self._build_fix_comment_commit_marker(None)} Merge main to resolve conflicts" && git push\n'
             f"   c) Verify: gh pr view {pr_number} --json mergeable (should show MERGEABLE, not CONFLICTING)\n\n"
-            f'6) git add -A && git commit -m "[{commit_marker_cli}-automation-commit] fix PR #{pr_number} review feedback" && git push\n\n'
+            f'6) git add -A && git commit -m "{self._build_fix_comment_commit_marker(commit_marker_cli)} fix PR #{pr_number} review feedback" && git push\n\n'
             f"7) Write completion report to /tmp/orchestration_results/pr-{pr_number}_results.json "
             "with comments addressed, files modified, tests run, and remaining issues\n\n"
             "**PR Details:**\n"
@@ -1780,7 +1789,7 @@ Your response MUST follow this exact structure for clarity:
 
         env = {k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
 
-        # Build help and execution commands for two-phase validation (help first, then real 2+2)
+        # Build help and execution commands for two-phase validation (help first, then arithmetic check)
         help_args = ["--help"]
         execution_cmd: list[str] = []
         if cli_name == "gemini":
@@ -1826,6 +1835,7 @@ Your response MUST follow this exact structure for clarity:
                 "@PROMPT_FILE",
                 "--output-format",
                 "text",
+                "--dangerously-skip-permissions",
                 "--strict-mcp-config",
             ]
             # Use env_set from CLI_PROFILES for consistency with task_dispatcher
@@ -1834,9 +1844,7 @@ Your response MUST follow this exact structure for clarity:
                 env[key] = value
             # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
             if cli_name == "minimax":
-                runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
-                if runtime_minimax_key:
-                    env["ANTHROPIC_API_KEY"] = runtime_minimax_key
+                env = apply_minimax_auth_env(env)
 
         try:
             result = validate_cli_two_phase(
@@ -1863,10 +1871,14 @@ Your response MUST follow this exact structure for clarity:
             )
 
         if result.success:
-            self.logger.info("✅ Preflight: %s passed help + 2+2 validation", cli_name)
+            self.logger.info("✅ Preflight: %s passed help + arithmetic validation", cli_name)
             return True
 
-        self.logger.warning("❌ Preflight: %s failed help + 2+2 validation", cli_name)
+        self.logger.warning(
+            "❌ Preflight: %s failed help + arithmetic validation: %s",
+            cli_name,
+            result.message,
+        )
         return False
 
     def _validate_cli_chain(
@@ -1949,7 +1961,7 @@ Your response MUST follow this exact structure for clarity:
         repo_full = self._normalize_repository_name(repository)
         cli_chain = [part.strip().lower() for part in str(agent_cli).split(",") if part.strip()]
         commit_marker_cli = cli_chain[0] if cli_chain else "claude"
-        commit_marker = f"[{commit_marker_cli}-automation-commit]"
+        commit_marker = self._build_fix_comment_commit_marker(commit_marker_cli)
         timeout_seconds = int(os.environ.get("FIX_COMMENT_WATCH_TIMEOUT", "3600"))
         poll_interval = float(os.environ.get("FIX_COMMENT_WATCH_POLL", "30"))
         deadline = time.time() + timeout_seconds
@@ -2097,14 +2109,24 @@ Your response MUST follow this exact structure for clarity:
         try:
             # Fetch mergeable status
             result = AutomationUtils.execute_subprocess_with_timeout(
-                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable,mergeStateStatus"],
                 timeout=30,
                 check=False,
             )
             if result.returncode == 0:
                 data = json.loads(result.stdout or "{}")
-                if data.get("mergeable") == "CONFLICTING":
+                # GitHub CLI: mergeable can be Boolean (false) or String ("CONFLICTING"/"MERGEABLE")
+                # mergeStateStatus: "DIRTY"/"CONFLICTING" means conflicts, "CLEAN" means mergeable
+                mergeable = data.get("mergeable")
+                merge_state_status = data.get("mergeStateStatus", "")
+                is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
+                is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
+                is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+                if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                     is_conflicting = True
+            else:
+                self.logger.warning(f"gh pr view failed for PR #{pr_number} with returncode {result.returncode}")
+                status_unknown = True
 
             # Check for failing checks
             is_failing = has_failing_checks(repo_full, pr_number)
@@ -2399,14 +2421,24 @@ Your response MUST follow this exact structure for clarity:
         try:
             # Fetch mergeable status
             result = AutomationUtils.execute_subprocess_with_timeout(
-                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable"],
+                ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable,mergeStateStatus"],
                 timeout=30,
                 check=False,
             )
             if result.returncode == 0:
                 data = json.loads(result.stdout or "{}")
-                if data.get("mergeable") == "CONFLICTING":
+                # GitHub CLI: mergeable can be Boolean (false) or String ("CONFLICTING"/"MERGEABLE")
+                # mergeStateStatus: "DIRTY"/"CONFLICTING" means conflicts, "CLEAN" means mergeable
+                mergeable = data.get("mergeable")
+                merge_state_status = data.get("mergeStateStatus", "")
+                is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
+                is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
+                is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+                if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                     is_conflicting = True
+            else:
+                self.logger.warning(f"gh pr view failed for PR #{pr_number} with returncode {result.returncode}")
+                status_unknown = True
 
             # Check for failing checks
             is_failing = has_failing_checks(repo_full, pr_number)
@@ -2429,7 +2461,7 @@ Your response MUST follow this exact structure for clarity:
             if is_conflicting or is_failing:
                 # Check if we've already tried this commit too many times
                 commit_attempts = self._count_commit_attempts(comments, "fixpr", head_sha)
-                if commit_attempts >= self.MAX_COMMIT_RETRIES:
+                if not self._fixpr_bypass_commit_limit and commit_attempts >= self.MAX_COMMIT_RETRIES:
                     self.logger.info(
                         "🚫 Skipping PR #%s - commit %s already attempted %d times (max: %d); waiting for new commit",
                         pr_number,
@@ -2892,11 +2924,20 @@ Your response MUST follow this exact structure for clarity:
         return None
 
     def _is_head_commit_from_codex(self, commit_details: dict[str, str | None] | None) -> bool:
-        """Determine if the head commit was authored or marked by Codex."""
+        """Determine if the head commit was authored or marked by any automation workflow.
+
+        This method checks for automation-authored commits using:
+        1. Actor fields (author_login, committer_login, etc.) matching automation bot names
+        2. Commit message markers from ANY workflow (codex, fixpr, fixcomment, comment-validation)
+
+        The message detection is centralized via is_automation_commit_message() which
+        automatically supports all workflows defined in AUTOMATION_WORKFLOW_NAMES.
+        """
 
         if not commit_details:
             return False
 
+        # Check actor fields for automation bot names
         actor_fields = [
             commit_details.get("author_login"),
             commit_details.get("author_email"),
@@ -2911,15 +2952,16 @@ Your response MUST follow this exact structure for clarity:
                 if any(pattern.search(field) for pattern in self._codex_actor_patterns):
                     return True
 
+        # Check commit messages for ANY automation workflow marker
+        # This uses centralized detection that supports all workflows automatically
         message_values = [
             commit_details.get("message_headline"),
             commit_details.get("message"),
         ]
 
         for message in message_values:
-            if message and isinstance(message, str):
-                if self._codex_commit_message_pattern.search(message):
-                    return True
+            if is_automation_commit_message(message):
+                return True
 
         return False
 
@@ -3810,7 +3852,7 @@ Your response MUST follow this exact structure for clarity:
                             selected_cli = agent_cli
                         else:
                             self.logger.warning(
-                                "🚫 Startup preflight failed: no CLIs passed help + 2+2 validation. Skipping run."
+                                "🚫 Startup preflight failed: no CLIs passed help + arithmetic validation. Skipping run."
                             )
                             self.safety_manager.check_and_notify_limits()
                             return
@@ -3862,23 +3904,37 @@ Your response MUST follow this exact structure for clarity:
                 # Check for conflicts or failing checks first
                 is_conflicting = False
                 is_failing = False
+                status_unknown = False
 
                 try:
                     result = AutomationUtils.execute_subprocess_with_timeout(
-                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full_name, "--json", "mergeable"],
+                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full_name, "--json", "mergeable,mergeStateStatus"],
                         timeout=30,
                         check=False,
                     )
                     if result.returncode == 0:
                         data = json.loads(result.stdout or "{}")
-                        if data.get("mergeable") == "CONFLICTING":
+                        # GitHub CLI: mergeable can be Boolean (false) or String ("CONFLICTING"/"MERGEABLE")
+                        # mergeStateStatus: "DIRTY"/"CONFLICTING" means conflicts, "CLEAN" means mergeable
+                        mergeable = data.get("mergeable")
+                        merge_state_status = data.get("mergeStateStatus", "")
+                        is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
+                        is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
+                        is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+                        if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                             is_conflicting = True
+                    else:
+                        # Treat status as unknown; don't assume the PR is clean
+                        self.logger.warning(f"gh pr view failed for PR #{pr_number} with returncode {result.returncode}")
+                        status_unknown = True
 
                     is_failing = has_failing_checks(repo_full_name, pr_number)
                 except Exception as e:
+                    # Treat status as unknown; don't assume the PR is clean
                     self.logger.warning(
                         f"⚠️ Error checking fixpr eligibility for #{pr_number} ({type(e).__name__}): {e}"
                     )
+                    status_unknown = True
 
                 # If PR has conflicts or failing checks, mark as actionable (bypass is_pr_actionable skip)
                 if is_conflicting or is_failing:
@@ -3886,7 +3942,12 @@ Your response MUST follow this exact structure for clarity:
                         f"🔄 PR #{pr_number} has conflicts or failing checks - marking actionable for fixpr"
                     )
                     # Skip is_pr_actionable check and proceed directly to processing
-                # Only check is_pr_actionable if no issues found
+                # If status is unknown due to API failure, don't skip - process conservatively
+                elif status_unknown:
+                    self.logger.info(
+                        f"ℹ️ PR #{pr_number} status unknown (API failure) - proceeding conservatively"
+                    )
+                # Only check is_pr_actionable if no issues found and status is known
                 elif not self.is_pr_actionable(pr):
                     skipped_count += 1
                     continue
@@ -4350,6 +4411,11 @@ def main():
     parser.add_argument(
         "--fixpr-limit", type=_positive_int_arg, default=None, help="Max fixpr comments per PR (default: 10)."
     )
+    parser.add_argument(
+        "--bypass-fixpr-commit-limit",
+        action="store_true",
+        help="Bypass the fixpr 3-attempt commit retry cap.",
+    )
     parser.add_argument("--automation-user", help="Override automation username for marker validation")
 
     args = parser.parse_args()
@@ -4395,6 +4461,7 @@ def main():
         safety_limits=safety_limits or None,
         no_act=args.no_act,
         automation_username=getattr(args, "automation_user", None),
+        fixpr_bypass_commit_limit=getattr(args, "bypass_fixpr_commit_limit", False),
     )
 
     if args.fix_comment_watch:

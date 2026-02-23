@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from .cli_validation import (
+    CLI_VALIDATION_TEST_PROMPT,
     CLI_VALIDATION_TIMEOUT_SECONDS,
     validate_cli_two_phase,
 )
@@ -39,19 +40,88 @@ from .constants import (
 A2A_AVAILABLE = True
 logger = logging.getLogger(__name__)
 
+PAIR_ORCHESTRATION_RESULTS_DIR_ENV = "PAIR_ORCHESTRATION_RESULTS_DIR"
+ORCHESTRATION_RESULTS_DIR_ENV = "ORCHESTRATION_RESULTS_DIR"
+ORCHESTRATION_LOG_DIR_ENV = "ORCHESTRATION_LOG_DIR"
+
 # Default Gemini model can be overridden via GEMINI_MODEL; default to gemini-3-flash-preview (Gemini 3 Flash)
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 # Cursor model can be overridden via CURSOR_MODEL; default to composer-1 (configurable)
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
 # MiniMax model can be overridden via MINIMAX_MODEL; default to MiniMax-M2.5
 MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL", "MiniMax-M2.5")
+# Codex model can be overridden via CODEX_MODEL; omit --model when unset to let codex choose its default.
+CODEX_MODEL = os.environ.get("CODEX_MODEL")  # None = omit --model flag
 # MiniMax key can be provided via MINIMAX_API_KEY and propagated to Anthropic SDK var
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 PREFLIGHT_CACHE_TTL_SECONDS = 3600
+MINIMAX_KEY_PATTERN = re.compile(r"^sk-(?!ant-)[A-Za-z0-9._-]{12,}$")
 
-# CLI validation constants imported from centralized validation library
-# CLI_VALIDATION_TEST_PROMPT, CLI_VALIDATION_TIMEOUT_SECONDS
 
+def _read_exported_shell_var(path: Path, var_name: str) -> str:
+    """Read `export VAR=...` style values from shell env files."""
+    try:
+        content = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+    assignment_pattern = re.compile(rf"^(?:export\s+)?{re.escape(var_name)}=(.*)$")
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        match = assignment_pattern.match(stripped)
+        if not match:
+            continue
+
+        value = match.group(1).strip()
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+        value = value.strip()
+        if value:
+            return value
+
+    return ""
+
+
+def resolve_minimax_api_key() -> str:
+    """Resolve MiniMax API key with env-first and shell-file fallback.
+
+    Only considers sources that are explicitly MiniMax keys. Anthropic API keys
+    (ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN) are intentionally excluded: the
+    MINIMAX_KEY_PATTERN matches Anthropic's sk-ant-... format, which would cause
+    Anthropic credentials to be sent to MiniMax's API endpoint.
+    """
+    candidates = [
+        os.environ.get("MINIMAX_API_KEY", ""),
+        _read_exported_shell_var(Path.home() / ".bashrc", "MINIMAX_API_KEY"),
+        _read_exported_shell_var(Path.home() / ".automation_env", "MINIMAX_API_KEY"),
+    ]
+    normalized = [candidate.strip() for candidate in candidates if isinstance(candidate, str) and candidate.strip()]
+
+    for candidate in normalized:
+        if MINIMAX_KEY_PATTERN.match(candidate):
+            return candidate
+
+    return ""
+
+
+def apply_minimax_auth_env(env: dict[str, str]) -> dict[str, str]:
+    """Apply MiniMax auth variables in the same shape used by `claudem`."""
+    minimax_key = resolve_minimax_api_key()
+    if minimax_key:
+        # Primary auth path is ANTHROPIC_AUTH_TOKEN; keep API_KEY for compatibility.
+        env["ANTHROPIC_AUTH_TOKEN"] = minimax_key
+        env["ANTHROPIC_API_KEY"] = minimax_key
+        env["ANTHROPIC_BASE_URL"] = "https://api.minimax.io/anthropic"
+        env["ANTHROPIC_MODEL"] = MINIMAX_MODEL
+        env["ANTHROPIC_SMALL_FAST_MODEL"] = MINIMAX_MODEL
+        env["API_TIMEOUT_MS"] = "3000000"
+        env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
+    return env
+
+# CLI validation constants imported from centralized validation library.
 CLI_PROFILES = {
     "claude": {
         "binary": "claude",
@@ -70,7 +140,8 @@ CLI_PROFILES = {
         "stdin_template": "/dev/null",
         "quote_prompt": False,
         # Unset API key and Base URL to force OAuth (not MiniMax proxy)
-        "env_unset": ["ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL"],
+        # Unset CLAUDECODE to allow nested claude invocations from within Claude Code sessions
+        "env_unset": ["ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "CLAUDECODE"],
         # Empty env_set for consistency with other profiles (only minimax uses it)
         "env_set": {},
         "detection_keywords": ["claude", "anthropic"],
@@ -175,8 +246,9 @@ CLI_PROFILES = {
         ),
         "stdin_template": "/dev/null",
         "quote_prompt": False,
-        # Unset default Anthropic API key to force MiniMax auth
-        "env_unset": ["ANTHROPIC_API_KEY"],
+        # Unset default Anthropic API key and token to force MiniMax auth.
+        # Unset CLAUDECODE to avoid nested-session auth conflicts.
+        "env_unset": ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDECODE"],
         # Set MiniMax-specific env vars (ANTHROPIC_API_KEY added at runtime if set)
         "env_set": {
             "ANTHROPIC_BASE_URL": "https://api.minimax.io/anthropic",
@@ -261,13 +333,17 @@ class TaskDispatcher:
         # LLM-driven enhancements - lazy loading to avoid subprocess overhead
         self._active_agents = None  # Will be loaded lazily when needed
         self._last_agent_check = 0  # Track when agents were last refreshed
-        self.result_dir = "/tmp/orchestration_results"
+        self.result_dir = os.environ.get(PAIR_ORCHESTRATION_RESULTS_DIR_ENV) or os.environ.get(
+            ORCHESTRATION_RESULTS_DIR_ENV, "/tmp/orchestration_results"
+        )
         os.makedirs(self.result_dir, exist_ok=True)
         # Normalize user-provided log_dir (expand ~ and make absolute)
         if log_dir:
             self.log_dir = os.path.abspath(os.path.expanduser(log_dir))
         else:
-            self.log_dir = "/tmp/orchestration_logs"
+            self.log_dir = os.path.abspath(
+                os.environ.get(ORCHESTRATION_LOG_DIR_ENV, "/tmp/orchestration_logs")
+            )
         os.makedirs(self.log_dir, exist_ok=True)
         self.preflight_cache_dir = os.path.join(self.log_dir, "preflight_cache")
         os.makedirs(self.preflight_cache_dir, exist_ok=True)
@@ -994,7 +1070,7 @@ class TaskDispatcher:
         """
         Pre-flight validation: Two-phase validation using centralized validation library.
         Phase 1: --help check (cheap sanity check)
-        Phase 2: Execution test (2+2) with file output
+        Phase 2: Execution test (arithmetic output file check)
         
         Returns True if CLI is available and working, False if quota/rate limit detected or execution fails.
         Timeouts are treated as "unknown" and return True (will rely on runtime fallback).
@@ -1007,9 +1083,7 @@ class TaskDispatcher:
                 env[key] = value
             # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
             if cli_name == "minimax":
-                runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
-                if runtime_minimax_key:
-                    env["ANTHROPIC_API_KEY"] = runtime_minimax_key
+                env = apply_minimax_auth_env(env)
 
             # Determine help args and execution cmd based on CLI type
             help_args = []
@@ -1025,6 +1099,8 @@ class TaskDispatcher:
             elif cli_name == "codex":
                 help_args = ["exec", "--help"]
                 execution_cmd = ["exec", "--yolo", "--skip-git-repo-check"]
+                if model:
+                    execution_cmd.extend(["--model", model])
             elif cli_name == "claude":
                 # OAuth CLI - check executable first, then use prompt file for execution
                 if not os.access(cli_path, os.X_OK):
@@ -1059,7 +1135,16 @@ class TaskDispatcher:
                 # This ensures preflight validates with the correct model for MiniMax API
                 test_model = MINIMAX_MODEL
                 # Use prompt file mode and strict MCP config to keep preflight lightweight.
-                execution_cmd = ["--model", test_model, "-p", "@PROMPT_FILE", "--output-format", "text", "--strict-mcp-config"]
+                execution_cmd = [
+                    "--model",
+                    test_model,
+                    "-p",
+                    "@PROMPT_FILE",
+                    "--output-format",
+                    "text",
+                    "--dangerously-skip-permissions",
+                    "--strict-mcp-config",
+                ]
                 skip_help = True  # Skip help for OAuth CLIs (may require auth)
             else:
                 # Unknown CLI type - assume available
@@ -1517,12 +1602,83 @@ Complete the task, then use /pr to create a new pull request."""
             "file exists",
             "unable to create",
             "could not create",
+            "already checked out at",
             "invalid argument",
             "read-only file system",
             "operation not permitted",
             "cross-device link",
         )
         return any(indicator in normalized for indicator in path_indicators)
+
+    @staticmethod
+    def _is_missing_registered_worktree_error(stderr: str) -> bool:
+        """Return True when stderr indicates a stale registered worktree path."""
+        if not stderr:
+            return False
+        normalized = stderr.lower()
+        return (
+            "missing but already registered worktree" in normalized
+            and "already registered worktree" in normalized
+        )
+
+    @staticmethod
+    def _extract_missing_worktree_path(stderr: str) -> str | None:
+        """Extract the missing registered worktree path from git stderr."""
+        match = re.search(r"fatal:\s*'([^']+)'\s+is a missing but already registered worktree", stderr)
+        if match:
+            return match.group(1)
+        return None
+
+    @staticmethod
+    def _cleanup_stale_registered_worktree(path: str | None) -> bool:
+        """Best-effort cleanup for stale registered worktree entries."""
+        if not path:
+            prune_result = subprocess.run(
+                ["git", "worktree", "prune"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+                shell=False,
+            )
+            if prune_result.returncode == 0:
+                return True
+            logger.warning(
+                "worktree_prune_failed",
+                extra={"stderr": prune_result.stderr.strip()},
+            )
+            return False
+
+        remove_result = subprocess.run(
+            ["git", "worktree", "remove", "--force", path],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            shell=False,
+        )
+        if remove_result.returncode != 0:
+            logger.warning(
+                "worktree_remove_failed",
+                extra={"path": path, "stderr": remove_result.stderr.strip()},
+            )
+
+        prune_result = subprocess.run(
+            ["git", "worktree", "prune"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            shell=False,
+        )
+        if prune_result.returncode != 0:
+            logger.warning(
+                "worktree_prune_failed",
+                extra={"path": path, "stderr": prune_result.stderr.strip()},
+            )
+            return remove_result.returncode == 0
+
+        return True
 
     @staticmethod
     def _safe_rmtree(path: str) -> None:
@@ -1650,6 +1806,105 @@ Complete the task, then use /pr to create a new pull request."""
             )
             return False
 
+    @staticmethod
+    def _remote_branch_exists(branch_name: str) -> bool:
+        """Check whether a git branch exists under origin."""
+        try:
+            result = subprocess.run(
+                ["git", "show-ref", "--verify", "--quiet", f"refs/remotes/origin/{branch_name}"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                shell=False,
+            )
+            return result.returncode == 0
+        except Exception:
+            logger.warning(
+                "remote_branch_exists_check_failed",
+                extra={"branch_name": branch_name},
+                exc_info=True,
+            )
+            return False
+
+    @staticmethod
+    def _get_ref_hash(ref_name: str) -> str | None:
+        """Resolve a git ref to a commit hash."""
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--verify", "--quiet", f"{ref_name}^{{commit}}"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                shell=False,
+            )
+            if result.returncode != 0:
+                return None
+            commit = result.stdout.strip()
+            return commit or None
+        except Exception:
+            logger.warning(
+                "git_ref_resolution_failed",
+                extra={"ref_name": ref_name},
+                exc_info=True,
+            )
+            return None
+
+    def _branch_matches_base_ref(self, branch_name: str, base_ref: str) -> bool | None:
+        """Return True when branch tip matches base_ref commit."""
+        if not self._branch_exists(branch_name):
+            return False
+
+        branch_hash = self._get_ref_hash(branch_name)
+        base_hash = self._get_ref_hash(base_ref)
+        if branch_hash is None or base_hash is None:
+            return None
+
+        return branch_hash == base_hash
+
+    def _build_worktree_add_command(
+        self,
+        agent_dir: str,
+        branch_name: str,
+        base_ref: str = "main",
+        create_new_branch: bool = True,
+    ) -> list[str]:
+        """Build a git worktree add command for both new and existing branches."""
+        command = ["git", "worktree", "add"]
+        if create_new_branch:
+            # Guard: if the branch was already created (e.g. by a partially-failed
+            # prior attempt), attach to it instead of using -b which would fail
+            # with "branch already exists".
+            if self._branch_exists(branch_name):
+                branch_matches = self._branch_matches_base_ref(branch_name, base_ref)
+                if branch_matches is False:
+                    logger.warning(
+                        "worktree_branch_base_mismatch",
+                        extra={
+                            "branch_name": branch_name,
+                            "base_ref": base_ref,
+                            "agent_dir": agent_dir,
+                        },
+                    )
+                    command.extend(["-B", branch_name, agent_dir, base_ref])
+                else:
+                    command.extend([agent_dir, branch_name])
+            else:
+                command.extend(["-b", branch_name, agent_dir, base_ref])
+            return command
+
+        if self._branch_exists(branch_name):
+            command.extend([agent_dir, branch_name])
+            return command
+
+        if self._remote_branch_exists(branch_name):
+            command.extend(["-b", branch_name, agent_dir, f"origin/{branch_name}"])
+            return command
+
+        command.extend([agent_dir, branch_name])
+        return command
+
     def _ensure_directory_exists(self, path):
         """Create directories with proper error handling."""
         try:
@@ -1718,11 +1973,12 @@ Complete the task, then use /pr to create a new pull request."""
             self._ensure_directory_exists(parent_dir)
 
             # Create the worktree
-            command = ["git", "worktree", "add"]
-            if create_new_branch:
-                command.extend(["-b", branch_name, agent_dir, base_ref])
-            else:
-                command.extend([agent_dir, branch_name])
+            command = self._build_worktree_add_command(
+                agent_dir=agent_dir,
+                branch_name=branch_name,
+                base_ref=base_ref,
+                create_new_branch=create_new_branch,
+            )
             result = subprocess.run(
                 command,
                 capture_output=True,
@@ -1732,16 +1988,37 @@ Complete the task, then use /pr to create a new pull request."""
                 shell=False,
             )
 
+            if result.returncode != 0 and not used_tmp_fallback and self._is_missing_registered_worktree_error(result.stderr):
+                missing_path = self._extract_missing_worktree_path(result.stderr)
+                logger.warning(
+                    "worktree_missing_registered_recovery_attempt",
+                    extra={"agent": agent_spec.get("name"), "path": missing_path or agent_dir},
+                )
+                if self._cleanup_stale_registered_worktree(missing_path or agent_dir):
+                    recovery_result = subprocess.run(
+                        command,
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                        timeout=30,
+                        shell=False,
+                    )
+                    if recovery_result.returncode == 0:
+                        logger.info(
+                            "worktree_missing_registered_recovered",
+                            extra={"agent": agent_spec.get("name"), "agent_dir": agent_dir},
+                        )
+                        return agent_dir, recovery_result
+                    result = recovery_result
+
             if result.returncode != 0 and not used_tmp_fallback and self._is_path_related_worktree_error(result.stderr):
                 tmp_agent_dir = self._create_tmp_worktree_directory(agent_spec)
-                retry_command = ["git", "worktree", "add"]
-                if create_new_branch:
-                    if self._branch_exists(branch_name):
-                        retry_command.extend([tmp_agent_dir, branch_name])
-                    else:
-                        retry_command.extend(["-b", branch_name, tmp_agent_dir, base_ref])
-                else:
-                    retry_command.extend([tmp_agent_dir, branch_name])
+                retry_command = self._build_worktree_add_command(
+                    agent_dir=tmp_agent_dir,
+                    branch_name=branch_name,
+                    base_ref=base_ref,
+                    create_new_branch=create_new_branch,
+                )
                 retry_result = subprocess.run(
                     retry_command,
                     capture_output=True,
@@ -1802,6 +2079,10 @@ Complete the task, then use /pr to create a new pull request."""
                 print(f"❌ Invalid model name requested: {raw_model!r}")
                 return False
             model = raw_model
+        forced_cli = agent_spec.get("forced_cli")  # e.g. "claude", "codex", "gemini"
+        if forced_cli is not None and forced_cli not in CLI_PROFILES:
+            print(f"❌ Invalid forced_cli: {forced_cli!r}. Must be one of {list(CLI_PROFILES.keys())}")
+            return False
         no_new_pr = bool(agent_spec.get("no_new_pr"))
         no_new_branch = bool(agent_spec.get("no_new_branch"))
         no_worktree = bool(agent_spec.get("no_worktree")) or os.environ.get("AI_ORCH_NO_WORKTREE", "").lower() in {
@@ -1833,7 +2114,7 @@ Complete the task, then use /pr to create a new pull request."""
         existing = self._check_existing_agents()
         existing.update(self.active_agents)
 
-        agent_name = base_name
+        agent_name = base_name or ""
         # If collision detected, generate a unique variation
         if agent_name in existing:
             timestamp = int(time.time() * 1000000) % 10000
@@ -1870,7 +2151,8 @@ Complete the task, then use /pr to create a new pull request."""
 
         try:
             # Support optional comma-separated CLI chains (preferred order)
-            raw_cli_chain = agent_spec.get("cli_chain")
+            # forced_cli overrides cli_chain/cli when provided
+            raw_cli_chain = forced_cli or agent_spec.get("cli_chain")
             if raw_cli_chain is None:
                 raw_cli_chain = agent_spec.get("cli")
 
@@ -1971,7 +2253,7 @@ Complete the task, then use /pr to create a new pull request."""
                 print(f"   📊 Validation summary: {len(validated_clis)} CLI(s) passed validation:")
                 for cli_name, cli_path in validated_clis:
                     print(f"      ✅ {CLI_PROFILES[cli_name]['display_name']} ({cli_path})")
-                if len(validated_clis) > 1:
+                if len(validated_clis) > 1 and validated_cli is not None:
                     print(f"   💡 Using {CLI_PROFILES[validated_cli]['display_name']} as primary, {len(validated_clis) - 1} fallback(s) available")
             
             if not validated_cli or not validated_path:
@@ -2007,6 +2289,7 @@ Complete the task, then use /pr to create a new pull request."""
                 agent_spec["model"] = model
 
             use_worktree = not no_worktree
+            git_result = None  # assigned in worktree branches below; initialized to satisfy type-checker
             # Create worktree for agent using new location logic
             try:
                 if use_worktree and no_new_branch and not existing_branch:
@@ -2014,7 +2297,13 @@ Complete the task, then use /pr to create a new pull request."""
                     return False
 
                 if not use_worktree:
-                    agent_dir = os.getcwd()
+                    if "workspace_root" in workspace_config:
+                        workspace_root = self._expand_path(workspace_config["workspace_root"])
+                        workspace_name = workspace_config.get("workspace_name", agent_name)
+                        agent_dir = os.path.join(workspace_root, workspace_name)
+                        self._ensure_directory_exists(agent_dir)
+                    else:
+                        agent_dir = os.getcwd()
                     if existing_branch:
                         if not self._is_safe_branch_name(existing_branch):
                             print(f"❌ Unsafe branch name provided: {existing_branch}")
@@ -2062,14 +2351,20 @@ Complete the task, then use /pr to create a new pull request."""
                 if use_worktree:
                     print(f"🏗️ Created worktree at: {agent_dir}")
 
-                    if git_result.returncode != 0:
+                    if git_result is not None and git_result.returncode != 0:
                         print(f"⚠️ Git worktree creation warning: {git_result.stderr}")
                         if "already exists" in git_result.stderr:
                             print(f"📁 Using existing worktree at {agent_dir}")
                         elif self._prompt_to_continue_without_worktree():
                             use_worktree = False
                             no_worktree = True
-                            agent_dir = os.getcwd()
+                            if "workspace_root" in workspace_config:
+                                workspace_root = self._expand_path(workspace_config["workspace_root"])
+                                workspace_name = workspace_config.get("workspace_name", agent_name)
+                                agent_dir = os.path.join(workspace_root, workspace_name)
+                                self._ensure_directory_exists(agent_dir)
+                            else:
+                                agent_dir = os.getcwd()
                             if existing_branch:
                                 if not self._is_safe_branch_name(existing_branch):
                                     print(f"❌ Unsafe branch name provided: {existing_branch}")
@@ -2366,6 +2661,10 @@ fi
             cli_chain_str = ",".join(cli_chain)
             cli_chain_json = json.dumps(cli_chain_str)
             rate_limit_pattern = "exhausted your daily quota|rate limit|quota exceeded|resource_exhausted"
+            # NOTE: Removed model_not_found_pattern - it used overly broad phrases like "does not exist"
+            # and "invalid_request_error" that caused false positives. CLI validation now reports raw
+            # output on failure instead of guessing error types.
+            minimax_runtime_auth_token = ""
 
             attempt_blocks = ""
             for idx, attempt_cli in enumerate(cli_chain, start=1):
@@ -2405,6 +2704,8 @@ fi
                     runtime_model = model or CURSOR_MODEL
                 elif attempt_cli == "claude":
                     runtime_model = model or "sonnet"
+                elif attempt_cli == "codex":
+                    runtime_model = model if model and model != "sonnet" else None
                 else:
                     runtime_model = model
 
@@ -2460,19 +2761,39 @@ fi
                                 f"'{attempt_profile.get('display_name', attempt_cli)}': {key!r}"
                             )
                         attempt_env_set_commands += f"export {key}={shlex.quote(value)}\n"
-                # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
+                # Add MiniMax auth at runtime if set (not captured at import time).
                 if attempt_cli == "minimax":
-                    runtime_minimax_key = os.environ.get("MINIMAX_API_KEY", "")
+                    runtime_minimax_key = resolve_minimax_api_key()
                     if runtime_minimax_key:
-                        attempt_env_set_commands += f"export ANTHROPIC_API_KEY={shlex.quote(runtime_minimax_key)}\n"
+                        minimax_runtime_auth_token = runtime_minimax_key
+                        # Unset CLAUDECODE to prevent "nested session" error
+                        attempt_env_set_commands += f"unset CLAUDECODE 2>/dev/null || true\n"
+                        attempt_env_set_commands += 'export ANTHROPIC_AUTH_TOKEN="${MINIMAX_AUTH_TOKEN}"\n'
+                        attempt_env_set_commands += 'export ANTHROPIC_API_KEY="${MINIMAX_AUTH_TOKEN}"\n'
+                        attempt_env_set_commands += f"export ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic\n"
+                        attempt_env_set_commands += f"export ANTHROPIC_MODEL={shlex.quote(MINIMAX_MODEL)}\n"
+                        attempt_env_set_commands += f"export ANTHROPIC_SMALL_FAST_MODEL={shlex.quote(MINIMAX_MODEL)}\n"
+                        attempt_env_set_commands += f"export API_TIMEOUT_MS=3000000\n"
+                        attempt_env_set_commands += f"export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1\n"
 
-                # Build cleanup commands to prevent env vars from leaking between CLI attempts
-                env_cleanup_vars = ["ANTHROPIC_BASE_URL", "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL", "API_TIMEOUT_MS", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"]
-                # Only add cleanup for non-MiniMax attempts; MiniMax sets these intentionally
+                # Build cleanup commands to prevent env vars from leaking between CLI attempts.
+                # This runs before executing each attempt to clear values from prior attempts.
+                env_cleanup_vars = [
+                    "ANTHROPIC_BASE_URL",
+                    "ANTHROPIC_MODEL",
+                    "ANTHROPIC_SMALL_FAST_MODEL",
+                    "API_TIMEOUT_MS",
+                    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+                    "ANTHROPIC_API_KEY",
+                ]
+                # ANTHROPIC_AUTH_TOKEN is only cleared if a prior MiniMax attempt could have
+                # set it to the MiniMax key. For Claude-only chains, unsetting it would break
+                # Claude's OAuth authentication.
+                if "minimax" in cli_chain[: idx - 1]:
+                    env_cleanup_vars.append("ANTHROPIC_AUTH_TOKEN")
                 attempt_env_cleanup_commands = ""
-                if attempt_cli != "minimax":
-                    for var in env_cleanup_vars:
-                        attempt_env_cleanup_commands += f"unset {var} 2>/dev/null || true\n"
+                for var in env_cleanup_vars:
+                    attempt_env_cleanup_commands += f"unset {var} 2>/dev/null || true\n"
 
                 attempt_display_name = attempt_profile.get("display_name", attempt_cli)
 
@@ -2482,6 +2803,7 @@ fi
                 # Build runtime pre-flight check command based on CLI type
                 # This is a quick test to verify CLI can run before the full task
                 # Note: Each CLI uses its own model - cursor uses CURSOR_MODEL, gemini uses GEMINI_MODEL
+                preflight_prompt = shlex.quote(CLI_VALIDATION_TEST_PROMPT)
                 if attempt_cli == "gemini":
                     preflight_model = model or GEMINI_MODEL
                     preflight_cmd = (
@@ -2499,7 +2821,14 @@ fi
                     )
                 elif attempt_cli == "minimax":
                     # MiniMax uses Claude Code with MiniMax API
-                    preflight_cmd = f'{attempt_binary_value} -p - --model {shlex.quote(MINIMAX_MODEL)} --output-format text'
+                    preflight_cmd = (
+                        f"{attempt_binary_value} -p - --model {shlex.quote(MINIMAX_MODEL)} "
+                        "--output-format text --dangerously-skip-permissions"
+                    )
+                elif attempt_cli == "codex":
+                    preflight_cmd = f'{attempt_binary_value} exec --yolo --skip-git-repo-check'
+                    if runtime_model:
+                        preflight_cmd += f' --model {shlex.quote(runtime_model)}'
                 else:
                     preflight_cmd = f'{attempt_binary_value}'
 
@@ -2518,20 +2847,19 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
 
     {prompt_env_export}
     {github_token_export}
+    {attempt_env_cleanup_commands}
     {attempt_env_unset_commands}
     {attempt_env_set_commands}
-    # Clean up env vars from previous CLI attempts to prevent leakage
-    # (e.g., MiniMax env vars must not persist to Claude fallback)
-    {attempt_env_cleanup_commands}
 
     # Quick pre-flight check: Test CLI can actually run before full execution
     # This catches quota exhaustion that happened between dispatch and execution
     echo "[$(date)] 🧪 Runtime pre-flight check for {attempt_display_name}..." | tee -a {log_file_quoted}
-    PREFLIGHT_OUTPUT=$(echo "What is 2+2? Reply with just the number." | timeout 30 {preflight_cmd} 2>&1 || true)
+    PREFLIGHT_OUTPUT=$(echo {preflight_prompt} | timeout 30 {preflight_cmd} 2>&1 || true)
 
-    # Check for quota/rate limit errors in pre-flight output
+    # Check for pre-flight blockers (quota/rate limits only - removed model classification)
     if echo "$PREFLIGHT_OUTPUT" | grep -Eqi "{rate_limit_pattern}|hit your usage limit|authentication required"; then
-        echo "[$(date)] ❌ Runtime pre-flight check FAILED - quota/rate limit detected" | tee -a {log_file_quoted}
+        PRE_FLIGHT_BLOCKER="quota/rate-limit"
+        echo "[$(date)] ❌ Runtime pre-flight check FAILED - ${{PRE_FLIGHT_BLOCKER}} detected" | tee -a {log_file_quoted}
         echo "[$(date)] Pre-flight output: $PREFLIGHT_OUTPUT" | tee -a {log_file_quoted}
         RATE_LIMITED_SEEN=1
         CLI_LAST="$ATTEMPT_CLI"
@@ -2705,12 +3033,35 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                     "-s",
                     agent_name,
                     "-c",
-                    agent_dir,
+                    agent_spec.get("start_dir") or agent_dir,
                     str(script_path),
                 ]
             )
 
-            result = subprocess.run(tmux_cmd, check=False, capture_output=True, text=True, timeout=30)
+            run_kwargs = {
+                "check": False,
+                "capture_output": True,
+                "text": True,
+                "timeout": 30,
+            }
+            launch_env = agent_spec.get("launch_env")
+            run_env: dict[str, str] | None = None
+            if isinstance(launch_env, dict):
+                run_env = os.environ.copy()
+                for key, value in launch_env.items():
+                    if not isinstance(key, str):
+                        continue
+                    if isinstance(value, (str, int, float, bool)):
+                        run_env[key] = str(value)
+            if run_env is not None:
+                run_kwargs["env"] = run_env
+            if minimax_runtime_auth_token:
+                if run_env is None:
+                    run_env = os.environ.copy()
+                run_env["MINIMAX_AUTH_TOKEN"] = minimax_runtime_auth_token
+                run_kwargs["env"] = run_env
+
+            result = subprocess.run(tmux_cmd, **run_kwargs)
             if result.returncode != 0:
                 print(f"⚠️ Error creating tmux session: {result.stderr}")
                 return False
