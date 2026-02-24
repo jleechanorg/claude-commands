@@ -496,6 +496,77 @@ class TestPerCommitRetryLimit(unittest.TestCase):
         count = self.monitor._count_commit_attempts([], "fixpr", None)
         self.assertEqual(count, 0, "None SHA should return 0 attempts")
 
+    def test_bypass_fixpr_commit_limit_allows_reprocess(self):
+        """Bypass flag should ignore the per-commit retry limit for fixpr."""
+        commit_sha = "abc123456789"
+        pr_data = {
+            "number": 1234,
+            "title": "Fixpr PR",
+            "headRefName": "feature/test",
+            "headRefOid": commit_sha,
+        }
+        comments = [
+            {
+                "body": f"<!-- fixpr-run-automation-commit:codex:{commit_sha} -->",
+                "author": {"login": "test-automation-user"},
+            },
+            {
+                "body": f"<!-- fixpr-run-automation-commit:codex:{commit_sha} -->",
+                "author": {"login": "test-automation-user"},
+            },
+            {
+                "body": f"<!-- fixpr-run-automation-commit:codex:{commit_sha} -->",
+                "author": {"login": "test-automation-user"},
+            },
+        ]
+
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager"):
+            bypass_monitor = JleechanorgPRMonitor(
+                automation_username="test-automation-user",
+                fixpr_bypass_commit_limit=True,
+            )
+        bypass_monitor.safety_manager.fixpr_limit = 10
+        bypass_monitor.logger = Mock()
+
+        with patch.object(
+            bypass_monitor, "_normalize_repository_name", return_value="test/repo"
+        ), patch.object(
+            bypass_monitor, "_get_pr_comment_state", return_value=(commit_sha, comments)
+        ), patch.object(
+            bypass_monitor, "_should_skip_pr", return_value=True
+        ), patch.object(
+            bypass_monitor, "_count_workflow_comments", return_value=0
+        ), patch.object(bypass_monitor, "_cleanup_pending_reviews"), patch.object(
+            bypass_monitor, "_post_fixpr_queued", return_value=True
+        ), patch.object(
+            bypass_monitor, "_record_processed_pr"
+        ), patch(
+            "jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks",
+            return_value=True,
+        ), patch(
+            "jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout",
+            return_value=Mock(returncode=0, stdout='{"mergeable":"MERGEABLE"}'),
+        ), patch(
+            "jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone",
+            return_value="/tmp/fake/repo",
+        ), patch(
+            "jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir",
+        ), patch(
+            "jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher",
+        ), patch(
+            "jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr",
+            return_value=True,
+        ) as mock_dispatch_agent:
+
+            result = bypass_monitor._process_pr_fixpr(
+                repository="test/repo",
+                pr_number=1234,
+                pr_data=pr_data,
+            )
+
+        self.assertEqual(result, "posted")
+        self.assertTrue(mock_dispatch_agent.called)
+
 
 if __name__ == "__main__":
     unittest.main()

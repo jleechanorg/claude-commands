@@ -21,6 +21,7 @@ permissions:
 # Smoke coverage:
 # - Mock API smoke tests on PR/push to main/dev, or after preview deploy completion (workflow_run)
 # - Real E2E preview smoke tests on /smoke comments or workflow_dispatch only
+# CI trigger noop: 2026-02-22T14:44:00Z
 on:
   issue_comment:
     types: [created]
@@ -93,11 +94,15 @@ jobs:
       success: ${{ steps.mark-success.outputs.success }}
     timeout-minutes: 10
     env:
+      GCP_REGION: us-central1
+      GCP_PROJECT: $GCP_PROJECT_ID
       PYTHON_VERSION: '3.11'
       TESTING: true
       FLASK_ENV: testing
       TEST_MODE: mock
       MOCK_SERVICES_MODE: true
+      STREAM_RESPONSE_SIGNING_SECRET: ${{ secrets.STREAM_RESPONSE_SIGNING_SECRET }}
+      SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
 
     steps:
 
@@ -161,20 +166,121 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
+    - name: Cache fastembed model
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
+      with:
+        path: ~/.cache/fastembed
+        key: fastembed-bge-small-en-v1.5
+
     - name: Install dependencies
       run: |
         python3 -m pip install --upgrade pip
         pip3 install -r mvp_site/requirements.txt
         if [ -f mvp_site/requirements-test.txt ]; then pip3 install -r mvp_site/requirements-test.txt; fi
 
+    - name: Pre-warm fastembed model
+      run: |
+        python3 -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5', cache_dir='$HOME/.cache/fastembed'); print('fastembed model ready')"
+
     - name: Setup test environment
       run: |
         # Create necessary directories
         mkdir -p /tmp/your-project.com/test
 
+    - name: Authenticate to Google Cloud
+      if: github.event_name == 'workflow_run' || github.event_name == 'pull_request'
+      uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up gcloud SDK
+      if: github.event_name == 'workflow_run' || github.event_name == 'pull_request'
+      uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200  # v2
+      with:
+        project_id: ${{ env.GCP_PROJECT }}
+
+    - name: Determine deployed preview service URL
+      id: service_url
+      run: |
+        set -euo pipefail
+
+        if [ "${{ github.event_name }}" = "workflow_run" ]; then
+          PR_NUMBER="${{ steps.pr_ref.outputs.pr_number }}"
+          PR_HEAD_SHA="${{ steps.pr_ref.outputs.tested_sha }}"
+          if [ -z "$PR_NUMBER" ] || [ -z "$PR_HEAD_SHA" ]; then
+            echo "::error::Could not resolve PR number or commit SHA for workflow_run"
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            echo "service_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+        elif [ "${{ github.event_name }}" = "pull_request" ]; then
+          PR_NUMBER="${{ github.event.number }}"
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+        else
+          echo "⚠️  No preview lookup needed for this event"
+          echo "deployed=false" >> "$GITHUB_OUTPUT"
+          echo "service_url=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        if [ -z "$PR_NUMBER" ] || [ -z "$PR_HEAD_SHA" ]; then
+          echo "⚠️  Could not resolve preview lookup context"
+          echo "deployed=false" >> "$GITHUB_OUTPUT"
+          echo "service_url=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "🔍 Searching for preview for PR #${PR_NUMBER} at commit ${PR_HEAD_SHA}"
+        SERVICE_NAME=$(gcloud run services list \
+          --region="${GCP_REGION}" \
+          --project="${GCP_PROJECT}" \
+          --filter="metadata.labels.pr-number=$PR_NUMBER AND metadata.labels.commit-sha=$PR_HEAD_SHA" \
+          --format="value(metadata.name)" \
+          --limit=1 \
+          --quiet 2>/dev/null || echo "")
+
+        if [ -z "$SERVICE_NAME" ]; then
+          echo "⚠️  No service found"
+          echo "deployed=false" >> "$GITHUB_OUTPUT"
+          echo "service_url=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
+          --platform managed \
+          --region "${GCP_REGION}" \
+          --project "${GCP_PROJECT}" \
+          --format="value(status.url)" \
+          --quiet 2>/dev/null || echo "")
+
+        if [ -z "$SERVICE_URL" ]; then
+          echo "⚠️  Found service $SERVICE_NAME but no URL was returned"
+          echo "deployed=false" >> "$GITHUB_OUTPUT"
+          echo "service_url=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "✅ Found deployed preview: $SERVICE_URL"
+        echo "deployed=true" >> "$GITHUB_OUTPUT"
+        echo "service_url=$SERVICE_URL" >> "$GITHUB_OUTPUT"
+
     - name: Run MCP smoke tests
+      id: smoke_tests
       run: |
         chmod +x scripts/mcp_smoke_test.sh
+        if [ "${{ github.event_name }}" = "workflow_run" ]; then
+          if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
+            echo "::error::Could not find deployed preview for mock smoke tests"
+            exit 1
+          fi
+          export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
+        elif [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
+            echo "::warning::Could not find deployed preview for mock smoke tests; skipping"
+            exit 0
+          fi
+          export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
+        fi
         ./scripts/mcp_smoke_test.sh
 
     - name: Upload test results
@@ -203,25 +309,64 @@ jobs:
               echo "⚠️  Warning: jq parse failed, defaulting to empty array" >&2
               TEST_DETAILS="[]"
             }
+            RESULT_SERVER_URL=$(jq -r '.server_url // ""' /tmp/your-project.com/test/smoke-test-results.json 2>/dev/null || echo "")
           else
             echo "⚠️  Warning: jq not found, defaulting to empty array" >&2
             TEST_DETAILS="[]"
+            RESULT_SERVER_URL=""
           fi
           echo "test_details=$TEST_DETAILS" >> $GITHUB_OUTPUT
+          echo "server_url=$RESULT_SERVER_URL" >> $GITHUB_OUTPUT
         else
           echo "test_details=[]" >> $GITHUB_OUTPUT
+          echo "server_url=" >> $GITHUB_OUTPUT
         fi
 
+    - name: Build workflow_run comment body
+      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && steps.service_url.outputs.deployed == 'true' && always()
+      id: smoke_comment_body
+      run: |
+        RESULT="${{ steps.smoke_tests.outcome }}"
+        if [ -z "$RESULT" ]; then
+          RESULT="failure"
+        fi
+        TEST_DETAILS='${{ steps.test-results.outputs.test_details }}'
+        if [ "$TEST_DETAILS" = "[]" ] || [ -z "$TEST_DETAILS" ]; then
+          TEST_DETAILS=""
+        fi
+        # Require deployed preview URL for reporting context
+        DISPLAY_URL="${{ steps.service_url.outputs.service_url }}"
+        if [ -z "$DISPLAY_URL" ]; then
+          echo "::error::Missing deployed preview URL for MCP smoke test report"
+          exit 1
+        fi
+
+        node scripts/mcp_smoke_comment.js \
+          --result "$RESULT" \
+          --mode "${{ env.TEST_MODE }}" \
+          --service-url "$DISPLAY_URL" \
+          ${TEST_DETAILS:+--items "$TEST_DETAILS"} \
+          --run-id "${{ github.run_id }}" \
+          --repo "${{ github.repository }}" \
+          --server-url "${{ github.server_url }}" \
+          --commit-sha "${{ steps.pr_ref.outputs.tested_sha }}" \
+          > /tmp/mcp-smoke-comment-body.md
+
     - name: Post workflow_run comment
-      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && success()
-      uses: ./.github/actions/post-workflow-run-comment
+      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && steps.service_url.outputs.deployed == 'true' && always()
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
       with:
-        pr_number: ${{ steps.pr_ref.outputs.pr_number }}
-        test_result: ${{ job.status }}
-        job_name: 'MCP Server Smoke Tests [Mock APIs]'
-        tested_sha: ${{ steps.pr_ref.outputs.tested_sha }}
-        test_details: ${{ steps.test-results.outputs.test_details }}
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const body = fs.readFileSync('/tmp/mcp-smoke-comment-body.md', 'utf8');
+
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: Number('${{ steps.pr_ref.outputs.pr_number }}'),
+            body
+          });
 
   fallback-github-hosted:
     name: MCP Server Smoke Tests [Mock APIs] (Fallback)
@@ -230,11 +375,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      GCP_REGION: us-central1
+      GCP_PROJECT: $GCP_PROJECT_ID
       PYTHON_VERSION: '3.11'
       TESTING: true
       FLASK_ENV: testing
       TEST_MODE: mock
       MOCK_SERVICES_MODE: true
+      STREAM_RESPONSE_SIGNING_SECRET: ${{ secrets.STREAM_RESPONSE_SIGNING_SECRET }}
+      SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
 
     steps:
     - name: Get PR ref for workflow_run trigger
@@ -296,20 +445,121 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
+    - name: Cache fastembed model
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
+      with:
+        path: ~/.cache/fastembed
+        key: fastembed-bge-small-en-v1.5
+
     - name: Install dependencies
       run: |
         python3 -m pip install --upgrade pip
         if [ -f mvp_site/requirements.txt ]; then pip3 install -r mvp_site/requirements.txt; fi
+
+    - name: Pre-warm fastembed model
+      run: |
+        python3 -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5', cache_dir='$HOME/.cache/fastembed'); print('fastembed model ready')"
 
     - name: Setup test environment
       run: |
         # Create necessary directories
         mkdir -p /tmp/your-project.com/test
 
+    - name: Authenticate to Google Cloud
+      if: github.event_name == 'workflow_run' || github.event_name == 'pull_request'
+      uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up gcloud SDK
+      if: github.event_name == 'workflow_run' || github.event_name == 'pull_request'
+      uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200  # v2
+      with:
+        project_id: ${{ env.GCP_PROJECT }}
+
+    - name: Determine deployed preview service URL
+      id: service_url
+      run: |
+        set -euo pipefail
+
+        if [ "${{ github.event_name }}" = "workflow_run" ]; then
+          PR_NUMBER="${{ steps.pr_ref.outputs.pr_number }}"
+          PR_HEAD_SHA="${{ steps.pr_ref.outputs.tested_sha }}"
+          if [ -z "$PR_NUMBER" ] || [ -z "$PR_HEAD_SHA" ]; then
+            echo "::error::Could not resolve PR number or commit SHA for workflow_run"
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            echo "service_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+        elif [ "${{ github.event_name }}" = "pull_request" ]; then
+          PR_NUMBER="${{ github.event.number }}"
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+        else
+          echo "⚠️  No preview lookup needed for this event"
+          echo "deployed=false" >> "$GITHUB_OUTPUT"
+          echo "service_url=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        if [ -z "$PR_NUMBER" ] || [ -z "$PR_HEAD_SHA" ]; then
+          echo "⚠️  Could not resolve preview lookup context"
+          echo "deployed=false" >> "$GITHUB_OUTPUT"
+          echo "service_url=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "🔍 Searching for preview for PR #${PR_NUMBER} at commit ${PR_HEAD_SHA}"
+        SERVICE_NAME=$(gcloud run services list \
+          --region="${GCP_REGION}" \
+          --project="${GCP_PROJECT}" \
+          --filter="metadata.labels.pr-number=$PR_NUMBER AND metadata.labels.commit-sha=$PR_HEAD_SHA" \
+          --format="value(metadata.name)" \
+          --limit=1 \
+          --quiet 2>/dev/null || echo "")
+
+        if [ -z "$SERVICE_NAME" ]; then
+          echo "⚠️  No service found"
+          echo "deployed=false" >> "$GITHUB_OUTPUT"
+          echo "service_url=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
+          --platform managed \
+          --region "${GCP_REGION}" \
+          --project "${GCP_PROJECT}" \
+          --format="value(status.url)" \
+          --quiet 2>/dev/null || echo "")
+
+        if [ -z "$SERVICE_URL" ]; then
+          echo "⚠️  Found service $SERVICE_NAME but no URL was returned"
+          echo "deployed=false" >> "$GITHUB_OUTPUT"
+          echo "service_url=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "✅ Found deployed preview: $SERVICE_URL"
+        echo "deployed=true" >> "$GITHUB_OUTPUT"
+        echo "service_url=$SERVICE_URL" >> "$GITHUB_OUTPUT"
+
     - name: Run MCP smoke tests
+      id: smoke_tests
       run: |
         echo "🔄 Running on GitHub-hosted fallback..."
         chmod +x scripts/mcp_smoke_test.sh
+        if [ "${{ github.event_name }}" = "workflow_run" ]; then
+          if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
+            echo "::error::Could not find deployed preview for mock smoke tests"
+            exit 1
+          fi
+          export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
+        elif [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
+            echo "::warning::Could not find deployed preview for mock smoke tests; skipping"
+            exit 0
+          fi
+          export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
+        fi
         ./scripts/mcp_smoke_test.sh
 
     - name: Upload test results
@@ -333,29 +583,68 @@ jobs:
               echo "⚠️  Warning: jq parse failed, defaulting to empty array" >&2
               TEST_DETAILS="[]"
             }
+            RESULT_SERVER_URL=$(jq -r '.server_url // ""' /tmp/your-project.com/test/smoke-test-results.json 2>/dev/null || echo "")
           else
             echo "⚠️  Warning: jq not found, defaulting to empty array" >&2
             TEST_DETAILS="[]"
+            RESULT_SERVER_URL=""
           fi
           echo "test_details=$TEST_DETAILS" >> $GITHUB_OUTPUT
+          echo "server_url=$RESULT_SERVER_URL" >> $GITHUB_OUTPUT
         else
           echo "test_details=[]" >> $GITHUB_OUTPUT
+          echo "server_url=" >> $GITHUB_OUTPUT
         fi
 
+    - name: Build workflow_run comment body (fallback)
+      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && steps.service_url.outputs.deployed == 'true' && always()
+      id: smoke_comment_body
+      run: |
+        RESULT="${{ steps.smoke_tests.outcome }}"
+        if [ -z "$RESULT" ]; then
+          RESULT="failure"
+        fi
+        TEST_DETAILS='${{ steps.test-results-fallback.outputs.test_details }}'
+        if [ "$TEST_DETAILS" = "[]" ] || [ -z "$TEST_DETAILS" ]; then
+          TEST_DETAILS=""
+        fi
+        # Require deployed preview URL for reporting context
+        DISPLAY_URL="${{ steps.service_url.outputs.service_url }}"
+        if [ -z "$DISPLAY_URL" ]; then
+          echo "::error::Missing deployed preview URL for MCP smoke test report"
+          exit 1
+        fi
+
+        node scripts/mcp_smoke_comment.js \
+          --result "$RESULT" \
+          --mode "${{ env.TEST_MODE }}" \
+          --service-url "$DISPLAY_URL" \
+          ${TEST_DETAILS:+--items "$TEST_DETAILS"} \
+          --run-id "${{ github.run_id }}" \
+          --repo "${{ github.repository }}" \
+          --server-url "${{ github.server_url }}" \
+          --commit-sha "${{ steps.pr_ref.outputs.tested_sha }}" \
+          > /tmp/mcp-smoke-comment-body-fallback.md
+
     - name: Post workflow_run comment (fallback)
-      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && always()
-      uses: ./.github/actions/post-workflow-run-comment
+      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && steps.service_url.outputs.deployed == 'true' && always()
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
       with:
-        pr_number: ${{ steps.pr_ref.outputs.pr_number }}
-        test_result: ${{ job.status }}
-        job_name: 'MCP Server Smoke Tests [Mock APIs] (Fallback)'
-        tested_sha: ${{ steps.pr_ref.outputs.tested_sha }}
-        test_details: ${{ steps.test-results-fallback.outputs.test_details }}
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const body = fs.readFileSync('/tmp/mcp-smoke-comment-body-fallback.md', 'utf8');
+
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: Number('${{ steps.pr_ref.outputs.pr_number }}'),
+            body
+          });
 
   preview-smoke-tests:
     name: MCP Smoke Tests [Preview E2E]
-    if: (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/smoke')) || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/smoke') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       GCP_REGION: us-central1
@@ -363,6 +652,8 @@ jobs:
       MCP_TEST_TIMEOUT_MS: ${{ vars.MCP_TEST_TIMEOUT_MS || '120000' }}
       MCP_TEST_MAX_ATTEMPTS: ${{ vars.MCP_TEST_MAX_ATTEMPTS || '3' }}
       MCP_TEST_RETRY_DELAY_MS: ${{ vars.MCP_TEST_RETRY_DELAY_MS || '2000' }}
+      STREAM_RESPONSE_SIGNING_SECRET: ${{ secrets.STREAM_RESPONSE_SIGNING_SECRET }}
+      SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
 
     steps:
       - name: Post acknowledgment comment
@@ -587,18 +878,32 @@ jobs:
         run: |
           echo "⚙️ Building smoke test comment body"
           RESULT="${{ steps.smoke_tests.outcome }}"
+          SERVICE_URL="${{ steps.service_url.outputs.service_url }}"
+          if [ -z "$SERVICE_URL" ]; then
+            echo "::error::Could not resolve preview service URL for smoke test report"
+            exit 1
+          fi
           if [ -z "$RESULT" ]; then
             RESULT="failure"
+          fi
+
+          # Read per-test results from test_results.json written by mcp-smoke-tests.mjs
+          RESULTS_JSON=$(find /tmp/your-project.com -name "test_results.json" 2>/dev/null | head -1)
+          if [ -n "$RESULTS_JSON" ] && [ -f "$RESULTS_JSON" ]; then
+            TEST_ITEMS=$(jq -c '.tests // []' "$RESULTS_JSON" 2>/dev/null || echo "[]")
+          else
+            TEST_ITEMS="[]"
           fi
 
           node scripts/mcp_smoke_comment.js \
             --result "$RESULT" \
             --mode "${{ steps.test_config.outputs.mode }}" \
-            --service-url "${{ steps.service_url.outputs.service_url }}" \
+            --service-url "$SERVICE_URL" \
             --run-id "${{ github.run_id }}" \
             --repo "${{ github.repository }}" \
             --server-url "${{ github.server_url }}" \
             --commit-sha "${{ steps.pr_number.outputs.head_sha }}" \
+            ${TEST_ITEMS:+--items "$TEST_ITEMS"} \
             > /tmp/smoke-comment-body.md
 
           {

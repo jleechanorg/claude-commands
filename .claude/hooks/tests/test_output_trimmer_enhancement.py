@@ -196,10 +196,11 @@ def run_comprehensive_tests():
 
     # Create test suite
     suite = unittest.TestSuite()
+    loader = unittest.TestLoader()
 
     # Add all test cases
-    suite.addTest(unittest.makeSuite(TestArgumentSanitization))
-    suite.addTest(unittest.makeSuite(TestOutputTrimmingIntegration))
+    suite.addTests(loader.loadTestsFromTestCase(TestArgumentSanitization))
+    suite.addTests(loader.loadTestsFromTestCase(TestOutputTrimmingIntegration))
 
     # Run tests with detailed output
     runner = unittest.TextTestRunner(verbosity=2, stream=sys.stdout)

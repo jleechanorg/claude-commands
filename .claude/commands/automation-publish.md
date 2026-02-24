@@ -4,7 +4,7 @@ type: llm-orchestration
 execution_mode: immediate
 ---
 ## Command Summary
-Publish `jleechanorg-orchestration` and `jleechanorg-pr-automation` to PyPI, verify site-packages installs, then restart `jleechanorg-pr-monitor`.
+Publish `jleechanorg-orchestration` and `jleechanorg-pr-automation` to PyPI, verify site-packages installs, then run all active crontab automation jobs via `jleechanorg-pr-monitor`.
 
 ## EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
@@ -93,32 +93,47 @@ The `jleechanorg-pr-automation` package depends on `jleechanorg-orchestration`.
    ```
 2. Push to remote: `git push origin <branch-name>`
 
-### Phase 7: Restart PR Monitor Process
+### Phase 7: Kill Stale Processes and Run All Cron Jobs
 
 **CRITICAL**: Running Python processes don't pick up new packages automatically.
-Any running `jleechanorg-pr-monitor` process must be restarted to use the new code.
+Kill any stale pr-monitor processes, then run ALL automation cron jobs once using the same binary and args as cron.
 
 **Action Steps:**
 1. Kill any running pr-monitor processes:
    ```bash
    pkill -f jleechanorg-pr-monitor || true
-   ```
-2. Wait for processes to terminate:
-   ```bash
    sleep 2
-   ```
-3. Verify no processes remain:
-   ```bash
    pgrep -f jleechanorg-pr-monitor && echo "WARNING: Process still running" || echo "OK: No pr-monitor processes"
    ```
-4. Start fresh pr-monitor with new code:
+
+2. Run all active crontab automation jobs (in background, matching crontab args exactly):
    ```bash
-   nohup jleechanorg-pr-monitor --fixpr --max-prs 10 --cli-agent gemini,cursor > /tmp/pr-monitor.log 2>&1 &
+   LOG=$HOME/Library/Logs/worldarchitect-automation
+
+   # [CRON-JOB-ID: pr-monitor]
+   nohup jleechanorg-pr-monitor --max-prs 10 >> $LOG/jleechanorg_pr_monitor.log 2>&1 &
+
+   # [CRON-JOB-ID: fix-comment]
+   nohup jleechanorg-pr-monitor --fix-comment --cli-agent minimax --max-prs 3 >> $LOG/minimax_fix_comment.log 2>&1 &
+
+   # [CRON-JOB-ID: comment-validation]
+   nohup jleechanorg-pr-monitor --comment-validation --max-prs 10 >> $LOG/comment_validation.log 2>&1 &
+
+   # [CRON-JOB-ID: codex-update]
+   nohup jleechanorg-pr-monitor --codex-update --codex-task-limit 10 >> $LOG/codex_automation.log 2>&1 &
+
+   # [CRON-JOB-ID: codex-api]
+   nohup jleechanorg-pr-monitor --codex-api --codex-apply-and-push --codex-task-limit 10 >> $LOG/codex_automation_api.log 2>&1 &
+
+   # [CRON-JOB-ID: fixpr]
+   nohup jleechanorg-pr-monitor --fixpr --max-prs 10 --cli-agent minimax >> $LOG/jleechanorg_pr_monitor.log 2>&1 &
    ```
-5. Verify it started with new package version:
+
+3. Verify processes started:
    ```bash
    sleep 3
-   ps aux | grep jleechanorg-pr-monitor | grep -v grep && echo "PR Monitor restarted successfully"
+   ps aux | grep jleechanorg-pr-monitor | grep -v grep
+   echo "All cron jobs launched"
    ```
 
 ## VERIFICATION CHECKLIST
@@ -127,6 +142,7 @@ After completion, verify:
 - [ ] Both packages show `site-packages` path (not local worktree)
 - [ ] CLI validation imports resolve from PyPI: verify module paths include `site-packages`
 - [ ] `jleechanorg-pr-monitor --help` works
+- [ ] All 6 cron job processes launched (pr-monitor, fix-comment, comment-validation, codex-update, codex-api, fixpr)
 
 ## REFERENCE DOCUMENTATION
 

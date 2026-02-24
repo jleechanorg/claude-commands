@@ -64,6 +64,7 @@ class TestUnifiedNaming(unittest.TestCase):
         agent_spec = {
             "name": "task-agent-test",
             "workspace_config": {"workspace_name": "tmux-pr456", "workspace_root": "/tmp/.worktrees"},
+            "no_worktree": False,  # Explicitly enable worktree isolation for this test
         }
 
         # Mock the git worktree creation to avoid actual filesystem operations

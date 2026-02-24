@@ -20,7 +20,11 @@ on:
       - "mvp_site/**"
       - "tests/**"
       - "run_tests.sh"
+      - "scripts/pr_autonomy_metrics.py"
+      - "scripts/trace_to_eval_case.py"
+      - "scripts/validate_prompt_tool_contracts.py"
       - "scripts/venv_utils.sh"
+      - "mvp_site/schemas/prompt_tool_contracts.json"
       - ".github/workflows/self-hosted-mvp-shard1.yml"
   workflow_dispatch:
 
@@ -34,6 +38,104 @@ permissions:
   pull-requests: read
 
 jobs:
+  harness-autonomy-self-hosted:
+    name: Harness autonomy checks (self hosted)
+    # Never run untrusted fork PR code on self-hosted infrastructure.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: [self-hosted, claude]
+    timeout-minutes: 20
+    outputs:
+      success: ${{ steps.mark-success.outputs.success }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+
+    - name: Run harness autonomy checks (self-hosted)
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GITHUB_ACTIONS: "true"
+      run: |
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+
+        python -m pytest \
+          tests/scripts/test_pr_autonomy_metrics.py \
+          tests/scripts/test_trace_to_eval_case.py \
+          tests/scripts/test_validate_prompt_tool_contracts.py
+
+        python scripts/validate_prompt_tool_contracts.py
+
+        python scripts/pr_autonomy_metrics.py \
+          --repo "${{ github.repository }}" \
+          --limit 20 \
+          --prompt-source claude_local_strict \
+          --no-persist \
+          --output-json /tmp/harness_metrics_ci.json
+
+    - name: Upload harness autonomy artifacts
+      if: always()
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      with:
+        name: harness-autonomy-self-hosted
+        path: /tmp/harness_metrics_ci.json
+        retention-days: 30
+        if-no-files-found: ignore
+
+    - name: Mark successful completion
+      id: mark-success
+      if: success()
+      run: echo "success=true" >> $GITHUB_OUTPUT
+
+  harness-autonomy-fallback:
+    name: Harness autonomy checks (fallback)
+    needs: harness-autonomy-self-hosted
+    if: always() && needs.harness-autonomy-self-hosted.outputs.success != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      with:
+        python-version: '3.11'
+
+    - name: Run harness autonomy checks (fallback)
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GITHUB_ACTIONS: "true"
+      run: |
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+
+        python -m pytest \
+          tests/scripts/test_pr_autonomy_metrics.py \
+          tests/scripts/test_trace_to_eval_case.py \
+          tests/scripts/test_validate_prompt_tool_contracts.py
+
+        python scripts/validate_prompt_tool_contracts.py
+
+        python scripts/pr_autonomy_metrics.py \
+          --repo "${{ github.repository }}" \
+          --limit 20 \
+          --prompt-source claude_local_strict \
+          --no-persist \
+          --output-json /tmp/harness_metrics_ci.json
+
+    - name: Upload harness autonomy artifacts (fallback)
+      if: always()
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      with:
+        name: harness-autonomy-fallback
+        path: /tmp/harness_metrics_ci.json
+        retention-days: 30
+        if-no-files-found: ignore
+
   mvp-shard-1:
     name: Directory tests (core-mvp-1(self hosted))
     # Never run untrusted fork PR code on self-hosted infrastructure.

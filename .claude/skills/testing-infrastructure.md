@@ -111,6 +111,26 @@ print(f"Debug: {result}")
 - Run only SPECIFIC tests: `TESTING=true python $PROJECT_ROOT/tests/test_<specific>.py`
 - GitHub CI is the authoritative source for test results
 
+## README-aligned Runner Selection (Critical)
+
+### `testing_mcp` suites
+- Treat many `testing_mcp/*.py` files as **script entrypoints**, not pytest-collected test modules.
+- Prefer direct execution:
+  - `cd testing_mcp && ../vpython test_<name>.py --server http://127.0.0.1:8001`
+  - `cd testing_mcp && ../vpython test_<name>.py --start-local`
+  - Schema scripts: `./vpython testing_mcp/schema/test_schema_<name>.py`
+- Avoid `pytest testing_mcp/...` for script-style files that parse CLI args or expect script runtime setup.
+
+### `testing_ui` browser auth bypass
+- Follow `mvp_site/testing_ui/README_TEST_MODE.md` exactly:
+  - Start backend with `TESTING_AUTH_BYPASS=true`.
+  - Open UI with `?test_mode=true&test_user_id=<id>`.
+  - Verify browser flow sets/uses:
+    - `window.testAuthBypass.enabled`
+    - `X-Test-Bypass-Auth: true`
+    - `X-Test-User-ID: <id>`
+- This is mandatory for browser E2E runs that cannot inject custom auth headers directly.
+
 ## MCP Smoke Tests
 
 ```bash

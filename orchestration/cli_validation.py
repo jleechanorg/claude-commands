@@ -4,7 +4,7 @@ Centralized CLI Validation Library
 
 Provides two-phase validation for CLI tools:
 - Phase 1: --help check (cheap sanity check)
-- Phase 2: Execution test with file output (2+2 test, saves to /tmp)
+- Phase 2: Execution test with file output (validation prompt, saves to /tmp)
 
 All CLIs use consistent validation logic with CLI-specific adaptations.
 """
@@ -23,7 +23,13 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # Test prompt used for CLI validation (simple math question to verify CLI can execute and write output)
-CLI_VALIDATION_TEST_PROMPT = "What is 2+2? Write only the number."
+CLI_VALIDATION_OPERAND_A = 123423432432432
+CLI_VALIDATION_OPERAND_B = 234329473243234334
+CLI_VALIDATION_SUM = CLI_VALIDATION_OPERAND_A + CLI_VALIDATION_OPERAND_B
+
+CLI_VALIDATION_TEST_PROMPT = (
+    f"What is {CLI_VALIDATION_OPERAND_A}+{CLI_VALIDATION_OPERAND_B}? Write only the number."
+)
 
 # Timeout constants for CLI validation subprocess runs
 # All CLIs get 90s - enough time for MCP servers, network latency, and slow responses.
@@ -31,8 +37,30 @@ CLI_VALIDATION_TEST_PROMPT = "What is 2+2? Write only the number."
 CLI_VALIDATION_TIMEOUT_SECONDS = 90
 HELP_CHECK_TIMEOUT_SECONDS = 10
 
-# Expected answer for 2+2 validation test
-EXPECTED_VALIDATION_ANSWER = "4"
+# Expected answer for CLI validation arithmetic test
+EXPECTED_VALIDATION_ANSWER = str(CLI_VALIDATION_SUM)
+
+
+def _build_validation_answer_regex(answer: str = EXPECTED_VALIDATION_ANSWER) -> re.Pattern[str]:
+    """Return strict answer regex that validates only the normalized numeric answer."""
+    normalized_answer = answer.replace(",", "").replace("_", "")
+    if not normalized_answer:
+        return re.compile(r"^$")
+    return re.compile(rf"^{re.escape(normalized_answer)}$")
+
+
+def _normalize_validation_output_line(line: str) -> str:
+    """Normalize a validation output line for numeric comparison."""
+    return line.strip().replace(",", "").replace("_", "")
+
+
+def _preview_text(text: str, max_chars: int = 1200) -> str:
+    """Compact output preview for log messages."""
+    # Handle both literal escape sequences and actual control characters
+    normalized = text.replace("\r", "").replace("\t", " ").replace("\\r", "").replace("\\t", " ")
+    if len(normalized) <= max_chars:
+        return normalized.strip()
+    return f"{normalized[:max_chars].strip()}... (truncated)"
 
 
 class ValidationResult:
@@ -157,7 +185,7 @@ def validate_cli_execution(
     prompt_file_needed: bool = False,
 ) -> ValidationResult:
     """
-    Phase 2: Validate CLI by running execution test (2+2) and verifying file output.
+    Phase 2: Validate CLI by running execution test and verifying file output.
     
     Args:
         cli_name: Name of CLI (e.g., "gemini", "codex")
@@ -225,7 +253,7 @@ def validate_cli_execution(
                 timeout=timeout,
                 env=env,
             )
-        
+
         stderr_output = result.stderr or ""
         
         # Check output file
@@ -234,102 +262,53 @@ def validate_cli_execution(
 
             # Output file exists and has non-empty content; correctness is validated by the strict regex match below
             if len(output_content.strip()) > 0:
-                # Verify the CLI actually answered "4" using strict matching
-                # IMPORTANT: Must avoid false positives from HTTP 429, timestamps, dates, etc.
-                # Match "4" as standalone: not preceded or followed by digits
-                # This matches: "4", "4.", "The answer is 4", but NOT "429", "2024", "14:30"
-                strict_match = re.search(r'(?<![0-9])4(?![0-9])', output_content)
-                if strict_match:
-                    return ValidationResult(
-                        success=True,
-                        phase="execution",
-                        message=f"{cli_name} execution test passed (2+2={EXPECTED_VALIDATION_ANSWER} verified, exit code {result.returncode})",
-                        output_file=validation_output_file,
-                    )
-                else:
-                    # CLI ran but didn't answer correctly - likely an error or unexpected state
-                    return ValidationResult(
-                        success=False,
-                        phase="execution",
-                        message=f"{cli_name} execution test failed (output missing expected answer '{EXPECTED_VALIDATION_ANSWER}')",
-                        output_file=validation_output_file,
-                    )
-        
-        # Check for quota/rate limit errors in stderr or stdout
-        # CRITICAL: Cursor returns "authentication required" when quota exhausted, NOT for real auth issues
-        # This check must run BEFORE auth error detection to catch quota exhaustion properly
-        combined_output = f"{stderr_output}\n{validation_output_file.read_text() if validation_output_file.exists() else ''}"
-        quota_phrases = [
-            "exhausted your capacity",
-            "exhausted your daily quota",
-            "rate limit",
-            "quota exceeded",
-            "resource_exhausted",
-            "hit your usage limit",  # Cursor uses this phrase
-            "usage limit",
-        ]
-
-        # Cursor-specific: "authentication required" is actually quota exhaustion
-        # User confirmed Cursor CLI is authenticated and working, so these are quota errors
-        cursor_quota_phrases = [
-            "authentication required",
-            "please run agent login first",
-        ]
-
-        # Check Cursor-specific quota patterns if this is Cursor CLI
-        if cli_name.lower() == "cursor":
-            if any(phrase in combined_output.lower() for phrase in cursor_quota_phrases):
+                strict_answer_pattern = _build_validation_answer_regex()
+                for output_line in output_content.splitlines():
+                    if strict_answer_pattern.fullmatch(_normalize_validation_output_line(output_line)):
+                        return ValidationResult(
+                            success=True,
+                            phase="execution",
+                            message=(
+                                f"{cli_name} execution test passed ("
+                                f"{CLI_VALIDATION_OPERAND_A}+{CLI_VALIDATION_OPERAND_B}="
+                                f"{EXPECTED_VALIDATION_ANSWER} verified, exit code {result.returncode})"
+                            ),
+                            output_file=validation_output_file,
+                        )
+                # CLI ran but didn't answer correctly - likely an error or unexpected state
+                preview = _preview_text(output_content)
                 return ValidationResult(
                     success=False,
                     phase="execution",
-                    message=f"{cli_name} quota/rate limit detected (Cursor returns auth errors when quota exhausted)",
-                    output_file=validation_output_file if validation_output_file.exists() else None,
-                )
-
-        # Check general quota patterns for all CLIs
-        if any(phrase in combined_output.lower() for phrase in quota_phrases):
-            return ValidationResult(
-                success=False,
-                phase="execution",
-                message=f"{cli_name} quota/rate limit detected",
-                output_file=validation_output_file if validation_output_file.exists() else None,
-            )
-        
-        # Check for auth/permission errors for OAuth CLIs (Claude/Cursor)
-        # DESIGN DECISION: Auth errors are treated as "available" (success=True) for OAuth CLIs.
-        # Rationale: OAuth CLIs require interactive login that may not be available during preflight.
-        # Runtime will handle auth (user may be logged in, or CLI will prompt interactively).
-        # Tradeoff: A CLI needing interactive login in non-interactive runs could "validate" but
-        # hang/fail at runtime. This is acceptable because OAuth CLIs are fallback options.
-        if prompt_file_needed:  # OAuth CLIs use prompt files
-            auth_patterns = [
-                r"\bauth\b",
-                r"\bpermission\b",
-                r"\bauthenticate\b",
-                r"\bnot authenticated\b",
-                r"\bnot authorized\b",
-            ]
-            if any(re.search(pattern, combined_output, re.IGNORECASE) for pattern in auth_patterns):
-                return ValidationResult(
-                    success=True,
-                    phase="execution",
-                    message=f"{cli_name} execution test detected auth issue (will try anyway, runtime will handle)",
-                    output_file=validation_output_file if validation_output_file.exists() else None,
+                    message=(
+                        f"{cli_name} execution test failed (output missing expected answer "
+                        f"'{EXPECTED_VALIDATION_ANSWER}', preview={preview})"
+                    ),
+                    output_file=validation_output_file,
                 )
         
-        # NOTE: Removed help/version fallback - it caused false positives when CLIs
-        # output "Usage:" in error messages. If CLI can't answer 2+2, it should fail.
+        # NOTE: Removed help/version and error classification fallback - it caused false positives
+        # when CLIs output generic phrases like "does not exist" or "invalid_request_error".
+        # If CLI can't answer the validation math prompt, it should fail.
+        # The final fallback reports exit code and raw output.
         
+        file_preview = ""
+        if validation_output_file.exists():
+            file_preview = _preview_text(validation_output_file.read_text())
         return ValidationResult(
             success=False,
             phase="execution",
-            message=f"{cli_name} execution test failed (exit code {result.returncode}, output file exists={validation_output_file.exists()})",
-            output_file=validation_output_file if validation_output_file.exists() else None,
+            message=(
+                f"{cli_name} execution test failed (exit code {result.returncode}, "
+                f"output file exists=True, preview={file_preview})"
+            ),
+            output_file=validation_output_file,
         )
     
     except subprocess.TimeoutExpired:
         # DESIGN DECISION: Timeouts are treated as FAILURE (success=False).
-        # Rationale: If CLI can't answer "2+2" within timeout, it's likely broken, hung, or
+        # Rationale: If CLI can't answer the validation prompt within timeout,
+        # it's likely broken, hung, or
         # experiencing API issues. Better to fail fast and try the next CLI in chain.
         # Previous behavior (success=True) caused false positives where quota-exhausted
         # CLIs would timeout waiting for API response, pass validation, then fail at runtime.
