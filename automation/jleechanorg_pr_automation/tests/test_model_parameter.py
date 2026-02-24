@@ -14,6 +14,7 @@ from jleechanorg_pr_automation.jleechanorg_pr_monitor import (
     JleechanorgPRMonitor,
     _normalize_model,
 )
+from jleechanorg_pr_automation.orchestrated_pr_runner import dispatch_agent_for_pr_with_task
 
 
 class TestModelParameter(unittest.TestCase):
@@ -76,6 +77,42 @@ class TestModelParameter(unittest.TestCase):
             except TypeError as e:
                 if "model" in str(e):
                     self.fail(f"dispatch_fix_comment_agent does not accept model parameter: {e}")
+
+    def test_dispatch_agent_for_pr_with_task_includes_model_in_agent_spec(self):
+        """Test that --model propagates into the created agent spec."""
+
+        class FakeDispatcher:
+            def __init__(self):
+                self.specs_seen = []
+
+            def analyze_task_and_create_agents(self, *args, **kwargs):
+                return [{"name": "task-agent", "focus": args[0], "cli": "codex", "type": "task"}]
+
+            def create_dynamic_agent(self, agent_spec):
+                self.specs_seen.append(agent_spec)
+                return True
+
+        pr = {
+            "repo_full": "owner/repo",
+            "repo": "repo",
+            "number": 123,
+            "branch": "feature/test",
+            "headRefOid": "abc123",
+        }
+
+        fake_dispatcher = FakeDispatcher()
+        with patch("jleechanorg_pr_automation.orchestrated_pr_runner.kill_tmux_session_if_exists") as mock_kill_tmux:
+            result = dispatch_agent_for_pr_with_task(
+                fake_dispatcher,
+                pr=pr,
+                task_description="fix issue",
+                agent_cli="codex",
+                model="opus",
+            )
+
+        self.assertTrue(result)
+        self.assertEqual(fake_dispatcher.specs_seen[0]["model"], "opus")
+        mock_kill_tmux.assert_called()
 
     def test_model_parameter_passed_to_dispatcher(self):
         """Test that model parameter is passed through to dispatcher."""

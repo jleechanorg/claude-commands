@@ -374,6 +374,8 @@ def dispatch_agent_for_pr(dispatcher: TaskDispatcher, pr: Dict) -> bool:
                 "workspace_name": workspace_name,
             },
         )
+        # Enable worktree isolation so each PR agent runs in its own worktree (not os.getcwd).
+        agent_spec["no_worktree"] = False
         ok = dispatcher.create_dynamic_agent(agent_spec)
         if ok:
             log(f"Spawned agent for {repo_full}#{pr_number} at /tmp/{repo}/{workspace_name}")

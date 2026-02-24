@@ -1,11 +1,12 @@
 """TDD Tests for MiniMax Preflight Validation Fix.
 
-Problem: MiniMax preflight validation was missing API key authentication setup.
-The validation code applied env_set from CLI_PROFILES but never mapped
-MINIMAX_API_KEY to ANTHROPIC_API_KEY, causing auth errors.
+Problem: MiniMax preflight validation was missing auth setup parity with
+the local claudem function. The validation code applied env_set from
+CLI_PROFILES but only mapped MINIMAX_API_KEY to ANTHROPIC_API_KEY.
 
-Solution: Add runtime mapping of MINIMAX_API_KEY to ANTHROPIC_API_KEY
-in _run_two_phase_cli_validation, consistent with task_dispatcher.py.
+Solution: Add runtime mapping of MiniMax key to both ANTHROPIC_API_KEY
+and ANTHROPIC_AUTH_TOKEN in _run_two_phase_cli_validation, consistent
+with task_dispatcher.py.
 """
 
 import os
@@ -32,7 +33,7 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
         mock_validate.return_value = MagicMock(success=True, output_file=None)
 
         # Set MINIMAX_API_KEY in environment
-        test_api_key = "test-minimax-key-12345"
+        test_api_key = "sk-test-minimax-key-12345"
         with patch.dict(os.environ, {"MINIMAX_API_KEY": test_api_key}, clear=False):
             # Call the validation method
             result = self.monitor._run_two_phase_cli_validation(
@@ -47,7 +48,7 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
         call_kwargs = mock_validate.call_args.kwargs
         env = call_kwargs.get("env", {})
 
-        # CRITICAL: Verify ANTHROPIC_API_KEY is set from MINIMAX_API_KEY
+        # CRITICAL: Verify both auth env vars are set from MINIMAX key
         self.assertIn(
             "ANTHROPIC_API_KEY",
             env,
@@ -57,6 +58,16 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
             env["ANTHROPIC_API_KEY"],
             test_api_key,
             "ANTHROPIC_API_KEY must equal MINIMAX_API_KEY value"
+        )
+        self.assertIn(
+            "ANTHROPIC_AUTH_TOKEN",
+            env,
+            "ANTHROPIC_AUTH_TOKEN must be in validation env for MiniMax"
+        )
+        self.assertEqual(
+            env["ANTHROPIC_AUTH_TOKEN"],
+            test_api_key,
+            "ANTHROPIC_AUTH_TOKEN must equal MINIMAX_API_KEY value"
         )
 
     @patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.validate_cli_two_phase")

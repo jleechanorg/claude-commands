@@ -186,6 +186,30 @@ def _write_checksum_for_file(filepath: Path) -> None:
     checksum_file.write_text(f"{sha256_hash}  {filepath.name}\n")
 ```
 
+### Streaming Response Commitment (Signed Payload)
+
+For integrations relying on streamed server output, done payload evidence must include:
+
+- `streaming_response_signature.digest`
+- `streaming_response_signature.algorithm`
+- `streaming_response_signature.schema_version`
+- `streaming_execution_trace`
+- `request_id`
+
+The signature is the SHA-256 digest (or HMAC-SHA256 when
+`STREAM_RESPONSE_SIGNING_SECRET` is set) over canonical JSON for:
+
+- `request_id`
+- `response_text`
+- `execution_trace`
+
+Evidence reviewers (or replay scripts) must verify:
+
+1. `streaming_response_signature` is present in real-mode runs.
+2. `streaming_execution_trace` exists and records real provider path (`provider` / `mock_callable`) for phases.
+3. In real mode, `mock_services_mode` is false and no phase uses `mock_local_fallback`.
+4. `signature.verification` uses identical serialization (`sort_keys=True`, compact separators, UTF-8).
+
 ### Evidence Package Consistency (NEW)
 
 **Single-run attribution:** If a bundle contains multiple runs, the docs **must**

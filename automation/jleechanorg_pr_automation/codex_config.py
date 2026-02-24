@@ -2,11 +2,122 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 DEFAULT_ASSISTANT_HANDLE = "coderabbitai"
 AUTOMATION_MARKER_NEW_FORMAT_COLONS = 2
 AUTOMATION_MARKER_LEGACY_FORMAT_COLONS = 1
+
+# Centralized list of ALL automation workflow names.
+# These are used in commit message patterns like [workflow-actor-automation-commit]
+# CRITICAL: When adding a new workflow, add it here to automatically enable
+# commit message detection across all detection points.
+AUTOMATION_WORKFLOW_NAMES: tuple[str, ...] = (
+    "codex",
+    "codex-api",
+    "fixpr",
+    "fixcomment",
+    "fix-comment",
+    "comment-validation",
+)
+
+# Centralized list of ALL automation actor keywords (CLI tools).
+# These are the actors that can run automation workflows.
+AUTOMATION_ACTOR_KEYWORDS: tuple[str, ...] = (
+    "codex",
+    "gemini",
+    "cursor",
+    "copilot",
+    "claude",
+    "minimax",
+    "coderabbit",
+    "coderabbitai",
+)
+
+
+def build_automation_commit_message_pattern() -> re.Pattern[str]:
+    """Build a centralized regex pattern that matches ALL automation commit message markers.
+
+    Matches patterns like:
+    - [codex-automation-commit]
+    - [codex-api-automation-commit]
+    - [fixpr-automation-commit]
+    - [fixcomment-automation-commit]
+    - [comment-validation-automation-commit]
+    - [fixpr gemini-automation-commit]  (workflow with actor)
+    - [codex cursor-automation-commit]
+
+    Returns:
+        Compiled regex pattern for matching automation commit messages.
+    """
+    # Build pattern to match all automation commit message formats:
+    # - [codex-automation-commit]         (actor only)
+    # - [codex-api-automation-commit]     (workflow only)
+    # - [fixpr-automation-commit]         (workflow only)
+    # - [fixcomment-automation-commit]    (workflow only)
+    # - [comment-validation-automation-commit] (workflow only)
+    # - [fixpr codex-automation-commit]   (workflow + actor)
+    # - [fixpr gemini-automation-commit]  (workflow + actor)
+    # Combine actors and workflows into one list for simpler matching
+    # Use a set to remove duplicates (e.g., 'codex' appears in both), and sort for deterministic regex output.
+    all_keywords_list = sorted(set(list(AUTOMATION_ACTOR_KEYWORDS) + list(AUTOMATION_WORKFLOW_NAMES)))
+    all_keywords = "|".join(re.escape(kw) for kw in all_keywords_list)
+
+    # Pattern: [ (optional keyword1) (optional keyword2) ... -automation-commit]
+    # The key insight is we just need to match ANY of the keywords followed eventually by -automation-commit
+    # This handles all formats: [codex-], [fixpr-], [fixpr codex-], [fixpr gemini-], etc.
+    pattern_str = rf"\[(?:\s*(?:{all_keywords})\s*)+\s*-automation-commit\]"
+
+    return re.compile(pattern_str, re.IGNORECASE)
+
+
+def build_automation_commit_marker(workflow: str, actor: str | None = None) -> str:
+    """Build a centralized automation commit message marker.
+
+    Args:
+        workflow: The automation workflow name (e.g. 'fixpr', 'fix-comment')
+        actor: Optional CLI actor that ran the workflow (e.g. 'claude', 'gemini')
+
+    Returns:
+        Standard marker string such as:
+        - [fixpr-automation-commit]
+        - [fix-comment claude-automation-commit]
+
+    Raises:
+        ValueError: If workflow is empty or not a string.
+    """
+    if not isinstance(workflow, str) or not workflow.strip():
+        raise ValueError("workflow must be a non-empty string")
+    normalized_workflow = workflow.strip()
+    if not actor:
+        return f"[{normalized_workflow}-automation-commit]"
+
+    normalized_actor = str(actor).strip()
+    if not normalized_actor:
+        return f"[{normalized_workflow}-automation-commit]"
+    return f"[{normalized_workflow} {normalized_actor}-automation-commit]"
+
+
+# Pre-compiled pattern for performance
+AUTOMATION_COMMIT_MESSAGE_PATTERN = build_automation_commit_message_pattern()
+
+
+def is_automation_commit_message(message: str | None) -> bool:
+    """Check if a commit message contains any automation marker.
+
+    This is the centralized function for detecting automation-authored commits
+    via their commit messages.
+
+    Args:
+        message: The commit message to check.
+
+    Returns:
+        True if the message contains an automation marker, False otherwise.
+    """
+    if message is None or not isinstance(message, str):
+        return False
+    return AUTOMATION_COMMIT_MESSAGE_PATTERN.search(message) is not None
 
 
 def compose_assistant_mentions(assistant_handle: str) -> str:
@@ -25,7 +136,7 @@ CODEX_COMMENT_INTRO_BODY = (
 # Shared tracking instruction text (used in both comment templates and monitor functions)
 CODEX_TRACKING_INSTRUCTION = (
     "For comment tracking and auditability, include html_url for each response item in responses.json and "
-    "generate a [codex-automation-commit] tracking commit message that separates FIXED vs CONSIDERED "
+    "generate a [codex-api-automation-commit] tracking commit message that separates FIXED vs CONSIDERED "
     "(ACKNOWLEDGED/DEFERRED/NOT_DONE) comment URLs."
 )
 

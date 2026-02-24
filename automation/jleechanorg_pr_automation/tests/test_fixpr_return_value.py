@@ -316,10 +316,11 @@ class TestFixprSkipsCleanPRs(unittest.TestCase):
         """
         Test that _process_pr_fixpr processes PRs with merge conflicts.
         """
-        # Mock CONFLICTING merge status
+        # Mock CONFLICTING merge status (GitHub API format)
         mock_result = MagicMock()
         mock_result.returncode = 0
-        mock_result.stdout = '{"mergeable": "CONFLICTING"}'
+        # GitHub API returns: mergeable=false (boolean), mergeableState="CONFLICTING" (string)
+        mock_result.stdout = '{"mergeable": false, "mergeableState": "CONFLICTING"}'
         mock_subprocess.return_value = mock_result
 
         # No failing checks (conflict alone should trigger processing)
@@ -398,6 +399,40 @@ class TestFixprAPIUnknownAndReprocess(unittest.TestCase):
         self.assertEqual(res, "posted")
         mock_dispatch.assert_called_once()
 
+    def test_fixpr_status_unknown_processes_when_gh_returns_nonzero(self):
+        """Non-zero gh returncode should be treated as unknown status, not clean."""
+        pr = self._base_pr()
+
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=False):
+            mock_subprocess_result = SimpleNamespace(returncode=1, stdout="", stderr="fail")
+            with patch(
+                "jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout",
+                return_value=mock_subprocess_result,
+            ):
+                with patch.object(self.monitor, "_should_skip_pr", return_value=False):
+                    with patch.object(self.monitor, "_get_pr_comment_state", return_value=("abc12345", [])):
+                        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.ensure_base_clone", return_value="/tmp/fake/repo"):
+                            with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.chdir"):
+                                with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.TaskDispatcher"):
+                                    with patch(
+                                        "jleechanorg_pr_automation.jleechanorg_pr_monitor.dispatch_agent_for_pr",
+                                        return_value=True,
+                                    ) as mock_dispatch:
+                                        with patch.object(self.monitor, "_post_fixpr_queued", return_value=True):
+                                            with patch.object(self.monitor, "_record_processed_pr"):
+                                                with patch.object(self.monitor, "_cleanup_pending_reviews"):
+                                                    with patch.object(self.monitor, "_count_workflow_comments", return_value=0):
+                                                        res = self.monitor._process_pr_fixpr(
+                                                            "test/repo",
+                                                            123,
+                                                            pr,
+                                                            agent_cli="claude",
+                                                            model=None,
+                                                        )
+
+        self.assertEqual(res, "posted")
+        mock_dispatch.assert_called_once()
+
     def test_fixpr_status_unknown_skips_when_already_processed(self):
         pr = self._base_pr()
         
@@ -471,7 +506,8 @@ class TestFixprUsesCorrectDispatchFunction(unittest.TestCase):
 
         # Mock conflicting status so fixpr processes (doesn't skip)
         with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=False):
-            mock_subprocess_result = SimpleNamespace(returncode=0, stdout='{"mergeable":"CONFLICTING"}', stderr="")
+            # GitHub API returns: mergeable=false (boolean), mergeableState="CONFLICTING" (string)
+            mock_subprocess_result = SimpleNamespace(returncode=0, stdout='{"mergeable": false, "mergeableState": "CONFLICTING"}', stderr="")
             with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_subprocess_result):
                 with patch.object(self.monitor, "_should_skip_pr", return_value=False):
                     with patch.object(self.monitor, "_get_pr_comment_state", return_value=("abc12345", [])):

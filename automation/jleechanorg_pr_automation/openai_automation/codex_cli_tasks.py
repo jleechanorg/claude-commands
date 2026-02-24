@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
+from jleechanorg_pr_automation.codex_config import build_automation_commit_marker
 from jleechanorg_pr_automation.orchestrated_pr_runner import ensure_base_clone
 from jleechanorg_pr_automation.utils import detect_repo_path, resolve_repo_full_from_environment_label, resolve_repo_path
 
@@ -511,7 +512,7 @@ class CodexCloudAPI:
             )
 
             # Git commit
-            commit_msg = f"""codex: {task_title}
+            commit_msg = f"""{build_automation_commit_marker("codex-api")} codex: {task_title}
 
 Applied from Codex Cloud task: {task_url}
 
@@ -848,7 +849,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
 
             # Commit
             conflict_note = " (with conflicts - needs resolution)" if has_conflicts else ""
-            commit_msg = f"""codex: {task_title}{conflict_note}
+            commit_msg = f"""{build_automation_commit_marker("codex-api")} codex: {task_title}{conflict_note}
 
 Applied from Codex Cloud task: {task_url}
 

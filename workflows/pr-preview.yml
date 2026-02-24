@@ -12,6 +12,8 @@
 
 name: Deploy PR Preview (Rotating Pool)
 
+# CI trigger noop: 2026-02-22T14:57:00Z
+
 # Cancel in-progress runs when new commits are pushed to same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -54,7 +56,7 @@ jobs:
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.fork == false &&
       github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, claude]
     env:
       GCP_REGION: us-central1
       GCP_PROJECT: $GCP_PROJECT_ID
@@ -123,9 +125,14 @@ jobs:
           SERVER: ${{ steps.server_pool.outputs.server }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.number }}
+          SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
         timeout-minutes: 20
         run: |
           set -euo pipefail
+          if [ -z "${SMOKE_TOKEN:-}" ]; then
+            echo "::error title=MissingSecret::SMOKE_TOKEN is required for preview deploy"
+            exit 1
+          fi
 
           echo "🚀 Deploying PR #$PR_NUMBER to server $SERVER..."
           echo "Service name: $SERVICE_NAME"
@@ -157,6 +164,14 @@ jobs:
           # Source shared config for consistent resource allocation
           source scripts/shared_config.sh
 
+          # Remove SMOKE_TOKEN secret reference if it was previously mounted via --set-secrets.
+          # Cloud Run rejects updating a secret-type env var to a plain string literal.
+          gcloud run services update "$SERVICE_NAME" \
+            --remove-secrets=SMOKE_TOKEN \
+            --region="${{ env.GCP_REGION }}" \
+            --project="${{ env.GCP_PROJECT }}" \
+            --quiet 2>/dev/null || true
+
           # Deploy to Cloud Run with PR label
           echo "Deploying to Cloud Run service: $SERVICE_NAME"
           echo "Using memory: $WORLDARCH_MEMORY, timeout: $WORLDARCH_TIMEOUT_SECONDS"
@@ -166,7 +181,7 @@ jobs:
             --project="${{ env.GCP_PROJECT }}" \
             --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview" \
+            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview,PRODUCTION_MODE=true,SMOKE_TOKEN=$SMOKE_TOKEN" \
             --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
             --memory="$WORLDARCH_MEMORY" \
             --cpu="$WORLDARCH_CPU" \

@@ -28,7 +28,7 @@ You are a **Codex CLI Verifier Agent** that delegates verification to the Codex 
 # Use orchestration library to launch the CLI with proper validation and env setup
 python3 orchestration/orchestrate_unified.py \
   --agent-cli codex \
-  --lite-mode \
+  --async \
   --no-worktree \
   "<prompt text>"
 ```

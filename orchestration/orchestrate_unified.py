@@ -315,8 +315,9 @@ class UnifiedOrchestration:
                     agent_spec["no_new_pr"] = True
                 if options.get("no_new_branch"):
                     agent_spec["no_new_branch"] = True
-                if options.get("no_worktree"):
-                    agent_spec["no_worktree"] = True
+                agent_spec["no_worktree"] = bool(options.get("no_worktree", True))
+                agent_spec["skip_preflight"] = not bool(options.get("preflight", False))
+                agent_spec["inject_prompt_template"] = bool(options.get("inject_prompt_template", False))
 
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
                 print(f"✅ Created continuation agent: {agent_spec['name']}")
@@ -386,8 +387,11 @@ class UnifiedOrchestration:
         display_options = dict(options)
         if options.get("agent_cli") is not None and not options.get("agent_cli_provided"):
             display_options["agent_cli"] = None
+        # Exclude no_worktree=True (default) from triggering display; only show when explicitly different (e.g. --worktree)
+        if display_options.get("no_worktree") is True:
+            display_options["no_worktree"] = None  # Don't count default as "option provided"
 
-        if any(display_options.values()):
+        if any(v is not None and v != "" for v in display_options.values()):
             print("📋 OPTIONS:")
             if display_options.get("agent_cli") is not None:
                 print(f"  └─ Agent CLI: {options['agent_cli']}")
@@ -407,10 +411,10 @@ class UnifiedOrchestration:
                 print("  └─ 🚫 New PR Creation: BLOCKED")
             if display_options.get("no_new_branch"):
                 print("  └─ 🚫 New Branch Creation: BLOCKED")
-            if display_options.get("no_worktree"):
-                print("  └─ 🧩 Worktree Isolation: DISABLED")
-            if display_options.get("lite_mode"):
-                print("  └─ ⚡ Lite Mode: ENABLED (no monitoring loop)")
+            if display_options.get("no_worktree") is False:
+                print("  └─ 🧩 Worktree Isolation: ENABLED")
+            if display_options.get("async_mode"):
+                print("  └─ ⚡ Async Mode: ENABLED (no monitoring loop)")
             logger.info(
                 "orchestration_options",
                 extra={
@@ -424,8 +428,10 @@ class UnifiedOrchestration:
                     "validate": options.get("validate"),
                     "no_new_pr": bool(options.get("no_new_pr")),
                     "no_new_branch": bool(options.get("no_new_branch")),
-                    "no_worktree": bool(options.get("no_worktree")),
-                    "lite_mode": bool(options.get("lite_mode")),
+                    "no_worktree": bool(options.get("no_worktree", True)),
+                    "preflight": bool(options.get("preflight")),
+                    "inject_prompt_template": bool(options.get("inject_prompt_template")),
+                    "async_mode": bool(options.get("async_mode")),
                 },
             )
 
@@ -497,8 +503,9 @@ class UnifiedOrchestration:
                 agent_spec["bead_id"] = options["bead"]
             if options.get("model"):
                 agent_spec["model"] = options["model"]
-            if options.get("no_worktree"):
-                agent_spec["no_worktree"] = True
+            agent_spec["no_worktree"] = bool(options.get("no_worktree", True))
+            agent_spec["skip_preflight"] = not bool(options.get("preflight", False))
+            agent_spec["inject_prompt_template"] = bool(options.get("inject_prompt_template", False))
             if options.get("no_new_pr"):
                 agent_spec["no_new_pr"] = True
             if options.get("no_new_branch"):
@@ -530,8 +537,8 @@ class UnifiedOrchestration:
             print(f"\n🏠 You remain in: {os.getcwd()}")
             print("\n📁 File-based A2A coordination - check orchestration/results/")
 
-            if options.get("lite_mode"):
-                print("\n⚡ LITE MODE: Agents launched, skipping monitoring loop")
+            if options.get("async_mode"):
+                print("\n⚡ ASYNC MODE: Agents launched, skipping monitoring loop")
                 print("  └─ Agents are running independently")
                 print("  └─ Caller is responsible for coordination/polling")
             else:
@@ -589,8 +596,9 @@ class UnifiedOrchestration:
                 agent_spec["no_new_pr"] = True
             if options.get("no_new_branch"):
                 agent_spec["no_new_branch"] = True
-            if options.get("no_worktree"):
-                agent_spec["no_worktree"] = True
+            agent_spec["no_worktree"] = bool(options.get("no_worktree", True))
+            agent_spec["skip_preflight"] = not bool(options.get("preflight", False))
+            agent_spec["inject_prompt_template"] = bool(options.get("inject_prompt_template", False))
 
             print(f"  📦 Creating Agent {i + 1}/{len(agents)}: {agent_spec['name']}")
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
@@ -640,9 +648,9 @@ class UnifiedOrchestration:
             print(f"\n🏠 You remain in: {os.getcwd()}")
             print("\n📁 File-based A2A coordination - check orchestration/results/")
 
-            # Check if lite-mode is enabled
-            if options.get("lite_mode"):
-                print("\n⚡ LITE MODE: Agents launched, skipping monitoring loop")
+            # Check if async mode is enabled (--async flag)
+            if options.get("async_mode"):
+                print("\n⚡ ASYNC MODE: Agents launched, skipping monitoring loop")
                 print("  └─ Agents are running independently")
                 print("  └─ Caller is responsible for coordination/polling")
                 monitoring_duration = 0
@@ -947,9 +955,42 @@ The orchestration system will:
     parser.add_argument(
         "--no-new-branch", action="store_true", help="Hard block on branch creation (agents must use existing branch)"
     )
-    parser.add_argument("--no-worktree", action="store_true", help="Run agents in current directory (no worktree)")
+    worktree_group = parser.add_mutually_exclusive_group()
+    worktree_group.add_argument(
+        "--worktree",
+        dest="no_worktree",
+        action="store_false",
+        help="Enable worktree isolation: create a dedicated git worktree per agent (opt-in, non-default).",
+    )
+    worktree_group.add_argument(
+        "--no-worktree",
+        dest="no_worktree",
+        action="store_true",
+        help="Deprecated/no-op: worktree isolation is disabled by default; this flag is ignored.",
+    )
+    parser.set_defaults(no_worktree=True)
     parser.add_argument(
-        "--lite-mode", action="store_true", help="Lite mode: launch agent and exit immediately (no monitoring loop)"
+        "--preflight",
+        action="store_true",
+        help="Enable pre-flight CLI validation before agent creation (opt-in, non-default).",
+    )
+    parser.add_argument(
+        "--inject-prompt-template",
+        dest="inject_prompt_template",
+        action="store_true",
+        help="Inject agent config block and completion instructions into the prompt (opt-in, non-default).",
+    )
+    parser.add_argument(
+        "--async",
+        dest="async_mode",
+        action="store_true",
+        help="Async mode: launch agent and return immediately without monitoring (background execution)",
+    )
+    parser.add_argument(
+        "--lite-mode",
+        dest="async_mode",
+        action="store_true",
+        help=argparse.SUPPRESS,  # Deprecated: use --async instead
     )
 
     # CLI selection
@@ -1028,7 +1069,9 @@ The orchestration system will:
         "no_new_pr": args.no_new_pr,
         "no_new_branch": args.no_new_branch,
         "no_worktree": args.no_worktree,
-        "lite_mode": args.lite_mode,
+        "preflight": args.preflight,
+        "inject_prompt_template": args.inject_prompt_template,
+        "async_mode": args.async_mode,
         # Note: CLI flag is --agent-cli; argparse exposes it as args.agent_cli.
         "agent_cli": agent_cli,
         "agent_cli_provided": agent_cli_provided,

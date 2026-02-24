@@ -320,9 +320,19 @@ class TestCleanupBeforeEligibilityChecks(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment"""
-        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager"):
+        with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager") as MockSafetyManager:
+            # Configure the mock to return proper limit values
+            mock_instance = Mock()
+            mock_instance.fixpr_limit = 5
+            mock_instance.fix_comment_limit = 5
+            mock_instance.pr_automation_limit = 5
+            mock_instance.pr_limit = 10
+            mock_instance.can_start_global_run.return_value = True
+            MockSafetyManager.return_value = mock_instance
             self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
             self.monitor.logger = Mock()
+            # Replace the safety_manager with our properly configured mock
+            self.monitor.safety_manager = mock_instance
 
     @patch.dict(os.environ, {"TESTING": "true"})
     def test_cleanup_runs_before_eligibility_checks(self):
@@ -342,11 +352,20 @@ class TestCleanupBeforeEligibilityChecks(unittest.TestCase):
         manager.attach_mock(self.monitor, "monitor")
 
         # Set TESTING=true to skip preflight validation in run_monitoring_cycle
+        # Mock the gh CLI to return clean merge status so is_pr_actionable is called
+        mock_gh_result = Mock()
+        mock_gh_result.returncode = 0
+        mock_gh_result.stdout = '{"mergeable": true, "mergeStateStatus": "CLEAN"}'
+        mock_gh_result.stderr = ""
+
         with patch.object(self.monitor, "discover_open_prs", return_value=[pr]):
             with patch.object(self.monitor, "is_pr_actionable", return_value=False) as mock_actionable:
                 with patch.object(self.monitor, "_cleanup_pending_reviews") as mock_cleanup:
-                    # Run monitoring cycle in fixpr mode (which triggers cleanup)
-                    self.monitor.run_monitoring_cycle(fixpr=True)
+                    with patch.object(self.monitor, "_count_workflow_comments", return_value=0):
+                        with patch.object(self.monitor, "_get_pr_comment_state", return_value=("sha", [])):
+                            with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_gh_result):
+                                # Run monitoring cycle in fixpr mode (which triggers cleanup)
+                                self.monitor.run_monitoring_cycle(fixpr=True)
 
                     # Verify cleanup was called
                     mock_cleanup.assert_called_once_with(repo_full, pr_number)
@@ -358,25 +377,35 @@ class TestCleanupBeforeEligibilityChecks(unittest.TestCase):
                     
         # Verification of order via a shared mock object
         # Re-run with shared mock to verify order (reuse the TESTING env var from decorator)
+        # Mock the gh CLI to return clean merge status so is_pr_actionable is called
+        mock_gh_result = Mock()
+        mock_gh_result.returncode = 0
+        mock_gh_result.stdout = '{"mergeable": true, "mergeStateStatus": "CLEAN"}'
+        mock_gh_result.stderr = ""
+
         with patch.object(self.monitor, "discover_open_prs", return_value=[pr]):
             with patch.object(self.monitor, "is_pr_actionable", return_value=False) as mock_actionable:
                 with patch.object(self.monitor, "_cleanup_pending_reviews") as mock_cleanup:
-                    # Shared mock to track call order
-                    order_mock = Mock()
+                    with patch.object(self.monitor, "_count_workflow_comments", return_value=0):
+                        with patch.object(self.monitor, "_get_pr_comment_state", return_value=("sha", [])):
+                            with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout", return_value=mock_gh_result):
+                                with patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=False):
+                                    # Shared mock to track call order
+                                    order_mock = Mock()
 
-                    # Define side_effect functions that track calls AND return correct values
-                    def cleanup_side_effect(*args, **kwargs):
-                        order_mock.cleanup()
-                        return None  # _cleanup_pending_reviews returns None
+                                    # Define side_effect functions that track calls AND return correct values
+                                    def cleanup_side_effect(*args, **kwargs):
+                                        order_mock.cleanup()
+                                        return None  # _cleanup_pending_reviews returns None
 
-                    def actionable_side_effect(*args, **kwargs):
-                        order_mock.actionable()
-                        return False  # is_pr_actionable should return False for this test
+                                    def actionable_side_effect(*args, **kwargs):
+                                        order_mock.actionable()
+                                        return False  # is_pr_actionable should return False for this test
 
-                    mock_cleanup.side_effect = cleanup_side_effect
-                    mock_actionable.side_effect = actionable_side_effect
+                                    mock_cleanup.side_effect = cleanup_side_effect
+                                    mock_actionable.side_effect = actionable_side_effect
 
-                    self.monitor.run_monitoring_cycle(fixpr=True)
+                                    self.monitor.run_monitoring_cycle(fixpr=True)
 
                     # Check order: cleanup should be before actionable
                     calls = [call[0] for call in order_mock.method_calls]

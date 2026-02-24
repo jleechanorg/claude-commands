@@ -310,6 +310,10 @@ class ClaudeCommandsExporter:
         # Export GitHub Actions workflows (as examples)
         self._export_github_workflows(staging_dir)
 
+        # Export root-level reference docs (CLAUDE.md and AGENTS.md)
+        self._export_claude_md(staging_dir)
+        self._export_agents_md(staging_dir)
+
         # Generate README
         self._generate_readme()
 
@@ -761,6 +765,79 @@ class ClaudeCommandsExporter:
             print("   • package-lock.json")
 
         print("✅ Exported Node.js dependencies")
+
+    def _export_claude_md(self, staging_dir):
+        """Export filtered CLAUDE.md to the staging directory"""
+        print("📄 Exporting CLAUDE.md...")
+
+        source_file = os.path.join(self.project_root, "CLAUDE.md")
+        if not os.path.exists(source_file):
+            print("⚠️  Warning: CLAUDE.md not found")
+            return
+
+        with open(source_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Prepend adaptation header
+        header = """# 📚 Reference Export - Adaptation Guide
+
+**Note**: This is a reference export from a working Claude Code project. You may need to
+personally debug some configurations, but Claude Code can easily adjust for your specific needs.
+
+These configurations may include:
+- Project-specific paths and settings that need updating for your environment
+- Setup assumptions and dependencies specific to the original project
+- References to particular GitHub repositories and project structures
+
+Feel free to use these as a starting point - Claude Code excels at helping you adapt and
+customize them for your specific workflow.
+
+---
+
+"""
+        full_content = header + content
+
+        target_file = os.path.join(staging_dir, "CLAUDE.md")
+        with open(target_file, "w", encoding="utf-8") as f:
+            f.write(full_content)
+
+        self._apply_content_filtering(target_file)
+        print("✅ Exported CLAUDE.md")
+
+    def _export_agents_md(self, staging_dir):
+        """Export filtered AGENTS.md to the staging directory"""
+        print("📄 Exporting AGENTS.md...")
+
+        source_file = os.path.join(self.project_root, "AGENTS.md")
+        if not os.path.exists(source_file):
+            print("⚠️  Warning: AGENTS.md not found")
+            return
+
+        with open(source_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Prepend adaptation header
+        header = """# 📚 Reference Export - Agents Configuration
+
+**Note**: This is a reference export from a working Claude Code project. These agent
+configurations and guidelines may contain project-specific references that need adaptation.
+
+Customize the following for your project:
+- Project-specific paths (mvp_site/ → your main source directory)
+- Repository and domain references
+- CI commands and test runner paths
+
+---
+
+"""
+        full_content = header + content
+
+        target_file = os.path.join(staging_dir, "AGENTS.md")
+        with open(target_file, "w", encoding="utf-8") as f:
+            f.write(full_content)
+
+        self._apply_content_filtering(target_file)
+        print("✅ Exported AGENTS.md")
 
     def _export_orchestration(self, staging_dir):
         """Export orchestration system with directory exclusions"""
@@ -1699,6 +1776,8 @@ This is a filtered reference export from a working Claude Code project. Commands
             "automation": "automation",  # Goes to repo root
             "scripts": None,  # Goes to repo root within scripts/
             "workflows": "workflows",  # GitHub workflows - goes to repo root as examples
+            "CLAUDE.md": "CLAUDE.md",  # Reference doc - goes to repo root
+            "AGENTS.md": "AGENTS.md",  # Reference doc - goes to repo root
         }
 
         # Create the .claude/ subdirectories (but not for files like settings.json)
@@ -1909,8 +1988,8 @@ Starting MANUAL INSTALLATION: Copy commands to .claude/commands/ and hooks to .c
             os.chdir(original_cwd)
 
     def _create_pull_request(self):
-        """Create pull request using GitHub API"""
-        print("📝 Creating pull request...")
+        """Create pull request using gh CLI (preferred per CLAUDE.md GitHub protocol)"""
+        print("📝 Creating pull request via gh CLI...")
 
         pr_title = f"Claude Commands Export {time.strftime('%Y-%m-%d')}: Directory Exclusions Applied"
         pr_body = f"""**🚨 AUTOMATED EXPORT** with directory exclusions applied per requirements.
@@ -1929,6 +2008,8 @@ This export **excludes** the following project-specific directories:
 - **🧠 {self.skills_count} Skills**: Reference knowledge exports (.claude/skills/)
 - **⚙️  {self.workflows_count} Workflows**: GitHub Actions examples (REQUIRE INTEGRATION)
 - **🤖 Orchestration System**: Core multi-agent task delegation (WIP prototype)
+- **📄 CLAUDE.md**: Filtered reference configuration for Claude Code
+- **📄 AGENTS.md**: Filtered agent guidelines and conventions
 - **📚 Complete Documentation**: Setup guide with adaptation examples
 
 ## Manual Installation
@@ -1945,9 +2026,9 @@ cp -n scripts/* ./scripts/
 ```
 
 ## 🔄 Content Filtering Applied
-- **Generic Paths**: mvp_site/ → \\$PROJECT_ROOT/
+- **Generic Paths**: mvp_site/ → $PROJECT_ROOT/
 - **Generic Domain**: worldarchitect.ai → your-project.com
-- **Generic User**: jleechan → \\$USER
+- **Generic User**: jleechan → $USER
 - **Generic Commands**: TESTING=true vpython → TESTING=true python
 
 ## ⚠️ Reference Export
@@ -1956,31 +2037,66 @@ This is a filtered reference export. Commands may need adaptation for specific e
 ---
 🤖 **Generated with [Claude Code](https://claude.ai/code)**"""
 
-        headers = {
-            "Authorization": f"token {self.github_token}",
-            "Accept": "application/vnd.github.v3+json",
-        }
+        # Locate gh CLI (same search as _clone_repository)
+        gh_cmd = shutil.which("gh")
+        if not gh_cmd:
+            common_paths = [
+                os.path.expanduser("~/.local/bin/gh"),
+                "/usr/local/bin/gh",
+                os.path.join(os.path.expanduser("~"), "bin", "gh"),
+            ]
+            for path in common_paths:
+                if os.path.exists(path):
+                    gh_cmd = path
+                    break
 
-        data = {
-            "title": pr_title,
-            "body": pr_body,
-            "head": self.export_branch,
-            "base": "main",
-        }
-
-        response = requests.post(
-            "https://api.github.com/repos/jleechanorg/claude-commands/pulls",
-            headers=headers,
-            json=data,
-        )
-
-        if response.status_code != 201:
+        if not gh_cmd:
             raise GitHubAPIError(
-                f"PR creation failed: {response.status_code} {response.text}"
+                "GitHub CLI (gh) not found. Install from https://cli.github.com/ or "
+                "run: curl -sL https://github.com/cli/cli/releases/download/v2.40.1/"
+                "gh_2.40.1_linux_amd64.tar.gz | tar -xz -C /tmp && "
+                "mkdir -p ~/.local/bin && cp /tmp/gh_2.40.1_linux_amd64/bin/gh ~/.local/bin/"
             )
 
-        pr_data = response.json()
-        pr_url = pr_data["html_url"]
+        # Write PR body to temp file to avoid shell quoting issues
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".md", delete=False, encoding="utf-8"
+        ) as body_file:
+            body_file.write(pr_body)
+            body_file_path = body_file.name
+
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(self.repo_dir)
+            result = subprocess.run(
+                [
+                    gh_cmd,
+                    "pr",
+                    "create",
+                    "--title", pr_title,
+                    "--body-file", body_file_path,
+                    "--base", "main",
+                    "--repo", "jleechanorg/claude-commands",
+                ],
+                capture_output=True,
+                text=True,
+            )
+        finally:
+            os.chdir(original_cwd)
+            try:
+                os.unlink(body_file_path)
+            except OSError:
+                pass
+
+        if result.returncode != 0:
+            raise GitHubAPIError(f"PR creation failed: {result.stderr}")
+
+        # gh pr create prints the PR URL as the last line of stdout
+        pr_url = result.stdout.strip().splitlines()[-1].strip()
+        if not pr_url.startswith("https://"):
+            raise GitHubAPIError(
+                f"Unexpected gh pr create output (no URL found): {result.stdout}"
+            )
 
         print(f"✅ Pull request created: {pr_url}")
         return pr_url
