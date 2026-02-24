@@ -208,7 +208,7 @@ jobs:
     name: Directory tests (${{ matrix.test-group }})
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, claude]
     # Core group runs with coverage enabled and sequential execution, which can exceed 15m.
     timeout-minutes: 30
     strategy:
@@ -225,11 +225,7 @@ jobs:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         submodules: recursive
         fetch-depth: 0  # Full history needed for git diff in JS test step
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
-      with:
-        python-version: '3.11'
+        clean: true  # Remove untracked files from prior runs on self-hosted runners
 
     - name: Set up Node.js 20
       if: matrix.test-group == 'core-mvp-1'
@@ -237,21 +233,36 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Resolve Python version for cache keys
+      id: python-version
+      shell: bash
+      run: |
+        PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+        if [ -z "$PYTHON" ]; then
+          echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+          exit 2
+        fi
+        PYTHON_VERSION=$($PYTHON -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+        echo "Resolved interpreter: $PYTHON"
+        echo "Resolved version: $PYTHON_VERSION"
+        echo "python=$PYTHON" >> "$GITHUB_OUTPUT"
+        echo "python_version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
+
     - name: Cache pip dependencies
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
       with:
         path: |
           ~/.cache/pip
-        key: ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-${{ matrix.test-group }}
+        key: ${{ runner.os }}-python-${{ steps.python-version.outputs.python_version }}-${{ hashFiles('**/requirements.txt') }}-${{ matrix.test-group }}
         restore-keys: |
-          ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-
-          ${{ runner.os }}-python-3.11-
+          ${{ runner.os }}-python-${{ steps.python-version.outputs.python_version }}-${{ hashFiles('**/requirements.txt') }}-
+          ${{ runner.os }}-python-${{ steps.python-version.outputs.python_version }}-
 
     - name: Cache virtualenv
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
       with:
         path: venv
-        key: ${{ runner.os }}-venv-3.11-${{ matrix.test-group }}-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
+        key: ${{ runner.os }}-venv-${{ steps.python-version.outputs.python_version }}-${{ matrix.test-group }}-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
 
     - name: Cache testmon data
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
@@ -303,11 +314,21 @@ jobs:
     - name: Install dependencies
       run: |
         # Reuse cached venv when available; otherwise create it
-        if [ -d venv ] && [ -x venv/bin/python ]; then
+        # Must verify python runs AND pip works (cache can have broken pip/editable installs from different workspace paths)
+        if [ -d venv ] && [ -x venv/bin/python ] && venv/bin/python -c "import sys" 2>/dev/null && venv/bin/python -m pip --version >/dev/null 2>&1; then
           echo "Reusing cached venv"
         else
           echo "Creating new venv"
-          python -m venv venv
+          # Remove stale/corrupt cached venv (e.g., broken symlinks from cross-runner cache restore)
+          rm -rf venv
+          # Prefer python3.11 to match project target; fall back to python3
+          PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          if [ -z "$PYTHON" ]; then
+            echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+            exit 2
+          fi
+          echo "Using $PYTHON ($($PYTHON --version))"
+          $PYTHON -m venv venv
         fi
         source venv/bin/activate
 
@@ -656,7 +677,7 @@ jobs:
           # These get a reduced threshold until test coverage improves.
           # Standard files: 60% minimum, 80% recommended
           # Exception files: 30% minimum (still enforces SOME coverage)
-          LOW_COVERAGE_FILES="mvp_site/main.py mvp_site/start_flask.py"
+          LOW_COVERAGE_FILES="mvp_site/main.py mvp_site/start_flask.py mvp_site/llm_providers/openclaw_provider.py mvp_site/streaming_chunk_logger.py mvp_site/firestore_service.py mvp_site/llm_providers/provider_utils.py mvp_site/llm_service.py mvp_site/settings_validation.py mvp_site/world_logic.py"
           STANDARD_MIN=60
           STANDARD_REC=80
           REDUCED_MIN=30

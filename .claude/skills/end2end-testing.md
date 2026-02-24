@@ -190,6 +190,31 @@ TESTING=true python3 -m pytest $PROJECT_ROOT/tests/test_code_execution_dice_roll
 ./run_tests_with_coverage.sh
 ```
 
+## Runner Split: pytest vs script entrypoints
+
+`testing_mcp/README.md` defines many MCP suites as direct-run scripts. Use this split:
+
+- Use `pytest` for:
+  - `mvp_site/tests/...`
+  - `tests/test_end2end/...`
+  - Regular unit/integration modules designed for pytest collection
+- Use direct script execution (`vpython <file>.py`) for:
+  - `testing_mcp/test_*_real_*.py`
+  - `testing_mcp/schema/test_schema_*.py`
+  - Other `testing_mcp` files that implement CLI `argparse` + `main()`
+
+Examples:
+
+```bash
+# MCP script-style suite (correct)
+cd testing_mcp
+../vpython test_social_encounter_real_api.py --start-local
+
+# Schema script-style suite (correct)
+cd $PROJECT_ROOT
+./vpython testing_mcp/schema/test_schema_enforcement_journey_real_api.py --work-name schema_enforcement_run
+```
+
 ## Flask API End2End Test Pattern (MANDATORY)
 
 **All API-level end2end tests MUST follow this pattern.** Located in `$PROJECT_ROOT/tests/test_end2end/`.

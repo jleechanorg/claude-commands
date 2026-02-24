@@ -56,20 +56,20 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
   schema-coverage:
     name: Schema Coverage Guard
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, claude]
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d  # v5.1.0
-        with:
-          python-version: '3.11'
-
       - name: Enforce game_state schema coverage
         run: |
-          python scripts/check_schema_coverage.py \
+          PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          if [ -z "$PYTHON" ]; then
+            echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+            exit 2
+          fi
+          $PYTHON scripts/check_schema_coverage.py \
             --fail-under 0 \
             --required-path combat_state.rewards_processed \
             --required-path encounter_state.encounter_completed \
@@ -95,67 +95,67 @@ jobs:
             --required-path player_character_data.equipped_items.legs
   python-lint:
     name: Python Linting (Ruff)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, claude]
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d  # v5.1.0
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
       - name: Install Ruff
         run: |
-          python -m pip install --upgrade pip
-          pip install ruff==0.8.4
+          PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          if [ -z "$PYTHON" ]; then
+            echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+            exit 2
+          fi
+          $PYTHON -m venv --clear .venv-ruff
+          .venv-ruff/bin/pip install --upgrade pip
+          .venv-ruff/bin/pip install ruff==0.8.4
 
       - name: Run Ruff linter
         run: |
           # Non-blocking for incremental adoption - shows errors but doesn't fail CI
-          ruff check . --output-format=github || true
+          .venv-ruff/bin/ruff check . --output-format=github || true
 
       - name: Run Ruff formatter check
         run: |
           # Non-blocking for incremental adoption
-          ruff format --check . || true
+          .venv-ruff/bin/ruff format --check . || true
 
   # Python type checking with mypy
   python-typecheck:
     name: Python Type Checking (mypy)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, claude]
     timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d  # v5.1.0
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          if [ -z "$PYTHON" ]; then
+            echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+            exit 2
+          fi
+          $PYTHON -m venv --clear .venv-mypy
+          .venv-mypy/bin/pip install --upgrade pip
           # Install mypy with pinned version
-          pip install mypy==1.13.0
+          .venv-mypy/bin/pip install mypy==1.13.0
           # Install project dependencies for type checking
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f mvp_site/requirements.txt ]; then pip install -r mvp_site/requirements.txt; fi
+          if [ -f requirements.txt ]; then .venv-mypy/bin/pip install -r requirements.txt; fi
+          if [ -f mvp_site/requirements.txt ]; then .venv-mypy/bin/pip install -r mvp_site/requirements.txt; fi
 
       - name: Run mypy type checker
         run: |
           # Run mypy on the main code directories
           # Non-blocking for incremental adoption - shows errors but doesn't fail CI
-          mypy mvp_site/ --config-file mvp_site/mypy.ini --no-error-summary || true
+          .venv-mypy/bin/mypy mvp_site/ --config-file mvp_site/mypy.ini --no-error-summary || true
 
   # JavaScript linting with ESLint
   javascript-lint:
     name: JavaScript Linting (ESLint)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, claude]
     timeout-minutes: 5
     steps:
       - name: Checkout repository
@@ -173,7 +173,6 @@ jobs:
       - name: Run ESLint
         run: |
           # ESLint installed via npm ci from package.json
-          # .eslintignore excludes frontend_v2 (has its own TypeScript ESLint config)
           # Lints both .js and .mjs files (ES modules)
           # Non-blocking for incremental adoption - shows errors but doesn't fail CI
           npx eslint . --ext .js,.mjs || true

@@ -28,7 +28,7 @@ You are a **Claude CLI Coder Agent** that delegates implementation to the Claude
 # Use orchestration library to launch the CLI with proper validation and env setup
 python3 orchestration/orchestrate_unified.py \
   --agent-cli claude \
-  --lite-mode \
+  --async \
   --no-worktree \
   "<prompt text>"
 ```

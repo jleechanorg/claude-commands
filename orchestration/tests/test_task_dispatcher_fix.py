@@ -250,6 +250,7 @@ class TestTaskDispatcherFix(unittest.TestCase):
             "focus": "write 2+2 in a file",
             "cli": "claude",
             "model": "sonnet",
+            "no_worktree": False,  # Explicitly enable worktree isolation for this test
         }
 
         first_failure = MagicMock(returncode=128, stderr="fatal: not a valid object name: 'main'\n")
@@ -292,6 +293,7 @@ class TestTaskDispatcherFix(unittest.TestCase):
             "focus": "write 2+2 in a file",
             "cli": "claude",
             "model": "sonnet",
+            "no_worktree": False,  # Explicitly enable worktree isolation for this test
         }
 
         first_failure = MagicMock(returncode=128, stderr="fatal: not a valid object name: 'main'\n")
@@ -357,6 +359,50 @@ class TestTaskDispatcherFix(unittest.TestCase):
         self.assertEqual(second_cmd[:3], ["git", "worktree", "add"])
         self.assertIn("/tmp/orchestration_worktrees/orch_repo/retry-agent-abc123", second_cmd)
 
+    def test_build_worktree_command_skips_b_flag_when_branch_already_exists(self):
+        """When create_new_branch=True but branch already exists (from partial failure), omit -b."""
+        with patch.object(self.dispatcher, "_branch_exists", return_value=True):
+            cmd = self.dispatcher._build_worktree_add_command(
+                agent_dir="/tmp/test-agent",
+                branch_name="fix/my-branch",
+                base_ref="main",
+                create_new_branch=True,
+            )
+
+        # Should NOT use -b since branch already exists
+        self.assertNotIn("-b", cmd)
+        self.assertEqual(cmd, ["git", "worktree", "add", "/tmp/test-agent", "fix/my-branch"])
+
+    def test_build_worktree_command_resets_existing_branch_when_base_ref_mismatch(self):
+        """When existing branch matches create_new_branch but stale base, force-reset it with -B."""
+        with (
+            patch.object(self.dispatcher, "_branch_exists", return_value=True),
+            patch.object(self.dispatcher, "_branch_matches_base_ref", return_value=False),
+        ):
+            cmd = self.dispatcher._build_worktree_add_command(
+                agent_dir="/tmp/test-agent",
+                branch_name="fix/my-branch",
+                base_ref="main",
+                create_new_branch=True,
+            )
+
+        self.assertEqual(
+            cmd,
+            ["git", "worktree", "add", "-B", "fix/my-branch", "/tmp/test-agent", "main"],
+        )
+
+    def test_build_worktree_command_uses_b_flag_for_new_branch(self):
+        """When create_new_branch=True and branch does not exist, use -b."""
+        with patch.object(self.dispatcher, "_branch_exists", return_value=False):
+            cmd = self.dispatcher._build_worktree_add_command(
+                agent_dir="/tmp/test-agent",
+                branch_name="fix/new-branch",
+                base_ref="main",
+                create_new_branch=True,
+            )
+
+        self.assertEqual(cmd, ["git", "worktree", "add", "-b", "fix/new-branch", "/tmp/test-agent", "main"])
+
     def test_create_worktree_skips_tmp_retry_for_non_path_errors(self):
         """Non-path git failures should not trigger /tmp retry."""
         failure_result = MagicMock(returncode=128, stderr="fatal: not a valid object name: 'main'")
@@ -365,6 +411,7 @@ class TestTaskDispatcherFix(unittest.TestCase):
             patch.object(self.dispatcher, "_calculate_agent_directory", return_value="/Users/test/orch/retry-agent"),
             patch.object(self.dispatcher, "_ensure_directory_exists"),
             patch.object(self.dispatcher, "_create_tmp_worktree_directory") as mock_tmp_dir,
+            patch.object(self.dispatcher, "_branch_exists", return_value=False),
             patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
         ):
             mock_run.return_value = failure_result
@@ -378,6 +425,112 @@ class TestTaskDispatcherFix(unittest.TestCase):
         self.assertEqual(result.returncode, 128)
         self.assertEqual(mock_run.call_count, 1)
         mock_tmp_dir.assert_not_called()
+
+    def test_create_worktree_with_existing_local_branch_uses_local_checkout(self):
+        """Existing local branches should be added directly without creating a new branch."""
+        branch_name = "feature/local-branch"
+
+        with (
+            patch.object(self.dispatcher, "_calculate_agent_directory", return_value="/Users/test/orch/local-agent"),
+            patch.object(self.dispatcher, "_ensure_directory_exists"),
+            patch.object(self.dispatcher, "_branch_exists", return_value=True),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            agent_dir, result = self.dispatcher._create_worktree_at_location(
+                {"name": "local-agent"},
+                branch_name,
+                create_new_branch=False,
+            )
+
+        self.assertEqual(agent_dir, "/Users/test/orch/local-agent")
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(mock_run.call_args[0][0], [
+            "git",
+            "worktree",
+            "add",
+            "/Users/test/orch/local-agent",
+            branch_name,
+        ])
+
+    def test_create_worktree_with_existing_remote_branch_creates_local_tracking_branch(self):
+        """Remote-only existing branches should be checked out as local tracking branches."""
+        branch_name = "feature/remote-branch"
+
+        with (
+            patch.object(self.dispatcher, "_calculate_agent_directory", return_value="/Users/test/orch/remote-agent"),
+            patch.object(self.dispatcher, "_ensure_directory_exists"),
+            patch.object(self.dispatcher, "_branch_exists", return_value=False),
+            patch.object(self.dispatcher, "_remote_branch_exists", return_value=True),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            agent_dir, result = self.dispatcher._create_worktree_at_location(
+                {"name": "remote-agent"},
+                branch_name,
+                create_new_branch=False,
+            )
+
+        self.assertEqual(agent_dir, "/Users/test/orch/remote-agent")
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(mock_run.call_args[0][0], [
+            "git",
+            "worktree",
+            "add",
+            "-b",
+            branch_name,
+            "/Users/test/orch/remote-agent",
+            f"origin/{branch_name}",
+        ])
+
+    def test_create_worktree_retries_in_tmp_directory_with_remote_existing_branch(self):
+        """Retry path should preserve remote-branch tracking when default location fails."""
+        branch_name = "feature/remote-branch"
+
+        with (
+            patch.object(self.dispatcher, "_calculate_agent_directory", return_value="/Users/test/orch/remote-agent"),
+            patch.object(self.dispatcher, "_ensure_directory_exists"),
+            patch.object(
+                self.dispatcher,
+                "_create_tmp_worktree_directory",
+                return_value="/tmp/orchestration_worktrees/orch_repo/remote-agent-abc123",
+            ),
+            patch.object(self.dispatcher, "_branch_exists", return_value=False),
+            patch.object(self.dispatcher, "_remote_branch_exists", return_value=True),
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+        ):
+            mock_run.side_effect = [
+                MagicMock(returncode=128, stderr="fatal: Permission denied"),
+                MagicMock(returncode=0, stdout="", stderr=""),
+            ]
+            agent_dir, result = self.dispatcher._create_worktree_at_location(
+                {"name": "remote-agent"},
+                branch_name,
+                create_new_branch=False,
+            )
+
+        self.assertEqual(agent_dir, "/tmp/orchestration_worktrees/orch_repo/remote-agent-abc123")
+        self.assertEqual(result.returncode, 0)
+        first_cmd = mock_run.call_args_list[0][0][0]
+        second_cmd = mock_run.call_args_list[1][0][0]
+        self.assertEqual(first_cmd, [
+            "git",
+            "worktree",
+            "add",
+            "-b",
+            branch_name,
+            "/Users/test/orch/remote-agent",
+            f"origin/{branch_name}",
+        ])
+        self.assertEqual(second_cmd, [
+            "git",
+            "worktree",
+            "add",
+            "-b",
+            branch_name,
+            "/tmp/orchestration_worktrees/orch_repo/remote-agent-abc123",
+            f"origin/{branch_name}",
+        ])
 
     def test_create_worktree_cleans_tmp_dir_when_retry_fails(self):
         """Temporary fallback directory should be cleaned up when retry also fails."""

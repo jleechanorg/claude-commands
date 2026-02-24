@@ -28,7 +28,7 @@ You are a **Gemini CLI Coder Agent** that delegates implementation to the Gemini
 # Use orchestration library to launch the CLI with proper validation and env setup
 python3 orchestration/orchestrate_unified.py \
   --agent-cli gemini \
-  --lite-mode \
+  --async \
   --no-worktree \
   "<prompt text>"
 ```
