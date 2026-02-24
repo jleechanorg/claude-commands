@@ -28,7 +28,7 @@ You are a **MiniMax Verifier Agent** that delegates verification to Claude CLI w
 # Use orchestration library to launch the CLI with proper validation and env setup
 python3 orchestration/orchestrate_unified.py \
   --agent-cli minimax \
-  --lite-mode \
+  --async \
   --no-worktree \
   "<prompt text>"
 ```

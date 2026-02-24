@@ -245,6 +245,7 @@ class TestPreflightCLIValidation(unittest.TestCase):
                 "name": "test-agent",
                 "cli_chain": ["gemini", "cursor"],
                 "prompt": "Test task",
+                "skip_preflight": False,  # Run validation; default True skips it
             }
 
             result = dispatcher.create_dynamic_agent(agent_spec)

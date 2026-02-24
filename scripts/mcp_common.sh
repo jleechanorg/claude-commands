@@ -1040,87 +1040,8 @@ add_mcp_server() {
 # NOTE: This script uses GitHub's NEW official MCP server (github/github-mcp-server)
 # which is HTTP-based and hosted remotely, replacing the old deprecated npm package
 
-# Load centralized token helper
-TOKEN_HELPER="$SCRIPT_DIR/load_tokens.sh"
-
-if [ -f "$TOKEN_HELPER" ]; then
-    echo -e "${BLUE}📋 Loading tokens using centralized helper...${NC}"
-    log_with_timestamp "Using centralized token helper: $TOKEN_HELPER"
-
-    # Source the token helper to load functions and tokens
-    source "$TOKEN_HELPER"
-
-    # Load tokens
-    if load_tokens; then
-        log_with_timestamp "Tokens loaded successfully via centralized helper"
-
-        # Ensure tokens are properly exported for use in this script
-        # The load_tokens function may not export variables to parent shell properly
-        if [ -f "$HOME/.token" ]; then
-            source "$HOME/.token" 2>/dev/null || true
-            export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
-        fi
-    else
-        echo -e "${RED}❌ Failed to load tokens via centralized helper${NC}"
-        echo -e "${YELLOW}💡 Run '$TOKEN_HELPER create' to create template token file${NC}"
-        echo -e "${YELLOW}💡 Run '$TOKEN_HELPER help' for more options${NC}"
-        log_with_timestamp "ERROR: Token loading failed, aborting for security"
-        safe_exit 1
-    fi
-else
-    echo -e "${YELLOW}⚠️ Centralized token helper not found, falling back to legacy method${NC}"
-    log_with_timestamp "WARNING: Token helper not found at $TOKEN_HELPER, using fallback"
-
-    # Fallback: try environment variable first, then ~/.token file
-    if [ -n "$GITHUB_TOKEN" ]; then
-        echo -e "${GREEN}✅ Loading tokens from GITHUB_TOKEN environment variable${NC}"
-        export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
-    elif [ -f "$HOME/.token" ]; then
-        echo -e "${GREEN}✅ Loading tokens from $HOME/.token${NC}"
-        source "$HOME/.token"
-        # Only export if GITHUB_TOKEN was defined in the file
-        if [ -n "${GITHUB_TOKEN:-}" ]; then
-            export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
-        else
-            echo -e "${YELLOW}⚠️ ~/.token file exists but GITHUB_TOKEN not defined${NC}"
-        fi
-    else
-        echo -e "${RED}❌ No GitHub token found${NC}"
-        echo -e "${YELLOW}💡 Set GITHUB_TOKEN environment variable or create ~/.token file${NC}"
-        safe_exit 1
-    fi
-fi
-
-# Ensure GITHUB_PERSONAL_ACCESS_TOKEN is exported for compatibility (already exported above)
-# export GITHUB_PERSONAL_ACCESS_TOKEN  # Removed: causes unbound variable error if not set
-
-# Function to check environment requirements
-check_github_requirements() {
-    if [ "$GITHUB_TOKEN_LOADED" = true ]; then
-        if declare -F test_github_token >/dev/null 2>&1; then
-            echo -e "${GREEN}✅ GitHub token loaded - GitHub remote server will have full access${NC}"
-
-            # Test token validity using the centralized helper
-            echo -e "${BLUE}  🔍 Testing GitHub token validity...${NC}"
-            if test_github_token; then
-                echo -e "${BLUE}  📡 Using GitHub's NEW official remote MCP server${NC}"
-                echo -e "${BLUE}  🔗 Server URL: https://api.githubcopilot.com/mcp/${NC}"
-            fi
-        else
-            echo -e "${YELLOW}⚠️ GitHub token marked as loaded, but token helper is unavailable; skipping validation${NC}"
-            echo -e "${YELLOW}   Server will work for public repositories${NC}"
-            echo -e "${YELLOW}   For private repos, ensure token has required scopes${NC}"
-        fi
-    elif [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
-        echo -e "${YELLOW}⚠️ GitHub token found but not validated by centralized helper${NC}"
-        echo -e "${YELLOW}   Server will work for public repositories${NC}"
-        echo -e "${YELLOW}   For private repos, ensure token has required scopes${NC}"
-    else
-        echo -e "${YELLOW}⚠️ No GitHub token found${NC}"
-        echo -e "${YELLOW}   Server will work for public repositories only${NC}"
-        echo -e "${YELLOW}   For private repos, set GITHUB_TOKEN environment variable${NC}"
-    fi
-}
+# Token loading disabled - MCP servers work with environment variables or NPX direct execution
+# GitHub token optional for GitHub MCP server, other servers are credential-agnostic
 
 # Enhanced MCP server checking with parallel health checks
 # Skip in test mode with TEST_INSTALL_DIR since config isolation doesn't work for mcp list

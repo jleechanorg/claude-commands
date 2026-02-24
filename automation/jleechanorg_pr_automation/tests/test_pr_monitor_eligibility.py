@@ -1,6 +1,6 @@
 import unittest
 from datetime import UTC, datetime, timedelta
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from _pytest.capture import CaptureFixture
 from _pytest.monkeypatch import MonkeyPatch
@@ -17,10 +17,11 @@ def codex_marker(monitor: mon.JleechanorgPRMonitor, token: str) -> str:
 def test_list_actionable_prs_conflicts_and_failing(monkeypatch: MonkeyPatch, capsys: CaptureFixture[str]) -> None:
     monitor = mon.JleechanorgPRMonitor(automation_username="test-automation-user")
 
+    # GitHub API returns mergeable as Boolean (false = conflicts) not string
     sample_prs = [
-        {"repository": "repo/a", "number": 1, "title": "conflict", "mergeable": "CONFLICTING"},
-        {"repository": "repo/b", "number": 2, "title": "failing", "mergeable": "MERGEABLE"},
-        {"repository": "repo/c", "number": 3, "title": "passing", "mergeable": "MERGEABLE"},
+        {"repository": "repo/a", "number": 1, "title": "conflict", "mergeable": False},
+        {"repository": "repo/b", "number": 2, "title": "failing", "mergeable": True},
+        {"repository": "repo/c", "number": 3, "title": "passing", "mergeable": True},
     ]
 
     monkeypatch.setattr(monitor, "discover_open_prs", lambda: sample_prs)
@@ -156,50 +157,67 @@ class TestFixCommentCheckpointLogic(unittest.TestCase):
     def test_completion_marker_with_no_unaddressed_comments_skips(self):
         """Test that completion marker + no unaddressed comments skips."""
         head_sha = "abc123def"
-        
+
         # Mock methods
         original_get_state = self.monitor._get_pr_comment_state  # noqa: SLF001
         original_count = self.monitor._count_workflow_comments  # noqa: SLF001
         original_has_marker = self.monitor._has_fix_comment_comment_for_commit  # noqa: SLF001
         original_has_unaddressed = self.monitor._has_unaddressed_comments  # noqa: SLF001
         original_should_skip = self.monitor._should_skip_pr  # noqa: SLF001
-        
+        original_has_failing_checks = mon.has_failing_checks  # Store module-level function
+
+        # Mock the subprocess call to prevent real gh API calls
+
         def mock_get_state(*_):  # noqa: ARG001
             return (head_sha, [])
-        
+
         def mock_count(*_):  # noqa: ARG001
             return 0
-        
+
         def mock_has_marker(c, s):  # noqa: ARG001
             return s == head_sha
-        
+
         def mock_has_unaddressed(*_):  # noqa: ARG001
             return False
-        
+
         def mock_should_skip(*_):  # noqa: ARG001
             return False
-        
+
+        def mock_has_failing_checks(*_):  # noqa: ARG001
+            return False
+
+        def mock_execute_subprocess(*args, **kwargs):  # noqa: ARG001
+            # Return a mock result indicating success with clean merge status
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_result.stdout = '{"mergeable": true, "mergeStateStatus": "CLEAN"}'
+            mock_result.stderr = ""
+            return mock_result
+
         self.monitor._get_pr_comment_state = mock_get_state  # noqa: SLF001
         self.monitor._count_workflow_comments = mock_count  # noqa: SLF001
         self.monitor._has_fix_comment_comment_for_commit = mock_has_marker  # noqa: SLF001
         self.monitor._has_unaddressed_comments = mock_has_unaddressed  # noqa: SLF001
         self.monitor._should_skip_pr = mock_should_skip  # noqa: SLF001
-        
-        try:
-            result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
-                "test/repo",
-                123,
-                {"headRefOid": head_sha, "headRefName": "test-branch"},
-                "claude",
-            )
-            assert result == "skipped"
-        finally:
-            # Restore original methods
-            self.monitor._get_pr_comment_state = original_get_state  # noqa: SLF001
-            self.monitor._count_workflow_comments = original_count  # noqa: SLF001
-            self.monitor._has_fix_comment_comment_for_commit = original_has_marker  # noqa: SLF001
-            self.monitor._has_unaddressed_comments = original_has_unaddressed  # noqa: SLF001
-            self.monitor._should_skip_pr = original_should_skip  # noqa: SLF001
+        mon.has_failing_checks = mock_has_failing_checks  # Mock module-level function
+
+        with patch.object(mon.AutomationUtils, "execute_subprocess_with_timeout", mock_execute_subprocess):
+            try:
+                result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
+                    "test/repo",
+                    123,
+                    {"headRefOid": head_sha, "headRefName": "test-branch"},
+                    "claude",
+                )
+                assert result == "skipped"
+            finally:
+                # Restore original methods
+                self.monitor._get_pr_comment_state = original_get_state  # noqa: SLF001
+                self.monitor._count_workflow_comments = original_count  # noqa: SLF001
+                self.monitor._has_fix_comment_comment_for_commit = original_has_marker  # noqa: SLF001
+                self.monitor._has_unaddressed_comments = original_has_unaddressed  # noqa: SLF001
+                self.monitor._should_skip_pr = original_should_skip  # noqa: SLF001
+                mon.has_failing_checks = original_has_failing_checks  # Restore module-level function
 
     def test_completion_marker_with_unaddressed_comments_reprocesses(self):
         """Test that completion marker + unaddressed comments reprocesses."""
@@ -381,49 +399,245 @@ class TestFixCommentCheckpointLogic(unittest.TestCase):
     def test_no_completion_marker_no_history_no_unaddressed_skips(self):
         """Test that no completion marker + no history + no unaddressed skips."""
         head_sha = "abc123def"
-        
+
         original_get_state = self.monitor._get_pr_comment_state  # noqa: SLF001
         original_count = self.monitor._count_workflow_comments  # noqa: SLF001
         original_has_marker = self.monitor._has_fix_comment_comment_for_commit  # noqa: SLF001
         original_has_unaddressed = self.monitor._has_unaddressed_comments  # noqa: SLF001
         original_should_skip = self.monitor._should_skip_pr  # noqa: SLF001
-        
+        original_has_failing_checks = mon.has_failing_checks  # Store module-level function
+
+
         def mock_get_state(*_):  # noqa: ARG001
             return (head_sha, [])
-        
+
         def mock_count(*_):  # noqa: ARG001
             return 0
-        
+
         def mock_has_marker(*_):  # noqa: ARG001
             return False
-        
+
         def mock_has_unaddressed(*_):  # noqa: ARG001
             return False
-        
+
         def mock_should_skip(*_):  # noqa: ARG001
             return False  # Not in history
-        
+
+        def mock_has_failing_checks(*_):  # noqa: ARG001
+            return False
+
+        def mock_execute_subprocess(*args, **kwargs):  # noqa: ARG001
+            # Return a mock result indicating success with clean merge status
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_result.stdout = '{"mergeable": true, "mergeStateStatus": "CLEAN"}'
+            mock_result.stderr = ""
+            return mock_result
+
         self.monitor._get_pr_comment_state = mock_get_state  # noqa: SLF001
         self.monitor._count_workflow_comments = mock_count  # noqa: SLF001
         self.monitor._has_fix_comment_comment_for_commit = mock_has_marker  # noqa: SLF001
         self.monitor._has_unaddressed_comments = mock_has_unaddressed  # noqa: SLF001
         self.monitor._should_skip_pr = mock_should_skip  # noqa: SLF001
-        
-        try:
-            result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
-                "test/repo",
-                123,
-                {"headRefOid": head_sha, "headRefName": "test-branch"},
-                "claude",
-            )
-            assert result == "skipped"
-        finally:
-            # Restore original methods
-            self.monitor._get_pr_comment_state = original_get_state  # noqa: SLF001
-            self.monitor._count_workflow_comments = original_count  # noqa: SLF001
-            self.monitor._has_fix_comment_comment_for_commit = original_has_marker  # noqa: SLF001
-            self.monitor._has_unaddressed_comments = original_has_unaddressed  # noqa: SLF001
-            self.monitor._should_skip_pr = original_should_skip  # noqa: SLF001
+        mon.has_failing_checks = mock_has_failing_checks  # Mock module-level function
+
+        with patch.object(mon.AutomationUtils, "execute_subprocess_with_timeout", mock_execute_subprocess):
+            try:
+                result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
+                    "test/repo",
+                    123,
+                    {"headRefOid": head_sha, "headRefName": "test-branch"},
+                    "claude",
+                )
+                assert result == "skipped"
+            finally:
+                # Restore original methods
+                self.monitor._get_pr_comment_state = original_get_state  # noqa: SLF001
+                self.monitor._count_workflow_comments = original_count  # noqa: SLF001
+                self.monitor._has_fix_comment_comment_for_commit = original_has_marker  # noqa: SLF001
+                self.monitor._has_unaddressed_comments = original_has_unaddressed  # noqa: SLF001
+                self.monitor._should_skip_pr = original_should_skip  # noqa: SLF001
+                mon.has_failing_checks = original_has_failing_checks  # Restore module-level function
+
+    def test_no_completion_marker_no_history_no_unaddressed_nonzero_gh_reprocesses(self):
+        """Non-zero gh returncode should be unknown status and continue processing."""
+        head_sha = "abc123def"
+
+        original_get_state = self.monitor._get_pr_comment_state  # noqa: SLF001
+        original_count = self.monitor._count_workflow_comments  # noqa: SLF001
+        original_has_marker = self.monitor._has_fix_comment_comment_for_commit  # noqa: SLF001
+        original_has_unaddressed = self.monitor._has_unaddressed_comments  # noqa: SLF001
+        original_should_skip = self.monitor._should_skip_pr  # noqa: SLF001
+        original_cleanup = self.monitor._cleanup_pending_reviews  # noqa: SLF001
+        original_dispatch = self.monitor.dispatch_fix_comment_agent
+        original_post = self.monitor._post_fix_comment_queued  # noqa: SLF001
+        original_has_failing_checks = mon.has_failing_checks
+
+        def mock_get_state(*_):  # noqa: ARG001
+            return (head_sha, [])
+
+        def mock_count(*_):  # noqa: ARG001
+            return 0
+
+        def mock_has_marker(*_):  # noqa: ARG001
+            return False
+
+        def mock_has_unaddressed(*_):  # noqa: ARG001
+            return False
+
+        def mock_should_skip(*_):  # noqa: ARG001
+            return False
+
+        def mock_cleanup(*_):  # noqa: ARG001
+            pass
+
+        def mock_dispatch(*_, **__):  # noqa: ARG001
+            return False
+
+        def mock_post(*_, **__):  # noqa: ARG001
+            return True
+
+        def mock_has_failing_checks(*_):  # noqa: ARG001
+            return False
+
+        def mock_execute_subprocess(*args, **kwargs):  # noqa: ARG001
+            mock_result = MagicMock()
+            mock_result.returncode = 1
+            mock_result.stdout = ""
+            mock_result.stderr = "fail"
+            return mock_result
+
+        self.monitor._get_pr_comment_state = mock_get_state  # noqa: SLF001
+        self.monitor._count_workflow_comments = mock_count  # noqa: SLF001
+        self.monitor._has_fix_comment_comment_for_commit = mock_has_marker  # noqa: SLF001
+        self.monitor._has_unaddressed_comments = mock_has_unaddressed  # noqa: SLF001
+        self.monitor._should_skip_pr = mock_should_skip  # noqa: SLF001
+        self.monitor._cleanup_pending_reviews = mock_cleanup  # noqa: SLF001
+        self.monitor.dispatch_fix_comment_agent = mock_dispatch
+        self.monitor._post_fix_comment_queued = mock_post  # noqa: SLF001
+        mon.has_failing_checks = mock_has_failing_checks
+
+        with patch.object(mon.AutomationUtils, "execute_subprocess_with_timeout", mock_execute_subprocess):
+            try:
+                result = self.monitor._process_pr_fix_comment(  # noqa: SLF001
+                    "test/repo",
+                    123,
+                    {"headRefOid": head_sha, "headRefName": "test-branch"},
+                    "claude",
+                )
+                assert result == "failed"
+            finally:
+                self.monitor._get_pr_comment_state = original_get_state  # noqa: SLF001
+                self.monitor._count_workflow_comments = original_count  # noqa: SLF001
+                self.monitor._has_fix_comment_comment_for_commit = original_has_marker  # noqa: SLF001
+                self.monitor._has_unaddressed_comments = original_has_unaddressed  # noqa: SLF001
+                self.monitor._should_skip_pr = original_should_skip  # noqa: SLF001
+                self.monitor._cleanup_pending_reviews = original_cleanup  # noqa: SLF001
+                self.monitor.dispatch_fix_comment_agent = original_dispatch
+                self.monitor._post_fix_comment_queued = original_post  # noqa: SLF001
+                mon.has_failing_checks = original_has_failing_checks
+
+
+class TestMergeableConflictDetection(unittest.TestCase):
+    """Test that fixpr correctly detects merge conflicts from GitHub API.
+
+    GitHub API returns mergeable as Boolean (false = conflicts), not string.
+    This test verifies the fix correctly handles Boolean mergeable values.
+    """
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.monitor = mon.JleechanorgPRMonitor(automation_username="test-automation-user")
+
+    @patch.object(mon, "has_failing_checks", return_value=False)
+    def test_pr_with_mergeable_false_is_actionable(self, mock_failing):
+        """PR with mergeable=false (conflicts) should be marked actionable."""
+        sample_prs = [
+            {"repository": "repo/a", "number": 1, "title": "has conflicts", "mergeable": False},
+        ]
+
+        with patch.object(self.monitor, "discover_open_prs", return_value=sample_prs):
+            actionable = self.monitor.list_actionable_prs(max_prs=10)
+
+        # Should be actionable because mergeable=False means conflicts
+        self.assertEqual(len(actionable), 1)
+        self.assertEqual(actionable[0]["number"], 1)
+
+    @patch.object(mon, "has_failing_checks", return_value=False)
+    def test_pr_with_mergeable_true_is_not_actionable(self, mock_failing):
+        """PR with mergeable=true (clean) should NOT be marked actionable."""
+        sample_prs = [
+            {"repository": "repo/a", "number": 2, "title": "clean PR", "mergeable": True},
+        ]
+
+        with patch.object(self.monitor, "discover_open_prs", return_value=sample_prs):
+            actionable = self.monitor.list_actionable_prs(max_prs=10)
+
+        # Should NOT be actionable because mergeable=True means clean
+        self.assertEqual(len(actionable), 0)
+
+    @patch.object(mon, "has_failing_checks", return_value=False)
+    def test_pr_with_mergeable_null_is_not_actionable(self, mock_failing):
+        """PR with mergeable=null (unknown) should NOT be marked actionable."""
+        sample_prs = [
+            {"repository": "repo/a", "number": 3, "title": "unknown state", "mergeable": None},
+        ]
+
+        with patch.object(self.monitor, "discover_open_prs", return_value=sample_prs):
+            actionable = self.monitor.list_actionable_prs(max_prs=10)
+
+        # Should NOT be actionable because mergeable=None means unknown
+        self.assertEqual(len(actionable), 0)
+
+    @patch.object(mon, "has_failing_checks", return_value=True)
+    def test_pr_with_failing_checks_is_actionable(self, mock_failing):
+        """PR with failing checks should be marked actionable regardless of mergeable."""
+        sample_prs = [
+            {"repository": "repo/a", "number": 4, "title": "failing checks", "mergeable": True},
+        ]
+
+        with patch.object(self.monitor, "discover_open_prs", return_value=sample_prs):
+            actionable = self.monitor.list_actionable_prs(max_prs=10)
+
+        # Should be actionable because has failing checks
+        self.assertEqual(len(actionable), 1)
+        self.assertEqual(actionable[0]["number"], 4)
+
+    @patch.object(mon, "has_failing_checks", return_value=False)
+    def test_pr_with_mergeable_dirty_state_is_actionable(self, mock_failing):
+        """PR with mergeableState='dirty' should be marked actionable."""
+        sample_prs = [
+            {"repository": "repo/a", "number": 5, "title": "dirty state", "mergeableState": "dirty"},
+        ]
+
+        with patch.object(self.monitor, "discover_open_prs", return_value=sample_prs):
+            actionable = self.monitor.list_actionable_prs(max_prs=10)
+
+        # Should be actionable because mergeableState="dirty" means conflicts
+        self.assertEqual(len(actionable), 1)
+        self.assertEqual(actionable[0]["number"], 5)
+
+    @patch.object(mon, "has_failing_checks", return_value=False)
+    def test_mixed_prs_filtered_correctly(self, mock_failing):
+        """Test that mixed PRs are filtered correctly."""
+        sample_prs = [
+            {"repository": "repo/a", "number": 1, "title": "conflicts", "mergeable": False},
+            {"repository": "repo/b", "number": 2, "title": "clean", "mergeable": True},
+            {"repository": "repo/c", "number": 3, "title": "failing", "mergeable": True},  # will have failing checks
+            {"repository": "repo/d", "number": 4, "title": "unknown", "mergeable": None},
+        ]
+
+        def fake_failing_checks(repo: str, pr_num: int) -> bool:
+            return pr_num == 3
+
+        with patch.object(self.monitor, "discover_open_prs", return_value=sample_prs), \
+             patch.object(mon, "has_failing_checks", fake_failing_checks):
+            actionable = self.monitor.list_actionable_prs(max_prs=10)
+
+        # Should have 2: #1 (conflicts) and #3 (failing checks)
+        self.assertEqual(len(actionable), 2)
+        self.assertEqual({pr["number"] for pr in actionable}, {1, 3})
+
 
 class TestRaceConditionFix(unittest.TestCase):
     """Test that queued comments are detected before agent dispatch."""

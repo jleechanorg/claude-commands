@@ -28,7 +28,7 @@ You are a **Cursor CLI Coder Agent** that delegates implementation to the Cursor
 # Use orchestration library to launch the CLI with proper validation and env setup
 python3 orchestration/orchestrate_unified.py \
   --agent-cli cursor \
-  --lite-mode \
+  --async \
   --no-worktree \
   "<prompt text>"
 ```

@@ -44,6 +44,7 @@ class TestExportCommandsMatrix(unittest.TestCase):
         os.makedirs(os.path.join(self.project_root, '.claude', 'commands'))
         os.makedirs(os.path.join(self.project_root, '.claude', 'hooks'))
         os.makedirs(os.path.join(self.project_root, 'orchestration'))
+        os.makedirs(self.repo_dir)
 
         # Create test files with project-specific content
         self._create_test_files()
@@ -429,13 +430,21 @@ export USER="jleechan"
                             self.exporter.phase2_github_publish()
                     else:
                         # Should succeed with proper token
+                        # _create_pull_request uses gh CLI; mock subprocess.run to return PR URL
+                        self.mock_subprocess.return_value.stdout = "https://github.com/test/pr/1\n"
+                        self.mock_subprocess.return_value.returncode = 0
                         with patch.object(self.exporter, '_clone_repository'), \
                              patch.object(self.exporter, '_create_export_branch'), \
                              patch.object(self.exporter, '_copy_to_repository'), \
                              patch.object(self.exporter, '_verify_exclusions'), \
-                             patch.object(self.exporter, '_commit_and_push'):
+                             patch.object(self.exporter, '_commit_and_push'), \
+                             patch.object(
+                                 self.exporter,
+                                 '_create_pull_request',
+                                 return_value='https://github.com/test/pr/1',
+                             ):
 
-                            result = self.exporter._create_pull_request()
+                            result = self.exporter.phase2_github_publish()
                             self.assertIn('github.com', result)
 
     def test_error_handling_matrix(self):

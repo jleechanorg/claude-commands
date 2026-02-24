@@ -54,7 +54,7 @@ class TestFixprPrompt(unittest.TestCase):
         self.assertIn("params=", dispatcher.task_description, "Prompt should use params= for pagination")
 
     def test_fixpr_uses_local_branch_name_not_remote_branch(self):
-        """Test that fixpr uses local branch name fixpr_{remote_branch} instead of remote branch directly."""
+        """Test that fixpr uses local branch name fixpr/{remote_branch} instead of remote branch directly."""
         pr_payload = {
             "repo_full": "jleechanorg/worldarchitect.ai",
             "repo": "worldarchitect.ai",
@@ -73,8 +73,8 @@ class TestFixprPrompt(unittest.TestCase):
         self.assertTrue(ok)
         self.assertIsNotNone(dispatcher.task_description)
 
-        # Local branch name should be fixpr_feature-add-cool-feature (sanitized)
-        expected_local_branch = "fixpr_feature-add-cool-feature"
+        # Local branch name should be fixpr/feature/add-cool-feature
+        expected_local_branch = "fixpr/feature/add-cool-feature"
 
         # Task description should use local branch for checkout
         self.assertIn(f"git checkout -B {expected_local_branch}", dispatcher.task_description,
@@ -112,8 +112,8 @@ class TestFixprPrompt(unittest.TestCase):
         self.assertTrue(ok)
         self.assertIsNotNone(dispatcher.task_description)
 
-        # Local branch name should be sanitized: fixpr_fix-bug-123-urgent
-        expected_local_branch = "fixpr_fix-bug-123-urgent"
+        # Local branch name should be sanitized: fixpr/fix/bug-123/urgent
+        expected_local_branch = "fixpr/fix/bug-123/urgent"
 
         # Should use local branch name
         self.assertIn(expected_local_branch, dispatcher.task_description,

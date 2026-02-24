@@ -28,7 +28,7 @@ You are a **Cursor CLI Verifier Agent** that delegates verification to the Curso
 # Use orchestration library to launch the CLI with proper validation and env setup
 python3 orchestration/orchestrate_unified.py \
   --agent-cli cursor \
-  --lite-mode \
+  --async \
   --no-worktree \
   "<prompt text>"
 ```

@@ -270,6 +270,36 @@ def test_dispatch_agent_for_pr_uses_copilot_slash_for_fix_comment(monkeypatch, t
     assert captured_desc == ["/copilot 13"]
 
 
+def test_dispatch_agent_for_pr_with_task_keeps_fix_comment_task_when_requesting_pr_mode(monkeypatch, tmp_path):
+    runner.WORKSPACE_ROOT_BASE = tmp_path
+    captured_desc = []
+
+    class FakeDispatcher:
+        def analyze_task_and_create_agents(self, task_description, forced_cli=None, wrap_prompt: bool = False, **kwargs):
+            captured_desc.append(task_description)
+            return [{"id": "agent"}]
+
+        def create_dynamic_agent(self, spec):
+            return True
+
+    monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
+    monkeypatch.setattr(runner, "kill_tmux_session_if_exists", lambda name: None)
+    monkeypatch.setattr(runner, "get_automation_user", lambda: "tester")
+
+    pr = {"repo_full": "org/repo", "repo": "repo", "number": 13, "branch": "feature/x"}
+    manual_task = "FIX-COMMENT TASK (SELF-CONTAINED): Update PR #13"
+    success = runner.dispatch_agent_for_pr_with_task(
+        FakeDispatcher(),
+        pr,
+        task_description=manual_task,
+        agent_cli="minimax",
+        job_mode="fix_comment",
+    )
+
+    assert success is True
+    assert captured_desc == [manual_task]
+
+
 def test_has_failing_checks_uses_conclusion_field(monkeypatch):
     """Test that conclusion field is checked (authoritative checkpoint)."""
     # Mock get_github_token

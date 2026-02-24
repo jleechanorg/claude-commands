@@ -88,11 +88,13 @@ no changes added to commit (use "git add -a" to commit all changes, or "git add 
 ```
 
 Examples:
-- `[Local: main | Remote: origin/main | PR: none]`
+- `[Local: main | Remote: upstream/main | PR: none]`
 - `[API: 49/50 requests (98% remaining) | Reset: 15:08:12]`
-- `[Local: feature-x | Remote: origin/main | PR: #123 https://github.com/user/repo/pull/123]`
-- `[Local: dev-branch (ahead 2) | Remote: origin/main | PR: (related to #456 https://github.com/user/repo/pull/456)]`
+- `[Local: feature-x | Remote: upstream/main | PR: #123 https://github.com/user/repo/pull/123]`
+- `[Local: dev-branch (ahead 2) | Remote: upstream/main | PR: (related to #456 https://github.com/user/repo/pull/456)]`
 - `[API: 25/50 requests (50% remaining) | Reset: 08:30:45]`
+
+**NOTE**: Remote must NEVER be `origin/main`. Use actual remote name (e.g., `upstream/main`, `origin/branch-name`).
 
 ## Compliance Note
 
