@@ -8,8 +8,7 @@ main() {
             return
         fi
         for candidate in \
-            "/private/tmp/worldarchitect.ai/sdui-spec-run/pairv2/run_001/orchestration_logs" \
-            "/tmp/worldarchitect.ai/sdui-spec-run/pairv2/run_001/orchestration_logs" \
+            "/tmp/${PROJECT_NAME:-your-project.com}/orchestration_logs" \
             "/tmp/orchestration_logs"; do
             if [ -d "$candidate" ]; then
                 echo "$candidate"

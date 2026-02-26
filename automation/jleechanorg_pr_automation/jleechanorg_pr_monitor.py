@@ -1795,9 +1795,11 @@ Your response MUST follow this exact structure for clarity:
 
         # Delegate per-CLI arg construction to the centralised helper so that
         # this site stays in sync with TaskDispatcher._validate_cli_availability.
-        help_args, execution_cmd, _ = build_preflight_execution_args(cli_name)
-        # Preserve legacy behavior: always run Phase 1 (help check) for all CLIs,
-        # unlike TaskDispatcher which skips it for OAuth CLIs (claude/cursor/minimax).
+        help_args, execution_cmd, skip_help = build_preflight_execution_args(cli_name)
+        # Preserve legacy behavior: always run Phase 1 (help check) for all CLIs.
+        # OAuth CLIs return empty help_args; supply --help so Phase 1 does not run bare binary (which can hang).
+        if not help_args:
+            help_args = ["--help"]
         skip_help = False
 
         try:

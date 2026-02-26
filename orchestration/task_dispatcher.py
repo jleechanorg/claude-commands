@@ -419,6 +419,7 @@ class TaskDispatcher:
         # LLM-driven enhancements - lazy loading to avoid subprocess overhead
         self._active_agents = None  # Will be loaded lazily when needed
         self._last_agent_check = 0  # Track when agents were last refreshed
+        self._subprocess_agents: set[str] = set()  # no_tmux agents (merged into active_agents)
         self.result_dir = os.environ.get(PAIR_ORCHESTRATION_RESULTS_DIR_ENV) or os.environ.get(
             ORCHESTRATION_RESULTS_DIR_ENV, "/tmp/orchestration_results"
         )
@@ -639,6 +640,7 @@ class TaskDispatcher:
         # Cache for 30 seconds to avoid excessive subprocess calls
         if self._active_agents is None or (current_time - self._last_agent_check) > 30:
             self._active_agents = self._get_active_tmux_agents()
+            self._active_agents.update(getattr(self, "_subprocess_agents", set()))
             self._last_agent_check = current_time
         return self._active_agents
 
@@ -3165,14 +3167,25 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                 }
                 if run_env is not None:
                     popen_kwargs["env"] = run_env
-                proc = subprocess.Popen(
-                    [str(script_path)],
-                    **popen_kwargs,
-                )
+                try:
+                    proc = subprocess.Popen(
+                        [str(script_path)],
+                        **popen_kwargs,
+                    )
+                except Exception:
+                    log_fd.close()
+                    raise
                 agent_spec["pid"] = proc.pid
                 agent_spec["process"] = proc
                 agent_spec["log_fd"] = log_fd
                 agent_spec["launch_mode"] = "subprocess"
+
+                # Register subprocess agent so capacity/collision checks include it.
+                if not hasattr(self, "_subprocess_agents"):
+                    self._subprocess_agents = set()
+                self._subprocess_agents.add(agent_name)
+                # Invalidate active_agents cache so next read merges subprocess agents.
+                self._active_agents = None
 
                 print(f"✅ Created {agent_name} (subprocess, pid={proc.pid}) - Focus: {agent_focus}")
                 print(f"📺 View logs: tail -f {log_file}")

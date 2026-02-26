@@ -22,7 +22,7 @@ def coerce_cli_args(value: Any) -> list[str]:
     if value is None:
         return []
     if isinstance(value, (list, tuple)):
-        return [str(item) for item in value if str(item).strip()]
+        return [str(item) for item in value if item is not None and str(item).strip()]
     if isinstance(value, bytes):
         value = value.decode("utf-8", errors="replace")
     if isinstance(value, str):
