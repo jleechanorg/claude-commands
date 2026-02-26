@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
+import cli_arg_utils
+
 from orchestration.cli_validation import (
     EXPECTED_VALIDATION_ANSWER,
     ValidationResult,
@@ -200,6 +202,102 @@ class TestAgentCliSelection(unittest.TestCase):
         self.assertIn("CLI chain: gemini,codex", script_contents)
         self.assertIn("Gemini exit code", script_contents)
         self.assertIn("Codex exit code", script_contents)
+
+    def test_create_dynamic_agent_includes_cli_args(self):
+        """Custom cli_args from agent_spec must be appended to each CLI attempt."""
+        agent_spec = {
+            "name": "task-agent-cli-args-test",
+            "focus": "Validate CLI extra args",
+            "prompt": "Do the work",
+            "capabilities": [],
+            "type": "development",
+            "cli": "codex",
+            "cli_args": ["--one", "value with space", "--no-test"],
+            "model": "gpt-4",
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_print_tmp_subdirectories"),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=("/tmp/task-agent-cli-args-test", MagicMock(returncode=0, stderr="")),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True) as mock_validate,
+        ):
+
+            def which_side_effect(command):
+                known_binaries = {
+                    "codex": "/usr/bin/codex",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        script_contents = mock_write_text.call_args_list[0][0][0]  # First positional arg is script content
+        self.assertIn("codex exec --yolo --skip-git-repo-check --model gpt-4 --one 'value with space' --no-test", script_contents)
+
+    def test_create_dynamic_agent_handles_malformed_cli_args(self):
+        """Malformed cli_args strings should not crash dynamic agent creation."""
+        agent_spec = {
+            "name": "task-agent-cli-args-malformed",
+            "focus": "Handle broken quotes",
+            "prompt": "Do the work",
+            "capabilities": [],
+            "type": "development",
+            "cli": "codex",
+            "cli_args": '--dangling "quote',
+            "model": "gpt-4",
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_print_tmp_subdirectories"),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=("/tmp/task-agent-cli-args-malformed", MagicMock(returncode=0, stderr="")),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+        ):
+
+            def which_side_effect(command):
+                known_binaries = {
+                    "codex": "/usr/bin/codex",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        script_contents = mock_write_text.call_args_list[0][0][0]
+        self.assertIn("codex exec --yolo --skip-git-repo-check --model gpt-4 --dangling", script_contents)
 
     def test_create_dynamic_agent_fails_when_requested_cli_missing(self):
         """Agent creation should fail when the requested CLI is absent (no automatic fallback)."""
@@ -1794,6 +1892,49 @@ class TestAgentCreationWithValidation(unittest.TestCase):
         # Verify agent name appears in logs
         agent_name_logs = [call for call in print_calls if "test-agent-logging" in call]
         self.assertGreater(len(agent_name_logs), 0, "Agent name should appear in validation logs")
+
+
+class TestCoerceCliArgs(unittest.TestCase):
+    """Tests for shared CLI argument coercion helper."""
+
+    def test_none_returns_empty_list(self):
+        self.assertEqual(cli_arg_utils.coerce_cli_args(None), [])
+
+    def test_empty_string_returns_empty_list(self):
+        self.assertEqual(cli_arg_utils.coerce_cli_args(""), [])
+        self.assertEqual(cli_arg_utils.coerce_cli_args("   "), [])
+
+    def test_list_values_are_stringified(self):
+        self.assertEqual(
+            cli_arg_utils.coerce_cli_args(["--flag", "value", None, "", "  "]),
+            ["--flag", "value", "None"],
+        )
+        self.assertEqual(
+            cli_arg_utils.coerce_cli_args((1, 2, "three", "")),
+            ["1", "2", "three"],
+        )
+
+    def test_bytes_are_decoded_and_split_like_string(self):
+        self.assertEqual(
+            cli_arg_utils.coerce_cli_args(b'--name "x y" --flag'),
+            ["--name", "x y", "--flag"],
+        )
+
+    def test_shlex_parsing_preserves_quoted_tokens(self):
+        self.assertEqual(
+            cli_arg_utils.coerce_cli_args('--foo "bar baz" --no-run'),
+            ["--foo", "bar baz", "--no-run"],
+        )
+
+    def test_malformed_quote_falls_back_to_whitespace_split(self):
+        self.assertEqual(
+            cli_arg_utils.coerce_cli_args('--foo "bar baz --flag'),
+            ["--foo", '"bar', "baz", "--flag"],
+        )
+
+    def test_scalar_values_become_single_token(self):
+        self.assertEqual(cli_arg_utils.coerce_cli_args(0), ["0"])
+        self.assertEqual(cli_arg_utils.coerce_cli_args({"a": 1}), ["{'a': 1}"])
 
 
 if __name__ == "__main__":

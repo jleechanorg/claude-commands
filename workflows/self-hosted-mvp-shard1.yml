@@ -42,10 +42,8 @@ jobs:
     name: Harness autonomy checks (self hosted)
     # Never run untrusted fork PR code on self-hosted infrastructure.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: [self-hosted, claude]
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 20
-    outputs:
-      success: ${{ steps.mark-success.outputs.success }}
 
     steps:
     - name: Checkout repository
@@ -56,6 +54,9 @@ jobs:
         GH_TOKEN: ${{ github.token }}
         GITHUB_ACTIONS: "true"
       run: |
+        cat <<'EOF' >/tmp/run-harness-autonomy-self-hosted.sh
+        #!/usr/bin/env bash
+        set -euo pipefail
         source scripts/venv_utils.sh
         ensure_venv
         ensure_requirements_installed
@@ -73,6 +74,12 @@ jobs:
           --prompt-source claude_local_strict \
           --no-persist \
           --output-json /tmp/harness_metrics_ci.json
+        EOF
+
+        chmod +x /tmp/run-harness-autonomy-self-hosted.sh
+        ./self-hosted-runner/run-in-ci-container.sh \
+          --workspace "$GITHUB_WORKSPACE" \
+          --cmd-file /tmp/run-harness-autonomy-self-hosted.sh
 
     - name: Upload harness autonomy artifacts
       if: always()
@@ -83,76 +90,33 @@ jobs:
         retention-days: 30
         if-no-files-found: ignore
 
-    - name: Mark successful completion
-      id: mark-success
-      if: success()
-      run: echo "success=true" >> $GITHUB_OUTPUT
-
-  harness-autonomy-fallback:
-    name: Harness autonomy checks (fallback)
-    needs: harness-autonomy-self-hosted
-    if: always() && needs.harness-autonomy-self-hosted.outputs.success != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
-      with:
-        python-version: '3.11'
-
-    - name: Run harness autonomy checks (fallback)
-      env:
-        GH_TOKEN: ${{ github.token }}
-        GITHUB_ACTIONS: "true"
-      run: |
-        source scripts/venv_utils.sh
-        ensure_venv
-        ensure_requirements_installed
-
-        python -m pytest \
-          tests/scripts/test_pr_autonomy_metrics.py \
-          tests/scripts/test_trace_to_eval_case.py \
-          tests/scripts/test_validate_prompt_tool_contracts.py
-
-        python scripts/validate_prompt_tool_contracts.py
-
-        python scripts/pr_autonomy_metrics.py \
-          --repo "${{ github.repository }}" \
-          --limit 20 \
-          --prompt-source claude_local_strict \
-          --no-persist \
-          --output-json /tmp/harness_metrics_ci.json
-
-    - name: Upload harness autonomy artifacts (fallback)
-      if: always()
-      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
-      with:
-        name: harness-autonomy-fallback
-        path: /tmp/harness_metrics_ci.json
-        retention-days: 30
-        if-no-files-found: ignore
-
   mvp-shard-1:
     name: Directory tests (core-mvp-1(self hosted))
     # Never run untrusted fork PR code on self-hosted infrastructure.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: [self-hosted, claude]
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 20
-    outputs:
-      success: ${{ steps.mark-success.outputs.success }}
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
 
+    - name: Runner control plane
+      uses: ./.github/actions/runner-control-plane
+
     - name: Run core-mvp-1 tests (self-hosted)
+      uses: ./.github/actions/container-run
+      with:
+        command: |
+          set -euo pipefail
+          source scripts/venv_utils.sh
+          ensure_venv
+          ensure_requirements_installed
+          SHARD_DISPLAY=$((0 + 1))
+          echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-1)"
+          chmod +x run_tests.sh
+          ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
       env:
-        TEST_SHARD_INDEX: 0
-        TEST_SHARD_TOTAL: 3
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"
         MOCK_SERVICES_MODE: "true"
@@ -167,16 +131,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
-        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
         TEST_MAX_WORKERS: 2
-      run: |
-        source scripts/venv_utils.sh
-        ensure_venv
-        ensure_requirements_installed
-        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
-        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-1)"
-        chmod +x run_tests.sh
-        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
 
     - name: Upload test results
       if: always()
@@ -187,83 +142,33 @@ jobs:
         retention-days: 30
         if-no-files-found: ignore
 
-    - name: Mark successful completion
-      id: mark-success
-      if: success()
-      run: echo "success=true" >> $GITHUB_OUTPUT
-
-  fallback-shard-1:
-    name: Directory tests (core-mvp-1(fallback))
-    needs: mvp-shard-1
-    if: always() && needs.mvp-shard-1.outputs.success != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
-      with:
-        python-version: '3.11'
-
-    - name: Run core-mvp-1 tests (fallback)
-      env:
-        TEST_SHARD_INDEX: 0
-        TEST_SHARD_TOTAL: 3
-        TESTING: "true"
-        TESTING_AUTH_BYPASS: "true"
-        MOCK_SERVICES_MODE: "true"
-        FAST_TESTS: "1"
-        GEMINI_API_KEY: "test-ci-key-only"
-        CEREBRAS_API_KEY: "test-ci-key-only"
-        OPENROUTER_API_KEY: "test-ci-key-only"
-        TEST_GEMINI_API_KEY: "test-ci-key-only"
-        GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
-        ENABLE_SEMANTIC_ROUTING: "false"
-        ENABLE_BROWSER_TESTS: "0"
-        ENABLE_BUILD_TESTS: "0"
-        ENABLE_NETWORK_TESTS: "0"
-        GITHUB_ACTIONS: "true"
-        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
-        TEST_MAX_WORKERS: 2
-      run: |
-        source scripts/venv_utils.sh
-        ensure_venv
-        ensure_requirements_installed
-        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
-        echo "🔄 Running core-mvp-1 fallback on GitHub-hosted runner"
-        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-1)"
-        chmod +x run_tests.sh
-        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
-
-    - name: Upload test results (fallback)
-      if: always()
-      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
-      with:
-        name: mvp-shard1-test-results-fallback
-        path: mvp_site/test-results/
-        retention-days: 30
-        if-no-files-found: ignore
-
   mvp-shard-2:
     name: Directory tests (core-mvp-2(self hosted))
     # Never run untrusted fork PR code on self-hosted infrastructure.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: [self-hosted, claude]
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 20
-    outputs:
-      success: ${{ steps.mark-success.outputs.success }}
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
 
+    - name: Runner control plane
+      uses: ./.github/actions/runner-control-plane
+
     - name: Run core-mvp-2 tests (self-hosted)
+      uses: ./.github/actions/container-run
+      with:
+        command: |
+          set -euo pipefail
+          source scripts/venv_utils.sh
+          ensure_venv
+          ensure_requirements_installed
+          SHARD_DISPLAY=$((1 + 1))
+          echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-2)"
+          chmod +x run_tests.sh
+          ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
       env:
-        TEST_SHARD_INDEX: 1
-        TEST_SHARD_TOTAL: 3
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"
         MOCK_SERVICES_MODE: "true"
@@ -278,16 +183,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
-        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
         TEST_MAX_WORKERS: 2
-      run: |
-        source scripts/venv_utils.sh
-        ensure_venv
-        ensure_requirements_installed
-        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
-        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-2)"
-        chmod +x run_tests.sh
-        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
 
     - name: Upload test results
       if: always()
@@ -298,83 +194,33 @@ jobs:
         retention-days: 30
         if-no-files-found: ignore
 
-    - name: Mark successful completion
-      id: mark-success
-      if: success()
-      run: echo "success=true" >> $GITHUB_OUTPUT
-
-  fallback-shard-2:
-    name: Directory tests (core-mvp-2(fallback))
-    needs: mvp-shard-2
-    if: always() && needs.mvp-shard-2.outputs.success != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
-      with:
-        python-version: '3.11'
-
-    - name: Run core-mvp-2 tests (fallback)
-      env:
-        TEST_SHARD_INDEX: 1
-        TEST_SHARD_TOTAL: 3
-        TESTING: "true"
-        TESTING_AUTH_BYPASS: "true"
-        MOCK_SERVICES_MODE: "true"
-        FAST_TESTS: "1"
-        GEMINI_API_KEY: "test-ci-key-only"
-        CEREBRAS_API_KEY: "test-ci-key-only"
-        OPENROUTER_API_KEY: "test-ci-key-only"
-        TEST_GEMINI_API_KEY: "test-ci-key-only"
-        GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
-        ENABLE_SEMANTIC_ROUTING: "false"
-        ENABLE_BROWSER_TESTS: "0"
-        ENABLE_BUILD_TESTS: "0"
-        ENABLE_NETWORK_TESTS: "0"
-        GITHUB_ACTIONS: "true"
-        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
-        TEST_MAX_WORKERS: 2
-      run: |
-        source scripts/venv_utils.sh
-        ensure_venv
-        ensure_requirements_installed
-        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
-        echo "🔄 Running core-mvp-2 fallback on GitHub-hosted runner"
-        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-2)"
-        chmod +x run_tests.sh
-        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
-
-    - name: Upload test results (fallback)
-      if: always()
-      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
-      with:
-        name: mvp-shard2-test-results-fallback
-        path: mvp_site/test-results/
-        retention-days: 30
-        if-no-files-found: ignore
-
   mvp-shard-3:
     name: Directory tests (core-mvp-3(self hosted))
     # Never run untrusted fork PR code on self-hosted infrastructure.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: [self-hosted, claude]
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 20
-    outputs:
-      success: ${{ steps.mark-success.outputs.success }}
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
 
+    - name: Runner control plane
+      uses: ./.github/actions/runner-control-plane
+
     - name: Run core-mvp-3 tests (self-hosted)
+      uses: ./.github/actions/container-run
+      with:
+        command: |
+          set -euo pipefail
+          source scripts/venv_utils.sh
+          ensure_venv
+          ensure_requirements_installed
+          SHARD_DISPLAY=$((2 + 1))
+          echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-3)"
+          chmod +x run_tests.sh
+          ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
       env:
-        TEST_SHARD_INDEX: 2
-        TEST_SHARD_TOTAL: 3
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"
         MOCK_SERVICES_MODE: "true"
@@ -389,82 +235,13 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
-        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
         TEST_MAX_WORKERS: 2
-      run: |
-        source scripts/venv_utils.sh
-        ensure_venv
-        ensure_requirements_installed
-        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
-        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-3)"
-        chmod +x run_tests.sh
-        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
 
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
       with:
         name: mvp-shard3-test-results
-        path: mvp_site/test-results/
-        retention-days: 30
-        if-no-files-found: ignore
-
-    - name: Mark successful completion
-      id: mark-success
-      if: success()
-      run: echo "success=true" >> $GITHUB_OUTPUT
-
-  fallback-shard-3:
-    name: Directory tests (core-mvp-3(fallback))
-    needs: mvp-shard-3
-    if: always() && needs.mvp-shard-3.outputs.success != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
-      with:
-        python-version: '3.11'
-
-    - name: Run core-mvp-3 tests (fallback)
-      env:
-        TEST_SHARD_INDEX: 2
-        TEST_SHARD_TOTAL: 3
-        TESTING: "true"
-        TESTING_AUTH_BYPASS: "true"
-        MOCK_SERVICES_MODE: "true"
-        FAST_TESTS: "1"
-        GEMINI_API_KEY: "test-ci-key-only"
-        CEREBRAS_API_KEY: "test-ci-key-only"
-        OPENROUTER_API_KEY: "test-ci-key-only"
-        TEST_GEMINI_API_KEY: "test-ci-key-only"
-        GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
-        ENABLE_SEMANTIC_ROUTING: "false"
-        ENABLE_BROWSER_TESTS: "0"
-        ENABLE_BUILD_TESTS: "0"
-        ENABLE_NETWORK_TESTS: "0"
-        GITHUB_ACTIONS: "true"
-        PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/mvp_site"
-        TEST_MAX_WORKERS: 2
-      run: |
-        source scripts/venv_utils.sh
-        ensure_venv
-        ensure_requirements_installed
-        SHARD_DISPLAY=$((TEST_SHARD_INDEX + 1))
-        echo "🔄 Running core-mvp-3 fallback on GitHub-hosted runner"
-        echo "🧩 Running Shard ${SHARD_DISPLAY} of ${TEST_SHARD_TOTAL} (core-mvp-3)"
-        chmod +x run_tests.sh
-        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
-
-    - name: Upload test results (fallback)
-      if: always()
-      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
-      with:
-        name: mvp-shard3-test-results-fallback
         path: mvp_site/test-results/
         retention-days: 30
         if-no-files-found: ignore

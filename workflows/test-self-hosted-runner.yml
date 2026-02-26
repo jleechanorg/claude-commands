@@ -22,7 +22,7 @@ on:
 
 jobs:
   test-runner:
-    runs-on: [self-hosted, claude]
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 5
     env:
       TEST_MESSAGE: ${{ inputs.test_message }}

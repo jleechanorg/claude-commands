@@ -44,7 +44,7 @@ jobs:
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
   try-self-hosted:
-    runs-on: [self-hosted, claude]
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 10
     continue-on-error: true
     outputs:
@@ -54,20 +54,24 @@ jobs:
 
     - uses: actions/checkout@v4
 
+    - name: Runner control plane
+      uses: ./.github/actions/runner-control-plane
+
+
     - name: Set up Python
       if: runner.os == 'Linux'
       uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
       with:
         python-version: '3.11'
 
-    - name: Run documentation size check
-      run: |
-        python3 mvp_site/tests/test_documentation_performance.py
-
-    - name: Quick size monitor
-      run: |
-        chmod +x mvp_site/monitor_doc_sizes.sh
-        ./mvp_site/monitor_doc_sizes.sh
+    - name: Run documentation checks in pinned container
+      uses: ./.github/actions/container-run
+      with:
+        command: |
+          set -euo pipefail
+          python3 mvp_site/tests/test_documentation_performance.py
+          chmod +x mvp_site/monitor_doc_sizes.sh
+          ./mvp_site/monitor_doc_sizes.sh
 
     - name: Comment PR if files too large
       if: failure() && github.event_name == 'pull_request'

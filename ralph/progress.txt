@@ -1,0 +1,13 @@
+# Ralph Progress Log
+Started: 2026-02-26
+PRD: Ralph Toolkit + Amazon Clone Benchmark
+Source: Example PRD — customize prd.json and progress.txt for your project.
+
+## Codebase Patterns
+- Runner: ralph/ralph.sh — reads prd.json, runs amp or claude with CLAUDE.md, archives on branch change, tracks .last-branch
+- Status: ralph/status.sh — CLI monitor, reads prd.json via jq, shows phases/commits/next story, pgrep for ralph/ralph.sh
+- Dashboard: ralph/dashboard_server.sh — Python HTTP server on :9450, /api/status returns JSON (total, passed, phases, stories, ralph_running)
+- Dashboard UI: ralph/dashboard.html — fetches /api/status, auto-refresh, phases table, commit list, story list
+- Customize prd.json for your project (userStories, branchName, acceptanceCriteria)
+- Amazon clone benchmark (A1–A6): Flask e-commerce, isolated workspace, evidence artifacts (shadow_validation.txt, final_order_confirmation.png, amazon_clone_flow.webm)
+---
