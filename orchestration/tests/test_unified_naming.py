@@ -171,6 +171,43 @@ class TestWorkspaceConfiguration(unittest.TestCase):
         self.assertEqual(pr_number, "789")
         self.assertEqual(mode, "update")
 
+    def test_slash_command_pr_context_detects_update(self):
+        task = "/copilot 5691"
+        pr_number, mode = self.dispatcher._detect_pr_context(task)
+        self.assertEqual(pr_number, "5691")
+        self.assertEqual(mode, "update")
+
+    def test_slash_command_with_text_pr_context_detects_update(self):
+        task = "Run the following: /fixpr 4567 to address review comments"
+        pr_number, mode = self.dispatcher._detect_pr_context(task)
+        self.assertEqual(pr_number, "4567")
+        self.assertEqual(mode, "update")
+
+    def test_slash_command_with_hash_pr_context_detects_update(self):
+        task = "/copilot `#1234`"
+        pr_number, mode = self.dispatcher._detect_pr_context(task)
+        self.assertEqual(pr_number, "1234")
+        self.assertEqual(mode, "update")
+
+    def test_fix_comment_variants_pr_context_detects_update(self):
+        for task in ["/fix-comment 5678", "/fix_comment 5678"]:
+            with self.subTest(task=task):
+                pr_number, mode = self.dispatcher._detect_pr_context(task)
+                self.assertEqual(pr_number, "5678")
+                self.assertEqual(mode, "update")
+
+    def test_slash_command_pr_context_case_insensitive(self):
+        task = "/COPILOT 123"
+        pr_number, mode = self.dispatcher._detect_pr_context(task)
+        self.assertEqual(pr_number, "123")
+        self.assertEqual(mode, "update")
+
+    def test_inline_slash_command_reference_does_not_trigger_update(self):
+        task = "Document /copilot 123 usage in README"
+        pr_number, mode = self.dispatcher._detect_pr_context(task)
+        self.assertIsNone(pr_number)
+        self.assertEqual(mode, "create")
+
     def test_analyze_task_includes_workspace_config(self):
         """Test that analyze_task_and_create_agents includes workspace config in agent spec"""
         # RED: This should fail initially

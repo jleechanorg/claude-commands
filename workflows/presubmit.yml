@@ -56,7 +56,7 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
   schema-coverage:
     name: Schema Coverage Guard
-    runs-on: [self-hosted, claude]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout repository
@@ -95,7 +95,7 @@ jobs:
             --required-path player_character_data.equipped_items.legs
   python-lint:
     name: Python Linting (Ruff)
-    runs-on: [self-hosted, claude]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout repository
@@ -125,9 +125,15 @@ jobs:
   # Python type checking with mypy
   python-typecheck:
     name: Python Type Checking (mypy)
-    runs-on: [self-hosted, claude]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Repair workspace permissions for checkout
+        run: |
+          if [ -d "$GITHUB_WORKSPACE" ]; then
+            chmod -R u+rwX "$GITHUB_WORKSPACE" || true
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
 
@@ -155,7 +161,7 @@ jobs:
   # JavaScript linting with ESLint
   javascript-lint:
     name: JavaScript Linting (ESLint)
-    runs-on: [self-hosted, claude]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout repository

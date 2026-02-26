@@ -72,6 +72,9 @@ class ClaudeCommandsExporter:
         # Add automation for GitHub export
         if "automation" not in self.EXPORT_SUBDIRS:
             self.EXPORT_SUBDIRS.append("automation")
+        # Add ralph (PRD-driven autonomous workflow toolkit)
+        if "ralph" not in self.EXPORT_SUBDIRS:
+            self.EXPORT_SUBDIRS.append("ralph")
 
         # Commands to skip during export (project-specific and user-specified exclusions)
         self.COMMANDS_SKIP_LIST = [
@@ -91,6 +94,9 @@ class ClaudeCommandsExporter:
             "pgen.md",
             "pgene.md",
             "proto_genesis.md",  # proto genesis commands (project-specific)
+            "pairv2",  # Pair v2 command - project-specific workflow
+            "pairv2.md",  # Pair v2 command file
+            "pairv2-usage.md",  # Pair v2 usage guide
         ]
 
         # Counters for summary
@@ -128,6 +134,11 @@ class ClaudeCommandsExporter:
                 'source': 'automation',
                 'exclude_dirs': ['__pycache__', '.pytest_cache', 'dist', 'build', '*.egg-info', 'testing_util'],
                 'exclude_files': ['*.pyc', '*.pyo', '*.swp', '*.tmp', 'simple_pr_batch.sh'],
+            },
+            'ralph': {
+                'source': 'ralph',
+                'exclude_dirs': ['archive'],
+                'exclude_files': ['.last-branch'],
             },
         }
 
@@ -306,6 +317,9 @@ class ClaudeCommandsExporter:
 
         # Export automation (GitHub PR automation system)
         self._export_automation(staging_dir)
+
+        # Export ralph (PRD-driven autonomous workflow toolkit)
+        self._export_ralph(staging_dir)
 
         # Export GitHub Actions workflows (as examples)
         self._export_github_workflows(staging_dir)
@@ -851,6 +865,13 @@ Customize the following for your project:
         print("🤖 Exporting automation system...")
         self._export_directory(
             "automation", self.EXPORT_DIRECTORIES["automation"], staging_dir
+        )
+
+    def _export_ralph(self, staging_dir):
+        """Export Ralph PRD-driven autonomous workflow toolkit"""
+        print("🐺 Exporting ralph...")
+        self._export_directory(
+            "ralph", self.EXPORT_DIRECTORIES["ralph"], staging_dir
         )
 
     def _export_github_workflows(self, staging_dir):
@@ -1774,6 +1795,7 @@ This is a filtered reference export from a working Claude Code project. Commands
             ),  # .claude/settings.json file
             "orchestration": "orchestration",  # Goes to repo root
             "automation": "automation",  # Goes to repo root
+            "ralph": "ralph",  # PRD-driven autonomous workflow toolkit - goes to repo root
             "scripts": None,  # Goes to repo root within scripts/
             "workflows": "workflows",  # GitHub workflows - goes to repo root as examples
             "CLAUDE.md": "CLAUDE.md",  # Reference doc - goes to repo root

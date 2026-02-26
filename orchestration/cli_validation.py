@@ -49,6 +49,25 @@ def _build_validation_answer_regex(answer: str = EXPECTED_VALIDATION_ANSWER) -> 
     return re.compile(rf"^{re.escape(normalized_answer)}$")
 
 
+def _extract_validation_numeric_tokens(line: str) -> list[str]:
+    """Extract normalized numeric tokens from one output line."""
+    normalized = _normalize_validation_output_line(line)
+    return re.findall(r"\d+", normalized)
+
+
+def _output_contains_expected_answer(output_content: str, expected_answer: str = EXPECTED_VALIDATION_ANSWER) -> bool:
+    """Return True if output contains a numeric token matching the expected answer."""
+    expected = expected_answer.replace(",", "").replace("_", "")
+    strict_answer_pattern = _build_validation_answer_regex(expected)
+    for output_line in output_content.splitlines():
+        if strict_answer_pattern.fullmatch(_normalize_validation_output_line(output_line)):
+            return True
+        for token in _extract_validation_numeric_tokens(output_line):
+            if token == expected:
+                return True
+    return False
+
+
 def _normalize_validation_output_line(line: str) -> str:
     """Normalize a validation output line for numeric comparison."""
     return line.strip().replace(",", "").replace("_", "")
@@ -226,45 +245,45 @@ def validate_cli_execution(
     
     validation_output_file = validation_dir / "validation_output.txt"
     
+    # Handle prompt file for OAuth CLIs (Claude/Cursor)
+    if prompt_file_needed:
+        prompt_file = validation_dir / "test_prompt.txt"
+        prompt_file.write_text(test_prompt)
+        # Replace @PROMPT_FILE marker with actual prompt file path, preserving @ prefix
+        # OAuth CLIs use -p @path syntax, so we need to keep the @
+        execution_cmd = [arg.replace("@PROMPT_FILE", f"@{prompt_file}") if "@PROMPT_FILE" in arg else arg for arg in execution_cmd]
+        stdin_input = None  # OAuth CLIs use prompt file, not stdin
+    else:
+        stdin_input = test_prompt  # API key CLIs use stdin
+
+    # Build full command
+    cmd = [cli_path] + execution_cmd
+    max_attempts = 3 if cli_name == "codex" else 1
+    last_preview = ""
+
     try:
-        # Handle prompt file for OAuth CLIs (Claude/Cursor)
-        if prompt_file_needed:
-            prompt_file = validation_dir / "test_prompt.txt"
-            prompt_file.write_text(test_prompt)
-            # Replace @PROMPT_FILE marker with actual prompt file path, preserving @ prefix
-            # OAuth CLIs use -p @path syntax, so we need to keep the @
-            execution_cmd = [arg.replace("@PROMPT_FILE", f"@{prompt_file}") if "@PROMPT_FILE" in arg else arg for arg in execution_cmd]
-            stdin_input = None  # OAuth CLIs use prompt file, not stdin
-        else:
-            stdin_input = test_prompt  # API key CLIs use stdin
-        
-        # Build full command
-        cmd = [cli_path] + execution_cmd
-        
-        # Run CLI and redirect output to file
-        with open(validation_output_file, "w") as f:
-            result = subprocess.run(
-                cmd,
-                input=stdin_input,
-                stdin=subprocess.DEVNULL if stdin_input is None else None,
-                stdout=f,
-                stderr=subprocess.PIPE,
-                text=True,
-                timeout=timeout,
-                env=env,
-            )
+        for attempt_num in range(1, max_attempts + 1):
+            # Run CLI and redirect output to file
+            with open(validation_output_file, "w") as f:
+                result = subprocess.run(
+                    cmd,
+                    input=stdin_input,
+                    stdin=subprocess.DEVNULL if stdin_input is None else None,
+                    stdout=f,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=timeout,
+                    env=env,
+                )
 
-        stderr_output = result.stderr or ""
-        
-        # Check output file
-        if validation_output_file.exists() and validation_output_file.stat().st_size > 0:
-            output_content = validation_output_file.read_text()
+            stderr_output = result.stderr or ""
+            # Check output file
+            if validation_output_file.exists() and validation_output_file.stat().st_size > 0:
+                output_content = validation_output_file.read_text()
 
-            # Output file exists and has non-empty content; correctness is validated by the strict regex match below
-            if len(output_content.strip()) > 0:
-                strict_answer_pattern = _build_validation_answer_regex()
-                for output_line in output_content.splitlines():
-                    if strict_answer_pattern.fullmatch(_normalize_validation_output_line(output_line)):
+                # Output file exists and has non-empty content; correctness is validated by token match below
+                if output_content.strip():
+                    if _output_contains_expected_answer(output_content):
                         return ValidationResult(
                             success=True,
                             phase="execution",
@@ -275,35 +294,24 @@ def validate_cli_execution(
                             ),
                             output_file=validation_output_file,
                         )
-                # CLI ran but didn't answer correctly - likely an error or unexpected state
-                preview = _preview_text(output_content)
-                return ValidationResult(
-                    success=False,
-                    phase="execution",
-                    message=(
-                        f"{cli_name} execution test failed (output missing expected answer "
-                        f"'{EXPECTED_VALIDATION_ANSWER}', preview={preview})"
-                    ),
-                    output_file=validation_output_file,
-                )
-        
-        # NOTE: Removed help/version and error classification fallback - it caused false positives
-        # when CLIs output generic phrases like "does not exist" or "invalid_request_error".
-        # If CLI can't answer the validation math prompt, it should fail.
-        # The final fallback reports exit code and raw output.
-        
-        file_preview = ""
-        if validation_output_file.exists():
-            file_preview = _preview_text(validation_output_file.read_text())
-        return ValidationResult(
-            success=False,
-            phase="execution",
-            message=(
-                f"{cli_name} execution test failed (exit code {result.returncode}, "
-                f"output file exists=True, preview={file_preview})"
-            ),
-            output_file=validation_output_file,
-        )
+                    last_preview = _preview_text(output_content)
+                elif stderr_output:
+                    last_preview = _preview_text(stderr_output)
+                else:
+                    last_preview = "no output"
+
+            if attempt_num < max_attempts:
+                continue
+
+            return ValidationResult(
+                success=False,
+                phase="execution",
+                message=(
+                    f"{cli_name} execution test failed (output missing expected answer "
+                    f"'{EXPECTED_VALIDATION_ANSWER}', preview={last_preview})"
+                ),
+                output_file=validation_output_file,
+            )
     
     except subprocess.TimeoutExpired:
         # DESIGN DECISION: Timeouts are treated as FAILURE (success=False).

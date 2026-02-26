@@ -1,0 +1,142 @@
+{
+  "project": "Ralph Toolkit + Amazon Clone Benchmark",
+  "branchName": "ralph/benchmark",
+  "description": "Ralph-driven execution: Ralph toolkit validation (ralph.sh, status.sh, dashboard) and full Amazon clone benchmark (Flask e-commerce with catalog/search/cart/checkout and evidence artifacts). Customize prd.json for your project.",
+  "userStories": [
+    {
+      "id": "R1-US-001",
+      "title": "Ralph Runner Integration Test",
+      "description": "Add an integration test for ralph/ralph.sh that verifies: (1) it reads prd.json and respects branchName, (2) it invokes claude/amp with CLAUDE.md, (3) it exits successfully when output contains <promise>COMPLETE</promise>, (4) it creates .last-branch when PRD has branchName. Use a temporary directory with a minimal prd.json.",
+      "acceptanceCriteria": [
+        "Integration test exists (e.g., ralph/tests/test_ralph_runner.sh or pytest)",
+        "Test verifies ralph.sh reads PRD and runs tool",
+        "Test verifies COMPLETE signal causes exit 0",
+        "Test verifies .last-branch is written",
+        "Test uses temp directory, no side effects on repo"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Ralph toolkit validation. Target: ralph/ralph.sh"
+    },
+    {
+      "id": "R2-US-001",
+      "title": "Status.sh Edge Case Handling",
+      "description": "Add tests for ralph/status.sh handling edge cases: (1) missing or empty prd.json, (2) malformed JSON in prd.json, (3) PRD with zero userStories. Ensure status.sh exits cleanly without crashing and prints sensible output.",
+      "acceptanceCriteria": [
+        "Test(s) for missing prd.json",
+        "Test(s) for malformed JSON",
+        "Test(s) for empty userStories",
+        "status.sh does not crash on edge cases",
+        "Document expected output format in README or test"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Ralph toolkit validation. Target: ralph/status.sh"
+    },
+    {
+      "id": "R3-US-001",
+      "title": "Dashboard API Validation",
+      "description": "Add tests for the dashboard /api/status endpoint: (1) returns valid JSON with total, passed, phases, stories, ralph_running, (2) handles missing prd.json with error field, (3) handles invalid JSON in prd.json gracefully. Use curl or pytest to hit the API.",
+      "acceptanceCriteria": [
+        "Test /api/status returns valid JSON",
+        "Test required fields present: total, passed, phases, stories, ralph_running",
+        "Test error response when prd.json missing",
+        "Test graceful handling of invalid prd.json",
+        "Tests can run without leaving server running (spawn/kill in test)"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Ralph toolkit validation. Target: ralph/dashboard_server.sh"
+    },
+    {
+      "id": "A1-US-001",
+      "title": "Amazon Clone Phase 1: Domain bootstrap",
+      "description": "Create a clean data domain layer for product, cart, and order entities. Define seed inventory and in-memory/state-backed storage. Define simple helper functions for totals and validation. Add deterministic fixtures used by both API and browser tests.",
+      "acceptanceCriteria": [
+        "Product, cart, order domain entities defined",
+        "Seed inventory and in-memory storage",
+        "Helper functions for totals and validation",
+        "Deterministic fixtures for tests"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "From amazon_clone_full_design_contract.md Phase 3.1. Run in isolated workspace per benchmark spec."
+    },
+    {
+      "id": "A2-US-001",
+      "title": "Amazon Clone Phase 2: Route layer",
+      "description": "Add catalog/list route for browsing. Add route for product detail fallback. Add cart mutation routes (add, update, remove). Add checkout route with validation and order creation. Add confirmation route that renders final summary by order token.",
+      "acceptanceCriteria": [
+        "Catalog/list route",
+        "Product detail fallback route",
+        "Cart add/update/remove routes",
+        "Checkout route with validation",
+        "Confirmation route with order token lookup"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "From amazon_clone_full_design_contract.md Phase 3.2."
+    },
+    {
+      "id": "A3-US-001",
+      "title": "Amazon Clone Phase 3: Template/UI baseline",
+      "description": "Build product list page with search box. Add cart page with line items and quantity controls. Add checkout form with required fields. Add confirmation page with success visual marker. Ensure all pages include stable IDs/classes for browser automation.",
+      "acceptanceCriteria": [
+        "Product list page with search",
+        "Cart page with line items and quantity controls",
+        "Checkout form with required fields",
+        "Confirmation page with success marker",
+        "Stable IDs/classes for browser automation"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "From amazon_clone_full_design_contract.md Phase 3.3. Required files: templates/index.html, cart.html, checkout.html, order_confirmation.html, static/styles.css"
+    },
+    {
+      "id": "A4-US-001",
+      "title": "Amazon Clone Phase 4: Evidence instrumentation",
+      "description": "Add evidence directory for shadow_validation.txt, final_order_confirmation.png, amazon_clone_flow.webm. Build capture script/harness that creates evidence text, screenshot, and webm video. Ensure deterministic file names and timestamps.",
+      "acceptanceCriteria": [
+        "evidence/shadow_validation.txt",
+        "evidence/final_order_confirmation.png",
+        "evidence/amazon_clone_flow.webm",
+        "Capture script/harness for full lifecycle",
+        "Deterministic timestamps and file names"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "From amazon_clone_full_design_contract.md Phase 3.4."
+    },
+    {
+      "id": "A5-US-001",
+      "title": "Amazon Clone Phase 5: Hardening",
+      "description": "Add explicit error state branches and assertion coverage. Add API validation tests for invalid states. Add UI-level resilience checks for missing images and empty cart. Add idempotency tests around checkout. Verify final confirmation remains retrievable after restart.",
+      "acceptanceCriteria": [
+        "Error state coverage",
+        "API validation tests for invalid states",
+        "UI resilience for missing images and empty cart",
+        "Idempotency tests for checkout",
+        "Confirmation retrievable after restart"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "From amazon_clone_full_design_contract.md Phase 3.5."
+    },
+    {
+      "id": "A6-US-001",
+      "title": "Amazon Clone Phase 6: Verification preparation",
+      "description": "Prepare verifier-facing artifact bundle. Ensure run output is machine-parseable. Validate all expected artifact names exist and are non-empty. Ensure no requirement depends on hidden repo paths or secrets. All tests pass: python3 -m pytest -q",
+      "acceptanceCriteria": [
+        "run.json, metadata.json, evidence.md present",
+        "evidence/shadow_validation.txt exists",
+        "evidence/final_order_confirmation.png exists",
+        "evidence/amazon_clone_flow.webm exists",
+        "tests/test_app.py (or equivalent) exists",
+        "python3 -m pytest -q passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "From amazon_clone_full_design_contract.md Phase 3.6. See ralph/benchmarks/amazon_clone_full_design_contract.md for full spec."
+    }
+  ]
+}
