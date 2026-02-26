@@ -42,10 +42,10 @@ jobs:
             --cmd 'curl -s --data-urlencode "prompt=$CLAUDE_PROMPT" "$CLAUDE_ENDPOINT"' \
             > /tmp/claude-response.txt
           # Use multiline format with unique delimiter (content may contain "EOF")
+          # GitHub requires closing delimiter at start of new line; ensure trailing newline
           DELIM="__CLAUDE_${GITHUB_RUN_ID:-0}_${GITHUB_RUN_ATTEMPT:-1}_$$"
           echo "answer<<$DELIM" >> $GITHUB_OUTPUT
-          head -c 65000 /tmp/claude-response.txt >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
+          { head -c 65000 /tmp/claude-response.txt; echo; } >> $GITHUB_OUTPUT
           echo "$DELIM" >> $GITHUB_OUTPUT
 
       - name: Comment back
