@@ -138,7 +138,7 @@ def get_status():
         'stories': [{'id': s['id'], 'title': s['title'], 'passes': s.get('passes', False)} for s in stories],
     }
 
-with socketserver.TCPServer(('', PORT), Handler) as httpd:
+with socketserver.TCPServer(('127.0.0.1', PORT), Handler) as httpd:
     httpd.serve_forever()
 " &
 

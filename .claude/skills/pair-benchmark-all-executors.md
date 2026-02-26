@@ -14,13 +14,13 @@ Use one script to benchmark all pair executors:
 - `/pair` via direct Python (`.claude/pair/pair_execute.py`)
 
 ## Script
-`./vpython .claude/pair/benchmark_pair_executors.py`
+`python .claude/pair/benchmark_pair_executors.py` (or `venv/bin/python` when using a virtualenv)
 
 ## Quick Start
 Run all three executors in one benchmark:
 
 ```bash
-./vpython .claude/pair/benchmark_pair_executors.py \
+python .claude/pair/benchmark_pair_executors.py \
   --executor-set all \
   --benchmark-iterations 1 \
   --timeout-seconds 180 \
@@ -31,7 +31,7 @@ Run all three executors in one benchmark:
 Run a small, named Amazon-style ecommerce preset:
 
 ```bash
-./vpython .claude/pair/benchmark_pair_executors.py \
+python .claude/pair/benchmark_pair_executors.py \
   --task-preset amazon_clone \
   --pairv2-max-cycles 2 \
   --timeout-seconds 1200 \
@@ -44,7 +44,7 @@ For historical benchmark prompts, including alternate Amazon-style variants, see
 Run all three in parallel:
 
 ```bash
-./vpython .claude/pair/benchmark_pair_executors.py \
+python .claude/pair/benchmark_pair_executors.py \
   --executor-set all \
   --parallel \
   --benchmark-iterations 1 \
@@ -77,7 +77,7 @@ Run all three in parallel:
 
 Run with no args to use these defaults:
 ```bash
-venv/bin/python3 .claude/pair/benchmark_pair_executors.py
+venv/bin/python .claude/pair/benchmark_pair_executors.py
 ```
 
 ## Notes

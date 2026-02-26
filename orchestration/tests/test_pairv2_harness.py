@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
 """Test for harness pairv2 test task verification"""
 
+import pytest
 
+
+@pytest.mark.skip(reason="TODO: implement real harness/pairv2 behavior tests")
 def test_harness_pairv2_responds():
     """Test that verifies pairv2 harness responds correctly"""
-    # Simple test to verify the harness responds to ping
-    result = True
-    assert result is True, "Harness should respond"
+    # Placeholder: replace with real harness interaction/assertions.
+    pass
 
 
+@pytest.mark.skip(reason="TODO: implement real harness/pairv2 behavior tests")
 def test_coder_implementation():
     """Test that verifies coder can implement features"""
-    # Simulate coder implementation check
-    implemented = True
-    assert implemented is True, "Coder should implement features"
+    # Placeholder: replace with real implementation checks.
+    pass
 
 
+@pytest.mark.skip(reason="TODO: implement real harness/pairv2 behavior tests")
 def test_verifier_can_verify():
     """Test that verifier can verify implementation"""
-    # Simulate verification check
-    verified = True
-    assert verified is True, "Verifier should verify correctly"
+    # Placeholder: replace with real verification logic/assertions.
+    pass
 
 
 if __name__ == "__main__":
-    test_harness_pairv2_responds()
-    test_coder_implementation()
-    test_verifier_can_verify()
-    print("All harness tests passed!")
+    pytest.main([__file__, "-v"])

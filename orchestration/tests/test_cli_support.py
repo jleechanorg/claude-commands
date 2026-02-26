@@ -12,8 +12,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-import cli_arg_utils
-
+from orchestration import cli_arg_utils
 from orchestration.cli_validation import (
     EXPECTED_VALIDATION_ANSWER,
     ValidationResult,
@@ -1907,7 +1906,7 @@ class TestCoerceCliArgs(unittest.TestCase):
     def test_list_values_are_stringified(self):
         self.assertEqual(
             cli_arg_utils.coerce_cli_args(["--flag", "value", None, "", "  "]),
-            ["--flag", "value", "None"],
+            ["--flag", "value"],
         )
         self.assertEqual(
             cli_arg_utils.coerce_cli_args((1, 2, "three", "")),

@@ -9,20 +9,20 @@ type: orchestration
 
 ## ⚠️ Important: Ralph vs Genesis
 
-**Ralph** = Standalone ralph-orchestrator fork at `/Users/$USER/projects_other/ralph-orchestrator`
+**Ralph** = Standalone ralph-orchestrator fork at `$RALPH_REPO` (default: `$HOME/projects/ralph-orchestrator`)
 - Uses Codex CLI by default (200K context via OpenRouter)
-- Separate codebase from WorldArchitect.ai
+- Separate codebase from your project
 - Command: `python -m ralph_orchestrator`
 
-**Genesis** = WorldArchitect.ai orchestration system (different from Ralph!)
-- Located at: `/Users/$USER/projects/worktree_ralph/genesis/`
+**Genesis** = Your project's orchestration system (different from Ralph!)
+- Located at: `$PROJECT_ROOT/genesis/` (or your project's genesis path)
 - **Uses Codex CLI by default** (can override with `--claude` flag)
 - Command: `python genesis/genesis.py`
 - See `/gene` command for Genesis execution
 
 ## Ralph Repository Location
 
-**Required**: `/Users/$USER/projects_other/ralph-orchestrator`
+**Required**: `$RALPH_REPO` (default: `$HOME/projects/ralph-orchestrator`)
 
 This command will verify the Ralph repo exists before executing. If you want to use a different Ralph installation, specify the repo path as the first argument.
 
@@ -35,7 +35,7 @@ This command will verify the Ralph repo exists before executing. If you want to 
 **Parameters**:
 - `goal-file-path`: Path to markdown goal file defining the autonomous task
 - `max-iterations`: (Optional) Maximum iterations before stopping (default: 20)
-- `ralph-repo-path`: (Optional) Path to Ralph repo (default: `/Users/$USER/projects_other/ralph-orchestrator`)
+- `ralph-repo-path`: (Optional) Path to Ralph repo (default: `$HOME/projects/ralph-orchestrator`)
 
 ## How Ralph Works
 
@@ -196,8 +196,8 @@ When you execute `/ralph_custom`:
 
 1. **Verify Ralph Repository**
    ```bash
-   # Default location
-   RALPH_REPO="/Users/$USER/projects_other/ralph-orchestrator"
+   # Default location (set RALPH_REPO or pass as parameter)
+   RALPH_REPO="${RALPH_REPO:-$HOME/projects/ralph-orchestrator}"
 
    # Or use custom location from parameter
    if [ $# -ge 3 ]; then
@@ -321,16 +321,16 @@ git commit -m "feat: add <filename>"
 
 ## Real-World Ralph Usage Example
 
-From TypeScript migration benchmark (commit 09ab17d):
+From a TypeScript migration benchmark:
 
 ```bash
 # Ralph command (uses Codex by default)
-/ralph_custom /Users/$USER/projects/orch_worldai_ralph/complete-production-deployment.md 30
+/ralph_custom $PROJECT_ROOT/goals/complete-production-deployment.md 30
 
 # Explicit execution (what Ralph does internally)
-cd /Users/$USER/projects_other/ralph-orchestrator
+cd "$RALPH_REPO"
 python -m ralph_orchestrator \
-    /Users/$USER/projects/orch_worldai_ralph/complete-production-deployment.md \
+    "$PROJECT_ROOT/goals/complete-production-deployment.md" \
     --agent codex \
     --max-iterations 30 \
     --verbose
@@ -344,8 +344,7 @@ python -m ralph_orchestrator \
 3. ✅ Rebuilt server (`npm run build`)
 4. ✅ Tested campaign creation (campaign ID: vG64GU7JppVOdFJP2QqL)
 5. ✅ Tested interaction endpoint (documented expected index error)
-6. ✅ Committed changes (commit 09ab17d)
-7. ✅ Pushed to remote branch (task-agent-fix-goal-failin-work)
+6. ✅ Committed changes and pushed to remote branch
 
 **Evidence**: All success criteria met, working production server, complete documentation
 
@@ -356,14 +355,14 @@ python -m ralph_orchestrator \
 - Autonomous execution with Codex's stronger reasoning
 - Complex multi-file refactoring
 - When you want fallback to Claude → Gemini automatically
-- Standalone projects outside WorldArchitect.ai
+- Standalone projects outside your main codebase
 
 **Use Genesis (`/gene`)** for:
-- Tasks within WorldArchitect.ai project context
+- Tasks within your project context
 - When you want fast-gen mode with Cerebras speed
-- Integrated with WorldArchitect.ai's codebase and tools
+- Integrated with your project's codebase and tools
 - Also uses Codex by default (same model as Ralph)
-- When you need WorldArchitect.ai-specific context
+- When you need project-specific context
 
 ## When to Use Ralph vs Manual Work
 
@@ -384,4 +383,4 @@ python -m ralph_orchestrator \
 ---
 
 **Ralph** = Standalone ralph-orchestrator, Codex by default, large context (200K)
-**Genesis** = WorldArchitect.ai integrated, Codex by default, fast-gen mode with Cerebras
+**Genesis** = Project-integrated, Codex by default, fast-gen mode with Cerebras
