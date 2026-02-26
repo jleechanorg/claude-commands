@@ -1,0 +1,45 @@
+name: Build CI Runner Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'self-hosted-runner/Dockerfile'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226  # v3.0.0
+
+      - name: Login to GHCR
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d  # v3.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09  # v5.0.0
+        with:
+          context: self-hosted-runner
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/ci-runner:latest
+          platforms: linux/amd64,linux/arm64
+
+      - name: Output digest
+        run: |
+          echo "Pushed image digest: ${{ steps.build.outputs.digest }}"
+          echo "Update self-hosted-runner/ci-runner-image.txt with:"
+          echo "ghcr.io/${{ github.repository_owner }}/ci-runner@${{ steps.build.outputs.digest }}"

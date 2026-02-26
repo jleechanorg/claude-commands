@@ -33,8 +33,13 @@ echo "   ... ($(grep -r "mvp_site" .claude/commands --include="*.md" --include="
 
 echo ""
 echo "🏠 Personal/project references:"
-grep -r "worldarchitect\.ai\|\$USER\|WorldArchitect\.AI" .claude/commands --include="*.md" --include="*.py" | head -3
-echo "   ... ($(grep -r "worldarchitect\.ai\|\$USER\|WorldArchitect\.AI" .claude/commands --include="*.md" --include="*.py" | wc -l) total references found)"
+grep -r "worldarchitect\.ai\|\$USER\|WorldArchitect\.AI" .claude/commands --include="*.md" --include="*.py" 2>/dev/null | head -3
+echo "   ... ($(grep -r "worldarchitect\.ai\|\$USER\|WorldArchitect\.AI" .claude/commands --include="*.md" --include="*.py" 2>/dev/null | wc -l) total references found)"
+
+echo ""
+echo "📁 Hardcoded user paths (should be filtered):"
+grep -rE "/Users/jleechan/|/Users/\$USER/projects/worktree_ralph|projects_other/ralph|orch_worldai_ralph|worldai_genesis2|worldai_ralph2" .claude/commands --include="*.md" --include="*.py" --include="*.sh" 2>/dev/null | head -5
+echo "   ... ($(grep -rE "/Users/jleechan/|/Users/\$USER/projects/worktree_ralph|projects_other/ralph|orch_worldai_ralph|worldai_genesis2|worldai_ralph2" .claude/commands --include="*.md" --include="*.py" --include="*.sh" 2>/dev/null | wc -l) total matches)"
 
 echo ""
 echo "🐍 Python sys.path modifications:"

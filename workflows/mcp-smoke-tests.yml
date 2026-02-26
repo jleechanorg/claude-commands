@@ -88,10 +88,7 @@ jobs:
   try-self-hosted:
     name: MCP Server Smoke Tests [Mock APIs]
     if: github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
-    runs-on: [self-hosted, claude]
-    continue-on-error: true
-    outputs:
-      success: ${{ steps.mark-success.outputs.success }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 10
     env:
       GCP_REGION: us-central1
@@ -152,6 +149,10 @@ jobs:
         ref: ${{ github.event_name == 'workflow_run' && steps.pr_ref.outputs.result || '' }}
         submodules: recursive
 
+    - name: Prepare runner control plane
+      uses: ./.github/actions/runner-control-plane
+
+
     - name: Set up Python
       if: runner.os == 'Linux'
       uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
@@ -174,9 +175,13 @@ jobs:
 
     - name: Install dependencies
       run: |
+        python3 -m venv .venv
+        source .venv/bin/activate
+        echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> "$GITHUB_ENV"
+        echo "$VIRTUAL_ENV/bin" >> "$GITHUB_PATH"
         python3 -m pip install --upgrade pip
-        pip3 install -r mvp_site/requirements.txt
-        if [ -f mvp_site/requirements-test.txt ]; then pip3 install -r mvp_site/requirements-test.txt; fi
+        python3 -m pip install -r mvp_site/requirements.txt
+        if [ -f mvp_site/requirements-test.txt ]; then python3 -m pip install -r mvp_site/requirements-test.txt; fi
 
     - name: Pre-warm fastembed model
       run: |
@@ -266,22 +271,28 @@ jobs:
 
     - name: Run MCP smoke tests
       id: smoke_tests
-      run: |
-        chmod +x scripts/mcp_smoke_test.sh
-        if [ "${{ github.event_name }}" = "workflow_run" ]; then
-          if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
-            echo "::error::Could not find deployed preview for mock smoke tests"
-            exit 1
+      uses: ./.github/actions/container-run
+      with:
+        command: |
+          set -euo pipefail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r mvp_site/requirements.txt
+          if [ -f mvp_site/requirements-test.txt ]; then python3 -m pip install -r mvp_site/requirements-test.txt; fi
+          chmod +x scripts/mcp_smoke_test.sh
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
+              echo "::error::Could not find deployed preview for mock smoke tests"
+              exit 1
+            fi
+            export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
+              echo "::warning::Could not find deployed preview for mock smoke tests; skipping"
+              exit 0
+            fi
+            export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
           fi
-          export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
-        elif [ "${{ github.event_name }}" = "pull_request" ]; then
-          if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
-            echo "::warning::Could not find deployed preview for mock smoke tests; skipping"
-            exit 0
-          fi
-          export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
-        fi
-        ./scripts/mcp_smoke_test.sh
+          ./scripts/mcp_smoke_test.sh
 
     - name: Upload test results
       if: always()
@@ -293,11 +304,6 @@ jobs:
           /tmp/your-project.com/test/smoke-test-results.json
           /tmp/your-project.com/test/mcp-requests-responses.json
         retention-days: 7
-
-    - name: Mark successful completion
-      id: mark-success
-      if: success()
-      run: echo "success=true" >> $GITHUB_OUTPUT
 
     - name: Read test results
       id: test-results
@@ -360,280 +366,6 @@ jobs:
         script: |
           const fs = require('fs');
           const body = fs.readFileSync('/tmp/mcp-smoke-comment-body.md', 'utf8');
-
-          await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: Number('${{ steps.pr_ref.outputs.pr_number }}'),
-            body
-          });
-
-  fallback-github-hosted:
-    name: MCP Server Smoke Tests [Mock APIs] (Fallback)
-    needs: try-self-hosted
-    if: (github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')) && needs.try-self-hosted.outputs.success != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      GCP_REGION: us-central1
-      GCP_PROJECT: $GCP_PROJECT_ID
-      PYTHON_VERSION: '3.11'
-      TESTING: true
-      FLASK_ENV: testing
-      TEST_MODE: mock
-      MOCK_SERVICES_MODE: true
-      STREAM_RESPONSE_SIGNING_SECRET: ${{ secrets.STREAM_RESPONSE_SIGNING_SECRET }}
-      SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
-
-    steps:
-    - name: Get PR ref for workflow_run trigger
-      if: github.event_name == 'workflow_run'
-      id: pr_ref
-      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
-      with:
-        result-encoding: string
-        script: |
-          const workflowRun = context.payload.workflow_run;
-          let prNumber;
-          let fallbackSha = workflowRun?.head_sha || '';
-
-          if (workflowRun?.pull_requests && workflowRun.pull_requests.length > 0) {
-            prNumber = workflowRun.pull_requests[0].number;
-          } else if (workflowRun?.head_branch) {
-            const match = workflowRun.head_branch.match(/pr-(\d+)/);
-            if (match) {
-              prNumber = Number(match[1]);
-            }
-          }
-
-          if (!prNumber || Number.isNaN(prNumber)) {
-            // Use fallback SHA from workflow_run event
-            core.setOutput('pr_number', '');
-            return fallbackSha || context.sha;
-          }
-
-          const pr = await github.rest.pulls.get({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            pull_number: prNumber
-          });
-
-          // Export PR number and tested SHA for comment posting
-          const testedSha = fallbackSha || pr.data.head.sha || context.sha;
-          core.setOutput('pr_number', String(prNumber));
-          core.setOutput('tested_sha', testedSha);
-
-          // Use SHA from completed deployment run to match deployed code
-          return testedSha;
-
-    - name: Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
-      with:
-        ref: ${{ github.event_name == 'workflow_run' && steps.pr_ref.outputs.result || '' }}
-        submodules: recursive
-
-    - name: Set up Python
-      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Cache pip dependencies
-      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('mvp_site/requirements*.txt', 'requirements*.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
-    - name: Cache fastembed model
-      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
-      with:
-        path: ~/.cache/fastembed
-        key: fastembed-bge-small-en-v1.5
-
-    - name: Install dependencies
-      run: |
-        python3 -m pip install --upgrade pip
-        if [ -f mvp_site/requirements.txt ]; then pip3 install -r mvp_site/requirements.txt; fi
-
-    - name: Pre-warm fastembed model
-      run: |
-        python3 -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5', cache_dir='$HOME/.cache/fastembed'); print('fastembed model ready')"
-
-    - name: Setup test environment
-      run: |
-        # Create necessary directories
-        mkdir -p /tmp/your-project.com/test
-
-    - name: Authenticate to Google Cloud
-      if: github.event_name == 'workflow_run' || github.event_name == 'pull_request'
-      uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
-      with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-    - name: Set up gcloud SDK
-      if: github.event_name == 'workflow_run' || github.event_name == 'pull_request'
-      uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200  # v2
-      with:
-        project_id: ${{ env.GCP_PROJECT }}
-
-    - name: Determine deployed preview service URL
-      id: service_url
-      run: |
-        set -euo pipefail
-
-        if [ "${{ github.event_name }}" = "workflow_run" ]; then
-          PR_NUMBER="${{ steps.pr_ref.outputs.pr_number }}"
-          PR_HEAD_SHA="${{ steps.pr_ref.outputs.tested_sha }}"
-          if [ -z "$PR_NUMBER" ] || [ -z "$PR_HEAD_SHA" ]; then
-            echo "::error::Could not resolve PR number or commit SHA for workflow_run"
-            echo "deployed=false" >> "$GITHUB_OUTPUT"
-            echo "service_url=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-        elif [ "${{ github.event_name }}" = "pull_request" ]; then
-          PR_NUMBER="${{ github.event.number }}"
-          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-        else
-          echo "⚠️  No preview lookup needed for this event"
-          echo "deployed=false" >> "$GITHUB_OUTPUT"
-          echo "service_url=" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
-        if [ -z "$PR_NUMBER" ] || [ -z "$PR_HEAD_SHA" ]; then
-          echo "⚠️  Could not resolve preview lookup context"
-          echo "deployed=false" >> "$GITHUB_OUTPUT"
-          echo "service_url=" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
-        echo "🔍 Searching for preview for PR #${PR_NUMBER} at commit ${PR_HEAD_SHA}"
-        SERVICE_NAME=$(gcloud run services list \
-          --region="${GCP_REGION}" \
-          --project="${GCP_PROJECT}" \
-          --filter="metadata.labels.pr-number=$PR_NUMBER AND metadata.labels.commit-sha=$PR_HEAD_SHA" \
-          --format="value(metadata.name)" \
-          --limit=1 \
-          --quiet 2>/dev/null || echo "")
-
-        if [ -z "$SERVICE_NAME" ]; then
-          echo "⚠️  No service found"
-          echo "deployed=false" >> "$GITHUB_OUTPUT"
-          echo "service_url=" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
-        SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
-          --platform managed \
-          --region "${GCP_REGION}" \
-          --project "${GCP_PROJECT}" \
-          --format="value(status.url)" \
-          --quiet 2>/dev/null || echo "")
-
-        if [ -z "$SERVICE_URL" ]; then
-          echo "⚠️  Found service $SERVICE_NAME but no URL was returned"
-          echo "deployed=false" >> "$GITHUB_OUTPUT"
-          echo "service_url=" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
-        echo "✅ Found deployed preview: $SERVICE_URL"
-        echo "deployed=true" >> "$GITHUB_OUTPUT"
-        echo "service_url=$SERVICE_URL" >> "$GITHUB_OUTPUT"
-
-    - name: Run MCP smoke tests
-      id: smoke_tests
-      run: |
-        echo "🔄 Running on GitHub-hosted fallback..."
-        chmod +x scripts/mcp_smoke_test.sh
-        if [ "${{ github.event_name }}" = "workflow_run" ]; then
-          if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
-            echo "::error::Could not find deployed preview for mock smoke tests"
-            exit 1
-          fi
-          export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
-        elif [ "${{ github.event_name }}" = "pull_request" ]; then
-          if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
-            echo "::warning::Could not find deployed preview for mock smoke tests; skipping"
-            exit 0
-          fi
-          export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
-        fi
-        ./scripts/mcp_smoke_test.sh
-
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
-      with:
-        name: mcp-smoke-test-results-fallback
-        path: |
-          /tmp/your-project.com/test/*.log
-          /tmp/your-project.com/test/smoke-test-results.json
-          /tmp/your-project.com/test/mcp-requests-responses.json
-        retention-days: 7
-
-    - name: Read test results (fallback)
-      id: test-results-fallback
-      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && always()
-      run: |
-        if [ -f /tmp/your-project.com/test/smoke-test-results.json ]; then
-          if command -v jq >/dev/null 2>&1; then
-            TEST_DETAILS=$(cat /tmp/your-project.com/test/smoke-test-results.json | jq -c '.test_details // []' 2>&1) || {
-              echo "⚠️  Warning: jq parse failed, defaulting to empty array" >&2
-              TEST_DETAILS="[]"
-            }
-            RESULT_SERVER_URL=$(jq -r '.server_url // ""' /tmp/your-project.com/test/smoke-test-results.json 2>/dev/null || echo "")
-          else
-            echo "⚠️  Warning: jq not found, defaulting to empty array" >&2
-            TEST_DETAILS="[]"
-            RESULT_SERVER_URL=""
-          fi
-          echo "test_details=$TEST_DETAILS" >> $GITHUB_OUTPUT
-          echo "server_url=$RESULT_SERVER_URL" >> $GITHUB_OUTPUT
-        else
-          echo "test_details=[]" >> $GITHUB_OUTPUT
-          echo "server_url=" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Build workflow_run comment body (fallback)
-      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && steps.service_url.outputs.deployed == 'true' && always()
-      id: smoke_comment_body
-      run: |
-        RESULT="${{ steps.smoke_tests.outcome }}"
-        if [ -z "$RESULT" ]; then
-          RESULT="failure"
-        fi
-        TEST_DETAILS='${{ steps.test-results-fallback.outputs.test_details }}'
-        if [ "$TEST_DETAILS" = "[]" ] || [ -z "$TEST_DETAILS" ]; then
-          TEST_DETAILS=""
-        fi
-        # Require deployed preview URL for reporting context
-        DISPLAY_URL="${{ steps.service_url.outputs.service_url }}"
-        if [ -z "$DISPLAY_URL" ]; then
-          echo "::error::Missing deployed preview URL for MCP smoke test report"
-          exit 1
-        fi
-
-        node scripts/mcp_smoke_comment.js \
-          --result "$RESULT" \
-          --mode "${{ env.TEST_MODE }}" \
-          --service-url "$DISPLAY_URL" \
-          ${TEST_DETAILS:+--items "$TEST_DETAILS"} \
-          --run-id "${{ github.run_id }}" \
-          --repo "${{ github.repository }}" \
-          --server-url "${{ github.server_url }}" \
-          --commit-sha "${{ steps.pr_ref.outputs.tested_sha }}" \
-          > /tmp/mcp-smoke-comment-body-fallback.md
-
-    - name: Post workflow_run comment (fallback)
-      if: github.event_name == 'workflow_run' && steps.pr_ref.outputs.pr_number && steps.service_url.outputs.deployed == 'true' && always()
-      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const fs = require('fs');
-          const body = fs.readFileSync('/tmp/mcp-smoke-comment-body-fallback.md', 'utf8');
 
           await github.rest.issues.createComment({
             owner: context.repo.owner,

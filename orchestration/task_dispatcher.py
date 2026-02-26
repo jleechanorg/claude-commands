@@ -37,6 +37,8 @@ from .constants import (
     TIMESTAMP_MODULO,
 )
 
+from . import cli_arg_utils
+
 A2A_AVAILABLE = True
 logger = logging.getLogger(__name__)
 
@@ -262,6 +264,90 @@ CLI_PROFILES = {
 }
 
 
+def build_preflight_execution_args(
+    cli_name: str, model: str | None = None
+) -> tuple[list[str], list[str], bool]:
+    """Return (help_args, execution_args, skip_help) for two-phase CLI preflight.
+
+    Centralises per-CLI preflight logic so both TaskDispatcher and callers such as
+    jleechanorg_pr_monitor can derive consistent, correct args from a single source.
+
+    execution_args includes ``--model`` and ``-p @PROMPT_FILE`` placeholders where
+    applicable; callers pass them verbatim to ``validate_cli_two_phase``.
+    """
+    if cli_name == "gemini":
+        test_model = model if model and model != "sonnet" else GEMINI_MODEL
+        return (
+            ["--help"],
+            ["-m", test_model, "--yolo", "--allowed-mcp-server-names", "none"],
+            False,
+        )
+    if cli_name == "codex":
+        exec_args = ["exec", "--yolo", "--skip-git-repo-check"]
+        if model:
+            exec_args.extend(["--model", model])
+        return (["exec", "--help"], exec_args, False)
+    if cli_name == "claude":
+        test_model = model if model else "sonnet"
+        return (
+            [],
+            [
+                "--model", test_model,
+                "-p", "@PROMPT_FILE",
+                "--output-format", "text",
+                "--strict-mcp-config",
+            ],
+            True,
+        )
+    if cli_name == "cursor":
+        test_model = model if model and model != "sonnet" else CURSOR_MODEL
+        return (
+            [],
+            [
+                "-f", "-p", "@PROMPT_FILE",
+                "--model", test_model,
+                "--output-format", "text",
+                "--approve-mcps",
+            ],
+            True,
+        )
+    if cli_name == "minimax":
+        return (
+            ["--help"],
+            [
+                "--model", MINIMAX_MODEL,
+                "-p", "@PROMPT_FILE",
+                "--output-format", "text",
+                "--dangerously-skip-permissions",
+                "--strict-mcp-config",
+            ],
+            True,
+        )
+    # Unknown CLI: let runtime validation surface failures
+    return (["--help"], [], False)
+
+
+def build_runtime_preflight_bash_cmd(cli_name: str, binary: str, model: str | None = None) -> str:
+    """Build the bash preflight command string used inside tmux shell scripts.
+
+    Derives args from build_preflight_execution_args and adapts them for
+    stdin mode: ``@PROMPT_FILE`` is replaced with ``-`` so callers can pipe
+    the test prompt via ``echo ... | timeout 30 <cmd>``.
+
+    Returns a fully shell-quoted command string ready for interpolation into
+    a bash heredoc.
+    """
+    _help_args, execution_cmd, _skip_help = build_preflight_execution_args(cli_name, model)
+
+    # Replace prompt-file placeholder with stdin marker
+    stdin_args = ["-" if arg == "@PROMPT_FILE" else arg for arg in execution_cmd]
+
+    quoted_binary = shlex.quote(binary)
+    if not stdin_args:
+        return quoted_binary
+    return f"{quoted_binary} {' '.join(shlex.quote(a) for a in stdin_args)}"
+
+
 # Shared sanitization helper
 def _sanitize_agent_token(name: str) -> str:
     """Return a filesystem-safe token for agent-derived file paths."""
@@ -333,6 +419,7 @@ class TaskDispatcher:
         # LLM-driven enhancements - lazy loading to avoid subprocess overhead
         self._active_agents = None  # Will be loaded lazily when needed
         self._last_agent_check = 0  # Track when agents were last refreshed
+        self._subprocess_agents: dict[str, subprocess.Popen] = {}  # name -> proc for no_tmux agents
         self.result_dir = os.environ.get(PAIR_ORCHESTRATION_RESULTS_DIR_ENV) or os.environ.get(
             ORCHESTRATION_RESULTS_DIR_ENV, "/tmp/orchestration_results"
         )
@@ -546,6 +633,22 @@ class TaskDispatcher:
         if omitted:
             logger.info("      … and %s more", omitted, extra=log_extra)
 
+    def _get_active_subprocess_agents(self) -> set[str]:
+        """Return names of subprocess agents still running; prune exited ones from registry."""
+        registry = getattr(self, "_subprocess_agents", {}) or {}
+        if not registry:
+            return set()
+        active = set()
+        dead = []
+        for name, proc in registry.items():
+            if proc.poll() is None:
+                active.add(name)
+            else:
+                dead.append(name)
+        for name in dead:
+            registry.pop(name, None)
+        return active
+
     @property
     def active_agents(self) -> set:
         """Lazy loading property for active agents with 30-second caching."""
@@ -553,13 +656,16 @@ class TaskDispatcher:
         # Cache for 30 seconds to avoid excessive subprocess calls
         if self._active_agents is None or (current_time - self._last_agent_check) > 30:
             self._active_agents = self._get_active_tmux_agents()
+            self._active_agents.update(self._get_active_subprocess_agents())
             self._last_agent_check = current_time
         return self._active_agents
 
     @active_agents.setter
     def active_agents(self, value: set):
-        """Setter for active agents."""
-        self._active_agents = value
+        """Setter for active agents. Merges live subprocess agents so capacity check includes them."""
+        merged = set(value) if value else set()
+        merged.update(self._get_active_subprocess_agents())
+        self._active_agents = merged
         self._last_agent_check = time.time()
 
     def _get_active_tmux_agents(self) -> set:
@@ -1020,6 +1126,8 @@ class TaskDispatcher:
             r"PR\s*#?(\d+)\s+(?:needs|should|must)",
             # Add/apply to PR number
             r"(?:add|apply)\s+.*?to\s+(?:PR|pull request)\s*#?(\d+)",
+            # Slash command PR form on a command line, e.g. /copilot 123 or /fixpr #123
+            r"(?:^|\n|:)\s*/(?:copilot|fixpr|fix-comment|fix_comment)\s*`?#?(\d+)`?(?:\s|$)",
             # Direct PR number reference
             r"(?:PR|pull request)\s*#(\d+)",
         ]
@@ -1085,71 +1193,20 @@ class TaskDispatcher:
             if cli_name == "minimax":
                 env = apply_minimax_auth_env(env)
 
-            # Determine help args and execution cmd based on CLI type
-            help_args = []
-            execution_cmd = []
             execution_timeout = CLI_VALIDATION_TIMEOUT_SECONDS
-            skip_help = False
 
-            if cli_name == "gemini":
-                help_args = ["--help"]
-                test_model = model if model and model != "sonnet" else GEMINI_MODEL
-                # Use --allowed-mcp-server-names none to skip MCP server loading during validation (2s vs 6s+)
-                execution_cmd = ["-m", test_model, "--yolo", "--allowed-mcp-server-names", "none"]
-            elif cli_name == "codex":
-                help_args = ["exec", "--help"]
-                execution_cmd = ["exec", "--yolo", "--skip-git-repo-check"]
-                if model:
-                    execution_cmd.extend(["--model", model])
-            elif cli_name == "claude":
-                # OAuth CLI - check executable first, then use prompt file for execution
+            # OAuth CLIs (claude, cursor, minimax) require an executable binary check
+            if cli_name in ("claude", "cursor", "minimax"):
                 if not os.access(cli_path, os.X_OK):
-                    print(f"   ⚠️ Claude CLI binary not executable: {cli_path} (agent {agent_name})")
+                    print(f"   ⚠️ {CLI_PROFILES.get(cli_name, {}).get('display_name', cli_name)} CLI binary not executable: {cli_path} (agent {agent_name})")
                     return False
-                help_args = ["--help"]
-                test_model = model if model else "sonnet"
-                # For Claude, we need to create a prompt file (handled in execution phase)
-                # Use a special marker to indicate prompt file needed
-                # Use --strict-mcp-config without --mcp-config to skip MCP server loading during validation
-                execution_cmd = ["--model", test_model, "-p", "@PROMPT_FILE", "--output-format", "text", "--strict-mcp-config"]
-                skip_help = True  # Skip help for OAuth CLIs (may require auth)
-            elif cli_name == "cursor":
-                # OAuth CLI - check executable first, then use prompt file for execution
-                if not os.access(cli_path, os.X_OK):
-                    print(f"   ⚠️ Cursor CLI binary not executable: {cli_path} (agent {agent_name})")
-                    return False
-                help_args = ["--help"]
-                # Use CURSOR_MODEL when model is "sonnet" or None to match runtime command_template
-                test_model = model if model and model != "sonnet" else CURSOR_MODEL
-                # For Cursor, we need to create a prompt file (handled in execution phase)
-                # Use --approve-mcps to auto-approve MCP servers (Cursor doesn't have a skip-MCP flag)
-                execution_cmd = ["-f", "-p", "@PROMPT_FILE", "--model", test_model, "--output-format", "text", "--approve-mcps"]
-                skip_help = True  # Skip help for OAuth CLIs (may require auth)
-            elif cli_name == "minimax":
-                # MiniMax runs through Claude CLI with MiniMax endpoint and model env overrides.
-                if not os.access(cli_path, os.X_OK):
-                    print(f"   ⚠️ MiniMax CLI binary not executable: {cli_path} (agent {agent_name})")
-                    return False
-                help_args = ["--help"]
-                # Always use MINIMAX_MODEL for MiniMax - never use chain-wide model
-                # This ensures preflight validates with the correct model for MiniMax API
-                test_model = MINIMAX_MODEL
-                # Use prompt file mode and strict MCP config to keep preflight lightweight.
-                execution_cmd = [
-                    "--model",
-                    test_model,
-                    "-p",
-                    "@PROMPT_FILE",
-                    "--output-format",
-                    "text",
-                    "--dangerously-skip-permissions",
-                    "--strict-mcp-config",
-                ]
-                skip_help = True  # Skip help for OAuth CLIs (may require auth)
-            else:
+
+            if cli_name not in CLI_PROFILES:
                 # Unknown CLI type - assume available
                 print(f"   ⚠️ Unknown CLI type '{cli_name}' for {agent_name} - assuming available (runtime fallback will catch failures)")
                 return True
+
+            help_args, execution_cmd, skip_help = build_preflight_execution_args(cli_name, model)
 
             if self._read_preflight_cache(cli_name, cli_path, model):
                 return True
@@ -2097,6 +2154,10 @@ Complete the task, then use /pr to create a new pull request."""
         skip_preflight = bool(agent_spec.get("skip_preflight", True))
         # Default to no prompt template injection; set inject_prompt_template=True to add agent config + completion steps.
         inject_prompt_template = bool(agent_spec.get("inject_prompt_template", False))
+        # REV-xi6: Default to tmux launch (battle-tested process isolation, session persistence,
+        # human-attachable debugging, agent self-orchestration via send-keys).
+        # Set no_tmux=True for environments where tmux is unavailable (CI, containers, testing).
+        no_tmux = bool(agent_spec.get("no_tmux", False))
 
         # Refresh actively working agents count from tmux sessions (excludes idle agents)
         # This ensures we check against the actual running system state,
@@ -2178,6 +2239,8 @@ Complete the task, then use /pr to create a new pull request."""
             if invalid_chain:
                 print(f"❌ Unsupported agent CLI requested: {invalid_chain}")
                 return False
+            raw_cli_args = agent_spec.get("cli_args")
+            cli_args = cli_arg_utils.coerce_cli_args(raw_cli_args)
 
             # Resolve the first available CLI in the chain (keeps behavior predictable)
             agent_cli = cli_chain[0]
@@ -2217,6 +2280,23 @@ Complete the task, then use /pr to create a new pull request."""
                         "   Install Cursor Agent CLI and ensure the 'cursor-agent' command is available on your PATH"
                     )
                 return False
+
+            if agent_cli == "codex" and cli_args:
+                # --search is a top-level Codex flag (codex --search exec ...),
+                # not an exec subcommand flag. Remove it and any value from exec args.
+                filtered: list[str] = []
+                skip_next = False
+                for arg in cli_args:
+                    a = str(arg)
+                    if skip_next:
+                        skip_next = False
+                        continue
+                    if a == "--search" or a.startswith("--search="):
+                        if a == "--search":
+                            skip_next = True
+                        continue
+                    filtered.append(arg)
+                cli_args = filtered
 
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
 
@@ -2751,6 +2831,9 @@ fi
 
                 # Build model_arg for CLIs that use --model flag (claude, codex)
                 model_arg = f" --model {shlex.quote(runtime_model)}" if runtime_model and attempt_cli in {"claude", "codex"} else ""
+                extra_args_fragment = (
+                    " " + " ".join(shlex.quote(arg) for arg in cli_args) if cli_args else ""
+                )
 
                 attempt_cli_command = (
                     attempt_profile["command_template"]
@@ -2765,6 +2848,7 @@ fi
                         model_arg=model_arg,
                     )
                     .strip()
+                    + extra_args_fragment
                 )
 
                 attempt_stdin_template = attempt_profile.get("stdin_template", "/dev/null")
@@ -2840,37 +2924,14 @@ fi
                 # All CLIs use OAuth and may need time for complex tasks
                 attempt_timeout_seconds = RUNTIME_CLI_TIMEOUT_SECONDS
 
-                # Build runtime pre-flight check command based on CLI type
-                # This is a quick test to verify CLI can run before the full task
-                # Note: Each CLI uses its own model - cursor uses CURSOR_MODEL, gemini uses GEMINI_MODEL
+                # Build runtime pre-flight check command based on CLI type.
+                # Uses the same centralised helper as _validate_cli_availability so
+                # all three sites (Python validation, bash script generation, monitor)
+                # stay in sync automatically.
                 preflight_prompt = shlex.quote(CLI_VALIDATION_TEST_PROMPT)
-                if attempt_cli == "gemini":
-                    preflight_model = model or GEMINI_MODEL
-                    preflight_cmd = (
-                        f'{attempt_binary_value} -m {shlex.quote(preflight_model)} --yolo --allowed-mcp-server-names none'
-                    )
-                elif attempt_cli == "cursor":
-                    preflight_model = model or CURSOR_MODEL
-                    preflight_cmd = (
-                        f'{attempt_binary_value} -f -p - --model {shlex.quote(preflight_model)} --output-format text'
-                    )
-                elif attempt_cli == "claude":
-                    preflight_model = runtime_model or "sonnet"
-                    preflight_cmd = (
-                        f'{attempt_binary_value} -p - --model {shlex.quote(preflight_model)} --output-format text'
-                    )
-                elif attempt_cli == "minimax":
-                    # MiniMax uses Claude Code with MiniMax API
-                    preflight_cmd = (
-                        f"{attempt_binary_value} -p - --model {shlex.quote(MINIMAX_MODEL)} "
-                        "--output-format text --dangerously-skip-permissions"
-                    )
-                elif attempt_cli == "codex":
-                    preflight_cmd = f'{attempt_binary_value} exec --yolo --skip-git-repo-check'
-                    if runtime_model:
-                        preflight_cmd += f' --model {shlex.quote(runtime_model)}'
-                else:
-                    preflight_cmd = f'{attempt_binary_value}'
+                preflight_cmd = build_runtime_preflight_bash_cmd(
+                    attempt_cli, attempt_path, model=runtime_model
+                )
 
                 if skip_preflight:
                     # Simple execution block: no runtime pre-flight API call, just run the CLI directly.
@@ -3105,6 +3166,64 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             agent_spec["legacy_log_file"] = legacy_log_file
             agent_spec["legacy_result_file"] = legacy_result_file
 
+            # Build launch environment (shared by both tmux and subprocess paths).
+            launch_env = agent_spec.get("launch_env")
+            run_env: dict[str, str] | None = None
+            if isinstance(launch_env, dict):
+                run_env = os.environ.copy()
+                for key, value in launch_env.items():
+                    if not isinstance(key, str):
+                        continue
+                    if isinstance(value, (str, int, float, bool)):
+                        run_env[key] = str(value)
+            if minimax_runtime_auth_token:
+                if run_env is None:
+                    run_env = os.environ.copy()
+                run_env["MINIMAX_AUTH_TOKEN"] = minimax_runtime_auth_token
+
+            # REV-xi6: Choose launch strategy based on no_tmux flag.
+            # Default: tmux (session persistence, human-attachable, send-keys orchestration).
+            # Alternative: subprocess (for CI/containers/environments without tmux).
+            if no_tmux:
+                # Subprocess launch: stdout/stderr captured to log file directly.
+                start_dir = agent_spec.get("start_dir") or agent_dir
+                log_fd = None
+                try:
+                    log_fd = open(log_file, "a", encoding="utf-8")  # noqa: SIM115
+                    popen_kwargs: dict[str, Any] = {
+                        "stdout": log_fd,
+                        "stderr": subprocess.STDOUT,
+                        "cwd": start_dir,
+                        "start_new_session": True,  # New process group for clean kill
+                    }
+                    if run_env is not None:
+                        popen_kwargs["env"] = run_env
+                    proc = subprocess.Popen(
+                        [str(script_path)],
+                        **popen_kwargs,
+                    )
+                except Exception:
+                    if log_fd is not None:
+                        log_fd.close()
+                    raise
+                agent_spec["pid"] = proc.pid
+                agent_spec["process"] = proc
+                agent_spec["log_fd"] = log_fd
+                agent_spec["launch_mode"] = "subprocess"
+
+                # Register subprocess agent (name -> proc) so capacity/collision checks include it.
+                # _get_active_subprocess_agents() prunes exited procs when building active set.
+                if not hasattr(self, "_subprocess_agents"):
+                    self._subprocess_agents = {}
+                self._subprocess_agents[agent_name] = proc
+                # Invalidate active_agents cache so next read includes this agent.
+                self._active_agents = None
+
+                print(f"✅ Created {agent_name} (subprocess, pid={proc.pid}) - Focus: {agent_focus}")
+                print(f"📺 View logs: tail -f {log_file}")
+                return True
+
+            # Legacy tmux launch path (opt-in via no_tmux=False).
             # Use agent-specific tmux config for 1-hour sessions
             tmux_config = get_tmux_config_path()
 
@@ -3130,33 +3249,21 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                 ]
             )
 
-            run_kwargs = {
+            tmux_run_kwargs: dict[str, Any] = {
                 "check": False,
                 "capture_output": True,
                 "text": True,
                 "timeout": 30,
             }
-            launch_env = agent_spec.get("launch_env")
-            run_env: dict[str, str] | None = None
-            if isinstance(launch_env, dict):
-                run_env = os.environ.copy()
-                for key, value in launch_env.items():
-                    if not isinstance(key, str):
-                        continue
-                    if isinstance(value, (str, int, float, bool)):
-                        run_env[key] = str(value)
             if run_env is not None:
-                run_kwargs["env"] = run_env
-            if minimax_runtime_auth_token:
-                if run_env is None:
-                    run_env = os.environ.copy()
-                run_env["MINIMAX_AUTH_TOKEN"] = minimax_runtime_auth_token
-                run_kwargs["env"] = run_env
+                tmux_run_kwargs["env"] = run_env
 
-            result = subprocess.run(tmux_cmd, **run_kwargs)
+            result = subprocess.run(tmux_cmd, **tmux_run_kwargs)
             if result.returncode != 0:
                 print(f"⚠️ Error creating tmux session: {result.stderr}")
                 return False
+
+            agent_spec["launch_mode"] = "tmux"
 
             # A2A registration happens automatically via file system
             # Agent will register itself when it starts using A2AAgentWrapper

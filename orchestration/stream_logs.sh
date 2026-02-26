@@ -2,8 +2,40 @@
 # Stream tmux logs with readable formatting
 
 main() {
+    detect_log_root() {
+        if [ -n "$ORCHESTRATION_LOG_DIR" ] && [ -d "$ORCHESTRATION_LOG_DIR" ]; then
+            echo "$ORCHESTRATION_LOG_DIR"
+            return
+        fi
+        for candidate in \
+            "/tmp/${PROJECT_NAME:-your-project.com}/orchestration_logs" \
+            "/tmp/orchestration_logs"; do
+            if [ -d "$candidate" ]; then
+                echo "$candidate"
+                return
+            fi
+        done
+        echo "/tmp/orchestration_logs"
+    }
+
+    LOG_ROOT="$(detect_log_root)"
+
+    if [ "$1" = "--latest" ]; then
+        LATEST_LOG="$(ls -t "$LOG_ROOT"/coder-*.log "$LOG_ROOT"/verifier-*.log 2>/dev/null | grep -E '/(coder|verifier)-.*\.log$' | head -n1)"
+        if [ -z "$LATEST_LOG" ]; then
+            echo "No coder/verifier logs found under: $LOG_ROOT"
+            return 1
+        fi
+        LATEST_SESSION="$(basename "$LATEST_LOG" .log)"
+        echo "Using latest session: $LATEST_SESSION"
+        exec "$0" "$LATEST_SESSION"
+    fi
+
     if [ -z "$1" ]; then
         echo "Usage: $0 <session_name>"
+        echo "   or: $0 --latest"
+        echo ""
+        echo "Log root: $LOG_ROOT"
         echo ""
         echo "Available sessions:"
         tmux list-sessions 2>/dev/null || echo "No tmux sessions found"
@@ -65,6 +97,69 @@ main() {
     # Function to extract and format meaningful content
     format_output() {
         local content="$1"
+        local has_jq=0
+        if command -v jq >/dev/null 2>&1; then
+            has_jq=1
+        fi
+
+        # Structured JSON parsing path (preferred when jq is available).
+        if [ "$has_jq" -eq 1 ] && echo "$content" | jq -e . >/dev/null 2>&1; then
+            local event_type sub_type text tool_name tool_cmd tool_desc
+            event_type="$(echo "$content" | jq -r '.type // empty')"
+            sub_type="$(echo "$content" | jq -r '.subtype // empty')"
+
+            if [ "$event_type" = "system" ] && [ -n "$sub_type" ]; then
+                local cwd model
+                cwd="$(echo "$content" | jq -r '.cwd // empty')"
+                model="$(echo "$content" | jq -r '.model // empty')"
+                echo -e "\n⚙️  \033[1;35mSystem:\033[0m ${sub_type}"
+                [ -n "$model" ] && echo "   model: $model"
+                [ -n "$cwd" ] && echo "   cwd:   $cwd"
+                echo ""
+                return
+            fi
+
+            text="$(echo "$content" | jq -r '.message.content[]? | select(.type=="text") | .text' 2>/dev/null)"
+            if [ -n "$text" ]; then
+                if [ ${#text} -gt 1200 ]; then
+                    text="${text:0:1200}
+...[truncated]"
+                fi
+                echo -e "\n🤖 \033[1;34mAssistant:\033[0m"
+                echo "$text"
+                echo ""
+                return
+            fi
+
+            tool_name="$(echo "$content" | jq -r '.message.content[]? | select(.type=="tool_use") | .name' 2>/dev/null | head -1)"
+            if [ -n "$tool_name" ] && [ "$tool_name" != "null" ]; then
+                tool_cmd="$(echo "$content" | jq -r '.message.content[]? | select(.type=="tool_use") | .input.command // empty' 2>/dev/null | head -1)"
+                tool_desc="$(echo "$content" | jq -r '.message.content[]? | select(.type=="tool_use") | .input.description // empty' 2>/dev/null | head -1)"
+                echo -e "🔧 \033[1;33mTool:\033[0m $tool_name"
+                [ -n "$tool_desc" ] && echo "   desc: $tool_desc"
+                if [ -n "$tool_cmd" ]; then
+                    if [ ${#tool_cmd} -gt 200 ]; then
+                        printf "   cmd: %.197s...\n" "$tool_cmd"
+                    else
+                        echo "   cmd: $tool_cmd"
+                    fi
+                fi
+                echo ""
+                return
+            fi
+
+            if [ "$event_type" = "user" ]; then
+                local tool_result_type
+                tool_result_type="$(echo "$content" | jq -r '.message.content[]? | select(.type=="tool_result") | .type' 2>/dev/null | head -1)"
+                if [ -n "$tool_result_type" ]; then
+                    echo -e "🧾 \033[1;32mTool result received\033[0m"
+                    return
+                fi
+            fi
+
+            # If JSON but no known event shape, ignore to avoid noisy dumps.
+            return
+        fi
 
         # Try to extract Claude's text messages
         if echo "$content" | grep -q '"type":"text"'; then
@@ -118,7 +213,7 @@ main() {
     if [ -z "$SANITIZED_SESSION" ]; then
         SANITIZED_SESSION="unknown-session"
     fi
-    LOG_FILE="/tmp/orchestration_logs/${SANITIZED_SESSION}.log"
+    LOG_FILE="${LOG_ROOT}/${SANITIZED_SESSION}.log"
 
     if [ -f "$LOG_FILE" ]; then
         echo "Tailing log file: $LOG_FILE"

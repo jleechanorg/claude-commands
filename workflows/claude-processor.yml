@@ -1,15 +1,3 @@
-# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
-# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
-# You MUST adapt the following before using:
-# - $GCP_PROJECT_ID → Your Google Cloud project ID
-# - $GITHUB_REPOSITORY → Your repository (owner/repo)
-# - $GITHUB_OWNER → Your GitHub username or org
-# - Service account configurations and secrets
-# - Environment-specific variables and paths
-#
-# See workflows/README.md for integration instructions.
-# ---
-
 name: Claude Bot Processor
 on:
   repository_dispatch:
@@ -17,9 +5,16 @@ on:
 
 jobs:
   claude:
-    runs-on: [self-hosted, claude]
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted", "claude", "ubuntu"]') }}
     timeout-minutes: 10  # Prevent hung processes
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Runner control plane
+        uses: ./.github/actions/runner-control-plane
+
+
       - name: Extract
         id: x
         run: |
@@ -35,16 +30,26 @@ jobs:
 
       - name: Call Claude
         id: y
+        env:
+          CLAUDE_PROMPT: ${{ steps.x.outputs.prompt }}
+          CLAUDE_ENDPOINT: ${{ secrets.CLAUDE_ENDPOINT }}
         run: |
-          echo "Debug: Calling Claude with prompt='${{ steps.x.outputs.prompt }}'"
-          A=$(curl -s --data-urlencode "prompt=${{ steps.x.outputs.prompt }}" "${{ secrets.CLAUDE_ENDPOINT }}")
-          echo "Debug: Claude response='$A'"
-          echo "answer<<EOF" >> $GITHUB_OUTPUT
-          echo "$A" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          RUNNER_SCRIPT="$GITHUB_WORKSPACE/self-hosted-runner/run-in-ci-container.sh"
+          chmod +x "$RUNNER_SCRIPT"
+          # Pass prompt/endpoint via env to avoid shell interpolation of user input (command injection)
+          "$RUNNER_SCRIPT" \
+            --workspace "$GITHUB_WORKSPACE" \
+            --cmd 'curl -s --data-urlencode "prompt=$CLAUDE_PROMPT" "$CLAUDE_ENDPOINT"' \
+            > /tmp/claude-response.txt
+          # Use multiline format with unique delimiter (content may contain "EOF")
+          # GitHub requires closing delimiter at start of new line; ensure trailing newline
+          DELIM="__CLAUDE_${GITHUB_RUN_ID:-0}_${GITHUB_RUN_ATTEMPT:-1}_$$"
+          echo "answer<<$DELIM" >> $GITHUB_OUTPUT
+          { head -c 65000 /tmp/claude-response.txt; echo; } >> $GITHUB_OUTPUT
+          echo "$DELIM" >> $GITHUB_OUTPUT
 
       - name: Comment back
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@9a932638a9f5079d84f4e9f56f0f2a5ceee4b2d1  # v4.0.0
         with:
           comment-id: ${{ steps.x.outputs.cid }}
           body: |
