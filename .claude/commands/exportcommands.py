@@ -1176,6 +1176,34 @@ Claude Code can assist with adapting these workflows to your specific project. J
                 content = re.sub(
                     r"/tmp/worldarchitect\.ai", "/tmp/$PROJECT_NAME", content
                 )
+
+                # Hardcoded user/project paths → generic placeholders
+                content = re.sub(r"/Users/jleechan/", "$HOME/", content)
+                content = re.sub(
+                    r'/Users/\$USER/projects/worktree_ralph(?=/|"|\s|$)',
+                    "$PROJECT_ROOT",
+                    content,
+                )
+                content = re.sub(
+                    r'/Users/\$USER/projects_other/ralph-orchestrator(?=/|"|\s|$)',
+                    "$RALPH_REPO",
+                    content,
+                )
+                content = re.sub(
+                    r'\$HOME/projects_other/ralph-orchestrator(?=/|"|\s|$)',
+                    "$RALPH_REPO",
+                    content,
+                )
+                content = re.sub(
+                    r'/Users/\$USER/projects_other(?=/|"|\s|$)',
+                    "$HOME/projects",
+                    content,
+                )
+                content = re.sub(
+                    r'/Users/\$USER/projects(?=/|"|\s|$)',
+                    "$HOME/projects",
+                    content,
+                )
                 # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
                 content = re.sub(
                     r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")',
@@ -1679,6 +1707,9 @@ This is a filtered reference export from a working Claude Code project. Commands
         # Verify exclusions
         self._verify_exclusions()
 
+        # Validate no hardcoded paths slipped through
+        self._validate_no_hardcoded_paths()
+
         # Commit and push
         self._commit_and_push()
 
@@ -1909,6 +1940,47 @@ This is a filtered reference export from a working Claude Code project. Commands
             print("✅ Cleaned up excluded directories")
         else:
             print("✅ Confirmed: No excluded directories in export")
+
+    # Patterns that indicate hardcoded user/project paths (should be filtered)
+    HARDCODED_PATH_PATTERNS = [
+        (r"/Users/jleechan/", "hardcoded /Users/jleechan/ - use $HOME/"),
+        (r"/Users/\$USER/projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
+        (r"/Users/\$USER/projects_other/ralph-orchestrator", "hardcoded ralph-orchestrator - use $RALPH_REPO"),
+        (r"projects_other/ralph-orchestrator", "hardcoded projects_other - use $RALPH_REPO"),
+        (r"projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
+        (r"orch_worldai_ralph", "project-specific orch path - use $PROJECT_ROOT"),
+        (r"worldai_genesis2|worldai_ralph2", "project-specific clone dir - use generic"),
+    ]
+
+    def _validate_no_hardcoded_paths(self):
+        """Scan exported content for hardcoded user/project paths; warn if found."""
+        print("🔍 Validating export for hardcoded path patterns...")
+        found = []
+        for root, _dirs, files in os.walk(self.repo_dir):
+            # Skip .git
+            if ".git" in root:
+                continue
+            for name in files:
+                if not name.endswith((".md", ".py", ".sh", ".yml", ".yaml")):
+                    continue
+                path = os.path.join(root, name)
+                try:
+                    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                except OSError:
+                    continue
+                rel = os.path.relpath(path, self.repo_dir)
+                for pattern, description in self.HARDCODED_PATH_PATTERNS:
+                    if re.search(pattern, content):
+                        found.append((rel, pattern, description))
+        if found:
+            print("⚠️  WARNING: Possible hardcoded paths detected (add to export filter):")
+            for rel, _pat, desc in found[:15]:  # Cap at 15 to avoid noise
+                print(f"   • {rel}: {desc}")
+            if len(found) > 15:
+                print(f"   ... and {len(found) - 15} more")
+        else:
+            print("✅ No hardcoded user paths detected in export")
 
     def _commit_and_push(self):
         """Commit changes and push branch"""
