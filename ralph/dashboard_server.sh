@@ -41,12 +41,13 @@ HTML = '$HTML'
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/api/status':
+        path = self.path.split('?')[0]
+        if path == '/api/status':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(get_status()).encode())
-        elif self.path == '/' or self.path == '/index.html':
+        elif path == '/' or path == '/index.html':
             self.send_response(200)
             self.send_header('Content-Type', 'text/html')
             self.end_headers()

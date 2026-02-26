@@ -1178,9 +1178,15 @@ Claude Code can assist with adapting these workflows to your specific project. J
                 )
 
                 # Hardcoded user/project paths → generic placeholders
-                content = re.sub(r"/Users/jleechan/", "$HOME/", content)
+                # Order: specific paths first, then broad. $HOME/projects/worktree_ralph can
+                # result from /Users/jleechan/ → $HOME/ when jleechan wasn't replaced yet.
                 content = re.sub(
                     r'/Users/\$USER/projects/worktree_ralph(?=/|"|\s|$)',
+                    "$PROJECT_ROOT",
+                    content,
+                )
+                content = re.sub(
+                    r'\$HOME/projects/worktree_ralph(?=/|"|\s|$)',
                     "$PROJECT_ROOT",
                     content,
                 )
@@ -1194,6 +1200,7 @@ Claude Code can assist with adapting these workflows to your specific project. J
                     "$RALPH_REPO",
                     content,
                 )
+                content = re.sub(r"/Users/jleechan/", "$HOME/", content)
                 content = re.sub(
                     r'/Users/\$USER/projects_other(?=/|"|\s|$)',
                     "$HOME/projects",
@@ -1961,6 +1968,9 @@ This is a filtered reference export from a working Claude Code project. Commands
             if ".git" in root:
                 continue
             for name in files:
+                # Skip exportcommands.py (contains pattern literals → false positives)
+                if name == "exportcommands.py":
+                    continue
                 if not name.endswith((".md", ".py", ".sh", ".yml", ".yaml")):
                     continue
                 path = os.path.join(root, name)
