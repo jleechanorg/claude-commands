@@ -419,7 +419,7 @@ class TaskDispatcher:
         # LLM-driven enhancements - lazy loading to avoid subprocess overhead
         self._active_agents = None  # Will be loaded lazily when needed
         self._last_agent_check = 0  # Track when agents were last refreshed
-        self._subprocess_agents: set[str] = set()  # no_tmux agents (merged into active_agents)
+        self._subprocess_agents: dict[str, subprocess.Popen] = {}  # name -> proc for no_tmux agents
         self.result_dir = os.environ.get(PAIR_ORCHESTRATION_RESULTS_DIR_ENV) or os.environ.get(
             ORCHESTRATION_RESULTS_DIR_ENV, "/tmp/orchestration_results"
         )
@@ -633,6 +633,22 @@ class TaskDispatcher:
         if omitted:
             logger.info("      … and %s more", omitted, extra=log_extra)
 
+    def _get_active_subprocess_agents(self) -> set[str]:
+        """Return names of subprocess agents still running; prune exited ones from registry."""
+        registry = getattr(self, "_subprocess_agents", {}) or {}
+        if not registry:
+            return set()
+        active = set()
+        dead = []
+        for name, proc in registry.items():
+            if proc.poll() is None:
+                active.add(name)
+            else:
+                dead.append(name)
+        for name in dead:
+            registry.pop(name, None)
+        return active
+
     @property
     def active_agents(self) -> set:
         """Lazy loading property for active agents with 30-second caching."""
@@ -640,14 +656,16 @@ class TaskDispatcher:
         # Cache for 30 seconds to avoid excessive subprocess calls
         if self._active_agents is None or (current_time - self._last_agent_check) > 30:
             self._active_agents = self._get_active_tmux_agents()
-            self._active_agents.update(getattr(self, "_subprocess_agents", set()))
+            self._active_agents.update(self._get_active_subprocess_agents())
             self._last_agent_check = current_time
         return self._active_agents
 
     @active_agents.setter
     def active_agents(self, value: set):
-        """Setter for active agents."""
-        self._active_agents = value
+        """Setter for active agents. Merges live subprocess agents so capacity check includes them."""
+        merged = set(value) if value else set()
+        merged.update(self._get_active_subprocess_agents())
+        self._active_agents = merged
         self._last_agent_check = time.time()
 
     def _get_active_tmux_agents(self) -> set:
@@ -3193,11 +3211,12 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                 agent_spec["log_fd"] = log_fd
                 agent_spec["launch_mode"] = "subprocess"
 
-                # Register subprocess agent so capacity/collision checks include it.
+                # Register subprocess agent (name -> proc) so capacity/collision checks include it.
+                # _get_active_subprocess_agents() prunes exited procs when building active set.
                 if not hasattr(self, "_subprocess_agents"):
-                    self._subprocess_agents = set()
-                self._subprocess_agents.add(agent_name)
-                # Invalidate active_agents cache so next read merges subprocess agents.
+                    self._subprocess_agents = {}
+                self._subprocess_agents[agent_name] = proc
+                # Invalidate active_agents cache so next read includes this agent.
                 self._active_agents = None
 
                 print(f"✅ Created {agent_name} (subprocess, pid={proc.pid}) - Focus: {agent_focus}")

@@ -41,10 +41,11 @@ jobs:
             --workspace "$GITHUB_WORKSPACE" \
             --cmd 'curl -s --data-urlencode "prompt=$CLAUDE_PROMPT" "$CLAUDE_ENDPOINT"' \
             > /tmp/claude-response.txt
-          # Use multiline format so newlines in response don't corrupt GITHUB_OUTPUT
-          echo "answer<<EOF" >> $GITHUB_OUTPUT
+          # Use multiline format with unique delimiter (content may contain "EOF")
+          DELIM="__CLAUDE_${GITHUB_RUN_ID:-0}_${GITHUB_RUN_ATTEMPT:-1}_$$"
+          echo "answer<<$DELIM" >> $GITHUB_OUTPUT
           head -c 65000 /tmp/claude-response.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "$DELIM" >> $GITHUB_OUTPUT
 
       - name: Comment back
         uses: peter-evans/create-or-update-comment@9a932638a9f5079d84f4e9f56f0f2a5ceee4b2d1  # v4.0.0
