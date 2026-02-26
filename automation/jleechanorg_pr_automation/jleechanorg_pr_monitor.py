@@ -1788,19 +1788,20 @@ Your response MUST follow this exact structure for clarity:
         env = {k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
 
         # Apply env_set overrides from the profile (e.g. MiniMax API endpoint)
-        for key, value in profile.get("env_set", {}).items():
-            env[key] = value
+        env_set = profile.get("env_set")
+        if isinstance(env_set, dict):
+            for key, value in env_set.items():
+                env[key] = value
         if cli_name == "minimax":
             env = apply_minimax_auth_env(env)
 
         # Delegate per-CLI arg construction to the centralised helper so that
         # this site stays in sync with TaskDispatcher._validate_cli_availability.
         help_args, execution_cmd, skip_help = build_preflight_execution_args(cli_name)
-        # Preserve legacy behavior: always run Phase 1 (help check) for all CLIs.
-        # OAuth CLIs return empty help_args; supply --help so Phase 1 does not run bare binary (which can hang).
-        if not help_args:
+        # Supply --help only when we would run Phase 1 but got empty args (avoids bare-binary hang).
+        # Honor skip_help from helper—OAuth CLIs (claude/cursor/minimax) skip Phase 1 by design.
+        if not help_args and not skip_help:
             help_args = ["--help"]
-        skip_help = False
 
         try:
             result = validate_cli_two_phase(
