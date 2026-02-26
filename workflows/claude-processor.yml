@@ -1,15 +1,3 @@
-# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
-# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
-# You MUST adapt the following before using:
-# - $GCP_PROJECT_ID → Your Google Cloud project ID
-# - $GITHUB_REPOSITORY → Your repository (owner/repo)
-# - $GITHUB_OWNER → Your GitHub username or org
-# - Service account configurations and secrets
-# - Environment-specific variables and paths
-#
-# See workflows/README.md for integration instructions.
-# ---
-
 name: Claude Bot Processor
 on:
   repository_dispatch:
@@ -21,7 +9,7 @@ jobs:
     timeout-minutes: 10  # Prevent hung processes
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Runner control plane
         uses: ./.github/actions/runner-control-plane
@@ -42,15 +30,21 @@ jobs:
 
       - name: Call Claude
         id: y
+        env:
+          CLAUDE_PROMPT: ${{ steps.x.outputs.prompt }}
+          CLAUDE_ENDPOINT: ${{ secrets.CLAUDE_ENDPOINT }}
         run: |
           RUNNER_SCRIPT="$GITHUB_WORKSPACE/self-hosted-runner/run-in-ci-container.sh"
           chmod +x "$RUNNER_SCRIPT"
-          # Capture only stdout (curl response); wrapper diagnostics go to stderr (Actions log)
+          # Pass prompt/endpoint via env to avoid shell interpolation of user input (command injection)
           "$RUNNER_SCRIPT" \
             --workspace "$GITHUB_WORKSPACE" \
-            --cmd "curl -s --data-urlencode 'prompt=${{ steps.x.outputs.prompt }}' '${{ secrets.CLAUDE_ENDPOINT }}'" \
+            --cmd 'curl -s --data-urlencode "prompt=$CLAUDE_PROMPT" "$CLAUDE_ENDPOINT"' \
             > /tmp/claude-response.txt
-          echo "answer=$(cat /tmp/claude-response.txt | head -c 65000)" >> $GITHUB_OUTPUT
+          # Use multiline format so newlines in response don't corrupt GITHUB_OUTPUT
+          echo "answer<<EOF" >> $GITHUB_OUTPUT
+          head -c 65000 /tmp/claude-response.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Comment back
         uses: peter-evans/create-or-update-comment@9a932638a9f5079d84f4e9f56f0f2a5ceee4b2d1  # v4.0.0

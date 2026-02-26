@@ -2265,9 +2265,20 @@ Complete the task, then use /pr to create a new pull request."""
 
             if agent_cli == "codex" and cli_args:
                 # --search is a top-level Codex flag (codex --search exec ...),
-                # not an exec subcommand flag. Remove it from exec args and rely
-                # on persistent config (web_search = "live") instead.
-                cli_args = [arg for arg in cli_args if str(arg) != "--search"]
+                # not an exec subcommand flag. Remove it and any value from exec args.
+                filtered: list[str] = []
+                skip_next = False
+                for arg in cli_args:
+                    a = str(arg)
+                    if skip_next:
+                        skip_next = False
+                        continue
+                    if a == "--search" or a.startswith("--search="):
+                        if a == "--search":
+                            skip_next = True
+                        continue
+                    filtered.append(arg)
+                cli_args = filtered
 
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
 
@@ -3158,22 +3169,24 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             if no_tmux:
                 # Subprocess launch: stdout/stderr captured to log file directly.
                 start_dir = agent_spec.get("start_dir") or agent_dir
-                log_fd = open(log_file, "a", encoding="utf-8")  # noqa: SIM115
-                popen_kwargs: dict[str, Any] = {
-                    "stdout": log_fd,
-                    "stderr": subprocess.STDOUT,
-                    "cwd": start_dir,
-                    "start_new_session": True,  # New process group for clean kill
-                }
-                if run_env is not None:
-                    popen_kwargs["env"] = run_env
+                log_fd = None
                 try:
+                    log_fd = open(log_file, "a", encoding="utf-8")  # noqa: SIM115
+                    popen_kwargs: dict[str, Any] = {
+                        "stdout": log_fd,
+                        "stderr": subprocess.STDOUT,
+                        "cwd": start_dir,
+                        "start_new_session": True,  # New process group for clean kill
+                    }
+                    if run_env is not None:
+                        popen_kwargs["env"] = run_env
                     proc = subprocess.Popen(
                         [str(script_path)],
                         **popen_kwargs,
                     )
                 except Exception:
-                    log_fd.close()
+                    if log_fd is not None:
+                        log_fd.close()
                     raise
                 agent_spec["pid"] = proc.pid
                 agent_spec["process"] = proc
