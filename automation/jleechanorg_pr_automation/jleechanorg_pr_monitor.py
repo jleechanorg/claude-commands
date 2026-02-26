@@ -39,10 +39,8 @@ from orchestration.cli_validation import (
 )
 from orchestration.task_dispatcher import (
     CLI_PROFILES,
-    CURSOR_MODEL,
-    GEMINI_MODEL,
-    MINIMAX_MODEL,
     apply_minimax_auth_env,
+    build_preflight_execution_args,
     TaskDispatcher,
 )
 
@@ -1789,62 +1787,21 @@ Your response MUST follow this exact structure for clarity:
 
         env = {k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
 
-        # Build help and execution commands for two-phase validation (help first, then arithmetic check)
-        help_args = ["--help"]
-        execution_cmd: list[str] = []
-        if cli_name == "gemini":
-            test_model = GEMINI_MODEL
-            execution_cmd = [
-                "-m",
-                test_model,
-                "--yolo",
-                "--allowed-mcp-server-names",
-                "none",
-            ]
-        elif cli_name == "codex":
-            help_args = ["exec", "--help"]
-            execution_cmd = ["exec", "--yolo", "--skip-git-repo-check"]
-        elif cli_name == "claude":
-            execution_cmd = [
-                "--model",
-                "sonnet",
-                "-p",
-                "@PROMPT_FILE",
-                "--output-format",
-                "text",
-                "--strict-mcp-config",
-            ]
-        elif cli_name == "cursor":
-            execution_cmd = [
-                "-f",
-                "-p",
-                "@PROMPT_FILE",
-                "--model",
-                CURSOR_MODEL,
-                "--output-format",
-                "text",
-                "--approve-mcps",
-            ]
-        elif cli_name == "minimax":
-            # MiniMax uses Claude Code with MiniMax API
-            # Use profile-based env_set from CLI_PROFILES instead of hardcoding
-            execution_cmd = [
-                "--model",
-                MINIMAX_MODEL,
-                "-p",
-                "@PROMPT_FILE",
-                "--output-format",
-                "text",
-                "--dangerously-skip-permissions",
-                "--strict-mcp-config",
-            ]
-            # Use env_set from CLI_PROFILES for consistency with task_dispatcher
-            profile = CLI_PROFILES.get(cli_name, {})
-            for key, value in profile.get("env_set", {}).items():
+        # Apply env_set overrides from the profile (e.g. MiniMax API endpoint)
+        env_set = profile.get("env_set")
+        if isinstance(env_set, dict):
+            for key, value in env_set.items():
                 env[key] = value
-            # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
-            if cli_name == "minimax":
-                env = apply_minimax_auth_env(env)
+        if cli_name == "minimax":
+            env = apply_minimax_auth_env(env)
+
+        # Delegate per-CLI arg construction to the centralised helper so that
+        # this site stays in sync with TaskDispatcher._validate_cli_availability.
+        help_args, execution_cmd, skip_help = build_preflight_execution_args(cli_name)
+        # Supply --help only when we would run Phase 1 but got empty args (avoids bare-binary hang).
+        # Honor skip_help from helper—OAuth CLIs (claude/cursor/minimax) skip Phase 1 by design.
+        if not help_args and not skip_help:
+            help_args = ["--help"]
 
         try:
             result = validate_cli_two_phase(
@@ -1855,7 +1812,7 @@ Your response MUST follow this exact structure for clarity:
                 env=env,
                 execution_timeout=CLI_VALIDATION_TIMEOUT_SECONDS,
                 retain_output=retain_output,
-                skip_help=False,
+                skip_help=skip_help,
                 agent_name=agent_name,
             )
         except Exception as exc:

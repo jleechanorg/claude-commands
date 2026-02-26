@@ -61,7 +61,7 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 **27 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**86 Skills** providing shared knowledge references and capabilities
+**87 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 
@@ -219,10 +219,10 @@ See bottom of README for complete version history.
 ### Latest Release: v1.1.0 (2025-12-30)
 
 **Export Statistics**:
-- **237 Commands**: Complete workflow orchestration system
+- **236 Commands**: Complete workflow orchestration system
 - **50 Hooks**: Claude Code automation and workflow hooks
 - **27 Scripts**: Development and automation tools
-- **86 Skills**: Shared knowledge references
+- **87 Skills**: Shared knowledge references
 
 **Recent Changes**:
 - Script allowlist expansion (12 additional development scripts)

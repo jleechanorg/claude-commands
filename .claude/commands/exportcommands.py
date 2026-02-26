@@ -72,6 +72,9 @@ class ClaudeCommandsExporter:
         # Add automation for GitHub export
         if "automation" not in self.EXPORT_SUBDIRS:
             self.EXPORT_SUBDIRS.append("automation")
+        # Add ralph (PRD-driven autonomous workflow toolkit)
+        if "ralph" not in self.EXPORT_SUBDIRS:
+            self.EXPORT_SUBDIRS.append("ralph")
 
         # Commands to skip during export (project-specific and user-specified exclusions)
         self.COMMANDS_SKIP_LIST = [
@@ -91,6 +94,9 @@ class ClaudeCommandsExporter:
             "pgen.md",
             "pgene.md",
             "proto_genesis.md",  # proto genesis commands (project-specific)
+            "pairv2",  # Pair v2 command - project-specific workflow
+            "pairv2.md",  # Pair v2 command file
+            "pairv2-usage.md",  # Pair v2 usage guide
         ]
 
         # Counters for summary
@@ -128,6 +134,11 @@ class ClaudeCommandsExporter:
                 'source': 'automation',
                 'exclude_dirs': ['__pycache__', '.pytest_cache', 'dist', 'build', '*.egg-info', 'testing_util'],
                 'exclude_files': ['*.pyc', '*.pyo', '*.swp', '*.tmp', 'simple_pr_batch.sh'],
+            },
+            'ralph': {
+                'source': 'ralph',
+                'exclude_dirs': ['archive'],
+                'exclude_files': ['.last-branch'],
             },
         }
 
@@ -306,6 +317,9 @@ class ClaudeCommandsExporter:
 
         # Export automation (GitHub PR automation system)
         self._export_automation(staging_dir)
+
+        # Export ralph (PRD-driven autonomous workflow toolkit)
+        self._export_ralph(staging_dir)
 
         # Export GitHub Actions workflows (as examples)
         self._export_github_workflows(staging_dir)
@@ -853,6 +867,13 @@ Customize the following for your project:
             "automation", self.EXPORT_DIRECTORIES["automation"], staging_dir
         )
 
+    def _export_ralph(self, staging_dir):
+        """Export Ralph PRD-driven autonomous workflow toolkit"""
+        print("🐺 Exporting ralph...")
+        self._export_directory(
+            "ralph", self.EXPORT_DIRECTORIES["ralph"], staging_dir
+        )
+
     def _export_github_workflows(self, staging_dir):
         """Export GitHub Actions workflows with project-specific filtering.
 
@@ -1154,6 +1175,41 @@ Claude Code can assist with adapting these workflows to your specific project. J
                 )
                 content = re.sub(
                     r"/tmp/worldarchitect\.ai", "/tmp/$PROJECT_NAME", content
+                )
+
+                # Hardcoded user/project paths → generic placeholders
+                # Order: specific paths first, then broad. $HOME/projects/worktree_ralph can
+                # result from /Users/jleechan/ → $HOME/ when jleechan wasn't replaced yet.
+                content = re.sub(
+                    r'/Users/\$USER/projects/worktree_ralph(?=/|"|\s|$)',
+                    "$PROJECT_ROOT",
+                    content,
+                )
+                content = re.sub(
+                    r'\$HOME/projects/worktree_ralph(?=/|"|\s|$)',
+                    "$PROJECT_ROOT",
+                    content,
+                )
+                content = re.sub(
+                    r'/Users/\$USER/projects_other/ralph-orchestrator(?=/|"|\s|$)',
+                    "$RALPH_REPO",
+                    content,
+                )
+                content = re.sub(
+                    r'\$HOME/projects_other/ralph-orchestrator(?=/|"|\s|$)',
+                    "$RALPH_REPO",
+                    content,
+                )
+                content = re.sub(r"/Users/jleechan/", "$HOME/", content)
+                content = re.sub(
+                    r'/Users/\$USER/projects_other(?=/|"|\s|$)',
+                    "$HOME/projects",
+                    content,
+                )
+                content = re.sub(
+                    r'/Users/\$USER/projects(?=/|"|\s|$)',
+                    "$HOME/projects",
+                    content,
                 )
                 # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
                 content = re.sub(
@@ -1658,6 +1714,9 @@ This is a filtered reference export from a working Claude Code project. Commands
         # Verify exclusions
         self._verify_exclusions()
 
+        # Validate no hardcoded paths slipped through
+        self._validate_no_hardcoded_paths()
+
         # Commit and push
         self._commit_and_push()
 
@@ -1774,6 +1833,7 @@ This is a filtered reference export from a working Claude Code project. Commands
             ),  # .claude/settings.json file
             "orchestration": "orchestration",  # Goes to repo root
             "automation": "automation",  # Goes to repo root
+            "ralph": "ralph",  # PRD-driven autonomous workflow toolkit - goes to repo root
             "scripts": None,  # Goes to repo root within scripts/
             "workflows": "workflows",  # GitHub workflows - goes to repo root as examples
             "CLAUDE.md": "CLAUDE.md",  # Reference doc - goes to repo root
@@ -1887,6 +1947,50 @@ This is a filtered reference export from a working Claude Code project. Commands
             print("✅ Cleaned up excluded directories")
         else:
             print("✅ Confirmed: No excluded directories in export")
+
+    # Patterns that indicate hardcoded user/project paths (should be filtered)
+    HARDCODED_PATH_PATTERNS = [
+        (r"/Users/jleechan/", "hardcoded /Users/jleechan/ - use $HOME/"),
+        (r"/Users/\$USER/projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
+        (r"/Users/\$USER/projects_other/ralph-orchestrator", "hardcoded ralph-orchestrator - use $RALPH_REPO"),
+        (r"projects_other/ralph-orchestrator", "hardcoded projects_other - use $RALPH_REPO"),
+        (r"projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
+        (r"orch_worldai_ralph", "project-specific orch path - use $PROJECT_ROOT"),
+        (r"worldai_genesis2|worldai_ralph2", "project-specific clone dir - use generic"),
+    ]
+
+    def _validate_no_hardcoded_paths(self):
+        """Scan exported content for hardcoded user/project paths; warn if found."""
+        print("🔍 Validating export for hardcoded path patterns...")
+        found = []
+        for root, _dirs, files in os.walk(self.repo_dir):
+            # Skip .git
+            if ".git" in root:
+                continue
+            for name in files:
+                # Skip exportcommands.py (contains pattern literals → false positives)
+                if name == "exportcommands.py":
+                    continue
+                if not name.endswith((".md", ".py", ".sh", ".yml", ".yaml")):
+                    continue
+                path = os.path.join(root, name)
+                try:
+                    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                except OSError:
+                    continue
+                rel = os.path.relpath(path, self.repo_dir)
+                for pattern, description in self.HARDCODED_PATH_PATTERNS:
+                    if re.search(pattern, content):
+                        found.append((rel, pattern, description))
+        if found:
+            print("⚠️  WARNING: Possible hardcoded paths detected (add to export filter):")
+            for rel, _pat, desc in found[:15]:  # Cap at 15 to avoid noise
+                print(f"   • {rel}: {desc}")
+            if len(found) > 15:
+                print(f"   ... and {len(found) - 15} more")
+        else:
+            print("✅ No hardcoded user paths detected in export")
 
     def _commit_and_push(self):
         """Commit changes and push branch"""

@@ -14,27 +14,40 @@ Use one script to benchmark all pair executors:
 - `/pair` via direct Python (`.claude/pair/pair_execute.py`)
 
 ## Script
-`./vpython .claude/pair/benchmark_pair_executors.py`
+`python .claude/pair/benchmark_pair_executors.py` (or `venv/bin/python` when using a virtualenv)
 
 ## Quick Start
 Run all three executors in one benchmark:
 
 ```bash
-./vpython .claude/pair/benchmark_pair_executors.py \
+python .claude/pair/benchmark_pair_executors.py \
   --executor-set all \
-  --iterations 1 \
+  --benchmark-iterations 1 \
   --timeout-seconds 180 \
   --teams-command "claude --print" \
   --artifact /tmp/{repo}/{branch}/pair/all_three.json
 ```
 
+Run a small, named Amazon-style ecommerce preset:
+
+```bash
+python .claude/pair/benchmark_pair_executors.py \
+  --task-preset amazon_clone \
+  --pairv2-max-cycles 2 \
+  --timeout-seconds 1200 \
+  --artifact /tmp/{repo}/{branch}/pair/amazon_clone_benchmark.json
+```
+
+For historical benchmark prompts, including alternate Amazon-style variants, see
+`testing_llm/pair/benchmark_tasks.json`.
+
 Run all three in parallel:
 
 ```bash
-./vpython .claude/pair/benchmark_pair_executors.py \
+python .claude/pair/benchmark_pair_executors.py \
   --executor-set all \
   --parallel \
-  --iterations 1 \
+  --benchmark-iterations 1 \
   --timeout-seconds 180 \
   --teams-command "claude --print" \
   --artifact /tmp/{repo}/{branch}/pair/all_three_parallel.json
@@ -59,12 +72,12 @@ Run all three in parallel:
 - `--executor-set`: `pairv2-only`
 - `--coder-cli`: `minimax`
 - `--verifier-cli`: `minimax`
-- `--task`: hello world script + pytest test
+- `--task`: hello world script + pytest test (default); overridden by `--task-preset` when provided
 - `--timeout-seconds`: `600`
 
 Run with no args to use these defaults:
 ```bash
-venv/bin/python3 .claude/pair/benchmark_pair_executors.py
+venv/bin/python .claude/pair/benchmark_pair_executors.py
 ```
 
 ## Notes

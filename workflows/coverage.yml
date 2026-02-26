@@ -45,6 +45,10 @@ jobs:
         with:
           persist-credentials: true
 
+      - name: Runner control plane
+        id: control-plane
+        uses: ./.github/actions/runner-control-plane
+
       - name: Set up Python 3.11
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
         with:
@@ -55,22 +59,25 @@ jobs:
         with:
           path: |
             ~/.cache/pip
-            venv
           key: ${{ runner.os }}-coverage-python-3.11-${{ hashFiles('mvp_site/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-coverage-python-3.11-
 
       - name: Install dependencies
         run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip setuptools wheel
-          pip install -r mvp_site/requirements.txt
-          pip install coverage pytest
+          rm -rf venv
+          python3 -m venv venv
+          VENV_PY="$PWD/venv/bin/python"
+          VENV_PIP="$PWD/venv/bin/pip"
+          "$VENV_PIP" install --upgrade pip setuptools wheel
+          "$VENV_PIP" install -r mvp_site/requirements.txt
+          "$VENV_PIP" install coverage pytest
+          echo "$PWD/venv/bin" >> "$GITHUB_PATH"
+          echo "VIRTUAL_ENV=$PWD/venv" >> "$GITHUB_ENV"
 
       - name: Run tests with coverage
         run: |
-          source venv/bin/activate
+          VENV_PY="$PWD/venv/bin/python"
 
           # Set environment and PYTHONPATH (run from project root)
           export TESTING=true
@@ -120,9 +127,9 @@ jobs:
 
           # Generate reports using the root .coveragerc
           # Suppress errors here too just in case coverage data is partial
-          coverage report --format=markdown > coverage_report.md || echo "Coverage report generation failed"
-          coverage xml -o coverage.xml || echo "Coverage XML generation failed"
-          coverage json -o coverage.json || echo "Coverage JSON generation failed"
+          "$VENV_PY" -m coverage report --format=markdown > coverage_report.md || echo "Coverage report generation failed"
+          "$VENV_PY" -m coverage xml -o coverage.xml || echo "Coverage XML generation failed"
+          "$VENV_PY" -m coverage json -o coverage.json || echo "Coverage JSON generation failed"
           
           # Exit with original test failure code if tests failed
           if [ "${test_exit_code}" -ne 0 ]; then
@@ -140,14 +147,14 @@ jobs:
       - name: Generate coverage badge
         if: (success() || failure()) && github.ref == 'refs/heads/main'
         run: |
-          source venv/bin/activate
+          VENV_PY="$PWD/venv/bin/python"
 
           # Extract total coverage percentage
-          COVERAGE=$(coverage report 2>/dev/null | tail -1 | awk '{print $4}' | tr -d '%')
+          COVERAGE=$("$VENV_PY" -m coverage report 2>/dev/null | tail -1 | awk '{print $4}' | tr -d '%')
 
           # Validate coverage is numeric
           if ! [[ "$COVERAGE" =~ ^[0-9]+$ ]]; then
-            COVERAGE=$(coverage report 2>/dev/null | grep "^TOTAL" | awk '{print $NF}' | tr -d '%')
+            COVERAGE=$("$VENV_PY" -m coverage report 2>/dev/null | grep "^TOTAL" | awk '{print $NF}' | tr -d '%')
             if ! [[ "$COVERAGE" =~ ^[0-9]+$ ]]; then
               echo "::warning::Could not parse coverage for badge generation, defaulting to 0"
               COVERAGE=0
@@ -171,6 +178,43 @@ jobs:
           echo "COVERAGE=${COVERAGE}" >> $GITHUB_ENV
           echo "BADGE_COLOR=${COLOR}" >> $GITHUB_ENV
 
+      - name: Update runner health score
+        id: runner-health-update
+        if: always()
+        run: |
+          chmod +x scripts/runner_health_score.py
+          DELTA=-1
+          REASON="coverage:success"
+
+          if [ -n "${{ steps.control-plane.outputs.preflight_exit_code }}" ] && [ "${{ steps.control-plane.outputs.preflight_exit_code }}" != "0" ]; then
+            DELTA=4
+            REASON="preflight:${{ steps.control-plane.outputs.infra_failure_class }}"
+          elif [ "${{ steps.control-plane.outputs.quarantined }}" = "true" ]; then
+            DELTA=0
+            REASON="quarantine:skipped"
+          elif [ "${{ job.status }}" = "cancelled" ]; then
+            DELTA=0
+            REASON="coverage:cancelled"
+          elif [ "${{ job.status }}" != "success" ]; then
+            DELTA=1
+            REASON="coverage:failed"
+          fi
+
+          scripts/runner_health_score.py \
+            --runner "${RUNNER_NAME:-unknown}" \
+            --threshold 6 \
+            --github-output "$GITHUB_OUTPUT" \
+            update \
+            --delta "$DELTA" \
+            --reason "$REASON"
+
+      - name: Collect runner health artifacts
+        if: always()
+        run: |
+          mkdir -p "${RUNNER_TEMP}/runner-health"
+          cp "${{ steps.control-plane.outputs.preflight_json }}" "${RUNNER_TEMP}/runner-health/runner_health.json" 2>/dev/null || true
+          cp "${HOME}/.cache/worldarchitect-ci/runner-health-score.json" "${RUNNER_TEMP}/runner-health/runner_health_score.json" 2>/dev/null || true
+
       - name: Upload coverage reports
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
         if: always()
@@ -181,12 +225,15 @@ jobs:
             coverage.xml
             coverage.json
             .coverage
+            ${{ runner.temp }}/runner-health/runner_health.json
+            ${{ runner.temp }}/runner-health/runner_health_score.json
+          if-no-files-found: warn
           retention-days: 30
 
       - name: Post coverage summary
         if: always()
         run: |
-          source venv/bin/activate
+          VENV_PY="$PWD/venv/bin/python"
 
           echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -194,5 +241,12 @@ jobs:
           if [ -f coverage_report.md ]; then
             cat coverage_report.md >> $GITHUB_STEP_SUMMARY
           else
-            coverage report --format=markdown >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Coverage report generation failed" >> $GITHUB_STEP_SUMMARY
+            "$VENV_PY" -m coverage report --format=markdown >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Coverage report generation failed" >> $GITHUB_STEP_SUMMARY
           fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Runner Health" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Quarantine score before run: ${{ steps.control-plane.outputs.score }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Quarantined before run: ${{ steps.control-plane.outputs.quarantined }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Preflight exit: ${{ steps.control-plane.outputs.preflight_exit_code }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Score after run: ${{ steps.runner-health-update.outputs.score }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Quarantined now: ${{ steps.runner-health-update.outputs.quarantined }}" >> "$GITHUB_STEP_SUMMARY"

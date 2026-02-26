@@ -117,6 +117,9 @@ Keep all request-handling layers at **600 seconds (10 minutes)**. Use `scripts/t
 ## Beads Issue Tracking
 - **NEVER gitignore `.beads/`** - Must be version controlled.
 - Always include `.beads/` changes in PRs - do not drop, revert, or omit beads diffs.
+- Incidental `.beads/` changes are **non-blocking** during implementation work.
+- Do **not** stop execution just because `.beads/` changed unexpectedly; continue the active task.
+- Only switch to bead management when explicitly requested by the user or during normal end-of-session handoff.
 
 ## Modal Routing Reference (Critical)
 Routing order in `$PROJECT_ROOT/agents.py:get_agent_for_input()`:
@@ -169,3 +172,12 @@ When ending a coding session:
 - Skills: `.claude/skills/`, `.codex/skills/`
 - Modal lock patterns: `$PROJECT_ROOT/agents.py`, `$PROJECT_ROOT/world_logic.py`
 - Beads usage: `docs/beads_creation_manual.md`
+
+<!-- BEGIN BEADS INTEGRATION -->
+## Issue Tracking with bd (beads)
+This project uses `bd` for all issue tracking; do not use markdown TODOs/task lists.
+Quick commands: `bd ready --json`, `bd create`, `bd update`, `bd close`.
+Use `--json` and link follow-up work with `discovered-from`.
+For full reference, see `docs/beads_creation_manual.md` and `docs/QUICKSTART.md`.
+
+<!-- END BEADS INTEGRATION -->

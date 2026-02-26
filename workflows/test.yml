@@ -208,7 +208,7 @@ jobs:
     name: Directory tests (${{ matrix.test-group }})
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
-    runs-on: [self-hosted, claude]
+    runs-on: ubuntu-latest
     # Core group runs with coverage enabled and sequential execution, which can exceed 15m.
     timeout-minutes: 30
     strategy:
@@ -216,6 +216,12 @@ jobs:
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
 
     steps:
+    - name: Repair workspace permissions for checkout
+      run: |
+        if [ -d "$GITHUB_WORKSPACE" ]; then
+          chmod -R u+rwX "$GITHUB_WORKSPACE" || true
+        fi
+
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
       with:
@@ -232,6 +238,16 @@ jobs:
       uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
       with:
         node-version: '20'
+
+    - name: Prepare runner tool cache for setup actions
+      run: |
+        chmod +x scripts/ci/setup-runner-tool-cache.sh
+        ./scripts/ci/setup-runner-tool-cache.sh
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+      with:
+        python-version: '3.11'
 
     - name: Resolve Python version for cache keys
       id: python-version
@@ -258,12 +274,6 @@ jobs:
           ${{ runner.os }}-python-${{ steps.python-version.outputs.python_version }}-${{ hashFiles('**/requirements.txt') }}-
           ${{ runner.os }}-python-${{ steps.python-version.outputs.python_version }}-
 
-    - name: Cache virtualenv
-      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
-      with:
-        path: venv
-        key: ${{ runner.os }}-venv-${{ steps.python-version.outputs.python_version }}-${{ matrix.test-group }}-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
-
     - name: Cache testmon data
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
       with:
@@ -282,6 +292,62 @@ jobs:
         key: testmon-${{ matrix.test-group }}-${{ github.base_ref || github.ref_name }}-${{ github.run_number }}
         restore-keys: |
           testmon-${{ matrix.test-group }}-${{ github.base_ref || github.ref_name }}-
+
+    - name: Runner preflight
+      id: preflight
+      shell: bash
+      run: |
+        chmod +x scripts/ci/runner_preflight.sh scripts/runner_health_score.py
+        export REQUIRED_PYTHON_MINOR="${{ steps.python-version.outputs.python_version }}"
+        export PRECHECK_JSON="${RUNNER_TEMP}/runner_health.json"
+        PRECHECK_PYTHON="${{ steps.python-version.outputs.python }}"
+        if [ -z "$PRECHECK_PYTHON" ]; then
+          PRECHECK_PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+        fi
+        if [ -z "$PRECHECK_PYTHON" ]; then
+          PRECHECK_PYTHON=python
+        fi
+        PRECHECK_CLASS=""
+        PRECHECK_EXIT=0
+        if scripts/ci/runner_preflight.sh "$PRECHECK_JSON"; then
+          PRECHECK_EXIT=0
+        else
+          PRECHECK_EXIT=$?
+          PRECHECK_PYTHON="${{ steps.python-version.outputs.python }}"
+          if [ -z "$PRECHECK_PYTHON" ] || [ ! -x "$PRECHECK_PYTHON" ]; then
+            PRECHECK_PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          fi
+          if [ -z "$PRECHECK_PYTHON" ]; then
+            PRECHECK_CLASS="preflight_parse_failed"
+          else
+            PRECHECK_CLASS=$("$PRECHECK_PYTHON" -c 'import json,os; path=os.environ.get("PRECHECK_JSON"); print((json.load(open(path, "r", encoding="utf-8")).get("infra_failure_class", "preflight_failed")) if path and os.path.exists(path) else "preflight_failed"') || PRECHECK_CLASS="preflight_parse_failed"
+          fi
+        fi
+        echo "preflight_json=$PRECHECK_JSON" >> "$GITHUB_OUTPUT"
+        echo "preflight_exit_code=$PRECHECK_EXIT" >> "$GITHUB_OUTPUT"
+        echo "infra_failure_class=$PRECHECK_CLASS" >> "$GITHUB_OUTPUT"
+
+    - name: Runner quarantine check
+      id: runner-quarantine
+      shell: bash
+      run: |
+        scripts/runner_health_score.py \
+          --runner "${RUNNER_NAME:-unknown}" \
+          --threshold 6 \
+          --github-output "$GITHUB_OUTPUT" \
+          check
+
+    - name: Enforce preflight and quarantine gate
+      shell: bash
+      run: |
+        if [ "${{ steps.preflight.outputs.preflight_exit_code }}" != "0" ]; then
+          echo "::error::Runner preflight failed (class=${{ steps.preflight.outputs.infra_failure_class }})"
+          exit 2
+        fi
+        if [ "${{ steps.runner-quarantine.outputs.quarantined }}" = "true" ]; then
+          echo "::error::Runner ${RUNNER_NAME:-unknown} is quarantined (score=${{ steps.runner-quarantine.outputs.score }})"
+          exit 3
+        fi
 
     - name: Debug testmon state
       if: always()
@@ -312,76 +378,124 @@ jobs:
         fi
 
     - name: Install dependencies
+      id: install-deps
       run: |
-        # Reuse cached venv when available; otherwise create it
-        # Must verify python runs AND pip works (cache can have broken pip/editable installs from different workspace paths)
-        if [ -d venv ] && [ -x venv/bin/python ] && venv/bin/python -c "import sys" 2>/dev/null && venv/bin/python -m pip --version >/dev/null 2>&1; then
+        VENV_PY="$PWD/venv/bin/python"
+        VENV_PIP="$PWD/venv/bin/pip"
+
+        # Reuse cached venv only when interpreter and pip are both healthy.
+        # A restored cache can contain venv/bin/python that exists but points
+        # to a missing interpreter, or pip state that is broken across runners.
+        if [ -d venv ] && [ -x "$VENV_PY" ] && [ -x "$VENV_PIP" ] \
+          && timeout 30 "$VENV_PY" --version >/dev/null 2>&1 \
+          && timeout 30 "$VENV_PIP" --version >/dev/null 2>&1 \
+          && "$VENV_PY" -m pip --version >/dev/null 2>&1; then
           echo "Reusing cached venv"
         else
           echo "Creating new venv"
           # Remove stale/corrupt cached venv (e.g., broken symlinks from cross-runner cache restore)
           rm -rf venv
-          # Prefer python3.11 to match project target; fall back to python3
+        fi
+        chmod +x scripts/ci/classify_infra_failure.sh
+
+        PYTHON="${{ steps.python-version.outputs.python }}"
+        if [ -z "$PYTHON" ]; then
+          # Prefer python3.11 to match project target; fall back to python3 then python.
           PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
-          if [ -z "$PYTHON" ]; then
-            echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
-            exit 2
+        fi
+        if [ -z "$PYTHON" ]; then
+          echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+          exit 2
+        fi
+        echo "Using $PYTHON ($($PYTHON --version))"
+
+        ATTEMPT=1
+        MAX_ATTEMPTS=2
+        INFRA_CLASS=""
+        while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
+          echo "Dependency install attempt ${ATTEMPT}/${MAX_ATTEMPTS}"
+
+          # Reuse cached venv when healthy, otherwise recreate to avoid cross-runner drift.
+          if [ -d venv ] && [ -x "$VENV_PY" ] && [ -x "$VENV_PIP" ] \
+            && timeout 30 "$VENV_PY" --version >/dev/null 2>&1 \
+            && timeout 30 "$VENV_PIP" --version >/dev/null 2>&1; then
+            echo "Reusing cached venv"
+          else
+            echo "Creating new venv"
+            rm -rf venv
+            $PYTHON -m venv venv
           fi
-          echo "Using $PYTHON ($($PYTHON --version))"
-          $PYTHON -m venv venv
-        fi
-        source venv/bin/activate
+          set +e
+          {
+            echo "Using venv python: $($VENV_PY --version)"
+            timeout 60 "$VENV_PY" --version
+            timeout 60 "$VENV_PIP" --version
+            echo "$PWD/venv/bin" >> "$GITHUB_PATH"
 
-        if python -c "import pydantic, pytest, xdist, pytest_cov, testmon" 2>/dev/null; then
-          echo "Cached venv already has core dependencies"
-        else
-          # Upgrade pip and install resolver tools with timeout
-          timeout 300 python -m pip install --upgrade pip setuptools wheel
+            if "$VENV_PY" -c "import pydantic, pytest, xdist, pytest_cov, testmon" 2>/dev/null; then
+              echo "Cached venv already has core dependencies"
+            else
+              # Upgrade pip and install resolver tools with timeout
+              timeout 300 "$VENV_PY" -m pip install --upgrade pip setuptools wheel
+              # Install core application requirements
+              timeout 600 "$VENV_PIP" install -r mvp_site/requirements.txt
+              # Install pytest tooling for batched worker execution
+              timeout 300 "$VENV_PIP" install pytest pytest-xdist pytest-testmon pytest-cov
+            fi
 
-          # Install core application requirements
-          timeout 600 pip install -r mvp_site/requirements.txt
+            case "${{ matrix.test-group }}" in
+              "core-mvp-1"|"core-mvp-2"|"core-mvp-3"|"core-tests"|"claude"|"orchestration"|"automation"|"scripts"|"mcp")
+                find . -name "requirements.txt" -not -path "./venv/*" -not -path "./mvp_site/requirements.txt" | while read req_file; do
+                  echo "Installing $req_file (with 300s timeout)"
+                  timeout 300 "$VENV_PIP" install -r "$req_file" || echo "Warning: Failed to install $req_file"
+                done
+                if [[ "${{ matrix.test-group }}" == core-* ]]; then
+                  if [ -f "moltbook_poster/pyproject.toml" ]; then
+                    echo "Installing moltbook_poster package for tests/ directory"
+                    timeout 300 "$VENV_PIP" install -e "./moltbook_poster" || echo "Warning: Failed to install moltbook_poster"
+                  fi
+                  if [ -f "orchestration/pyproject.toml" ]; then
+                    echo "Installing orchestration package for tests/ directory"
+                    timeout 300 "$VENV_PIP" install -e "./orchestration" || echo "Warning: Failed to install orchestration"
+                  fi
+                fi
+                if [ "${{ matrix.test-group }}" = "automation" ] && [ -f "automation/pyproject.toml" ]; then
+                  echo "Installing automation package in editable mode with dev dependencies"
+                  timeout 300 "$VENV_PIP" install -e "./automation[dev]"
+                fi
+                ;;
+            esac
 
-          # Install pytest tooling for batched worker execution
-          timeout 300 pip install pytest pytest-xdist pytest-testmon pytest-cov
-        fi
-
-        # Install additional requirements for specific directories if needed
-        # NOTE: Keep the group names in sync with GROUP_CONFIG in scripts/ci-detect-changes.sh (source of truth).
-        case "${{ matrix.test-group }}" in
-          "core-mvp-1"|"core-mvp-2"|"core-mvp-3"|"core-tests"|"claude"|"orchestration"|"automation"|"scripts"|"mcp")
-            # These directories may have additional requirements
-            find . -name "requirements.txt" -not -path "./venv/*" -not -path "./mvp_site/requirements.txt" | while read req_file; do
-              echo "Installing $req_file (with 300s timeout)"
-              timeout 300 pip install -r "$req_file" || echo "Warning: Failed to install $req_file"
-            done
-            # Install utility packages if testing core group (tests/ directory needs these)
             if [[ "${{ matrix.test-group }}" == core-* ]]; then
-              if [ -f "moltbook_poster/pyproject.toml" ]; then
-                echo "Installing moltbook_poster package for tests/ directory"
-                timeout 300 pip install -e "./moltbook_poster" || echo "Warning: Failed to install moltbook_poster"
-              fi
-              if [ -f "orchestration/pyproject.toml" ]; then
-                echo "Installing orchestration package for tests/ directory"
-                timeout 300 pip install -e "./orchestration" || echo "Warning: Failed to install orchestration"
-              fi
+              "$VENV_PIP" install coverage
             fi
-            # Install automation package if testing automation
-            if [ "${{ matrix.test-group }}" = "automation" ] && [ -f "automation/pyproject.toml" ]; then
-              echo "Installing automation package in editable mode with dev dependencies"
-              timeout 300 pip install -e "./automation[dev]"
-            fi
-            ;;
-        esac
 
-        # Install coverage for core group (data collected during test execution)
-        if [[ "${{ matrix.test-group }}" == core-* ]]; then
-          pip install coverage
-        fi
+            timeout 60 "$VENV_PY" -c "import pydantic; print(f'✅ Pydantic {pydantic.__version__} available')"
+            chmod +x vpython
+            timeout 60 ./vpython --version
+          } 2>&1 | tee "${RUNNER_TEMP}/install-deps.log"
+          INSTALL_EXIT=${PIPESTATUS[0]}
+          set -e
 
-        # Verify key dependencies
-        timeout 60 python -c "import pydantic; print(f'✅ Pydantic {pydantic.__version__} available')"
-        chmod +x vpython
-        timeout 60 ./vpython --version
+          if [ "$INSTALL_EXIT" -eq 0 ]; then
+            echo "infra_failure_class=" >> "$GITHUB_OUTPUT"
+            break
+          fi
+
+          INFRA_CLASS="$(scripts/ci/classify_infra_failure.sh "${RUNNER_TEMP}/install-deps.log" || true)"
+          echo "Install attempt ${ATTEMPT} failed (infra_class=${INFRA_CLASS:-none})"
+          if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ] && [ -n "$INFRA_CLASS" ]; then
+            echo "Retrying install due to infra-classified failure..."
+            ATTEMPT=$((ATTEMPT + 1))
+            sleep 5
+            continue
+          fi
+
+          echo "infra_failure_class=${INFRA_CLASS}" >> "$GITHUB_OUTPUT"
+          exit "$INSTALL_EXIT"
+        done
+
+        echo "install_attempts=${ATTEMPT}" >> "$GITHUB_OUTPUT"
 
     - name: Run frontend_v1 JS unit tests
       if: matrix.test-group == 'core-mvp-1'
@@ -421,26 +535,23 @@ jobs:
         COVEOF
 
     - name: Run directory-based tests - ${{ matrix.test-group }}
+      id: run-tests
       # Keep per-step timeout aligned with the expanded suite timeout budget.
       timeout-minutes: 25
       run: |
-        source venv/bin/activate
-
+        chmod +x scripts/ci/classify_infra_failure.sh
+        # VIRTUAL_ENV set so run_tests.sh/ensure_venv skips sourcing activate.
+        export VIRTUAL_ENV="$PWD/venv"
         # Set CI environment variables
         export TESTING=true
         export TESTING_AUTH_BYPASS=true
         export MOCK_SERVICES_MODE=true
         export FAST_TESTS=1
-        # Defense-in-depth: Set fake API keys so real services can't be hit
-        # even if mock mode is somehow bypassed
-        # NOTE: Keys must start with "test-" or "dummy-" to trigger Gemini stub
-        # (see gemini_provider._use_test_stub_client)
         export GEMINI_API_KEY="test-ci-key-only"
         export CEREBRAS_API_KEY="test-ci-key-only"
         export OPENROUTER_API_KEY="test-ci-key-only"
         export TEST_GEMINI_API_KEY="test-ci-key-only"
         export GOOGLE_APPLICATION_CREDENTIALS="/dev/null"
-        # Disable semantic classifier to prevent model download stalls in CI
         export ENABLE_SEMANTIC_ROUTING=false
         export ENABLE_BROWSER_TESTS=0
         export ENABLE_BUILD_TESTS=0
@@ -460,12 +571,7 @@ jobs:
           bash automation/tests/test_crontab_restore_safety.sh
         fi
 
-        # Run tests only for the specified directory/directories
         chmod +x run_tests.sh
-        # CI_TEST_LIMIT removed to run all discovered tests (prevents skipping critical tests)
-        # Historical note: CI_TEST_LIMIT=50 previously truncated test lists, risking test coverage gaps
-
-        # Use directory-based test discovery with validation
         IFS=',' read -ra SELECTED_DIRS <<< "${{ matrix.test-dirs }}"
         TOTAL_TESTS=0
         for DIR in "${SELECTED_DIRS[@]}"; do
@@ -477,26 +583,126 @@ jobs:
         done
 
         if [ "$TOTAL_TESTS" -eq 0 ]; then
-          echo "⚠️ No tests found in specified directories, falling back to full test suite"
-          ./run_tests.sh --ci --parallel --exclude-integration --exclude-mcp
+          TEST_CMD="./run_tests.sh --ci --parallel --exclude-integration --exclude-mcp"
         elif [[ "${{ matrix.test-group }}" == core-mvp-* ]] && [ "${{ github.event_name }}" = "pull_request" ]; then
-          # Coverage shards on PRs: testmon skips unchanged tests,
-          # pytest-cov measures coverage on what ran. If testmon deselects a
-          # test, its coverage is unchanged — the total stays accurate.
           export TEST_SUITE_TIMEOUT=1080  # 18 min (vs default 15 min)
           export TEST_MAX_WORKERS=2
-          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --coverage --exclude-integration --exclude-mcp --testmon
+          TEST_CMD="./run_tests.sh --test-dirs=\"${{ matrix.test-dirs }}\" --coverage --exclude-integration --exclude-mcp --testmon"
         elif [ "${{ github.event_name }}" = "push" ]; then
-          # Push-to-main: use testmon to build/update the .testmondata baseline.
-          # On subsequent pushes, testmon skips unchanged test files.
           export TEST_MAX_WORKERS=2
-          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp --testmon
+          TEST_CMD="./run_tests.sh --test-dirs=\"${{ matrix.test-dirs }}\" --parallel --exclude-integration --exclude-mcp --testmon"
         else
-          # Non-coverage shards on PRs (e.g. core-tests): use testmon for test reduction.
-          # Ghost tests fixed — all tests now pass under pytest, enabling testmon.
           export TEST_MAX_WORKERS=2
-          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp --testmon
+          TEST_CMD="./run_tests.sh --test-dirs=\"${{ matrix.test-dirs }}\" --parallel --exclude-integration --exclude-mcp --testmon"
         fi
+
+        ATTEMPT=1
+        MAX_ATTEMPTS=2
+        TEST_INFRA_CLASS=""
+        while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
+          echo "Test execution attempt ${ATTEMPT}/${MAX_ATTEMPTS}: ${TEST_CMD}"
+          set +e
+          bash -o pipefail -c "${TEST_CMD}" 2>&1 | tee "${RUNNER_TEMP}/run-tests.log"
+          TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$TEST_EXIT" -eq 0 ]; then
+            echo "infra_failure_class=" >> "$GITHUB_OUTPUT"
+            break
+          fi
+
+          TEST_INFRA_CLASS="$(scripts/ci/classify_infra_failure.sh "${RUNNER_TEMP}/run-tests.log" || true)"
+          echo "Test attempt ${ATTEMPT} failed (infra_class=${TEST_INFRA_CLASS:-none})"
+          if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ] && [ -n "$TEST_INFRA_CLASS" ]; then
+            echo "Retrying tests due to infra-classified failure..."
+            ATTEMPT=$((ATTEMPT + 1))
+            sleep 5
+            continue
+          fi
+
+          echo "infra_failure_class=${TEST_INFRA_CLASS}" >> "$GITHUB_OUTPUT"
+          exit "$TEST_EXIT"
+        done
+
+        echo "test_attempts=${ATTEMPT}" >> "$GITHUB_OUTPUT"
+
+    - name: Update runner health score
+      if: always()
+      id: runner-health-update
+      shell: bash
+      run: |
+        chmod +x scripts/runner_health_score.py
+
+        DELTA=-1
+        REASON="success"
+
+        if [ "${{ steps.preflight.outputs.preflight_exit_code }}" != "0" ]; then
+          DELTA=4
+          REASON="preflight:${{ steps.preflight.outputs.infra_failure_class }}"
+        elif [ "${{ steps.runner-quarantine.outputs.quarantined }}" = "true" ]; then
+          DELTA=0
+          REASON="quarantine:skipped"
+        elif [ "${{ steps.install-deps.outcome }}" = "skipped" ] && [ "${{ steps.run-tests.outcome }}" = "skipped" ]; then
+          DELTA=0
+          REASON="gated:skipped"
+        elif [ "${{ steps.install-deps.outcome }}" != "success" ]; then
+          if [ -n "${{ steps.install-deps.outputs.infra_failure_class }}" ]; then
+            DELTA=3
+            REASON="install:${{ steps.install-deps.outputs.infra_failure_class }}"
+          else
+            DELTA=1
+            REASON="install:unknown"
+          fi
+        elif [ "${{ steps.run-tests.outcome }}" != "success" ]; then
+          if [ -n "${{ steps.run-tests.outputs.infra_failure_class }}" ]; then
+            DELTA=2
+            REASON="tests:${{ steps.run-tests.outputs.infra_failure_class }}"
+          else
+            DELTA=1
+            REASON="tests:product-failure"
+          fi
+        fi
+
+        scripts/runner_health_score.py \
+          --runner "${RUNNER_NAME:-unknown}" \
+          --threshold 6 \
+          --github-output "$GITHUB_OUTPUT" \
+          update \
+          --delta "$DELTA" \
+          --reason "$REASON"
+
+    - name: Persist runner health state snapshot
+      if: always()
+      shell: bash
+      run: |
+        mkdir -p "${RUNNER_TEMP}/runner-health"
+        cp "${{ steps.preflight.outputs.preflight_json }}" "${RUNNER_TEMP}/runner-health/runner_health.json" 2>/dev/null || true
+        cp "${HOME}/.cache/worldarchitect-ci/runner-health-score.json" "${RUNNER_TEMP}/runner-health/runner_health_score.json" 2>/dev/null || true
+
+    - name: Upload runner health artifacts
+      if: always()
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+      with:
+        name: runner-health-${{ matrix.test-group }}
+        path: |
+          ${{ runner.temp }}/runner-health/
+        if-no-files-found: warn
+        retention-days: 30
+
+    - name: Runner health summary
+      if: always()
+      shell: bash
+      run: |
+        echo "### Runner Health" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Runner: ${RUNNER_NAME:-unknown}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Quarantine score before run: ${{ steps.runner-quarantine.outputs.score }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Quarantined before run: ${{ steps.runner-quarantine.outputs.quarantined }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Preflight exit: ${{ steps.preflight.outputs.preflight_exit_code }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Install attempts: ${{ steps.install-deps.outputs.install_attempts }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Test attempts: ${{ steps.run-tests.outputs.test_attempts }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Health score delta: ${{ steps.runner-health-update.outputs.delta }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Health score now: ${{ steps.runner-health-update.outputs.score }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Quarantined now: ${{ steps.runner-health-update.outputs.quarantined }}" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Checkpoint testmon WAL
       if: always()
@@ -530,8 +736,7 @@ jobs:
           cp /tmp/worldarchitectai/coverage/.coverage ".coverage.${{ matrix.test-group }}"
           echo "✅ Coverage data copied to workspace"
         elif compgen -G "/tmp/worldarchitectai/coverage/.coverage.*" > /dev/null; then
-          source venv/bin/activate
-          python -m coverage combine /tmp/worldarchitectai/coverage || true
+          "$PWD/venv/bin/python" -m coverage combine /tmp/worldarchitectai/coverage || true
           if [ -f .coverage ]; then
             cp .coverage ".coverage.${{ matrix.test-group }}"
             echo "✅ Coverage data combined and copied from shard files"
