@@ -41,7 +41,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
           persist-credentials: true
 
@@ -219,7 +219,7 @@ jobs:
         run: |
           mkdir -p "${RUNNER_TEMP}/runner-health"
           cp "${{ steps.control-plane.outputs.preflight_json }}" "${RUNNER_TEMP}/runner-health/runner_health.json" 2>/dev/null || true
-          cp "${HOME}/.cache/${PROJECT_NAME:-your-project}-ci/runner-health-score.json" "${RUNNER_TEMP}/runner-health/runner_health_score.json" 2>/dev/null || true
+          cp "${HOME}/.cache/${PROJECT_NAME:-${GITHUB_REPOSITORY##*/}}-ci/runner-health-score.json" "${RUNNER_TEMP}/runner-health/runner_health_score.json" 2>/dev/null || true
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1

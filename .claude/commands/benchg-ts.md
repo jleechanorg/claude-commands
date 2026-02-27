@@ -18,6 +18,10 @@ When this command is invoked:
 ### 1. Verify Prerequisites
 
 ```bash
+# Fallback definitions for project paths if not set in environment
+RALPH_REPO="${RALPH_REPO:-/Users/$USER/projects/worktree_ralph}"
+PROJECT_ROOT="${PROJECT_ROOT:-$RALPH_REPO}"
+
 echo "🔍 PREREQUISITE VERIFICATION"
 echo "============================"
 
@@ -103,7 +107,7 @@ echo "🏆 TYPESCRIPT MIGRATION BENCHMARK: Genesis vs Ralph"
 echo "===================================================="
 echo ""
 echo "📋 Configuration:"
-echo "  Source: $PROJECT_ROOT/$PROJECT_ROOT/"
+echo "  Source: $PROJECT_ROOT/"
 echo "  Genesis Target: $HOME/projects/worldai_genesis2"
 echo "  Ralph Target: $HOME/projects/worldai_ralph2"
 echo "  Max Iterations: 50 per agent"

@@ -23,8 +23,17 @@ cmd_run() {
 
   # Parse arguments
   MAX_ITERATIONS=10
+  AI_TOOL="claude"
   while [[ $# -gt 0 ]]; do
     case $1 in
+      --tool)
+        AI_TOOL="$2"
+        shift 2
+        ;;
+      --tool=*)
+        AI_TOOL="${1#--tool=}"
+        shift
+        ;;
       [0-9]*)
         MAX_ITERATIONS="$1"
         shift
@@ -32,7 +41,7 @@ cmd_run() {
       *)
         echo "Error: Unknown argument '$1' for run command" >&2
         cmd_help
-        exit 2
+        return 2
         ;;
     esac
   done
@@ -72,7 +81,7 @@ cmd_run() {
     echo "---" >> "$PROGRESS_FILE"
   fi
 
-  echo "Starting Ralph - Max iterations: $MAX_ITERATIONS"
+  echo "Starting Ralph - Max iterations: $MAX_ITERATIONS (tool: $AI_TOOL)"
 
   for i in $(seq 1 $MAX_ITERATIONS); do
     echo ""
@@ -80,16 +89,16 @@ cmd_run() {
     echo "  Ralph Iteration $i of $MAX_ITERATIONS"
     echo "==============================================================="
 
-    if ! OUTPUT=$(claude --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr); then
-      echo "Error: claude failed on iteration $i" >&2
-      exit 1
+    if ! OUTPUT=$("$AI_TOOL" --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr); then
+      echo "Error: $AI_TOOL failed on iteration $i" >&2
+      return 1
     fi
 
     if echo "$OUTPUT" | tr -s '[:space:]' ' ' | grep -qE '<promise>[[:space:]]*COMPLETE[[:space:]]*</promise>'; then
       echo ""
       echo "Ralph completed all tasks!"
       echo "Completed at iteration $i of $MAX_ITERATIONS"
-      exit 0
+      return 0
     fi
 
     echo "Iteration $i complete. Continuing..."
@@ -99,7 +108,7 @@ cmd_run() {
   echo ""
   echo "Ralph reached max iterations ($MAX_ITERATIONS) without completing all tasks."
   echo "Check $PROGRESS_FILE for status."
-  exit 1
+  return 1
 }
 
 # ─── STATUS COMMAND ───────────────────────────────────────────────────────────
@@ -146,7 +155,6 @@ show_status() {
     PASSED=0; FAILED=0; PCT=0; FILLED=0; EMPTY=40
   else
     PASSED=$(jq_or_default '[.userStories[] | select(.passes == true)] | length' 0 "$PRD_FILE")
-    FAILED=$((TOTAL - PASSED))
     PCT=$((PASSED * 100 / TOTAL))
     FILLED=$((PCT * 40 / 100))
     EMPTY=$((40 - FILLED))
@@ -285,7 +293,7 @@ cmd_status() {
 # ─── DASHBOARD COMMAND ────────────────────────────────────────────────────────
 
 cmd_dashboard() {
-  trap 'if [ -n "$SERVER_PID" ]; then kill "$SERVER_PID" 2>/dev/null || true; fi' EXIT INT TERM
+  trap 'if [ -n "${SERVER_PID:-}" ]; then kill "${SERVER_PID}" 2>/dev/null || true; fi' EXIT INT TERM
 
   EXISTING_PID=$(lsof -ti:$DASHBOARD_PORT 2>/dev/null || true)
   if [ -n "$EXISTING_PID" ]; then

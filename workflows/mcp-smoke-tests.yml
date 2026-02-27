@@ -144,7 +144,7 @@ jobs:
           return testedSha;
 
     - name: Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       with:
         ref: ${{ github.event_name == 'workflow_run' && steps.pr_ref.outputs.result || '' }}
         submodules: recursive
@@ -440,7 +440,7 @@ jobs:
             return headRef;
 
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
           ref: ${{ steps.pr_ref.outputs.result }}
 
