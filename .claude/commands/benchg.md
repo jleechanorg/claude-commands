@@ -135,7 +135,7 @@ RALPH_SESSION="ralph-benchmark-p${PROJECT_NUM}-$(date +%Y%m%d-%H%M%S)"
 echo "📋 Ralph orchestration starting..."
 tmux new-session -d -s "$RALPH_SESSION" bash -c "
     cd '$RALPH_DIR' &&
-    python3 /Users/$USER/projects/worktree_ralph/orchestration/orchestrate_unified.py --goal '$PROJECT_DESCRIPTION' --max-iterations 30;
+    python3 $PROJECT_ROOT/orchestration/orchestrate_unified.py --goal '$PROJECT_DESCRIPTION' --max-iterations 30;
     exec bash
 "
 

@@ -48,6 +48,18 @@ class DirectoryOperationError(ExportError):
 
 
 class ClaudeCommandsExporter:
+    # Patterns that indicate hardcoded user/project paths (should be filtered)
+    HARDCODED_PATH_PATTERNS = [
+        (r"/Users/jleechan/", "hardcoded /Users/jleechan/ - use $HOME/"),
+        (r"/Users/\$USER/projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
+        (r"/Users/\$USER/projects_other/ralph-orchestrator", "hardcoded ralph-orchestrator - use $RALPH_REPO"),
+        (r"projects_other/ralph-orchestrator", "hardcoded projects_other - use $RALPH_REPO"),
+        (r"projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
+        (r"orch_worldai_ralph", "project-specific orch path - use $PROJECT_ROOT"),
+        (r"worldai_genesis2|worldai_ralph2", "project-specific clone dir - use generic"),
+        (r"worldarchitect-ci", "hardcoded worldarchitect-ci - use ${PROJECT_NAME:-your-project}-ci"),
+    ]
+
     def __init__(self):
         self.project_root = self._get_project_root()
         self.export_dir = os.path.join(
@@ -932,8 +944,24 @@ Customize the following for your project:
             )
             content = re.sub(r"worldarchitecture-ai", "$GCP_PROJECT_ID", content)
             content = re.sub(r"worldarchitect\.ai", "your-project.com", content)
+            content = re.sub(r"worldarchitect-ci", "${PROJECT_NAME:-your-project}-ci", content)
             content = re.sub(r"jleechanorg", "$GITHUB_OWNER", content)
             content = re.sub(r"\bjleechan\b", "$USER", content)
+
+            # Replace runner-control-plane with inline stub (action not exported to claude-commands)
+            _runner_cp_pattern = (
+                r"(- name: Runner control plane\s*\n\s+id: control-plane\s*\n)\s+uses: \.\/\.github\/actions\/runner-control-plane\s*\n"
+            )
+            _runner_cp_repl = r'''\1        run: |
+          echo "preflight_exit_code=0" >> "$GITHUB_OUTPUT"
+          echo "infra_failure_class=" >> "$GITHUB_OUTPUT"
+          echo "preflight_json=${RUNNER_TEMP:-/tmp}/runner_health.json" >> "$GITHUB_OUTPUT"
+          echo "quarantined=false" >> "$GITHUB_OUTPUT"
+          echo "score=0" >> "$GITHUB_OUTPUT"
+          echo "::notice::Runner control plane skipped - add .github/actions/runner-control-plane for full preflight"
+
+'''
+            content = re.sub(_runner_cp_pattern, _runner_cp_repl, content)
 
             # Update outdated GitHub Actions to latest secure versions
             # actions/checkout v4.1.1 (Dec 2023) → v4.3.1 (Nov 2024)
@@ -1148,6 +1176,9 @@ Claude Code can assist with adapting these workflows to your specific project. J
                     if "$PROJECT_ROOT/" not in content:
                         content = re.sub(r"mvp_site/", "$PROJECT_ROOT/", content)
                 content = re.sub(r"worldarchitect\.ai", "your-project.com", content)
+                content = re.sub(
+                    r"worldarchitect-ci", "${PROJECT_NAME:-your-project}-ci", content
+                )
                 content = re.sub(r"\bjleechan\b", "$USER", content)
                 content = re.sub(
                     r"TESTING=true vpython", "TESTING=true python", content
@@ -1178,8 +1209,7 @@ Claude Code can assist with adapting these workflows to your specific project. J
                 )
 
                 # Hardcoded user/project paths → generic placeholders
-                # Order: specific paths first, then broad. $HOME/projects/worktree_ralph can
-                # result from /Users/jleechan/ → $HOME/ when jleechan wasn't replaced yet.
+                # Order: specific paths first, then broad.
                 content = re.sub(
                     r'/Users/\$USER/projects/worktree_ralph(?=/|"|\s|$)',
                     "$PROJECT_ROOT",
@@ -1200,7 +1230,7 @@ Claude Code can assist with adapting these workflows to your specific project. J
                     "$RALPH_REPO",
                     content,
                 )
-                content = re.sub(r"/Users/jleechan/", "$HOME/", content)
+                # Medium-specific paths before broad /Users/$USER/ replacement
                 content = re.sub(
                     r'/Users/\$USER/projects_other(?=/|"|\s|$)',
                     "$HOME/projects",
@@ -1211,6 +1241,8 @@ Claude Code can assist with adapting these workflows to your specific project. J
                     "$HOME/projects",
                     content,
                 )
+                # Broad pattern last - catches remaining /Users/$USER/ occurrences
+                content = re.sub(r"/Users/\$USER/", "$HOME/", content)
                 # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
                 content = re.sub(
                     r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")',
@@ -1251,6 +1283,14 @@ Claude Code can assist with adapting these workflows to your specific project. J
                 content = re.sub(
                     r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]',
                     'if [ ! -d "$SOURCE_DIR" ]',
+                    content,
+                )
+
+                # integrate.sh: replace project-specific test_server_manager.sh call with generic comment
+                # The call already has || true so it's safe, but making it explicit helps adopters
+                content = re.sub(
+                    r'\./test_server_manager\.sh\s+stop\s+[^\n]+\n',
+                    '# ./your-test-server-manager.sh stop "$current_branch" 2>/dev/null || true\n',
                     content,
                 )
 
@@ -1748,9 +1788,27 @@ This is a filtered reference export from a working Claude Code project. Commands
                     break
 
             if not gh_cmd:
-                raise GitHubAPIError(
-                    "GitHub CLI (gh) not found in PATH or common locations. Please install GitHub CLI."
-                )
+                # Fallback: use git clone with token-authenticated HTTPS URL
+                print("⚠️  gh CLI not found, falling back to git clone with GITHUB_TOKEN...")
+                if not self.github_token:
+                    raise GitHubAPIError(
+                        "GitHub CLI (gh) not found and GITHUB_TOKEN not set. "
+                        "Please install GitHub CLI or set GITHUB_TOKEN."
+                    )
+                repo_url = f"https://x-access-token:{self.github_token}@github.com/jleechanorg/claude-commands.git"
+                cmd = ["git", "clone", repo_url, self.repo_dir]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode != 0:
+                    raise GitRepositoryError(f"Repository clone failed: {result.stderr}")
+                # Configure authenticated remote for subsequent pushes
+                original_cwd = os.getcwd()
+                os.chdir(self.repo_dir)
+                try:
+                    self._configure_authenticated_remote()
+                finally:
+                    os.chdir(original_cwd)
+                print("✅ Repository cloned via git")
+                return
 
         cmd = [gh_cmd, "repo", "clone", "jleechanorg/claude-commands", self.repo_dir]
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -1948,24 +2006,13 @@ This is a filtered reference export from a working Claude Code project. Commands
         else:
             print("✅ Confirmed: No excluded directories in export")
 
-    # Patterns that indicate hardcoded user/project paths (should be filtered)
-    HARDCODED_PATH_PATTERNS = [
-        (r"/Users/jleechan/", "hardcoded /Users/jleechan/ - use $HOME/"),
-        (r"/Users/\$USER/projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
-        (r"/Users/\$USER/projects_other/ralph-orchestrator", "hardcoded ralph-orchestrator - use $RALPH_REPO"),
-        (r"projects_other/ralph-orchestrator", "hardcoded projects_other - use $RALPH_REPO"),
-        (r"projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
-        (r"orch_worldai_ralph", "project-specific orch path - use $PROJECT_ROOT"),
-        (r"worldai_genesis2|worldai_ralph2", "project-specific clone dir - use generic"),
-    ]
-
     def _validate_no_hardcoded_paths(self):
         """Scan exported content for hardcoded user/project paths; warn if found."""
         print("🔍 Validating export for hardcoded path patterns...")
         found = []
         for root, _dirs, files in os.walk(self.repo_dir):
-            # Skip .git
-            if ".git" in root:
+            # Skip only the actual .git directory
+            if ".git" in Path(root).parts:
                 continue
             for name in files:
                 # Skip exportcommands.py (contains pattern literals → false positives)
@@ -2155,12 +2202,9 @@ This is a filtered reference export. Commands may need adaptation for specific e
                     break
 
         if not gh_cmd:
-            raise GitHubAPIError(
-                "GitHub CLI (gh) not found. Install from https://cli.github.com/ or "
-                "run: curl -sL https://github.com/cli/cli/releases/download/v2.40.1/"
-                "gh_2.40.1_linux_amd64.tar.gz | tar -xz -C /tmp && "
-                "mkdir -p ~/.local/bin && cp /tmp/gh_2.40.1_linux_amd64/bin/gh ~/.local/bin/"
-            )
+            # Fallback: use GitHub REST API directly via requests
+            print("⚠️  gh CLI not found, falling back to GitHub REST API...")
+            return self._create_pull_request_via_api(pr_title, pr_body)
 
         # Write PR body to temp file to avoid shell quoting issues
         with tempfile.NamedTemporaryFile(
@@ -2203,6 +2247,38 @@ This is a filtered reference export. Commands may need adaptation for specific e
             )
 
         print(f"✅ Pull request created: {pr_url}")
+        return pr_url
+
+    def _create_pull_request_via_api(self, pr_title, pr_body):
+        """Create pull request using GitHub REST API (fallback when gh CLI unavailable)"""
+        if not self.github_token:
+            raise GitHubAPIError("GITHUB_TOKEN not set - cannot create PR via API")
+
+        api_url = "https://api.github.com/repos/jleechanorg/claude-commands/pulls"
+        headers = {
+            "Authorization": f"token {self.github_token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "title": pr_title,
+            "body": pr_body,
+            "head": self.export_branch,
+            "base": "main",
+        }
+
+        response = requests.post(api_url, headers=headers, json=payload)
+        if response.status_code not in (200, 201):
+            raise GitHubAPIError(
+                f"GitHub API PR creation failed ({response.status_code}): {response.text}"
+            )
+
+        pr_data = response.json()
+        pr_url = pr_data.get("html_url", "")
+        if not pr_url:
+            raise GitHubAPIError(f"No PR URL in API response: {response.text}")
+
+        print(f"✅ Pull request created via API: {pr_url}")
         return pr_url
 
     def report_success(self, pr_url):

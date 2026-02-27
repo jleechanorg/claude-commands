@@ -1791,7 +1791,15 @@ Your response MUST follow this exact structure for clarity:
         env_set = profile.get("env_set")
         if isinstance(env_set, dict):
             for key, value in env_set.items():
-                env[key] = value
+                if not isinstance(key, str) or value is None:
+                    self.logger.warning(
+                        "Skipping invalid env_set override for %s: %r=%r",
+                        cli_name,
+                        key,
+                        value,
+                    )
+                    continue
+                env[key] = str(value)
         if cli_name == "minimax":
             env = apply_minimax_auth_env(env)
 

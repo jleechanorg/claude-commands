@@ -677,7 +677,7 @@ jobs:
       run: |
         mkdir -p "${RUNNER_TEMP}/runner-health"
         cp "${{ steps.preflight.outputs.preflight_json }}" "${RUNNER_TEMP}/runner-health/runner_health.json" 2>/dev/null || true
-        cp "${HOME}/.cache/worldarchitect-ci/runner-health-score.json" "${RUNNER_TEMP}/runner-health/runner_health_score.json" 2>/dev/null || true
+        cp "${HOME}/.cache/${PROJECT_NAME:-your-project}-ci/runner-health-score.json" "${RUNNER_TEMP}/runner-health/runner_health_score.json" 2>/dev/null || true
 
     - name: Upload runner health artifacts
       if: always()
