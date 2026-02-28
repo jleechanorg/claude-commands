@@ -262,8 +262,12 @@ fi
 # Stop test server for current branch if running
 current_branch=$(git branch --show-current)
 if [ "$current_branch" != "main" ]; then
-    echo "🛑 Stopping test server for branch '$current_branch'..."
-    ./test_server_manager.sh stop "$current_branch" 2>/dev/null || true
+    if [ -x "./test_server_manager.sh" ]; then
+        echo "🛑 Stopping test server for branch '$current_branch'..."
+        ./test_server_manager.sh stop "$current_branch" 2>/dev/null || true
+    else
+        echo "ℹ️  Skipping test server stop (test_server_manager.sh not found)"
+    fi
 fi
 
 # Check for unmerged changes on current branch

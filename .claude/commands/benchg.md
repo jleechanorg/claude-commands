@@ -17,6 +17,9 @@ When this command is invoked:
 
 ### 1. Parse Project Specification
 ```bash
+# Fallback definition for PROJECT_ROOT if not set in environment
+PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+
 PROJECT_NUM="${1:-1}"  # Default to Project 1
 CUSTOM_DESCRIPTION="${2:-}"  # Optional custom project description
 
@@ -135,7 +138,7 @@ RALPH_SESSION="ralph-benchmark-p${PROJECT_NUM}-$(date +%Y%m%d-%H%M%S)"
 echo "📋 Ralph orchestration starting..."
 tmux new-session -d -s "$RALPH_SESSION" bash -c "
     cd '$RALPH_DIR' &&
-    python3 /Users/$USER/projects/worktree_ralph/orchestration/orchestrate_unified.py --goal '$PROJECT_DESCRIPTION' --max-iterations 30;
+    python3 $PROJECT_ROOT/orchestration/orchestrate_unified.py --goal '$PROJECT_DESCRIPTION' --max-iterations 30;
     exec bash
 "
 
