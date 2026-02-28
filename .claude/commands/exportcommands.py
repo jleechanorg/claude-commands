@@ -1799,7 +1799,8 @@ This is a filtered reference export from a working Claude Code project. Commands
                 cmd = ["git", "clone", repo_url, self.repo_dir]
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 if result.returncode != 0:
-                    raise GitRepositoryError(f"Repository clone failed: {result.stderr}")
+                    masked_stderr = result.stderr.replace(self.github_token, "***")
+                    raise GitRepositoryError(f"Repository clone failed: {masked_stderr}")
                 # Configure authenticated remote for subsequent pushes
                 original_cwd = os.getcwd()
                 os.chdir(self.repo_dir)

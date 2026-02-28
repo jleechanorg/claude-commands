@@ -473,8 +473,10 @@ case "${1:-run}" in
   status)     [ $# -gt 0 ] && shift; cmd_status "$@" ;;
   dashboard)  [ $# -gt 0 ] && shift; cmd_dashboard "$@" ;;
   help|--help|-h) cmd_help ;;
-  # Backwards compat: if first arg is a number, treat as `run`
+  # Backwards compat: if first arg is a number or --tool, treat as `run`
   [0-9]*)
+    cmd_run "$@" ;;
+  --tool*)
     cmd_run "$@" ;;
   *)
     echo "Unknown command: $1"
