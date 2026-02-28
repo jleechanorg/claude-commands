@@ -475,7 +475,7 @@ case "${1:-run}" in
   help|--help|-h) cmd_help; exit 1 ;;
   # Backwards compat: if first arg is a number or --tool, treat as `run`
   [0-9]*)
-    cmd_run "$@"; exit 1 ;;
+    cmd_run "$@" ;;
   --tool*)
     cmd_run "$@" ;;
   *)
