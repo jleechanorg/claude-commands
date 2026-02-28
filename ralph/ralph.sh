@@ -224,7 +224,7 @@ show_status() {
   echo ""
 
   # Elapsed since last commit
-  LAST_COMMIT_TS=$(git -C "$REPO_ROOT" log -1 --format="%ct" 2>/dev/null)
+  LAST_COMMIT_TS=$(git -C "$REPO_ROOT" log -1 --format="%ct" 2>/dev/null || true)
   NOW_TS=$(date +%s)
   if [ -n "$LAST_COMMIT_TS" ]; then
     ELAPSED=$(( NOW_TS - LAST_COMMIT_TS ))
@@ -281,7 +281,7 @@ show_status() {
   echo ""
   echo "  ── File activity (last 2 min) ────────────────────────"
   RECENT=$(find "$REPO_ROOT" \( -name "*.ts" -o -name "*.py" -o -name "*.js" \) -mmin -2 \
-    -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -8)
+    -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -8 || true)
   if [ -n "$RECENT" ]; then
     echo "$RECENT" | while IFS= read -r f; do
       [ -n "$f" ] && echo "    $f"
