@@ -635,7 +635,7 @@ class TaskDispatcher:
 
     def _get_active_subprocess_agents(self) -> set[str]:
         """Return names of subprocess agents still running; prune exited ones from registry."""
-        registry = getattr(self, "_subprocess_agents", {})
+        registry = self._subprocess_agents
         if not registry:
             return set()
         active = set()

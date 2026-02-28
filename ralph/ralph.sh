@@ -472,10 +472,10 @@ case "${1:-run}" in
   run)        [ $# -gt 0 ] && shift; cmd_run "$@" ;;
   status)     [ $# -gt 0 ] && shift; cmd_status "$@" ;;
   dashboard)  [ $# -gt 0 ] && shift; cmd_dashboard "$@" ;;
-  help|--help|-h) cmd_help ;;
+  help|--help|-h) cmd_help; exit 1 ;;
   # Backwards compat: if first arg is a number or --tool, treat as `run`
   [0-9]*)
-    cmd_run "$@" ;;
+    cmd_run "$@"; exit 1 ;;
   --tool*)
     cmd_run "$@" ;;
   *)

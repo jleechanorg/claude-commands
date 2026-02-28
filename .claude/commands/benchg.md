@@ -17,6 +17,9 @@ When this command is invoked:
 
 ### 1. Parse Project Specification
 ```bash
+# Fallback definition for PROJECT_ROOT if not set in environment
+PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+
 PROJECT_NUM="${1:-1}"  # Default to Project 1
 CUSTOM_DESCRIPTION="${2:-}"  # Optional custom project description
 

@@ -19,8 +19,8 @@ When this command is invoked:
 
 ```bash
 # Fallback definitions for project paths if not set in environment
-RALPH_REPO="${RALPH_REPO:-/Users/$USER/projects/worktree_ralph}"
-PROJECT_ROOT="${PROJECT_ROOT:-$RALPH_REPO}"
+PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+RALPH_REPO="${RALPH_REPO:-$PROJECT_ROOT/ralph}"
 
 echo "🔍 PREREQUISITE VERIFICATION"
 echo "============================"
