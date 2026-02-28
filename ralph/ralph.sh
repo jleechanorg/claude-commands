@@ -81,6 +81,11 @@ cmd_run() {
     echo "---" >> "$PROGRESS_FILE"
   fi
 
+  if [[ "$AI_TOOL" != "claude" && "$AI_TOOL" != "amp" ]]; then
+    echo "Error: Invalid tool '$AI_TOOL'. Must be 'claude' or 'amp'." >&2
+    return 2
+  fi
+
   echo "Starting Ralph - Max iterations: $MAX_ITERATIONS (tool: $AI_TOOL)"
 
   for i in $(seq 1 $MAX_ITERATIONS); do
@@ -89,9 +94,16 @@ cmd_run() {
     echo "  Ralph Iteration $i of $MAX_ITERATIONS"
     echo "==============================================================="
 
-    if ! OUTPUT=$("$AI_TOOL" --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr); then
-      echo "Error: $AI_TOOL failed on iteration $i" >&2
-      return 1
+    if [[ "$AI_TOOL" == "amp" ]]; then
+      if ! OUTPUT=$(amp --dangerously-allow-all < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr); then
+        echo "Error: amp failed on iteration $i" >&2
+        return 1
+      fi
+    else
+      if ! OUTPUT=$(claude --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr); then
+        echo "Error: claude failed on iteration $i" >&2
+        return 1
+      fi
     fi
 
     if echo "$OUTPUT" | tr -s '[:space:]' ' ' | grep -qE '<promise>[[:space:]]*COMPLETE[[:space:]]*</promise>'; then
