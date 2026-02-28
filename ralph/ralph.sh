@@ -96,13 +96,13 @@ cmd_run() {
 
     if [[ "$AI_TOOL" == "amp" ]]; then
       if ! OUTPUT=$(amp --dangerously-allow-all < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr); then
-        echo "Error: amp failed on iteration $i" >&2
-        return 1
+        echo "Error: amp failed on iteration $i, continuing to next iteration..." >&2
+        continue
       fi
     else
       if ! OUTPUT=$(claude --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr); then
-        echo "Error: claude failed on iteration $i" >&2
-        return 1
+        echo "Error: claude failed on iteration $i, continuing to next iteration..." >&2
+        continue
       fi
     fi
 
