@@ -309,8 +309,17 @@ fi
 
 
 
-# Skip git status output for statusline mode
-if [ "$1" != "--status-only" ]; then
+# Parse arguments (--with-status anywhere; --status-only as no-op alias for backward compat)
+WITH_STATUS=false
+for arg in "$@"; do
+    case "$arg" in
+        --with-status) WITH_STATUS=true ;;
+        --status-only) : ;;  # no-op alias for backward compatibility
+    esac
+done
+
+# Show git status output only when explicitly requested
+if [ "$WITH_STATUS" = true ]; then
     echo "=== Git Status ==="
     git status
     echo

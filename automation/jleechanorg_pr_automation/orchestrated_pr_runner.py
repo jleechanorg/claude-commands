@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -437,6 +438,12 @@ def _reset_base_clone_to_main(base_dir: Path) -> None:
 def _fresh_clone(base_dir: Path, repo_full: str, github_host: str) -> None:
     """Delete existing clone and create fresh one."""
     shutil.rmtree(base_dir, ignore_errors=True)
+    if base_dir.exists():
+        raise RuntimeError(
+            f"Failed to remove existing clone at {base_dir} — "
+            "directory still present after rmtree (permission error or locked files). "
+            f"Manual cleanup required: rm -rf -- {shlex.quote(str(base_dir))}"
+        )
     run_cmd(
         ["git", "clone", f"https://{github_host}/{repo_full}.git", str(base_dir)],
         timeout=CLONE_TIMEOUT,

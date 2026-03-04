@@ -21,8 +21,8 @@ execution_mode: immediate
 5. Remove all friction in compliance
 
 **Automated Memory Aid**:
-6. The single command `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh` provides complete context
-7. Shows git status + intelligently finds relevant PRs
+6. The single command `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh` provides essential repo context by default
+7. Intelligently finds relevant PRs and shows sync status (add `--with-status` for full git status)
 8. No need to remember multiple separate commands
 9. Consistent, reliable output every time
 10. Perfect for developing muscle memory
@@ -44,30 +44,35 @@ execution_mode: immediate
 
 ## Implementation
 
-**Single Command**: `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh --with-api`
+**Single Command**: `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh`
 
 This script automatically:
-1. Shows full `git status` output for complete repository context
-2. Gets local branch name with sync status
-3. Gets remote upstream info
-4. Intelligently infers PR information:
+1. Gets local branch name with sync status
+2. Gets remote upstream info
+3. Intelligently infers PR information:
    - Primary: Finds PR for current branch
    - Fallback: If no PR for current branch but uncommitted changes exist, suggests related open PRs
-5. Gets Claude API usage statistics (remaining sessions out of 50)
-6. Formats everything into the required header
+4. Formats everything into the required header
+
+**Optional**: Pass `--with-status` to also show full `git status` output before the header.
 
 **Benefits**:
-- ✅ **Complete git context** - Full `git status` output shows working directory state
+- ✅ **Concise by default** - Header line only, no verbose git status dump
 - ✅ **Intelligent PR inference** - Finds relevant PRs even when branch doesn't have direct PR
-- ✅ **One command with usage info** - Shows sessions remaining out of monthly 50
 - ✅ **Automatic formatting** - Prevents formatting errors
 - ✅ **Error handling** - Gracefully handles missing upstreams/PRs
-- ✅ **Usage awareness** - Never run out of sessions unexpectedly
 - ✅ **Consistent output** - Same format every time
+- ✅ **Optional verbosity** - Use `--with-status` when full git status is needed
 
 ## Output Format
 
-Shows complete repository context followed by the mandatory header format:
+Default output is just the mandatory header line:
+
+```
+[Local: <branch> | Remote: <upstream> | PR: <number> <url>]
+```
+
+With `--with-status` flag, git status is shown first:
 
 ```
 === Git Status ===
@@ -75,24 +80,15 @@ On branch dev1754541036
 Your branch is ahead of 'origin/main' by 2 commits.
   (use "git push" to publish your local commits)
 
-Changes not staged for commit:
-  (use "git add <file>..." to update what will be committed)
-  (use "git checkout -- <file>..." to discard changes to working directory)
-
 	modified:   .claude/hooks/git-header.sh
 
-no changes added to commit (use "git add -a" to commit all changes, or "git add <file>..." to update what will be committed)
-
 [Local: <branch> | Remote: <upstream> | PR: <number> <url>]
-[API: <remaining>/<limit> requests (<percentage>% remaining) | Reset: <time>]
 ```
 
 Examples:
 - `[Local: main | Remote: upstream/main | PR: none]`
-- `[API: 49/50 requests (98% remaining) | Reset: 15:08:12]`
 - `[Local: feature-x | Remote: upstream/main | PR: #123 https://github.com/user/repo/pull/123]`
 - `[Local: dev-branch (ahead 2) | Remote: upstream/main | PR: (related to #456 https://github.com/user/repo/pull/456)]`
-- `[API: 25/50 requests (50% remaining) | Reset: 08:30:45]`
 
 **NOTE**: Remote must NEVER be `origin/main`. Use actual remote name (e.g., `upstream/main`, `origin/branch-name`).
 

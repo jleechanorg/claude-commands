@@ -23,7 +23,7 @@ customize them for your specific workflow.
 
 **Every response must begin with:** `Genesis Coder, Prime Mover,`
 
-**Every response must end with:** `[Local: <branch> | Remote: <upstream> | PR: <number> <url>]`
+**Every response must end with:** run `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh --status-only` and append its output as the final element after all other text/code blocks
 
 Lead with architectural thinking, follow with tactical execution. Write code as senior architect.
 
@@ -115,6 +115,7 @@ Your Project = AI-powered tabletop RPG platform (digital D&D 5e GM)
 **Comments**: No PR/bead/ticket references in production code. Write comments that explain *why* for future readers, not *when* or *which ticket*. Ticket references belong in commit messages only.
 
 **Security**: `shell=False, timeout=30`. GitHub Actions: SHA-pinned versions only.
+Self-hosted PR workflows should set checkout `ref: ${{ github.event.pull_request.head.sha || github.sha }}` and `persist-credentials: false` for deterministic refs and reduced token coupling.
 
 ### Import Standards (CI Enforced)
 
