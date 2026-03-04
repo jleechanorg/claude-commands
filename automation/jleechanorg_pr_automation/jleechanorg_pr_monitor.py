@@ -1791,7 +1791,15 @@ Your response MUST follow this exact structure for clarity:
         env_set = profile.get("env_set")
         if isinstance(env_set, dict):
             for key, value in env_set.items():
-                env[key] = value
+                if not isinstance(key, str) or value is None:
+                    self.logger.warning(
+                        "Skipping invalid env_set override for %s: %r=%r",
+                        cli_name,
+                        key,
+                        value,
+                    )
+                    continue
+                env[key] = str(value)
         if cli_name == "minimax":
             env = apply_minimax_auth_env(env)
 
@@ -4436,23 +4444,11 @@ def main():
 
         task_limit = min(args.codex_task_limit, 200)
 
-        print(f"🤖 Running Codex automation (first {task_limit} tasks)...")
-
-        # Validate Chrome CDP is accessible before running (auto-starts if needed)
-        cdp_ok, cdp_msg = ensure_chrome_cdp_accessible()
-        print(cdp_msg)
-        if not cdp_ok:
-            print("\n⚠️ Skipping Codex automation (Chrome CDP unavailable).")
-            print("💡 TIP: Start Chrome with CDP enabled first:")
-            print("   ./automation/jleechanorg_pr_automation/openai_automation/start_chrome_debug.sh")
-            print("   Or set CODEX_CDP_START_SCRIPT to a custom launcher path.")
-            sys.exit(0)
+        print(f"🤖 Running Codex automation headed+minimized (first {task_limit} tasks)...")
 
         try:
-            host, port = _resolve_cdp_host_port()
-            # Call the codex automation module with limit
-            # Use -m to run as module (works with installed package)
-            # Requires Chrome with CDP enabled (host/port resolved via _resolve_cdp_host_port)
+            # Call the codex automation module with limit.
+            # Headless mode runs with a fresh browser, so CDP pre-check/startup is not required.
 
             # Determine timeout: honor --subprocess-timeout if provided, otherwise use default
             default_timeout_seconds = max(900, int(task_limit * 30))  # ~30s/task, min 15 minutes
@@ -4468,11 +4464,8 @@ def main():
                     "python3",
                     "-m",
                     "jleechanorg_pr_automation.openai_automation.codex_github_mentions",
-                    "--use-existing-browser",
-                    "--cdp-host",
-                    host,
-                    "--cdp-port",
-                    str(port),
+                    "--launch-new-browser",
+                    "--headed",
                     "--limit",
                     str(task_limit),
                 ],

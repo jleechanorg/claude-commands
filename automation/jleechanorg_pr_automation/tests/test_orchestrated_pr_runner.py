@@ -1304,3 +1304,23 @@ def test_get_github_token_from_config_file_with_encoding(monkeypatch, tmp_path):
     # but we can verify it reads correctly.
     token = runner.get_github_token()
     assert token == "utf8-token-🚀"
+
+
+def test_fresh_clone_raises_when_rmtree_silently_fails(monkeypatch, tmp_path):
+    """_fresh_clone must raise RuntimeError when rmtree leaves the dir behind.
+
+    Previously shutil.rmtree(ignore_errors=True) could silently fail (e.g. due
+    to permission issues or locked files on macOS), leaving the directory in
+    place. The subsequent git clone would then exit 128 with an opaque error.
+    The fix is to verify the dir is gone after rmtree and raise a clear
+    RuntimeError so the caller can surface a useful message instead.
+    """
+    base_dir = tmp_path / "org" / "repo"
+    base_dir.mkdir(parents=True)
+    (base_dir / "stale.txt").write_text("stale")
+
+    # Simulate rmtree silently failing by making it a no-op
+    monkeypatch.setattr("shutil.rmtree", lambda path, ignore_errors=False: None)
+
+    with pytest.raises(RuntimeError, match="Failed to remove existing clone"):
+        runner._fresh_clone(base_dir, "org/repo", "github.com")

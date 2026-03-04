@@ -1,61 +1,72 @@
 # Orchestration Quick Start
 
 ## Problem Solved
+
 Previously, spawning an agent took 5+ minutes of manual steps. Now it takes <30 seconds with a single command.
 
 ## Quick Usage
 
-### Python Orchestration
+### ai_orch (recommended)
+
 ```bash
-python3 orchestration/orchestrate_unified.py "Your task description here"
+# Passthrough: run directly, stream output
+ai_orch "Your task description here"
+
+# Async: detached tmux, return immediately
+ai_orch --async "Find and fix inline imports"
 ```
 
 ## Examples
 
 ```bash
 # Fix code issues
-python3 orchestration/orchestrate_unified.py "Find and fix inline imports"
+ai_orch "Find and fix inline imports"
 
 # Run tests
-python3 orchestration/orchestrate_unified.py "Run all tests and fix failures"
+ai_orch "Run all tests and fix failures"
 
 # Frontend tasks
-python3 orchestration/orchestrate_unified.py "Update CSS for dark mode"
+ai_orch "Update CSS for dark mode"
+
+# Use codex
+ai_orch --agent-cli codex "Implement feature X"
+
+# Async with worktree
+ai_orch --async --worktree "refactor auth module"
 ```
 
 ## Monitoring Agents
 
 ```bash
-# List all agents
-tmux ls | grep agent
+# List tmux sessions
+tmux ls | grep ai-
 
-# Attach to specific agent
-tmux attach -t task-direct-5756
+# Attach to specific session (session name printed when started)
+tmux attach -t ai-claude-abc123
 
 # View agent output without attaching
-tmux capture-pane -t task-direct-5756 -p | tail -50
+tmux capture-pane -t ai-claude-abc123 -p | tail -50
 ```
 
 ## Key Improvements
 
 1. **Single Command**: No more navigating directories or setting environment
-2. **Proper Token Limits**: Automatically sets CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192
-3. **Auto Agent Type**: Detects backend/frontend/testing based on task
-4. **Works from Worktrees**: No need to cd to parent directory
-5. **Immediate Feedback**: Shows agent session name for monitoring
+2. **Passthrough by default**: Direct CLI invocation, stream output
+3. **Opt-in async**: `--async` for detached tmux when needed
+4. **Resume support**: `--async --resume` reuses existing session for same directory
+5. **Immediate Feedback**: Shows session name for monitoring
 
 ## Technical Details
 
-- `orchestration/orchestrate_unified.py`: Python orchestration system with agent creation
-- Creates tmux sessions for easy monitoring
-- Agents run with correct token limits from ~/.bashrc
+- `ai_orch` entry point: `orchestration.runner:main`
+- Passthrough: invokes claude/codex/gemini directly
+- Async: creates tmux session under `~/.ai_orch_sessions.json` for resume
 
 ## Troubleshooting
 
-If agent fails with token error:
-- Check ~/.bashrc has: `export CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192`
-- The orchestration system sets the correct value
-
 Agent not starting:
 - Check tmux is installed: `which tmux`
-- Verify Claude CLI is accessible: `which claude`
+- Verify CLI is accessible: `which claude` or `which codex`
+
+MiniMax auth:
+- Set `MINIMAX_API_KEY` in env or `~/.bashrc` or `~/.automation_env`

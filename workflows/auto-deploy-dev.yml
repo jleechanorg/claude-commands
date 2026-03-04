@@ -88,27 +88,15 @@ jobs:
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "Deployment URL: $URL"
 
-      - name: Set up Node.js 20.x
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
-        with:
-          node-version: 20
-
       - name: Run MCP smoke tests
         id: smoke_tests
         timeout-minutes: 15
-        env:
-          MCP_SERVER_URL: ${{ steps.get-url.outputs.url }}
-          MCP_TEST_MODE: real
+        uses: ./.github/actions/run-mcp-smoke-tests
+        with:
+          server_url: ${{ steps.get-url.outputs.url }}
           # Test BOTH Cerebras and Gemini 3 to catch provider-specific regressions
-          MCP_TEST_PROVIDERS: cerebras,gemini
-        run: |
-          echo "🧪 Running MCP smoke tests against dev deployment..."
-          echo "Target: $MCP_SERVER_URL/mcp"
-          echo "Providers: $MCP_TEST_PROVIDERS"
-
-          node scripts/mcp-smoke-tests.mjs
-
-          echo "✅ MCP smoke tests passed"
+          test_providers: cerebras,gemini
+          smoke_token: ${{ secrets.SMOKE_TOKEN }}
 
       - name: Upload smoke test logs
         if: always()
