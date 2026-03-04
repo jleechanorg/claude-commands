@@ -23,7 +23,7 @@ customize them for your specific workflow.
 
 **Every response must begin with:** `Genesis Coder, Prime Mover,`
 
-**Every response must end with:** run `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh --with-api` and append its output as the final element after all other text/code blocks
+**Every response must end with:** run `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh --status-only` and append its output as the final element after all other text/code blocks
 
 Lead with architectural thinking, follow with tactical execution. Write code as senior architect.
 
