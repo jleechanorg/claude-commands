@@ -28,8 +28,6 @@ from importlib import metadata as importlib_metadata
 from typing import Optional
 
 from orchestration.cli_args import add_agent_cli_and_model_arguments
-from orchestration.cli_args import add_live_cli_arguments
-from orchestration.cli_args import add_named_session_argument
 from orchestration.cli_args import add_task_argument
 from orchestration.live_mode import LiveMode
 from orchestration.task_dispatcher import apply_minimax_auth_env
@@ -282,34 +280,29 @@ def main() -> int:
             return "unknown"
 
     parser = argparse.ArgumentParser(
-        description="ai_orch - run AI CLI tasks (passthrough or async tmux)",
+        description="ai_orch - run AI CLI tasks",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  ai_orch "explain this code"                       # passthrough (default)
-  ai_orch --agent-cli codex "print 1"               # codex passthrough
-  ai_orch --async "implement feature X"             # detached tmux session
-  ai_orch --async --resume "add error handling"     # resume existing session
-  ai_orch --async --worktree "refactor auth"        # new git worktree + tmux
-  ai_orch live --cli codex                          # interactive session
+  ai_orch "explain this code"                    passthrough (default)
+  ai_orch --agent-cli codex "print 1"            use codex
+  ai_orch --async "implement feature X"          detached tmux, return immediately
+  ai_orch --async --resume "add error handling"  resume existing session for this dir
+  ai_orch --async --worktree "refactor auth"     git worktree + tmux
         """,
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {_get_version()}")
 
     commands = {"run", "live", "list", "attach", "kill"}
-    live_only_flags = {"--cli", "--name", "--dir", "--detached"}
     argv = sys.argv[1:]
     if argv and not argv[0].startswith("-") and argv[0] not in commands:
         argv = ["run"] + argv
     elif argv and argv[0].startswith("-") and argv[0] not in {"--version", "--help", "-h"}:
-        if any(arg in live_only_flags for arg in argv):
-            argv = ["live"] + argv
-        else:
-            argv = ["run"] + argv
+        argv = ["run"] + argv
 
-    subparsers = parser.add_subparsers(dest="command", help="Commands")
+    subparsers = parser.add_subparsers(dest="command")
 
-    run_parser = subparsers.add_parser("run", help="Run a task (passthrough or async)")
+    run_parser = subparsers.add_parser("run", help="Run a task")
     add_task_argument(run_parser, help_text="Task to send to the CLI")
     add_agent_cli_and_model_arguments(run_parser, model_default=None)
     run_parser.add_argument(
@@ -318,21 +311,24 @@ Examples:
     )
     run_parser.add_argument(
         "--resume", "--continue", dest="resume", action="store_true", default=False,
-        help="Resume existing session for this directory (or add --continue for claude)",
+        help="Resume existing session for this directory",
     )
     run_parser.add_argument(
         "--worktree", dest="worktree", action="store_true", default=False,
-        help="Create a git worktree before running (only applies with --async)",
+        help="Create a git worktree first (only with --async)",
     )
 
-    live_parser = subparsers.add_parser("live", help="Start interactive AI CLI session in tmux")
-    add_live_cli_arguments(live_parser, include_model=True, include_detached=True)
+    # Add live, list, attach, kill subcommands
+    live_parser = subparsers.add_parser("live", help="Start live orchestration mode")
+    live_parser.add_argument("--session", "-s", help="Session name to use")
 
-    subparsers.add_parser("list", help="List active tmux sessions")
-    attach_parser = subparsers.add_parser("attach", help="Attach to existing session")
-    add_named_session_argument(attach_parser, help_text="Session name to attach to")
-    kill_parser = subparsers.add_parser("kill", help="Kill a session")
-    add_named_session_argument(kill_parser, help_text="Session name to kill")
+    list_parser = subparsers.add_parser("list", help="List active sessions")
+
+    attach_parser = subparsers.add_parser("attach", help="Attach to an existing session")
+    attach_parser.add_argument("session", help="Session name to attach to")
+
+    kill_parser = subparsers.add_parser("kill", help="Kill an existing session")
+    kill_parser.add_argument("session", help="Session name to kill")
 
     if argv in (["--help"], ["-h"]):
         parser.print_help()
@@ -361,72 +357,30 @@ Examples:
         return _run_passthrough(task, cli, args.model, resume=args.resume)
 
     if args.command == "live":
-        live_mode = LiveMode(cli_name=args.cli)
-        live_mode.start_interactive_session(
-            session_name=args.name, working_dir=args.dir, model=args.model, attach=not args.detached
-        )
+        live = LiveMode()
+        session_name = getattr(args, "session", None)
+        live.start_live_mode(session_name=session_name)
         return 0
 
     if args.command == "list":
-        all_sessions = []
-        for cli_name in CLI_PROFILES.keys():
-            live_mode = LiveMode(cli_name=cli_name)
-            all_sessions.extend(live_mode.list_sessions())
-
-        if all_sessions:
-            print("📋 Active AI sessions:")
-            for session in all_sessions:
-                print(f"   - {session}")
+        live = LiveMode()
+        sessions = live.list_sessions()
+        if sessions:
+            print("Active sessions:")
+            for s in sessions:
+                print(f"  - {s}")
         else:
-            print("📋 No active AI sessions.")
+            print("No active sessions.")
         return 0
 
     if args.command == "attach":
-        session_name = args.session
-        found = False
-
-        for cli_name in CLI_PROFILES.keys():
-            live_mode = LiveMode(cli_name=cli_name)
-            normalized_name = (
-                session_name
-                if session_name.startswith(live_mode.session_prefix)
-                else f"{live_mode.session_prefix}-{session_name}"
-            )
-            if live_mode._session_exists(normalized_name):
-                live_mode.attach_to_session(session_name)
-                found = True
-                break
-
-        if not found:
-            print(f"❌ Error: Session '{session_name}' not found.")
-            print("\n📋 Available sessions:")
-            for cli_name in CLI_PROFILES.keys():
-                live_mode = LiveMode(cli_name=cli_name)
-                sessions = live_mode.list_sessions()
-                for s in sessions:
-                    print(f"   - {s}")
-            return 1
+        live = LiveMode()
+        live.attach_to_session(args.session)
         return 0
 
     if args.command == "kill":
-        session_name = args.session
-        found = False
-
-        for cli_name in CLI_PROFILES.keys():
-            live_mode = LiveMode(cli_name=cli_name)
-            normalized_name = (
-                session_name
-                if session_name.startswith(live_mode.session_prefix)
-                else f"{live_mode.session_prefix}-{session_name}"
-            )
-            if live_mode._session_exists(normalized_name):
-                live_mode.kill_session(session_name)
-                found = True
-                break
-
-        if not found:
-            print(f"❌ Error: Session '{session_name}' not found.")
-            return 1
+        live = LiveMode()
+        live.kill_session(args.session)
         return 0
 
     parser.print_help()
