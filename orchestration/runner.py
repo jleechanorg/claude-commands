@@ -29,6 +29,7 @@ from typing import Optional
 
 from orchestration.cli_args import add_agent_cli_and_model_arguments
 from orchestration.cli_args import add_task_argument
+from orchestration.live_mode import LiveMode
 from orchestration.task_dispatcher import apply_minimax_auth_env
 from orchestration.task_dispatcher import CLI_PROFILES
 from orchestration.task_dispatcher import GEMINI_MODEL
@@ -292,7 +293,7 @@ Examples:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {_get_version()}")
 
-    commands = {"run"}
+    commands = {"run", "live", "list", "attach", "kill"}
     argv = sys.argv[1:]
     if argv and not argv[0].startswith("-") and argv[0] not in commands:
         argv = ["run"] + argv
@@ -316,6 +317,18 @@ Examples:
         "--worktree", dest="worktree", action="store_true", default=False,
         help="Create a git worktree first (only with --async)",
     )
+
+    # Add live, list, attach, kill subcommands
+    live_parser = subparsers.add_parser("live", help="Start live orchestration mode")
+    live_parser.add_argument("--session", "-s", help="Session name to use")
+
+    list_parser = subparsers.add_parser("list", help="List active sessions")
+
+    attach_parser = subparsers.add_parser("attach", help="Attach to an existing session")
+    attach_parser.add_argument("session", help="Session name to attach to")
+
+    kill_parser = subparsers.add_parser("kill", help="Kill an existing session")
+    kill_parser.add_argument("session", help="Session name to kill")
 
     if argv in (["--help"], ["-h"]):
         parser.print_help()
@@ -342,6 +355,33 @@ Examples:
                 resume=args.resume, worktree=args.worktree,
             )
         return _run_passthrough(task, cli, args.model, resume=args.resume)
+
+    if args.command == "live":
+        live = LiveMode()
+        session_name = getattr(args, "session", None)
+        live.start_live_mode(session_name=session_name)
+        return 0
+
+    if args.command == "list":
+        live = LiveMode()
+        sessions = live.list_sessions()
+        if sessions:
+            print("Active sessions:")
+            for s in sessions:
+                print(f"  - {s}")
+        else:
+            print("No active sessions.")
+        return 0
+
+    if args.command == "attach":
+        live = LiveMode()
+        live.attach_to_session(args.session)
+        return 0
+
+    if args.command == "kill":
+        live = LiveMode()
+        live.kill_session(args.session)
+        return 0
 
     parser.print_help()
     return 1
