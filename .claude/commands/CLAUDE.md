@@ -39,7 +39,7 @@ Commands without this header are considered invalid and should be updated before
 
 **Core Command Files** (80+ .md files):
 - **Execution**: `execute.md`, `e.md` - Main task execution commands
-- **Planning**: `plan.md`, `arch.md`, `design.md` - Architectural and planning workflows
+- **Planning**: `planexec.md`, `arch.md`, `design.md` - Architectural and planning workflows
 - **Testing**: `test.md`, `tdd.md`, `testui.md`, `testhttpf.md` - Testing command suite
 - **Git Operations**: `push.md`, `pushl.md`, `pr.md`, `integrate.md` - Git workflow automation
 - **Orchestration**: `orch.md`, `orchestrate.md`, `handoff.md` - Multi-agent coordination
