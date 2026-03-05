@@ -160,6 +160,15 @@ User must respond with "APPROVED" or specific modifications before execution beg
 3. Use universal composition with other commands naturally
 4. Preserve context for testing and validation
 
+### Phase 5: Simplify (MANDATORY FINAL STEP)
+
+**Action Steps:**
+**After execution completes, ALWAYS run `/simplify` to review changed code:**
+1. Invoke the `/simplify` skill automatically — do NOT skip this step
+2. `/simplify` reviews all changed code for reuse opportunities, code quality, and efficiency
+3. Any issues found by `/simplify` must be fixed before considering the plan complete
+4. This phase ensures every `/plan` and `/planexec` execution produces clean, efficient, deduplicated code
+
 ## 📋 REFERENCE DOCUMENTATION
 
 # Plan Command - Execute with Approval
@@ -186,6 +195,7 @@ User must respond with "APPROVED" or specific modifications before execution beg
 - `/think` - Strategic analysis and problem solving
 - `/guidelines` - Mistake prevention and protocol compliance
 - `/context` - Continuous context monitoring
+- `/simplify` - **MANDATORY** final step: code reuse, quality, and efficiency review
 - Memory MCP - Pattern recognition and preference application
 
 **Adaptive Workflow**: The planning process adapts based on:
