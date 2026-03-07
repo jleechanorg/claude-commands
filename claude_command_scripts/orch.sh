@@ -3,16 +3,16 @@
 # Usage: /orch [task_description] or ./orch.sh [task_description]
 # Works from any directory within a git repository or worktree
 
+set -euo pipefail
+
 # Find the git directory (works in worktrees and submodules)
-git rev-parse --git-dir >/dev/null 2>&1
-if [ $? -ne 0 ]; then
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
     echo "[Not in a git repository]"
     exit 1
 fi
 
 # Get the root of the working tree
-git_root=$(git rev-parse --show-toplevel 2>/dev/null)
-if [ $? -ne 0 ]; then
+if ! git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
     echo "[Unable to find git root]"
     exit 1
 fi

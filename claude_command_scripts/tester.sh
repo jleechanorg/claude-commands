@@ -2,7 +2,7 @@
 # /tester - Run End2End Tests (Real Mode)
 # Runs end2end tests using actual services (Firestore, Gemini)
 
-set -e
+set -euo pipefail
 
 # Set test mode environment
 export TEST_MODE=real

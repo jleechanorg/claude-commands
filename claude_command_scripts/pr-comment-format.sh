@@ -3,7 +3,7 @@
 # PR Comment Formatter - CLI script for generating structured PR comment responses
 # Usage: ./pr-comment-format.sh [template|interactive|json <file>]
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -98,7 +98,10 @@ run_interactive_mode() {
     read -p "Enter summary title: " summary_title
 
     # Create temporary Python script for interactive mode
-    cat > /tmp/pr_interactive.py << 'EOF'
+    local interactive_py
+    interactive_py="$(mktemp -t pr_interactive.XXXXXX.py)"
+
+    cat > "$interactive_py" << 'EOF'
 import sys
 sys.path.insert(0, 'scripts')
 from pr_comment_formatter import PRCommentFormatter, CommentStatus
@@ -192,15 +195,18 @@ EOF
 
     # Run the interactive script
     cd "$PROJECT_ROOT"
-    python3 /tmp/pr_interactive.py "$summary_title"
+    python3 "$interactive_py" "$summary_title"
 
     # Clean up
-    rm -f /tmp/pr_interactive.py
+    rm -f "$interactive_py"
 }
 
 # Function to create example JSON file
 create_example_json() {
-    cat > /tmp/example_pr_response.json << 'EOF'
+    local example_json
+    example_json="$(mktemp -t example_pr_response.XXXXXX.json)"
+
+    cat > "$example_json" << 'EOF'
 {
     "summary_title": "Example PR Response",
     "tasks": [
@@ -257,8 +263,8 @@ create_example_json() {
 }
 EOF
 
-    print_color $GREEN "Example JSON file created at: /tmp/example_pr_response.json"
-    echo "You can use it with: $0 json /tmp/example_pr_response.json"
+    print_color $GREEN "Example JSON file created at: $example_json"
+    echo "You can use it with: $0 json $example_json"
 }
 
 # Main script logic

@@ -66,12 +66,19 @@ has_changes() {
     ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]
 }
 
+print_rule() {
+    printf "=%.0s" {1..80}
+    echo
+}
+
 create_planning_scratchpad() {
     local task_name="$1"
     local prompt="$2"
     local current_branch="$(get_current_branch)"
     local timestamp="$(date '+%Y-%m-%d %H:%M')"
     local filename="roadmap/scratchpad_${task_name}.md"
+
+    mkdir -p roadmap
 
     cat > "$filename" << EOF
 # 🎯 HEADLESS COMMAND READY (Copy-paste when ready)
@@ -228,16 +235,16 @@ git push -u origin "$BRANCH_NAME"
 
 # Phase 2: Generate Copy-Paste Command
 echo ""
-echo "="*80
+print_rule
 echo -e "${GREEN}✅ PLANNING PHASE COMPLETE${NC}"
-echo "="*80
+print_rule
 echo -e "${CYAN}📋 Planning file:${NC} $SCRATCHPAD_FILE"
 echo -e "${CYAN}🌿 Branch:${NC} $BRANCH_NAME (pushed to remote)"
 echo -e "${CYAN}📁 Worktree:${NC} $(pwd)"
 echo ""
-echo "="*80
+print_rule
 echo -e "${GREEN}🤖 HEADLESS COMMAND READY (Copy & Paste)${NC}"
-echo "="*80
+print_rule
 echo ""
 echo -e "${YELLOW}claude -p \"TASK: $PROMPT"
 echo ""
@@ -257,7 +264,7 @@ echo "FULL SPECIFICATION: $(pwd)/$SCRATCHPAD_FILE"
 echo ""
 echo "START: Implement the detailed plan below\" --output-format stream-json --verbose --dangerously-skip-permissions${NC}"
 echo ""
-echo "="*80
+print_rule
 echo -e "${GREEN}📋 Next Steps:${NC}"
 echo -e "${CYAN}1.${NC} Review the generated plan in: $SCRATCHPAD_FILE"
 echo -e "${CYAN}2.${NC} Modify the plan if needed (add details, adjust approach)"

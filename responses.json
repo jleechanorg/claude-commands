@@ -1,0 +1,44 @@
+{
+  "fixed": [
+    {
+      "html_url": "https://github.com/jleechanorg/claude-commands/pull/255#discussion_install_handle_failure",
+      "summary": "Updated install failure paths to avoid hard exits, add interactive prompt when running in TTY, and return non-zero for graceful handling."
+    },
+    {
+      "html_url": "https://github.com/jleechanorg/claude-commands/pull/255#discussion_install_copy_validation",
+      "summary": "Hardened install_component() by validating cp/find/chmod operations and comparing source vs destination file counts."
+    },
+    {
+      "html_url": "https://github.com/jleechanorg/claude-commands/pull/255#discussion_install_plugin_src_fallback",
+      "summary": "Added fallback plugin source resolution to parent directory when .claude/ is not in script directory."
+    },
+    {
+      "html_url": "https://github.com/jleechanorg/claude-commands/pull/255#discussion_test_installer_pipefail",
+      "summary": "Updated test_installer_real.sh with set -euo pipefail, explicit fail() helper, robust file counting, and reduced excess blank lines."
+    },
+    {
+      "html_url": "https://github.com/jleechanorg/claude-commands/pull/255#discussion_headless_roadmap_dir",
+      "summary": "Ensured roadmap directory is created before writing scratchpad and replaced invalid '=' repetition syntax with print_rule helper."
+    },
+    {
+      "html_url": "https://github.com/jleechanorg/claude-commands/pull/255#discussion_scripts_strict_mode",
+      "summary": "Applied set -euo pipefail to list/test/pr formatting helper scripts highlighted in review."
+    },
+    {
+      "html_url": "https://github.com/jleechanorg/claude-commands/pull/255#discussion_tmp_file_security",
+      "summary": "Replaced predictable /tmp file names in pr-comment-format.sh with mktemp-generated file paths."
+    },
+    {
+      "html_url": "https://github.com/jleechanorg/claude-commands/pull/255#discussion_memory_wrapper_dependencies",
+      "summary": "Updated memory_enhanced_wrapper.sh to avoid broken imports/paths and map to scripts that exist in this repository."
+    }
+  ],
+  "considered": [
+    {
+      "html_url": "https://github.com/jleechanorg/claude-commands/pull/255#discussion_install_component_shared_lib",
+      "status": "DEFERRED",
+      "summary": "Kept install_component local to this installer for this PR scope; extracting a shared install utility across automation/orchestration can be handled as a follow-up refactor."
+    }
+  ],
+  "marker": "<!-- codex-automation-commit:cfad5c2cb69dcfe21e2f823a578f616afd848c11-->"
+}

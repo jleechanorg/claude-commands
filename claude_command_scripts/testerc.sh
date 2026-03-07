@@ -2,7 +2,7 @@
 # /testerc - Run End2End Tests (Real Mode + Capture)
 # Runs end2end tests using real services AND captures data for mock generation
 
-set -e
+set -euo pipefail
 
 # Set test mode environment
 export TEST_MODE=capture

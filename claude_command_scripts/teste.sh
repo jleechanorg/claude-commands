@@ -2,7 +2,7 @@
 # /teste - Run End2End Tests (Mock Mode)
 # Runs end2end tests using mocked services (current behavior)
 
-set -e
+set -euo pipefail
 
 # Set test mode environment
 export TEST_MODE=mock
