@@ -63,7 +63,7 @@ jobs:
       has-changes: ${{ steps.changes.outputs.has-changes }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
           fetch-depth: 0  # Full history for accurate change detection
 
@@ -101,7 +101,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
           fetch-depth: 0  # Full history needed for merge-base diff
       - name: Run import validation
@@ -141,7 +141,7 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/mvp_site:${{ github.workspace }}/automation
     steps:
     - name: Checkout merge commit
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       with:
         # Deliberately NOT setting ref — uses default merge commit
         # to validate the PR integrates cleanly with the base branch.
@@ -223,7 +223,7 @@ jobs:
         fi
 
     - name: Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       with:
         # For PRs: checkout the actual head commit, not the synthetic merge commit.
         # testmon fingerprints files using the working tree state; the merge commit
@@ -677,7 +677,7 @@ jobs:
       run: |
         mkdir -p "${RUNNER_TEMP}/runner-health"
         cp "${{ steps.preflight.outputs.preflight_json }}" "${RUNNER_TEMP}/runner-health/runner_health.json" 2>/dev/null || true
-        cp "${HOME}/.cache/worldarchitect-ci/runner-health-score.json" "${RUNNER_TEMP}/runner-health/runner_health_score.json" 2>/dev/null || true
+        cp "${HOME}/.cache/${PROJECT_NAME:-${GITHUB_REPOSITORY##*/}}-ci/runner-health-score.json" "${RUNNER_TEMP}/runner-health/runner_health_score.json" 2>/dev/null || true
 
     - name: Upload runner health artifacts
       if: always()
@@ -774,7 +774,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
           fetch-depth: 0  # Full history needed for git diff (delta coverage)
 

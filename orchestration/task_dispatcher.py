@@ -635,7 +635,7 @@ class TaskDispatcher:
 
     def _get_active_subprocess_agents(self) -> set[str]:
         """Return names of subprocess agents still running; prune exited ones from registry."""
-        registry = getattr(self, "_subprocess_agents", {}) or {}
+        registry = self._subprocess_agents
         if not registry:
             return set()
         active = set()
@@ -2285,17 +2285,22 @@ Complete the task, then use /pr to create a new pull request."""
                 # --search is a top-level Codex flag (codex --search exec ...),
                 # not an exec subcommand flag. Remove it and any value from exec args.
                 filtered: list[str] = []
-                skip_next = False
-                for arg in cli_args:
+                i = 0
+                while i < len(cli_args):
+                    arg = cli_args[i]
                     a = str(arg)
-                    if skip_next:
-                        skip_next = False
+                    if a.startswith("--search="):
+                        i += 1
                         continue
-                    if a == "--search" or a.startswith("--search="):
-                        if a == "--search":
-                            skip_next = True
+                    if a == "--search":
+                        # Skip an explicit value only when next token is not another option.
+                        if i + 1 < len(cli_args) and not str(cli_args[i + 1]).startswith("-"):
+                            i += 2
+                        else:
+                            i += 1
                         continue
                     filtered.append(arg)
+                    i += 1
                 cli_args = filtered
 
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
@@ -3202,19 +3207,16 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                         [str(script_path)],
                         **popen_kwargs,
                     )
-                except Exception:
+                finally:
                     if log_fd is not None:
                         log_fd.close()
-                    raise
                 agent_spec["pid"] = proc.pid
                 agent_spec["process"] = proc
-                agent_spec["log_fd"] = log_fd
+                agent_spec["log_file"] = log_file
                 agent_spec["launch_mode"] = "subprocess"
 
                 # Register subprocess agent (name -> proc) so capacity/collision checks include it.
                 # _get_active_subprocess_agents() prunes exited procs when building active set.
-                if not hasattr(self, "_subprocess_agents"):
-                    self._subprocess_agents = {}
                 self._subprocess_agents[agent_name] = proc
                 # Invalidate active_agents cache so next read includes this agent.
                 self._active_agents = None

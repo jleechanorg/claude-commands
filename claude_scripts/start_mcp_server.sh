@@ -66,7 +66,7 @@ done
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-MCP_SERVER_PATH="$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py"
+MCP_SERVER_PATH="$PROJECT_ROOT/mcp_api.py"
 
 # Validate MCP server exists
 if [ ! -f "$MCP_SERVER_PATH" ]; then

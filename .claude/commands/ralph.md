@@ -197,7 +197,7 @@ When you execute `/ralph`:
 1. **Verify Ralph Repository**
    ```bash
    # Default location
-   RALPH_REPO="/Users/$USER/projects_other/ralph-orchestrator"
+   RALPH_REPO="${RALPH_REPO:-$HOME/projects/ralph-orchestrator}"
 
    # Or use custom location from parameter
    if [ $# -ge 3 ]; then

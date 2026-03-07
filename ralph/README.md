@@ -6,20 +6,21 @@ Self-contained toolkit for running iterative AI-driven development tasks from a 
 
 ```bash
 # From repo root
-./ralph/ralph.sh [--tool claude] 20
-./ralph/status.sh --watch          # Monitor progress
-./ralph/dashboard_server.sh --open # Web dashboard on :9450
+./ralph/ralph.sh run --tool claude 20   # Run agent loop
+./ralph/ralph.sh status --watch         # Monitor progress
+./ralph/ralph.sh dashboard --open       # Web dashboard on 127.0.0.1:9450 (local only)
+
+# Shorthand (backwards compatible)
+./ralph/ralph.sh --tool claude 20       # Defaults to `run`
 ```
 
 ## Contents
 
 | File | Purpose |
 |------|---------|
-| `ralph.sh` | Main runner loop: runs agent per story, commits, updates PRD |
-| `status.sh` | CLI status monitor (`--watch` for auto-refresh) |
-| `dashboard_server.sh` | Web dashboard on port 9450 |
+| `ralph.sh` | Single entry point: `run`, `status`, `dashboard` subcommands |
 | `dashboard.html` | Dashboard UI (phases, commits, next story) |
-| `CLAUDE.md` | Agent instructions (read by `ralph.sh`) |
+| `CLAUDE.md` | Agent instructions (read by `ralph.sh run`) |
 | `prd.json` | PRD with user stories — **customize for your project** |
 | `progress.txt` | Progress log (append-only, codebase patterns at top) |
 | `.last-branch` | Runtime state (branch tracking, gitignored) |
@@ -33,20 +34,13 @@ Self-contained toolkit for running iterative AI-driven development tasks from a 
 
 ## Usage
 
-**From repo root:**
-
 ```bash
-./ralph/ralph.sh [--tool amp|claude] [max_iterations]
-./ralph/status.sh [--watch]
-./ralph/dashboard_server.sh [--open]
-```
+./ralph/ralph.sh run [--tool amp|claude] [max_iterations]
+./ralph/ralph.sh status [--watch|-w]
+./ralph/ralph.sh dashboard [--open|-o]
+./ralph/ralph.sh help
 
-**From inside `ralph/`:**
-
-```bash
-./ralph.sh [--tool amp|claude] [max_iterations]
-./status.sh [--watch]
-./dashboard_server.sh [--open]
+Note: the dashboard binds to `127.0.0.1` and is only accessible from the local machine.
 ```
 
 ## Customizing for Your Project
@@ -67,4 +61,4 @@ Self-contained toolkit for running iterative AI-driven development tasks from a 
 
 ## Self-Contained
 
-All paths use `SCRIPT_DIR`. Place `ralph/` at any project root and customize `prd.json` and `progress.txt`.
+All paths use `SCRIPT_DIR`. Place `ralph/` at any project root and customize `prd.json` and `progress.txt`. Scripts are symlink-safe and work when invoked via symlink from `PATH`.
