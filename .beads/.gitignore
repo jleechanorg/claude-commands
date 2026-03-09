@@ -10,3 +10,5 @@
 # Temporary
 last-touched
 *.tmp
+
+dolt/

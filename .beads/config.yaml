@@ -1,4 +1,6 @@
-# Beads Project Configuration
-# issue_prefix: claude-commands
-# default_priority: 2
-# default_type: task
+issue-prefix: "rev"
+no-db: false
+no-daemon: true
+db: .beads/beads.db
+sync-branch: "beads-sync"
+no-sparse-checkout: true
