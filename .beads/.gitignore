@@ -12,3 +12,4 @@ last-touched
 *.tmp
 
 dolt/
+.br_history/
