@@ -207,7 +207,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'echo \"🚫 Automation disabled - manual push required\"; exit 0'",
+            "command": "bash -c 'echo \"\ud83d\udeab Automation disabled - manual push required\"; exit 0'",
             "description": "DISABLED: Auto-sync commits to remote after git commit operations"
           }
         ]
@@ -277,7 +277,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/scripts/slack_notify.sh\" ] && \"$ROOT/scripts/slack_notify.sh\" \"✅ Claude Code: Work completed - awaiting next instruction\" || true; fi; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/scripts/slack_notify.sh\" ] && \"$ROOT/scripts/slack_notify.sh\" \"\u2705 Claude Code: Work completed - awaiting next instruction\" || true; fi; exit 0'",
             "description": "Send Slack notification when Claude Code stops and awaits next command"
           }
         ]
@@ -287,7 +287,7 @@
   "verbose": false,
   "statusLine": {
     "type": "command",
-    "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && \"$ROOT/.claude/hooks/git-header.sh\" --status-only && exit 0; fi; if [ -x \"$HOME/.claude/hooks/git-header.sh\" ]; then \"$HOME/.claude/hooks/git-header.sh\" --status-only; elif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo \"📁 $(basename \"$(pwd)\") | 🌿 $(git branch --show-current 2>/dev/null || echo 'detached')\"; else echo \"📁 $(basename \"$(pwd)\") | 🏠 home\"; fi'",
+    "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && \"$ROOT/.claude/hooks/git-header.sh\" --status-only && exit 0; fi; if [ -x \"$HOME/.claude/hooks/git-header.sh\" ]; then \"$HOME/.claude/hooks/git-header.sh\" --status-only; elif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo \"\ud83d\udcc1 $(basename \"$(pwd)\") | \ud83c\udf3f $(git branch --show-current 2>/dev/null || echo 'detached')\"; else echo \"\ud83d\udcc1 $(basename \"$(pwd)\") | \ud83c\udfe0 home\"; fi'",
     "padding": 0
   },
   "mcpServers": {
@@ -367,19 +367,6 @@
         "Authorization": "Bearer ${RENDER_API_KEY}"
       }
     },
-    "serena": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/oraios/serena",
-        "serena",
-        "start-mcp-server"
-      ],
-      "env": {
-        "MCP_VERBOSE_TOOLS": "false",
-        "MCP_AUTO_DISCOVER": "false"
-      }
-    },
     "ios-simulator-mcp": {
       "command": "npx",
       "args": [
@@ -396,6 +383,16 @@
       "env": {
         "PYTHONPATH": "${HOME}/projects/worktree_worker2"
       }
+    },
+    "openclaw": {
+      "command": "npx",
+      "args": [
+        "openclaw-mcp",
+        "--openclaw-url",
+        "http://127.0.0.1:18789",
+        "--gateway-token",
+        "08594b0c0a25e880680c874df473521ac37320a865620725"
+      ]
     }
   }
 }

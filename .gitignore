@@ -94,3 +94,4 @@ workspace_*/
 # Task outputs
 task_outputs/
 results/
+.claude/scheduled_tasks.lock
