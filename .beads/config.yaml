@@ -1,4 +1,4 @@
-issue-prefix: "rev"
+issue-prefix: "REV"
 no-db: false
 no-daemon: true
 db: .beads/beads.db
