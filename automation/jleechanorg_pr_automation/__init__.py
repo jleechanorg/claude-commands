@@ -11,13 +11,13 @@ from importlib.metadata import version as dist_version
 from pathlib import Path
 from typing import Any
 
-from .automation_safety_manager import AutomationSafetyManager
-
-
 # Lazy import to avoid RuntimeWarning when running as script
 # Use __getattr__ for Python 3.7+ lazy module imports
 def __getattr__(name: str) -> Any:
-    """Lazy import of JleechanorgPRMonitor to avoid frozen module warning."""
+    """Lazy import of package exports to avoid module-execution warnings."""
+    if name == "AutomationSafetyManager":
+        from .automation_safety_manager import AutomationSafetyManager
+        return AutomationSafetyManager
     if name == "JleechanorgPRMonitor":
         from .jleechanorg_pr_monitor import JleechanorgPRMonitor
         return JleechanorgPRMonitor

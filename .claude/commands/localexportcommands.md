@@ -39,6 +39,7 @@ This command copies standard Claude Code directories to ~/.claude:
 - **Settings** (.claude/settings.json) → ~/.claude/settings.json - Configuration
 - **Dependencies** (package.json, package-lock.json) → ~/.claude/ - Node.js dependencies for secondo command
 - **Codex Skills** (.codex/skills/) → ~/.codex/skills/ - Codex CLI skill documentation
+- **Ralph Toolkit** (ralph/) → ~/ralph/ - Portable Ralph runtime and libraries
 **🚨 EXCLUDED**: Project-specific directories (schemas, templates, framework, guides, learnings, memory_templates, research) are NOT exported to maintain clean global ~/.claude structure.
 
 **✅ INCLUDES**:
@@ -46,6 +47,7 @@ This command copies standard Claude Code directories to ~/.claude:
 - **Unified MCP installer** (install_mcp_servers.sh) - Installs all MCP servers for Claude/Codex/both
 - **Secondo authentication CLI** (auth-cli.mjs in .claude/scripts/)
 - Node.js dependencies (package.json, package-lock.json)
+- **Ralph toolkit scripts** (ralph.sh, ralph-pair.sh, lib/*.sh, dashboard assets)
 
 **🚀 UNIFIED MCP INSTALLER**:
 - `install_mcp_servers.sh` replaces old claude_mcp.sh and codex_mcp.sh launchers
@@ -318,6 +320,66 @@ else
     echo "   ⚠️  .codex/skills/ not found, skipping Codex skills export"
 fi
 
+# Export Ralph toolkit from root ralph/ to ~/ralph/
+echo ""
+echo "📦 Exporting Ralph toolkit..."
+echo "================================="
+
+if [ -d "ralph" ]; then
+    mkdir -p "$HOME/ralph"
+    backup_root="$HOME/.claude/backups"
+    backup_dir="$backup_root/ralph-$(date +%Y%m%d-%H%M%S)"
+
+    if [ -d "$HOME/ralph" ] && [ "$(ls -A "$HOME/ralph" 2>/dev/null)" ]; then
+        mkdir -p "$backup_root" "$backup_dir"
+        if command -v rsync >/dev/null 2>&1; then
+            rsync -a "$HOME/ralph/" "$backup_dir/"
+        else
+            cp -a "$HOME/ralph/." "$backup_dir/"
+        fi
+        echo "   🔁 Backed up existing ~/ralph to $backup_dir"
+    fi
+
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -a --delete \
+            --exclude="prd.json" \
+            --exclude="progress.txt" \
+            --exclude="metrics.json" \
+            --exclude="archive/" \
+            --exclude=".last-branch" \
+            "ralph/" "$HOME/ralph/"
+    else
+        tmp_dir="$HOME/ralph.tmp.$$"
+        rm -rf "$tmp_dir"
+        mkdir -p "$tmp_dir"
+        cp -a "ralph/." "$tmp_dir/"
+
+        # Remove repo runtime files from tmp_dir so fresh install does not leak source state
+        rm -f "$tmp_dir/prd.json" "$tmp_dir/progress.txt" "$tmp_dir/metrics.json" "$tmp_dir/.last-branch"
+        rm -rf "$tmp_dir/archive"
+
+        for runtime_file in "prd.json" "progress.txt" "metrics.json" ".last-branch"; do
+            if [ -e "$HOME/ralph/$runtime_file" ]; then
+                cp -a "$HOME/ralph/$runtime_file" "$tmp_dir/$runtime_file"
+            fi
+        done
+
+        if [ -d "$HOME/ralph/archive" ]; then
+            mkdir -p "$tmp_dir/archive"
+            cp -a "$HOME/ralph/archive/." "$tmp_dir/archive/"
+        fi
+
+        rm -rf "$HOME/ralph"
+        mv "$tmp_dir" "$HOME/ralph"
+    fi
+
+    find "$HOME/ralph" -name "*.sh" -exec chmod +x {} \;
+    echo "   ✅ Exported Ralph toolkit to ~/ralph (toolkit synced, runtime state preserved)"
+else
+    echo "   ⚠️  ralph/ directory not found, skipping Ralph toolkit export"
+fi
+
+echo ""
 # Validation checklist
 
 echo ""
@@ -332,6 +394,7 @@ echo "6. Skills directory: $([ -d "$HOME/.claude/skills" ] && echo "✅ Present"
 echo "7. package.json: $([ -f "$HOME/.claude/package.json" ] && echo "✅ Present" || echo "⚠️  Missing (secondo may not work)")"
 echo "8. install_mcp_servers.sh: $([ -f "$HOME/.claude/scripts/install_mcp_servers.sh" ] && echo "✅ Present" || echo "⚠️  Missing")"
 echo "9. Codex skills directory: $([ -d "$HOME/.codex/skills" ] && echo "✅ Present ($(find "$HOME/.codex/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') skills)" || echo "⚠️  Missing")"
+echo "10. Ralph toolkit entrypoint: $([ -x "$HOME/ralph/ralph.sh" ] && echo "✅ Present" || echo "⚠️  Missing or not executable")"
 
 echo ""
 echo "🎉 Local export completed successfully!"

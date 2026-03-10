@@ -6,13 +6,17 @@ Validates that model parameter is correctly passed through the automation pipeli
 """
 
 import argparse
+import io
+import sys
 import unittest
+from contextlib import redirect_stdout
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import (
     JleechanorgPRMonitor,
     _normalize_model,
+    main,
 )
 from jleechanorg_pr_automation.orchestrated_pr_runner import dispatch_agent_for_pr_with_task
 
@@ -277,6 +281,90 @@ class TestModelParameter(unittest.TestCase):
             mock_dispatch.assert_called_once()
             call_kwargs = mock_dispatch.call_args[1] if mock_dispatch.call_args else {}
             self.assertEqual(call_kwargs.get("model"), "sonnet")
+
+    @patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.CodexCloudAPI")
+    def test_codex_api_main_exits_non_zero_when_any_task_fails(self, mock_api_cls):
+        """codex-api should fail the overall run when a task still fails after fallback."""
+        mock_api = MagicMock()
+        task_ok = {"id": "task_e_ok123456", "title": "GitHub Mention: ok", "summary": {"files_changed": 1}}
+        task_bad = {"id": "task_e_bad12345", "title": "GitHub Mention: bad", "summary": {"files_changed": 1}}
+        mock_api_cls.return_value = mock_api
+        mock_api.list_all_tasks.return_value = [task_ok, task_bad]
+        mock_api.filter_github_mentions.return_value = [task_ok, task_bad]
+        mock_api.filter_by_status.return_value = [task_ok, task_bad]
+        mock_api.filter_has_changes.return_value = [task_ok, task_bad]
+        mock_api.apply_and_push.side_effect = [
+            {"success": True, "branch": "codex/ok123456"},
+            {"success": False, "error": "branch exists"},
+        ]
+        mock_api.create_pr_from_diff.return_value = {"success": False, "error": "commit failed"}
+
+        stdout = io.StringIO()
+        with patch.object(sys, "argv", ["pr-monitor", "--codex-api", "--codex-apply-and-push", "--codex-task-limit", "2"]):
+            with self.assertRaises(SystemExit) as cm, redirect_stdout(stdout):
+                main()
+
+        self.assertEqual(cm.exception.code, 1)
+        self.assertIn("PR creation failed", stdout.getvalue())
+
+    @patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.CodexCloudAPI")
+    def test_codex_api_skips_pr_fallback_for_unrecoverable_patch_errors(self, mock_api_cls):
+        """Malformed task diffs should be skipped without failing the scheduler run."""
+        mock_api = MagicMock()
+        task_bad = {"id": "task_e_bad12345", "title": "GitHub Mention: bad", "summary": {"files_changed": 1}}
+        mock_api_cls.return_value = mock_api
+        mock_api.list_all_tasks.return_value = [task_bad]
+        mock_api.filter_github_mentions.return_value = [task_bad]
+        mock_api.filter_by_status.return_value = [task_bad]
+        mock_api.filter_has_changes.return_value = [task_bad]
+        mock_api.apply_and_push.return_value = {
+            "success": False,
+            "error": "error: corrupt patch at line 396",
+            "fallback_to_pr": False,
+        }
+
+        stdout = io.StringIO()
+        with patch.object(sys, "argv", ["pr-monitor", "--codex-api", "--codex-apply-and-push", "--codex-task-limit", "1"]):
+            with self.assertRaises(SystemExit) as cm, redirect_stdout(stdout):
+                main()
+
+        self.assertEqual(cm.exception.code, 0)
+        self.assertIn("Skipping unrecoverable task output", stdout.getvalue())
+        self.assertIn("skipped 1 invalid task payload", stdout.getvalue())
+        mock_api.create_pr_from_diff.assert_not_called()
+
+    def test_wrapper_managed_monitor_cycle_does_not_record_global_run_again(self):
+        """wrapper-managed runs should not increment the global safety counter inside the monitor."""
+        monitor = JleechanorgPRMonitor()
+        monitor.wrapper_managed = True
+        pr = {
+            "repository": "test/repo",
+            "repositoryFullName": "test/repo",
+            "number": 123,
+            "title": "Test PR",
+            "headRefName": "feature/test",
+        }
+
+        with patch.object(monitor, "discover_open_prs", return_value=[pr]), \
+             patch.object(monitor, "is_pr_actionable", return_value=True), \
+             patch.object(monitor, "_get_pr_comment_state", return_value=(None, [])), \
+             patch.object(monitor, "_process_pr_fix_comment", return_value="posted"), \
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=False), \
+             patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.validate_cli_two_phase", return_value=(True, "")):
+
+            with patch.object(monitor, "safety_manager") as mock_safety:
+                mock_safety.can_start_global_run.return_value = True
+                mock_safety.try_process_pr.return_value = True
+                mock_safety.get_global_runs.return_value = 1
+                mock_safety.global_limit = 50
+                mock_safety.fixpr_limit = 10
+                mock_safety.pr_limit = 10
+                mock_safety.pr_automation_limit = 10
+                mock_safety.fix_comment_limit = 10
+
+                monitor.run_monitoring_cycle(max_prs=1, cutoff_hours=24, fix_comment=True)
+
+            mock_safety.record_global_run.assert_not_called()
 
 
     def test_normalize_model_none_returns_none(self):

@@ -10,6 +10,43 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
+### Phase 0: Aspect Routing (from official claude-plugins-official/pr-review-toolkit)
+
+**Arguments**: "$ARGUMENTS"
+
+Parse `$ARGUMENTS` for aspect flags. If flags are present, run only those aspects. If absent or "all", run full workflow.
+
+**Available aspects:**
+- `comments` — Analyze PR comment accuracy and maintainability; verify comment rot
+- `tests` — Review test coverage quality, behavioral gaps, and critical missing cases
+- `errors` — Hunt silent failures, bare catch blocks, missing error logging
+- `types` — Analyze type design, invariants, encapsulation (if new types added)
+- `code` — General code review: CLAUDE.md compliance, bugs, project guidelines
+- `simplify` — Simplify code for clarity, DRY, readability; preserve functionality
+- `all` — Run all applicable reviews (default when no flags given)
+
+**Routing logic:**
+```
+KNOWN_ASPECTS = {comments, tests, errors, types, code, simplify, all}
+
+1. Parse tokens from $ARGUMENTS
+2. Split tokens into:
+     - aspect_tokens: exact matches in KNOWN_ASPECTS
+     - positional_tokens: PR numbers, SHAs, file paths, and other non-flag hints
+     - flag_like_tokens: tokens starting with "-" or "--"
+3. Compute unknown_flags = flag_like_tokens - KNOWN_ASPECTS
+4. If unknown_flags is non-empty:
+     ERROR: "Unknown aspect flags: <unknown_flags>. Valid aspects: comments tests errors types code simplify all"
+     STOP — do not run any reviews
+5. Else if aspect_tokens is empty OR aspect_tokens == {"all"}:
+     run full 4-phase workflow below (using positional_tokens as optional context)
+6. Else:
+     run ONLY the listed aspect reviews (and pass positional_tokens through as context)
+     STOP after completing aspect reviews — do NOT fall through to Phase 1–4 workflow
+```
+
+**Aspect execution**: For each selected aspect, launch a focused agent targeting that concern on the PR diff. Collect all results and aggregate into **a single PR comment** with one section per aspect. Use the confidence-scoring filter (score 0-100, include only findings ≥80) before posting. Post exactly one comment total, not one per aspect.
+
 ### Phase 1: ⚡ Core Workflow - Self-Contained Implementation
 
 **Action Steps:**

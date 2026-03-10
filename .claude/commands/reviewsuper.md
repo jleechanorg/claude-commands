@@ -10,6 +10,11 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
+### Phase 0: Eligibility Pre-Check (Haiku Agent)
+
+**Action Steps:**
+Use a Haiku agent to check if the pull request (a) is closed, (b) is a draft, (c) is an automated/trivial PR not needing review, or (d) already has a recent reviewsuper comment **AND** the PR head SHA has not changed since that comment (i.e., no new commits since the last reviewsuper run). Only skip if **both** conditions are true for (d): the comment is recent AND `getHeadSHA() == sha_recorded_in_last_reviewsuper_comment`. If new commits exist since the last reviewsuper comment, always proceed with re-review. If any other condition (a–c) is true, stop and do not proceed.
+
 ### Phase 1: Actionable Feedback
 
 **Action Steps:**
@@ -17,20 +22,27 @@ execution_mode: immediate
 2. Identify problems, flaws, and technical debt
 3. Provide specific, actionable recommendations
 
-### Phase 2: Required Actions
+### Phase 2: Confidence Scoring & False-Positive Filtering (from official claude-plugins-official/code-review)
 
 **Action Steps:**
-1. [Specific, actionable requirement]
-2. [Another concrete fix with timeline]
-3. [Testing or documentation requirement]
+For each issue found in Phase 1, launch a parallel Haiku agent to score it 0-100:
+- **0**: False positive, pre-existing issue, or doesn't stand up to light scrutiny
+- **25**: Might be real but unverified; stylistic issue not explicitly in CLAUDE.md
+- **50**: Verified real issue but minor or infrequent in practice
+- **75**: Double-checked, very likely real, directly impacts functionality or in CLAUDE.md
+- **100**: Confirmed real, happens frequently, evidence directly confirms it
+
+Filter out ALL issues with score < 80. If no issues survive, post "No high-confidence architectural issues found."
+
+False positives to reject: pre-existing issues; nitpicks a senior engineer wouldn't flag; things linters/CI catch; general quality issues not in CLAUDE.md; issues on lines the PR didn't modify.
 
 ### Phase 3: Required Actions
 
 **Action Steps:**
-1. Extract EmailProvider interface and inject dependency
-2. Add input sanitization layer before database operations
-3. Refactor payment logic using strategy pattern
-4. Add unit tests for edge cases (currently 0% coverage)
+1. Convert high-confidence findings into concrete, PR-specific action items.
+2. For each action item, include file/path scope and expected outcome.
+3. Mark each action as **Required** or **If applicable** based on direct evidence from the PR.
+4. Use sample wording only as templates, never as mandatory hardcoded tasks.
 
 ## 📋 REFERENCE DOCUMENTATION
 

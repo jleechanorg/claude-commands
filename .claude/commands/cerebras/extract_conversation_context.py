@@ -112,7 +112,7 @@ def extract_conversation_context(max_tokens=DEFAULT_MAX_TOKENS):
     current_cwd = os.getcwd()
 
     # Convert current working directory to unique sanitized format
-    # e.g., /Users/$USER/projects/your-project.com/worktree_cereb -> worktree_cereb-a1b2c3d4e5f6
+    # e.g., $HOME/projects/your-project.com/worktree_cereb -> worktree_cereb-a1b2c3d4e5f6
     sanitized_cwd = _sanitize_path(current_cwd)
     project_dir = projects_dir / sanitized_cwd
 

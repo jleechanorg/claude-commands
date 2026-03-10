@@ -18,6 +18,29 @@ This ensures generated tests follow current evidence standards.
 **USE SHARED LIBRARIES**: ALWAYS use `testing_mcp/lib/` utilities - NEVER reimplement test infrastructure.
 **FREE-FORM INPUT**: Accept natural language like "for this PR make sure the equipment logic works".
 
+## 🚨 testing_mcp/ FOLDER RULES (ABSOLUTE — NO EXCEPTIONS)
+
+Tests placed in `testing_mcp/` MUST follow ALL rules below. Violating any rule makes the test invalid:
+
+1. **NO MOCKS** — `testing_mcp/` never uses `unittest.mock`, `MagicMock`, `patch()`, fake
+   services, or test-mode env vars (`TEST_MODE=mock`, `MOCK_SERVICES_MODE`, `USE_MOCK_FIREBASE`,
+   `USE_MOCK_GEMINI`). This is enforced at runtime by `lib/server_utils.py`.
+
+2. **MCPTestBase required** — Every test that calls the MCP server must inherit from
+   `testing_mcp.lib.base_test.MCPTestBase`. No standalone scripts for new tests.
+
+3. **Real server only** — Tests connect to a real local server (auto-started by MCPTestBase) with
+   real Firebase Firestore and real Gemini LLM calls. Do NOT pass `--ci-sim`, `TESTING=true`, or
+   mock-related flags.
+
+4. **No new infrastructure** — Use functions from `testing_mcp/lib/`. Never reimplement
+   `create_campaign`, `process_action`, `get_campaign_state`, or evidence utilities.
+
+5. **Unit tests go elsewhere** — Pure unit tests (no MCP server) belong in `$PROJECT_ROOT/tests/`,
+   not in `testing_mcp/`. Use pytest for those.
+
+**See `testing_mcp/CLAUDE.md` and `testing_mcp/agents.md` for the full policy.**
+
 ## 🔧 PREFERRED: USE MCPTestBase FOR E2E TESTS
 
 **⚠️ CRITICAL RULE**: For E2E tests that use the MCP server, ALWAYS inherit from `MCPTestBase` class.

@@ -9,6 +9,8 @@ import subprocess
 import time
 from datetime import datetime
 
+from orchestration.cli_args import add_safe_monitor_arguments
+
 
 class SafeAgentMonitor:
     """Monitor agent progress without risk of keyboard input interference"""
@@ -108,12 +110,7 @@ class SafeAgentMonitor:
 
 def main():
     parser = argparse.ArgumentParser(description="Safe agent monitoring without keyboard interference")
-    parser.add_argument("agent", nargs="?", help="Agent session name to monitor")
-    parser.add_argument("-a", "--all", action="store_true", help="Monitor all agents")
-    parser.add_argument("-l", "--list", action="store_true", help="List running agents")
-    parser.add_argument("-c", "--continuous", action="store_true", help="Continuous monitoring")
-    parser.add_argument("-i", "--interval", type=int, default=5, help="Update interval in seconds")
-    parser.add_argument("-n", "--lines", type=int, default=50, help="Number of lines to show")
+    add_safe_monitor_arguments(parser)
 
     args = parser.parse_args()
     monitor = SafeAgentMonitor()

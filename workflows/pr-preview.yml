@@ -149,17 +149,42 @@ jobs:
           images: ['$IMAGE_TAG']
           EOF
 
-          gcloud builds submit \
+          # Submit asynchronously to avoid VPC-SC log-streaming restriction.
+          # --async exits immediately with the build ID; we then poll describe
+          # (metadata API, not logs API) until SUCCESS or failure.
+          BUILD_ID=$(gcloud builds submit \
             --config=/tmp/cloudbuild.yaml \
             --project="${{ env.GCP_PROJECT }}" \
             --timeout=15m \
-            --quiet \
-            --suppress-logs \
-            . || {
-            echo "⚠️ Build command returned non-zero exit code, but build may still be running"
-            echo "Checking if image was created..."
-            sleep 30
-          }
+            --async \
+            --format='value(id)' \
+            .)
+          echo "Build submitted: $BUILD_ID"
+
+          MAX_WAIT=900
+          POLL_INTERVAL=30
+          ELAPSED=0
+          BUILD_STATUS=""
+          while [ $ELAPSED -le $MAX_WAIT ]; do
+            BUILD_STATUS=$(gcloud builds describe "$BUILD_ID" \
+              --project="${{ env.GCP_PROJECT }}" \
+              --format='value(status)' 2>/dev/null || echo "UNKNOWN")
+            echo "Build $BUILD_ID status: $BUILD_STATUS (${ELAPSED}s elapsed)"
+            if [ "$BUILD_STATUS" = "SUCCESS" ]; then
+              break
+            elif [ "$BUILD_STATUS" = "FAILURE" ] || [ "$BUILD_STATUS" = "TIMEOUT" ] || [ "$BUILD_STATUS" = "CANCELLED" ] || [ "$BUILD_STATUS" = "INTERNAL_ERROR" ] || [ "$BUILD_STATUS" = "EXPIRED" ]; then
+              echo "::error::Cloud Build failed with status: $BUILD_STATUS"
+              exit 1
+            fi
+            sleep $POLL_INTERVAL
+            ELAPSED=$((ELAPSED + POLL_INTERVAL))
+          done
+
+          if [ "$BUILD_STATUS" != "SUCCESS" ]; then
+            echo "::error::Cloud Build did not complete within ${MAX_WAIT}s. Last status: $BUILD_STATUS"
+            exit 1
+          fi
+          echo "Docker image built: $IMAGE_TAG"
 
           # Source shared config for consistent resource allocation
           source scripts/shared_config.sh

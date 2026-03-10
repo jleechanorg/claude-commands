@@ -145,7 +145,11 @@ Branch: <branch_name>
 
 **Step 5c: Launch /pair with the task spec**
 
-Run `/pair` with the task spec from Step 5b.
+Run `/pair` with the task spec from Step 5b. `/pair` routes to:
+
+```bash
+bash ralph/ralph-pair.sh run
+```
 
 This gives dual-agent coder+verifier: Claude implements, Codex verifies tests pass.
 

@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -29,7 +30,7 @@ DEFAULT_CUTOFF_HOURS = 24
 DEFAULT_MAX_PRS = 5
 DEFAULT_TIMEOUT = 30  # baseline timeout per security guideline
 TIMEOUT_SECONDS = DEFAULT_TIMEOUT  # Alias for backward compatibility (fixes NameError in tests)
-CLONE_TIMEOUT = 300
+CLONE_TIMEOUT = 900  # 15 min - large repos (e.g., 330MB worldarchitect.ai) need more time
 FETCH_TIMEOUT = 120
 API_TIMEOUT = 60
 WORKTREE_TIMEOUT = 60
@@ -382,14 +383,10 @@ def has_failing_checks(repo_full: str, pr_number: int) -> bool:
 def _reset_base_clone_to_main(base_dir: Path) -> None:
     """Reset base clone to default branch with clean state.
 
-    Handles: untracked files, detached HEAD, dirty working tree, missing default branch.
+    Handles: detached HEAD, dirty working tree, missing default branch.
     Detects the repository's default branch dynamically (main, master, etc.).
     Raises subprocess.CalledProcessError on failure.
     """
-    # Clean untracked files FIRST - must happen before checkout to avoid
-    # "untracked working tree files would be overwritten" errors
-    run_cmd(["git", "clean", "-fdx"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-    
     # Detect the actual default branch from remote HEAD
     result = run_cmd(
         ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
@@ -422,23 +419,29 @@ def _reset_base_clone_to_main(base_dir: Path) -> None:
         if not default_branch:
             raise RuntimeError("Could not detect default branch for base clone")
     
-    # Ensure we're on default branch (create if doesn't exist locally)
-    result = run_cmd(["git", "rev-parse", "--verify", default_branch], cwd=base_dir, check=False, timeout=DEFAULT_TIMEOUT)
-    if result.returncode != 0:
-        # Local branch doesn't exist - checkout from remote tracking branch
-        run_cmd(["git", "checkout", "-B", default_branch, f"origin/{default_branch}"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-    else:
-        # Local branch exists - discard local changes first, then switch and reset
-        run_cmd(["git", "reset", "--hard"], cwd=base_dir, timeout=FETCH_TIMEOUT)
-        run_cmd(["git", "checkout", default_branch], cwd=base_dir, timeout=FETCH_TIMEOUT)
-        run_cmd(["git", "reset", "--hard", f"origin/{default_branch}"], cwd=base_dir, timeout=FETCH_TIMEOUT)
+    # Force the local default branch to track the remote default branch directly.
+    # This avoids expensive repo-wide clean/reset walks in large repos while
+    # preserving the same recovery semantics for expendable base clones.
+    run_cmd(
+        ["git", "checkout", "--force", "-B", default_branch, f"origin/{default_branch}"],
+        cwd=base_dir,
+        timeout=FETCH_TIMEOUT,
+    )
 
 
 def _fresh_clone(base_dir: Path, repo_full: str, github_host: str) -> None:
     """Delete existing clone and create fresh one."""
     shutil.rmtree(base_dir, ignore_errors=True)
+    if base_dir.exists():
+        raise RuntimeError(
+            f"Failed to remove existing clone at {base_dir} — "
+            "directory still present after rmtree (permission error or locked files). "
+            f"Manual cleanup required: rm -rf -- {shlex.quote(str(base_dir))}"
+        )
+    # Use shallow clone with sufficient depth for 3-way merge (--depth 50 provides ~50 commits of history)
+    # Shallow clones (depth=1) break 3-way merge because base blobs aren't available
     run_cmd(
-        ["git", "clone", f"https://{github_host}/{repo_full}.git", str(base_dir)],
+        ["git", "clone", "--depth", "50", "--single-branch", f"https://{github_host}/{repo_full}.git", str(base_dir)],
         timeout=CLONE_TIMEOUT,
     )
 
@@ -465,8 +468,10 @@ def ensure_base_clone(repo_full: str) -> Path:
 
     if not base_dir.exists():
         log(f"Cloning base repo for {repo_full} into {base_dir}")
+        # Use shallow clone with sufficient depth for 3-way merge (--depth 50)
+        # Shallow clones (depth=1) break 3-way merge
         run_cmd(
-            ["git", "clone", f"https://{github_host}/{repo_full}.git", str(base_dir)],
+            ["git", "clone", "--depth", "50", "--single-branch", f"https://{github_host}/{repo_full}.git", str(base_dir)],
             timeout=CLONE_TIMEOUT,
         )
     else:

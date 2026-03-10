@@ -63,6 +63,27 @@ class TestPackagingIntegration:
             f"Help output doesn't contain expected flags. Got: {result.stdout}"
         )
 
+    def test_automation_safety_manager_module_execution_has_no_runpy_warning(self):
+        """Executing automation_safety_manager with -m should not emit duplicate-module warnings."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-Werror::RuntimeWarning",
+                "-m",
+                "jleechanorg_pr_automation.automation_safety_manager",
+                "--help",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        assert result.returncode == 0, (
+            f"automation_safety_manager module execution failed\n"
+            f"STDOUT: {result.stdout}\n"
+            f"STDERR: {result.stderr}"
+        )
+
     def test_openai_automation_has_init_file(self):
         """
         Directly verify that __init__.py exists in openai_automation.

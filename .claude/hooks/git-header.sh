@@ -309,8 +309,17 @@ fi
 
 
 
-# Skip git status output for statusline mode
-if [ "$1" != "--status-only" ]; then
+# Parse arguments (--with-status anywhere; --status-only as no-op alias for backward compat)
+WITH_STATUS=false
+for arg in "$@"; do
+    case "$arg" in
+        --with-status) WITH_STATUS=true ;;
+        --status-only) : ;;  # no-op alias for backward compatibility
+    esac
+done
+
+# Show git status output only when explicitly requested
+if [ "$WITH_STATUS" = true ]; then
     echo "=== Git Status ==="
     git status
     echo
@@ -318,22 +327,37 @@ fi
 
 
 
-# Simple output - just the essential info
-# Add context percentage if available (with color coding)
-context_display=""
-if [ -n "$CONTEXT_PCT" ]; then
-    # Color code based on usage: green <30%, yellow 30-60%, orange 61-80%, red >80%
-    pct_num=$(echo "$CONTEXT_PCT" | awk '{print int($1)}')
-    if [ "$pct_num" -lt 30 ]; then
-        context_color="\033[1;32m"  # Green
-    elif [ "$pct_num" -le 60 ]; then
-        context_color="\033[1;33m"  # Yellow
-    elif [ "$pct_num" -le 80 ]; then
-        context_color="\033[1;38;5;208m"  # Orange
-    else
-        context_color="\033[1;31m"  # Red
-    fi
-    context_display="${context_color}Context: ${CONTEXT_PCT}%\033[1;36m | "
+# Line 1: git info — truncated to terminal width to prevent wrap eating line 2
+short_remote=$(echo "$remote" | sed 's|origin/||;s|upstream/||')
+short_pr=$(echo "$pr_text" | sed 's| https://[^ ]*||')
+line1="[Dir: $working_dir | Local: $local_branch$local_status | Remote: $short_remote | PR: $short_pr]"
+cols=$(tput cols 2>/dev/null || echo 120)
+max_len=$((cols - 2))
+if [ ${#line1} -gt "$max_len" ]; then
+    line1="${line1:0:$((max_len - 1))}…"
 fi
+echo -e "\033[1;36m${line1}\033[0m"
 
-echo -e "\033[1;36m[${context_display}Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"
+# Line 2: context progress bar (always shown; uses ctx% if available, else placeholder)
+pct_num=0
+[ -n "$CONTEXT_PCT" ] && pct_num=$(echo "$CONTEXT_PCT" | awk '{v=int($1); print (v<0?0:(v>100?100:v))}')
+if [ "$pct_num" -lt 30 ]; then
+    bar_color="\033[1;32m"
+elif [ "$pct_num" -le 60 ]; then
+    bar_color="\033[1;33m"
+elif [ "$pct_num" -le 80 ]; then
+    bar_color="\033[1;38;5;208m"
+else
+    bar_color="\033[1;31m"
+fi
+filled=$((pct_num / 10))
+empty=$((10 - filled))
+bar=""
+[ "$filled" -gt 0 ] && bar=$(printf "%${filled}s" | tr ' ' '█')
+[ "$empty"  -gt 0 ] && bar="${bar}$(printf "%${empty}s" | tr ' ' '░')"
+ctx_label="${CONTEXT_PCT:----}%"
+echo -e "${bar_color}ctx ${bar} ${ctx_label}\033[0m"
+
+# Line 3: PR URL (only when a real PR URL exists)
+pr_url=$(echo "$pr_text" | grep -o 'https://[^ ]*' | head -1)
+[ -n "$pr_url" ] && printf '%s\n' "$pr_url"

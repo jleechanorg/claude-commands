@@ -84,6 +84,7 @@ Use matching skills automatically based on request context.
 - `./run_lint.sh` or `pre-commit run -a`: Lint/format.
 
 ### testing_mcp and testing_ui execution policy
+- Streaming is the primary preview/prod execution path; investigate and validate streaming first before non-streaming.
 - Do not use pytest collection for script-style `testing_mcp/` suites. Run directly with `vpython`.
 - Canonical: `cd testing_mcp && ../vpython test_<name>.py --server http://127.0.0.1:8001`
 - Browser tests: Start server with `TESTING_AUTH_BYPASS=true`, navigate with `?test_mode=true&test_user_id=<id>`.
