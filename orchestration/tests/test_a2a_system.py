@@ -73,11 +73,10 @@ def test_basic_a2a_functionality():
         print(f"✓ System status: {status['agents_online']} agents online, {status['available_tasks']} tasks available")
 
         print("✅ Basic A2A functionality test PASSED")
-        return True
 
     except Exception as e:
         print(f"❌ Basic A2A functionality test FAILED: {e}")
-        return False
+        raise
     finally:
         # Cleanup temporary workspaces
         try:
@@ -120,11 +119,10 @@ def test_a2a_wrapper():
         print("✓ Wrapper stopped successfully")
 
         print("✅ A2A wrapper test PASSED")
-        return True
 
     except Exception as e:
         print(f"❌ A2A wrapper test FAILED: {e}")
-        return False
+        raise
     finally:
         # Cleanup temporary workspace
         with contextlib.suppress(Exception):
@@ -155,11 +153,10 @@ def test_a2a_monitor():
         print("✓ Monitor stopped successfully")
 
         print("✅ A2A monitor test PASSED")
-        return True
 
     except Exception as e:
         print(f"❌ A2A monitor test FAILED: {e}")
-        return False
+        raise
 
 
 def test_task_dispatcher_integration():
@@ -184,11 +181,9 @@ def test_task_dispatcher_integration():
         else:
             print("⚠️  Task dispatcher A2A integration test SKIPPED (A2A not available)")
 
-        return True
-
     except Exception as e:
         print(f"❌ Task dispatcher A2A integration test FAILED: {e}")
-        return False
+        raise
 
 
 def run_all_tests():
@@ -207,8 +202,11 @@ def run_all_tests():
     total = len(tests)
 
     for test in tests:
-        if test():
+        try:
+            test()
             passed += 1
+        except Exception:
+            pass
 
     print(f"\n📊 Test Results: {passed}/{total} tests passed")
 

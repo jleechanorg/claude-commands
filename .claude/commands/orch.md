@@ -26,7 +26,7 @@ execution_mode: immediate
 **Options** (default: --agent-cli gemini):
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--agent-cli <cli>` | Agent CLI to use (claude, codex, gemini, cursor). Supports chain (e.g., 'gemini,claude') | gemini |
+| `--agent-cli <cli>` | Agent CLI to use (claude, codex, cursor, gemini, minimax). Supports chain (e.g., 'gemini,claude') | gemini |
 | `--context <path>` | Path to markdown file to inject into agent prompt | - |
 | `--branch <name>` | Force checkout of specific branch | - |
 | `--pr <number>` | Existing PR number to update | - |

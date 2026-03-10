@@ -8,6 +8,9 @@ import time
 from dataclasses import asdict
 from datetime import datetime
 
+import pytest
+from _pytest.outcomes import Failed, Skipped
+
 from orchestration.message_broker import MessageBroker, MessageType, TaskMessage
 
 # Ensure imports work for direct execution
@@ -22,14 +25,12 @@ def test_simple_flow():
     try:
         if not hasattr(broker, "redis_client") or broker.redis_client is None:
             print("⚠️  Redis client not available - skipping Redis-specific test")
-            print("✅ Test skipped gracefully (file-based broker in use)")
-            return True  # Return True for graceful skip
+            pytest.skip("file-based broker in use")
         # Test Redis connectivity
         broker.redis_client.ping()
     except Exception as e:
         print(f"⚠️  Redis not available: {e}")
-        print("✅ Test skipped gracefully (Redis not accessible)")
-        return True  # Return True for graceful skip
+        pytest.skip(f"Redis not accessible: {e}")
 
     print("=== Simple Task Flow Test ===\n")
 
@@ -67,7 +68,7 @@ def test_simple_flow():
             print(f"   Type: {msg.get('type')}")
             print(f"   From: {msg.get('from_agent')}")
             print(f"   Payload: {json.dumps(msg.get('payload'), indent=2)}")
-            return True
+            return
 
         print(f"   Waiting... ({i + 1}/10)")
 
@@ -84,9 +85,16 @@ def test_simple_flow():
     sender_queue = broker.redis_client.lrange("queue:test_sender", 0, -1)
     print(f"   queue:test_sender has {len(sender_queue)} messages")
 
-    return False
+    pytest.fail("No response received after 10 seconds")
 
 
 if __name__ == "__main__":
-    success = test_simple_flow()
-    sys.exit(0 if success else 1)
+    try:
+        test_simple_flow()
+        sys.exit(0)
+    except BaseException as e:
+        if isinstance(e, Skipped):
+            sys.exit(0)  # Skipped counts as success when run directly
+        if isinstance(e, Failed):
+            sys.exit(1)
+        raise

@@ -41,16 +41,13 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
 
   run-hook-tests:
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 10
 
     steps:
 
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
-
-    - name: Runner control plane
-      uses: ./.github/actions/runner-control-plane
 
 
     - name: Set up Python 3.11
@@ -60,9 +57,7 @@ jobs:
         python-version: '3.11'
 
     - name: Run hook tests in pinned container
-      uses: ./.github/actions/container-run
-      with:
-        command: |
+      run: |
           set -euo pipefail
           cd .claude/hooks/tests
           echo "🧪 Running Claude Code Hook Tests..."

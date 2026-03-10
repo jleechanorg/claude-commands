@@ -1,101 +1,49 @@
 ---
-description: Launch dual-agent pair programming with coder + verifier
-argument-hint: '"task description"'
-type: llm-orchestration
-execution_mode: llm-driven
+description: Launch ralph-pair (coder + deterministic verifier)
+argument-hint: '[max_iterations]'
 ---
 
----
+# /pair — Ralph with Deterministic Verification
 
-# /pair - Dual-Agent Pair Programming (Teams-Native)
+Runs `ralph-pair.sh`, which is ralph.sh with an added verification step after each coder iteration.
 
-## Primary: Teams-native (default)
+## What it does
 
-When `/pair <task>` is invoked, use the Teams-native path:
+1. **Coder phase** — same as ralph: pipe PRD + CLAUDE.md to the agent
+2. **Verifier phase** — runs `verifyCommand` for every unpassed story
+3. Auto-marks stories as `passes: true` when their verifyCommand succeeds
+4. When verify story VN passes, also marks paired implement story SN
+5. Repeats until ALL stories verified or max iterations reached
 
-### Step-by-step
+## Routing
 
-1. **Create team**
-   ```
-   TeamCreate("pair-{hash}")
-   ```
-   where `{hash}` is a short identifier derived from the task (e.g., first 8 chars of SHA256).
-
-2. **Create tasks with dependency**
-   ```
-   implement_task = TaskCreate("Implement: {task}", ...)
-   verify_task    = TaskCreate("Verify: {task}",    blockedBy=[implement_task.id])
-   ```
-   The verify task is blocked until implement is marked complete.
-
-3. **Launch coder**
-   ```
-   Task(subagent_type="pair-coder", model="sonnet",
-        instructions="Implement {task}. Signal IMPLEMENTATION_READY when done.")
-   ```
-
-4. **Launch verifier** (after IMPLEMENTATION_READY received)
-   ```
-   Task(subagent_type="pair-verifier", model="haiku",
-        instructions="Verify {task}. Signal VERIFICATION_COMPLETE when done.")
-   ```
-
-5. **Wait for completion signals**
-   - Poll teammate messages for `IMPLEMENTATION_READY` from coder.
-   - Only after `IMPLEMENTATION_READY`: unblock verify task and launch verifier.
-   - Poll for `VERIFICATION_COMPLETE` from verifier.
-
-6. **Synthesize result**
-   Report final outcome to the user after both signals are observed.
-
-### Policy
-
-- Do not implement inline in the lead session.
-- Keep coder/verifier responsibilities separate.
-- Require independent verification before declaring done.
-
-## Fallback: --scripted
-
-Use `--scripted` when the runtime does not expose native Teams controls or when the user explicitly requests scripted behavior.
-
-### --scripted primary (pairv2)
+When `/pair` is invoked, execute:
 
 ```bash
-python3 .claude/pair/pair_execute_v2.py \
-  --left-contract .claude/contracts/left_contract.template.json \
-  --right-contract .claude/contracts/right_contract.template.json \
-  --no-worktree "Your task description here"
+bash ralph/ralph-pair.sh run
 ```
 
-### --scripted last resort (pairv1)
+## Usage
 
 ```bash
-python3 .claude/pair/pair_execute.py --no-worktree "Your task description here"
+# Default: 10 iterations with claude
+bash ralph/ralph-pair.sh run
+
+# Custom: 3 iterations
+bash ralph/ralph-pair.sh run 3
+
+# With a different tool
+bash ralph/ralph-pair.sh run --tool codex
+
+# Check status
+bash ralph/ralph-pair.sh status
+bash ralph/ralph-pair.sh status --watch
 ```
 
-See `/pairv1` for full legacy CLI reference.
+## How it differs from ralph.sh
 
-## Logging Convention
-
-Both Teams and --scripted runs write timestamped logs:
-
-- Directory: `/tmp/{repo_name}/{branch}/pair_logs/`
-- Files: `coder.log`, `verifier.log`
-- Format: `[YYYY-MM-DD HH:MM:SS] [PHASE] message`
-
-## Completion criteria
-
-A pair session is complete only when all are true:
-
-1. Coder signals `IMPLEMENTATION_READY`.
-2. Verifier signals `VERIFICATION_COMPLETE`.
-3. Lead session synthesizes both outputs and reports final result.
-
-## Agent cleanup
-
-- Teams mode: Claude manages teammate lifecycle after completion.
-- --scripted mode: `pair_execute_v2.py` terminates/observes both agents.
-- Legacy fallback: `pair_execute.py` terminates both agents.
-- If a session is interrupted, check for orphaned processes before rerun.
-
-**Protocol Version:** 9.1 (TeamCreate primary with TaskCreate dependency; --scripted fallback)
+| | ralph.sh | ralph-pair.sh |
+|---|---|---|
+| Completion check | Trusts `<promise>COMPLETE</promise>` | Runs verifyCommand per story |
+| Verification | None | Deterministic (pytest, etc.) |
+| Auto-marking | Coder must update prd_state.json | Verifier auto-marks on pass |

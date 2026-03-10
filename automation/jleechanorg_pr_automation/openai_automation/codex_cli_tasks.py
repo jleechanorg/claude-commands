@@ -63,6 +63,10 @@ class CodexCloudAPI:
         # Determine repository path via shared automation utility.
         self.repo_path = resolve_repo_path(repo_path, logger=logger)
 
+    def _codex_cli_timeout(self) -> int:
+        """Return a launchd-safe timeout for codex CLI subprocesses."""
+        return max(self.timeout, 120)
+
     def _resolve_repo_full(self, task: dict) -> Optional[str]:
         """Resolve owner/repo from task metadata."""
         return resolve_repo_full_from_environment_label(task)
@@ -102,6 +106,26 @@ class CodexCloudAPI:
         """Backward-compatible wrapper for tests and legacy callers."""
         detected = detect_repo_path()
         return str(detected) if detected is not None else None
+
+    def _worktree_add(
+        self,
+        base_repo_path: Path,
+        worktree_dir: Path,
+        base_branch: str,
+        force: bool = True,
+    ) -> None:
+        """Run ``git worktree add`` without checkout to avoid internal reset hangs."""
+        cmd = ["git", "-C", str(base_repo_path), "worktree", "add", "--detach", "--no-checkout"]
+        if force:
+            cmd.extend(["-f", "-f"])
+        cmd.extend([str(worktree_dir), base_branch])
+        subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=max(self.timeout, 120),
+        )
 
     def _create_worktree(self, branch_name: str, base_repo_path: Path) -> tuple[Path, str]:
         """Create a temporary worktree for the given branch.
@@ -233,13 +257,27 @@ class CodexCloudAPI:
                     candidates.sort(key=branch_priority)
                     base_branch = candidates[0]
 
-            subprocess.run(
-                ["git", "-C", str(base_repo_path), "worktree", "add", "--detach", str(worktree_dir), base_branch],
-                capture_output=True,
-                text=True,
-                check=True,
-                timeout=self.timeout,
-            )
+            self._prune_stale_worktrees(base_repo_path)
+            # Clean up any stale local branch with the same name to avoid
+            # "branch already exists" errors from previous incomplete runs
+            try:
+                subprocess.run(
+                    ["git", "-C", str(base_repo_path), "branch", "-D", branch_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                pass  # Branch didn't exist, which is fine
+
+            try:
+                self._worktree_add(base_repo_path, worktree_dir, base_branch)
+            except subprocess.CalledProcessError as exc:
+                self._prune_stale_worktrees(base_repo_path)
+                self._worktree_add(base_repo_path, worktree_dir, base_branch, force=True)
+            except subprocess.TimeoutExpired:
+                self._prune_stale_worktrees(base_repo_path)
+                self._worktree_add(base_repo_path, worktree_dir, base_branch, force=True)
             logger.info("Created worktree at %s from %s", worktree_dir, base_branch)
             return worktree_dir, base_branch
         except Exception as exc:
@@ -257,22 +295,42 @@ class CodexCloudAPI:
         if not base_repo_path:
             return
 
+        removed_temp_dir = False
         try:
-            # Remove worktree from git (--force handles missing directories)
-            subprocess.run(
-                ["git", "-C", str(base_repo_path), "worktree", "remove", str(worktree_path), "--force"],
-                capture_output=True,
-                text=True,
-                check=True,
-                timeout=self.timeout,
+            # These codex temp worktrees are throwaway scratch dirs under /tmp.
+            # Removing the directory first and pruning metadata is faster and
+            # avoids launchd-visible hangs in `git worktree remove --force`.
+            is_temp_codex_worktree = (
+                worktree_path.is_absolute()
+                and worktree_path.parent == Path("/tmp")
+                and worktree_path.name.startswith("codex_")
             )
-            logger.info("Cleaned up worktree at %s", worktree_path)
+            if is_temp_codex_worktree:
+                if worktree_path.exists():
+                    shutil.rmtree(worktree_path, ignore_errors=True)
+                    removed_temp_dir = True
+                logger.info("Cleaned up temp worktree at %s", worktree_path)
+            else:
+                subprocess.run(
+                    ["git", "-C", str(base_repo_path), "worktree", "remove", str(worktree_path), "--force"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    timeout=max(self.timeout, 120),
+                )
+                logger.info("Cleaned up worktree at %s", worktree_path)
         except Exception as exc:
             logger.warning("Failed to clean up worktree %s: %s", worktree_path, exc)
         finally:
             # Always attempt filesystem cleanup, even if git worktree remove failed
-            if worktree_path.exists():
+            if not removed_temp_dir and worktree_path.exists():
                 shutil.rmtree(worktree_path, ignore_errors=True)
+            # Best-effort prune - don't let cleanup errors override successful apply/push
+            if base_repo_path:
+                try:
+                    self._prune_stale_worktrees(base_repo_path)
+                except Exception as prune_exc:
+                    logger.warning("Worktree prune failed (best-effort): %s", prune_exc)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -299,13 +357,103 @@ class CodexCloudAPI:
             cmd,
             capture_output=True,
             text=True,
-            timeout=self.timeout,
+            timeout=self._codex_cli_timeout(),
             check=True,
         )
         stdout = result.stdout.strip()
         if parse_json:
             return json.loads(stdout)
         return stdout
+
+    def _remote_branch_exists(self, worktree_str: str, branch: str) -> bool:
+        """Return True when the branch already exists on origin."""
+        result = subprocess.run(
+            ["git", "-C", worktree_str, "ls-remote", "--heads", "origin", branch],
+            capture_output=True,
+            text=True,
+            timeout=self.timeout,
+        )
+        if result.returncode != 0:
+            logger.warning("ls-remote failed for branch %s: %s", branch, result.stderr)
+            return False
+        return result.stdout.strip() != ""
+
+    def _prune_stale_worktrees(self, base_repo_path: Path) -> None:
+        """Remove stale worktree metadata left behind by interrupted runs."""
+        self._remove_initializing_worktree_metadata(base_repo_path)
+        result = subprocess.run(
+            ["git", "-C", str(base_repo_path), "worktree", "prune", "--verbose"],
+            capture_output=True,
+            text=True,
+            timeout=self.timeout,
+        )
+        if result.returncode != 0:
+            logger.warning("git worktree prune failed: %s", result.stderr)
+
+    def _remove_initializing_worktree_metadata(self, base_repo_path: Path) -> None:
+        """Drop stale ``locked initializing`` metadata whose worktree path is gone."""
+        worktrees_dir = base_repo_path / ".git" / "worktrees"
+        if not worktrees_dir.exists():
+            return
+
+        for metadata_dir in worktrees_dir.iterdir():
+            if not metadata_dir.is_dir():
+                continue
+            locked_file = metadata_dir / "locked"
+            gitdir_file = metadata_dir / "gitdir"
+            if not locked_file.exists() or not gitdir_file.exists():
+                continue
+            lock_reason = locked_file.read_text(encoding="utf-8", errors="ignore").strip().lower()
+            if "initializing" not in lock_reason:
+                continue
+            gitdir_path = Path(gitdir_file.read_text(encoding="utf-8", errors="ignore").strip())
+            worktree_path = gitdir_path.parent
+            if worktree_path.exists():
+                continue
+            shutil.rmtree(metadata_dir, ignore_errors=True)
+            logger.warning("Removed stale initializing worktree metadata: %s", metadata_dir)
+
+    def _checkout_branch_at_target(self, worktree_str: str, branch: str, reset_target: str) -> None:
+        """Create or reset a branch to a known target in one git operation.
+
+        Uses -B (force) to handle cases where branch already exists.
+        If that fails due to existing branch, try to delete and recreate.
+        """
+        result = subprocess.run(
+            ["git", "-C", worktree_str, "checkout", "-B", branch, reset_target],
+            capture_output=True,
+            text=True,
+            timeout=max(self.timeout, 120),
+        )
+        if result.returncode != 0:
+            # If -B fails (e.g., branch exists), try deleting and recreating
+            if "already exists" in result.stderr:
+                subprocess.run(
+                    ["git", "-C", worktree_str, "branch", "-D", branch],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                subprocess.run(
+                    ["git", "-C", worktree_str, "checkout", "-b", branch, reset_target],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    timeout=max(self.timeout, 120),
+                )
+            else:
+                # Re-raise for other errors
+                raise subprocess.CalledProcessError(result.returncode, "git checkout", result.stderr)
+
+    def _checkout_detached_target(self, worktree_str: str, reset_target: str) -> None:
+        """Check out a target commit/ref in detached HEAD mode."""
+        subprocess.run(
+            ["git", "-C", worktree_str, "checkout", "--detach", reset_target],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=max(self.timeout, 120),
+        )
 
     # ------------------------------------------------------------------
     # List / paginate
@@ -411,20 +559,10 @@ class CodexCloudAPI:
             worktree_str = str(worktree_path)
 
             # Check if branch exists remotely first to handle rerun scenarios
-            remote_branch_exists = subprocess.run(
-                ["git", "-C", worktree_str, "ls-remote", "--heads", "origin", branch],
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-            ).returncode == 0 and subprocess.run(
-                ["git", "-C", worktree_str, "ls-remote", "--heads", "origin", branch],
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-            ).stdout.strip() != ""
+            remote_branch_exists = self._remote_branch_exists(worktree_str, branch)
 
             if remote_branch_exists:
-                # Remote branch exists, fetch and checkout
+                # Remote branch exists, fetch and operate from detached remote HEAD.
                 subprocess.run(
                     ["git", "-C", worktree_str, "fetch", "origin", branch],
                     capture_output=True,
@@ -432,48 +570,13 @@ class CodexCloudAPI:
                     check=True,
                     timeout=self.timeout,
                 )
-                # Check if local branch exists
-                local_branch_exists = subprocess.run(
-                    ["git", "-C", worktree_str, "rev-parse", "--verify", branch],
-                    capture_output=True,
-                    text=True,
-                    timeout=self.timeout,
-                ).returncode == 0
-                
-                if local_branch_exists:
-                    subprocess.run(
-                        ["git", "-C", worktree_str, "checkout", branch],
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                        timeout=self.timeout,
-                    )
-                else:
-                    # Create local tracking branch from remote
-                    subprocess.run(
-                        ["git", "-C", worktree_str, "checkout", "-b", branch, f"origin/{branch}"],
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                        timeout=self.timeout,
-                    )
-                # Reset to remote branch
-                subprocess.run(
-                    ["git", "-C", worktree_str, "reset", "--hard", f"origin/{branch}"],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                    timeout=self.timeout,
-                )
+                self._checkout_detached_target(worktree_str, f"origin/{branch}")
             else:
-                # Create and checkout new branch in worktree
-                subprocess.run(
-                    ["git", "-C", worktree_str, "checkout", "-b", branch],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                    timeout=self.timeout,
-                )
+                # Avoid attaching a local branch in scratch worktrees: branch names may
+                # already be active in sibling worktrees from prior runs.
+                # Normalize base_branch to avoid "origin/origin/..." paths
+                normalized_branch = base_branch[7:] if base_branch.startswith("origin/") else base_branch
+                self._checkout_detached_target(worktree_str, f"origin/{normalized_branch}")
 
             # Get diff
             diff_text = self.get_diff(task_id, attempt=attempt)
@@ -495,12 +598,35 @@ class CodexCloudAPI:
             )
             if apply_result.returncode != 0:
                 error_msg = apply_result.stderr or "Failed to apply diff"
-                logger.warning("Failed to apply diff for %s: %s", task_id, error_msg)
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "task_id": task_id,
-                }
+                # Check for stale patch - target repo has changed since diff was generated
+                # "patch does not apply" means the diff is outdated, not corrupt
+                is_stale_patch = "patch does not apply" in error_msg.lower() or "does not exist in index" in error_msg.lower() or "corrupt patch" in error_msg.lower()
+                # Retry without --3way if corrupt patch - sometimes Codex Cloud generates diffs
+                # that work with plain apply but fail with 3-way merge
+                if "corrupt patch" in error_msg.lower():
+                    logger.info("Retrying apply without --3way for %s", task_id)
+                    apply_result = subprocess.run(
+                        ["git", "-C", worktree_str, "apply"],
+                        input=diff_text,
+                        capture_output=True,
+                        text=True,
+                        timeout=self.timeout,
+                    )
+                    if apply_result.returncode == 0:
+                        logger.info("Retry succeeded for %s", task_id)
+                    else:
+                        error_msg = apply_result.stderr or "Failed to apply diff (retry)"
+                        is_stale_patch = is_stale_patch or ("patch does not apply" in error_msg.lower())
+                if apply_result.returncode != 0:
+                    logger.warning("Failed to apply diff for %s: %s", task_id, error_msg)
+                    # Don't fallback to PR for stale patches - they won't apply anyway
+                    allow_pr_fallback = not is_stale_patch and "corrupt patch" not in (error_msg or "").lower()
+                    return {
+                        "success": False,
+                        "error": error_msg,
+                        "task_id": task_id,
+                        "fallback_to_pr": allow_pr_fallback,
+                    }
 
             # Git add
             subprocess.run(
@@ -525,9 +651,14 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                 timeout=self.timeout,
             )
 
-            # Git push
+            # Git push - use force to handle cases where remote branch already exists
+            # (e.g., from previous failed runs where push succeeded but PR creation failed)
+            if remote_branch_exists:
+                push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
+            else:
+                push_cmd = ["git", "-C", worktree_str, "push", "--force", "-u", "origin", f"HEAD:{branch}"]
             subprocess.run(
-                ["git", "-C", worktree_str, "push", "-u", "origin", branch],
+                push_cmd,
                 capture_output=True,
                 text=True,
                 check=True,
@@ -548,6 +679,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                 "success": False,
                 "error": error_msg,
                 "task_id": task_id,
+                "fallback_to_pr": True,
             }
         finally:
             # Always clean up the worktree
@@ -600,13 +732,13 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
             return None
 
     def _find_existing_pr_by_task_id(self, task_id: str, repo_full: Optional[str] = None) -> Optional[tuple[str, str]]:
-        """Find existing PR by task_id from metadata comments.
+        """Find existing PR by the deterministic task branch name.
 
         Returns (branch, pr_url) or None.
         """
         try:
-            # Get list of open PRs
-            cmd = ["gh", "pr", "list", "--json", "number,headRefName,url", "--limit", "50"]
+            branch = f"codex/{task_id[-8:]}"
+            cmd = ["gh", "pr", "list", "--json", "number,headRefName,url", "--limit", "50", "--head", branch]
             if repo_full:
                 cmd.extend(["--repo", repo_full])
             result = subprocess.run(
@@ -620,14 +752,11 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
 
             prs = json.loads(result.stdout)
             for pr in prs:
-                pr_number = str(pr["number"])
-                metadata = self._parse_metadata_from_pr(pr_number, repo_full=repo_full)
-
-                if metadata and metadata["task_id"] == task_id:
-                    return (metadata["branch"], pr["url"])
+                if pr.get("headRefName") == branch:
+                    return (branch, pr["url"])
 
             return None
-        except (subprocess.CalledProcessError, json.JSONDecodeError) as exc:
+        except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as exc:
             logger.warning("Failed to search PR by task_id: %s", exc)
             return None
 
@@ -739,73 +868,22 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                     check=True,
                     timeout=self.timeout,
                 )
-                # Check if local branch exists
-                local_branch_exists = subprocess.run(
-                    ["git", "-C", worktree_str, "rev-parse", "--verify", branch],
-                    capture_output=True,
-                    text=True,
-                    timeout=self.timeout,
-                ).returncode == 0
-                
-                if local_branch_exists:
-                    subprocess.run(
-                        ["git", "-C", worktree_str, "checkout", branch],
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                        timeout=self.timeout,
-                    )
-                else:
-                    # Create local tracking branch from remote
-                    subprocess.run(
-                        ["git", "-C", worktree_str, "checkout", "-b", branch, f"origin/{branch}"],
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                        timeout=self.timeout,
-                    )
-                # Reset to remote version to start fresh
-                subprocess.run(
-                    ["git", "-C", worktree_str, "reset", "--hard", f"origin/{branch}"],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                    timeout=self.timeout,
-                )
+                self._checkout_detached_target(worktree_str, f"origin/{branch}")
             else:
-                # Check if branch exists locally (from previous worktree)
-                branch_exists = subprocess.run(
-                    ["git", "-C", worktree_str, "rev-parse", "--verify", branch],
-                    capture_output=True,
-                    text=True,
-                    timeout=self.timeout,
-                ).returncode == 0
-
-                if branch_exists:
-                    # Branch exists locally - delete and recreate from base to avoid stale state
+                # Check if branch already exists on remote (from previous failed run)
+                remote_exists = self._remote_branch_exists(worktree_str, branch)
+                if remote_exists:
+                    # Fetch and update existing branch
                     subprocess.run(
-                        ["git", "-C", worktree_str, "branch", "-D", branch],
+                        ["git", "-C", worktree_str, "fetch", "origin", branch],
                         capture_output=True,
                         text=True,
                         check=True,
                         timeout=self.timeout,
                     )
-                    subprocess.run(
-                        ["git", "-C", worktree_str, "checkout", "-b", branch],
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                        timeout=self.timeout,
-                    )
+                    self._checkout_detached_target(worktree_str, f"origin/{branch}")
                 else:
-                    # Create and checkout new branch
-                    subprocess.run(
-                        ["git", "-C", worktree_str, "checkout", "-b", branch],
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                        timeout=self.timeout,
-                    )
+                    self._checkout_branch_at_target(worktree_str, branch, base_branch)
 
             # Apply diff with 3-way merge (creates conflict markers if needed)
             apply_result = subprocess.run(
@@ -816,8 +894,51 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                 timeout=self.timeout,
             )
             has_conflicts = apply_result.returncode != 0
+            apply_stderr = (apply_result.stderr or "").strip()
 
             if has_conflicts:
+                # Check for stale patch - target repo has changed since diff was generated
+                # "patch does not apply" or "does not exist in index" means diff is stale
+                is_stale_patch = "patch does not apply" in apply_stderr.lower() or "does not exist in index" in apply_stderr.lower() or "corrupt patch" in apply_stderr.lower()
+
+                # Retry without --3way if corrupt patch - sometimes Codex Cloud generates diffs
+                # that work with plain apply but fail with 3-way merge
+                if "corrupt patch" in apply_stderr.lower():
+                    logger.info("Retrying apply without --3way for %s", task_id)
+                    apply_result = subprocess.run(
+                        ["git", "-C", worktree_str, "apply"],
+                        input=diff_text,
+                        capture_output=True,
+                        text=True,
+                        timeout=self.timeout,
+                    )
+                    if apply_result.returncode == 0:
+                        logger.info("Retry succeeded for %s", task_id)
+                        has_conflicts = False
+                        apply_stderr = ""
+                    else:
+                        # Check if retry also failed with stale patch
+                        is_stale_patch = is_stale_patch or ("patch does not apply" in (apply_result.stderr or "").lower())
+                        if is_stale_patch:
+                            logger.warning("Stale diff - patch does not apply to current repo state for %s", task_id)
+                            return {
+                                "success": False,
+                                "error": "Stale diff - target repo has changed since task was created",
+                                "task_id": task_id,
+                            }
+                        return {
+                            "success": False,
+                            "error": apply_result.stderr or "Failed to apply diff (retry)",
+                            "task_id": task_id,
+                        }
+                # If it's a stale patch that wasn't caught above, fail early
+                if is_stale_patch and has_conflicts:
+                    logger.warning("Stale diff - patch does not apply to current repo state for %s", task_id)
+                    return {
+                        "success": False,
+                        "error": "Stale diff - target repo has changed since task was created",
+                        "task_id": task_id,
+                    }
                 # When conflicts occur, git apply leaves files in unmerged state
                 # Get list of unmerged files and accept incoming changes
                 unmerged_result = subprocess.run(
@@ -847,6 +968,27 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                 timeout=self.timeout,
             )
 
+            staged_changes = subprocess.run(
+                ["git", "-C", worktree_str, "diff", "--cached", "--quiet"],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout,
+            )
+            # Only returncode 0 means no staged changes; returncode 1 means changes staged
+            # Any other returncode (e.g., 2 for errors) should be treated as an error
+            if staged_changes.returncode == 0:
+                return {
+                    "success": False,
+                    "error": "no staged changes after fallback apply",
+                    "task_id": task_id,
+                }
+            elif staged_changes.returncode > 1:
+                return {
+                    "success": False,
+                    "error": f"git diff --cached failed with code {staged_changes.returncode}: {staged_changes.stderr}",
+                    "task_id": task_id,
+                }
+
             # Commit
             conflict_note = " (with conflicts - needs resolution)" if has_conflicts else ""
             commit_msg = f"""{build_automation_commit_marker("codex-api")} codex: {task_title}{conflict_note}
@@ -854,21 +996,37 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
 Applied from Codex Cloud task: {task_url}
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
-            subprocess.run(
+            commit_result = subprocess.run(
                 ["git", "-C", worktree_str, "commit", "-m", commit_msg],
                 capture_output=True,
                 text=True,
-                check=True,
                 timeout=self.timeout,
             )
-
-            # Push branch (force-with-lease for existing branches)
-            push_cmd = ["git", "-C", worktree_str, "push", "origin"]
-            if updated_existing:
-                push_cmd.append("--force-with-lease")
+            if commit_result.returncode != 0:
+                logger.warning("Commit failed for %s: %s", task_id, commit_result.stderr)
+                if "nothing to commit" in commit_result.stderr.lower():
+                    logger.info("Nothing to commit for %s, checking for existing changes", task_id)
+                    status_result = subprocess.run(
+                        ["git", "-C", worktree_str, "status", "--porcelain"],
+                        capture_output=True, text=True, timeout=30,
+                    )
+                    logger.warning("Git status for %s: %s", task_id, status_result.stdout)
+                    return {
+                        "success": False,
+                        "error": f"nothing to commit: {status_result.stdout[:200]}",
+                        "task_id": task_id,
+                    }
             else:
-                push_cmd.append("-u")
-            push_cmd.append(branch)
+                logger.info("Committed changes for %s", task_id)
+
+            # Push branch - use force to handle existing branches from previous runs
+            # Use HEAD:{branch} when in detached HEAD mode (remote_exists but no local branch)
+            push_cmd = ["git", "-C", worktree_str, "push", "--force", "origin"]
+            if updated_existing or remote_exists:
+                # Use HEAD:{branch} for detached HEAD mode or existing branch
+                push_cmd.extend(["--force-with-lease", f"HEAD:{branch}"])
+            else:
+                push_cmd.extend(["-u", branch])
 
             subprocess.run(
                 push_cmd,
@@ -913,7 +1071,7 @@ Task URL: {task_url}
 ✅ Applied changes from [Codex Cloud task {task_id}]({task_url})
 📋 **Metadata:** PR #{pr_number} | Branch: `{branch}`"""
 
-                subprocess.run(
+                comment_result = subprocess.run(
                     ["gh", "pr", "comment", pr_number, "--body", metadata_comment]
                     + (["--repo", repo_full] if repo_full else []),
                     capture_output=True,
@@ -921,6 +1079,8 @@ Task URL: {task_url}
                     timeout=self.timeout,
                     cwd=worktree_str,
                 )
+                if comment_result.returncode != 0:
+                    logger.warning("Failed to post metadata comment: %s", comment_result.stderr)
 
                 logger.info("Created PR for %s: %s (conflicts: %s)", task_id, pr_url, has_conflicts)
             else:
@@ -935,7 +1095,7 @@ Task URL: {task_url}
 🔄 Updated from [Codex Cloud task {task_id}]({task_url})
 📋 **Metadata:** PR #{pr_number} | Branch: `{branch}`"""
 
-                subprocess.run(
+                comment_result = subprocess.run(
                     ["gh", "pr", "comment", pr_number, "--body", update_comment]
                     + (["--repo", repo_full] if repo_full else []),
                     capture_output=True,
@@ -943,6 +1103,8 @@ Task URL: {task_url}
                     timeout=self.timeout,
                     cwd=worktree_str,
                 )
+                if comment_result.returncode != 0:
+                    logger.warning("Failed to post update comment: %s", comment_result.stderr)
 
                 logger.info("Updated existing PR %s for %s (conflicts: %s)", pr_url, task_id, has_conflicts)
 

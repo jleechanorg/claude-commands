@@ -36,26 +36,27 @@ permissions:
   contents: read
   actions: write
   pull-requests: read
+  packages: read
 
 jobs:
   harness-autonomy-self-hosted:
     name: Harness autonomy checks (self hosted)
-    # Never run untrusted fork PR code on self-hosted infrastructure.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
-    timeout-minutes: 20
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 30
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 1
 
     - name: Run harness autonomy checks (self-hosted)
       env:
         GH_TOKEN: ${{ github.token }}
         GITHUB_ACTIONS: "true"
       run: |
-        cat <<'EOF' >/tmp/run-harness-autonomy-self-hosted.sh
-        #!/usr/bin/env bash
         set -euo pipefail
         source scripts/venv_utils.sh
         ensure_venv
@@ -73,49 +74,41 @@ jobs:
           --limit 20 \
           --prompt-source claude_local_strict \
           --no-persist \
-          --output-json /tmp/harness_metrics_ci.json
-        EOF
-
-        chmod +x /tmp/run-harness-autonomy-self-hosted.sh
-        ./self-hosted-runner/run-in-ci-container.sh \
-          --workspace "$GITHUB_WORKSPACE" \
-          --cmd-file /tmp/run-harness-autonomy-self-hosted.sh
+          --output-json "harness_metrics_ci.json"
 
     - name: Upload harness autonomy artifacts
       if: always()
       uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
       with:
         name: harness-autonomy-self-hosted
-        path: /tmp/harness_metrics_ci.json
+        path: harness_metrics_ci.json
         retention-days: 30
         if-no-files-found: ignore
 
   mvp-shard-1:
     name: Directory tests (core-mvp-1(self hosted))
-    # Never run untrusted fork PR code on self-hosted infrastructure.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
-    timeout-minutes: 20
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 30
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
-
-    - name: Runner control plane
-      uses: ./.github/actions/runner-control-plane
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 1
 
     - name: Run core-mvp-1 tests (self-hosted)
-      uses: ./.github/actions/container-run
-      with:
-        command: |
-          set -euo pipefail
-          source scripts/venv_utils.sh
-          ensure_venv
-          ensure_requirements_installed
-          SHARD_DISPLAY=$((0 + 1))
-          echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-1)"
-          chmod +x run_tests.sh
-          ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+      run: |
+        set -euo pipefail
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+        rm -rf mvp_site/test-results 2>/dev/null || true
+        SHARD_DISPLAY=$((0 + 1))
+        echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-1)"
+        chmod +x run_tests.sh
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
       env:
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"
@@ -132,6 +125,8 @@ jobs:
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
         TEST_MAX_WORKERS: 2
+        TEST_SHARD_TOTAL: "3"
+        TEST_SHARD_INDEX: "0"
 
     - name: Upload test results
       if: always()
@@ -141,33 +136,30 @@ jobs:
         path: mvp_site/test-results/
         retention-days: 30
         if-no-files-found: ignore
-
   mvp-shard-2:
     name: Directory tests (core-mvp-2(self hosted))
-    # Never run untrusted fork PR code on self-hosted infrastructure.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
-    timeout-minutes: 20
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 30
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
-
-    - name: Runner control plane
-      uses: ./.github/actions/runner-control-plane
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 1
 
     - name: Run core-mvp-2 tests (self-hosted)
-      uses: ./.github/actions/container-run
-      with:
-        command: |
-          set -euo pipefail
-          source scripts/venv_utils.sh
-          ensure_venv
-          ensure_requirements_installed
-          SHARD_DISPLAY=$((1 + 1))
-          echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-2)"
-          chmod +x run_tests.sh
-          ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+      run: |
+        set -euo pipefail
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+        rm -rf mvp_site/test-results 2>/dev/null || true
+        SHARD_DISPLAY=$((1 + 1))
+        echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-2)"
+        chmod +x run_tests.sh
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
       env:
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"
@@ -184,6 +176,8 @@ jobs:
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
         TEST_MAX_WORKERS: 2
+        TEST_SHARD_TOTAL: "3"
+        TEST_SHARD_INDEX: "1"
 
     - name: Upload test results
       if: always()
@@ -196,30 +190,28 @@ jobs:
 
   mvp-shard-3:
     name: Directory tests (core-mvp-3(self hosted))
-    # Never run untrusted fork PR code on self-hosted infrastructure.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
-    timeout-minutes: 20
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 30
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
-
-    - name: Runner control plane
-      uses: ./.github/actions/runner-control-plane
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 1
 
     - name: Run core-mvp-3 tests (self-hosted)
-      uses: ./.github/actions/container-run
-      with:
-        command: |
-          set -euo pipefail
-          source scripts/venv_utils.sh
-          ensure_venv
-          ensure_requirements_installed
-          SHARD_DISPLAY=$((2 + 1))
-          echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-3)"
-          chmod +x run_tests.sh
-          ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+      run: |
+        set -euo pipefail
+        source scripts/venv_utils.sh
+        ensure_venv
+        ensure_requirements_installed
+        rm -rf mvp_site/test-results 2>/dev/null || true
+        SHARD_DISPLAY=$((2 + 1))
+        echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-3)"
+        chmod +x run_tests.sh
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
       env:
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"
@@ -236,6 +228,8 @@ jobs:
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
         TEST_MAX_WORKERS: 2
+        TEST_SHARD_TOTAL: "3"
+        TEST_SHARD_INDEX: "2"
 
     - name: Upload test results
       if: always()

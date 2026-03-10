@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-tmux Live Mode - Interactive AI CLI Wrapper
+ai_orch - AI CLI runner with passthrough and async tmux modes.
 
-Start claude or codex CLI in an interactive tmux session for direct user interaction.
-Beyond slash commands, this provides a persistent terminal interface to AI assistants.
+Modes:
+  passthrough (default): run CLI directly, stream output
+  async (--async):       spawn detached tmux session, return immediately
 """
 
 # ruff: noqa: E402
 
 # Allow direct script execution - add parent directory to sys.path
+import hashlib
 import os
 import sys
 
@@ -17,8 +19,6 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 import argparse
-import contextlib
-import io
 import json
 import shlex
 import shutil
@@ -28,9 +28,13 @@ from importlib import metadata as importlib_metadata
 from typing import Optional
 
 # Use absolute imports with package name for __main__ compatibility
-from orchestration.orchestrate_unified import UnifiedOrchestration
+from orchestration.cli_args import add_agent_cli_and_model_arguments
+from orchestration.cli_args import add_live_cli_arguments
+from orchestration.cli_args import add_named_session_argument
+from orchestration.cli_args import add_task_argument
+from orchestration.task_dispatcher import apply_minimax_auth_env
 from orchestration.task_dispatcher import CLI_PROFILES
-from orchestration.task_dispatcher import TaskDispatcher
+from orchestration.task_dispatcher import GEMINI_MODEL
 
 
 class LiveMode:
@@ -273,6 +277,197 @@ class LiveMode:
             sys.exit(1)
 
 
+class AsyncRunner:
+    """Spawn detached tmux sessions for CLI tasks; track by CWD for resume."""
+
+    SESSIONS_FILE = os.path.expanduser("~/.ai_orch_sessions.json")
+
+    def _load_sessions(self) -> dict:
+        try:
+            with open(self.SESSIONS_FILE) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def _save_sessions(self, sessions: dict) -> None:
+        with open(self.SESSIONS_FILE, "w") as f:
+            json.dump(sessions, f, indent=2)
+
+    def session_alive(self, session_name: str) -> bool:
+        """Check if a tmux session exists."""
+        try:
+            result = subprocess.run(
+                ["tmux", "has-session", "-t", session_name],
+                shell=False, capture_output=True, timeout=5,
+            )
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
+
+    def find_existing_session(self, cwd: str, cli: str) -> Optional[str]:
+        """Return session name if one is alive for this cwd+cli, else None."""
+        session = self._load_sessions().get(cwd, {}).get(cli)
+        if session and self.session_alive(session):
+            return session
+        return None
+
+    def _register_session(self, cwd: str, cli: str, session_name: str) -> None:
+        sessions = self._load_sessions()
+        sessions.setdefault(cwd, {})[cli] = session_name
+        self._save_sessions(sessions)
+
+    def _make_session_name(self, cli: str, cwd: str) -> str:
+        cwd_hash = hashlib.md5(cwd.encode()).hexdigest()[:6]
+        return f"ai-{cli}-{cwd_hash}"
+
+    def _build_shell_cmd(self, cli: str, model: Optional[str], task: str, resume: bool) -> str:
+        """Return a shell command string suitable for tmux to execute."""
+        profile = CLI_PROFILES[cli]
+        binary = shlex.quote(profile["binary"])
+
+        if cli == "claude":
+            parts = [binary]
+            if model:
+                parts += ["--model", shlex.quote(model)]
+            else:
+                parts += ["--model", "sonnet"]
+            if resume:
+                parts.append("--continue")
+            parts += ["-p", shlex.quote(task)]
+            return " ".join(parts)
+
+        if cli == "codex":
+            parts = [binary, "exec", "--yolo", "--skip-git-repo-check"]
+            if model:
+                parts += ["--model", shlex.quote(model)]
+            return f"printf '%s' {shlex.quote(task)} | {' '.join(parts)}"
+
+        if cli == "gemini":
+            m = shlex.quote(model or GEMINI_MODEL)
+            return f"printf '%s' {shlex.quote(task)} | {binary} -m {m} --yolo"
+
+        if cli == "minimax":
+            # MiniMax uses claude binary with environment variable overrides
+            env_cmds = []
+            # Unset conflicting environment variables
+            for var in profile.get("env_unset", []):
+                env_cmds.append(f"unset {var}")
+            # Set MiniMax-specific environment variables
+            for key, value in profile.get("env_set", {}).items():
+                env_cmds.append(f"export {key}={shlex.quote(str(value))}")
+            # Apply MiniMax authentication
+            auth_env = apply_minimax_auth_env({})
+            for key, value in auth_env.items():
+                env_cmds.append(f"export {key}={shlex.quote(str(value))}")
+            
+            # Build claude command (minimax uses claude binary)
+            parts = ["claude"]
+            if model:
+                parts += ["--model", shlex.quote(model)]
+            if resume:
+                parts.append("--continue")
+            parts += ["-p", shlex.quote(task)]
+            
+            # Combine environment setup and command
+            return "; ".join(env_cmds + [" ".join(parts)])
+
+        # generic fallback: task as positional arg
+        parts = [binary]
+        if model:
+            parts += ["--model", shlex.quote(model)]
+        parts.append(shlex.quote(task))
+        return " ".join(parts)
+
+    def create_worktree(self, cwd: str) -> Optional[str]:
+        """Create a git worktree under /tmp and return its path, or None on failure."""
+        branch = f"ai-orch-{int(time.time()) % 100000}"
+        worktree_path = f"/tmp/ai-orch-worktrees/{branch}"
+        os.makedirs("/tmp/ai-orch-worktrees", exist_ok=True)
+        try:
+            subprocess.run(
+                ["git", "worktree", "add", "-b", branch, worktree_path],
+                shell=False, check=True, cwd=cwd,
+                capture_output=True, timeout=30,
+            )
+            print(f"🧩 Worktree: {worktree_path} (branch: {branch})")
+            return worktree_path
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode() if e.stderr else str(e)
+            print(f"❌ Failed to create worktree: {stderr}")
+            return None
+
+    def run(
+        self,
+        task: str,
+        cli: str,
+        model: Optional[str] = None,
+        resume: bool = False,
+        worktree: bool = False,
+        cwd: Optional[str] = None,
+    ) -> int:
+        """Spawn a detached tmux session and return immediately."""
+        if cwd is None:
+            cwd = os.getcwd()
+
+        profile = CLI_PROFILES.get(cli)
+        if not profile:
+            print(f"❌ Unknown CLI: {cli}. Valid: {', '.join(sorted(CLI_PROFILES.keys()))}")
+            return 2
+
+        if not shutil.which("tmux"):
+            print("❌ tmux not found. Install with: brew install tmux")
+            return 1
+
+        binary = profile["binary"]
+        if not shutil.which(binary):
+            print(f"❌ {binary} not found in PATH")
+            return 1
+
+        work_dir = cwd
+        if worktree:
+            work_dir = self.create_worktree(cwd)
+            if work_dir is None:
+                return 1
+
+        # Find or create session name
+        session_name = self._make_session_name(cli, cwd)
+        existing = self.find_existing_session(cwd, cli) if resume else None
+
+        shell_cmd = self._build_shell_cmd(cli, model, task, resume=(existing is not None))
+
+        if existing:
+            # Resume: send task to the live session
+            try:
+                subprocess.run(
+                    ["tmux", "send-keys", "-t", existing, shell_cmd, "Enter"],
+                    shell=False, check=True, timeout=10,
+                )
+                print(f"📨 Sent to existing session: {existing}")
+                print(f"📺 Attach: tmux attach -t {existing}")
+                return 0
+            except subprocess.CalledProcessError as e:
+                print(f"⚠️  Could not send to session {existing}: {e}. Creating new session.")
+
+        # Unique name if already taken
+        if self.session_alive(session_name):
+            session_name = f"{session_name}-{int(time.time()) % 10000}"
+
+        try:
+            subprocess.run(
+                ["tmux", "new-session", "-d", "-s", session_name, "-c", work_dir, shell_cmd],
+                shell=False, check=True, timeout=15,
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to start tmux session: {e}")
+            return 1
+
+        self._register_session(cwd, cli, session_name)
+        print(f"🚀 Async session: {session_name}")
+        print(f"📺 Attach: tmux attach -t {session_name}")
+        print(f"💓 Alive?: tmux has-session -t {session_name} && echo alive")
+        return 0
+
+
 def main():
     """Main CLI entry point."""
 
@@ -283,178 +478,106 @@ def main():
         except importlib_metadata.PackageNotFoundError:
             return "unknown"
 
-    def _normalize_cli_chain(cli_value: Optional[str]):
-        if cli_value is None:
-            return None, False
-        cli_parts = [part.strip().lower() for part in cli_value.split(",") if part.strip()]
-        if not cli_parts:
-            raise ValueError("Agent CLI chain cannot be empty")
-        invalid = [cli for cli in cli_parts if cli not in CLI_PROFILES]
-        if invalid:
-            raise ValueError(f"Invalid agent CLI(s): {', '.join(invalid)}")
-        return ",".join(cli_parts), True
-
-    def _json_dumps_safe(payload: object) -> str:
-        try:
-            return json.dumps(payload, indent=2)
-        except TypeError:
-            return json.dumps(payload, indent=2, default=str)
-
-    def _run_unified(args) -> int:
-        try:
-            agent_cli, cli_provided = _normalize_cli_chain(args.agent_cli)
-        except ValueError as exc:
-            print(f"❌ {exc}. Valid options: {', '.join(sorted(CLI_PROFILES.keys()))}")
+    def _run_passthrough(task: str, cli_name: str, model: Optional[str], resume: bool = False) -> int:
+        """Invoke the CLI directly and stream output to stdout."""
+        profile = CLI_PROFILES.get(cli_name)
+        if not profile:
+            print(f"❌ Unknown CLI: {cli_name}. Valid: {', '.join(sorted(CLI_PROFILES.keys()))}")
             return 2
 
-        if agent_cli is None:
-            agent_cli = "gemini"
+        binary = profile["binary"]
+        if not shutil.which(binary):
+            print(f"❌ {binary} not found in PATH")
+            return 1
+
+        try:
+            if cli_name == "claude":
+                cmd = [binary]
+                if model:
+                    cmd.extend(["--model", model])
+                else:
+                    cmd.extend(["--model", "sonnet"])
+                if resume:
+                    cmd.append("--continue")
+                cmd.extend(["-p", task])
+                return subprocess.run(cmd, shell=False).returncode
+
+            if cli_name == "codex":
+                cmd = [binary, "exec", "--yolo", "--skip-git-repo-check"]
+                if model:
+                    cmd.extend(["--model", model])
+                return subprocess.run(cmd, input=task, text=True, shell=False).returncode
+
+            if cli_name == "gemini":
+                cmd = [binary, "-m", model or GEMINI_MODEL, "--yolo"]
+                return subprocess.run(cmd, input=task, text=True, shell=False).returncode
+
+            if cli_name == "minimax":
+                cmd = ["claude"]
+                if model is not None:
+                    cmd.extend(["--model", model])
+                if resume:
+                    cmd.append("--continue")
+                cmd.extend(["-p", task])
+                env = dict(os.environ)
+                for var in profile.get("env_unset", []):
+                    env.pop(var, None)
+                env.update({k: str(v) for k, v in profile.get("env_set", {}).items()})
+                env = apply_minimax_auth_env(env)
+                return subprocess.run(cmd, shell=False, env=env).returncode
+
+            # Generic fallback
+            cmd = [binary]
+            if model:
+                cmd.extend(["--model", model])
+            cmd.append(task)
+            return subprocess.run(cmd, shell=False).returncode
+
+        except KeyboardInterrupt:
+            return 130
+
+    def _run(args) -> int:
+        cli = (args.agent_cli or "claude").strip().lower()
+        if cli not in CLI_PROFILES:
+            print(f"❌ Unknown CLI: {cli}. Valid: {', '.join(sorted(CLI_PROFILES.keys()))}")
+            return 2
 
         task = " ".join(args.task).strip()
         if not task:
-            print("❌ Task description is required.")
+            print("❌ Task is required.")
+            return 2
+        if args.worktree and not args.async_mode:
+            print("❌ --worktree requires --async.")
             return 2
 
-        options = {
-            "context": args.context,
-            "branch": args.branch,
-            "pr": args.pr,
-            "mcp_agent": args.mcp_agent,
-            "bead": args.bead,
-            "validate": args.validate,
-            "no_new_pr": args.no_new_pr,
-            "no_new_branch": args.no_new_branch,
-            "no_worktree": args.no_worktree,
-            "agent_cli": agent_cli,
-            "agent_cli_provided": cli_provided,
-            "model": args.model,
-        }
-
-        try:
-            orchestration = UnifiedOrchestration()
-            agents_created = orchestration.orchestrate(task, options=options)
-            if agents_created is None:
-                agents_created = 0
-            return 0 if agents_created > 0 else 1
-        except KeyboardInterrupt:
-            print("\n👋 Orchestration interrupted.")
-            return 130
-        except Exception as exc:
-            print(f"❌ Orchestration failed: {exc}")
-            return 1
-
-    def _dispatcher_analyze(args) -> int:
-        try:
-            agent_cli, _ = _normalize_cli_chain(args.agent_cli)
-        except ValueError as exc:
-            print(f"❌ {exc}. Valid options: {', '.join(sorted(CLI_PROFILES.keys()))}")
-            return 2
-
-        task = " ".join(args.task).strip()
-        try:
-            if args.output_json:
-                captured_stdout = io.StringIO()
-                with contextlib.redirect_stdout(captured_stdout):
-                    dispatcher = TaskDispatcher()
-                    specs = dispatcher.analyze_task_and_create_agents(
-                        task,
-                        forced_cli=agent_cli,
-                        wrap_prompt=True,
-                        pr_update_mode=True,
-                    )
-                dispatcher_logs = captured_stdout.getvalue().strip()
-                if dispatcher_logs:
-                    print(dispatcher_logs, file=sys.stderr)
-                print(_json_dumps_safe(specs))
-            else:
-                dispatcher = TaskDispatcher()
-                specs = dispatcher.analyze_task_and_create_agents(
-                    task,
-                    forced_cli=agent_cli,
-                    wrap_prompt=True,
-                    pr_update_mode=True,
-                )
-                print(f"Planned {len(specs)} agent(s):")
-                for idx, spec in enumerate(specs, start=1):
-                    print(f"{idx}. {spec.get('name')} ({spec.get('cli', 'default')})")
-            return 0
-        except KeyboardInterrupt:
-            print("\n👋 Dispatcher analysis interrupted.")
-            return 130
-        except Exception as exc:
-            print(f"❌ Dispatcher analyze failed: {exc}")
-            return 1
-
-    def _dispatcher_create(args) -> int:
-        try:
-            agent_cli, _ = _normalize_cli_chain(args.agent_cli)
-        except ValueError as exc:
-            print(f"❌ {exc}. Valid options: {', '.join(sorted(CLI_PROFILES.keys()))}")
-            return 2
-
-        try:
-            dispatcher = TaskDispatcher()
-            task = " ".join(args.task).strip()
-            specs = dispatcher.analyze_task_and_create_agents(
-                task,
-                forced_cli=agent_cli,
-                wrap_prompt=True,
-                pr_update_mode=True,
+        if args.async_mode:
+            return AsyncRunner().run(
+                task=task,
+                cli=cli,
+                model=args.model,
+                resume=args.resume,
+                worktree=args.worktree,
             )
 
-            if args.model:
-                for spec in specs:
-                    spec["model"] = args.model
-
-            if args.dry_run:
-                print(_json_dumps_safe(specs))
-                return 0
-
-            success_count = 0
-            for spec in specs:
-                print(f"Creating agent: {spec.get('name')}")
-                if dispatcher.create_dynamic_agent(spec):
-                    success_count += 1
-                    print(f"✅ Created: {spec.get('name')}")
-                else:
-                    print(f"❌ Failed: {spec.get('name')}")
-
-            if success_count != len(specs):
-                print(f"❌ Created {success_count}/{len(specs)} agents.")
-                return 1
-            return 0
-        except KeyboardInterrupt:
-            print("\n👋 Dispatcher create interrupted.")
-            return 130
-        except Exception as exc:
-            print(f"❌ Dispatcher create failed: {exc}")
-            return 1
+        return _run_passthrough(task, cli, args.model, resume=args.resume)
 
     parser = argparse.ArgumentParser(
-        description="AI Orchestration CLI (unified runtime + task dispatcher)",
+        description="ai_orch - run AI CLI tasks (passthrough or async tmux)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Unified orchestration (default mode)
-  ai_orch run --agent-cli gemini,claude "Fix failing tests"
-  ai_orch --agent-cli claude "Implement feature X"
-
-  # TaskDispatcher helpers
-  ai_orch dispatcher analyze --agent-cli codex "Refactor API handlers"
-  ai_orch dispatcher create --agent-cli gemini "Fix PR #123 conflicts"
-
-  # Legacy interactive tmux mode
-  ai_orch live --cli codex
+  ai_orch "explain this code"                       # passthrough (default)
+  ai_orch --agent-cli codex "print 1"               # codex passthrough
+  ai_orch --async "implement feature X"             # detached tmux session
+  ai_orch --async --resume "add error handling"     # resume existing session
+  ai_orch --async --worktree "refactor auth"        # new git worktree + tmux
+  ai_orch live --cli codex                          # interactive session
         """,
     )
-    parser.add_argument(
-        "--version",
-        action="version",
-        version=f"%(prog)s {_get_version()}",
-    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {_get_version()}")
 
-    commands = {"run", "dispatcher", "live", "list", "attach", "kill"}
-    live_only_flags = {"--cli", "--name", "--dir", "--detached", "--model"}
+    commands = {"run", "live", "list", "attach", "kill"}
+    live_only_flags = {"--cli", "--name", "--dir", "--detached"}
     argv = sys.argv[1:]
     if argv and not argv[0].startswith("-") and argv[0] not in commands:
         argv = ["run"] + argv
@@ -466,73 +589,42 @@ Examples:
 
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
-    # Unified orchestration command
-    run_parser = subparsers.add_parser("run", help="Run unified orchestration (orchestrate_unified interface)")
-    run_parser.add_argument("task", nargs="+", help="Task description for the orchestration system")
-    run_parser.add_argument("--context", type=str, default=None, help="Path to markdown context file")
-    run_parser.add_argument("--branch", type=str, default=None, help="Force checkout of specific branch")
-    run_parser.add_argument("--pr", type=int, default=None, help="Existing PR number to update")
-    run_parser.add_argument("--mcp-agent", type=str, default=None, help="Pre-fill agent name for MCP Mail")
-    run_parser.add_argument("--bead", type=str, default=None, help="Pre-fill bead ID for tracking")
-    run_parser.add_argument("--validate", type=str, default=None, help="Validation command to run after completion")
-    run_parser.add_argument("--no-new-pr", action="store_true", help="Block new PR creation")
-    run_parser.add_argument("--no-new-branch", action="store_true", help="Block new branch creation")
-    run_parser.add_argument("--no-worktree", action="store_true", help="Run agents in current directory (no worktree)")
+    # run command
+    run_parser = subparsers.add_parser("run", help="Run a task (passthrough or async)")
+    add_task_argument(run_parser, help_text="Task to send to the CLI")
+    add_agent_cli_and_model_arguments(run_parser, model_default=None)
     run_parser.add_argument(
-        "--agent-cli",
-        type=str,
-        default=None,
-        help="Agent CLI to use (supports fallback chain, e.g. gemini,claude)",
+        "--async", dest="async_mode", action="store_true", default=False,
+        help="Spawn a detached tmux session and return immediately",
     )
-    run_parser.add_argument("--model", type=str, default=None, help="Model override for supported CLIs")
-
-    # TaskDispatcher command
-    dispatcher_parser = subparsers.add_parser("dispatcher", help="Direct TaskDispatcher utilities")
-    dispatcher_subparsers = dispatcher_parser.add_subparsers(dest="dispatcher_command", required=True)
-
-    analyze_parser = dispatcher_subparsers.add_parser("analyze", help="Analyze task and print planned agent specs")
-    analyze_parser.add_argument("task", nargs="+", help="Task description to analyze")
-    analyze_parser.add_argument("--agent-cli", type=str, default=None, help="Force a specific CLI")
-    analyze_parser.add_argument("--json", action="store_true", dest="output_json", help="Print JSON output")
-
-    create_parser = dispatcher_subparsers.add_parser(
-        "create", help="Analyze task and create dynamic agents via TaskDispatcher"
+    run_parser.add_argument(
+        "--resume", "--continue", dest="resume", action="store_true", default=False,
+        help="Resume existing session for this directory (or add --continue for claude)",
     )
-    create_parser.add_argument("task", nargs="+", help="Task description")
-    create_parser.add_argument("--agent-cli", type=str, default=None, help="Force a specific CLI")
-    create_parser.add_argument("--model", type=str, default=None, help="Model override")
-    create_parser.add_argument("--dry-run", action="store_true", help="Print planned specs without creating agents")
-
-    # Legacy live command
-    live_parser = subparsers.add_parser("live", help="(Legacy) Start interactive AI CLI session")
-    live_parser.add_argument(
-        "--cli", choices=list(CLI_PROFILES.keys()), default="claude", help="AI CLI to use (default: claude)"
-    )
-    live_parser.add_argument("--name", help="Custom session name")
-    live_parser.add_argument("--dir", help="Working directory (default: current directory)")
-    live_parser.add_argument("--model", help="Model to use (default: sonnet for claude)")
-    live_parser.add_argument(
-        "--detached", action="store_true", help="Start in detached mode (don't attach immediately)"
+    run_parser.add_argument(
+        "--worktree", dest="worktree", action="store_true", default=False,
+        help="Create a git worktree before running (only applies with --async)",
     )
 
-    # Legacy list/attach/kill commands
-    subparsers.add_parser("list", help="(Legacy) List active tmux sessions")
-    attach_parser = subparsers.add_parser("attach", help="(Legacy) Attach to existing session")
-    attach_parser.add_argument("session", help="Session name to attach to")
-    kill_parser = subparsers.add_parser("kill", help="(Legacy) Kill a session")
-    kill_parser.add_argument("session", help="Session name to kill")
+    # live command
+    live_parser = subparsers.add_parser("live", help="Start interactive AI CLI session in tmux")
+    add_live_cli_arguments(live_parser, include_model=True, include_detached=True)
+
+    # list/attach/kill commands
+    subparsers.add_parser("list", help="List active tmux sessions")
+    attach_parser = subparsers.add_parser("attach", help="Attach to existing session")
+    add_named_session_argument(attach_parser, help_text="Session name to attach to")
+    kill_parser = subparsers.add_parser("kill", help="Kill a session")
+    add_named_session_argument(kill_parser, help_text="Session name to kill")
+
+    if argv == ["--help"] or argv == ["-h"]:
+        parser.print_help()
+        return 0
 
     args = parser.parse_args(argv)
 
     if args.command == "run":
-        return _run_unified(args)
-
-    if args.command == "dispatcher":
-        if args.dispatcher_command == "analyze":
-            return _dispatcher_analyze(args)
-        if args.dispatcher_command == "create":
-            return _dispatcher_create(args)
-        return 2
+        return _run(args)
 
     if args.command == "live":
         live_mode = LiveMode(cli_name=args.cli)

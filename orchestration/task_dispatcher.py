@@ -33,6 +33,7 @@ from .constants import (
     AGENT_SESSION_TIMEOUT_SECONDS,
     DEFAULT_MAX_CONCURRENT_AGENTS,
     MAX_AGENT_NAME_LENGTH,
+    ORCHESTRATION_CHILD_PROCESS_VMEM_CAP_KB,
     RUNTIME_CLI_TIMEOUT_SECONDS,
     TIMESTAMP_MODULO,
 )
@@ -45,6 +46,7 @@ logger = logging.getLogger(__name__)
 PAIR_ORCHESTRATION_RESULTS_DIR_ENV = "PAIR_ORCHESTRATION_RESULTS_DIR"
 ORCHESTRATION_RESULTS_DIR_ENV = "ORCHESTRATION_RESULTS_DIR"
 ORCHESTRATION_LOG_DIR_ENV = "ORCHESTRATION_LOG_DIR"
+ORCHESTRATION_WORKTREE_BASE_ENV = "ORCHESTRATION_WORKTREE_BASE"
 
 # Default Gemini model can be overridden via GEMINI_MODEL; default to gemini-3-flash-preview (Gemini 3 Flash)
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
@@ -360,6 +362,23 @@ def _sanitize_agent_token(name: str) -> str:
 # Production safety limits - only counts actively working agents (not idle)
 MAX_CONCURRENT_AGENTS = int(os.environ.get("MAX_CONCURRENT_AGENTS", DEFAULT_MAX_CONCURRENT_AGENTS))
 
+# Inner bash body for child process memory capping.
+# $1 = memory cap in KB, $2 = command to execute.
+# Used in both skip-preflight and preflight attempt blocks to avoid duplication.
+_CHILD_VMEM_CAP_BASH_BODY = """\
+MEMORY_CAP_KB="$1"
+ATTEMPT_COMMAND="$2"
+if [ "${MEMORY_CAP_KB:-0}" -gt 0 ] 2>/dev/null; then
+    if ulimit -v "$MEMORY_CAP_KB" 2>/dev/null; then
+        echo "[$(date)] Applied child virtual memory cap: ${MEMORY_CAP_KB} KB"
+    else
+        echo "[$(date)] Error: could not apply child virtual memory cap ${MEMORY_CAP_KB} KB - exiting for safety"
+        exit 1
+    fi
+fi
+exec sh -c "$ATTEMPT_COMMAND"
+"""
+
 
 # Shared configuration paths
 def get_tmux_config_path():
@@ -635,7 +654,7 @@ class TaskDispatcher:
 
     def _get_active_subprocess_agents(self) -> set[str]:
         """Return names of subprocess agents still running; prune exited ones from registry."""
-        registry = getattr(self, "_subprocess_agents", {}) or {}
+        registry = getattr(self, "_subprocess_agents", {})
         if not registry:
             return set()
         active = set()
@@ -1821,10 +1840,20 @@ Complete the task, then use /pr to create a new pull request."""
             raise
 
     def _get_worktree_base_path(self):
-        """Calculate ~/projects/orch_{repo_name}/ base path."""
+        """Calculate orchestration worktree base path.
+
+        Default: <tempdir>/orch_worktrees/orch_{repo_name}/
+        (e.g. /tmp/orch_worktrees/orch_myrepo/ on Linux,
+        /var/folders/.../T/orch_worktrees/orch_myrepo/ on macOS)
+        Override via ORCHESTRATION_WORKTREE_BASE env var.
+        """
         try:
             repo_name = self._extract_repository_name()
-            base_path = os.path.join("~", "projects", f"orch_{repo_name}")
+            custom_base = os.environ.get(ORCHESTRATION_WORKTREE_BASE_ENV)
+            if custom_base:
+                base_path = os.path.join(custom_base, f"orch_{repo_name}")
+            else:
+                base_path = os.path.join(tempfile.gettempdir(), "orch_worktrees", f"orch_{repo_name}")
             return self._expand_path(base_path)
         except Exception as e:
             print(f"Error getting worktree base path: {e}")
@@ -2285,17 +2314,22 @@ Complete the task, then use /pr to create a new pull request."""
                 # --search is a top-level Codex flag (codex --search exec ...),
                 # not an exec subcommand flag. Remove it and any value from exec args.
                 filtered: list[str] = []
-                skip_next = False
-                for arg in cli_args:
+                i = 0
+                while i < len(cli_args):
+                    arg = cli_args[i]
                     a = str(arg)
-                    if skip_next:
-                        skip_next = False
+                    if a.startswith("--search="):
+                        i += 1
                         continue
-                    if a == "--search" or a.startswith("--search="):
-                        if a == "--search":
-                            skip_next = True
+                    if a == "--search":
+                        # Skip an explicit value only when next token is not another option.
+                        if i + 1 < len(cli_args) and not str(cli_args[i + 1]).startswith("-"):
+                            i += 2
+                        else:
+                            i += 1
                         continue
                     filtered.append(arg)
+                    i += 1
                 cli_args = filtered
 
             print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
@@ -2781,6 +2815,7 @@ fi
             cli_chain_str = ",".join(cli_chain)
             cli_chain_json = json.dumps(cli_chain_str)
             rate_limit_pattern = "exhausted your daily quota|rate limit|quota exceeded|resource_exhausted"
+            child_vmem_cap_kb = ORCHESTRATION_CHILD_PROCESS_VMEM_CAP_KB
             # NOTE: Removed model_not_found_pattern - it used overly broad phrases like "does not exist"
             # and "invalid_request_error" that caused false positives. CLI validation now reports raw
             # output on failure instead of guessing error types.
@@ -2959,7 +2994,7 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
 
     LOG_START_LINE=$(wc -l < {log_file_quoted} 2>/dev/null || echo 0)
 
-    timeout {attempt_timeout_seconds} sh -c '{attempt_execution_line}' 2>&1 | tee -a {log_file_quoted}
+    timeout {attempt_timeout_seconds} bash -c '{_CHILD_VMEM_CAP_BASH_BODY}' _ {child_vmem_cap_kb} {shlex.quote(attempt_execution_line)} 2>&1 | tee -a {log_file_quoted}
     ATTEMPT_EXIT=${{PIPESTATUS[0]}}
 
     if [ $ATTEMPT_EXIT -eq 124 ]; then
@@ -3037,7 +3072,7 @@ if [ $RESULT_WRITTEN -eq 0 ]; then
 
         # Wrap execution with timeout to prevent hangs and allow prompt fallback
         # Exit code 124 = timeout, which should trigger fallback to next CLI
-        timeout {attempt_timeout_seconds} sh -c '{attempt_execution_line}' 2>&1 | tee -a {log_file_quoted}
+        timeout {attempt_timeout_seconds} bash -c '{_CHILD_VMEM_CAP_BASH_BODY}' _ {child_vmem_cap_kb} {shlex.quote(attempt_execution_line)} 2>&1 | tee -a {log_file_quoted}
     ATTEMPT_EXIT=${{PIPESTATUS[0]}}
 
     # Handle timeout exit code (124) - treat as failure to trigger fallback
@@ -3093,6 +3128,7 @@ trap 'echo "[$(date)] Agent terminated with signal SIGTERM" | tee -a {log_file_q
 echo "[$(date)] Starting agent {agent_name_quoted}" | tee -a {log_file_quoted}
 echo "[$(date)] Working directory: {agent_dir_quoted}" | tee -a {log_file_quoted}
 echo "[$(date)] CLI chain: {cli_chain_str}" | tee -a {log_file_quoted}
+echo "[$(date)] Child virtual memory cap: {child_vmem_cap_kb} KB" | tee -a {log_file_quoted}
 echo "[$(date)] PATH: $PATH" | tee -a {log_file_quoted}
 
 RESULT_WRITTEN=0
@@ -3202,19 +3238,16 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                         [str(script_path)],
                         **popen_kwargs,
                     )
-                except Exception:
+                finally:
                     if log_fd is not None:
                         log_fd.close()
-                    raise
                 agent_spec["pid"] = proc.pid
                 agent_spec["process"] = proc
-                agent_spec["log_fd"] = log_fd
+                agent_spec["log_file"] = log_file
                 agent_spec["launch_mode"] = "subprocess"
 
                 # Register subprocess agent (name -> proc) so capacity/collision checks include it.
                 # _get_active_subprocess_agents() prunes exited procs when building active set.
-                if not hasattr(self, "_subprocess_agents"):
-                    self._subprocess_agents = {}
                 self._subprocess_agents[agent_name] = proc
                 # Invalidate active_agents cache so next read includes this agent.
                 self._active_agents = None

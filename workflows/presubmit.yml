@@ -27,17 +27,19 @@ permissions:
 on:
   pull_request:
     paths-ignore:
-      - '**/*.md'
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
+      - 'README.md'
+      - '*.md'
   push:
     branches: [ main, dev ]
     paths-ignore:
-      - '**/*.md'
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
+      - 'README.md'
+      - '*.md'
 
 jobs:
   limit-pr-runs:
@@ -89,10 +91,13 @@ jobs:
             --required-path rumors \
             --required-path scene_event \
             --required-path complications \
-            --required-path player_character_data.equipped_items.shoulders \
-            --required-path player_character_data.equipped_items.chest \
-            --required-path player_character_data.equipped_items.waist \
-            --required-path player_character_data.equipped_items.legs
+            --required-path player_character_data.equipment.shoulders \
+            --required-path player_character_data.equipment.chest \
+            --required-path player_character_data.equipment.waist \
+            --required-path player_character_data.equipment.legs \
+            --required-path player_character_data.spells_known \
+            --required-path player_character_data.spells_prepared \
+            --required-path player_character_data.cantrips
   python-lint:
     name: Python Linting (Ruff)
     runs-on: ubuntu-latest

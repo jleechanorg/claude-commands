@@ -438,17 +438,17 @@ Ready to exit character creation?
 ## Related Files
 
 **Agent routing:**
-- `/Users/$USER/projects/worktree_worker8/$PROJECT_ROOT/agents.py` (lines 2552-3164)
+- `$HOME/projects/worktree_worker8/$PROJECT_ROOT/agents.py` (lines 2552-3164)
 
 **Character creation:**
-- `/Users/$USER/projects/worktree_worker8/$PROJECT_ROOT/agents.py` (lines 830-1151, CharacterCreationAgent)
-- `/Users/$USER/projects/worktree_worker8/$PROJECT_ROOT/prompts/character_creation_instruction.md`
+- `$HOME/projects/worktree_worker8/$PROJECT_ROOT/agents.py` (lines 830-1151, CharacterCreationAgent)
+- `$HOME/projects/worktree_worker8/$PROJECT_ROOT/prompts/character_creation_instruction.md`
 
 **Intent classifier:**
-- `/Users/$USER/projects/worktree_worker8/$PROJECT_ROOT/intent_classifier.py`
+- `$HOME/projects/worktree_worker8/$PROJECT_ROOT/intent_classifier.py`
 
 **State management:**
-- `/Users/$USER/projects/worktree_worker8/$PROJECT_ROOT/game_state.py`
+- `$HOME/projects/worktree_worker8/$PROJECT_ROOT/game_state.py`
 
 ## References
 

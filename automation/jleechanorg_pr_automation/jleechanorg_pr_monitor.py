@@ -1791,7 +1791,15 @@ Your response MUST follow this exact structure for clarity:
         env_set = profile.get("env_set")
         if isinstance(env_set, dict):
             for key, value in env_set.items():
-                env[key] = value
+                if not isinstance(key, str) or value is None:
+                    self.logger.warning(
+                        "Skipping invalid env_set override for %s: %r=%r",
+                        cli_name,
+                        key,
+                        value,
+                    )
+                    continue
+                env[key] = str(value)
         if cli_name == "minimax":
             env = apply_minimax_auth_env(env)
 
@@ -4436,23 +4444,11 @@ def main():
 
         task_limit = min(args.codex_task_limit, 200)
 
-        print(f"🤖 Running Codex automation (first {task_limit} tasks)...")
-
-        # Validate Chrome CDP is accessible before running (auto-starts if needed)
-        cdp_ok, cdp_msg = ensure_chrome_cdp_accessible()
-        print(cdp_msg)
-        if not cdp_ok:
-            print("\n⚠️ Skipping Codex automation (Chrome CDP unavailable).")
-            print("💡 TIP: Start Chrome with CDP enabled first:")
-            print("   ./automation/jleechanorg_pr_automation/openai_automation/start_chrome_debug.sh")
-            print("   Or set CODEX_CDP_START_SCRIPT to a custom launcher path.")
-            sys.exit(0)
+        print(f"🤖 Running Codex automation headed+minimized (first {task_limit} tasks)...")
 
         try:
-            host, port = _resolve_cdp_host_port()
-            # Call the codex automation module with limit
-            # Use -m to run as module (works with installed package)
-            # Requires Chrome with CDP enabled (host/port resolved via _resolve_cdp_host_port)
+            # Call the codex automation module with limit.
+            # Headless mode runs with a fresh browser, so CDP pre-check/startup is not required.
 
             # Determine timeout: honor --subprocess-timeout if provided, otherwise use default
             default_timeout_seconds = max(900, int(task_limit * 30))  # ~30s/task, min 15 minutes
@@ -4468,11 +4464,8 @@ def main():
                     "python3",
                     "-m",
                     "jleechanorg_pr_automation.openai_automation.codex_github_mentions",
-                    "--use-existing-browser",
-                    "--cdp-host",
-                    host,
-                    "--cdp-port",
-                    str(port),
+                    "--launch-new-browser",
+                    "--headed",
                     "--limit",
                     str(task_limit),
                 ],
@@ -4510,6 +4503,8 @@ def main():
             print(f"📋 Ready: {len(ready_tasks)}")
             print(f"📋 With changes: {len(tasks_with_changes)}")
 
+            had_failures = False
+            skipped_invalid_tasks = 0
             if apply_and_push:
                 print(f"\n🔧 Applying and pushing {len(tasks_with_changes[:task_limit])} tasks...")
                 for task in tasks_with_changes[:task_limit]:
@@ -4519,14 +4514,19 @@ def main():
                         print(f"    ✅ Pushed to branch: {result['branch']}")
                     else:
                         print(f"    ⚠️  Apply failed: {result.get('error', 'Unknown error')}")
-                        print(f"    🔄 Creating PR with conflict markers using git apply --3way...")
-                        pr_result = api.create_pr_from_diff(task)
-                        if pr_result["success"]:
-                            conflict_note = " (has conflicts)" if pr_result.get("has_conflicts") else ""
-                            action = "updated" if pr_result.get("updated_existing") else "created"
-                            print(f"    ✅ PR {action}: {pr_result['pr_url']}{conflict_note}")
+                        if result.get("fallback_to_pr", True):
+                            print(f"    🔄 Creating PR with conflict markers using git apply --3way...")
+                            pr_result = api.create_pr_from_diff(task)
+                            if pr_result["success"]:
+                                conflict_note = " (has conflicts)" if pr_result.get("has_conflicts") else ""
+                                action = "updated" if pr_result.get("updated_existing") else "created"
+                                print(f"    ✅ PR {action}: {pr_result['pr_url']}{conflict_note}")
+                            else:
+                                had_failures = True
+                                print(f"    ❌ PR creation failed: {pr_result.get('error', 'Unknown error')}")
                         else:
-                            print(f"    ❌ PR creation failed: {pr_result.get('error', 'Unknown error')}")
+                            skipped_invalid_tasks += 1
+                            print("    ⚠️  Skipping unrecoverable task output")
             else:
                 for task in tasks_with_changes[:task_limit]:
                     summary = task.get("summary", {})
@@ -4535,6 +4535,13 @@ def main():
                         f"    +{summary.get('lines_added', 0)}/-{summary.get('lines_removed', 0)} in {summary.get('files_changed', 0)} files"
                     )
                     print(f"    {task.get('url', '')}")
+
+            if had_failures:
+                print("\n❌ Codex CLI API completed with task failures")
+                sys.exit(1)
+
+            if skipped_invalid_tasks:
+                print(f"\n⚠️ Codex CLI API skipped {skipped_invalid_tasks} invalid task payload(s)")
 
             print(f"\n✅ Codex CLI API complete")
             sys.exit(0)

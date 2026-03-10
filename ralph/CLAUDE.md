@@ -2,22 +2,68 @@
 
 You are an autonomous coding agent working on a software project.
 
+## Runtime Directories
+
+- **PRD (read-only spec):** `prd.json` in the same directory as this file
+- **Progress log:** `$RALPH_RUNTIME_DIR/progress.txt` — ALWAYS write here, never alongside code
+- **PRD state (runtime copy):** `$RALPH_RUNTIME_DIR/prd_state.json` — update `passes` here
+- **Evidence:** `$RALPH_RUNTIME_DIR/evidence/`
+- **App port:** If the project includes a web server, serve it on **port 5555** (not 3000) so browser proof recording captures the correct app
+
+`RALPH_RUNTIME_DIR` defaults to `/tmp/ralph-run` (set by the runner script). Check this env var at startup.
+
+If `$RALPH_RUNTIME_DIR/progress.txt` doesn't exist yet, create it with a header.
+If `$RALPH_RUNTIME_DIR/prd_state.json` doesn't exist yet, copy `prd.json` to it first.
+
 ## Your Task
 
-1. Read the PRD at `prd.json` (in the same directory as this file)
-2. Read the progress log at `progress.txt` (check Codebase Patterns section first)
-3. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
-4. Pick the **highest priority** user story where `passes: false`
-5. Implement that single user story
-6. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
-7. Update CLAUDE.md files if you discover reusable patterns (see below)
-8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
-9. Update the PRD to set `passes: true` for the completed story
-10. Append your progress to `progress.txt`
+1. Read the PRD at `prd.json` (in the same directory as this file) for the full spec
+2. Read the runtime PRD state at `$RALPH_RUNTIME_DIR/prd_state.json` (if it exists) for current pass/fail status
+3. Read the progress log at `$RALPH_RUNTIME_DIR/progress.txt` (check Codebase Patterns section first)
+4. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
+5. Implement user stories where `passes: false`, in priority order. Use your judgement for how many to tackle per iteration.
+6. For stories with `"type": "verify"`, run the verification (see **Verification Stories** below)
+7. For implementation stories, build the code, tests, and commit
+8. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
+9. Update CLAUDE.md files if you discover reusable patterns (see below)
+10. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
+11. Update `$RALPH_RUNTIME_DIR/prd_state.json` to set `passes: true` for the completed story
+12. Append your progress to `$RALPH_RUNTIME_DIR/progress.txt`
+
+## Verification Stories
+
+Stories with `"type": "verify"` are **verification milestones**. They run after implementation stories to confirm everything works end-to-end.
+
+**PRD schema:** Stories may include an optional `"verifyCommand"` field (shell command string). When set, ralph-pair runs this command after each coder iteration and auto-marks the story as passed when the command succeeds. Only use trusted PRD sources—commands are executed in the workspace.
+
+**How to handle a verification story:**
+
+1. Check if the story has a `"verifyCommand"` field — if so, run that exact command
+2. If no `verifyCommand`, use the `acceptanceCriteria` to determine what to test
+3. Run the verification. If it **passes**: set `passes: true` and continue
+4. If it **fails**: set `passes: false`, append failure details to progress log, and **stop** — the next iteration will address the failure
+
+**Verification stories are blocking.** You must not skip ahead to the next implementation story until all preceding verification stories pass.
+
+Stories without a `"type"` field (or with `"type": "implement"`) are normal implementation stories.
+
+### Example PRD with verification stories:
+```json
+{
+  "userStories": [
+    {"id": "S1", "title": "Add login page", "type": "implement", "passes": false},
+    {"id": "V1", "title": "Verify login page", "type": "verify", "passes": false,
+     "verifyCommand": "pytest tests/test_login.py -v"},
+    {"id": "S2", "title": "Add dashboard", "type": "implement", "passes": false},
+    {"id": "V2", "title": "Verify full flow", "type": "verify", "passes": false,
+     "verifyCommand": "pytest tests/test_integration.py -v"}
+  ]
+}
+```
 
 ## Progress Report Format
 
-APPEND to progress.txt (never replace, always append):
+APPEND to `$RALPH_RUNTIME_DIR/progress.txt` (never replace, always append):
 ```
 ## [Date/Time] - [Story ID]
 - What was implemented
@@ -33,7 +79,7 @@ The learnings section is critical - it helps future iterations avoid repeating m
 
 ## Consolidate Patterns
 
-If you discover a **reusable pattern** that future iterations should know, add it to the `## Codebase Patterns` section at the TOP of progress.txt (create it if it doesn't exist). This section should consolidate the most important learnings:
+If you discover a **reusable pattern** that future iterations should know, add it to the `## Codebase Patterns` section at the TOP of `$RALPH_RUNTIME_DIR/progress.txt` (create it if it doesn't exist). This section should consolidate the most important learnings:
 
 ```
 ## Codebase Patterns
@@ -66,7 +112,7 @@ Before committing, check if any edited files have learnings worth preserving in 
 **Do NOT add:**
 - Story-specific implementation details
 - Temporary debugging notes
-- Information already in progress.txt
+- Information already in $RALPH_RUNTIME_DIR/progress.txt
 
 Only update CLAUDE.md if you have **genuinely reusable knowledge** that would help future work in that directory.
 
@@ -76,6 +122,22 @@ Only update CLAUDE.md if you have **genuinely reusable knowledge** that would he
 - Do NOT commit broken code
 - Keep changes focused and minimal
 - Follow existing code patterns
+- If remote CI verification is blocked (for example `gh` cannot reach `api.github.com`), capture the exact failing command/error and run local workflow-equivalent checks as evidence in `$RALPH_RUNTIME_DIR/progress.txt`.
+
+## Ralph Fork Isolation
+
+Changes under `ralph/` are intentionally specific to this repository's workflow.
+Do not treat this directory as the canonical implementation for the conceptual upstream.
+Code changes under `ralph/` must remain isolated to this repo and should not be
+submitted upstream unless explicitly requested and reviewed.
+Use the conceptual upstream project only for reference and drift checks:
+
+- Conceptual upstream (Snark Ralph): https://github.com/snarktank/ralph
+- Keep local adaptations in this fork constrained to repo-specific patterns and paths.
+- Do not copy experimental local orchestration changes into the upstream
+  `snarktank/ralph` repository without explicit review and a dedicated upstream PR.
+- Any `ralph/` behavior changes should be reviewed for interoperability risk before
+  proposing or syncing to conceptual upstream.
 
 ## Browser Testing (If Available)
 
@@ -89,16 +151,17 @@ If no browser tools are available, note in your progress report that manual brow
 
 ## Stop Condition
 
-After completing a user story, check if ALL stories have `passes: true`.
+After completing your work, check if ALL stories have `passes: true` in `$RALPH_RUNTIME_DIR/prd_state.json`.
 
 If ALL stories are complete and passing, reply with:
 <promise>COMPLETE</promise>
 
-If there are still stories with `passes: false`, end your response normally (another iteration will pick up the next story).
+If there are still stories with `passes: false`, end your response normally (another iteration will continue).
 
 ## Important
 
-- Work on ONE story per iteration
+- Use your judgement for how many stories to implement per iteration
 - Commit frequently
 - Keep CI green
+- After each implementation story, run its paired verification story immediately
 - Read the Codebase Patterns section in progress.txt before starting

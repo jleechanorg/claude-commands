@@ -7,6 +7,8 @@ import sys
 import unittest
 from unittest import TextTestRunner
 
+from orchestration.cli_args import add_test_runner_arguments
+
 # Add project root directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -43,13 +45,7 @@ def run_all_tests():
 def main():
     """Main test runner function."""
     parser = argparse.ArgumentParser(description="Run orchestration system tests")
-    parser.add_argument(
-        "test",
-        nargs="?",
-        help='Specific test to run (e.g., "unified" for test_orchestrate_unified.py)',
-    )
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    parser.add_argument("--list", "-l", action="store_true", help="List available tests")
+    add_test_runner_arguments(parser)
 
     args = parser.parse_args()
 

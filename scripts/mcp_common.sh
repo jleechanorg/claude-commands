@@ -1243,6 +1243,32 @@ setup_second_opinion_mcp_server() {
     fi
 }
 
+# Function to check environment requirements
+check_github_requirements() {
+    if [ "$GITHUB_TOKEN_LOADED" = true ]; then
+        if declare -F test_github_token >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ GitHub token loaded - GitHub remote server will have full access${NC}"
+            echo -e "${BLUE}  🔍 Testing GitHub token validity...${NC}"
+            if test_github_token; then
+                echo -e "${BLUE}  📡 Using GitHub's NEW official remote MCP server${NC}"
+                echo -e "${BLUE}  🔗 Server URL: https://api.githubcopilot.com/mcp/${NC}"
+            fi
+        else
+            echo -e "${YELLOW}⚠️ GitHub token marked as loaded, but token helper is unavailable; skipping validation${NC}"
+            echo -e "${YELLOW}   Server will work for public repositories${NC}"
+            echo -e "${YELLOW}   For private repos, ensure token has required scopes${NC}"
+        fi
+    elif [ -n "${GITHUB_TOKEN:-}" ] || [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
+        echo -e "${YELLOW}⚠️ GitHub token found but not validated by centralized helper${NC}"
+        echo -e "${YELLOW}   Server will work for public repositories${NC}"
+        echo -e "${YELLOW}   For private repos, ensure token has required scopes${NC}"
+    else
+        echo -e "${YELLOW}⚠️ No GitHub token found${NC}"
+        echo -e "${YELLOW}   Server will work for public repositories only${NC}"
+        echo -e "${YELLOW}   For private repos, set GITHUB_TOKEN environment variable${NC}"
+    fi
+}
+
 # Check environment requirements
 if should_install_server "github-server" || [[ "$SERVER_FILTER_ACTIVE" == false ]]; then
     echo -e "${BLUE}🔍 Checking environment requirements...${NC}"

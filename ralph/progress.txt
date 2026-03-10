@@ -1,13 +1,55 @@
 # Ralph Progress Log
-Started: 2026-02-26
-PRD: Ralph Toolkit + Amazon Clone Benchmark
-Source: Example PRD — customize prd.json and progress.txt for your project.
-
 ## Codebase Patterns
-- Runner: ralph/ralph.sh — reads prd.json, runs amp or claude with CLAUDE.md, archives on branch change, tracks .last-branch
-- Status: ralph/status.sh — CLI monitor, reads prd.json via jq, shows phases/commits/next story, pgrep for ralph/ralph.sh
-- Dashboard: ralph/dashboard_server.sh — Python HTTP server on :9450, /api/status returns JSON (total, passed, phases, stories, ralph_running)
-- Dashboard UI: ralph/dashboard.html — fetches /api/status, auto-refresh, phases table, commit list, story list
-- Customize prd.json for your project (userStories, branchName, acceptanceCriteria)
-- Amazon clone benchmark (A1–A6): Flask e-commerce, isolated workspace, evidence artifacts (shadow_validation.txt, final_order_confirmation.png, amazon_clone_flow.webm)
+- Self-hosted workflow jobs should use `runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}` so runner label overrides stay centralized.
+- When runner label policy changes, update `.github/workflows/README.md` and `.github/workflows/RUNNER_VERSION_TEST_REPORT.md` in the same change to keep operational docs aligned with workflows.
+- For self-hosted PR workflows, pin `actions/checkout` and set `ref: ${{ github.event.pull_request.head.sha || github.sha }}` with `persist-credentials: false` to avoid merge-ref drift and token side effects.
+- Keep heavy startup dependencies in `mvp_site.streaming_orchestrator` as module-level lazy proxies (`_lazy_module(...)`) so startup-regression tests and `unittest.mock.patch("mvp_site.streaming_orchestrator.<target>")` both remain valid.
+- If `gh` cannot reach `api.github.com`, record the exact command error as an external blocker for remote CI verification and run local workflow-equivalent checks for evidence.
+- For CI-simulated unit/end-to-end tests that call provider selection or MCP protocol handlers, patch `mvp_site.llm_service.get_user_settings` or `firestore_service.get_db` to avoid live Firestore DNS retries/timeouts.
+- Local MCP smoke parity requires localhost socket bind capability; if `bind(('127.0.0.1', 0))` returns `Operation not permitted`, record it as an external environment blocker with command/log evidence.
+
+Started: Mon Mar  2 02:39:03 PST 2026
+---
+## [2026-03-02 02:40:48 PST] - [R1-CI-RUNNERS]
+- Implemented Mikey-compatible centralized self-hosted runner selector fallback across self-hosted workflows and workflow docs.
+- Files changed: `.github/workflows/README.md`, `.github/workflows/RUNNER_VERSION_TEST_REPORT.md`, `.github/workflows/claude-processor.yml`, `.github/workflows/coverage.yml`, `.github/workflows/doc-size-check.yml`, `.github/workflows/hook-tests.yml`, `.github/workflows/mcp-smoke-tests.yml`, `.github/workflows/pr-cleanup.yml`, `.github/workflows/self-hosted-mvp-shard1.yml`, `.github/workflows/test-self-hosted-runner.yml`, `ralph/prd.json`, `ralph/progress.txt`
+- **Learnings for future iterations:**
+  - Patterns discovered (e.g., "this codebase uses X for Y"): Self-hosted jobs in this repo should rely on `vars.SELF_HOSTED_RUNNER_LABELS` with `fromJson(...)` fallback rather than hardcoded labels in each workflow.
+  - Gotchas encountered (e.g., "don't forget to update Z when changing W"): The infrastructure test `test_linux_default_runner_labels_for_container_workflows` validates the fallback fragment `["self-hosted"...`; policy changes must keep tests and workflows in sync.
+  - Useful context (e.g., "the evaluation panel is in component X"): Workflow reference docs under `.github/workflows/` are used as operator runbooks and should be updated alongside workflow selector changes.
+---
+## [2026-03-02 02:44:50 PST] - [R2-CI-SHARDS]
+- Implemented reliable self-hosted shard execution checkout behavior by pinning checkout action refs, using explicit PR-head-or-push SHA checkout refs, and disabling persisted checkout credentials; removed the brittle GHCR login step that depended on runner-local `gh` auth state.
+- Files changed: `.github/workflows/self-hosted-mvp-shard1.yml`, `CLAUDE.md`, `ralph/prd.json`, `ralph/progress.txt`
+- **Learnings for future iterations:**
+  - Patterns discovered (e.g., "this codebase uses X for Y"): Self-hosted PR workflows are more stable when checkout explicitly targets `${{ github.event.pull_request.head.sha || github.sha }}` instead of default merge ref behavior.
+  - Gotchas encountered (e.g., "don't forget to update Z when changing W"): Avoid workflow steps that scrape `gh auth token` from runner state; use explicit GitHub Actions tokens only where a step strictly needs them.
+  - Useful context (e.g., "the evaluation panel is in component X"): `mvp_site/tests/test_infrastructure.py` provides a fast policy guard for self-hosted workflow defaults and should be run after workflow label or checkout-path changes.
+---
+## [2026-03-02 11:03:00 PST] - [R3-CI-TESTS]
+- Verified and completed the core-mvp regression story by validating the animation script load-order and streaming orchestrator patchability/lazy-import behavior against the targeted regression suites.
+- Files changed: `ralph/prd.json`, `ralph/progress.txt`
+- **Learnings for future iterations:**
+  - Patterns discovered (e.g., "this codebase uses X for Y"): For `mvp_site.streaming_orchestrator`, keeping lazy-loaded service modules at module scope preserves both cold-start optimizations and stable patch targets for unit tests.
+  - Gotchas encountered (e.g., "don't forget to update Z when changing W"): If startup performance refactors touch streaming imports, rerun `mvp_site/tests/test_startup_import_regression.py` together with `mvp_site/tests/test_streaming_orchestrator.py` to catch patch-target regressions quickly.
+  - Useful context (e.g., "the evaluation panel is in component X"): `mvp_site/tests/test_animation_system.py::TestAnimationIntegration::test_loading_order_in_html` is the direct guard for `theme-manager.js` → `animation-helpers.js` → `app.js` ordering in `frontend_v1/index.html`.
+---
+## [2026-03-02 11:09:47 PST] - [R4-CI-VERIFY]
+- Attempted self-hosted CI verification via `gh` (`gh pr view --json ...` and `gh run list --json ...`), then captured the concrete external blocker: `error connecting to api.github.com`.
+- Ran local workflow-equivalent validation checks to keep iteration evidence current while remote inspection was blocked.
+- Files changed: `ralph/CLAUDE.md`, `ralph/prd.json`, `ralph/progress.txt`
+- **Learnings for future iterations:**
+  - Patterns discovered (e.g., "this codebase uses X for Y"): When GitHub API access is unavailable in the execution environment, treat remote CI inspection/rerun as an external blocker and pair it with local test evidence from related workflow commands.
+  - Gotchas encountered (e.g., "don't forget to update Z when changing W"): `gh` commands for PR/run evidence fail fast without outbound connectivity, so capture exact stderr and avoid assuming stale local branch sync implies remote checks are green.
+  - Useful context (e.g., "the evaluation panel is in component X"): The targeted regression suites from earlier stories can be re-used as quick local confidence checks: infrastructure runner-label guard, animation load order, streaming orchestrator patchability, and hook tests.
+---
+## [2026-03-02 12:19:38 PST] - [R5-LOCAL-CI-GATE]
+- Implemented an enforceable local CI parity gate script (`scripts/ci/local_ci_gate.sh`), fixed all shard regressions found during gate execution (JSON-only Firestore timeout, loading-message marker drift, provenance test isolation, tilde-home service-account test portability, MCP protocol Firestore timeout), and re-ran shard/hook parity until only an environment-only MCP smoke blocker remained.
+- Captured concrete blocker evidence for MCP smoke: `./scripts/ci/local_ci_gate.sh` reached `mcp_smoke_mock` then failed with `connection to ('localhost', 8000) failed: [Errno 1] Operation not permitted` and `Can't connect to ('localhost', 8000)`; loopback bind preflight now reports this explicitly before smoke startup.
+- Quality evidence: `./vpython -m pytest -q mvp_site/tests/test_json_only_mode.py mvp_site/tests/test_base_test_provenance.py mvp_site/tests/test_service_account_loader.py mvp_site/tests/test_loading_messages.py mvp_site/tests/test_end2end/test_mcp_protocol_end2end.py` passed (`48 passed, 2 warnings`), and local gate logs showed shard/hook classes green before MCP bind blocker.
+- Files changed: `mvp_site/frontend_v1/index.html`, `mvp_site/tests/CLAUDE.md`, `mvp_site/tests/test_base_test_provenance.py`, `mvp_site/tests/test_end2end/test_mcp_protocol_end2end.py`, `mvp_site/tests/test_json_only_mode.py`, `mvp_site/tests/test_service_account_loader.py`, `scripts/ci/local_ci_gate.sh`, `scripts/README.md`, `scripts/CLAUDE.md`, `ralph/prd.json`, `ralph/progress.txt`, `ralph/metrics.json`
+- **Learnings for future iterations:**
+  - Patterns discovered (e.g., "this codebase uses X for Y"): Running a single scripted parity gate across shards + hooks quickly exposes hidden network-coupled tests; patching Firestore access points in tests (`get_user_settings` / `get_db`) restores deterministic CI-speed behavior.
+  - Gotchas encountered (e.g., "don't forget to update Z when changing W"): Frontend contract tests can enforce historical HTML marker comments (e.g., TASK tags), so harmless markup cleanups can still break CI if comments are part of asserted integration contracts.
+  - Useful context (e.g., "the evaluation panel is in component X"): In this execution environment, localhost listening sockets are blocked; MCP smoke must run in an environment that permits loopback binds, with logs under `/tmp/worldarchitect.ai/local-ci-gate/<timestamp>/`.
 ---

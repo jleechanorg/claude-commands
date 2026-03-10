@@ -127,6 +127,35 @@ def test_ensure_base_clone_recovers_from_fetch_failure(monkeypatch, tmp_path, ca
     assert expected_fragment in output
 
 
+def test_reset_base_clone_uses_forced_remote_checkout(monkeypatch, tmp_path):
+    repo_full = "org/repo"
+    runner.BASE_CLONE_ROOT = tmp_path
+    base_dir = tmp_path / "org" / "repo"
+    base_dir.mkdir(parents=True)
+
+    commands = []
+
+    def fake_run_cmd(cmd, cwd=None, check=True, timeout=None):
+        commands.append(cmd)
+        if cmd == ["git", "fetch", "origin", "--prune"]:
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+        if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
+            return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main", stderr="")
+        if cmd == ["git", "checkout", "--force", "-B", "main", "origin/main"]:
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+        raise AssertionError(f"Unexpected command: {cmd}")
+
+    monkeypatch.setattr(runner, "run_cmd", fake_run_cmd)
+
+    result = runner.ensure_base_clone(repo_full)
+
+    assert result == base_dir
+    assert ["git", "checkout", "--force", "-B", "main", "origin/main"] in commands
+    assert ["git", "clean", "-fdx"] not in commands
+    assert ["git", "reset", "--hard"] not in commands
+    assert ["git", "reset", "--hard", "origin/main"] not in commands
+
+
 def test_prepare_workspace_dir_cleans_worktree(monkeypatch, tmp_path):
     runner.WORKSPACE_ROOT_BASE = tmp_path
     target = tmp_path / "repo" / "ws"
@@ -1304,3 +1333,23 @@ def test_get_github_token_from_config_file_with_encoding(monkeypatch, tmp_path):
     # but we can verify it reads correctly.
     token = runner.get_github_token()
     assert token == "utf8-token-🚀"
+
+
+def test_fresh_clone_raises_when_rmtree_silently_fails(monkeypatch, tmp_path):
+    """_fresh_clone must raise RuntimeError when rmtree leaves the dir behind.
+
+    Previously shutil.rmtree(ignore_errors=True) could silently fail (e.g. due
+    to permission issues or locked files on macOS), leaving the directory in
+    place. The subsequent git clone would then exit 128 with an opaque error.
+    The fix is to verify the dir is gone after rmtree and raise a clear
+    RuntimeError so the caller can surface a useful message instead.
+    """
+    base_dir = tmp_path / "org" / "repo"
+    base_dir.mkdir(parents=True)
+    (base_dir / "stale.txt").write_text("stale")
+
+    # Simulate rmtree silently failing by making it a no-op
+    monkeypatch.setattr("shutil.rmtree", lambda path, ignore_errors=False: None)
+
+    with pytest.raises(RuntimeError, match="Failed to remove existing clone"):
+        runner._fresh_clone(base_dir, "org/repo", "github.com")

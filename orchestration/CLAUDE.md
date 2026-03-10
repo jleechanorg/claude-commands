@@ -9,7 +9,8 @@ The orchestration system manages distributed multi-agent communication and task 
 ## File Inventory
 
 ### Core Orchestration Components
-- `orchestrate_unified.py` - Main orchestration engine and task coordination
+- `runner.py` - ai_orch entry point (passthrough + async tmux)
+- `orchestrate_unified.py` - Deprecated stub (import compatibility only)
 - `agent_system.py` - Agent lifecycle management and registration
 - `agent_monitor.py` - Real-time agent health monitoring and status tracking
 - `task_dispatcher.py` - Distributed task routing and execution management
@@ -50,7 +51,7 @@ The orchestration system manages distributed multi-agent communication and task 
 - `test_a2a_integration.py` - A2A communication protocol testing
 - `test_agent_monitor_restart.py` - Agent restart and recovery testing
 - `test_end_to_end.py` - Complete system integration testing
-- `test_orchestrate_unified.py` - Main orchestration engine testing
+- `test_runner.py` - Runner CLI and worktree guard tests
 - `test_task_dispatcher.py` - Task dispatch logic validation
 - `test_security_validation.py` - Security protocol compliance testing
 - `test_tmux_session_lifecycle.py` - tmux session management testing
@@ -145,10 +146,12 @@ The orchestration system maintains high-quality standards through:
 
 ### Task Orchestration
 ```python
-from orchestration.orchestrate_unified import OrchestrationEngine
-engine = OrchestrationEngine()
-task_id = engine.dispatch_task(task_definition, agents=['agent1', 'agent2'])
-result = engine.wait_for_completion(task_id)
+from orchestration.task_dispatcher import TaskDispatcher
+
+dispatcher = TaskDispatcher()
+specs = dispatcher.analyze_task_and_create_agents("Fix failing tests", forced_cli="claude")
+for spec in specs:
+    dispatcher.create_dynamic_agent(spec)
 ```
 
 ### A2A Communication

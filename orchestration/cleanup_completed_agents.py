@@ -21,6 +21,7 @@ import time
 from typing import Any, Dict, List
 
 # Use absolute imports with package name for __main__ compatibility
+from orchestration.cli_args import add_cleanup_arguments
 from orchestration.constants import IDLE_MINUTES_THRESHOLD
 
 
@@ -311,10 +312,7 @@ def main():
     """Main entry point."""
 
     parser = argparse.ArgumentParser(description="Cleanup completed tmux agents")
-    parser.add_argument(
-        "--dry-run", action="store_true", help="Show what would be cleaned up without actually doing it"
-    )
-    parser.add_argument("--json", action="store_true", help="Output results in JSON format")
+    add_cleanup_arguments(parser)
 
     args = parser.parse_args()
 

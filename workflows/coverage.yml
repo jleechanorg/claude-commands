@@ -36,7 +36,7 @@ permissions:
 jobs:
   coverage:
     name: Generate Coverage Report
-    runs-on: [self-hosted, claude]
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 20
 
     steps:
@@ -44,10 +44,6 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
         with:
           persist-credentials: true
-
-      - name: Runner control plane
-        id: control-plane
-        uses: ./.github/actions/runner-control-plane
 
       - name: Set up Python 3.11
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
@@ -178,43 +174,6 @@ jobs:
           echo "COVERAGE=${COVERAGE}" >> $GITHUB_ENV
           echo "BADGE_COLOR=${COLOR}" >> $GITHUB_ENV
 
-      - name: Update runner health score
-        id: runner-health-update
-        if: always()
-        run: |
-          chmod +x scripts/runner_health_score.py
-          DELTA=-1
-          REASON="coverage:success"
-
-          if [ -n "${{ steps.control-plane.outputs.preflight_exit_code }}" ] && [ "${{ steps.control-plane.outputs.preflight_exit_code }}" != "0" ]; then
-            DELTA=4
-            REASON="preflight:${{ steps.control-plane.outputs.infra_failure_class }}"
-          elif [ "${{ steps.control-plane.outputs.quarantined }}" = "true" ]; then
-            DELTA=0
-            REASON="quarantine:skipped"
-          elif [ "${{ job.status }}" = "cancelled" ]; then
-            DELTA=0
-            REASON="coverage:cancelled"
-          elif [ "${{ job.status }}" != "success" ]; then
-            DELTA=1
-            REASON="coverage:failed"
-          fi
-
-          scripts/runner_health_score.py \
-            --runner "${RUNNER_NAME:-unknown}" \
-            --threshold 6 \
-            --github-output "$GITHUB_OUTPUT" \
-            update \
-            --delta "$DELTA" \
-            --reason "$REASON"
-
-      - name: Collect runner health artifacts
-        if: always()
-        run: |
-          mkdir -p "${RUNNER_TEMP}/runner-health"
-          cp "${{ steps.control-plane.outputs.preflight_json }}" "${RUNNER_TEMP}/runner-health/runner_health.json" 2>/dev/null || true
-          cp "${HOME}/.cache/worldarchitect-ci/runner-health-score.json" "${RUNNER_TEMP}/runner-health/runner_health_score.json" 2>/dev/null || true
-
       - name: Upload coverage reports
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
         if: always()
@@ -225,8 +184,6 @@ jobs:
             coverage.xml
             coverage.json
             .coverage
-            ${{ runner.temp }}/runner-health/runner_health.json
-            ${{ runner.temp }}/runner-health/runner_health_score.json
           if-no-files-found: warn
           retention-days: 30
 
@@ -243,10 +200,3 @@ jobs:
           else
             "$VENV_PY" -m coverage report --format=markdown >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Coverage report generation failed" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "## Runner Health" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Quarantine score before run: ${{ steps.control-plane.outputs.score }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Quarantined before run: ${{ steps.control-plane.outputs.quarantined }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Preflight exit: ${{ steps.control-plane.outputs.preflight_exit_code }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Score after run: ${{ steps.runner-health-update.outputs.score }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Quarantined now: ${{ steps.runner-health-update.outputs.quarantined }}" >> "$GITHUB_STEP_SUMMARY"

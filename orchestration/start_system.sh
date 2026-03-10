@@ -71,7 +71,7 @@ setup_directories() {
     echo "=== Dynamic Agent Status Dashboard ===" > "${task_base}/shared_status.txt"
     echo "Updated: $(date)" >> "${task_base}/shared_status.txt"
     echo "" >> "${task_base}/shared_status.txt"
-    echo "Use 'python3 orchestration/orchestrate_unified.py \"task\"' to create agents" >> "${task_base}/shared_status.txt"
+    echo "Use 'ai_orch \"task\"' or 'ai_orch --async \"task\"' to run agents" >> "${task_base}/shared_status.txt"
 
     log_info "Dynamic agent directories created"
 }

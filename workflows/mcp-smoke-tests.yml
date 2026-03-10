@@ -49,6 +49,7 @@ on:
       - 'mvp_site/game_state.py'
       - 'mvp_site/llm_service.py'
       - '.github/workflows/mcp-smoke-tests.yml'
+      - '.github/actions/run-mcp-smoke-tests/action.yml'
       - 'scripts/mcp_smoke_test.sh'
       - 'testing_mcp/test_smoke.py'
       - 'testing_mcp/lib/**'
@@ -64,6 +65,7 @@ on:
       - 'mvp_site/game_state.py'
       - 'mvp_site/llm_service.py'
       - '.github/workflows/mcp-smoke-tests.yml'
+      - '.github/actions/run-mcp-smoke-tests/action.yml'
       - 'scripts/mcp_smoke_test.sh'
       - 'testing_mcp/test_smoke.py'
       - 'testing_mcp/lib/**'
@@ -88,7 +90,7 @@ jobs:
   try-self-hosted:
     name: MCP Server Smoke Tests [Mock APIs]
     if: github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 10
     env:
       GCP_REGION: us-central1
@@ -149,9 +151,6 @@ jobs:
         ref: ${{ github.event_name == 'workflow_run' && steps.pr_ref.outputs.result || '' }}
         submodules: recursive
 
-    - name: Prepare runner control plane
-      uses: ./.github/actions/runner-control-plane
-
 
     - name: Set up Python
       if: runner.os == 'Linux'
@@ -173,7 +172,7 @@ jobs:
         path: ~/.cache/fastembed
         key: fastembed-bge-small-en-v1.5
 
-    - name: Install dependencies
+    - name: Create venv and install dependencies
       run: |
         python3 -m venv .venv
         source .venv/bin/activate
@@ -271,28 +270,26 @@ jobs:
 
     - name: Run MCP smoke tests
       id: smoke_tests
-      uses: ./.github/actions/container-run
-      with:
-        command: |
-          set -euo pipefail
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -r mvp_site/requirements.txt
-          if [ -f mvp_site/requirements-test.txt ]; then python3 -m pip install -r mvp_site/requirements-test.txt; fi
-          chmod +x scripts/mcp_smoke_test.sh
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
-              echo "::error::Could not find deployed preview for mock smoke tests"
-              exit 1
-            fi
-            export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
-          elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
-              echo "::warning::Could not find deployed preview for mock smoke tests; skipping"
-              exit 0
-            fi
-            export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
+      run: |
+        set -euo pipefail
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -r mvp_site/requirements.txt
+        if [ -f mvp_site/requirements-test.txt ]; then python3 -m pip install -r mvp_site/requirements-test.txt; fi
+        chmod +x scripts/mcp_smoke_test.sh
+        if [ "${{ github.event_name }}" = "workflow_run" ]; then
+          if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
+            echo "::error::Could not find deployed preview for mock smoke tests"
+            exit 1
           fi
-          ./scripts/mcp_smoke_test.sh
+          export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
+        elif [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
+            echo "::warning::Could not find deployed preview for mock smoke tests; skipping"
+            exit 0
+          fi
+          export MCP_SERVER_URL="${{ steps.service_url.outputs.service_url }}"
+        fi
+        ./scripts/mcp_smoke_test.sh
 
     - name: Upload test results
       if: always()
@@ -385,7 +382,6 @@ jobs:
       MCP_TEST_MAX_ATTEMPTS: ${{ vars.MCP_TEST_MAX_ATTEMPTS || '3' }}
       MCP_TEST_RETRY_DELAY_MS: ${{ vars.MCP_TEST_RETRY_DELAY_MS || '2000' }}
       STREAM_RESPONSE_SIGNING_SECRET: ${{ secrets.STREAM_RESPONSE_SIGNING_SECRET }}
-      SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
 
     steps:
       - name: Post acknowledgment comment
@@ -553,38 +549,16 @@ jobs:
                 'Please wait for the preview to deploy first, or trigger a new deployment.'
             });
 
-      - name: Set up Node.js 20.x
-        if: steps.service_url.outputs.deployed == 'true'
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
-        with:
-          node-version: 20
-
       - name: Run MCP smoke tests
         if: steps.service_url.outputs.deployed == 'true'
         id: smoke_tests
         timeout-minutes: 25  # Extended for real mode: 3 providers x ~8min each
-        env:
-          MCP_SERVER_URL: ${{ steps.service_url.outputs.service_url }}
-          MCP_TEST_MODE: ${{ steps.test_config.outputs.mode }}
-        run: |
-          set -euo pipefail
-
-          echo "🧪 Running MCP smoke tests against deployed preview..."
-          echo "Target: $MCP_SERVER_URL/mcp"
-
-          set +e
-          node scripts/mcp-smoke-tests.mjs
-          EXIT_CODE=$?
-          set -e
-
-          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
-
-          if [ $EXIT_CODE -eq 0 ]; then
-            echo "✅ MCP smoke tests passed"
-          else
-            echo "❌ MCP smoke tests failed"
-            exit $EXIT_CODE
-          fi
+        uses: ./.github/actions/run-mcp-smoke-tests
+        with:
+          server_url: ${{ steps.service_url.outputs.service_url }}
+          test_mode: ${{ steps.test_config.outputs.mode }}
+          test_providers: ${{ vars.MCP_PREVIEW_SMOKE_PROVIDERS || 'cerebras,gemini' }}
+          smoke_token: ${{ secrets.SMOKE_TOKEN }}
 
       - name: Upload smoke test logs
         if: always() && steps.service_url.outputs.deployed == 'true'

@@ -1,15 +1,15 @@
 # Orchestration Library (`jleechanorg-orchestration`)
 
-Python package and CLI for task-driven agent orchestration.
+Python package and CLI for AI CLI task execution (passthrough and async tmux modes).
 
 ## Table of Contents
 
 - [Install from PyPI](#install-from-pypi)
 - [Verify Install and Version](#verify-install-and-version)
 - [CLI Entry Points](#cli-entry-points)
-- [Primary Usage: Task Dispatching](#primary-usage-task-dispatching)
+- [Primary Usage: ai_orch](#primary-usage-ai_orch)
 - [Task Dispatcher Python Interface](#task-dispatcher-python-interface)
-- [Legacy Interactive Mode (`live`)](#legacy-interactive-mode-live)
+- [Legacy: orchestrate_unified (deprecated)](#legacy-orchestrate_unified-deprecated)
 - [Design Summary](#design-summary)
 - [Tech Stack (Summary)](#tech-stack-summary)
 - [Local Development (Package Source)](#local-development-package-source)
@@ -46,53 +46,40 @@ Console scripts installed by the package:
 - `ai_orch`
 - `orch` (alias)
 
-Both map to `orchestration.live_mode:main`.
+Both map to `orchestration.runner:main`.
 
-## Primary Usage: Task Dispatching
+## Primary Usage: ai_orch
 
-### 1. Unified orchestration (`run`)
+### Passthrough (default)
 
-```bash
-ai_orch run --agent-cli gemini,claude "Fix flaky integration tests and open/update PR"
-```
-
-Shorthand (defaults to `run`):
+Run the selected CLI directly and stream output to stdout:
 
 ```bash
-ai_orch --agent-cli claude "Implement task dispatcher retry metrics"
+ai_orch "explain this code"
+ai_orch --agent-cli codex "print 1"
+ai_orch --agent-cli gemini "fix the bug"
 ```
 
-Useful flags:
+### Async (detached tmux)
 
-- `--agent-cli`: force CLI or fallback chain (`claude`, `codex`, `gemini`, `cursor`)
-- `--context`: inject markdown context file
-- `--branch`: force branch checkout
-- `--pr`: update an existing PR
-- `--no-new-pr`, `--no-new-branch`: hard guardrails
-- `--validate`: post-run validation command
+Spawn a detached tmux session and return immediately:
+
+```bash
+ai_orch --async "implement feature X"
+ai_orch --async --resume "add error handling"   # resume existing session for this dir
+ai_orch --async --worktree "refactor auth"      # create git worktree first, then async
+```
+
+**Flags:**
+- `--agent-cli`: CLI to use (`claude`, `codex`, `gemini`, `minimax`, `cursor`)
 - `--model`: model override for supported CLIs
-
-### 2. Task Dispatcher Interface
-
-Analyze task only:
-
-```bash
-ai_orch dispatcher analyze --agent-cli codex --json "Refactor auth middleware"
-```
-
-Create agents from task:
-
-```bash
-ai_orch dispatcher create --agent-cli gemini --model gemini-3-flash-preview "Fix PR #123 review blockers"
-```
-
-Dry-run planned agent specs:
-
-```bash
-ai_orch dispatcher create --agent-cli claude --dry-run "Investigate failing CI"
-```
+- `--async`: spawn detached tmux session
+- `--resume`: reuse existing session for this directory (requires `--async`)
+- `--worktree`: create git worktree before async (requires `--async`)
 
 ## Task Dispatcher Python Interface
+
+For programmatic multi-agent orchestration (used by `automation/`), use `TaskDispatcher` directly:
 
 ```python
 from orchestration.task_dispatcher import TaskDispatcher
@@ -122,18 +109,9 @@ for spec in agent_specs:
 - `workspace_config` (optional): workspace placement/settings
 - `model` (optional): model override
 
-## Legacy Interactive Mode (`live`)
+## Legacy: orchestrate_unified (deprecated)
 
-Interactive tmux mode is still available:
-
-```bash
-ai_orch live --cli codex
-ai_orch list
-ai_orch attach <session>
-ai_orch kill <session>
-```
-
-Use this when you explicitly want a persistent manual CLI session. For automated task execution, prefer `run` or `dispatcher`.
+`orchestrate_unified.py` is retained as a stub for import compatibility. Its orchestration logic has moved to `runner.py`. Use `ai_orch` for passthrough/async or `TaskDispatcher` for programmatic agent creation.
 
 ## Design Summary
 
@@ -141,10 +119,10 @@ Full design details live in [`orchestration/design.md`](./design.md).
 
 High-level design:
 
-- Entry point is `ai_orch`/`orch` (mapped to `orchestration.live_mode:main`).
-- Default flow is unified `run` mode, which delegates orchestration to `UnifiedOrchestration`.
-- `dispatcher` mode exposes task planning and agent creation directly via `TaskDispatcher`.
-- Agent execution is isolated via tmux sessions and workspace-specific execution context.
+- Entry point is `ai_orch`/`orch` (mapped to `orchestration.runner:main`).
+- Default flow is passthrough: invoke CLI directly, stream output.
+- Async flow (`--async`) spawns detached tmux sessions with resume and optional worktree support.
+- `TaskDispatcher` remains for programmatic multi-agent orchestration (automation, PR monitors).
 - Coordination uses file-backed A2A/task state under `/tmp` (no Redis dependency).
 
 ## Tech Stack (Summary)
@@ -152,7 +130,7 @@ High-level design:
 - Runtime: Python 3.11+
 - Session/process isolation: `tmux`
 - VCS/PR operations: `git`, `gh`
-- Agent CLIs: `claude`, `codex`, `gemini`, `cursor-agent`
+- Agent CLIs: `claude`, `codex`, `gemini`, `minimax`, `cursor-agent`
 - Coordination: file-backed A2A/task state under `/tmp` (no Redis requirement)
 
 Detailed architecture and implementation docs:

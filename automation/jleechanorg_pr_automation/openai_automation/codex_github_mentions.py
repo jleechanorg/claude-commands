@@ -23,6 +23,7 @@ import argparse
 import asyncio
 import json
 import logging
+import subprocess
 import sys
 import time
 import traceback
@@ -39,6 +40,7 @@ from playwright.async_api import (
     TimeoutError as PlaywrightTimeoutError,
     async_playwright,
 )
+from playwright_stealth import Stealth
 
 from ..logging_utils import setup_logging as _setup_logging
 
@@ -230,9 +232,28 @@ class CodexGitHubMentionsAutomation:
             print(f"🚀 Launching Chrome...")
             logger.info(f"Launching Chrome")
 
+            # Start minimized so the window goes to the dock without appearing on screen.
+            # --window-position=-32000,-32000 is unreliable on macOS (OS corrects the position).
+            # Headless is kept as an option but Cloudflare blocks it; prefer headed+minimized.
+            launch_args = ["--start-minimized"] if not self.headless else []
             self.browser = await self.playwright.chromium.launch(
                 headless=self.headless,
+                args=launch_args,
             )
+
+            # On macOS, force-hide the Chromium window using osascript so it never appears
+            # on screen. --start-minimized alone is unreliable; osascript is authoritative.
+            if not self.headless and sys.platform == "darwin":
+                await asyncio.sleep(0.5)
+                subprocess.run(
+                    [
+                        "osascript",
+                        "-e",
+                        'tell application "System Events" to set visible of (processes whose displayed name contains "Chromium") to {false}',
+                    ],
+                    capture_output=True,
+                    timeout=5,
+                )
 
             # Create context with storage state if available
             if storage_state:
@@ -246,6 +267,8 @@ class CodexGitHubMentionsAutomation:
 
             # Create page
             self.page = await self.context.new_page()
+            # Apply stealth patches to evade Cloudflare bot detection (headed and headless)
+            await Stealth().apply_stealth_async(self.page)
 
         return True
 
@@ -1067,6 +1090,20 @@ Examples:
     )
 
     parser.add_argument(
+        "--headless",
+        action="store_true",
+        default=True,
+        help="Run browser in headless mode (default: headless)"
+    )
+
+    parser.add_argument(
+        "--headed",
+        action="store_false",
+        dest="headless",
+        help="Run browser with visible window (overrides default headless mode)"
+    )
+
+    parser.add_argument(
         "--archive",
         action="store_true",
         help="Archive completed tasks (tasks showing 'View PR' instead of 'Update branch')"
@@ -1099,6 +1136,7 @@ Examples:
     # Run automation
     automation = CodexGitHubMentionsAutomation(
         cdp_url=cdp_url,
+        headless=args.headless,
         task_limit=args.limit,
         user_data_dir=args.profile_dir,
         debug=args.debug,

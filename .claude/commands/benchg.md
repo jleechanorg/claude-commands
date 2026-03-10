@@ -78,6 +78,9 @@ echo "  Ralph: $RALPH_DIR"
 echo ""
 
 mkdir -p "$GENESIS_DIR" "$RALPH_DIR"
+
+# Ralph orchestrator path (set via env or use default)
+RALPH_ORCHESTRATOR_PATH="${RALPH_ORCHESTRATOR_PATH:-$HOME/worktree_ralph/orchestration/orchestrate_unified.py}"
 ```
 
 ### 3. Execute Genesis Implementation
@@ -133,9 +136,10 @@ git commit -m "Initial commit"
 RALPH_SESSION="ralph-benchmark-p${PROJECT_NUM}-$(date +%Y%m%d-%H%M%S)"
 
 echo "📋 Ralph orchestration starting..."
+# NOTE: orchestrate_unified.py --goal/--max-iterations deprecated (PR #5824). Use ai_orch for task execution.
 tmux new-session -d -s "$RALPH_SESSION" bash -c "
     cd '$RALPH_DIR' &&
-    python3 /Users/$USER/projects/worktree_ralph/orchestration/orchestrate_unified.py --goal '$PROJECT_DESCRIPTION' --max-iterations 30;
+    ai_orch --async '$PROJECT_DESCRIPTION';
     exec bash
 "
 
@@ -462,7 +466,7 @@ echo "✅ Benchmark completed successfully!"
 
 This command leverages:
 - **Genesis orchestration** via `/gene` command
-- **Ralph orchestration** via `orchestrate_unified.py`
+- **Ralph orchestration** via `ai_orch --async`
 - **Consensus review** via `/cons` command
 - **tmux session management** for parallel execution
 - **Comprehensive validation** with live testing

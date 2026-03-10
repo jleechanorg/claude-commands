@@ -2,7 +2,18 @@
 description: Push Command
 type: llm-orchestration
 execution_mode: immediate
+allowed-tools: Bash(git:*), Bash(gh:*)
+# Note: /review and /testserver subcommands invoked in phases 2 and 5 below
+# execute under their own command tool scopes — not restricted by this frontmatter.
 ---
+
+## Live Context (injected at execution time)
+
+- Current git status: !`git status`
+- Changed files summary: !`git diff --stat HEAD`
+- Current branch: !`git branch --show-current`
+- Recent commits: !`git log --oneline -10`
+
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
 **This is NOT documentation - these are COMMANDS to execute right now.**

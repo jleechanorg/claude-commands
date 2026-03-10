@@ -357,5 +357,116 @@ class TestNavigationInteraction:
         print(f"✅ Complete workflow successful with {len(tasks)} tasks found")
 
 
+class TestBrowserLaunchArgs:
+    """Tests for headed off-screen browser launch and stealth configuration (via setup())."""
+
+    def _make_mock_browser(self):
+        mock_page = AsyncMock()
+        mock_context = AsyncMock()
+        mock_context.new_page = AsyncMock(return_value=mock_page)
+        mock_browser = AsyncMock()
+        mock_browser.new_context = AsyncMock(return_value=mock_context)
+        return mock_browser, mock_context, mock_page
+
+    @pytest.mark.asyncio
+    async def test_headed_launch_uses_offscreen_args(self, monkeypatch, tmp_path):
+        """Headed mode (headless=False) adds --window-position=-32000,-32000."""
+        automation = CodexGitHubMentionsAutomation(headless=False)
+        mock_browser, _, _ = self._make_mock_browser()
+
+        captured_kwargs = {}
+
+        async def fake_launch(**kwargs):
+            captured_kwargs.update(kwargs)
+            return mock_browser
+
+        mock_playwright = AsyncMock()
+        mock_playwright.chromium.launch = fake_launch
+        automation.playwright = mock_playwright
+
+        monkeypatch.setattr(automation, "start_playwright", AsyncMock())
+        monkeypatch.setattr(automation, "connect_to_existing_browser", AsyncMock(return_value=False))
+        monkeypatch.setattr(
+            "jleechanorg_pr_automation.openai_automation.codex_github_mentions.AUTH_STATE_PATH",
+            tmp_path / "nonexistent.json",
+        )
+        monkeypatch.setattr(
+            "jleechanorg_pr_automation.openai_automation.codex_github_mentions.Stealth",
+            lambda: AsyncMock(apply_stealth_async=AsyncMock()),
+        )
+
+        await automation.setup()
+
+        assert captured_kwargs.get("headless") is False
+        assert "--start-minimized" in captured_kwargs.get("args", [])
+
+    @pytest.mark.asyncio
+    async def test_headless_launch_omits_offscreen_args(self, monkeypatch, tmp_path):
+        """Headless mode (headless=True) does not add --start-minimized arg."""
+        automation = CodexGitHubMentionsAutomation(headless=True)
+        mock_browser, _, _ = self._make_mock_browser()
+
+        captured_kwargs = {}
+
+        async def fake_launch(**kwargs):
+            captured_kwargs.update(kwargs)
+            return mock_browser
+
+        mock_playwright = AsyncMock()
+        mock_playwright.chromium.launch = fake_launch
+        automation.playwright = mock_playwright
+
+        monkeypatch.setattr(automation, "start_playwright", AsyncMock())
+        monkeypatch.setattr(automation, "connect_to_existing_browser", AsyncMock(return_value=False))
+        monkeypatch.setattr(
+            "jleechanorg_pr_automation.openai_automation.codex_github_mentions.AUTH_STATE_PATH",
+            tmp_path / "nonexistent.json",
+        )
+        monkeypatch.setattr(
+            "jleechanorg_pr_automation.openai_automation.codex_github_mentions.Stealth",
+            lambda: AsyncMock(apply_stealth_async=AsyncMock()),
+        )
+
+        await automation.setup()
+
+        assert captured_kwargs.get("headless") is True
+        assert "--start-minimized" not in captured_kwargs.get("args", [])
+
+    @pytest.mark.asyncio
+    async def test_stealth_applied_to_new_page(self, monkeypatch, tmp_path):
+        """Stealth patches are applied to the new page in both headed and headless modes."""
+        automation = CodexGitHubMentionsAutomation(headless=False)
+        mock_browser, _, mock_page = self._make_mock_browser()
+
+        async def fake_launch(**kwargs):
+            return mock_browser
+
+        mock_playwright = AsyncMock()
+        mock_playwright.chromium.launch = fake_launch
+        automation.playwright = mock_playwright
+
+        stealth_apply_calls = []
+        mock_stealth_instance = AsyncMock()
+        mock_stealth_instance.apply_stealth_async = AsyncMock(
+            side_effect=lambda page: stealth_apply_calls.append(page) or None
+        )
+
+        monkeypatch.setattr(automation, "start_playwright", AsyncMock())
+        monkeypatch.setattr(automation, "connect_to_existing_browser", AsyncMock(return_value=False))
+        monkeypatch.setattr(
+            "jleechanorg_pr_automation.openai_automation.codex_github_mentions.AUTH_STATE_PATH",
+            tmp_path / "nonexistent.json",
+        )
+        monkeypatch.setattr(
+            "jleechanorg_pr_automation.openai_automation.codex_github_mentions.Stealth",
+            lambda: mock_stealth_instance,
+        )
+
+        await automation.setup()
+
+        assert len(stealth_apply_calls) == 1
+        assert stealth_apply_calls[0] is mock_page
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s", "--no-cov"])

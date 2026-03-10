@@ -19,6 +19,7 @@ from orchestration.cli_validation import (
     _build_validation_answer_regex,
     _normalize_validation_output_line,
 )
+from orchestration.constants import ORCHESTRATION_CHILD_PROCESS_VMEM_CAP_KB
 from orchestration.task_dispatcher import (
     CLI_PROFILES,
     CURSOR_MODEL,
@@ -249,6 +250,101 @@ class TestAgentCliSelection(unittest.TestCase):
         self.assertTrue(result)
         script_contents = mock_write_text.call_args_list[0][0][0]  # First positional arg is script content
         self.assertIn("codex exec --yolo --skip-git-repo-check --model gpt-4 --one 'value with space' --no-test", script_contents)
+
+    def test_create_dynamic_agent_wraps_execution_with_memory_cap(self):
+        """Generated runner scripts should cap child virtual memory before exec."""
+        agent_spec = {
+            "name": "task-agent-memory-cap-test",
+            "focus": "Validate child memory cap wrapper",
+            "prompt": "Do the work",
+            "capabilities": [],
+            "type": "development",
+            "cli": "codex",
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_print_tmp_subdirectories"),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=("/tmp/task-agent-memory-cap-test", MagicMock(returncode=0, stderr="")),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+        ):
+
+            def which_side_effect(command):
+                known_binaries = {
+                    "codex": "/usr/bin/codex",
+                    "tmux": "/usr/bin/tmux",
+                }
+                return known_binaries.get(command)
+
+            mock_which.side_effect = which_side_effect
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        script_contents = mock_write_text.call_args_list[0][0][0]
+        self.assertIn(f"Child virtual memory cap: {ORCHESTRATION_CHILD_PROCESS_VMEM_CAP_KB} KB", script_contents)
+        self.assertIn("ulimit -v \"$MEMORY_CAP_KB\"", script_contents)
+        self.assertIn("exec sh -c \"$ATTEMPT_COMMAND\"", script_contents)
+        self.assertIn(f"' _ {ORCHESTRATION_CHILD_PROCESS_VMEM_CAP_KB} ", script_contents)
+
+    def test_create_dynamic_agent_wraps_execution_with_memory_cap_preflight(self):
+        """Memory cap wrapper is present on the skip_preflight=False (preflight) execution path."""
+        agent_spec = {
+            "name": "task-agent-memory-cap-preflight-test",
+            "focus": "Validate child memory cap wrapper (preflight path)",
+            "prompt": "Do the work",
+            "capabilities": [],
+            "type": "development",
+            "cli": "codex",
+            "skip_preflight": False,
+        }
+
+        with (
+            patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
+            patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()),
+            patch.object(self.dispatcher, "_print_tmp_subdirectories"),
+            patch.object(
+                self.dispatcher,
+                "_create_worktree_at_location",
+                return_value=("/tmp/task-agent-memory-cap-preflight-test", MagicMock(returncode=0, stderr="")),
+            ),
+            patch("os.makedirs"),
+            patch("os.chmod"),
+            patch("builtins.open", mock_open()),
+            patch("os.path.exists", return_value=False),
+            patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text,
+            patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
+            patch("orchestration.task_dispatcher.shutil.which") as mock_which,
+            patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
+        ):
+
+            def which_side_effect(command):
+                return {"codex": "/usr/bin/codex", "tmux": "/usr/bin/tmux"}.get(command)
+
+            mock_which.side_effect = which_side_effect
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+            result = self.dispatcher.create_dynamic_agent(agent_spec)
+
+        self.assertTrue(result)
+        script_contents = mock_write_text.call_args_list[0][0][0]
+        self.assertIn(f"Child virtual memory cap: {ORCHESTRATION_CHILD_PROCESS_VMEM_CAP_KB} KB", script_contents)
+        self.assertIn("ulimit -v \"$MEMORY_CAP_KB\"", script_contents)
+        self.assertIn("exec sh -c \"$ATTEMPT_COMMAND\"", script_contents)
+        self.assertIn(f"' _ {ORCHESTRATION_CHILD_PROCESS_VMEM_CAP_KB} ", script_contents)
 
     def test_create_dynamic_agent_handles_malformed_cli_args(self):
         """Malformed cli_args strings should not crash dynamic agent creation."""
@@ -752,7 +848,7 @@ class TestGeminiCliIntegration(unittest.TestCase):
         self.assertFalse(gemini["quote_prompt"])
 
     def test_all_cli_profiles_have_consistent_structure(self):
-        """Integration: All CLI profiles (claude, codex, gemini, cursor) have same structure."""
+        """Integration: All CLI profiles (claude, codex, cursor, gemini, minimax) have same structure."""
 
         expected_keys = set(CLI_PROFILES["claude"].keys())
 
