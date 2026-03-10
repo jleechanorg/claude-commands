@@ -1,6 +1,5 @@
 ---
 description: Alias for /evidence_review — Review evidence artifacts using the evidence-reviewer agent (codex dispatch, claude fallback)
-aliases: [evidence_review]
 type: orchestration
 execution_mode: immediate
 ---
