@@ -12,6 +12,7 @@ Tests:
 
 import argparse
 import inspect
+import io
 import json
 import os
 import subprocess
@@ -31,6 +32,12 @@ sys.path.insert(0, orchestration_dir)
 
 from orchestration import orchestrate_unified
 from orchestration import live_mode
+from orchestration.cli_args import add_agent_cli_and_model_arguments
+from orchestration.cli_args import add_named_session_argument
+from orchestration.cli_args import add_shared_orchestration_arguments
+from orchestration.cli_args import add_task_argument
+from orchestration.cli_args import add_live_cli_arguments
+from orchestration.orchestrate_unified import UnifiedOrchestration
 
 
 class TestOrchestrateUnifiedArguments(unittest.TestCase):
@@ -210,6 +217,9 @@ class TestContextFileLoading(unittest.TestCase):
         self.assertFalse(os.path.exists(context_path))
 
 
+@unittest.skip(
+    "PR #5824: dispatcher analyze/create removed; ai_orch now uses runner.py passthrough/async only"
+)
 class TestLiveModeDispatcherWrapPrompt(unittest.TestCase):
     """Ensure live-mode dispatcher commands keep wrapped PR-aware behavior."""
 
@@ -548,6 +558,281 @@ class TestOrchestrateReturnConsistency(unittest.TestCase):
         with patch.object(orchestration, "_check_dependencies", return_value=False):
             result = orchestration.orchestrate("test task")
         self.assertEqual(result, 0)
+
+
+class TestLiveModeCLIHelpAndWorktreeFlags(unittest.TestCase):
+    """Regression coverage for ai_orch CLI help and run-time worktree flags."""
+
+    @unittest.skip("PR #5824: ai_orch entry point is runner.py; help text differs")
+    def test_ai_orch_help_includes_run_options(self):
+        """Top-level --help should surface run-mode options including worktree flags."""
+        with (
+            patch("sys.argv", ["ai_orch", "--help"]),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+        ):
+            rc = live_mode.main()
+
+        self.assertEqual(rc, 0)
+        output = mock_stdout.getvalue()
+        self.assertIn("Run mode arguments (default command):", output)
+        self.assertIn("--no-worktree", output)
+        self.assertIn("--worktree", output)
+        self.assertIn("--no-new-branch", output)
+
+    @unittest.skip("PR #5824: run mode in runner.py; no UnifiedOrchestration worktree options")
+    def test_ai_orch_run_supports_worktree_flag(self):
+        """--worktree should map to no_worktree=False and reach UnifiedOrchestration."""
+        with (
+            patch("sys.argv", ["ai_orch", "run", "--worktree", "Test", "worktree", "task"]),
+            patch("orchestration.live_mode.UnifiedOrchestration") as mock_unified_cls,
+        ):
+            orchestrator = mock_unified_cls.return_value
+            orchestrator.orchestrate.return_value = 1
+
+            rc = live_mode.main()
+
+        self.assertEqual(rc, 0)
+        orchestrator.orchestrate.assert_called_once()
+        _, orchestrate_kwargs = orchestrator.orchestrate.call_args
+        self.assertFalse(orchestrate_kwargs["options"]["no_worktree"])
+
+    @unittest.skip("PR #5824: run mode in runner.py; no --no-worktree flag")
+    def test_ai_orch_run_supports_no_worktree_flag(self):
+        """Explicit --no-worktree should map to no_worktree=True and reach UnifiedOrchestration."""
+        with (
+            patch("sys.argv", ["ai_orch", "run", "--no-worktree", "Test", "no", "worktree", "task"]),
+            patch("orchestration.live_mode.UnifiedOrchestration") as mock_unified_cls,
+        ):
+            orchestrator = mock_unified_cls.return_value
+            orchestrator.orchestrate.return_value = 1
+
+            rc = live_mode.main()
+
+        self.assertEqual(rc, 0)
+        orchestrator.orchestrate.assert_called_once()
+        _, orchestrate_kwargs = orchestrator.orchestrate.call_args
+        self.assertTrue(orchestrate_kwargs["options"]["no_worktree"])
+
+    @unittest.skip("PR #5824: run mode in runner.py; live_mode has no run")
+    def test_ai_orch_run_default_worktree_is_disabled(self):
+        """No flag should default to no_worktree=True (worktree isolation disabled by default)."""
+        with (
+            patch("sys.argv", ["ai_orch", "run", "Test", "default", "task"]),
+            patch("orchestration.live_mode.UnifiedOrchestration") as mock_unified_cls,
+        ):
+            orchestrator = mock_unified_cls.return_value
+            orchestrator.orchestrate.return_value = 1
+
+            rc = live_mode.main()
+
+        self.assertEqual(rc, 0)
+        orchestrator.orchestrate.assert_called_once()
+        _, orchestrate_kwargs = orchestrator.orchestrate.call_args
+        self.assertTrue(orchestrate_kwargs["options"]["no_worktree"])
+
+    @unittest.skip("PR #5824: run mode in runner.py; live_mode has no run")
+    def test_ai_orch_defaults_to_claude_and_sonnet(self):
+        """Default ai_orch run should target claude with sonnet model unless overridden."""
+        with (
+            patch("sys.argv", ["ai_orch", "run", "Build", "new", "feature"]),
+            patch("orchestration.live_mode.UnifiedOrchestration") as mock_unified_cls,
+        ):
+            orchestrator = mock_unified_cls.return_value
+            orchestrator.orchestrate.return_value = 1
+
+            rc = live_mode.main()
+
+        self.assertEqual(rc, 0)
+        orchestrator.orchestrate.assert_called_once()
+        _, orchestrate_kwargs = orchestrator.orchestrate.call_args
+        options = orchestrate_kwargs["options"]
+        self.assertEqual(options["agent_cli"], "claude")
+        self.assertEqual(options["model"], "sonnet")
+        self.assertTrue(options["no_worktree"])
+
+    @unittest.skip("PR #5824: run mode in runner.py; no add_shared_orchestration_arguments in run path")
+    def test_shared_orchestration_arguments_are_reused_in_ai_orch_run_parser(self):
+        """live_mode should wire shared orchestration args through a single helper function."""
+        with (
+            patch("sys.argv", ["ai_orch", "run", "some", "task"]),
+            patch("orchestration.live_mode.UnifiedOrchestration") as mock_unified_cls,
+            patch(
+                "orchestration.live_mode.add_shared_orchestration_arguments",
+                wraps=live_mode.add_shared_orchestration_arguments,
+            ) as add_shared_mock,
+        ):
+            mock_unified_cls.return_value.orchestrate.return_value = 1
+
+            rc = live_mode.main()
+
+        self.assertEqual(rc, 0)
+        add_shared_mock.assert_called_once()
+
+    def test_shared_parser_handles_new_orch_args(self):
+        """Helper used by both CLI entrypoints should parse common orchestration flags."""
+        parser = argparse.ArgumentParser()
+        add_shared_orchestration_arguments(parser)
+
+        parsed = parser.parse_args(
+            [
+                "--worktree",
+                "--branch",
+                "feature-branch",
+                "--validate",
+                "make test",
+                "--mcp-agent",
+                "agent-name",
+                "--bead",
+                "bead-1",
+                "--no-new-pr",
+                "--agent-cli",
+                "gemini,claude",
+            ]
+        )
+
+        self.assertFalse(parsed.no_worktree)
+        self.assertEqual(parsed.branch, "feature-branch")
+        self.assertEqual(parsed.validate, "make test")
+        self.assertEqual(parsed.mcp_agent, "agent-name")
+        self.assertEqual(parsed.bead, "bead-1")
+        self.assertTrue(parsed.no_new_pr)
+        self.assertEqual(parsed.agent_cli, "gemini,claude")
+
+    @unittest.skip("PR #5824: dispatcher analyze/create removed")
+    def test_dispatcher_parsers_reuse_agent_cli_helper(self):
+        """Dispatcher analyze/create should use the shared agent-cli argument helper."""
+        with (
+            patch(
+                "orchestration.live_mode.add_agent_cli_and_model_arguments",
+                wraps=add_agent_cli_and_model_arguments,
+            ) as add_agent_helper,
+            patch("sys.argv", ["ai_orch", "dispatcher", "analyze", "Task input"]),
+            patch("orchestration.live_mode.TaskDispatcher") as mock_dispatcher_cls,
+        ):
+            dispatcher = mock_dispatcher_cls.return_value
+            dispatcher.analyze_task_and_create_agents.return_value = [{"name": "task-agent-1", "cli": "claude"}]
+            rc = live_mode.main()
+
+        self.assertEqual(rc, 0)
+        self.assertGreaterEqual(add_agent_helper.call_count, 1)
+
+    def test_dispatcher_create_parses_shared_agent_cli_model_args(self):
+        """Dispatcher create should keep shared agent_cli/model signature."""
+        parser = argparse.ArgumentParser()
+        parser.add_argument("task", nargs="+")
+        add_agent_cli_and_model_arguments(parser)
+
+        parsed = parser.parse_args(["--agent-cli", "claude", "--model", "sonnet", "ignored-task"])
+
+        self.assertEqual(parsed.agent_cli, "claude")
+        self.assertEqual(parsed.model, "sonnet")
+
+
+class TestCliArgCentralizationHelpers(unittest.TestCase):
+    """Regression tests for centralized orchestration CLI helpers."""
+
+    def test_safe_monitor_args_are_reusable(self):
+        parser = argparse.ArgumentParser(description="safe monitor")
+        from orchestration.cli_args import add_safe_monitor_arguments
+
+        add_safe_monitor_arguments(parser)
+
+        parsed = parser.parse_args(["--all", "--interval", "15", "agent-1"])
+
+        self.assertTrue(parsed.all)
+        self.assertEqual(parsed.interval, 15)
+        self.assertEqual(parsed.agent, "agent-1")
+
+
+    @unittest.skip("PR #5824: run mode moved to runner.py; live_mode no longer has run with UnifiedOrchestration")
+    def test_live_mode_run_uses_shared_task_helper(self):
+        """run mode should use centralized task positional helper."""
+        with patch("orchestration.live_mode.add_task_argument", wraps=add_task_argument) as helper:
+            with patch("orchestration.live_mode.UnifiedOrchestration") as mock_unified_cls:
+                mock_unified_cls.return_value.orchestrate.return_value = 1
+                with patch("sys.argv", ["ai_orch", "run", "sample", "task"]):
+                    rc = live_mode.main()
+
+        self.assertGreaterEqual(helper.call_count, 1)
+        self.assertEqual(rc, 0)
+
+    @unittest.skip("PR #5824: orchestrate_unified is stub; does not use add_task_argument")
+    def test_orchestrate_unified_uses_shared_task_helper(self):
+        """orchestrate_unified should use centralized task helper."""
+        with patch("orchestration.orchestrate_unified.add_task_argument", wraps=add_task_argument) as helper:
+            with patch("orchestration.orchestrate_unified.UnifiedOrchestration") as mock_unified_cls:
+                mock_unified_cls.return_value.orchestrate.return_value = 1
+                with patch("sys.argv", ["orchestrate_unified.py", "sample", "task"]):
+                    rc = orchestrate_unified.main()
+
+        self.assertEqual(helper.call_count, 1)
+        self.assertEqual(rc, 0)
+
+    def test_reusable_task_arg_builder(self):
+        """Task helper should produce identical positional parsing."""
+        parser = argparse.ArgumentParser()
+        add_task_argument(parser, help_text="Task description for tests")
+        parsed = parser.parse_args(["my", "task", "input"])
+
+        self.assertEqual(parsed.task, ["my", "task", "input"])
+
+    def test_live_cli_argument_reuse(self):
+        """Live CLI helper should parse shared session command options consistently."""
+        parser = argparse.ArgumentParser()
+        add_live_cli_arguments(parser)
+        parsed = parser.parse_args(["--cli", "claude", "--name", "sess", "--dir", "/tmp", "--model", "sonnet", "--detached"])
+
+        self.assertEqual(parsed.cli, "claude")
+        self.assertEqual(parsed.name, "sess")
+        self.assertEqual(parsed.dir, "/tmp")
+        self.assertEqual(parsed.model, "sonnet")
+        self.assertTrue(parsed.detached)
+
+    def test_named_session_argument_reusable(self):
+        parser = argparse.ArgumentParser()
+        add_named_session_argument(parser, help_text="Session name to attach to")
+        parsed = parser.parse_args(["session-1"])
+
+        self.assertEqual(parsed.session, "session-1")
+
+    @unittest.skip("PR #5824: run mode moved to runner.py; live_mode no longer has run")
+    def test_ai_orch_run_default_worktree_behavior(self):
+        """Default run invocation without worktree flags should preserve no_worktree=True."""
+        with (
+            patch("sys.argv", ["ai_orch", "run", "Default", "worktree", "task"]),
+            patch("orchestration.live_mode.UnifiedOrchestration") as mock_unified_cls,
+        ):
+            orchestrator = mock_unified_cls.return_value
+            orchestrator.orchestrate.return_value = 1
+
+            rc = live_mode.main()
+
+        self.assertEqual(rc, 0)
+        orchestrator.orchestrate.assert_called_once()
+        _, orchestrate_kwargs = orchestrator.orchestrate.call_args
+        self.assertTrue(orchestrate_kwargs["options"]["no_worktree"])
+
+    def test_cleanup_args_reusable(self):
+        parser = argparse.ArgumentParser()
+        from orchestration.cli_args import add_cleanup_arguments
+
+        add_cleanup_arguments(parser)
+
+        parsed = parser.parse_args(["--dry-run", "--json"])
+
+        self.assertTrue(parsed.dry_run)
+        self.assertTrue(parsed.json)
+
+    def test_test_runner_args_reusable(self):
+        parser = argparse.ArgumentParser()
+        from orchestration.cli_args import add_test_runner_arguments
+
+        add_test_runner_arguments(parser)
+
+        parsed = parser.parse_args(["--verbose", "--list"])
+
+        self.assertTrue(parsed.verbose)
+        self.assertTrue(parsed.list)
 
 
 if __name__ == "__main__":

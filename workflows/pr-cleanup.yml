@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   try-self-hosted:
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 10
     continue-on-error: true
     outputs:
@@ -36,9 +36,6 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
-
-      - name: Runner control plane
-        uses: ./.github/actions/runner-control-plane
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
@@ -55,8 +52,6 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          cat <<'EOF' >/tmp/pr-cleanup-release.sh
-          #!/usr/bin/env bash
           set -euo pipefail
 
           chmod +x .github/scripts/pr-server-pool.sh
@@ -74,12 +69,6 @@ jobs:
           fi
 
           echo "✅ Found server assignment: $SERVER (service: $SERVICE_NAME)"
-          EOF
-
-          chmod +x /tmp/pr-cleanup-release.sh
-          ./self-hosted-runner/run-in-ci-container.sh \
-            --workspace "$GITHUB_WORKSPACE" \
-            --cmd-file /tmp/pr-cleanup-release.sh
 
       - name: Remove PR label from service
         if: steps.release.outputs.service_name != 'null'
@@ -87,45 +76,33 @@ jobs:
           SERVICE_NAME: ${{ steps.release.outputs.service_name }}
           SERVER: ${{ steps.release.outputs.server }}
         run: |
-          cat <<'EOF' >/tmp/pr-cleanup-remove-label.sh
-          #!/usr/bin/env bash
           set -euo pipefail
 
           echo "🧹 Releasing server $SERVER back to pool..."
+
+          if ! gcloud run services describe "$SERVICE_NAME" \
+            --project="${GCP_PROJECT}" \
+            --region="${GCP_REGION}" \
+            --quiet >/dev/null 2>&1; then
+            echo "⚠️ Service $SERVICE_NAME not found; skipping label removal"
+            exit 0
+          fi
 
           gcloud run services update "$SERVICE_NAME" \
             --project="${GCP_PROJECT}" \
             --region="${GCP_REGION}" \
             --remove-labels=pr-number,commit-sha \
-            --quiet && {
-            echo "✅ Server $SERVER released back to pool"
-          } || {
-            echo "⚠️ Could not remove label (service may not exist yet)"
-            exit 0
-          }
-          EOF
-
-          chmod +x /tmp/pr-cleanup-remove-label.sh
-          ./self-hosted-runner/run-in-ci-container.sh \
-            --workspace "$GITHUB_WORKSPACE" \
-            --cmd-file /tmp/pr-cleanup-remove-label.sh
+            --quiet
+          echo "✅ Server $SERVER released back to pool"
 
       - name: Show pool status
         if: always()
         run: |
-          cat <<'EOF' >/tmp/pr-cleanup-status.sh
-          #!/usr/bin/env bash
           set -euo pipefail
           chmod +x .github/scripts/pr-server-pool.sh
           echo ""
           echo "📊 Current pool status after cleanup:"
           .github/scripts/pr-server-pool.sh status
-          EOF
-
-          chmod +x /tmp/pr-cleanup-status.sh
-          ./self-hosted-runner/run-in-ci-container.sh \
-            --workspace "$GITHUB_WORKSPACE" \
-            --cmd-file /tmp/pr-cleanup-status.sh
 
       - name: Post cleanup comment
         if: steps.release.outputs.service_name != 'null'
@@ -134,8 +111,6 @@ jobs:
           SERVICE_NAME: ${{ steps.release.outputs.service_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          cat <<'EOF' >/tmp/pr-cleanup-comment.sh
-          #!/usr/bin/env bash
           set -euo pipefail
 
           gh pr comment "$PR_NUMBER" --repo ${{ github.repository }} --body "## 🧹 PR Preview Resources Released
@@ -152,20 +127,12 @@ jobs:
           2. The workflow will automatically assign an available server
 
           🤖 *Rotating server pool auto-management*"
-          EOF
-
-          chmod +x /tmp/pr-cleanup-comment.sh
-          ./self-hosted-runner/run-in-ci-container.sh \
-            --workspace "$GITHUB_WORKSPACE" \
-            --cmd-file /tmp/pr-cleanup-comment.sh
 
       - name: Post no-cleanup comment
         if: steps.release.outputs.service_name == 'null'
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          cat <<'EOF' >/tmp/pr-no-cleanup-comment.sh
-          #!/usr/bin/env bash
           set -euo pipefail
 
           gh pr comment "$PR_NUMBER" --repo ${{ github.repository }} --body "## ℹ️ No Preview Resources to Clean Up
@@ -173,12 +140,6 @@ jobs:
           This PR did not have an active preview deployment.
 
           🤖 *Rotating server pool auto-management*"
-          EOF
-
-          chmod +x /tmp/pr-no-cleanup-comment.sh
-          ./self-hosted-runner/run-in-ci-container.sh \
-            --workspace "$GITHUB_WORKSPACE" \
-            --cmd-file /tmp/pr-no-cleanup-comment.sh
 
       - name: Mark successful completion
         id: mark-success
@@ -246,17 +207,20 @@ jobs:
 
           echo "🧹 Releasing server $SERVER back to pool..."
 
-          # Remove pr-number label to mark server as available
-          gcloud run services update "$SERVICE_NAME" \
-            --project="${{ env.GCP_PROJECT }}" \
-            --region="${{ env.GCP_REGION }}" \
-            --remove-labels=pr-number,commit-sha \
-            --quiet && {
-            echo "✅ Server $SERVER released back to pool"
-          } || {
-            echo "⚠️ Could not remove label (service may not exist yet)"
+          if ! gcloud run services describe "$SERVICE_NAME" \
+            --project="${GCP_PROJECT}" \
+            --region="${GCP_REGION}" \
+            --quiet >/dev/null 2>&1; then
+            echo "⚠️ Service $SERVICE_NAME not found; skipping label removal"
             exit 0
-          }
+          fi
+
+          gcloud run services update "$SERVICE_NAME" \
+            --project="${GCP_PROJECT}" \
+            --region="${GCP_REGION}" \
+            --remove-labels=pr-number,commit-sha \
+            --quiet
+          echo "✅ Server $SERVER released back to pool"
 
       - name: Show pool status
         if: always()

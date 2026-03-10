@@ -1,7 +1,7 @@
 """Tests for dirty git repository handling in orchestrated_pr_runner.
 
 This test file validates that ensure_base_clone handles dirty git repositories
-correctly by running `git reset --hard` before attempting to checkout branches.
+correctly by forcing the default branch back to the remote tracking branch.
 """
 
 import subprocess
@@ -24,8 +24,8 @@ def test_prepare_base_clone_handles_dirty_repo(tmp_path, monkeypatch):
 
     Simulates the scenario where:
     1. Base clone exists but has uncommitted changes (detached HEAD state)
-    2. `git checkout main` would fail with "local changes would be overwritten"
-    3. Fix: Run `git reset --hard` BEFORE `git checkout main`
+    2. A normal checkout would fail with "local changes would be overwritten"
+    3. Fix: Force `git checkout -B main origin/main`
     """
     base_clone_root = tmp_path / "pr-orch-bases"
     repo_full = "jleechanorg/test-repo"
@@ -50,27 +50,7 @@ def test_prepare_base_clone_handles_dirty_repo(tmp_path, monkeypatch):
         if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
             return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main", stderr="")
 
-        # Simulate git rev-parse --verify main (main branch exists)
-        if cmd == ["git", "rev-parse", "--verify", "main"]:
-            return SimpleNamespace(returncode=0, stdout="", stderr="")
-
-        # Simulate git checkout main failing on dirty repo (BEFORE the fix)
-        # This is what would happen without `git reset --hard` first
-        if cmd == ["git", "checkout", "main"]:
-            # Check if we ran `git reset --hard` before this
-            reset_hard_before_checkout = any(
-                c == ["git", "reset", "--hard"]
-                for c in git_commands[:-1]  # Check commands before this one
-            )
-
-            if not reset_hard_before_checkout:
-                # Simulate the error that occurs on dirty repos
-                exc = subprocess.CalledProcessError(
-                    1, cmd,
-                    stderr="error: Your local changes to the following files would be overwritten by checkout:\n\t.beads/beads.base.jsonl\n\t.claude/settings.json\nPlease commit your changes or stash them before you switch branches.\nAborting"
-                )
-                raise exc
-            # After reset --hard, checkout succeeds
+        if cmd == ["git", "checkout", "--force", "-B", "main", "origin/main"]:
             return SimpleNamespace(returncode=0, stdout="", stderr="")
 
         # All other git commands succeed
@@ -85,34 +65,17 @@ def test_prepare_base_clone_handles_dirty_repo(tmp_path, monkeypatch):
     # Run ensure_base_clone
     result = runner.ensure_base_clone(repo_full)
 
-    # Verify the fix: git reset --hard should run BEFORE git checkout main
+    # Verify the fix: force the local default branch back to origin/main directly
     assert result == base_dir
 
     # Extract just the git commands
     git_cmds = [cmd for cmd in git_commands if cmd[0] == "git"]
 
-    # Find indices of key commands
-    reset_hard_idx = None
-    checkout_main_idx = None
-
-    for i, cmd in enumerate(git_cmds):
-        if cmd == ["git", "reset", "--hard"]:
-            reset_hard_idx = i
-        elif cmd == ["git", "checkout", "main"]:
-            checkout_main_idx = i
-
-    # Verify the fix is in place
-    assert reset_hard_idx is not None, "git reset --hard should be called"
-    assert checkout_main_idx is not None, "git checkout main should be called"
-    assert reset_hard_idx < checkout_main_idx, \
-        "git reset --hard must run BEFORE git checkout main to handle dirty repos"
-
     # Verify full command sequence (key parts)
-    assert ["git", "rev-parse", "--verify", "main"] in git_cmds
-    assert ["git", "reset", "--hard"] in git_cmds
-    assert ["git", "checkout", "main"] in git_cmds
-    assert ["git", "reset", "--hard", "origin/main"] in git_cmds
     assert ["git", "clean", "-fdx"] in git_cmds
+    assert ["git", "checkout", "--force", "-B", "main", "origin/main"] in git_cmds
+    assert ["git", "reset", "--hard"] not in git_cmds
+    assert ["git", "checkout", "main"] not in git_cmds
 
 
 def test_prepare_base_clone_error_message_includes_command(tmp_path, monkeypatch):
@@ -138,9 +101,6 @@ def test_prepare_base_clone_error_message_includes_command(tmp_path, monkeypatch
         """Mock run_cmd that fails on git clean persistently (even after re-clone)."""
         if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
             return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main", stderr="")
-
-        if cmd == ["git", "rev-parse", "--verify", "main"]:
-            return SimpleNamespace(returncode=0, stdout="", stderr="")
 
         if cmd == ["git", "clean", "-fdx"]:
             clean_call_count[0] += 1
@@ -195,15 +155,8 @@ def test_prepare_base_clone_handles_detached_head(tmp_path, monkeypatch):
         if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
             return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main", stderr="")
 
-        if cmd == ["git", "rev-parse", "--verify", "main"]:
-            return SimpleNamespace(returncode=0, stdout="", stderr="")
-
-        if cmd == ["git", "reset", "--hard"]:
-            # reset --hard works in detached HEAD
-            return SimpleNamespace(returncode=0, stdout="", stderr="")
-
-        if cmd == ["git", "checkout", "main"]:
-            # After reset --hard, we can checkout main successfully
+        if cmd == ["git", "checkout", "--force", "-B", "main", "origin/main"]:
+            # Force checkout works even from detached HEAD
             return SimpleNamespace(returncode=0, stdout="", stderr="")
 
         return SimpleNamespace(returncode=0, stdout="", stderr="")
@@ -214,7 +167,7 @@ def test_prepare_base_clone_handles_detached_head(tmp_path, monkeypatch):
     result = runner.ensure_base_clone(repo_full)
     assert result == base_dir
 
-    # Verify reset --hard runs before checkout
+    # Verify detached HEAD is resolved with one forced remote checkout
     git_cmds = [cmd for cmd in git_commands if cmd[0] == "git"]
-    assert ["git", "reset", "--hard"] in git_cmds
-    assert ["git", "checkout", "main"] in git_cmds
+    assert ["git", "checkout", "--force", "-B", "main", "origin/main"] in git_cmds
+    assert ["git", "reset", "--hard"] not in git_cmds

@@ -48,6 +48,18 @@ class DirectoryOperationError(ExportError):
 
 
 class ClaudeCommandsExporter:
+    # Patterns that indicate hardcoded user/project paths (should be filtered)
+    HARDCODED_PATH_PATTERNS = [
+        (r"/Users/jleechan/", "hardcoded /Users/jleechan/ - use $HOME/"),
+        (r"/Users/\$USER/projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
+        (r"/Users/\$USER/projects_other/ralph-orchestrator", "hardcoded ralph-orchestrator - use $RALPH_REPO"),
+        (r"projects_other/ralph-orchestrator", "hardcoded projects_other - use $RALPH_REPO"),
+        (r"projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
+        (r"orch_worldai_ralph", "project-specific orch path - use $PROJECT_ROOT"),
+        (r"worldai_genesis2|worldai_ralph2", "project-specific clone dir - use generic"),
+        (r"worldarchitect-ci", "hardcoded worldarchitect-ci - use ${PROJECT_NAME:-your-project}-ci"),
+    ]
+
     def __init__(self):
         self.project_root = self._get_project_root()
         self.export_dir = os.path.join(
@@ -932,8 +944,24 @@ Customize the following for your project:
             )
             content = re.sub(r"worldarchitecture-ai", "$GCP_PROJECT_ID", content)
             content = re.sub(r"worldarchitect\.ai", "your-project.com", content)
+            content = re.sub(r"worldarchitect-ci", "${PROJECT_NAME:-your-project}-ci", content)
             content = re.sub(r"jleechanorg", "$GITHUB_OWNER", content)
             content = re.sub(r"\bjleechan\b", "$USER", content)
+
+            # Replace runner-control-plane with inline stub (action not exported to claude-commands)
+            _runner_cp_pattern = (
+                r"(- name: Runner control plane\s*\n\s+id: control-plane\s*\n)\s+uses: \.\/\.github\/actions\/runner-control-plane\s*\n"
+            )
+            _runner_cp_repl = r'''\1        run: |
+          echo "preflight_exit_code=0" >> "$GITHUB_OUTPUT"
+          echo "infra_failure_class=" >> "$GITHUB_OUTPUT"
+          echo "preflight_json=${RUNNER_TEMP:-/tmp}/runner_health.json" >> "$GITHUB_OUTPUT"
+          echo "quarantined=false" >> "$GITHUB_OUTPUT"
+          echo "score=0" >> "$GITHUB_OUTPUT"
+          echo "::notice::Runner control plane skipped - add .github/actions/runner-control-plane for full preflight"
+
+'''
+            content = re.sub(_runner_cp_pattern, _runner_cp_repl, content)
 
             # Update outdated GitHub Actions to latest secure versions
             # actions/checkout v4.1.1 (Dec 2023) → v4.3.1 (Nov 2024)
@@ -1148,6 +1176,9 @@ Claude Code can assist with adapting these workflows to your specific project. J
                     if "$PROJECT_ROOT/" not in content:
                         content = re.sub(r"mvp_site/", "$PROJECT_ROOT/", content)
                 content = re.sub(r"worldarchitect\.ai", "your-project.com", content)
+                content = re.sub(
+                    r"worldarchitect-ci", "${PROJECT_NAME:-your-project}-ci", content
+                )
                 content = re.sub(r"\bjleechan\b", "$USER", content)
                 content = re.sub(
                     r"TESTING=true vpython", "TESTING=true python", content
@@ -1178,8 +1209,7 @@ Claude Code can assist with adapting these workflows to your specific project. J
                 )
 
                 # Hardcoded user/project paths → generic placeholders
-                # Order: specific paths first, then broad. $HOME/projects/worktree_ralph can
-                # result from /Users/jleechan/ → $HOME/ when jleechan wasn't replaced yet.
+                # Order: specific paths first, then broad.
                 content = re.sub(
                     r'/Users/\$USER/projects/worktree_ralph(?=/|"|\s|$)',
                     "$PROJECT_ROOT",
@@ -1200,7 +1230,7 @@ Claude Code can assist with adapting these workflows to your specific project. J
                     "$RALPH_REPO",
                     content,
                 )
-                content = re.sub(r"/Users/jleechan/", "$HOME/", content)
+                # Medium-specific paths before broad /Users/$USER/ replacement
                 content = re.sub(
                     r'/Users/\$USER/projects_other(?=/|"|\s|$)',
                     "$HOME/projects",
@@ -1211,6 +1241,8 @@ Claude Code can assist with adapting these workflows to your specific project. J
                     "$HOME/projects",
                     content,
                 )
+                # Broad pattern last - catches remaining /Users/$USER/ occurrences
+                content = re.sub(r"/Users/\$USER/", "$HOME/", content)
                 # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
                 content = re.sub(
                     r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")',
@@ -1948,24 +1980,13 @@ This is a filtered reference export from a working Claude Code project. Commands
         else:
             print("✅ Confirmed: No excluded directories in export")
 
-    # Patterns that indicate hardcoded user/project paths (should be filtered)
-    HARDCODED_PATH_PATTERNS = [
-        (r"/Users/jleechan/", "hardcoded /Users/jleechan/ - use $HOME/"),
-        (r"/Users/\$USER/projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
-        (r"/Users/\$USER/projects_other/ralph-orchestrator", "hardcoded ralph-orchestrator - use $RALPH_REPO"),
-        (r"projects_other/ralph-orchestrator", "hardcoded projects_other - use $RALPH_REPO"),
-        (r"projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
-        (r"orch_worldai_ralph", "project-specific orch path - use $PROJECT_ROOT"),
-        (r"worldai_genesis2|worldai_ralph2", "project-specific clone dir - use generic"),
-    ]
-
     def _validate_no_hardcoded_paths(self):
         """Scan exported content for hardcoded user/project paths; warn if found."""
         print("🔍 Validating export for hardcoded path patterns...")
         found = []
         for root, _dirs, files in os.walk(self.repo_dir):
-            # Skip .git
-            if ".git" in root:
+            # Skip only the actual .git directory
+            if ".git" in Path(root).parts:
                 continue
             for name in files:
                 # Skip exportcommands.py (contains pattern literals → false positives)

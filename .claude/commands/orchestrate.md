@@ -28,7 +28,7 @@ execution_mode: immediate
 **Options**:
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--agent-cli <cli>` | Agent CLI to use (claude, codex, gemini, cursor). Supports comma-separated chain for fallback (e.g., 'gemini,claude') | gemini |
+| `--agent-cli <cli>` | Agent CLI to use (claude, codex, cursor, gemini, minimax). Supports comma-separated chain for fallback (e.g., 'gemini,claude') | gemini |
 | `--context <path>` | Path to markdown file to inject into agent prompt as context | - |
 | `--branch <name>` | Force checkout of specific branch (prevents new branch creation) | - |
 | `--pr <number>` | Existing PR number to update (prevents new PR creation) | - |

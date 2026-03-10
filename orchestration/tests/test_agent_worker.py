@@ -10,8 +10,8 @@ import time
 from orchestration.message_broker import MessageBroker, MessageType
 
 
-class TestWorkerAgent:
-    """Test agent that processes tasks and returns results"""
+class WorkerAgentForTests:
+    """Test agent that processes tasks and returns results. Name avoids pytest collecting it."""
 
     def __init__(self, agent_id="test-worker"):
         self.agent_id = agent_id
@@ -85,7 +85,7 @@ class TestWorkerAgent:
 
 if __name__ == "__main__":
     agent_id = sys.argv[1] if len(sys.argv) > 1 else "test-worker"
-    agent = TestWorkerAgent(agent_id)
+    agent = WorkerAgentForTests(agent_id)
 
     try:
         # When run directly for testing, limit iterations to prevent infinite loops

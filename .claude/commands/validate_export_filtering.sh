@@ -38,8 +38,8 @@ echo "   ... ($(grep -r "worldarchitect\.ai\|\$USER\|WorldArchitect\.AI" .claude
 
 echo ""
 echo "📁 Hardcoded user paths (should be filtered):"
-grep -rE "/Users/jleechan/|/Users/\$USER/projects/worktree_ralph|projects_other/ralph|orch_worldai_ralph|worldai_genesis2|worldai_ralph2" .claude/commands --include="*.md" --include="*.py" --include="*.sh" 2>/dev/null | head -5
-echo "   ... ($(grep -rE "/Users/jleechan/|/Users/\$USER/projects/worktree_ralph|projects_other/ralph|orch_worldai_ralph|worldai_genesis2|worldai_ralph2" .claude/commands --include="*.md" --include="*.py" --include="*.sh" 2>/dev/null | wc -l) total matches)"
+grep -rE "$HOME/|/Users/\$USER/projects/worktree_ralph|projects_other/ralph|orch_worldai_ralph|worldai_genesis2|worldai_ralph2" .claude/commands --include="*.md" --include="*.py" --include="*.sh" 2>/dev/null | head -5
+echo "   ... ($(grep -rE "$HOME/|/Users/\$USER/projects/worktree_ralph|projects_other/ralph|orch_worldai_ralph|worldai_genesis2|worldai_ralph2" .claude/commands --include="*.md" --include="*.py" --include="*.sh" 2>/dev/null | wc -l) total matches)"
 
 echo ""
 echo "🐍 Python sys.path modifications:"

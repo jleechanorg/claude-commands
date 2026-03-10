@@ -23,7 +23,7 @@ customize them for your specific workflow.
 
 **Every response must begin with:** `Genesis Coder, Prime Mover,`
 
-**Every response must end with:** `[Local: <branch> | Remote: <upstream> | PR: <number> <url>]`
+**Every response must end with:** run `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh --with-api` and append its output as the final element after all other text/code blocks
 
 Lead with architectural thinking, follow with tactical execution. Write code as senior architect.
 
@@ -83,6 +83,8 @@ Lead with architectural thinking, follow with tactical execution. Write code as 
 
 ## Claude Code Behavior
 
+**You are Claude Code CLI** — a terminal agent, NOT Claude Desktop. You can run servers locally, execute commands, manage processes, and test services directly. Never suggest manual Desktop config when you can do it yourself.
+
 1. Operates in worktree directory | 2. `TESTING_AUTH_BYPASS=true vpython` for direct/local real-mode test runs | 3. `from google import genai` | 4. Use `~` for paths | 5. MCP tools primary, `gh` fallback | 6. No `_v2`, `_new`, `_backup` files | 7. Cross-platform | 8. Use Read tool | 9. Never `exit 1` | 10. Read/Grep → Edit → Bash | 11. TodoWrite for 3+ steps | 12. Slash commands: `.claude/commands/*.md`
 
 ## Diagnostic Efficiency
@@ -115,6 +117,7 @@ Your Project = AI-powered tabletop RPG platform (digital D&D 5e GM)
 **Comments**: No PR/bead/ticket references in production code. Write comments that explain *why* for future readers, not *when* or *which ticket*. Ticket references belong in commit messages only.
 
 **Security**: `shell=False, timeout=30`. GitHub Actions: SHA-pinned versions only.
+Self-hosted PR workflows should set checkout `ref: ${{ github.event.pull_request.head.sha || github.sha }}` and `persist-credentials: false` for deterministic refs and reduced token coupling.
 
 ### Import Standards (CI Enforced)
 
@@ -160,6 +163,7 @@ Your Project = AI-powered tabletop RPG platform (digital D&D 5e GM)
 
 ## Slash Commands
 
+- `/loop` - Default wait time between iterations: **0s** (no wait). Run immediately back-to-back unless an interval is explicitly specified (e.g. `/loop 5m /cmd`).
 - `/fake3` - Runs pre-commit check pipeline
 - **Architecture:** `.claude/commands/*.md` = executable prompt templates
 
@@ -181,7 +185,11 @@ vpython $PROJECT_ROOT/test_file.py              # Single test
 
 ## Skill Files Reference
 
-See `.claude/skills/`: `agents.md`, `llm-prompt-engineering.md`, `file-justification.md`, `code-centralization.md`, `integration-verification.md`, `testing-infrastructure.md`, `unified-logging.md`, `github-cli-reference.md`, `pr-workflow-manager.md`, `dice-authenticity-standards.md`
+See `.claude/skills/`: `agents.md`, `llm-prompt-engineering.md`, `file-justification.md`, `code-centralization.md`, `integration-verification.md`, `testing-infrastructure.md`, `unified-logging.md`, `github-cli-reference.md`, `pr-workflow-manager.md`, `dice-authenticity-standards.md`, `cmux-steer.md`
+
+## cmux Socket — Steering Another Terminal Tab
+
+See `.claude/skills/cmux-steer.md`. **Never `select_workspace`** — it switches the user's visible tab. Use `send_surface <uuid>` + `send_key_surface enter` to submit.
 
 ## Meta-Rules
 

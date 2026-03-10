@@ -606,18 +606,33 @@ pip install .  # Note: NOT pip install -e .
 # See latest releases on PyPI: https://pypi.org/project/jleechanorg-pr-automation/
 ```
 
-### macOS Automation (Scheduled Monitoring)
+### Native Scheduler Installation
 
 ```bash
-# Install launchd service
-./automation/install_jleechanorg_automation.sh
+# Install native schedulers from the repo root
+./automation/install.sh
 
-# Verify service
-launchctl list | grep jleechanorg
+# Preview without mutating schedulers
+./automation/install.sh --dry-run
 
-# View logs
-tail -f ~/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log
+# Validate native services after install
+launchctl print "gui/$(id -u)/ai.worldarchitect.pr-automation.pr-monitor"   # macOS
+systemctl --user status worldarchitect-pr-automation-pr-monitor.timer        # Linux
+
+# Inspect OpenClaw cron state after migration
+openclaw cron list --all --json
 ```
+
+`./automation/install.sh` installs exactly five PR automation jobs as native schedulers:
+- `pr-monitor`
+- `fix-comment`
+- `comment-validation`
+- `codex-api`
+- `fixpr`
+
+It does not install or modify the Slack check-in jobs or `ai-orch-session-keepalive`.
+After the native scheduler verifies successfully, it disables matching OpenClaw cron
+jobs by exact name so the same automation does not run twice.
 
 ### Crontab Management
 
@@ -641,16 +656,15 @@ crontab -l
 crontab ~/.crontab_backup_YYYYMMDD_HHMMSS
 ```
 
-**Standard Cron Jobs:**
+**Migrated PR Automation Jobs:**
 
 | Schedule | Command | Purpose |
 |----------|---------|---------|
-| Every 2 hours (`:00`) | `jleechanorg-pr-monitor --max-prs 10` | Workflow 1: PR monitoring |
-| Every hour (`:45`) | `jleechanorg-pr-monitor --fix-comment --cli-agent minimax,gemini,cursor --max-prs 3` | Workflow 2: Fix-comment automation |
+| Every hour (`:00`) | `jleechanorg-pr-monitor --max-prs 10` | Workflow 1: PR monitoring |
+| Every hour (`:45`) | `jleechanorg-pr-monitor --fix-comment --cli-agent minimax --max-prs 3` | Workflow 2: Fix-comment automation |
 | Every 30 minutes | `jleechanorg-pr-monitor --comment-validation --max-prs 10` | Workflow 3: Comment validation |
-| Every hour (`:15`) | `jleechanorg-pr-monitor --codex-update --codex-task-limit 10` | Workflow 4: Codex update automation |
-| Every hour (`:30`) | `jleechanorg-pr-monitor --codex-api --codex-apply-and-push --codex-task-limit 10` | Workflow 5: Codex API automation |
-| Every 30 minutes | `jleechanorg-pr-monitor --fixpr --max-prs 10 --cli-agent minimax,gemini,cursor` | Workflow 6: Fix PRs autonomously |
+| Every hour (`:30`) | `jleechanorg-pr-monitor --codex-api --codex-apply-and-push --codex-task-limit 10` | Workflow 4: Codex API automation |
+| Every 30 minutes | `jleechanorg-pr-monitor --fixpr --max-prs 10 --cli-agent minimax` | Workflow 5: Fix PRs autonomously |
 
 ---
 
@@ -879,3 +893,45 @@ MIT License - see LICENSE file for details.
 - Initial release with @codex comment agent and FixPR workflow
 - Comprehensive safety system with dual limits
 - Cross-organization PR monitoring
+
+## OpenClaw Mission Control Integration — Implementation Roadmap
+
+Status: **planned / in-progress**
+
+### Phase 0 — Baseline + scope lock
+- Confirm current entrypoint(s) used by OpenClaw for long-running tasks.
+- Define the canonical Mission Control task payload shape (`title`, `description`, `status`, metadata fields).
+- Document success criteria for "queued" acknowledgment path (<2s return, task ID included).
+
+### Phase 1 — Task creation path
+- Add a single hardened shell/Python entrypoint that:
+  - validates required env vars (`MISSION_CONTROL_BASE_URL`, `MISSION_CONTROL_TOKEN`, `MISSION_CONTROL_BOARD_ID`),
+  - posts to `/api/v1/boards/{board_id}/tasks`,
+  - returns normalized output with task ID and board URL.
+- Add retry/backoff and clear error taxonomy (auth, network, validation).
+
+### Phase 2 — Context expansion + redaction
+- Implement message-history expansion for "as discussed"/"continue" requests before dispatch.
+- Add strict redaction pass for secrets/PII prior to writing MC task descriptions.
+- Add tests for secret patterns and redaction invariants.
+
+### Phase 3 — Poller + execution bridge
+- Ensure Task Poller reliably picks inbox tasks and transitions state (`inbox` → `in_progress` → `done`/`blocked`).
+- Emit concise execution logs with task IDs and agent session mappings.
+- Add watchdog behavior for stalled tasks.
+
+### Phase 4 — Observability + reliability hardening
+- Add health checks for Mission Control API reachability and auth validity.
+- Add metrics/log counters: queued count, dispatch latency, success/failure rates.
+- Add cron/launchd-safe lock handling for pollers and watchdog scripts.
+
+### Phase 5 — Verification + rollout
+- Add end-to-end tests for create-task + poller transitions.
+- Validate against real board in staging mode, then production mode.
+- Ship runbook: setup, recovery, rollback, and common failure signatures.
+
+### Definition of Done
+- A long-running user request is acknowledged in-thread with a real task ID.
+- Task appears in Mission Control inbox and is automatically dispatched.
+- State transitions are visible and auditable.
+- Tests + docs cover normal flow and failure modes.

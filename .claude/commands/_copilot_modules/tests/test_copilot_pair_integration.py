@@ -4,7 +4,17 @@ Tests for /copilot and /pair integration.
 
 Following TDD (RED phase): Write tests FIRST before implementation.
 These tests will FAIL until the integration is implemented.
+
+DEPRECATED: Legacy pair_integration-based tests disabled after Pair v1/v2 removal.
+Use the new ralph-pair + verifyCommand workflow.
 """
+
+import pytest
+pytest.skip(
+    "Deprecated: legacy pair_integration-based tests disabled after Pair v1/v2 removal. "
+    "Use the new ralph-pair + verifyCommand workflow.",
+    allow_module_level=True,
+)
 
 import json
 import sys

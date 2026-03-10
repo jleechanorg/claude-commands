@@ -20,23 +20,25 @@ This document describes the current orchestration system where task-specific age
 User/Automation Command
         |
         v
-orchestration/live_mode.py (ai_orch/orch)
+orchestration/runner.py (ai_orch/orch)
         |
-        +--> run (UnifiedOrchestration)
-        |        |
-        |        v
-        |   TaskDispatcher.analyze_task_and_create_agents()
-        |        |
-        |        v
-        |   TaskDispatcher.create_dynamic_agent()
+        +--> run passthrough: invoke CLI directly, stream output
         |
-        +--> dispatcher analyze/create (direct TaskDispatcher)
-                 |
-                 v
-        tmux session + isolated worktree + CLI profile (claude/codex/gemini/cursor)
-                 |
-                 v
-        result artifacts under /tmp/orchestration_results
+        +--> run --async: spawn detached tmux, return immediately
+        |        (optional --resume, --worktree)
+        |
+        v
+Automation (jleechanorg_pr_monitor, orchestrated_pr_runner)
+        |
+        v
+TaskDispatcher.analyze_task_and_create_agents()
+TaskDispatcher.create_dynamic_agent()
+        |
+        v
+tmux session + isolated worktree + CLI profile (claude/codex/gemini/cursor/minimax)
+        |
+        v
+result artifacts under /tmp/orchestration_results
 ```
 
 ### Execution Flow Diagram
@@ -49,9 +51,10 @@ Task input -> analyze task -> build agent spec -> create worktree -> generate pr
 ## Key Design Principles
 
 ### 1. Single Entry Point
-- **Command**: `python3 orchestration/orchestrate_unified.py "task description"`
+- **Command**: `ai_orch "task description"` (passthrough) or `ai_orch --async "task"` (detached tmux)
+- **Entry point**: `orchestration.runner:main`
 - **No predefined agent types** - agents understand tasks naturally
-- **Dynamic naming**: `task-agent-{timestamp}` for uniqueness
+- **Dynamic naming**: `ai-{cli}-{cwd_hash}` for async sessions
 
 ### 2. Task-Based Agent Creation
 ```python
@@ -83,26 +86,32 @@ Each agent:
 
 ### Core Components
 
-1. **orchestrate_unified.py**
-   - Single entry point for all agent creation
-   - Handles task parsing and agent spawning
-   - Manages worktree creation
+1. **runner.py** (ai_orch entry point)
+   - Passthrough: invokes CLI directly, streams output
+   - Async: spawns detached tmux via AsyncRunner
+   - Supports --resume and --worktree for async mode
 
-2. **task_dispatcher.py**
+2. **orchestrate_unified.py** (deprecated stub)
+   - Retained for import compatibility
+   - Logic moved to runner.py
+
+3. **task_dispatcher.py**
    - Dynamic agent capability discovery
    - Load balancing across agents
    - No hardcoded agent mappings
 
-3. **start_system.sh**
+4. **start_system.sh**
    - Minimal setup (directories, Redis optional)
    - No static agent startup
    - Only starts opus-master if requested
 
 ### Agent Lifecycle
 
-```
-User Task → orchestrate_unified.py → Create Worktree → Spawn Agent → Execute Task → Create PR → Terminate
-```
+**Passthrough**: `User Task → ai_orch → CLI (claude/codex/gemini) → stream output`
+
+**Async**: `User Task → ai_orch --async → tmux session → CLI runs detached`
+
+**Automation (TaskDispatcher)**: `User Task → TaskDispatcher → Create Worktree → Spawn Agent → Execute Task → Create PR → Terminate`
 
 ### Detailed tmux-Based Implementation
 
@@ -111,8 +120,9 @@ The lifecycle is implemented through tmux sessions that provide process isolatio
 **Phase 1: Task Submission**
 ```python
 # User types: /orch "Fix all failing tests"
-# .claude/commands/orchestrate.md triggers:
-orchestrate_unified.py orchestrate(task_description)
+# ai_orch invokes CLI directly (passthrough) or spawns tmux (--async)
+ai_orch "Fix all failing tests"
+ai_orch --async "Fix all failing tests"
 ```
 
 **Phase 2: Agent Specification**
@@ -358,17 +368,13 @@ orchestrate_unified.py._cleanup_stale_orchestration_state()
 ## Usage Examples
 
 ```bash
-# Any development task
-python3 orchestration/orchestrate_unified.py "Add user authentication to the API"
+# Passthrough (default)
+ai_orch "Add user authentication to the API"
+ai_orch --agent-cli codex "Write integration tests for payment system"
 
-# Testing tasks
-python3 orchestration/orchestrate_unified.py "Write integration tests for payment system"
-
-# Bug fixes
-python3 orchestration/orchestrate_unified.py "Fix memory leak in image processing"
-
-# Infrastructure
-python3 orchestration/orchestrate_unified.py "Set up CI/CD pipeline for staging"
+# Async (detached tmux)
+ai_orch --async "Fix memory leak in image processing"
+ai_orch --async --worktree "Set up CI/CD pipeline for staging"
 ```
 
 ## Status Coordination

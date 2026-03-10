@@ -49,19 +49,30 @@ execution_mode: immediate
                                   - Performance optimization and benchmarking insights
                                   - Emerging security patterns and prevention techniques
                                   - Real-world code review expertise from security communities
-5. /reviewe [target]                 # Enhanced code review with security analysis
-6. Synthesis & PR guidelines         # Combine consensus + all three tracks + generate docs/pr-guidelines/{PR_NUMBER}/guidelines.md
+5. Confidence scoring & false-positive filtering (from official claude-plugins-official/code-review):
+   - For each issue found across Tracks A, B, C: launch parallel Haiku agents to score 0-100 confidence
+   - Rubric (give verbatim to each scoring agent):
+     * 0: False positive, doesn't stand up to light scrutiny, or pre-existing issue
+     * 25: Might be real but unverified; stylistic issues not explicitly in CLAUDE.md
+     * 50: Verified real issue but minor or infrequent in practice
+     * 75: Double-checked, very likely real, directly impacts functionality or explicitly in CLAUDE.md
+     * 100: Confirmed real, happens frequently, evidence directly confirms it
+   - Filter out ALL issues with score < 80. If no issues remain, note "No high-confidence issues found" and skip posting
+   - For CLAUDE.md-flagged issues: scoring agent MUST verify CLAUDE.md actually calls out that specific issue
+   - False positives to filter: pre-existing issues, nitpicks a senior engineer would ignore, linter/type-checker catches, general quality issues unless in CLAUDE.md, issues on unmodified lines **except when a clear causal link from modified code to the unchanged code path exists** (in that case: the reviewer must (1) explain the causal link and reference the modifying symbol(s), (2) provide minimal repro steps or stack trace showing the regression, and (3) mark the issue as "exception" so it surfaces despite the unmodified-line filter)
+6. /reviewe [target]                 # Enhanced code review with security analysis
+7. Synthesis & PR guidelines         # Combine consensus + all three tracks + generate docs/pr-guidelines/{PR_NUMBER}/guidelines.md
 ```
 
 The `/execute` delegation ensures optimal execution with:
-7. **Always-Parallel Review Tracks**: Default simultaneous execution of technical (/cerebras), architectural (/arch), and AI research (Perplexity) analysis for significant speed improvement
-8. **Guidelines Generation**: Automatically creates `docs/pr-guidelines/{PR_NUMBER}/guidelines.md` with PR-specific mistake prevention patterns
-9. **Guidelines Integration**: Consults existing `docs/pr-guidelines/base-guidelines.md` (general patterns) and generates PR-specific guidelines
-10. **Anti-Pattern Application**: Analyzes review findings to document new mistake patterns and solutions
-11. **Intelligent Synthesis**: Combines technical and strategic findings into comprehensive recommendations
-12. Progress tracking via TodoWrite
-13. Auto-approval for review workflows
-14. Optimized parallel execution for maximum speed
+8. **Always-Parallel Review Tracks**: Default simultaneous execution of technical (/cerebras), architectural (/arch), and AI research (Perplexity) analysis for significant speed improvement
+9. **Guidelines Generation**: Automatically creates `docs/pr-guidelines/{PR_NUMBER}/guidelines.md` with PR-specific mistake prevention patterns
+10. **Guidelines Integration**: Consults existing `docs/pr-guidelines/base-guidelines.md` (general patterns) and generates PR-specific guidelines
+11. **Anti-Pattern Application**: Analyzes review findings to document new mistake patterns and solutions
+12. **Intelligent Synthesis**: Combines technical and strategic findings into comprehensive recommendations
+13. Progress tracking via TodoWrite
+14. Auto-approval for review workflows
+15. Optimized parallel execution for maximum speed
 
 Each command is executed with the same target parameter passed to `/reviewdeep`.
 
