@@ -48,20 +48,16 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Absolute path to git hooks dir — used to bypass Husky during scripted checkouts
-# (relative paths in -c core.hooksPath can misbehave when invoked from a subdirectory)
-GIT_HOOKS_PATH="$(git rev-parse --show-toplevel)/.git/hooks"
-
 # Function to detect if commits were squash-merged into origin/main
 detect_squash_merged_commits() {
     local commit_count=$1
     local squash_merged_count=0
-
+    
     echo "   🔍 Checking if commits were squash-merged..."
-
+    
     # Get list of commits not in origin/main
     local commits_list=$(git rev-list origin/main..HEAD 2>/dev/null)
-
+    
     for commit_hash in $commits_list; do
         # Get commit subject (first line of commit message)
         local commit_subject=$(git log --format="%s" -n 1 "$commit_hash" 2>/dev/null)
@@ -69,23 +65,23 @@ detect_squash_merged_commits() {
             # Remove PR number suffix to match squash-merged commits (e.g., "Fix bug (#123)" -> "Fix bug")
             # Use POSIX-compatible regex that matches single and multi-digit PR numbers
             local base_subject=$(echo "$commit_subject" | sed 's/ (#[0-9]\+)$//')
-
+            
             # Skip if base_subject is empty (prevents matching all commits)
             if [ -z "$base_subject" ]; then
                 echo -e "   ${YELLOW}?${NC} $commit_hash → empty subject after stripping PR number"
                 continue
             fi
-
+            
             # Search for similar commit message in recent origin/main commits (configurable depth)
             local search_depth="${DETECT_SQUASH_SEARCH_DEPTH:-200}"
             local similar_commit
-            similar_commit=$(git log origin/main --oneline "-${search_depth}" --fixed-strings --grep="$base_subject" 2>/dev/null | head -1 || true)
-
+            similar_commit=$(git log origin/main --oneline "-${search_depth}" --fixed-strings --grep="$base_subject" 2>/dev/null | head -1)
+            
             if [ -n "$similar_commit" ]; then
                 local main_commit_hash=$(echo "$similar_commit" | cut -d' ' -f1)
                 local local_files=$(git diff-tree --no-commit-id --name-only -r "$commit_hash" | sort)
                 local main_files=$(git diff-tree --no-commit-id --name-only -r "$main_commit_hash" | sort)
-
+                
                 # If same files changed, likely squash-merged
                 if [ "$local_files" = "$main_files" ] && [ -n "$local_files" ]; then
                     squash_merged_count=$((squash_merged_count + 1))
@@ -98,7 +94,7 @@ detect_squash_merged_commits() {
             fi
         fi
     done
-
+    
     # Return success if all commits appear squash-merged
     if [ $commit_count -eq $squash_merged_count ] && [ $squash_merged_count -gt 0 ]; then
         echo -e "   ${GREEN}🎉 All $commit_count commit(s) were squash-merged into origin/main${NC}"
@@ -120,15 +116,15 @@ export PATH="$HOME/.local/bin:$PATH"
 # Check for required tools and provide helpful messages
 check_dependencies() {
     local missing_tools=()
-
+    
     if ! command -v gh >/dev/null 2>&1; then
         missing_tools+=("gh (GitHub CLI)")
     fi
-
+    
     if ! command -v jq >/dev/null 2>&1; then
         missing_tools+=("jq")
     fi
-
+    
     if [ ${#missing_tools[@]} -gt 0 ]; then
         echo -e "${YELLOW}⚠️  Some optional tools are missing:${NC}"
         for tool in "${missing_tools[@]}"; do
@@ -141,112 +137,6 @@ check_dependencies() {
 
 # Check dependencies early
 check_dependencies
-
-# Returns 0 if the local beads daemon appears alive, 1 otherwise.
-beads_daemon_running() {
-    local repo_root="$1"
-    local pid_file="$repo_root/.beads/daemon.pid"
-    if [ ! -f "$pid_file" ]; then
-        return 1
-    fi
-
-    local daemon_pid
-    daemon_pid=$(cat "$pid_file" 2>/dev/null || true)
-    if [[ ! "$daemon_pid" =~ ^[0-9]+$ ]]; then
-        return 1
-    fi
-
-    if kill -0 "$daemon_pid" 2>/dev/null; then
-        return 0
-    fi
-    return 1
-}
-
-# Stash helper that avoids touching active .beads runtime files while daemon is running.
-force_mode_stash() {
-    local stash_message="$1"
-    local log_file="${2:-}"
-    local repo_root
-    repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || die 1 "Not inside a git repository"
-
-    local stash_cmd=(
-        git
-        stash
-        push
-        -u
-        -m
-        "$stash_message"
-    )
-
-    if beads_daemon_running "$repo_root"; then
-        echo -e "${YELLOW}⚠️  Beads daemon running; excluding active .beads runtime files from stash${NC}"
-        stash_cmd+=(
-            --
-            .
-            ":(exclude).beads/.jsonl.lock"
-            ":(exclude).beads/bd.sock"
-            ":(exclude).beads/daemon.lock"
-            ":(exclude).beads/daemon.pid"
-            ":(exclude).beads/beads.db-shm"
-            ":(exclude).beads/beads.db-wal"
-        )
-    fi
-
-    if [ -n "$log_file" ]; then
-        "${stash_cmd[@]}" >>"$log_file" 2>&1
-    else
-        "${stash_cmd[@]}"
-    fi
-}
-
-# Remove transient local runtime files that can block branch checkout
-# (only if they are untracked in git).
-cleanup_checkout_blockers() {
-    local repo_root
-    repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || die 1 "Not inside a git repository"
-    local had_error=0
-    local candidates=(
-        ".beads/.jsonl.lock"
-        ".beads/bd.sock"
-        ".beads/daemon.lock"
-        ".beads/daemon.pid"
-        ".beads/beads.db-shm"
-        ".beads/beads.db-wal"
-    )
-
-    for rel_path in "${candidates[@]}"; do
-        local abs_path="$repo_root/$rel_path"
-        if [ -e "$abs_path" ] || [ -L "$abs_path" ]; then
-            if ! git -C "$repo_root" ls-files --error-unmatch "$rel_path" >/dev/null 2>&1; then
-                if [[ "$rel_path" == ".beads/beads.db-shm" || "$rel_path" == ".beads/beads.db-wal" ]]; then
-                    if beads_daemon_running "$repo_root"; then
-                        echo -e "${YELLOW}⚠️  Skipping $rel_path while beads daemon is running (DB safety)${NC}"
-                        continue
-                    fi
-                fi
-
-                echo -e "${YELLOW}⚠️  Removing untracked runtime file: $rel_path${NC}"
-                if ! rm -rf -- "$abs_path"; then
-                    echo -e "${RED}❌ Failed to remove $abs_path${NC}" >&2
-                    had_error=1
-                fi
-            fi
-        fi
-    done
-
-    return "$had_error"
-}
-
-clear_tracked_beads_index_flags() {
-    local repo_root
-    repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
-    local tracked_file=.beads/issues.jsonl
-
-    if git -C "$repo_root" ls-files --error-unmatch "$tracked_file" >/dev/null 2>&1; then
-        git -C "$repo_root" update-index --no-assume-unchanged "$tracked_file" 2>/dev/null || true
-        git -C "$repo_root" update-index --no-skip-worktree "$tracked_file" 2>/dev/null || true
-    fi
-}
 
 # Utility function for safe command execution with fallback
 safe_gh_command() {
@@ -391,7 +281,7 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
         echo ""
         if [ "$FORCE_MODE" = true ]; then
             echo -e "${RED}🚨 FORCE MODE: Stashing uncommitted changes to proceed${NC}"
-            if force_mode_stash "integrate.sh --force: auto-stash on $(date -u +"%Y-%m-%d %H:%M:%S UTC")"; then
+            if git stash push -m "integrate.sh --force: auto-stash on $(date -u +"%Y-%m-%d %H:%M:%S UTC")"; then
                 echo "   ✅ Changes stashed successfully"
                 echo "   To recover: git stash pop"
             else
@@ -423,13 +313,13 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
             echo ""
             if [ "$local_commits" -gt 0 ]; then
                 echo "   📋 LOCAL-ONLY COMMITS:"
-                git log --oneline "$git_upstream"..HEAD | head -5 | sed 's/^/     /' || true
+                git log --oneline "$git_upstream"..HEAD | head -5 | sed 's/^/     /'
                 [ "$local_commits" -gt 5 ] && echo "     ...and $((local_commits - 5)) more commits"
                 echo ""
             fi
             if [ "$remote_commits" -gt 0 ]; then
                 echo "   📋 REMOTE-ONLY COMMITS:"
-                git log --oneline HEAD.."$git_upstream" | head -5 | sed 's/^/     /' || true
+                git log --oneline HEAD.."$git_upstream" | head -5 | sed 's/^/     /'
                 [ "$remote_commits" -gt 5 ] && echo "     ...and $((remote_commits - 5)) more commits"
                 echo ""
             fi
@@ -453,17 +343,14 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
             echo -e "${RED}❌ HARD STOP: Branch '$current_branch' has $commit_count commit(s) not in origin/main:${NC}"
             echo ""
             echo "   📋 COMMIT SUMMARY:"
-            git log --oneline origin/main..HEAD | head -10 | sed 's/^/     /' || true
+            git log --oneline origin/main..HEAD | head -10 | sed 's/^/     /'
             echo ""
             echo "   📊 FILES CHANGED:"
-            git diff --name-only origin/main..HEAD | head -10 | sed 's/^/     /' || true
+            git diff --name-only origin/main..HEAD | head -10 | sed 's/^/     /'
             echo ""
-
-            # Check if commits were squash-merged before requiring --force (skip in very large unmerged sets to avoid expensive O(n^2) scans)
-            if [ "$FORCE_MODE" = true ] && [ "$commit_count" -gt "${FORCE_SQUASH_CHECK_MAX:-1000}" ]; then
-                echo -e "${YELLOW}⚠️  FORCE MODE: Skipping squash merge detection for $commit_count commits (threshold ${FORCE_SQUASH_CHECK_MAX:-1000}).${NC}"
-                should_delete_branch=false
-            elif detect_squash_merged_commits "$commit_count"; then
+            
+            # Check if commits were squash-merged before requiring --force
+            if detect_squash_merged_commits $commit_count; then
                 echo -e "${GREEN}✅ Proceeding automatically - all commits were squash-merged into origin/main${NC}"
                 should_delete_branch=true
             elif [ "$FORCE_MODE" = true ]; then
@@ -486,89 +373,7 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
 fi
 
 echo -e "\n${GREEN}1. Switching to main branch...${NC}"
-checkout_err_file="$(mktemp -t integrate_checkout_err.XXXXXX)"
-force_mode_checkout_restored=false
-force_mode_checkout_message=""
-if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout main 2>"$checkout_err_file"; then
-    if [ "$FORCE_MODE" = true ]; then
-        echo -e "${RED}🚨 FORCE MODE: Checkout to main failed, attempting automatic recovery${NC}"
-        if ! cleanup_checkout_blockers; then
-            echo "cleanup_checkout_blockers reported errors" >>"$checkout_err_file"
-        fi
-        if ! force_mode_stash "integrate.sh --force: pre-checkout auto-stash on $(date -u +"%Y-%m-%d %H:%M:%S UTC")" "$checkout_err_file"; then
-            echo "Pre-checkout stash failed in FORCE_MODE recovery." >>"$checkout_err_file"
-            echo "   Checkout error details:"
-            tail -n 20 "$checkout_err_file" || true
-            rm -f "$checkout_err_file"
-            die 1 "Failed to stash changes during FORCE_MODE checkout recovery"
-        fi
-        if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout main 2>>"$checkout_err_file"; then
-            echo -e "${YELLOW}⚠️  FORCE MODE: Normal checkout retry failed; trying forced checkout to override remaining blockers${NC}"
-            echo -e "${RED}⚠️  WARNING: git checkout -f will discard any uncommitted local changes and untracked blockers. Proceeding...${NC}"
-            if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -f main 2>>"$checkout_err_file"; then
-                repo_root="$(git rev-parse --show-toplevel)"
-                clean_cmd=(
-                    git
-                    -c
-                    core.hooksPath="$GIT_HOOKS_PATH"
-                    -C
-                    "$repo_root"
-                    clean
-                    -fd
-                )
-                echo -e "${RED}🚨 FORCE MODE: Destructive recovery is about to run${NC}"
-                echo -e "${RED}   This can permanently discard uncommitted local changes and delete untracked files.${NC}"
-                echo -e "${YELLOW}⚠️  FORCE MODE: Forced checkout failed; attempting hard reset + clean before one final forced attempt${NC}"
-                if ! clear_tracked_beads_index_flags; then
-                    echo "Could not clear tracked index flags for .beads/issues.jsonl during FORCE_MODE recovery." >>"$checkout_err_file"
-                fi
-
-                main_target=$(git rev-parse --verify origin/main 2>/dev/null || git rev-parse --verify main 2>/dev/null || echo HEAD)
-                if ! git -c core.hooksPath="$GIT_HOOKS_PATH" reset --hard "$main_target" 2>>"$checkout_err_file"; then
-                    echo "Failed to hard reset current branch to $main_target during FORCE_MODE recovery."
-                    echo "   Checkout error details:"
-                    tail -n 20 "$checkout_err_file" || true
-                    rm -f "$checkout_err_file"
-                    die 1 "Failed to switch to main even after FORCE_MODE recovery"
-                fi
-                if beads_daemon_running "$repo_root"; then
-                    clean_cmd+=( -e '.beads/beads.db-shm' -e '.beads/beads.db-wal' )
-                fi
-                if ! "${clean_cmd[@]}" 2>>"$checkout_err_file"; then
-                    echo "Failed to clean untracked files during FORCE_MODE recovery."
-                    echo "   Checkout error details:"
-                    tail -n 20 "$checkout_err_file" || true
-                    rm -f "$checkout_err_file"
-                    die 1 "Failed to switch to main even after FORCE_MODE recovery"
-                fi
-                if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -f main 2>>"$checkout_err_file"; then
-                    echo "   Checkout error details:"
-                    tail -n 20 "$checkout_err_file" || true
-                    rm -f "$checkout_err_file"
-                    die 1 "Failed to switch to main even after FORCE_MODE recovery"
-                fi
-                force_mode_checkout_message="✅ FORCE MODE: Hard reset + clean + forced checkout to main completed"
-            else
-                force_mode_checkout_message="✅ FORCE MODE: Forced checkout to main completed"
-            fi
-            force_mode_checkout_restored=true
-        else
-            force_mode_checkout_restored=true
-            force_mode_checkout_message="✅ FORCE MODE: Checkout to main completed"
-        fi
-        if [ "$force_mode_checkout_restored" = true ]; then
-            echo -e "${GREEN}${force_mode_checkout_message}${NC}"
-        fi
-    else
-        echo "   Checkout error details:"
-        tail -n 20 "$checkout_err_file" || true
-        echo ""
-        echo "   Resolve local untracked conflicts and re-run."
-        rm -f "$checkout_err_file"
-        die 1 "Failed to switch to main"
-    fi
-fi
-rm -f "$checkout_err_file"
+git checkout main
 
 echo -e "\n${GREEN}2. Smart sync with origin/main...${NC}"
 # Skip fetch here - origin/main was already fetched at script start to ensure accurate branch comparisons
@@ -661,66 +466,40 @@ if git merge-base --is-ancestor HEAD origin/main; then
     fi
 
 elif git merge-base --is-ancestor origin/main HEAD; then
-    # Local main is ahead of origin/main → check for actual file changes first
+    # Local main is ahead of origin/main → create PR for commits
+    echo -e "${GREEN}✅ Local main ahead, creating PR to sync${NC}"
     commit_count=$(git rev-list --count origin/main..HEAD)
     echo "   Found $commit_count commits ahead of origin/main"
 
-    # Check for actual file differences (not just commit differences)
-    if git diff --quiet origin/main...HEAD; then
-        # No file changes detected - likely merge commits or already-merged changes
-        echo -e "${YELLOW}⚠️  No file changes detected (likely merge commits only)${NC}"
-        echo "   These commits don't contain actual changes:"
-        git log --oneline origin/main..HEAD | sed 's/^/     /'
-        echo ""
-        echo "   Resetting local main to match origin/main instead of creating blank PR"
+    # Generate timestamp for branch naming
+    timestamp=$(date +%Y%m%d-%H%M%S)
 
-        if [ "$FORCE_MODE" = true ]; then
-            echo -e "${RED}🚨 FORCE MODE: Resetting local main to origin/main${NC}"
-            git reset --hard origin/main
-            echo -e "${GREEN}✅ Local main synchronized with origin/main${NC}"
-            die 0 "Local main successfully synchronized with origin/main in FORCE_MODE."
+    # Create temporary branch for PR
+    sync_branch="sync-main-$timestamp"
+    echo "   Creating sync branch: $sync_branch"
+
+    if ! git checkout -b "$sync_branch"; then
+        die 1 "Failed to create sync branch"
+    fi
+
+    if ! git push -u origin HEAD; then
+        die 1 "Failed to push sync branch"
+    fi
+
+    # Create PR if gh is available
+    if command -v gh >/dev/null 2>&1; then
+        pr_title="Sync main branch commits (integrate.sh)"
+        # Dynamic commit listing based on count
+        commit_limit=${PR_COMMIT_LIMIT:-10}
+        if [ "$commit_count" -le "$commit_limit" ]; then
+            commit_list=$(git log --oneline origin/main..HEAD)
         else
-            echo ""
-            echo "   To reset local main to origin/main:"
-            echo "   git reset --hard origin/main"
-            echo ""
-            echo "   Or use --force mode to reset automatically:"
-            echo "   ./integrate.sh --force"
-            die 1 "Local main has commits without file changes - manual reset required"
-        fi
-    else
-        # Actual file changes exist - proceed with PR creation
-        echo -e "${GREEN}✅ Local main ahead with actual file changes, creating PR to sync${NC}"
-
-        # Generate timestamp for branch naming
-        timestamp=$(date +%Y%m%d-%H%M%S)
-
-        # Create temporary branch for PR
-        sync_branch="sync-main-$timestamp"
-        echo "   Creating sync branch: $sync_branch"
-
-        if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -b "$sync_branch"; then
-            die 1 "Failed to create sync branch"
-        fi
-
-        if ! git push -u origin HEAD; then
-            die 1 "Failed to push sync branch"
-        fi
-
-        # Create PR if gh is available
-        if command -v gh >/dev/null 2>&1; then
-            pr_title="Sync main branch commits (integrate.sh)"
-            # Dynamic commit listing based on count
-            commit_limit=${PR_COMMIT_LIMIT:-10}
-            if [ "$commit_count" -le "$commit_limit" ]; then
-                commit_list=$(git log --oneline origin/main..HEAD)
-            else
-                commit_list=$(git log --oneline origin/main..HEAD | head -"$commit_limit" || true)
-                commit_list="$commit_list
+            commit_list=$(git log --oneline origin/main..HEAD | head -"$commit_limit")
+            commit_list="$commit_list
    ...and $((commit_count - commit_limit)) more commits not shown"
-            fi
+        fi
 
-            pr_body="Auto-generated PR to sync $commit_count commits that were ahead on local main.
+        pr_body="Auto-generated PR to sync $commit_count commits that were ahead on local main.
 
 This PR was created by integrate.sh to handle repository branch protection rules.
 
@@ -729,22 +508,21 @@ $commit_list
 
 Please review and merge to complete the integration process."
 
-            if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
-                echo -e "${GREEN}✅ Created PR: $pr_url${NC}"
-                echo "   Please review and merge the PR, then re-run integrate.sh"
-                die 0
-            else
-                echo "⚠️  Could not create PR automatically. Please create one manually:"
-                echo "   Branch: $sync_branch"
-                echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
-                die 1 "Could not create PR automatically. Please create one manually using the URL above"
-            fi
+        if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
+            echo -e "${GREEN}✅ Created PR: $pr_url${NC}"
+            echo "   Please review and merge the PR, then re-run integrate.sh"
+            die 0
         else
-            echo "⚠️  gh CLI not available. Please create PR manually:"
+            echo "⚠️  Could not create PR automatically. Please create one manually:"
             echo "   Branch: $sync_branch"
             echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
-            die 1 "gh CLI not available. Please create PR manually using the URL above"
+            die 1 "Could not create PR automatically. Please create one manually using the URL above"
         fi
+    else
+        echo "⚠️  gh CLI not available. Please create PR manually:"
+        echo "   Branch: $sync_branch"
+        echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
+        die 1 "gh CLI not available. Please create PR manually using the URL above"
     fi
 
 else
@@ -767,14 +545,14 @@ else
 
     if [ "$local_only" -gt 0 ]; then
         echo "🔍 Recent local-only commits:"
-        git log --oneline origin/main..HEAD | head -5 | sed 's/^/   /' || true
+        git log --oneline origin/main..HEAD | head -5 | sed 's/^/   /'
         [ "$local_only" -gt 5 ] && echo "   ...and $((local_only - 5)) more commits"
         echo ""
     fi
 
     if [ "$remote_only" -gt 0 ]; then
         echo "🔍 Recent remote-only commits:"
-        git log --oneline HEAD..origin/main | head -5 | sed 's/^/   /' || true
+        git log --oneline HEAD..origin/main | head -5 | sed 's/^/   /'
         [ "$remote_only" -gt 5 ] && echo "   ...and $((remote_only - 5)) more commits"
         echo ""
     fi
@@ -836,7 +614,7 @@ else
 fi
 
 echo -e "\n${GREEN}5. Creating fresh branch from main...${NC}"
-git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -b "$branch_name"
+git checkout -b "$branch_name"
 
 # Delete the old branch if it was clean (and not in --new-branch mode)
 if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then

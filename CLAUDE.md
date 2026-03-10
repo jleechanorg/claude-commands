@@ -13,177 +13,304 @@ customize them for your specific workflow.
 
 ---
 
-# CLAUDE.md - Primary Rules and Operating Protocol
+# CLAUDE.md
 
-**COMPACTNESS RULE**: Keep this file under 200 lines. Move detailed procedures to `.claude/skills/*.md`.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Primary rules file for AI collaboration on Your Project**
+## Repository Purpose
 
-## Mandatory Greeting Protocol
+This repo (`jleechanorg/jleechanclaw`) is a **personal backup and workspace** for `~/.openclaw` configuration and custom orchestration tooling. It is NOT a fork of or contribution target for the upstream [openclaw/openclaw](https://github.com/openclaw/openclaw) — that repo won't accept PRs from here.
 
-**Every response must begin with:** `Genesis Coder, Prime Mover,`
+What this repo contains:
+- `openclaw-config/` — personal OpenClaw config files (openclaw.json, SOUL.md, etc.)
+- `src/genesis/` — Python config/memory/cron generation layer
+- `src/orchestration/` — Python orchestration layer (heartbeat, lifecycle, webhook, GitHub integration)
+- `src/tests/` — pytest test suite for the above
+- `roadmap/` — design docs (GENESIS_DESIGN.md, ORCHESTRATION_DESIGN.md)
+- Various shell scripts for backup, sync, and setup
 
-**Every response must end with:** `[Local: <branch> | Remote: <upstream> | PR: <number> <url>]`
+## MiniMax Agent — No Separate Binary
 
-Lead with architectural thinking, follow with tactical execution. Write code as senior architect.
+`minimax` is NOT a standalone binary. It uses the `claude` CLI with MiniMax API credentials.
+`which minimax` returning nothing is **expected and correct** — do not switch to codex/claude.
 
-## Output Formatting
+Full details: `~/.claude/skills/minimax.md` and `~/.claude/skills/minimax-cli-fix.md`
 
-**Full absolute paths ALWAYS** - Never abbreviate with `...` or relative paths
-- ✅ `/tmp/your-project.com/fix/branch/test/iteration_004/`
-- ❌ `.../iteration_004/` or "evidence directory"
-- Evidence bundles: Show full structure, symlinks (e.g., `latest -> iteration_004`)
+---
 
-## LLM Architecture Principles
+## OpenClaw Config: Live Files vs This Repo
 
-**Core Rule**: LLM decides, server executes - Give full context, never pre-compute decisions
+**The real OpenClaw config lives in `~/.openclaw/` — `openclaw-config/` in this repo is a BACKUP only.**
 
-**BANNED Anti-Patterns**:
-- Keyword/substring matching for intent (use FastEmbed classifier, <50ms)
-- Creating new env vars (use constants; env vars only for credentials/URLs)
-- Stripping tool definitions to "optimize"
-- Disabled-by-default env vars
+| Live (what OpenClaw reads) | Backup (this repo) |
+|---|---|
+| `~/.openclaw/SOUL.md` | `openclaw-config/SOUL.md` |
+| `~/.openclaw/TOOLS.md` | `openclaw-config/TOOLS.md` |
+| `~/.openclaw/openclaw.json` | `openclaw-config/openclaw.json` |
 
-**Intent Detection**: Local classifier ONLY. Exception: Parsing structured prefixes (`CHOICE:`, `GOD MODE:`)
+**After editing any `openclaw-config/` file, always sync to live and reload:**
+```bash
+cp openclaw-config/SOUL.md ~/.openclaw/SOUL.md
+kill -HUP $(pgrep -f openclaw-gateway)
+```
 
-**Error Handling Philosophy**: Warnings only - no assertions, retries, or default content. Log warnings and let validation surface issues.
+---
 
-## File Protocols
+## Config-First Principle
 
-**New Files**: DEFAULT NO - Integration hierarchy: existing file → utility → `__init__.py` → test → config → NEW (last resort)
+**Before writing Python code, check if the goal can be achieved by editing `openclaw-config/`.**
 
-**Placement**: Python → `$PROJECT_ROOT/` | Scripts → `scripts/` | Tests → `$PROJECT_ROOT/tests/` | No `_v2`, `_new`, `_backup` files
+openclaw has rich built-in capabilities. Use them:
 
-**Deletion**: NEVER delete unrelated content from origin/main. Task-related only: Integration > Modification > Deletion. Before deleting: Search imports → Fix references → Verify dependencies → Delete. When in doubt: ASK first.
+| Want to change | Edit this |
+|---|---|
+| jleechanclaw behavior / decision-making | `openclaw-config/SOUL.md` |
+| Tool allow/deny list | `openclaw-config/TOOLS.md` or `openclaw.json` |
+| Memory, history, compaction settings | `openclaw.json` (memorySearch, dmHistoryLimit, compaction) |
+| Agent identity / user context | `openclaw-config/USER.md`, `identity/` |
+| Cron / scheduled tasks (Slack, backup, memory) | `openclaw-config/cron/` |
+| **PR automation** jobs (pr-monitor, fixpr, etc.) | `~/.openclaw/cron/jobs.json` directly — **exception**, not tracked in repo |
+| New Python orchestration logic | `src/orchestration/` — **only if config cannot express it** |
+
+New Python code in `src/` is for capabilities that genuinely don't exist in openclaw's config surface. Everything else is config. See `roadmap/NATURAL_LANGUAGE_DISPATCH.md` for the rationale.
+
+## PR Automation System
+
+Automated PR jobs (comment-validation, fixpr, fix-comment, codex-update) run via **openclaw gateway cron**. On macOS they were migrated off system crontab on 2026-03-04 and do not appear in `crontab -l`. On Linux environments set up with `scripts/claude_start.sh`, a fallback crontab entry may still be present — check both when debugging.
+
+- Definitions (live): `~/.openclaw/cron/jobs.json` — **not** in `openclaw-config/cron/` (that tracks only Slack check-ins and backup jobs)
+- Binary: `/opt/homebrew/bin/jleechanorg-pr-monitor` (`pip install jleechanorg-automation`, source at `~/projects/your-project.com/automation/`)
+- Executor: `ai.openclaw.gateway` launchd service (cron scheduler is built into the gateway process)
+
+## Durable Behavior Goal (Not Incident-Only)
+
+Primary intent: OpenClaw should behave consistently for repeated user requests, not require one-off fixes per thread/PR.
+
+Execution rules:
+1. Treat behavior bugs as system bugs first (config/policy/workflow contract), not isolated incidents.
+2. Prefer reusable guardrails in `openclaw-config/` and shared automation templates over ad-hoc local patches.
+3. Enforce explicit routing and target resolution for external actions (repo, endpoint, channel) before mutation.
+4. Add fail-closed checks (tests/CI/policy validators) so the same class of error cannot silently recur.
+5. Validate fixes by replaying the same request style in multiple contexts.
+
+---
+
+## Testing Philosophy — Real Over Fake
+
+**Always prefer real end-to-end tests.** Fake sessions (stub registry entries pointing to non-existent tmux sessions) are only acceptable for isolated unit tests of the reconciler logic itself.
+
+For this repo, any suite or artifact under `testing_*/` must be **real-only and black-box**. That means:
+- no mocks
+- no monkeypatching
+- no stubbed OpenClaw/Slack/tmux/git behavior
+- no direct registry/outbox/session injection
+- no modifying the system under test while claiming verification
+
+`testing_*` may trigger the system from the outside and then observe evidence only. If a test needs simulated internals, it belongs in `src/tests/` and must not be described as end-to-end proof.
+
+For mctrl integration tests:
+1. Post a real Slack trigger to `#ai-slack-test` as $USER (`source ~/.profile`, use `SLACK_USER_TOKEN`)
+2. Run `dispatch_task.py` to spawn a real `ai_orch` agent in a real worktree
+3. Wait for the running `ai.mctrl.supervisor` launchd daemon to detect session exit
+4. Verify the real thread reply + DM appear in Slack
+
+Never substitute fake JSONL entries pointing to dead sessions for this loop — it bypasses the actual dispatch and agent execution paths.
 
 ## Critical Rules
 
 | Rule | Requirement |
 |------|-------------|
-| **NO UNRELATED DELETIONS** | Never delete content from origin/main unrelated to current task |
-| **CI test failures are BLOCKERS** | ALL failing tests must be fixed - NEVER merge with failing CI |
-| Character creation modal exit | User cannot exit until selecting specific planning_block choice |
-| GEMINI 3 CODE EXECUTION ONLY | Code execution mode REQUIRED. Fix root causes, NOT workarounds |
-| Test failures | Fix ALL, no excuses, no "pre-existing" excuses |
-| Beads tracking | Always include `.beads/` changes in commits/PRs |
-| No bash arguments | NEVER pass bash arguments without explicit user approval |
-| Timeout integrity | 10min/600s across all layers |
-| WorldAI campaign LLM waits | Default >= 3min/180s; 30s insufficient |
+| **CI test failures are BLOCKERS** | ALL failing tests must be fixed before merge — no exceptions |
+| **No unrelated deletions** | Never delete content from origin/main unrelated to the current task |
+| No false checkmarks | Only mark items complete when 100% verified |
+| No fake code | Audit existing code before writing new implementations |
+| Code centralization | Search for existing utilities before writing new ones |
+| PR merges | Never merge without explicit user approval |
+
+## LLM Architecture Principles
+
+### Core Rule: LLM Decides, Server Executes
+
+- **LLM gets full context** — don't strip information "to optimize"
+- **LLM makes decisions** — don't pre-compute what the LLM should decide
+- **Server executes actions** — tools and state changes happen server-side
+
+### Anti-Patterns (BANNED)
+
+- Keyword-based intent detection to bypass LLM judgment
+- Stripping tool definitions based on predicted need
+- "Optimizations" that reduce information available to the LLM
+- Disabled-by-default env-var feature flags for user-requested functionality
+- Creating new env vars without clear justification (env vars for credentials/URLs only)
+
+### Error Handling Philosophy
+
+Warnings only — no silent fixes with fallback generation. Log warnings and let validation surface issues. Never silently fix with default content.
+
+## Project Structure
+
+```
+src/
+  genesis/          # Config/memory/cron generation (Python)
+  orchestration/    # Heartbeat, lifecycle, webhook, GH integration (Python)
+  tests/            # pytest suite (colocated *.test.py or tests/)
+openclaw-config/    # Personal OpenClaw config files
+roadmap/            # Design docs
+scripts/            # Shell utilities
+```
+
+## Build, Test, and Development Commands
+
+This repo uses **Python + pytest**, not TypeScript/pnpm.
+
+- Run tests: `python -m pytest src/tests/ -v`
+- Run tests with coverage: `python -m pytest src/tests/ --tb=short -q`
+- Add src to path for imports: `PYTHONPATH=src python -m pytest src/tests/`
+- pyproject.toml configures pytest root and test paths
+
+No build step — Python source runs directly. No pnpm, no TypeScript, no Vitest.
+
+## Coding Style
+
+- Language: Python 3.12+
+- Type hints on all function signatures
+- `from __future__ import annotations` at top of files
+- Dataclasses for config/data structures
+- `StrEnum` for string enumerations
+- Brief comments for tricky/non-obvious logic
+- Keep files under ~300 LOC; split when it aids clarity or testability
+- No `**kwargs` forwarding — use explicit named parameters
+
+## File Protocols
+
+**Default: NO NEW FILES.** Integrate into existing files first.
+
+Before creating a new file:
+1. Search for existing similar functionality
+2. Try integrating into an existing module
+3. Only create new file if integration is truly impossible
+
+File placement:
+- Python source → `src/genesis/` or `src/orchestration/`
+- Tests → `src/tests/test_<module>.py`
+- Config → `openclaw-config/`
+- Scripts → `scripts/` or repo root
+
+## Slack — Posting as $USER (not the bot)
+
+To post to Slack **as $USER** (user `U09GH5BR3QU`, not the openclaw bot):
+
+```bash
+source ~/.profile   # loads SLACK_USER_TOKEN (xoxp-...) — not in env by default
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $SLACK_USER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel": "CHANNEL_ID", "text": "your message"}'
+```
+
+- `SLACK_USER_TOKEN` is defined in `~/.profile` (xoxp-... user OAuth token) but **not exported to Claude sessions** — always `source ~/.profile` first.
+- `OPENCLAW_SLACK_BOT_TOKEN` (xoxb-...) is already in env but posts as the **openclaw bot** (`U0AEZC7RX1Q`), not $USER.
+- No Slack MCP server is configured or needed; the Web API + user token is sufficient.
+- Channel IDs: `#ai-slack-test` → `C0AKALZ4CKW`, `#all-$USER-ai` → `C09GRLXF9GR`.
+- Verify identity: `curl -s https://slack.com/api/auth.test -H "Authorization: Bearer $SLACK_USER_TOKEN"` should return `"user":"$USER"`.
+
+## Gateway (Local Machine)
+
+The OpenClaw gateway on this machine runs as a **LaunchAgent**, not a menubar app.
+
+```bash
+# Status
+openclaw gateway status
+
+# Restart
+launchctl stop gui/$UID/ai.openclaw.gateway
+launchctl start gui/$UID/ai.openclaw.gateway
+
+# Logs
+tail -f /tmp/openclaw/openclaw-$(date +%F).log
+# or
+tail -f ~/.openclaw/logs/gateway.log
+
+# Verify listening
+lsof -i :18789 | grep LISTEN
+```
+
+Service file: `~/Library/LaunchAgents/ai.openclaw.gateway.plist`
+Port: 18789 (loopback only)
+
+## exe.dev VM ops
+
+- Access: `ssh exe.dev` then `ssh vm-name`
+- SSH flaky: use exe.dev web terminal or Shelley; keep tmux session for long ops
+- Update: `sudo npm i -g openclaw@latest`
+- Config: `openclaw config set ...`; ensure `gateway.mode=local`
+- Discord token: store raw token only (no `DISCORD_BOT_TOKEN=` prefix)
+- Restart gateway on VM:
+  ```bash
+  pkill -9 -f openclaw-gateway || true
+  nohup openclaw gateway run --bind loopback --port 18789 --force > /tmp/openclaw-gateway.log 2>&1 &
+  ```
+- Verify: `openclaw channels status --probe`, `ss -ltnp | rg 18789`
 
 ## PR & Merge Protocols
 
-- Never merge PRs without explicit "MERGE APPROVED" from user
-- MANDATORY: ALL CI tests must pass before merge - check `statusCheckRollup`
-- `/pr` must create actual PR with working URL - never give manual steps
-- Verify agent work: file existence check, `git diff --stat`, `git status`
+- **NEVER make PRs to openclaw/openclaw** — this is a personal backup repo
+- **NEVER merge without explicit user approval**
+- **ALL CI checks must pass before merge** — `mergeable: "MERGEABLE"` only means no conflicts
+- Always check `statusCheckRollup` for failures before declaring PR ready
 
-### PR Description Requirements
+### PR Description Sections (required)
+- Summary (1–4 bullets)
+- Changes (what changed, before → after → why)
+- Testing (verification approach, evidence if applicable)
+- Known Limitations
 
-**Required sections**: Summary (1-4 bullets) | Production Code Changes (before → now → why) | Test Changes | Known Limitations
+### CodeRabbit Review Protocol
+After pushing fixes that address review comments authored by `coderabbitai`:
+1. Post a PR comment: `@coderabbitai all good?`
+2. This triggers CodeRabbit to re-review and verify the fixes are resolved.
 
-## Claude Code Behavior
+Do NOT ping CodeRabbit on a timer or without a preceding push. Only trigger after a fresh commit lands on the PR branch.
 
-1. Operates in worktree directory | 2. `TESTING_AUTH_BYPASS=true vpython` for direct/local real-mode test runs | 3. `from google import genai` | 4. Use `~` for paths | 5. MCP tools primary, `gh` fallback | 6. No `_v2`, `_new`, `_backup` files | 7. Cross-platform | 8. Use Read tool | 9. Never `exit 1` | 10. Read/Grep → Edit → Bash | 11. TodoWrite for 3+ steps | 12. Slash commands: `.claude/commands/*.md`
+### Commit Guidelines
 
-## Diagnostic Efficiency
+- Use `git add <specific files>` — never `git add -A` blindly
+- Concise, action-oriented messages (e.g., `fix: remove redundant try/except in heartbeat poller`)
+- Group related changes; don't bundle unrelated refactors
 
-**Config debugging**: Read source code first (Read tool on consuming file), not exploratory Bash. Max 3 diagnostic attempts before reassessing.
+## Shorthand Commands
 
-**Env vars**: Set via Cloud Run/Docker/shell profile (NOT `.env` files). Check consuming code for exact names (e.g., `VITE_*` prefix for frontend).
+- `sync`: commit all dirty changes with a sensible Conventional Commit message, then `git pull --rebase` and `git push`
 
-**Grep tool**: Use `Grep` tool for code search, not `grep`/`rg` in Bash (except piping command output).
+## Git Notes
 
-## Project Overview
+- If `git branch -d/-D <branch>` is policy-blocked: `git update-ref -d refs/heads/<branch>`
 
-Your Project = AI-powered tabletop RPG platform (digital D&D 5e GM)
+## Security & Configuration
 
-**Stack:** Python 3.11/Flask/Gunicorn | Gemini API | Firebase Firestore | Vanilla JS/Bootstrap | Docker/Cloud Run
+- Never commit real tokens, phone numbers, or live config values — use obviously fake placeholders
+- Web provider creds: `~/.openclaw/credentials/`; rerun `openclaw login` if logged out
+- Session logs: `~/.openclaw/agents/<agentId>/sessions/*.jsonl`
+- Environment variables: see `~/.profile`
 
-**Testing Methodology:** Red-green (`/tdd` or `/rg`): Write failing tests → Confirm fail → Minimal code → Refactor
+## Beads (Issue Tracking)
 
-### MCP CLI JSON Piping
+- Issue prefix: `ORCH`
+- DB backend: Dolt server at `127.0.0.1:3307`
+- Init if needed: `bd init -p ORCH --force`
+- Commands: `bd list`, `bd create`, `bd show <id>`
 
-**CRITICAL**: Use `printf` or `cat`, NOT `echo` (adds `\n` that breaks parsing)
-- ✅ `printf '{"key":"value"}' | mcp-cli call tool -`
-- ✅ `cat file.json | mcp-cli call tool -`
-- ❌ `echo '{"key":"value"}' | mcp-cli call tool -`
+## Multi-Agent Safety
 
-## Development Guidelines
+- Do **not** create/apply/drop `git stash` entries unless explicitly requested
+- Do **not** switch branches unless explicitly requested
+- Do **not** create/remove `git worktree` checkouts unless explicitly requested
+- When "push" requested: `git pull --rebase` first (never discard other agents' work)
+- When "commit" requested: scope to your changes only
+- When you see unrecognized files: keep going, focus on your changes only
 
-**Code Standards**: SOLID, DRY, use existing patterns. Constants: Module-level or constants.py. Path Computation: Use `os.path.dirname()`, `os.path.join()`, `pathlib.Path` - NEVER `string.replace()`.
+## Troubleshooting
 
-**Comments**: No PR/bead/ticket references in production code. Write comments that explain *why* for future readers, not *when* or *which ticket*. Ticket references belong in commit messages only.
-
-**Security**: `shell=False, timeout=30`. GitHub Actions: SHA-pinned versions only.
-
-### Import Standards (CI Enforced)
-
-- **FORBIDDEN**: try/except around imports (`try: import foo except: pass`)
-- **FORBIDDEN**: Inline imports inside functions (`def test(): from foo import bar`)
-- **MANDATORY**: All imports at module level - top of file only
-  - Order: Standard library → third-party → local (alphabetically sorted within each group)
-
-## Testing & Evidence
-
-- Run specific tests: `./run_tests.sh $PROJECT_ROOT/tests/test_feature.py` (not all)
-- testing_mcp: Run directly with `vpython`, NOT pytest
-- testing_ui: Run via `python3 $PROJECT_ROOT/main.py testui` with `TESTING_AUTH_BYPASS=true`
-- Evidence path: `/tmp/your-project.com/<branch>/<test_name>/latest/`
-- TDD: RED (bug) → GREEN (fix) → REFACTOR
-
-**Context Limits:** 500K (Enterprise) / 200K (Paid) | Health: Green (0-30%) | Yellow (31-60%) | Orange (61-80%) | Red (81%+)
-
-## Orchestration
-
-- tmux sessions with dynamic task agents
-- Never execute orchestration tasks yourself - delegate to agents
-- `/orch` prefix → immediate tmux delegation | `/converge` → autonomous until goal achieved
-
-## Git Workflow
-
-- Main = Truth | All changes via PRs | Fresh branches from main
-- **FORBIDDEN**: Merging directly to main without PR | `git sparse-checkout`
-
-## Environment
-
-- Firebase: `~/serviceAccountKey.json` → `GOOGLE_APPLICATION_CREDENTIALS`
-- Python: Verify venv, run with `vpython`
-- Temp files: Use `mktemp`, never predictable `/tmp/` names
-
-## Operations Guide
-
-**Tool Hierarchy**: Serena MCP → Read/Grep → Edit → Bash (OS only)
-
-**Test Execution**: DO NOT run `./run_tests.sh` without arguments. Use CI for full regression. Print evidence bundle path after testing_mcp tests. `testing_mcp/` and `testing_ui/` must run with real services only (no mock mode): do not use `TEST_MODE=mock`, `MOCK_SERVICES_MODE`, `USE_MOCK_FIREBASE`, `USE_MOCK_GEMINI`, or mock-server flags.
-
-**Data defense**: Use `dict.get()` and validate all data structures before use.
-
-## Slash Commands
-
-- `/fake3` - Runs pre-commit check pipeline
-- **Architecture:** `.claude/commands/*.md` = executable prompt templates
-
-## Dangerous Command Safety
-
-**NEVER suggest:** `sudo chown -R $USER:$(id -gn) $(npm -g config get prefix)` or recursive chown on system directories.
-
-**Safe npm fix:** `mkdir ~/.npm-global && npm config set prefix ~/.npm-global`
-
-## Quick Reference
-
-```bash
-vpython $PROJECT_ROOT/test_file.py              # Single test
-./run_tests.sh $PROJECT_ROOT/tests/test_app.py  # Specific tests
-/fake3                                     # Pre-commit check
-./integrate.sh                             # New branch
-./deploy.sh [stable]                       # Deploy
-```
-
-## Skill Files Reference
-
-See `.claude/skills/`: `agents.md`, `llm-prompt-engineering.md`, `file-justification.md`, `code-centralization.md`, `integration-verification.md`, `testing-infrastructure.md`, `unified-logging.md`, `github-cli-reference.md`, `pr-workflow-manager.md`, `dice-authenticity-standards.md`
-
-## Meta-Rules
-
-**Pre-action checkpoint:** Does this violate CLAUDE.md rules?
-**Write gate:** Search existing files → Attempt integration → Document why impossible
+- Gateway/config issues: `openclaw doctor`
+- Gateway not starting: check `~/.openclaw/logs/gateway.err.log`
+- Import errors in Python: ensure `PYTHONPATH=src` or run pytest from repo root with pyproject.toml present
