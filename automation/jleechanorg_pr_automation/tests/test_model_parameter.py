@@ -213,6 +213,8 @@ class TestModelParameter(unittest.TestCase):
              patch.object(monitor, "is_pr_actionable", return_value=True), \
              patch.object(monitor, "_get_pr_comment_state", return_value=(None, [])), \
              patch.object(monitor, "_process_pr_fixpr", return_value="skipped") as mock_fixpr, \
+             patch.object(monitor, "_validate_cli_chain", return_value=("claude", {"claude": True})), \
+             patch.object(monitor, "_cleanup_pending_reviews"), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks", return_value=True), \
              patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout",
                    return_value=SimpleNamespace(returncode=0, stdout='{\"mergeable\":\"MERGEABLE\"}')):
@@ -283,8 +285,8 @@ class TestModelParameter(unittest.TestCase):
             self.assertEqual(call_kwargs.get("model"), "sonnet")
 
     @patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.CodexCloudAPI")
-    def test_codex_api_main_exits_non_zero_when_any_task_fails(self, mock_api_cls):
-        """codex-api should fail the overall run when a task still fails after fallback."""
+    def test_codex_api_main_soft_fails_when_any_task_fails(self, mock_api_cls):
+        """codex-api should report task failures but keep scheduler exit code zero."""
         mock_api = MagicMock()
         task_ok = {"id": "task_e_ok123456", "title": "GitHub Mention: ok", "summary": {"files_changed": 1}}
         task_bad = {"id": "task_e_bad12345", "title": "GitHub Mention: bad", "summary": {"files_changed": 1}}
@@ -304,8 +306,9 @@ class TestModelParameter(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm, redirect_stdout(stdout):
                 main()
 
-        self.assertEqual(cm.exception.code, 1)
+        self.assertEqual(cm.exception.code, 0)
         self.assertIn("PR creation failed", stdout.getvalue())
+        self.assertIn("soft-fail mode: exit 0", stdout.getvalue())
 
     @patch("jleechanorg_pr_automation.jleechanorg_pr_monitor.CodexCloudAPI")
     def test_codex_api_skips_pr_fallback_for_unrecoverable_patch_errors(self, mock_api_cls):

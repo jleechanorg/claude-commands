@@ -4537,8 +4537,7 @@ def main():
                     print(f"    {task.get('url', '')}")
 
             if had_failures:
-                print("\n❌ Codex CLI API completed with task failures")
-                sys.exit(1)
+                print("\n⚠️ Codex CLI API completed with task failures (soft-fail mode: exit 0)")
 
             if skipped_invalid_tasks:
                 print(f"\n⚠️ Codex CLI API skipped {skipped_invalid_tasks} invalid task payload(s)")

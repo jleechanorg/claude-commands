@@ -43,6 +43,7 @@ Lead with architectural thinking, follow with tactical execution. Write code as 
 - Creating new env vars (use constants; env vars only for credentials/URLs)
 - Stripping tool definitions to "optimize"
 - Disabled-by-default env vars
+- **Fallback/synthetic data generation** - Never generate fake data to mask LLM failures. Fix prompts instead.
 
 **Intent Detection**: Local classifier ONLY. Exception: Parsing structured prefixes (`CHOICE:`, `GOD MODE:`)
 

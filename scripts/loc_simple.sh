@@ -3,11 +3,12 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# Simple Lines of Code Counter - Accurate Production vs Test breakdown
-# Excludes: venv/, roadmap/ (planning docs), and other non-production directories
+# Comprehensive Lines of Code Counter
+# Counts everything: application logic, tests, CI/CD, documentation, observability, internal tooling
+# Excludes: venv/, node_modules/, .git/, __pycache__, tmp/
 
-echo "📊 Lines of Code Count (Production Focus)"
-echo "=========================================="
+echo "📊 Lines of Code Count (Comprehensive — All File Types)"
+echo "======================================================="
 
 # Utility to normalize glob scopes used for functional area summaries
 normalize_scope_glob() {
@@ -31,6 +32,19 @@ normalize_scope_glob() {
     fi
 
     echo "$glob"
+}
+
+# Identify whether a file path should be considered documentation
+is_doc_file() {
+    local path="$1"
+    local ext="$2"
+
+    case "${ext,,}" in
+        md|mdx|rst|adoc|ipynb)
+            return 0
+            ;;
+    esac
+    return 1
 }
 
 # Identify whether a file path should be considered test code
@@ -158,7 +172,11 @@ declare -a LANGUAGE_SPECS=(
     "mm|🍎 Objective-C++ (.mm)"
     "m|🍎 Objective-C (.m)"
     "cshtml|🌐 Razor (.cshtml)"
+    "md|📝 Markdown (.md)"
     "mdx|📝 MDX (.mdx)"
+    "rst|📝 ReStructuredText (.rst)"
+    "adoc|📝 AsciiDoc (.adoc)"
+    "ipynb|📓 Jupyter (.ipynb)"
     "nix|🧪 Nix (.nix)"
     "tf|🌍 Terraform (.tf)"
     "tfvars|🌍 Terraform Vars (.tfvars)"
@@ -168,6 +186,7 @@ declare -a LANGUAGE_SPECS=(
 declare -A LANGUAGE_LABELS=()
 declare -A PROD_COUNTS=()
 declare -A TEST_COUNTS=()
+declare -A DOCS_COUNTS=()
 declare -a ORDERED_EXTS=()
 declare -a ACTIVE_LANGUAGE_EXTS=()
 
@@ -201,7 +220,6 @@ FIND_CMD+=(
     ! -path "*/venv/*"
     ! -path "*/__pycache__/*"
     ! -path "./tmp/*"
-    ! -path "./roadmap/*"
     -print0
 )
 
@@ -227,11 +245,16 @@ while IFS= read -r -d '' file; do
     mode="prod"
     if is_test_file "$file" "$ext"; then
         mode="test"
+    elif is_doc_file "$file" "$ext"; then
+        mode="docs"
     fi
 
     if [[ "$mode" == "test" ]]; then
         current_test=${TEST_COUNTS["$ext"]:-0}
         TEST_COUNTS["$ext"]=$((current_test + lines))
+    elif [[ "$mode" == "docs" ]]; then
+        current_docs=${DOCS_COUNTS["$ext"]:-0}
+        DOCS_COUNTS["$ext"]=$((current_docs + lines))
     else
         current_prod=${PROD_COUNTS["$ext"]:-0}
         PROD_COUNTS["$ext"]=$((current_prod + lines))
@@ -246,7 +269,8 @@ done < <("${FIND_CMD[@]}")
 for ext in "${ORDERED_EXTS[@]}"; do
     prod_value=${PROD_COUNTS["$ext"]:-0}
     test_value=${TEST_COUNTS["$ext"]:-0}
-    if (( prod_value + test_value > 0 )); then
+    docs_value=${DOCS_COUNTS["$ext"]:-0}
+    if (( prod_value + test_value + docs_value > 0 )); then
         ACTIVE_LANGUAGE_EXTS+=("$ext")
     fi
 done
@@ -256,14 +280,16 @@ if (( ${#ACTIVE_LANGUAGE_EXTS[@]} > 0 )); then
     for ext in "${ORDERED_EXTS[@]}"; do
         prod_value=${PROD_COUNTS["$ext"]:-0}
         test_value=${TEST_COUNTS["$ext"]:-0}
-        total_value=$((prod_value + test_value))
+        docs_value=${DOCS_COUNTS["$ext"]:-0}
+        total_value=$((prod_value + test_value + docs_value))
         if (( total_value == 0 )); then
             continue
         fi
         label=${LANGUAGE_LABELS["$ext"]}
         echo "$label:"
-        echo "  Production: ${prod_value} lines"
-        echo "  Test:       ${test_value} lines"
+        printf "  Production:    %7d lines\n" "$prod_value"
+        printf "  Test:          %7d lines\n" "$test_value"
+        printf "  Documentation: %7d lines\n" "$docs_value"
     done
 else
     echo "  No source files found for the configured extensions."
@@ -275,32 +301,40 @@ echo "📋 Summary:"
 
 total_prod=0
 total_test=0
+total_docs=0
 for ext in "${ORDERED_EXTS[@]}"; do
     prod_value=${PROD_COUNTS["$ext"]:-0}
     test_value=${TEST_COUNTS["$ext"]:-0}
+    docs_value=${DOCS_COUNTS["$ext"]:-0}
     total_prod=$((total_prod + prod_value))
     total_test=$((total_test + test_value))
+    total_docs=$((total_docs + docs_value))
 done
 
-total_all=$((total_prod + total_test))
+total_all=$((total_prod + total_test + total_docs))
 
-echo "  Production Code: $total_prod lines"
-echo "  Test Code:       $total_test lines"
-echo "  TOTAL CODEBASE:  $total_all lines"
+echo "  Production:    $total_prod lines (application, config, tooling)"
+echo "  Test:          $total_test lines"
+echo "  Documentation: $total_docs lines (markdown, planning, specs)"
+echo "  ─────────────────────────────"
+echo "  TOTAL:         $total_all lines"
 
 if [[ $total_all -gt 0 ]]; then
-    test_percentage=$(awk -v test="$total_test" -v all="$total_all" 'BEGIN {if (all > 0) printf "%.1f", test * 100 / all; else print "0"}')
-    echo "  Test LOC share:  ${test_percentage}%"
+    test_pct=$(awk -v test="$total_test" -v all="$total_all" 'BEGIN {if (all > 0) printf "%.1f", test * 100 / all; else print "0"}')
+    docs_pct=$(awk -v docs="$total_docs" -v all="$total_all" 'BEGIN {if (all > 0) printf "%.1f", docs * 100 / all; else print "0"}')
+    echo "  Test share:  ${test_pct}%  |  Docs share: ${docs_pct}%"
 fi
 
 echo ""
-echo "🎯 Production Code by Functionality:"
-echo "===================================="
+echo "🎯 Codebase by Functional Area:"
+echo "==============================="
 
-# Count major functional areas (production only)
+# Count major functional areas (production and/or docs)
+# Third arg: "prod" (default), "docs", or "both"
 count_functional_area() {
     local pattern="$1"
     local name="$2"
+    local modes="${3:-prod}"
 
     local scope_glob
     scope_glob=$(normalize_scope_glob "$pattern")
@@ -321,9 +355,13 @@ count_functional_area() {
     done
 
     for idx in "${!FILE_PATHS[@]}"; do
-        if [[ "${FILE_MODES[$idx]}" != "prod" ]]; then
-            continue
-        fi
+        local mode="${FILE_MODES[$idx]}"
+        case "$modes" in
+            prod)    [[ "$mode" != "prod" ]] && continue ;;
+            docs)    [[ "$mode" != "docs" ]] && continue ;;
+            both)    [[ "$mode" != "prod" && "$mode" != "docs" ]] && continue ;;
+            *)       [[ "$mode" != "prod" ]] && continue ;;
+        esac
 
         local ext="${FILE_EXTS[$idx]}"
         if [[ -z ${allowed_exts["$ext"]+x} ]]; then
@@ -366,17 +404,21 @@ count_functional_area() {
     fi
 }
 
-# Major functional areas
+# Major functional areas (production + documentation)
 count_functional_area "./mvp_site/" "Core Application"
 count_functional_area "./scripts/" "Automation Scripts"
 count_functional_area "./.claude/" "AI Assistant"
 count_functional_area "./orchestration/" "Task Management"
 count_functional_area "./prototype*/" "Prototypes"
 count_functional_area "./testing_*/" "Test Infrastructure"
+count_functional_area "./.github/" "CI/CD Config" "both"
+count_functional_area "./roadmap/" "Planning & Roadmap Docs" "docs"
+count_functional_area "./docs/" "Documentation" "docs"
+count_functional_area "./skills/" "Skills & Tooling" "both"
 
 echo ""
 echo "ℹ️  Exclusions:"
 echo "  • Virtual environment (venv/)"
-echo "  • Planning documents (roadmap/)"
 echo "  • Node modules, git files"
-echo "  • Temporary and cache files"
+echo "  • __pycache__, tmp/"
+echo "  • Everything else is counted (app, tests, CI/CD, docs, tooling)"

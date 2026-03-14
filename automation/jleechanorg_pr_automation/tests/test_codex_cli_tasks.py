@@ -411,6 +411,7 @@ class TestRepoContextFallback(unittest.TestCase):
             MagicMock(stdout="", stderr="", returncode=1),  # rev-parse master fails
             MagicMock(stdout="origin/develop\norigin/release/main\n", stderr="", returncode=0),  # for-each-ref fallback
             MagicMock(stdout="", stderr="", returncode=0),  # prune before add
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             MagicMock(stdout="", stderr="", returncode=0),  # worktree add
         ]
 
@@ -438,6 +439,7 @@ class TestRepoContextFallback(unittest.TestCase):
         mock_run.side_effect = [
             MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref
             MagicMock(stdout="", stderr="", returncode=0),  # prune before add
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             subprocess.TimeoutExpired(cmd=["git", "worktree", "add"], timeout=30),  # first add fails
             MagicMock(stdout="", stderr="", returncode=0),  # prune before retry
             MagicMock(stdout="", stderr="", returncode=0),  # second add succeeds
@@ -499,6 +501,7 @@ class TestRepoContextFallback(unittest.TestCase):
         mock_run.side_effect = [
             MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref
             MagicMock(stdout="", stderr="", returncode=0),  # prune before add
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             subprocess.CalledProcessError(
                 128,
                 ["git", "worktree", "add"],
@@ -576,16 +579,16 @@ class TestApplyAndPush(unittest.TestCase):
         # 9. git push
         # 10. git worktree remove
         mock_run.side_effect = [
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
+            MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref origin/HEAD
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             MagicMock(stdout="", stderr="", returncode=0),  # worktree add
-            MagicMock(stdout="", stderr="", returncode=1),  # ls-remote
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote (empty = branch doesn't exist)
             MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
             MagicMock(stdout="diff content", stderr="", returncode=0),  # codex cloud diff
             MagicMock(stdout="", stderr="", returncode=0),  # git apply
             MagicMock(stdout="", stderr="", returncode=0),  # git add
             MagicMock(stdout="", stderr="", returncode=0),  # git commit
             MagicMock(stdout="", stderr="", returncode=0),  # git push
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
         ]
 
         api = CodexCloudAPI()
@@ -598,7 +601,7 @@ class TestApplyAndPush(unittest.TestCase):
 
         self.assertTrue(result["success"])
         self.assertEqual(result["branch"], "codex/e_abc123")
-        self.assertEqual(mock_run.call_count, 9)
+        self.assertEqual(mock_run.call_count, 10)
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
@@ -608,13 +611,13 @@ class TestApplyAndPush(unittest.TestCase):
     def test_apply_failure(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test failure when codex apply fails."""
         mock_run.side_effect = [
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
+            MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref origin/HEAD
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             MagicMock(stdout="", stderr="", returncode=0),  # worktree add
-            MagicMock(stdout="", stderr="", returncode=1),  # ls-remote
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote (empty = branch doesn't exist)
             MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
             MagicMock(stdout="diff content", stderr="", returncode=0),  # codex cloud diff
             MagicMock(stdout="", stderr="conflict", returncode=1),  # git apply fails
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
         ]
 
         api = CodexCloudAPI()
@@ -633,13 +636,14 @@ class TestApplyAndPush(unittest.TestCase):
     def test_apply_corrupt_patch_disables_pr_fallback(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Malformed diffs should fail without attempting the PR fallback path."""
         mock_run.side_effect = [
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
+            MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref origin/HEAD
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             MagicMock(stdout="", stderr="", returncode=0),  # worktree add
-            MagicMock(stdout="", stderr="", returncode=1),  # ls-remote
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote (empty = branch doesn't exist)
             MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
             MagicMock(stdout="diff content", stderr="", returncode=0),  # codex cloud diff
-            MagicMock(stdout="", stderr="error: corrupt patch at line 396", returncode=1),  # git apply fails
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
+            MagicMock(stdout="", stderr="error: corrupt patch at line 396", returncode=1),  # git apply --3way fails
+            MagicMock(stdout="", stderr="error: corrupt patch at line 396", returncode=1),  # git apply retry fails
         ]
 
         api = CodexCloudAPI()
@@ -658,16 +662,16 @@ class TestApplyAndPush(unittest.TestCase):
     def test_git_push_failure(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test failure when git push fails."""
         mock_run.side_effect = [
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
+            MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref origin/HEAD
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             MagicMock(stdout="", stderr="", returncode=0),  # worktree add
-            MagicMock(stdout="", stderr="", returncode=1),  # ls-remote
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote (empty = branch doesn't exist)
             MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
             MagicMock(stdout="diff content", stderr="", returncode=0),  # codex cloud diff
             MagicMock(stdout="", stderr="", returncode=0),  # git apply
             MagicMock(stdout="", stderr="", returncode=0),  # git add
             MagicMock(stdout="", stderr="", returncode=0),  # git commit
             subprocess.CalledProcessError(1, "git push", stderr="rejected"),  # git push fails
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
         ]
 
         api = CodexCloudAPI()
@@ -685,9 +689,10 @@ class TestApplyAndPush(unittest.TestCase):
     def test_apply_and_push_uses_detached_remote_checkout_and_head_push_for_new_branch(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """New branch apply+push should avoid local branch attachment entirely."""
         mock_run.side_effect = [
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
+            MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref origin/HEAD
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             MagicMock(stdout="", stderr="", returncode=0),  # worktree add
-            MagicMock(stdout="", stderr="", returncode=1),  # ls-remote
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote (empty = branch doesn't exist)
             MagicMock(stdout="", stderr="", returncode=0),  # checkout --detach origin/main
             MagicMock(stdout="diff content", stderr="", returncode=0),  # codex cloud diff
             MagicMock(stdout="", stderr="", returncode=0),  # git apply
@@ -703,7 +708,7 @@ class TestApplyAndPush(unittest.TestCase):
         self.assertTrue(result["success"])
         commands = [call.args[0] for call in mock_run.call_args_list]
         self.assertTrue(
-            any(cmd[0] == "git" and "checkout" in cmd and "--detach" in cmd and "origin/main" in cmd for cmd in commands),
+            any(cmd[0] == "git" and ("checkout" in cmd or "switch" in cmd) and "--detach" in cmd and "origin/main" in cmd for cmd in commands),
             commands,
         )
         self.assertTrue(
@@ -733,18 +738,21 @@ index 1234567..abcdefg 100644
         mock_run.side_effect = [
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (search by task_id)
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (search by title)
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main (worktree creation)
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree add
+            MagicMock(stdout="refs/remotes/origin/main", stderr="", returncode=0),  # git symbolic-ref
+            MagicMock(stdout="", stderr="", returncode=0),  # git branch -D (cleanup)
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree add
             MagicMock(stdout=diff_text, stderr="", returncode=0),  # codex cloud diff
-            MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
+            MagicMock(stdout="", stderr="", returncode=0),  # git ls-remote (branch doesn't exist)
+            MagicMock(stdout="", stderr="", returncode=0),  # git checkout -B
             MagicMock(stdout="", stderr="", returncode=0),  # git apply --3way (success)
             MagicMock(stdout="", stderr="", returncode=0),  # git add -A
             MagicMock(stdout="", stderr="", returncode=1),  # git diff --cached --quiet
             MagicMock(stdout="", stderr="", returncode=0),  # git commit
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote before push (branch_on_remote check)
             MagicMock(stdout="", stderr="", returncode=0),  # git push
             MagicMock(stdout="https://github.com/org/repo/pull/123\n", stderr="", returncode=0),  # gh pr create
             MagicMock(stdout="", stderr="", returncode=0),  # gh pr comment (metadata)
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree remove
         ]
 
         api = CodexCloudAPI()
@@ -761,7 +769,7 @@ index 1234567..abcdefg 100644
         self.assertEqual(result["pr_url"], "https://github.com/org/repo/pull/123")
         self.assertFalse(result["has_conflicts"])
         self.assertFalse(result["updated_existing"])
-        self.assertEqual(mock_run.call_count, 13)
+        self.assertEqual(mock_run.call_count, 16)
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
@@ -791,18 +799,19 @@ index 1234567..abcdefg 100644
         mock_run.side_effect = [
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (search by task_id)
             MagicMock(stdout=existing_prs_json, stderr="", returncode=0),  # gh pr list (found by title)
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree add
+            MagicMock(stdout="refs/remotes/origin/main", stderr="", returncode=0),  # git symbolic-ref
+            MagicMock(stdout="", stderr="", returncode=0),  # git branch -D (cleanup)
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree add
             MagicMock(stdout=diff_text, stderr="", returncode=0),  # codex cloud diff
             MagicMock(stdout="", stderr="", returncode=0),  # git fetch
-            MagicMock(stdout="", stderr="", returncode=0),  # git checkout -B
+            MagicMock(stdout="", stderr="", returncode=0),  # git checkout --detach
             MagicMock(stdout="", stderr="", returncode=0),  # git apply --3way (success)
             MagicMock(stdout="", stderr="", returncode=0),  # git add -A
             MagicMock(stdout="", stderr="", returncode=1),  # git diff --cached --quiet
             MagicMock(stdout="", stderr="", returncode=0),  # git commit
+            MagicMock(stdout="deadbeef\trefs/heads/claude/divine-system-cleanup-8jqKL\n", stderr="", returncode=0),  # ls-remote before push
             MagicMock(stdout="", stderr="", returncode=0),  # git push --force-with-lease
             MagicMock(stdout="", stderr="", returncode=0),  # gh pr comment (update metadata)
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
         ]
 
         api = CodexCloudAPI()
@@ -819,12 +828,12 @@ index 1234567..abcdefg 100644
         self.assertEqual(result["pr_url"], "https://github.com/org/repo/pull/4989")  # Uses existing PR URL!
         self.assertFalse(result["has_conflicts"])
         self.assertTrue(result["updated_existing"])  # This is the key flag
-        self.assertEqual(mock_run.call_count, 13)
+        self.assertEqual(mock_run.call_count, 15)
         commands = [call.args[0] for call in mock_run.call_args_list]
         self.assertTrue(
             any(
                 cmd[0] == "git"
-                and "checkout" in cmd
+                and ("checkout" in cmd or "switch" in cmd)
                 and "--detach" in cmd
                 and "origin/claude/divine-system-cleanup-8jqKL" in cmd
                 for cmd in commands
@@ -848,6 +857,61 @@ index 1234567..abcdefg 100644
     @patch("shutil.which", return_value="/usr/local/bin/codex")
     @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
+    def test_update_existing_pr_returns_error_when_fetch_fails(
+        self,
+        _mock_exists,
+        _mock_detect,
+        _mock_which,
+        _mock_prune,
+        mock_run,
+    ):
+        """Existing PR updates should fail fast when remote branch fetch fails."""
+        diff_text = "diff --git a/file.py b/file.py\n..."
+        existing_prs_json = json.dumps(
+            [
+                {
+                    "number": 4989,
+                    "title": "Github Mention: Existing PR",
+                    "headRefName": "claude/divine-system-cleanup-8jqKL",
+                    "url": "https://github.com/org/repo/pull/4989",
+                }
+            ]
+        )
+
+        mock_run.side_effect = [
+            MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (task_id)
+            MagicMock(stdout=existing_prs_json, stderr="", returncode=0),  # gh pr list (title)
+            MagicMock(stdout="refs/remotes/origin/main", stderr="", returncode=0),  # git symbolic-ref
+            MagicMock(stdout="", stderr="", returncode=0),  # git branch -D (cleanup)
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree add
+            MagicMock(stdout=diff_text, stderr="", returncode=0),  # codex cloud diff
+            subprocess.CalledProcessError(1, "git fetch", stderr="fatal: couldn't find remote ref"),
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree remove (cleanup)
+        ]
+
+        api = CodexCloudAPI()
+        task = {
+            "id": "task_e_abc123def",
+            "title": "Github Mention: Existing PR",
+            "url": "https://chatgpt.com/codex/tasks/task_e_abc123def",
+            "summary": {"files_changed": 1, "lines_added": 5, "lines_removed": 1},
+        }
+        result = api.create_pr_from_diff(task)
+
+        self.assertFalse(result["success"])
+        self.assertIn("Failed to update existing PR branch", result["error"])
+        self.assertEqual(result["task_id"], "task_e_abc123def")
+        commands = [call.args[0] for call in mock_run.call_args_list if call.args]
+        self.assertFalse(
+            any(cmd[0] == "gh" and "create" in cmd for cmd in commands),
+            commands,
+        )
+
+    @patch("subprocess.run")
+    @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
+    @patch("shutil.which", return_value="/usr/local/bin/codex")
+    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("pathlib.Path.exists", return_value=True)
     def test_success_with_conflicts(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test successful PR creation with conflict markers."""
         diff_text = "diff --git a/file.py b/file.py\n..."
@@ -855,20 +919,23 @@ index 1234567..abcdefg 100644
         mock_run.side_effect = [
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (search by task_id)
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (search by title)
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree add
+            MagicMock(stdout="refs/remotes/origin/main", stderr="", returncode=0),  # git symbolic-ref
+            MagicMock(stdout="", stderr="", returncode=0),  # git branch -D (cleanup)
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree add
             MagicMock(stdout=diff_text, stderr="", returncode=0),  # codex cloud diff
-            MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
+            MagicMock(stdout="", stderr="", returncode=0),  # git ls-remote (branch doesn't exist)
+            MagicMock(stdout="", stderr="", returncode=0),  # git checkout -B
             MagicMock(stdout="", stderr="conflict", returncode=1),  # git apply --3way (conflict)
             MagicMock(stdout="file.py\n", stderr="", returncode=0),  # git diff --name-only --diff-filter=U
             MagicMock(stdout="", stderr="", returncode=0),  # git checkout --theirs
             MagicMock(stdout="", stderr="", returncode=0),  # git add -A
             MagicMock(stdout="", stderr="", returncode=1),  # git diff --cached --quiet
             MagicMock(stdout="", stderr="", returncode=0),  # git commit
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote before push
             MagicMock(stdout="", stderr="", returncode=0),  # git push
             MagicMock(stdout="https://github.com/org/repo/pull/456\n", stderr="", returncode=0),  # gh pr create
             MagicMock(stdout="", stderr="", returncode=0),  # gh pr comment
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree remove (cleanup)
         ]
 
         api = CodexCloudAPI()
@@ -879,7 +946,7 @@ index 1234567..abcdefg 100644
         self.assertTrue(result["has_conflicts"])
         self.assertFalse(result["updated_existing"])
         self.assertEqual(result["pr_url"], "https://github.com/org/repo/pull/456")
-        self.assertEqual(mock_run.call_count, 15)
+        self.assertEqual(mock_run.call_count, 18)
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
@@ -898,12 +965,14 @@ index 1234567..abcdefg 100644
         mock_run.side_effect = [
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (task_id)
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (title)
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
+            MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref origin/HEAD
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             MagicMock(stdout="", stderr="", returncode=0),  # worktree add
             MagicMock(stdout=diff_text, stderr="", returncode=0),  # codex cloud diff
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote (branch missing)
             MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
-            MagicMock(stdout="", stderr="error: corrupt patch at line 396", returncode=1),  # git apply --3way
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
+            MagicMock(stdout="", stderr="error: corrupt patch at line 396", returncode=1),  # git apply --3way fails
+            MagicMock(stdout="", stderr="error: corrupt patch at line 396", returncode=1),  # git apply retry fails
         ]
 
         api = CodexCloudAPI()
@@ -911,8 +980,8 @@ index 1234567..abcdefg 100644
         result = api.create_pr_from_diff(task)
 
         self.assertFalse(result["success"])
-        self.assertIn("corrupt patch", result["error"])
-        self.assertEqual(mock_run.call_count, 7)
+        self.assertIn("Stale diff - target repo has changed", result["error"])
+        self.assertEqual(mock_run.call_count, 10)
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
@@ -931,15 +1000,16 @@ index 1234567..abcdefg 100644
         mock_run.side_effect = [
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (task_id)
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (title)
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
+            MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref origin/HEAD
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             MagicMock(stdout="", stderr="", returncode=0),  # worktree add
             MagicMock(stdout=diff_text, stderr="", returncode=0),  # codex cloud diff
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote (branch missing)
             MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
             MagicMock(stdout="", stderr="conflict", returncode=1),  # git apply --3way
             MagicMock(stdout="", stderr="", returncode=0),  # git diff --name-only --diff-filter=U
             MagicMock(stdout="", stderr="", returncode=0),  # git add -A
             MagicMock(stdout="", stderr="", returncode=0),  # git diff --cached --quiet
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
         ]
 
         api = CodexCloudAPI()
@@ -948,7 +1018,7 @@ index 1234567..abcdefg 100644
 
         self.assertFalse(result["success"])
         self.assertIn("no staged changes", result["error"])
-        self.assertEqual(mock_run.call_count, 10)
+        self.assertEqual(mock_run.call_count, 12)
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
@@ -960,10 +1030,10 @@ index 1234567..abcdefg 100644
         mock_run.side_effect = [
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (task_id)
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (title)
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
+            MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref origin/HEAD
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             MagicMock(stdout="", stderr="", returncode=0),  # worktree add
             MagicMock(stdout="No diff available for this task", stderr="", returncode=0),  # codex cloud diff
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
         ]
 
         api = CodexCloudAPI()
@@ -972,7 +1042,7 @@ index 1234567..abcdefg 100644
 
         self.assertFalse(result["success"])
         self.assertIn("No diff available", result["error"])
-        self.assertEqual(mock_run.call_count, 5)
+        self.assertEqual(mock_run.call_count, 6)
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
@@ -985,17 +1055,19 @@ index 1234567..abcdefg 100644
         mock_run.side_effect = [
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (task_id)
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (title)
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree add
+            MagicMock(stdout="refs/remotes/origin/main", stderr="", returncode=0),  # git symbolic-ref
+            MagicMock(stdout="", stderr="", returncode=0),  # git branch -D (cleanup)
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree add
             MagicMock(stdout=diff_text, stderr="", returncode=0),  # codex cloud diff
-            MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
+            MagicMock(stdout="", stderr="", returncode=0),  # git ls-remote (branch doesn't exist)
+            MagicMock(stdout="", stderr="", returncode=0),  # git checkout -B
             MagicMock(stdout="", stderr="", returncode=0),  # git apply --3way
             MagicMock(stdout="", stderr="", returncode=0),  # git add -A
             MagicMock(stdout="", stderr="", returncode=1),  # git diff --cached --quiet
             MagicMock(stdout="", stderr="", returncode=0),  # git commit
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote before push
             MagicMock(stdout="", stderr="", returncode=0),  # git push
             subprocess.CalledProcessError(1, "gh pr create", stderr="PR already exists"),  # gh fails
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
         ]
 
         api = CodexCloudAPI()
@@ -1004,7 +1076,7 @@ index 1234567..abcdefg 100644
 
         self.assertFalse(result["success"])
         self.assertIn("PR already exists", result["error"])
-        self.assertEqual(mock_run.call_count, 12)
+        self.assertEqual(mock_run.call_count, 15)
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
@@ -1019,18 +1091,21 @@ index 1234567..abcdefg 100644
         mock_run.side_effect = [
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (search by task_id)
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (search by title)
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree add
+            MagicMock(stdout="refs/remotes/origin/main", stderr="", returncode=0),  # git symbolic-ref
+            MagicMock(stdout="", stderr="", returncode=0),  # git branch -D (cleanup)
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree add
             MagicMock(stdout=diff_text, stderr="", returncode=0),  # codex cloud diff
-            MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
+            MagicMock(stdout="", stderr="", returncode=0),  # git ls-remote (branch doesn't exist)
+            MagicMock(stdout="", stderr="", returncode=0),  # git checkout -B
             MagicMock(stdout="", stderr="", returncode=0),  # git apply --3way
             MagicMock(stdout="", stderr="", returncode=0),  # git add -A
             MagicMock(stdout="", stderr="", returncode=1),  # git diff --cached --quiet
             MagicMock(stdout="", stderr="", returncode=0),  # git commit
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote before push
             MagicMock(stdout="", stderr="", returncode=0),  # git push
             MagicMock(stdout=f"{pr_url}\n", stderr="", returncode=0),  # gh pr create
             MagicMock(stdout="", stderr="", returncode=0),  # gh pr comment (metadata)
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree remove
         ]
 
         api = CodexCloudAPI()
@@ -1082,18 +1157,21 @@ index 1234567..abcdefg 100644
         mock_run.side_effect = [
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (task_id)
             MagicMock(stdout="[]", stderr="", returncode=0),  # gh pr list (title)
-            MagicMock(stdout="main\n", stderr="", returncode=0),  # rev-parse main
+            MagicMock(stdout="refs/remotes/origin/main\n", stderr="", returncode=0),  # symbolic-ref origin/HEAD
+            MagicMock(stdout="", stderr="", returncode=0),  # branch -D (best-effort)
             MagicMock(stdout="", stderr="", returncode=0),  # worktree add
             MagicMock(stdout=diff_text, stderr="", returncode=0),  # codex cloud diff
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote (branch missing)
             MagicMock(stdout="", stderr="", returncode=0),  # checkout -B
             MagicMock(stdout="", stderr="", returncode=0),  # git apply --3way
             MagicMock(stdout="", stderr="", returncode=0),  # git add -A
             MagicMock(stdout="", stderr="", returncode=1),  # git diff --cached --quiet
             MagicMock(stdout="", stderr="", returncode=0),  # git commit
+            MagicMock(stdout="", stderr="", returncode=0),  # ls-remote before push
             MagicMock(stdout="", stderr="", returncode=0),  # git push
             MagicMock(stdout="https://github.com/org/repo/pull/456\n", stderr="", returncode=0),  # gh pr create
             MagicMock(stdout="", stderr="", returncode=0),  # gh pr comment
-            MagicMock(stdout="", stderr="", returncode=0),  # worktree remove
+            MagicMock(stdout="", stderr="", returncode=0),  # git worktree remove
         ]
 
         api = CodexCloudAPI()
@@ -1106,7 +1184,6 @@ index 1234567..abcdefg 100644
             any(cmd[0] == "git" and "checkout" in cmd and "-B" in cmd and "codex/e_xyz789" in cmd and "main" in cmd for cmd in commands),
             commands,
         )
-        self.assertFalse(any("branch" in cmd and "-D" in cmd for cmd in commands), commands)
 
     @patch("shutil.which", return_value="/usr/local/bin/codex")
     @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))

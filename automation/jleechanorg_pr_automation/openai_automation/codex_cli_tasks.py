@@ -374,8 +374,8 @@ class CodexCloudAPI:
             timeout=self.timeout,
         )
         if result.returncode != 0:
-            logger.warning("ls-remote failed for branch %s: %s", branch, result.stderr)
-            return False
+            error_msg = result.stderr.strip() or result.stdout.strip() or "git ls-remote failed"
+            raise RuntimeError(f"Failed to query remote branch {branch!r}: {error_msg}")
         return result.stdout.strip() != ""
 
     def _prune_stale_worktrees(self, base_repo_path: Path) -> None:
@@ -447,6 +447,18 @@ class CodexCloudAPI:
 
     def _checkout_detached_target(self, worktree_str: str, reset_target: str) -> None:
         """Check out a target commit/ref in detached HEAD mode."""
+        # Prefer `switch --detach <ref>` to avoid checkout argument parsing quirks
+        # with remote branch names that include slash-separated path segments.
+        switch_result = subprocess.run(
+            ["git", "-C", worktree_str, "switch", "--detach", reset_target],
+            capture_output=True,
+            text=True,
+            timeout=max(self.timeout, 120),
+        )
+        if switch_result.returncode == 0:
+            return
+
+        # Fallback for older git versions that may not support `switch`.
         subprocess.run(
             ["git", "-C", worktree_str, "checkout", "--detach", reset_target],
             capture_output=True,
@@ -564,7 +576,14 @@ class CodexCloudAPI:
             if remote_branch_exists:
                 # Remote branch exists, fetch and operate from detached remote HEAD.
                 subprocess.run(
-                    ["git", "-C", worktree_str, "fetch", "origin", branch],
+                    [
+                        "git",
+                        "-C",
+                        worktree_str,
+                        "fetch",
+                        "origin",
+                        f"+{branch}:refs/remotes/origin/{branch}",
+                    ],
                     capture_output=True,
                     text=True,
                     check=True,
@@ -580,6 +599,10 @@ class CodexCloudAPI:
 
             # Get diff
             diff_text = self.get_diff(task_id, attempt=attempt)
+            # FIX: Codex Cloud diff may not end with newline, causing "corrupt patch" error
+            # Ensure diff ends with newline before applying
+            if diff_text and not diff_text.endswith("\n"):
+                diff_text = diff_text + "\n"
             if not diff_text or "No diff available" in diff_text:
                 return {
                     "success": False,
@@ -598,6 +621,8 @@ class CodexCloudAPI:
             )
             if apply_result.returncode != 0:
                 error_msg = apply_result.stderr or "Failed to apply diff"
+                # DEBUG: Log first 500 chars of diff to diagnose corrupt patch
+                logger.debug("Diff preview (first 500 chars) for %s: %s", task_id, diff_text[:500] if diff_text else "EMPTY")
                 # Check for stale patch - target repo has changed since diff was generated
                 # "patch does not apply" means the diff is outdated, not corrupt
                 is_stale_patch = "patch does not apply" in error_msg.lower() or "does not exist in index" in error_msg.lower() or "corrupt patch" in error_msg.lower()
@@ -616,6 +641,9 @@ class CodexCloudAPI:
                         logger.info("Retry succeeded for %s", task_id)
                     else:
                         error_msg = apply_result.stderr or "Failed to apply diff (retry)"
+                        # DEBUG: Log diff preview on retry failure too
+                        logger.debug("Retry diff preview (first 500 chars) for %s: %s", task_id, diff_text[:500] if diff_text else "EMPTY")
+                        logger.debug("Retry stderr for %s: %s", task_id, error_msg)
                         is_stale_patch = is_stale_patch or ("patch does not apply" in error_msg.lower())
                 if apply_result.returncode != 0:
                     logger.warning("Failed to apply diff for %s: %s", task_id, error_msg)
@@ -654,9 +682,11 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
             # Git push - use force to handle cases where remote branch already exists
             # (e.g., from previous failed runs where push succeeded but PR creation failed)
             if remote_branch_exists:
+                # Use HEAD:{branch} for existing branch
                 push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
             else:
-                push_cmd = ["git", "-C", worktree_str, "push", "--force", "-u", "origin", f"HEAD:{branch}"]
+                # Worktree stays detached for scratch safety; push detached HEAD explicitly.
+                push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force", f"HEAD:{branch}"]
             subprocess.run(
                 push_cmd,
                 capture_output=True,
@@ -852,6 +882,10 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
 
             # Get diff
             diff_text = self.get_diff(task_id, attempt=attempt)
+            # FIX: Codex Cloud diff may not end with newline, causing "corrupt patch" error
+            # Ensure diff ends with newline before applying
+            if diff_text and not diff_text.endswith("\n"):
+                diff_text = diff_text + "\n"
             if not diff_text or "No diff available" in diff_text:
                 return {
                     "success": False,
@@ -859,31 +893,72 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                     "task_id": task_id,
                 }
 
+            checked_out_detached = False
             if updated_existing:
                 # Fetch and checkout existing branch
-                subprocess.run(
-                    ["git", "-C", worktree_str, "fetch", "origin", branch],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                    timeout=self.timeout,
-                )
-                self._checkout_detached_target(worktree_str, f"origin/{branch}")
-            else:
-                # Check if branch already exists on remote (from previous failed run)
-                remote_exists = self._remote_branch_exists(worktree_str, branch)
-                if remote_exists:
-                    # Fetch and update existing branch
+                try:
                     subprocess.run(
-                        ["git", "-C", worktree_str, "fetch", "origin", branch],
+                        [
+                            "git",
+                            "-C",
+                            worktree_str,
+                            "fetch",
+                            "origin",
+                            f"+{branch}:refs/remotes/origin/{branch}",
+                        ],
                         capture_output=True,
                         text=True,
                         check=True,
                         timeout=self.timeout,
                     )
                     self._checkout_detached_target(worktree_str, f"origin/{branch}")
+                    checked_out_detached = True
+                except subprocess.CalledProcessError as e:
+                    error_msg = (e.stderr or str(e)).strip()
+                    logger.error(
+                        "Failed to fetch existing PR branch %s for task %s: %s",
+                        branch,
+                        task_id,
+                        error_msg,
+                    )
+                    return {
+                        "success": False,
+                        "error": f"Failed to update existing PR branch {branch}: {error_msg}",
+                        "task_id": task_id,
+                    }
+            else:
+                # Check if branch already exists on remote (from previous failed run)
+                remote_exists = self._remote_branch_exists(worktree_str, branch)
+                if remote_exists:
+                    # Fetch and update existing branch
+                    try:
+                        subprocess.run(
+                            [
+                                "git",
+                                "-C",
+                                worktree_str,
+                                "fetch",
+                                "origin",
+                                f"+{branch}:refs/remotes/origin/{branch}",
+                            ],
+                            capture_output=True,
+                            text=True,
+                            check=True,
+                            timeout=self.timeout,
+                        )
+                        self._checkout_detached_target(worktree_str, f"origin/{branch}")
+                        checked_out_detached = True
+                    except Exception as e:
+                        # Branch may have been deleted or force-pushed after _remote_branch_exists check
+                        # Fall back to treating as new branch
+                        logger.warning("Failed to checkout existing branch %s: %s", branch, e)
+                        logger.info("Falling back to new branch for task %s", task_id)
+                        normalized_base = base_branch[7:] if base_branch.startswith("origin/") else base_branch
+                        self._checkout_branch_at_target(worktree_str, branch, f"origin/{normalized_base}")
+                        checked_out_detached = False
                 else:
                     self._checkout_branch_at_target(worktree_str, branch, base_branch)
+                    checked_out_detached = False
 
             # Apply diff with 3-way merge (creates conflict markers if needed)
             apply_result = subprocess.run(
@@ -1016,17 +1091,40 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                         "error": f"nothing to commit: {status_result.stdout[:200]}",
                         "task_id": task_id,
                     }
+                # Any other commit failure should not fall through to push
+                error_msg = (commit_result.stderr or commit_result.stdout or "git commit failed").strip()
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "task_id": task_id,
+                }
             else:
                 logger.info("Committed changes for %s", task_id)
 
-            # Push branch - use force to handle existing branches from previous runs
+            # Push branch - use force-with-lease for safety (not --force which negates it)
             # Use HEAD:{branch} when in detached HEAD mode (remote_exists but no local branch)
-            push_cmd = ["git", "-C", worktree_str, "push", "--force", "origin"]
-            if updated_existing or remote_exists:
-                # Use HEAD:{branch} for detached HEAD mode or existing branch
-                push_cmd.extend(["--force-with-lease", f"HEAD:{branch}"])
+            # But first verify the branch exists on remote to avoid "not a full refname" error
+            try:
+                branch_on_remote = self._remote_branch_exists(worktree_str, branch)
+            except Exception:
+                branch_on_remote = False  # If we can't check, assume new branch
+
+            if branch_on_remote:
+                if updated_existing:
+                    # Updating known existing PR/branch: keep lease protection.
+                    push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
+                else:
+                    # We fell back to treating this as a new branch but remote may still
+                    # exist; lease checks can be stale in that path, so force-update.
+                    push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force", f"HEAD:{branch}"]
             else:
-                push_cmd.extend(["-u", branch])
+                if checked_out_detached:
+                    # Existing branch may have disappeared after checkout; detached HEAD cannot
+                    # push local branch names, so push explicit HEAD ref.
+                    push_cmd = ["git", "-C", worktree_str, "push", "origin", f"HEAD:{branch}"]
+                else:
+                    # Use -u for new local branch
+                    push_cmd = ["git", "-C", worktree_str, "push", "-u", "origin", branch]
 
             subprocess.run(
                 push_cmd,

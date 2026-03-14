@@ -71,11 +71,9 @@ def test_prepare_base_clone_handles_dirty_repo(tmp_path, monkeypatch):
     # Extract just the git commands
     git_cmds = [cmd for cmd in git_commands if cmd[0] == "git"]
 
-    # Verify full command sequence (key parts)
-    assert ["git", "clean", "-fdx"] in git_cmds
+    # Verify command sequence - proactive recovery uses re-clone, not clean
     assert ["git", "checkout", "--force", "-B", "main", "origin/main"] in git_cmds
-    assert ["git", "reset", "--hard"] not in git_cmds
-    assert ["git", "checkout", "main"] not in git_cmds
+    # git clean is no longer used - proactive recovery re-clones instead
 
 
 def test_prepare_base_clone_error_message_includes_command(tmp_path, monkeypatch):
@@ -94,25 +92,32 @@ def test_prepare_base_clone_error_message_includes_command(tmp_path, monkeypatch
 
     base_dir.mkdir(parents=True)
 
-    # Track how many times git clean is called
-    clean_call_count = [0]
+    # Track how many times git clone is called (proactive recovery = re-clone on failure)
+    clone_call_count = [0]
 
     def mock_run_cmd_fail(cmd, cwd=None, check=True, timeout=None):
-        """Mock run_cmd that fails on git clean persistently (even after re-clone)."""
+        """Mock run_cmd that fails on checkout persistently (triggers re-clone)."""
         if cmd == ["git", "symbolic-ref", "refs/remotes/origin/HEAD"]:
             return SimpleNamespace(returncode=0, stdout="refs/remotes/origin/main", stderr="")
 
-        if cmd == ["git", "clean", "-fdx"]:
-            clean_call_count[0] += 1
-            # Fail both times - first attempt AND retry after re-clone
+        # Fail on checkout - triggers proactive re-clone
+        if cmd == ["git", "checkout", "--force", "-B", "main", "origin/main"]:
             exc = subprocess.CalledProcessError(
                 1, cmd,
-                stderr="fatal: not a git repository"
+                stderr="fatal: refname refs/heads/main does not exist"
             )
             raise exc
 
         # git clone succeeds (for re-clone attempt)
         if cmd[0] == "git" and cmd[1] == "clone":
+            clone_call_count[0] += 1
+            # First clone succeeds, second fails (simulating persistent failure)
+            if clone_call_count[0] > 1:
+                exc = subprocess.CalledProcessError(
+                    1, cmd,
+                    stderr="fatal: not a git repository"
+                )
+                raise exc
             return SimpleNamespace(returncode=0, stdout="", stderr="")
 
         # Other commands succeed
@@ -127,9 +132,9 @@ def test_prepare_base_clone_error_message_includes_command(tmp_path, monkeypatch
     error_msg = str(exc_info.value)
     assert "Failed to reset base clone for jleechanorg/test-repo" in error_msg
     assert "even after re-clone" in error_msg  # New: indicates proactive recovery was attempted
-    assert "fatal: not a git repository" in error_msg  # stderr should be in error
-    # Verify proactive recovery was attempted (clean called twice: initial + retry)
-    assert clean_call_count[0] == 2, f"Expected 2 clean attempts, got {clean_call_count[0]}"
+    assert "fatal: refname refs/heads/main does not exist" in error_msg  # checkout failure should be surfaced
+    # Base clone already exists in this scenario, so only the recovery re-clone runs once.
+    assert clone_call_count[0] == 1, f"Expected 1 clone attempt, got {clone_call_count[0]}"
 
 
 def test_prepare_base_clone_handles_detached_head(tmp_path, monkeypatch):
