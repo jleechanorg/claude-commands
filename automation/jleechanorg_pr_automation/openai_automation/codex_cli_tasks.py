@@ -1118,13 +1118,9 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                 branch_on_remote = False  # If we can't check, assume new branch
 
             if branch_on_remote:
-                if updated_existing:
-                    # Updating known existing PR/branch: keep lease protection.
-                    push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
-                else:
-                    # We fell back to treating this as a new branch but remote may still
-                    # exist; use force-with-lease to update safely without blind overwrites.
-                    push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
+                # Branch exists on remote (updated_existing or fell back after checkout failure);
+                # use force-with-lease to update safely without blind overwrites.
+                push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
             else:
                 if checked_out_detached:
                     # Existing branch may have disappeared after checkout; detached HEAD cannot
