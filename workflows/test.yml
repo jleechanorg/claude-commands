@@ -148,10 +148,10 @@ jobs:
         submodules: recursive
         fetch-depth: 1
 
-    - name: Set up Python 3.11
+    - name: Set up Python
       uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
       with:
-        python-version: '3.11'
+        python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
 
     - name: Install dependencies
       run: |
@@ -244,18 +244,18 @@ jobs:
         chmod +x scripts/ci/setup-runner-tool-cache.sh
         ./scripts/ci/setup-runner-tool-cache.sh
 
-    - name: Set up Python 3.11
+    - name: Set up Python
       uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
       with:
-        python-version: '3.11'
+        python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
 
     - name: Resolve Python version for cache keys
       id: python-version
       shell: bash
       run: |
-        PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+        PYTHON=$(command -v python${{ vars.PYTHON_VERSION || '3.12' }} || command -v python3 || command -v python || true)
         if [ -z "$PYTHON" ]; then
-          echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+          echo "::error::No suitable Python interpreter found (tried: python${{ vars.PYTHON_VERSION || '3.12' }}, python3, python)" >&2
           exit 2
         fi
         PYTHON_VERSION=$($PYTHON -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
@@ -302,7 +302,7 @@ jobs:
         export PRECHECK_JSON="${RUNNER_TEMP}/runner_health.json"
         PRECHECK_PYTHON="${{ steps.python-version.outputs.python }}"
         if [ -z "$PRECHECK_PYTHON" ]; then
-          PRECHECK_PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          PRECHECK_PYTHON=$(command -v python${{ vars.PYTHON_VERSION || '3.12' }} || command -v python3 || command -v python || true)
         fi
         if [ -z "$PRECHECK_PYTHON" ]; then
           PRECHECK_PYTHON=python
@@ -315,7 +315,7 @@ jobs:
           PRECHECK_EXIT=$?
           PRECHECK_PYTHON="${{ steps.python-version.outputs.python }}"
           if [ -z "$PRECHECK_PYTHON" ] || [ ! -x "$PRECHECK_PYTHON" ]; then
-            PRECHECK_PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+            PRECHECK_PYTHON=$(command -v python${{ vars.PYTHON_VERSION || '3.12' }} || command -v python3 || command -v python || true)
           fi
           if [ -z "$PRECHECK_PYTHON" ]; then
             PRECHECK_CLASS="preflight_parse_failed"
@@ -400,11 +400,10 @@ jobs:
 
         PYTHON="${{ steps.python-version.outputs.python }}"
         if [ -z "$PYTHON" ]; then
-          # Prefer python3.11 to match project target; fall back to python3 then python.
-          PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          PYTHON=$(command -v python${{ vars.PYTHON_VERSION || '3.12' }} || command -v python3 || command -v python || true)
         fi
         if [ -z "$PYTHON" ]; then
-          echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+          echo "::error::No suitable Python interpreter found (tried: python${{ vars.PYTHON_VERSION || '3.12' }}, python3, python)" >&2
           exit 2
         fi
         echo "Using $PYTHON ($($PYTHON --version))"
@@ -778,10 +777,10 @@ jobs:
         with:
           fetch-depth: 0  # Full history needed for git diff (delta coverage)
 
-      - name: Set up Python 3.11
+      - name: Set up Python
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
         with:
-          python-version: '3.11'
+          python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
 
       - name: Download coverage data
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8

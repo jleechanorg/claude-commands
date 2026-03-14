@@ -95,7 +95,7 @@ jobs:
     env:
       GCP_REGION: us-central1
       GCP_PROJECT: $GCP_PROJECT_ID
-      PYTHON_VERSION: '3.11'
+      PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.12' }}
       TESTING: true
       FLASK_ENV: testing
       TEST_MODE: mock
@@ -375,6 +375,7 @@ jobs:
     name: MCP Smoke Tests [Preview E2E]
     if: (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/smoke') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       GCP_REGION: us-central1
       GCP_PROJECT: $GCP_PROJECT_ID
@@ -443,7 +444,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
         with:
-          python-version: '3.11'
+          python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
 
       - name: Install smoke test dependencies
         run: |
@@ -552,7 +553,7 @@ jobs:
       - name: Run MCP smoke tests
         if: steps.service_url.outputs.deployed == 'true'
         id: smoke_tests
-        timeout-minutes: 25  # Extended for real mode: 3 providers x ~8min each
+        timeout-minutes: 10  # Aligned with 10-minute policy
         uses: ./.github/actions/run-mcp-smoke-tests
         with:
           server_url: ${{ steps.service_url.outputs.service_url }}
