@@ -33,6 +33,7 @@ jobs:
   ping-coderabbit:
     if: github.event.repository.fork == false
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Comment on matching open PR
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7.1.0

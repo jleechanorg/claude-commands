@@ -22,7 +22,7 @@ export WORKSPACE_PATH=/path/to/your/ralph-workspace
 In a NEW tmux session, run:
 ```bash
 # Launch Ralph with minimax in tmux
-tmux new-session -d -s ralph-bench-minimax 'cd $WORKSPACE_PATH && claudem -p --dangerously-skip-permissions -p "Run the following task: Execute /loop 10 /e ralph_iteration. This runs Ralph iteration command which should generate the Amazon clone benchmark until it passes."'
+tmux new-session -d -s ralph-bench-minimax 'cd $WORKSPACE_PATH && claudem --dangerously-skip-permissions -p "Run the following task: Execute /loop 10 /e ralph_iteration. This runs Ralph iteration command which should generate the Amazon clone benchmark until it passes."'
 ```
 
 Wait 3 seconds, then check if it started:
@@ -35,7 +35,7 @@ tmux list-sessions | grep ralph-bench
 In ANOTHER NEW tmux session, run:
 ```bash
 # Launch Ralph-Pair with minimax in tmux
-tmux new-session -d -s ralph-pair-bench-minimax 'cd $WORKSPACE_PATH && claudem -p --dangerously-skip-permissions -p "Run the following task: Execute /loop 10 /e ralph_pair_iteration. This runs Ralph-Pair iteration command which should generate the Amazon clone benchmark with verification until it passes."'
+tmux new-session -d -s ralph-pair-bench-minimax 'cd $WORKSPACE_PATH && claudem --dangerously-skip-permissions -p "Run the following task: Execute /loop 10 /e ralph_pair_iteration. This runs Ralph-Pair iteration command which should generate the Amazon clone benchmark with verification until it passes."'
 ```
 
 Wait 3 seconds, then check if it started:

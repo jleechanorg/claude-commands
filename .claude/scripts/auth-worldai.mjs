@@ -22,7 +22,7 @@ const mainScript = join(__dirname, 'auth-cli.mjs');
 const firebaseApiKey = process.env.WORLDAI_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
 
 if (!firebaseApiKey) {
-  console.error('❌ FIREBASE_API_KEY or WORLDAI_FIREBASE_API_KEY must be set for Your Project');
+  console.error('❌ FIREBASE_API_KEY or WORLDAI_FIREBASE_API_KEY must be set for World Architecture AI');
   process.exit(1);
 }
 

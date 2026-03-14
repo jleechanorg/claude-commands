@@ -928,7 +928,10 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                     }
             else:
                 # Check if branch already exists on remote (from previous failed run)
-                remote_exists = self._remote_branch_exists(worktree_str, branch)
+                try:
+                    remote_exists = self._remote_branch_exists(worktree_str, branch)
+                except Exception:
+                    remote_exists = False  # Treat as new branch on transient failure
                 if remote_exists:
                     # Fetch and update existing branch
                     try:

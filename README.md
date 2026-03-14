@@ -238,7 +238,7 @@ For complete version history, see [Version History Archive](#version-history-arc
 <details>
 <summary>Click to expand complete version history</summary>
 
-### v1.1.0 (2025-12-30)
+### v1.1.0 (2025-12-30, initial release snapshot)
 - 195 Commands, 43 Hooks, 19 Scripts, 33 Skills
 - Script allowlist expansion for development tools
 - Enhanced export utility coverage

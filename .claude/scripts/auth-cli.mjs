@@ -37,6 +37,7 @@ const DEFAULT_PROJECT = {
 
 // Known project configurations for convenience
 const KNOWN_PROJECTS = {
+  'ai-universe': DEFAULT_PROJECT,
   'ai-universe-b3551': DEFAULT_PROJECT,
   'worldarchitecture-ai': {
     id: 'worldarchitecture-ai',
@@ -257,12 +258,9 @@ async function refreshIdToken(refreshToken) {
     const response = await fetch(`${REFRESH_TOKEN_URL}?key=${CONFIG.firebaseConfig.apiKey}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: JSON.stringify({
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken
-      })
+      body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`
     });
 
     if (!response.ok) {

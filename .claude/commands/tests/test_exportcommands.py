@@ -803,7 +803,7 @@ class TestExportScriptIntegrity(unittest.TestCase):
         path = os.path.join(self.claude_scripts, 'auth-cli.mjs')
         self.assertTrue(
             os.path.isfile(path),
-            f"Missing .claude/scripts/auth-cli.mjs — required by secondo-cli.sh and /secondo"
+            "Missing .claude/scripts/auth-cli.mjs — required by secondo-cli.sh and /secondo"
         )
 
     def test_secondo_cli_sh_present_in_claude_scripts(self):
@@ -811,7 +811,7 @@ class TestExportScriptIntegrity(unittest.TestCase):
         path = os.path.join(self.claude_scripts, 'secondo-cli.sh')
         self.assertTrue(
             os.path.isfile(path),
-            f"Missing .claude/scripts/secondo-cli.sh — required by /secondo command"
+            "Missing .claude/scripts/secondo-cli.sh — required by /secondo command"
         )
 
     def test_claude_scripts_mjs_files_are_exported(self):

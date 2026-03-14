@@ -69,7 +69,7 @@ if [ -n "${CLAUDE_SESSION_ID:-}" ]; then
     esac
 else
     # Non-Claude CLI: use shell script for everything
-    bash ralph/ralph-pair.sh "$@"
+    bash ~/ralph/ralph-pair.sh "$@"
 fi
 ```
 
