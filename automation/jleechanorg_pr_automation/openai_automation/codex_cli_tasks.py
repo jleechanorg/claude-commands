@@ -571,7 +571,10 @@ class CodexCloudAPI:
             worktree_str = str(worktree_path)
 
             # Check if branch exists remotely first to handle rerun scenarios
-            remote_branch_exists = self._remote_branch_exists(worktree_str, branch)
+            try:
+                remote_branch_exists = self._remote_branch_exists(worktree_str, branch)
+            except Exception:
+                remote_branch_exists = False  # Treat as new branch on transient failure
 
             if remote_branch_exists:
                 # Remote branch exists, fetch and operate from detached remote HEAD.
