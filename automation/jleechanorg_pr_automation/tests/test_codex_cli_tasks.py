@@ -770,6 +770,10 @@ index 1234567..abcdefg 100644
         self.assertFalse(result["has_conflicts"])
         self.assertFalse(result["updated_existing"])
         self.assertEqual(mock_run.call_count, 16)
+        # Verify worktree cleanup was the final subprocess call
+        last_call_args = mock_run.call_args_list[-1].args[0]
+        self.assertIn("worktree", last_call_args)
+        self.assertIn("remove", last_call_args)
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
@@ -906,6 +910,11 @@ index 1234567..abcdefg 100644
             any(cmd[0] == "gh" and "create" in cmd for cmd in commands),
             commands,
         )
+        # Verify worktree cleanup ran even on the fetch-failure path
+        self.assertTrue(
+            any("worktree" in cmd and "remove" in cmd for cmd in commands),
+            f"Expected worktree remove in cleanup commands, got: {commands}",
+        )
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
@@ -947,6 +956,10 @@ index 1234567..abcdefg 100644
         self.assertFalse(result["updated_existing"])
         self.assertEqual(result["pr_url"], "https://github.com/org/repo/pull/456")
         self.assertEqual(mock_run.call_count, 18)
+        # Verify worktree cleanup was the final subprocess call
+        last_call_args = mock_run.call_args_list[-1].args[0]
+        self.assertIn("worktree", last_call_args)
+        self.assertIn("remove", last_call_args)
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")

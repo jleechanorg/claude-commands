@@ -53,7 +53,7 @@ Do not print full JSONL lines.
 ### 4) Find matching Codex rollout sessions for cwd
 
 ```bash
-python3 - <<'PY'
+python3 - <<PY
 from pathlib import Path
 cwd = "$PWD"
 files = []
