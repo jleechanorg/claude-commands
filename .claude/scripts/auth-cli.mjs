@@ -7,11 +7,11 @@
  * Pattern used by: gcloud CLI, Firebase CLI, GitHub CLI
  *
  * Usage:
- *   node scripts/auth-cli.mjs login                    # Login to ai-universe (default)
- *   node scripts/auth-cli.mjs login --project custom   # Login to custom project
- *   node scripts/auth-cli.mjs logout
- *   node scripts/auth-cli.mjs status
- *   node scripts/auth-cli.mjs token
+ *   node .claude/scripts/auth-cli.mjs login                    # Login to ai-universe (default)
+ *   node .claude/scripts/auth-cli.mjs login --project custom   # Login to custom project
+ *   node .claude/scripts/auth-cli.mjs logout
+ *   node .claude/scripts/auth-cli.mjs status
+ *   node .claude/scripts/auth-cli.mjs token
  */
 
 import express from 'express';
@@ -131,7 +131,7 @@ function validateConfig() {
   if (missingEnvVars.length > 0) {
     console.error(`❌ Firebase configuration missing for ${ACTIVE_PROJECT.name}.`);
     if (ACTIVE_PROJECT.id === 'ai-universe-b3551') {
-      console.error('   Please run: ./scripts/setup-firebase-config.sh');
+      console.error('   Set environment variable: VITE_AI_UNIVERSE_FIREBASE_API_KEY=<your-api-key>');
       console.error('');
     }
     console.error('Or set environment variables:');
@@ -233,14 +233,14 @@ function validateTokenProject(idToken, context) {
   if (aud !== EXPECTED_FIREBASE_PROJECT_ID) {
     throw new Error(
       `[${context}] Token project mismatch: expected "${EXPECTED_FIREBASE_PROJECT_ID}", received "${aud || 'unknown'}". ` +
-      `Run \`node scripts/auth-cli.mjs login --project ${ACTIVE_PROJECT.id}\` for ${ACTIVE_PROJECT.name}.`
+      `Run \`node .claude/scripts/auth-cli.mjs login --project ${ACTIVE_PROJECT.id}\` for ${ACTIVE_PROJECT.name}.`
     );
   }
 
   if (!iss || !iss.endsWith(`/${EXPECTED_FIREBASE_PROJECT_ID}`)) {
     throw new Error(
       `[${context}] Token issuer mismatch: expected Firebase issuer for "${EXPECTED_FIREBASE_PROJECT_ID}", got "${iss || 'unknown'}". ` +
-      `Run \`node scripts/auth-cli.mjs login --project ${ACTIVE_PROJECT.id}\` for ${ACTIVE_PROJECT.name}.`
+      `Run \`node .claude/scripts/auth-cli.mjs login --project ${ACTIVE_PROJECT.id}\` for ${ACTIVE_PROJECT.name}.`
     );
   }
 
@@ -291,7 +291,7 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
     if (returnNullIfMissing) {
       return { tokenData: null, expiresAt: null, now: new Date(), expired: false };
     }
-    throw new Error('Not authenticated. Run: node scripts/auth-cli.mjs login');
+    throw new Error('Not authenticated. Run: node .claude/scripts/auth-cli.mjs login');
   }
 
   let rawToken;
@@ -350,7 +350,7 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
   }
 
   if (expired && !allowExpired) {
-    throw new Error('Token expired. Run: node scripts/auth-cli.mjs login');
+    throw new Error('Token expired. Run: node .claude/scripts/auth-cli.mjs login');
   }
 
   return { tokenData, expiresAt, now, expired };
@@ -607,7 +607,7 @@ async function refresh() {
     console.log(`   New expiration: ${new Date(tokenData.expiresAt).toLocaleString()}\n`);
   } catch (error) {
     console.error('❌ Refresh failed:', error.message);
-    console.error('   Please run: node scripts/auth-cli.mjs login');
+    console.error('   Please run: node .claude/scripts/auth-cli.mjs login');
     process.exit(1);
   }
 }
@@ -620,7 +620,7 @@ async function status() {
     const { tokenData, expiresAt, expired } = await readTokenData({ allowExpired: true, returnNullIfMissing: true });
 
     if (!tokenData) {
-      console.log('❌ Not authenticated. Run: node scripts/auth-cli.mjs login');
+      console.log('❌ Not authenticated. Run: node .claude/scripts/auth-cli.mjs login');
       process.exit(1);
     }
 
@@ -633,7 +633,7 @@ async function status() {
     console.log(`   Status: ${expired ? '❌ EXPIRED' : '✅ VALID'}\n`);
 
     if (expired) {
-      console.log('⚠️  Token expired. Run: node scripts/auth-cli.mjs login');
+      console.log('⚠️  Token expired. Run: node .claude/scripts/auth-cli.mjs login');
       process.exit(1);
     }
   } catch (error) {
@@ -755,7 +755,7 @@ switch (command) {
 AI Universe CLI Authentication Tool
 
 Usage:
-  node scripts/auth-cli.mjs <command> [--project <project-id>]
+  node .claude/scripts/auth-cli.mjs <command> [--project <project-id>]
 
 Commands:
   login    - Start browser-based authentication flow
@@ -767,7 +767,7 @@ Commands:
 
 Options:
   --project, -p <id>  - Use a specific Firebase project instead of default
-                        Known projects: ai-universe, worldarchitecture-ai
+                        Known projects: ai-universe-b3551, worldarchitecture-ai
                         Custom project IDs are also supported
 
 Default Project: ai-universe (ai-universe-b3551)
@@ -780,23 +780,23 @@ Token Refresh:
 
 Examples:
   # Authenticate with AI Universe (default)
-  node scripts/auth-cli.mjs login
+  node .claude/scripts/auth-cli.mjs login
 
   # Authenticate with a different project
-  node scripts/auth-cli.mjs login --project worldarchitecture-ai
-  node scripts/auth-cli.mjs login -p my-custom-project
+  node .claude/scripts/auth-cli.mjs login --project worldarchitecture-ai
+  node .claude/scripts/auth-cli.mjs login -p my-custom-project
 
   # Check status
-  node scripts/auth-cli.mjs status
+  node .claude/scripts/auth-cli.mjs status
 
   # Get token (auto-refreshes if expired)
-  TOKEN=$(node scripts/auth-cli.mjs token)
+  TOKEN=$(node .claude/scripts/auth-cli.mjs token)
 
   # Manually refresh token
-  node scripts/auth-cli.mjs refresh
+  node .claude/scripts/auth-cli.mjs refresh
 
   # Use token in HTTPie request
-  TOKEN=$(node scripts/auth-cli.mjs token)
+  TOKEN=$(node .claude/scripts/auth-cli.mjs token)
   echo '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}' | \\
     http POST ${CONFIG.productionMcpUrl} \\
     Accept:'application/json, text/event-stream' \\

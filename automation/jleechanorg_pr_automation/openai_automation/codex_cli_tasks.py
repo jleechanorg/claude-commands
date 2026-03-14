@@ -621,8 +621,8 @@ class CodexCloudAPI:
             )
             if apply_result.returncode != 0:
                 error_msg = apply_result.stderr or "Failed to apply diff"
-                # DEBUG: Log first 500 chars of diff to diagnose corrupt patch
-                logger.debug("Diff preview (first 500 chars) for %s: %s", task_id, diff_text[:500] if diff_text else "EMPTY")
+                # Log diff size only (not content) to avoid leaking repository code into logs
+                logger.debug("Diff size for %s: %d bytes", task_id, len(diff_text) if diff_text else 0)
                 # Check for stale patch - target repo has changed since diff was generated
                 # "patch does not apply" means the diff is outdated, not corrupt
                 is_stale_patch = "patch does not apply" in error_msg.lower() or "does not exist in index" in error_msg.lower() or "corrupt patch" in error_msg.lower()

@@ -101,9 +101,17 @@ if [ -n "${CLAUDE_SESSION_ID:-}" ]; then
     # Claude Code invocation
     case "$COMMAND" in
         run)
-            # Use /loop for iteration
-            MAX_ITERATIONS="${2:-10}"
-            /loop "$MAX_ITERATIONS" /e ralph_iteration "${@:3}"
+            # Use /loop for iteration. Only consume arg 2 when it is numeric.
+            case "${2:-}" in
+                ''|*[!0-9]*)
+                    MAX_ITERATIONS="10"
+                    /loop "$MAX_ITERATIONS" /e ralph_iteration "${@:2}"
+                    ;;
+                *)
+                    MAX_ITERATIONS="$2"
+                    /loop "$MAX_ITERATIONS" /e ralph_iteration "${@:3}"
+                    ;;
+            esac
             ;;
         status|dashboard|help)
             # Use shell script for other commands
