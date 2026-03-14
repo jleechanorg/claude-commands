@@ -414,7 +414,7 @@ count_functional_area "./testing_*/" "Test Infrastructure"
 count_functional_area "./.github/" "CI/CD Config" "both"
 count_functional_area "./roadmap/" "Planning & Roadmap Docs" "docs"
 count_functional_area "./docs/" "Documentation" "docs"
-count_functional_area "./skills/" "Skills & Tooling" "both"
+count_functional_area "./.claude/skills/" "Skills & Tooling" "both"
 
 echo ""
 echo "ℹ️  Exclusions:"

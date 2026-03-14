@@ -32,7 +32,8 @@ const DEFAULT_PROJECT = {
   id: 'ai-universe-b3551',
   authDomain: 'ai-universe-b3551.firebaseapp.com',
   envPrefix: 'VITE_AI_UNIVERSE_FIREBASE',
-  name: 'AI Universe'
+  name: 'AI Universe',
+  mcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp'
 };
 
 // Known project configurations for convenience
@@ -43,7 +44,8 @@ const KNOWN_PROJECTS = {
     id: 'worldarchitecture-ai',
     authDomain: 'worldarchitecture-ai.firebaseapp.com',
     envPrefix: 'VITE_FIREBASE',
-    name: 'World Architecture AI'
+    name: 'World Architecture AI',
+    mcpUrl: 'https://worldarchitecture-ai-backend.onrender.com/mcp'
   }
 };
 
@@ -116,7 +118,7 @@ const CONFIG = {
   callbackPort: 9005,
   callbackPath: '/auth/callback',
   tokenPath: join(homedir(), '.ai-universe', `auth-token-${ACTIVE_PROJECT.id}.json`),
-  productionMcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp',
+  productionMcpUrl: ACTIVE_PROJECT.mcpUrl || 'https://ai-universe-backend-final.onrender.com/mcp',
   activeProject: ACTIVE_PROJECT
 };
 
