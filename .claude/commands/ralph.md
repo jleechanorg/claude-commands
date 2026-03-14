@@ -10,6 +10,26 @@ execution_mode: llm-driven
 Use this command when you need autonomous multi-iteration execution with the
 portable Ralph toolkit. Ralph can target **any repository**.
 
+## Claude Code vs Non-CLI Routing
+
+**Important**: This command detects how it's being invoked and routes accordingly:
+
+- **`run` command**: Uses `/loop` for iteration - Claude handles each iteration directly with full context
+- **Other commands** (`status`, `dashboard`): Falls back to `ralph.sh` script for compatibility
+- **Non-Claude CLI**: Always falls back to `ralph.sh` script
+
+The detection works by checking for `CLAUDE_SESSION_ID` environment variable (set by Claude Code).
+
+### Routing Table
+
+| Command | From Claude Code | From Other CLI |
+|---------|------------------|----------------|
+| `run` | `/loop N /e ralph_iteration` | `ralph.sh run` |
+| `status` | `ralph.sh status` | `ralph.sh status` |
+| `dashboard` | `ralph.sh dashboard` | `ralph.sh dashboard` |
+
+This allows Claude Code to handle iteration loops natively while preserving all other Ralph functionality.
+
 ## Run Ralph against any repository
 
 1. Ensure Ralph toolkit is exported locally (from `/localexportcommands`):
@@ -42,6 +62,23 @@ portable Ralph toolkit. Ralph can target **any repository**.
    ~/ralph/ralph.sh status --watch
    ```
 
+## Claude Code Execution (via /loop)
+
+When invoked from Claude Code, this command uses `/loop` for iteration:
+
+**Default (10 iterations)**:
+```bash
+/loop 10 /e ralph_iteration --workspace /path/to/repo
+```
+
+**With custom tool**:
+```bash
+/loop 10 /e ralph_iteration --workspace /path/to/repo --tool codex
+```
+
+Each iteration reads `prd.json` and `progress.txt`, implements unpassed stories,
+runs quality checks, commits, and updates `passes` status.
+
 ## Optional: run from this repo directly
 
 If you specifically want to run the in-repo copy:
@@ -52,6 +89,43 @@ If you specifically want to run the in-repo copy:
 
 Unlike the portable `~/ralph` workflow, the in-repo copy keeps runtime state with
 that repository's own Ralph directory.
+
+## Routing Logic
+
+```bash
+# Parse the command
+COMMAND="${1:-run}"
+
+# Route based on command and invocation context
+if [ -n "${CLAUDE_SESSION_ID:-}" ]; then
+    # Claude Code invocation
+    case "$COMMAND" in
+        run)
+            # Use /loop for iteration. Only consume arg 2 when it is numeric.
+            case "${2:-}" in
+                ''|*[!0-9]*)
+                    MAX_ITERATIONS="10"
+                    /loop "$MAX_ITERATIONS" /e ralph_iteration "${@:2}"
+                    ;;
+                *)
+                    MAX_ITERATIONS="$2"
+                    /loop "$MAX_ITERATIONS" /e ralph_iteration "${@:3}"
+                    ;;
+            esac
+            ;;
+        status|dashboard|help)
+            # Use shell script for other commands
+            ~/ralph/ralph.sh "$@"
+            ;;
+        *)
+            ~/ralph/ralph.sh "$@"
+            ;;
+    esac
+else
+    # Non-Claude CLI: use shell script for everything
+    ~/ralph/ralph.sh "$@"
+fi
+```
 
 ## Sanity check before handoff
 

@@ -546,8 +546,9 @@ class ClaudeCommandsExporter:
         # MCP helper scripts (required by install_mcp_servers.sh) - must be from scripts/ subdirectory
         mcp_helper_scripts = ["mcp_common.sh", "load_tokens.sh"]
 
-        # Secondo command scripts (multi-model AI feedback system)
-        secondo_scripts = ["auth-cli.mjs", "secondo-cli.sh", "test_secondo_pr.sh"]
+        # Secondo command scripts located in scripts/ root (auth-cli.mjs and secondo-cli.sh
+        # live in .claude/scripts/ and are exported by _export_claude_scripts instead)
+        secondo_scripts = ["test_secondo_pr.sh"]
 
         # GitHub runner setup scripts (from self-hosted/scripts/ top-level directory)
         # Now exported from top-level self-hosted/ directory, not scripts/ subdirectory
@@ -671,7 +672,7 @@ class ClaudeCommandsExporter:
 
         # Export native Claude scripts (.claude/scripts)
         if source_dir.exists():
-            for pattern in ("*.py", "*.sh"):
+            for pattern in ("*.py", "*.sh", "*.mjs"):
                 for file_path in source_dir.glob(pattern):
                     if file_path.name in copied_names:
                         continue

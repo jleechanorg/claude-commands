@@ -5,6 +5,7 @@ Tests the complete export workflow with comprehensive coverage.
 """
 
 import os
+import re
 import sys
 import tempfile
 import shutil
@@ -780,6 +781,98 @@ class TestGenericDirectoryExport(unittest.TestCase):
                 self.assertEqual(args[0], 'rsync')
                 self.assertIn('-av', args)
                 self.assertIn('--exclude=test_exclude/', args)
+
+class TestExportScriptIntegrity(unittest.TestCase):
+    """Verify that every script referenced by export logic exists in the source tree.
+
+    These tests catch the class of bug where export code references a script that
+    was moved, renamed, or never committed - resulting in silent omissions in the
+    exported claude-commands repo.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Locate project root relative to this test file."""
+        cls.project_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..', '..', '..')
+        )
+        cls.scripts_root = os.path.join(cls.project_root, 'scripts')
+        cls.claude_scripts = os.path.join(cls.project_root, '.claude', 'scripts')
+
+    def test_auth_cli_mjs_present_in_claude_scripts(self):
+        """auth-cli.mjs must exist in .claude/scripts/ (source for export)."""
+        path = os.path.join(self.claude_scripts, 'auth-cli.mjs')
+        self.assertTrue(
+            os.path.isfile(path),
+            "Missing .claude/scripts/auth-cli.mjs — required by secondo-cli.sh and /secondo"
+        )
+
+    def test_secondo_cli_sh_present_in_claude_scripts(self):
+        """secondo-cli.sh must exist in .claude/scripts/ (source for export)."""
+        path = os.path.join(self.claude_scripts, 'secondo-cli.sh')
+        self.assertTrue(
+            os.path.isfile(path),
+            "Missing .claude/scripts/secondo-cli.sh — required by /secondo command"
+        )
+
+    def test_claude_scripts_mjs_files_are_exported(self):
+        """_export_claude_scripts must include *.mjs in its glob patterns.
+
+        Regression guard: previously only *.py and *.sh were exported, silently
+        dropping all *.mjs files (auth-cli.mjs, auth-aiuniverse.mjs, etc.).
+        """
+        exporter_path = os.path.join(
+            os.path.dirname(__file__), '..', 'exportcommands.py'
+        )
+        with open(exporter_path) as f:
+            source = f.read()
+
+        # Find the _export_claude_scripts method and verify *.mjs is present
+        # We look for the tuple/sequence of patterns passed to glob
+        self.assertIn('*.mjs', source,
+            "_export_claude_scripts must include '*.mjs' glob pattern; "
+            "auth-cli.mjs and other .mjs files were being silently skipped"
+        )
+
+    def test_secondo_scripts_in_export_scripts_exist_in_scripts_root(self):
+        """Every script listed in secondo_scripts (scripts/ root) must exist there."""
+        # These are the scripts that _export_scripts looks for in scripts/
+        # (auth-cli.mjs and secondo-cli.sh belong to .claude/scripts/ and are
+        #  excluded from this list since #PR that fixed the path mismatch)
+        secondo_scripts_in_root = ["test_secondo_pr.sh"]
+        for script_name in secondo_scripts_in_root:
+            path = os.path.join(self.scripts_root, script_name)
+            self.assertTrue(
+                os.path.isfile(path),
+                f"secondo script listed in _export_scripts not found: scripts/{script_name}"
+            )
+
+    def test_no_mjs_files_in_secondo_scripts_pointing_to_wrong_dir(self):
+        """auth-cli.mjs must NOT be in the secondo_scripts list that looks in scripts/.
+
+        auth-cli.mjs lives in .claude/scripts/, not scripts/.  If it appears in
+        secondo_scripts it will never be found there and will be silently omitted
+        from the export.
+        """
+        exporter_path = os.path.join(
+            os.path.dirname(__file__), '..', 'exportcommands.py'
+        )
+        with open(exporter_path) as f:
+            source = f.read()
+
+        # Find the secondo_scripts assignment line
+        match = re.search(r'secondo_scripts\s*=\s*\[([^\]]*)\]', source)
+        self.assertIsNotNone(match, "Could not find secondo_scripts list in exportcommands.py")
+        list_contents = match.group(1)
+        self.assertNotIn('auth-cli.mjs', list_contents,
+            "auth-cli.mjs must not be in secondo_scripts (lives in .claude/scripts/, "
+            "not scripts/); it is exported by _export_claude_scripts instead"
+        )
+        self.assertNotIn('secondo-cli.sh', list_contents,
+            "secondo-cli.sh must not be in secondo_scripts (lives in .claude/scripts/, "
+            "not scripts/); it is exported by _export_claude_scripts instead"
+        )
+
 
 if __name__ == '__main__':
     # Run tests with verbose output

@@ -353,8 +353,10 @@ fi
 filled=$((pct_num / 10))
 empty=$((10 - filled))
 bar=""
-[ "$filled" -gt 0 ] && bar=$(printf "%${filled}s" | tr ' ' '█')
-[ "$empty"  -gt 0 ] && bar="${bar}$(printf "%${empty}s" | tr ' ' '░')"
+# Keep progress bar ASCII-only for cross-platform safety.
+# GNU tr treats multibyte replacements byte-wise and can emit invalid UTF-8.
+[ "$filled" -gt 0 ] && bar=$(printf "%${filled}s" | tr ' ' '#')
+[ "$empty"  -gt 0 ] && bar="${bar}$(printf "%${empty}s" | tr ' ' '-')"
 ctx_label="${CONTEXT_PCT:----}%"
 echo -e "${bar_color}ctx ${bar} ${ctx_label}\033[0m"
 

@@ -94,3 +94,5 @@ workspace_*/
 # Task outputs
 task_outputs/
 results/
+# Claude Code runtime files
+.claude/scheduled_tasks.lock
