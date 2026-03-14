@@ -893,7 +893,6 @@ index 1234567..abcdefg 100644
             MagicMock(stdout="", stderr="", returncode=0),  # git worktree add
             MagicMock(stdout=diff_text, stderr="", returncode=0),  # codex cloud diff
             subprocess.CalledProcessError(1, "git fetch", stderr="fatal: couldn't find remote ref"),
-            MagicMock(stdout="", stderr="", returncode=0),  # git worktree remove (cleanup)
         ]
 
         api = CodexCloudAPI()
@@ -903,7 +902,8 @@ index 1234567..abcdefg 100644
             "url": "https://chatgpt.com/codex/tasks/task_e_abc123def",
             "summary": {"files_changed": 1, "lines_added": 5, "lines_removed": 1},
         }
-        result = api.create_pr_from_diff(task)
+        with patch("shutil.rmtree") as mock_rmtree:
+            result = api.create_pr_from_diff(task)
 
         self.assertFalse(result["success"])
         self.assertIn("Failed to update existing PR branch", result["error"])
@@ -913,11 +913,8 @@ index 1234567..abcdefg 100644
             any(cmd[0] == "gh" and "create" in cmd for cmd in commands),
             commands,
         )
-        # Verify worktree cleanup ran even on the fetch-failure path
-        self.assertTrue(
-            any("worktree" in cmd and "remove" in cmd for cmd in commands),
-            f"Expected worktree remove in cleanup commands, got: {commands}",
-        )
+        # _cleanup_worktree uses shutil.rmtree (not subprocess) for /tmp/codex_* paths
+        mock_rmtree.assert_called()
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
@@ -947,22 +944,20 @@ index 1234567..abcdefg 100644
             MagicMock(stdout="", stderr="", returncode=0),  # git push
             MagicMock(stdout="https://github.com/org/repo/pull/456\n", stderr="", returncode=0),  # gh pr create
             MagicMock(stdout="", stderr="", returncode=0),  # gh pr comment
-            MagicMock(stdout="", stderr="", returncode=0),  # git worktree remove (cleanup)
         ]
 
         api = CodexCloudAPI()
         task = {"id": "task_e_xyz789", "title": "Test", "url": "https://example.com", "summary": {}}
-        result = api.create_pr_from_diff(task)
+        with patch("shutil.rmtree") as mock_rmtree:
+            result = api.create_pr_from_diff(task)
 
         self.assertTrue(result["success"])
         self.assertTrue(result["has_conflicts"])
         self.assertFalse(result["updated_existing"])
         self.assertEqual(result["pr_url"], "https://github.com/org/repo/pull/456")
         self.assertEqual(mock_run.call_count, 18)
-        # Verify worktree cleanup was the final subprocess call
-        last_call_args = mock_run.call_args_list[-1].args[0]
-        self.assertIn("worktree", last_call_args)
-        self.assertIn("remove", last_call_args)
+        # _cleanup_worktree uses shutil.rmtree (not subprocess) for /tmp/codex_* paths
+        mock_rmtree.assert_called()
 
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
