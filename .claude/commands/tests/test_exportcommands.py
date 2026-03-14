@@ -5,6 +5,7 @@ Tests the complete export workflow with comprehensive coverage.
 """
 
 import os
+import re
 import sys
 import tempfile
 import shutil
@@ -860,7 +861,6 @@ class TestExportScriptIntegrity(unittest.TestCase):
             source = f.read()
 
         # Find the secondo_scripts assignment line
-        import re
         match = re.search(r'secondo_scripts\s*=\s*\[([^\]]*)\]', source)
         self.assertIsNotNone(match, "Could not find secondo_scripts list in exportcommands.py")
         list_contents = match.group(1)
