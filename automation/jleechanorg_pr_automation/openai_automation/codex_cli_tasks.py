@@ -644,8 +644,8 @@ class CodexCloudAPI:
                         logger.info("Retry succeeded for %s", task_id)
                     else:
                         error_msg = apply_result.stderr or "Failed to apply diff (retry)"
-                        # DEBUG: Log diff preview on retry failure too
-                        logger.debug("Retry diff preview (first 500 chars) for %s: %s", task_id, diff_text[:500] if diff_text else "EMPTY")
+                        # Log diff size only (not content) to avoid leaking repository code into logs
+                        logger.debug("Retry diff size for %s: %d bytes", task_id, len(diff_text) if diff_text else 0)
                         logger.debug("Retry stderr for %s: %s", task_id, error_msg)
                         is_stale_patch = is_stale_patch or ("patch does not apply" in error_msg.lower())
                 if apply_result.returncode != 0:

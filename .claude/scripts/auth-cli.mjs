@@ -95,7 +95,8 @@ function getProjectConfig(projectOverride) {
     id: projectOverride,
     authDomain: `${projectOverride}.firebaseapp.com`,
     envPrefix: `VITE_${projectOverride.toUpperCase().replace(/-/g, '_')}_FIREBASE`,
-    name: projectOverride
+    name: projectOverride,
+    mcpUrl: `https://${projectOverride}.onrender.com/mcp`
   };
 }
 
@@ -364,7 +365,7 @@ function getAuthHtml(callbackUrl) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>AI Universe - Sign In</title>
+  <title>${ACTIVE_PROJECT.name} - Sign In</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
            max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
@@ -377,8 +378,8 @@ function getAuthHtml(callbackUrl) {
   </style>
 </head>
 <body>
-  <h1>🚀 AI Universe Authentication</h1>
-  <p>Sign in with your Google account to access the AI Universe MCP server</p>
+  <h1>🚀 ${ACTIVE_PROJECT.name} Authentication</h1>
+  <p>Sign in with your Google account to access the ${ACTIVE_PROJECT.name} MCP server</p>
   <button onclick="signIn()">Sign in with Google</button>
   <div id="status"></div>
 
