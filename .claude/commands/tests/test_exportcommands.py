@@ -820,7 +820,6 @@ class TestExportScriptIntegrity(unittest.TestCase):
         Regression guard: previously only *.py and *.sh were exported, silently
         dropping all *.mjs files (auth-cli.mjs, auth-aiuniverse.mjs, etc.).
         """
-        import ast
         exporter_path = os.path.join(
             os.path.dirname(__file__), '..', 'exportcommands.py'
         )

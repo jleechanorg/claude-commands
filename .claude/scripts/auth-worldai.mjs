@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Your Project Authentication Wrapper
+ * World Architecture AI Authentication Wrapper
  *
  * Usage:
  *   node auth-worldai.mjs login

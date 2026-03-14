@@ -77,17 +77,17 @@ fi
 
 ```bash
 # Default: 10 iterations with claude
-bash ralph/ralph-pair.sh run
+bash ~/ralph/ralph-pair.sh run
 
 # Custom: 3 iterations
-bash ralph/ralph-pair.sh run 3
+bash ~/ralph/ralph-pair.sh run 3
 
 # With a different tool
-bash ralph/ralph-pair.sh run --tool codex
+bash ~/ralph/ralph-pair.sh run --tool codex
 
 # Check status
-bash ralph/ralph-pair.sh status
-bash ralph/ralph-pair.sh status --watch
+bash ~/ralph/ralph-pair.sh status
+bash ~/ralph/ralph-pair.sh status --watch
 ```
 
 ## Claude Code Execution (via /loop)
