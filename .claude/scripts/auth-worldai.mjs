@@ -26,13 +26,13 @@ if (!firebaseApiKey) {
   process.exit(1);
 }
 
-const child = spawn('node', [mainScript, ...args], {
+const child = spawn('node', [mainScript, '--project', 'worldarchitecture-ai', ...args], {
   stdio: 'inherit',
   env: {
     ...process.env,
-    FIREBASE_PROJECT_ID: 'worldarchitecture-ai',
-    FIREBASE_AUTH_DOMAIN: 'worldarchitecture-ai.firebaseapp.com',
-    FIREBASE_API_KEY: firebaseApiKey
+    VITE_FIREBASE_PROJECT_ID: 'worldarchitecture-ai',
+    VITE_FIREBASE_AUTH_DOMAIN: 'worldarchitecture-ai.firebaseapp.com',
+    VITE_FIREBASE_API_KEY: firebaseApiKey
   }
 });
 
