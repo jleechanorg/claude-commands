@@ -1123,8 +1123,8 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                     push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
                 else:
                     # We fell back to treating this as a new branch but remote may still
-                    # exist; lease checks can be stale in that path, so force-update.
-                    push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force", f"HEAD:{branch}"]
+                    # exist; use force-with-lease to update safely without blind overwrites.
+                    push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
             else:
                 if checked_out_detached:
                     # Existing branch may have disappeared after checkout; detached HEAD cannot
