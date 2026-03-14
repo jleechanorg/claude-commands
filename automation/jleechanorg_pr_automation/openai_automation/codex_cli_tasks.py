@@ -679,14 +679,16 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                 timeout=self.timeout,
             )
 
-            # Git push - use force to handle cases where remote branch already exists
-            # (e.g., from previous failed runs where push succeeded but PR creation failed)
+            # Git push - use --force-with-lease when branch already exists (handles reruns
+            # where push succeeded but PR creation failed), and plain push for new branches.
             if remote_branch_exists:
                 # Use HEAD:{branch} for existing branch
                 push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
             else:
                 # Worktree stays detached for scratch safety; push detached HEAD explicitly.
-                push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force", f"HEAD:{branch}"]
+                # Do not use --force here: a plain push will fail if another concurrent runner
+                # already created the same branch, alerting the caller to the race condition.
+                push_cmd = ["git", "-C", worktree_str, "push", "origin", f"HEAD:{branch}"]
             subprocess.run(
                 push_cmd,
                 capture_output=True,
