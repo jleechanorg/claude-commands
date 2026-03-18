@@ -198,6 +198,9 @@ jobs:
             --quiet 2>/dev/null || true
 
           # Deploy to Cloud Run with PR label
+          # RATE_LIMIT_EXEMPT_EMAILS: Exempt smoke-test@example.com (CI identity for
+          # SMOKE_TOKEN auth) so MCP smoke tests bypass rate limits without disabling
+          # limits for all preview traffic or growing Firestore rate_limits docs.
           echo "Deploying to Cloud Run service: $SERVICE_NAME"
           echo "Using memory: $WORLDARCH_MEMORY, timeout: $WORLDARCH_TIMEOUT_SECONDS"
           gcloud run deploy "$SERVICE_NAME" \
@@ -206,7 +209,7 @@ jobs:
             --project="${{ env.GCP_PROJECT }}" \
             --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview,PRODUCTION_MODE=true,SMOKE_TOKEN=$SMOKE_TOKEN" \
+            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview,PRODUCTION_MODE=true,SMOKE_TOKEN=$SMOKE_TOKEN,RATE_LIMIT_EXEMPT_EMAILS=smoke-test@example.com" \
             --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
             --memory="$WORLDARCH_MEMORY" \
             --cpu="$WORLDARCH_CPU" \

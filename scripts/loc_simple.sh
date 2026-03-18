@@ -7,7 +7,7 @@ IFS=$'\n\t'
 # Counts everything: application logic, tests, CI/CD, documentation, observability, internal tooling
 # Excludes: venv/, node_modules/, .git/, __pycache__, tmp/
 
-echo "📊 Lines of Code Count (Comprehensive — Configured Extensions)"
+echo "📊 Lines of Code Count (Comprehensive — All File Types)"
 echo "======================================================="
 
 # Utility to normalize glob scopes used for functional area summaries
@@ -414,11 +414,11 @@ count_functional_area "./testing_*/" "Test Infrastructure"
 count_functional_area "./.github/" "CI/CD Config" "both"
 count_functional_area "./roadmap/" "Planning & Roadmap Docs" "docs"
 count_functional_area "./docs/" "Documentation" "docs"
-count_functional_area "./.claude/skills/" "Skills & Tooling" "both"
+count_functional_area "./skills/" "Skills & Tooling" "both"
 
 echo ""
 echo "ℹ️  Exclusions:"
 echo "  • Virtual environment (venv/)"
 echo "  • Node modules, git files"
 echo "  • __pycache__, tmp/"
-echo "  • All matched configured extensions are counted (app, tests, CI/CD, docs, tooling)"
+echo "  • Everything else is counted (app, tests, CI/CD, docs, tooling)"

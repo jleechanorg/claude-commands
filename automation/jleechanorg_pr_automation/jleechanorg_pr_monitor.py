@@ -9,12 +9,14 @@ posting configurable automation comments with safety limits integration.
 
 import argparse
 import json
+import logging
 import os
 import re
 import shlex
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import traceback
 import urllib.request
@@ -23,6 +25,30 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import requests
+
+logger = logging.getLogger(__name__)
+
+# Global process tracking for thread leak prevention
+_tracked_subprocesses: list[subprocess.Popen] = []
+_tracked_subprocesses_lock = threading.Lock()
+_leaked_process_warning_logged = False
+
+
+def _reap_tracked_subprocesses():
+    """Reap any finished child processes to prevent thread accumulation."""
+    global _tracked_subprocesses
+    with _tracked_subprocesses_lock:
+        _tracked_subprocesses = [p for p in _tracked_subprocesses if p.poll() is None]
+
+
+def _check_thread_safety_valve():
+    """Exit if thread count exceeds safety threshold."""
+    if threading.active_count() > 500:
+        _reap_tracked_subprocesses()
+        post_reap_count = threading.active_count()
+        if post_reap_count > 500:
+            logger.error("THREAD SAFETY VALVE: %d threads exceeding limit of 500, exiting", post_reap_count)
+            sys.exit(1)
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
@@ -1218,7 +1244,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
     ) -> str:
         """Build comment body that requests AI bots (minus Codex) to review PR and ensure comments are addressed"""
 
-        comment_body = f"""@coderabbit-ai @greptileai @bugbot @copilot
+        comment_body = f"""@coderabbitai @greptileai @bugbot @copilot
 
 **Summary (Review Flow):**
 1. Review every outstanding PR comment to understand required fixes and clarifications.
@@ -1895,7 +1921,7 @@ Your response MUST follow this exact structure for clarity:
             agent_cli,
         ]
         try:
-            subprocess.Popen(
+            process = subprocess.Popen(
                 cmd,
                 cwd=str(ROOT_DIR),
                 env=env,
@@ -1903,6 +1929,8 @@ Your response MUST follow this exact structure for clarity:
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
             )
+            with _tracked_subprocesses_lock:
+                _tracked_subprocesses.append(process)
             self.logger.info(
                 "🧭 Started fix-comment review watcher for PR #%s (%s)",
                 pr_number,
@@ -4158,12 +4186,14 @@ def _start_chrome_debug(port: int, user_data_dir: str) -> tuple[bool, str]:
         cmd[0] = str(script_path_resolved)
         cmd.append(str(port))
         try:
-            subprocess.Popen(
+            process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
             )
+            with _tracked_subprocesses_lock:
+                _tracked_subprocesses.append(process)
             return True, f"🚀 Started Chrome via script {script_path_resolved} on port {port}"
         except Exception as exc:
             return False, f"❌ Failed to run CODEX_CDP_START_SCRIPT ({script_path_resolved}): {exc}"
@@ -4193,12 +4223,14 @@ def _start_chrome_debug(port: int, user_data_dir: str) -> tuple[bool, str]:
         "https://chatgpt.com/",
     ]
     try:
-        subprocess.Popen(
+        process = subprocess.Popen(
             command,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
+        with _tracked_subprocesses_lock:
+            _tracked_subprocesses.append(process)
         return True, f"🚀 Started Chrome with CDP on port {port}"
     except Exception as exc:
         return False, f"❌ Failed to start Chrome with CDP: {exc}"
@@ -4508,6 +4540,9 @@ def main():
             if apply_and_push:
                 print(f"\n🔧 Applying and pushing {len(tasks_with_changes[:task_limit])} tasks...")
                 for task in tasks_with_changes[:task_limit]:
+                    # Reap finished processes and check thread safety before each task
+                    _reap_tracked_subprocesses()
+                    _check_thread_safety_valve()
                     print(f"\n  Processing: {task.get('title', '(no title)')}")
                     result = api.apply_and_push(task)
                     if result["success"]:
@@ -4529,6 +4564,9 @@ def main():
                             print("    ⚠️  Skipping unrecoverable task output")
             else:
                 for task in tasks_with_changes[:task_limit]:
+                    # Reap finished processes and check thread safety before each task
+                    _reap_tracked_subprocesses()
+                    _check_thread_safety_valve()
                     summary = task.get("summary", {})
                     print(f"\n  [{task.get('status', '?').upper()}] {task.get('title', '(no title)')}")
                     print(

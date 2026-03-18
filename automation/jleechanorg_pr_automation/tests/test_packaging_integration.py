@@ -76,7 +76,7 @@ class TestPackagingIntegration:
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(jleechanorg_pr_automation.__file__)),
-            env={**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, [os.path.dirname(os.path.dirname(jleechanorg_pr_automation.__file__)), os.environ.get("PYTHONPATH", "")]))},
+            env={**os.environ, "PYTHONPATH": os.path.dirname(os.path.dirname(jleechanorg_pr_automation.__file__))},
             timeout=10,
         )
 

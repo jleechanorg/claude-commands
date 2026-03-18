@@ -152,6 +152,16 @@ class ClaudeCommandsExporter:
                 'exclude_dirs': ['archive'],
                 'exclude_files': ['.last-branch'],
             },
+            'codex_skills': {
+                'source': '.codex/skills',
+                'exclude_dirs': [],
+                'exclude_files': [],
+            },
+            'codex_hooks': {
+                'source': '.codex/hooks',
+                'exclude_dirs': [],
+                'exclude_files': [],
+            },
         }
 
     def _get_project_root(self):
@@ -332,6 +342,11 @@ class ClaudeCommandsExporter:
 
         # Export ralph (PRD-driven autonomous workflow toolkit)
         self._export_ralph(staging_dir)
+
+        # Export Codex skills and hooks
+        self._export_codex_skills(staging_dir)
+        self._export_codex_hooks(staging_dir)
+        self._export_codex_hooks_config(staging_dir)
 
         # Export GitHub Actions workflows (as examples)
         self._export_github_workflows(staging_dir)
@@ -543,8 +558,8 @@ class ClaudeCommandsExporter:
             "push.sh",
         ]
 
-        # MCP helper scripts (required by install_mcp_servers.sh) - must be from scripts/ subdirectory
-        mcp_helper_scripts = ["mcp_common.sh", "load_tokens.sh"]
+        # MCP helper scripts (required by install_mcp_servers.sh) and PR workflow - must be from scripts/ subdirectory
+        mcp_helper_scripts = ["mcp_common.sh", "load_tokens.sh", "check-pr-status.sh"]
 
         # Secondo command scripts located in scripts/ root (auth-cli.mjs and secondo-cli.sh
         # live in .claude/scripts/ and are exported by _export_claude_scripts instead)
@@ -707,6 +722,9 @@ class ClaudeCommandsExporter:
             "mcp_stdio_wrapper.py": [
                 Path(self.project_root) / "scripts" / "mcp_stdio_wrapper.py",
                 Path(self.project_root) / "mcp_stdio_wrapper.py",
+            ],
+            "check-pr-status.sh": [
+                Path(self.project_root) / "scripts" / "check-pr-status.sh",
             ],
         }
 
@@ -886,6 +904,42 @@ Customize the following for your project:
         self._export_directory(
             "ralph", self.EXPORT_DIRECTORIES["ralph"], staging_dir
         )
+
+    def _export_codex_skills(self, staging_dir):
+        """Export Codex CLI skills"""
+        print("📦 Exporting Codex skills...")
+        self._export_directory(
+            "codex_skills", self.EXPORT_DIRECTORIES["codex_skills"], staging_dir
+        )
+
+    def _export_codex_hooks(self, staging_dir):
+        """Export Codex CLI hooks"""
+        print("🪝 Exporting Codex hooks...")
+        self._export_directory(
+            "codex_hooks", self.EXPORT_DIRECTORIES["codex_hooks"], staging_dir
+        )
+        # Set executable permissions on shell scripts
+        codex_hooks_dir = os.path.join(staging_dir, "codex_hooks")
+        if os.path.exists(codex_hooks_dir):
+            for f in os.listdir(codex_hooks_dir):
+                if f.endswith(".sh"):
+                    hook_path = os.path.join(codex_hooks_dir, f)
+                    try:
+                        os.chmod(hook_path, 0o755)
+                    except (OSError, NotImplementedError) as exc:
+                        print(f"⚠️  Warning: Could not set executable bit on {hook_path}: {exc}")
+
+    def _export_codex_hooks_config(self, staging_dir):
+        """Export Codex hooks.json engine config file."""
+        source_file = os.path.join(self.project_root, ".codex", "hooks.json")
+        if not os.path.exists(source_file):
+            print("⚠️  Codex hooks config .codex/hooks.json not found - skipping")
+            return
+
+        target_file = os.path.join(staging_dir, "codex_hooks.json")
+        shutil.copy2(source_file, target_file)
+        self._apply_content_filtering(target_file)
+        print("✅ Exported Codex hooks config (codex_hooks.json)")
 
     def _export_github_workflows(self, staging_dir):
         """Export GitHub Actions workflows with project-specific filtering.

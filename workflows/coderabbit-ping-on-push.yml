@@ -33,7 +33,6 @@ jobs:
   ping-coderabbit:
     if: github.event.repository.fork == false
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - name: Comment on matching open PR
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7.1.0
@@ -63,26 +62,27 @@ jobs:
             }
 
             const body = '@coderabbitai all good?';
-            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+            const cooldownMinutes = 10;
+            const tenMinAgo = new Date(Date.now() - cooldownMinutes * 60 * 1000);
 
             for (const pr of prs) {
-              // Check for recent comments from this workflow to avoid duplicates
+              // Skip only if we posted in the last N minutes (allows new ping per push after cooldown)
               const { data: comments } = await github.rest.issues.listComments({
                 owner,
                 repo,
                 issue_number: pr.number,
                 per_page: 50,
-                since: oneHourAgo.toISOString(),
+                since: tenMinAgo.toISOString(),
               });
 
               const recentComment = comments.find(c =>
-                c.user.type === 'Bot' &&
-                c.body.includes('@coderabbitai all good?') &&
-                new Date(c.created_at) > oneHourAgo
+                c.user.login === 'github-actions[bot]' &&
+                c.body.trim() === body &&
+                new Date(c.created_at) > tenMinAgo
               );
 
               if (recentComment) {
-                core.info(`Skipping PR #${pr.number} - recent ping already exists`);
+                core.info(`Skipping PR #${pr.number} - recent ping in last ${cooldownMinutes} min`);
                 continue;
               }
 

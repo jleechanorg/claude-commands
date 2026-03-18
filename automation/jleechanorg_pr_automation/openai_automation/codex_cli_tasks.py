@@ -5,12 +5,14 @@ Replaces browser-based automation with direct API calls through the
 official OpenAI Codex CLI (authenticated, no Cloudflare).
 """
 
+import atexit
 import json
 import logging
 import re
 import shutil
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -25,6 +27,36 @@ _DEFAULT_CODEX_BIN = "codex"
 
 # Maximum items per page (CLI hard limit is 20).
 _MAX_PAGE_LIMIT = 20
+
+# Rate limiting for worktree operations to prevent worktree storm
+_worktree_last_created = 0
+_WORKTREE_MIN_INTERVAL = 2.0  # seconds between worktree creations
+
+# Track active worktrees for cleanup on process exit
+_active_worktrees: list[tuple[Path, Optional[Path]]] = []
+
+
+def _rate_limit_worktree():
+    """Rate limit worktree creation to prevent worktree storm."""
+    global _worktree_last_created
+    elapsed = time.monotonic() - _worktree_last_created
+    if elapsed < _WORKTREE_MIN_INTERVAL:
+        time.sleep(_WORKTREE_MIN_INTERVAL - elapsed)
+    _worktree_last_created = time.monotonic()
+
+
+def _cleanup_all_worktrees():
+    """Clean up all tracked worktrees on process exit."""
+    for worktree_path, base_repo_path in _active_worktrees:
+        try:
+            if worktree_path.exists():
+                shutil.rmtree(worktree_path, ignore_errors=True)
+        except Exception as exc:
+            logger.warning("Failed to clean up worktree %s: %s", worktree_path, exc)
+
+
+# Register cleanup for worktrees on process exit
+atexit.register(_cleanup_all_worktrees)
 
 
 class CodexCloudAPI:
@@ -139,6 +171,8 @@ class CodexCloudAPI:
         Raises:
             RuntimeError: If worktree creation fails
         """
+        # Rate limit worktree creation to prevent worktree storm
+        _rate_limit_worktree()
 
         # Create worktree directory in /tmp (sanitize branch name for directory)
         safe_branch_name = branch_name.replace("/", "_")
@@ -279,6 +313,8 @@ class CodexCloudAPI:
                 self._prune_stale_worktrees(base_repo_path)
                 self._worktree_add(base_repo_path, worktree_dir, base_branch, force=True)
             logger.info("Created worktree at %s from %s", worktree_dir, base_branch)
+            # Track worktree for cleanup on process exit
+            _active_worktrees.append((worktree_dir, base_repo_path))
             return worktree_dir, base_branch
         except Exception as exc:
             # Clean up on failure
@@ -325,6 +361,8 @@ class CodexCloudAPI:
             # Always attempt filesystem cleanup, even if git worktree remove failed
             if not removed_temp_dir and worktree_path.exists():
                 shutil.rmtree(worktree_path, ignore_errors=True)
+            # Remove from tracking list to prevent unbounded growth
+            _active_worktrees[:] = [(wp, br) for wp, br in _active_worktrees if wp != worktree_path]
             # Best-effort prune - don't let cleanup errors override successful apply/push
             if base_repo_path:
                 try:
@@ -571,10 +609,7 @@ class CodexCloudAPI:
             worktree_str = str(worktree_path)
 
             # Check if branch exists remotely first to handle rerun scenarios
-            try:
-                remote_branch_exists = self._remote_branch_exists(worktree_str, branch)
-            except Exception:
-                remote_branch_exists = False  # Treat as new branch on transient failure
+            remote_branch_exists = self._remote_branch_exists(worktree_str, branch)
 
             if remote_branch_exists:
                 # Remote branch exists, fetch and operate from detached remote HEAD.
@@ -624,8 +659,8 @@ class CodexCloudAPI:
             )
             if apply_result.returncode != 0:
                 error_msg = apply_result.stderr or "Failed to apply diff"
-                # Log diff size only (not content) to avoid leaking repository code into logs
-                logger.debug("Diff size for %s: %d bytes", task_id, len(diff_text) if diff_text else 0)
+                # DEBUG: Log first 500 chars of diff to diagnose corrupt patch
+                logger.debug("Diff preview (first 500 chars) for %s: %s", task_id, diff_text[:500] if diff_text else "EMPTY")
                 # Check for stale patch - target repo has changed since diff was generated
                 # "patch does not apply" means the diff is outdated, not corrupt
                 is_stale_patch = "patch does not apply" in error_msg.lower() or "does not exist in index" in error_msg.lower() or "corrupt patch" in error_msg.lower()
@@ -644,8 +679,8 @@ class CodexCloudAPI:
                         logger.info("Retry succeeded for %s", task_id)
                     else:
                         error_msg = apply_result.stderr or "Failed to apply diff (retry)"
-                        # Log diff size only (not content) to avoid leaking repository code into logs
-                        logger.debug("Retry diff size for %s: %d bytes", task_id, len(diff_text) if diff_text else 0)
+                        # DEBUG: Log diff preview on retry failure too
+                        logger.debug("Retry diff preview (first 500 chars) for %s: %s", task_id, diff_text[:500] if diff_text else "EMPTY")
                         logger.debug("Retry stderr for %s: %s", task_id, error_msg)
                         is_stale_patch = is_stale_patch or ("patch does not apply" in error_msg.lower())
                 if apply_result.returncode != 0:
@@ -682,16 +717,14 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                 timeout=self.timeout,
             )
 
-            # Git push - use --force-with-lease when branch already exists (handles reruns
-            # where push succeeded but PR creation failed), and plain push for new branches.
+            # Git push - use force to handle cases where remote branch already exists
+            # (e.g., from previous failed runs where push succeeded but PR creation failed)
             if remote_branch_exists:
                 # Use HEAD:{branch} for existing branch
                 push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
             else:
                 # Worktree stays detached for scratch safety; push detached HEAD explicitly.
-                # Do not use --force here: a plain push will fail if another concurrent runner
-                # already created the same branch, alerting the caller to the race condition.
-                push_cmd = ["git", "-C", worktree_str, "push", "origin", f"HEAD:{branch}"]
+                push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force", f"HEAD:{branch}"]
             subprocess.run(
                 push_cmd,
                 capture_output=True,
@@ -933,10 +966,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                     }
             else:
                 # Check if branch already exists on remote (from previous failed run)
-                try:
-                    remote_exists = self._remote_branch_exists(worktree_str, branch)
-                except Exception:
-                    remote_exists = False  # Treat as new branch on transient failure
+                remote_exists = self._remote_branch_exists(worktree_str, branch)
                 if remote_exists:
                     # Fetch and update existing branch
                     try:
@@ -1118,9 +1148,13 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                 branch_on_remote = False  # If we can't check, assume new branch
 
             if branch_on_remote:
-                # Branch exists on remote (updated_existing or fell back after checkout failure);
-                # use force-with-lease to update safely without blind overwrites.
-                push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
+                if updated_existing:
+                    # Updating known existing PR/branch: keep lease protection.
+                    push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
+                else:
+                    # We fell back to treating this as a new branch but remote may still
+                    # exist; lease checks can be stale in that path, so force-update.
+                    push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force", f"HEAD:{branch}"]
             else:
                 if checked_out_detached:
                     # Existing branch may have disappeared after checkout; detached HEAD cannot

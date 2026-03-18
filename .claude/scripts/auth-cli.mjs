@@ -402,8 +402,8 @@ function getAuthHtml(callbackUrl) {
         const user = result.user;
         const idToken = await user.getIdToken();
 
-        // Get refresh token (available via stsTokenManager)
-        const refreshToken = user.stsTokenManager?.refreshToken || user.refreshToken;
+        // Get refresh token using the documented public Firebase SDK property
+        const refreshToken = user.refreshToken;
 
         // Send token back to CLI server
         const response = await fetch('${callbackUrl}', {
@@ -753,7 +753,7 @@ switch (command) {
     break;
   default:
     console.log(`
-AI Universe CLI Authentication Tool
+${ACTIVE_PROJECT.name} CLI Authentication Tool
 
 Usage:
   node .claude/scripts/auth-cli.mjs <command> [--project <project-id>]

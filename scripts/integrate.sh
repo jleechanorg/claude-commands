@@ -485,11 +485,22 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
     fi
 fi
 
+# Detect if main is checked out in a worktree (can't checkout in primary repo)
+MAIN_IN_WORKTREE=false
+if git worktree list --porcelain 2>/dev/null | grep -q "^branch refs/heads/main$"; then
+    MAIN_IN_WORKTREE=true
+    worktree_path=$(git worktree list --porcelain 2>/dev/null | grep -B2 "^branch refs/heads/main$" | grep "^worktree " | awk '{print $2}')
+    echo -e "${YELLOW}⚠️  'main' is checked out in worktree: $worktree_path${NC}"
+    echo -e "${YELLOW}   Skipping checkout — will use origin/main as branch base instead.${NC}"
+fi
+
 echo -e "\n${GREEN}1. Switching to main branch...${NC}"
 checkout_err_file="$(mktemp -t integrate_checkout_err.XXXXXX)"
 force_mode_checkout_restored=false
 force_mode_checkout_message=""
-if ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout main 2>"$checkout_err_file"; then
+if [ "$MAIN_IN_WORKTREE" = true ]; then
+    echo "   (Skipped: main is checked out in a worktree)"
+elif ! git -c core.hooksPath="$GIT_HOOKS_PATH" checkout main 2>"$checkout_err_file"; then
     if [ "$FORCE_MODE" = true ]; then
         echo -e "${RED}🚨 FORCE MODE: Checkout to main failed, attempting automatic recovery${NC}"
         if ! cleanup_checkout_blockers; then
@@ -652,6 +663,10 @@ check_existing_sync_pr() {
 # Check for existing sync PRs before proceeding
 check_existing_sync_pr
 
+if [ "$MAIN_IN_WORKTREE" = true ]; then
+    echo "   (Skipped: main is in a worktree — new branch will be created from origin/main)"
+else
+
 # Detect relationship between local main and origin/main
 if git merge-base --is-ancestor HEAD origin/main; then
     # Local main is behind origin/main → safe fast-forward
@@ -813,6 +828,8 @@ else
     fi
 fi
 
+fi  # end: if [ "$MAIN_IN_WORKTREE" = false ]
+
 # Check if there are any local branches that haven't been pushed
 echo -e "\n${GREEN}3. Checking for unmerged local branches...${NC}"
 # Fix regex escaping for ahead branch detection and proper main branch filtering
@@ -836,7 +853,11 @@ else
 fi
 
 echo -e "\n${GREEN}5. Creating fresh branch from main...${NC}"
-git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -b "$branch_name"
+if [ "$MAIN_IN_WORKTREE" = true ]; then
+    git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -b "$branch_name" origin/main
+else
+    git -c core.hooksPath="$GIT_HOOKS_PATH" checkout -b "$branch_name"
+fi
 
 # Delete the old branch if it was clean (and not in --new-branch mode)
 if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then

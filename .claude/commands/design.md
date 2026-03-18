@@ -1125,21 +1125,18 @@ For each major design decision, identify and compare:
 - [ ] Solo developer maintainability confirmed
 - [ ] MVP speed priorities addressed
 
-### Integration with Memory MCP (Enhanced with Query Optimization)
+### Integration with Native Memory
 
-**Memory MCP Query Optimization**: Uses universal composition with `/memory search` for improved design pattern discovery:
-- **Smart Search Strategy**: Transform compound design queries into optimized single-word searches
-- **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better design pattern retrieval
-- **Result Merging**: Combine multiple optimized searches for comprehensive design analysis
+**Native Memory Integration**: Uses native memory for improved design pattern discovery:
+- **Smart Search**: Use `memory_search` for design patterns
+- **Enhanced Pattern Discovery**: Use native memory for better design pattern retrieval
+- **Result Integration**: Combine searches for comprehensive design analysis
 
 **Capture Architectural Learnings**:
 ```
-mcp__memory-server__create_entities:
-- Architecture decisions and rationales
-- Design patterns that work/fail for solo MVP
-- Standard tool evaluations and outcomes
-- Performance vs complexity trade-offs
-- Solo developer workflow optimizations
+memory_save("Architecture decision: <desc> Rationale: <desc> Trade-offs: <desc>")
+memory_save("Design pattern: <desc> Outcome: <desc>")
+memory_save("Tool evaluation: <desc> Decision: <desc>")
 ```
 
 **Purpose**: Prevent repeated architectural mistakes and build institutional knowledge for future design decisions.

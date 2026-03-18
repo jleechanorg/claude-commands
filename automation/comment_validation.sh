@@ -11,7 +11,7 @@ if ! flock -n 9; then
 fi
 
 # Comment Validation Mode - Same as PR automation but asks AI bots to review instead of Codex fixing
-# Posts comment asking @coderabbit-ai, @greptileai, bugbot, copilot to review PR and check comments are fixed
+# Posts comment asking @coderabbitai, @greptileai, @bugbot, @copilot to review PR and check comments are fixed
 
 PROCESSED_FILE="/tmp/comment_validation_processed.txt"
 LOG_FILE="/tmp/comment_validation.log"
@@ -262,7 +262,7 @@ post_ai_bot_review_request() {
     # Comment asking AI bots (not Codex) to review
     local comment_body="Please review this PR for bugs, security issues, and ensure all review comments are properly addressed.
 
-@coderabbit-ai @greptileai @bugbot @copilot
+@coderabbitai @greptileai @bugbot @copilot
 
 Please check:
 - Serious bugs and security vulnerabilities

@@ -41,15 +41,12 @@ When defining a new goal, the system:
    - **Output**: Structured goal analysis with success criteria
    - **Benefits**: Direct processing, persistent storage, standardized format
 
-2. **Memory MCP Integration with Query Optimization**: Search and integrate with persistent knowledge using enhanced effectiveness
-   - **Universal Composition**: Use `/memory search` for automatic query optimization and improved goal pattern discovery
-   - **Smart Search Strategy**: Leverage `/memory` command's automatic compound query transformation
-   - **Command**: `/memory search "related goals and patterns"` - Search with built-in optimization
-   - **Command**: `/memory recall "historical goal contexts"` - Retrieve specific goal learnings
-   - **Result Merging**: Automatic through `/memory` command's built-in deduplication and scoring
-   - Extract similar goal patterns and success strategies from enhanced memory retrieval
-   - Identify anti-patterns and failure modes from improved search results
-   - **Performance Enhancement**: Improve goal pattern discovery from ~30% to 70%+ success rate
+2. **Native Memory Integration**: Search and integrate with persistent knowledge
+   - **Universal Usage**: Use `memory_search` for finding related goals and patterns
+   - **Smart Search Strategy**: Use `memory_search` for goal pattern discovery
+   - **Command**: `memory_search("related goals and patterns")` - Search for related goals
+   - **Command**: `memory_save` - Store goal definitions and learnings
+   - Extract similar goal patterns and success strategies from memory
 
 3. **Guidelines Consultation**: **Command**: `/guidelines` - Consult mistake prevention system before goal processing
    - Apply CLAUDE.md rules and constraints to goal definition
@@ -59,16 +56,13 @@ When defining a new goal, the system:
 
 4. **Process Goal Structure**: Parse structured goal specification
 5. **Validate and Enhance**: Verify output and add context-specific enhancements
-6. **Memory Persistence**: Captures goal definition in persistent knowledge graph with machine-readable patterns
-   - **Command**: `mcp__memory-server__create_entities` - Create goal entity with structured metadata
-     - **Entity Type**: `goal_pattern` with template classification and complexity scoring
-     - **Structured Metadata**: Goal type, success criteria count, estimated complexity, template used
-   - **Command**: `mcp__memory-server__create_relations` - Link to related projects, patterns, and contexts
-     - **Pattern Relations**: Links to similar goals, template usage, success/failure patterns
-     - **Context Relations**: PR numbers, project phases, team members, timeline constraints
-   - **Command**: `mcp__memory-server__add_observations` - Store goal definition, criteria, and analysis
-     - **Machine-Readable Format**: JSON structure with goal classification, success predictors, failure modes
-     - **Pattern Recognition**: Template effectiveness, criteria validation rates, convergence indicators
+6. **Memory Persistence**: Captures goal definition in native memory
+   - **Command**: `memory_save` - Save goal with structured metadata
+     - **Content**: Goal type, success criteria count, estimated complexity
+   - **Command**: `memory_search` - Search for related goals and patterns
+     - **Pattern Relations**: Links to similar goals, success/failure patterns
+     - **Context Relations**: PR numbers, project phases, timeline constraints
+   - **Command**: `memory_save` - Store goal definition, criteria, and analysis
 7. **Stores Goal Context**: Saves goal.md file with complete specification (guidelines-compliant structure)
 
 ### Goal Storage Structure
@@ -104,8 +98,8 @@ Auto-generated criteria:
 ### Validation Process
 
 1. **Memory Context Retrieval**: Load relevant validation patterns and historical data
-   - **Command**: `/memory search "validation scenarios and outcomes"` - Find similar patterns with optimization
-   - **Command**: `/memory recall "validation methods and success patterns"` - Retrieve specific validation contexts
+   - **Command**: `memory_search("validation scenarios and outcomes")` - Find similar patterns
+   - **Command**: `memory_search("validation methods and success patterns")` - Retrieve specific validation contexts
    - Apply learned validation strategies from successful goal completions
    - Identify common validation failure points and mitigation strategies
 
@@ -119,10 +113,10 @@ Auto-generated criteria:
 4. **Systematic Validation**: Check each success criterion objectively (per guidelines standards and memory patterns)
 5. **Evidence Collection**: Gather concrete evidence for each validation point (following evidence protocols)
 6. **Status Calculation**: Determine completion percentage and overall status
-7. **Memory Learning**: Capture validation results and patterns in persistent knowledge
-   - **Command**: `mcp__memory-server__add_observations` - Store validation evidence and outcomes
-   - **Command**: `mcp__memory-server__create_relations` - Link validation patterns to goal success/failure
-   - Update goal entity with completion status and validation learnings
+7. **Memory Learning**: Capture validation results and patterns in native memory
+   - **Command**: `memory_save` - Store validation evidence and outcomes
+   - **Command**: `memory_search` - Search for related validation patterns
+   - Update goal with completion status and validation learnings
 8. **Update Progress**: Record validation results and current state (guidelines-compliant documentation)
 
 ### Validation Methods by Criteria Type
@@ -308,13 +302,12 @@ Auto-generated criteria:
 - Progress tracked continuously until completion
 - **Memory Integration**: Active goal linked to persistent knowledge graph
 
-### Goal History with Memory MCP
+### Goal History with Native Memory
 
-- **Memory Persistence**: All goals stored in persistent knowledge graph with rich metadata
-  - **Command**: `mcp__memory-server__create_entities` - Goal entities with completion status and metrics
-  - **Command**: `mcp__memory-server__create_relations` - Relationships between goals, strategies, and outcomes
-  - **Command**: `mcp__memory-server__add_observations` - Detailed success/failure patterns and learnings
-- **Pattern Recognition**: Memory MCP enables cross-goal pattern analysis
+- **Native Memory Persistence**: All goals stored in native memory with rich metadata
+  - **Command**: `memory_save` - Save goal with completion status and metrics
+  - **Command**: `memory_search` - Search for related goals and patterns
+- **Pattern Recognition**: Native memory enables cross-goal pattern analysis
   - Success rate correlation with goal types and complexity
   - Validation method effectiveness across different goal categories
   - Common failure patterns and successful mitigation strategies
