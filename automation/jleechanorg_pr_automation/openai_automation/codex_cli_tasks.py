@@ -724,7 +724,8 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"""
                 push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force-with-lease", f"HEAD:{branch}"]
             else:
                 # Worktree stays detached for scratch safety; push detached HEAD explicitly.
-                push_cmd = ["git", "-C", worktree_str, "push", "origin", "--force", f"HEAD:{branch}"]
+                # Plain push for new branches - will fail if concurrent runner already created branch
+                push_cmd = ["git", "-C", worktree_str, "push", "origin", f"HEAD:{branch}"]
             subprocess.run(
                 push_cmd,
                 capture_output=True,

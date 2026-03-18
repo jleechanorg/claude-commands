@@ -40,7 +40,7 @@ MEM0_CONFIG = {
 
 TOP_K = 6
 SCORE_THRESHOLD = 0.35
-USER_ID = "$USER"
+USER_ID = os.environ.get("USER", "default")
 
 
 def main() -> None:
