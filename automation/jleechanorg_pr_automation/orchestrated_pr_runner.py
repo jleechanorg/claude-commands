@@ -1028,9 +1028,100 @@ def run_fixpr_batch(
     log(f"Completed orchestration dispatch for {processed} PR(s)")
 
 
+def _build_check_pr_task(pr_number: int, repo_full: str, branch: str, workspace_root: str, workspace_name: str) -> str:
+    """Task for check-pr-status loop: fix serious gh comments, optionally /fixpr or /copilot."""
+    return (
+        f"PR UPDATE TASK: Update PR #{pr_number} in {repo_full} (branch {branch}).\n\n"
+        "Primary goal: Fix all serious issues raised in GitHub review comments.\n\n"
+        "Optional escalation:\n"
+        "- If tests are broken or there are merge conflicts: use /fixpr\n"
+        "- If there are more than 5 unresolved comments: use /copilot\n\n"
+        "Work in your git worktree (isolated per PR). "
+        f"Workspace: --workspace-root {workspace_root} --workspace-name {workspace_name}. "
+        "DO NOT wait for additional input—start immediately."
+    )
+
+
+def run_single_pr(
+    repo_full: str,
+    pr_number: int,
+    agent_cli: str = "claude",
+    check_pr_mode: bool = False,
+) -> bool:
+    """Dispatch agent for a single PR. Returns True if dispatched successfully.
+
+    When check_pr_mode=True, uses a lighter task (fix serious gh comments, optional /fixpr or /copilot).
+    Each agent runs in its own git worktree by default.
+    """
+    try:
+        result = subprocess.run(
+            ["gh", "pr", "view", str(pr_number), "-R", repo_full, "--json", "headRefName", "-q", ".headRefName"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        if result.returncode != 0 or not result.stdout or not result.stdout.strip():
+            log(f"Failed to get branch for {repo_full}#{pr_number}: {result.stderr or 'no branch'}")
+            return False
+        branch = result.stdout.strip()
+    except Exception as e:
+        log(f"Error fetching PR branch: {e}")
+        return False
+
+    repo = repo_full.split("/")[-1]
+    pr = {"repo_full": repo_full, "repo": repo, "number": pr_number, "branch": branch}
+    workspace_name = sanitize_workspace_name(branch or f"pr-{pr_number}", pr_number)
+    workspace_root = str(WORKSPACE_ROOT_BASE / repo)
+
+    base_dir = ensure_base_clone(repo_full)
+    with chdir(base_dir):
+        dispatcher = TaskDispatcher()
+        if check_pr_mode:
+            task = _build_check_pr_task(pr_number, repo_full, branch, workspace_root, workspace_name)
+            return bool(
+                dispatch_agent_for_pr_with_task(
+                    dispatcher, pr, task_description=task, agent_cli=agent_cli
+                )
+            )
+        return bool(dispatch_agent_for_pr(dispatcher, pr, agent_cli=agent_cli))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Orchestrated PR batch runner (/fixpr-only)")
     parser.add_argument("--cutoff-hours", type=int, default=DEFAULT_CUTOFF_HOURS, help="Lookback window for PR updates")
     parser.add_argument("--max-prs", type=int, default=DEFAULT_MAX_PRS, help="Maximum PRs to process per run")
+    parser.add_argument(
+        "--pr",
+        metavar="REPO:PR_NUMBER",
+        help="Dispatch for single PR (e.g. jleechanorg/worldarchitect.ai:5965). Skips batch.",
+    )
+    parser.add_argument(
+        "--agent-cli",
+        default="claude",
+        choices=("claude", "cursor", "codex", "gemini", "minimax"),
+        help="Agent CLI to use (default: claude)",
+    )
+    parser.add_argument(
+        "--check-pr",
+        action="store_true",
+        help="Use check-pr task (fix serious gh comments, optional /fixpr or /copilot). Uses worktree per PR.",
+    )
     args = parser.parse_args()
-    run_fixpr_batch(args.cutoff_hours, args.max_prs)
+
+    if args.pr:
+        if ":" not in args.pr:
+            log("--pr must be REPO:PR_NUMBER (e.g. jleechanorg/worldarchitect.ai:5965)")
+            sys.exit(1)
+        repo_full, pr_num_str = args.pr.rsplit(":", 1)
+        try:
+            pr_number = int(pr_num_str)
+        except ValueError:
+            log(f"Invalid PR number: {pr_num_str!r}")
+            sys.exit(1)
+        success = run_single_pr(
+            repo_full, pr_number, agent_cli=args.agent_cli, check_pr_mode=args.check_pr
+        )
+        sys.exit(0 if success else 1)
+
+    run_fixpr_batch(args.cutoff_hours, args.max_prs, agent_cli=args.agent_cli)

@@ -264,20 +264,52 @@ else
         if command -v gh >/dev/null 2>&1; then
             pr_info=""
 
+            # Detect the repo for the tracking remote (handles fork workflows with
+            # non-standard remote names like "jleechanorg")
+            tracking_remote_name=""
+            tracking_repo=""
+            if [ "$remote" != "no upstream" ]; then
+                tracking_remote_name="${remote%%/*}"
+            fi
+            if [ -n "$tracking_remote_name" ]; then
+                tracking_url=$(git remote get-url "$tracking_remote_name" 2>/dev/null)
+                if [ -n "$tracking_url" ]; then
+                    # Use same parser as repo_name to get consistent format (domain/owner/repo)
+                    if [[ "$tracking_url" =~ https?://([^@/]+@)?([^/]+)/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+                        tracking_repo="${BASH_REMATCH[2]}/${BASH_REMATCH[3]}/${BASH_REMATCH[4]%.git}"
+                    elif [[ "$tracking_url" =~ git@([^:]+):([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+                        tracking_repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}/${BASH_REMATCH[3]%.git}"
+                    elif [[ "$tracking_url" =~ /git/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+                        # Local proxy format: http://local_proxy@127.0.0.1:PORT/git/owner/repo
+                        tracking_repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]%.git}"
+                    fi
+                fi
+            fi
+
             # First try to look up by branch name (works for local branches tied to PRs)
             if [ -n "$local_branch" ]; then
                 if [ -n "$repo_name" ]; then
                     pr_info=$(gh_with_timeout 5 pr view --repo "$repo_name" --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
-                else
+                fi
+                # Fallback: try the tracking remote's repo (fork workflow)
+                if [ -z "$pr_info" ] && [ -n "$tracking_repo" ] && [ "$tracking_repo" != "$repo_name" ]; then
+                    pr_info=$(gh_with_timeout 5 pr view --repo "$tracking_repo" --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
+                fi
+                if [ -z "$pr_info" ] && [ -z "$repo_name" ] && [ -z "$tracking_repo" ]; then
                     pr_info=$(gh_with_timeout 5 pr view --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
                 fi
             fi
 
-            # If branch lookup failed, fall back to searching by commit SHA (covers detached HEADs, renamed branches, etc.)
+            # If branch lookup failed, fall back to searching by commit SHA
             if [ -z "$pr_info" ] && [ -n "$current_commit" ]; then
                 if [ -n "$repo_name" ]; then
                     pr_info=$(gh_with_timeout 5 pr list --repo "$repo_name" --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
-                else
+                fi
+                if [ -z "$pr_info" ] && [ -n "$tracking_repo" ] && [ "$tracking_repo" != "$repo_name" ]; then
+                    pr_info=$(gh_with_timeout 5 pr list --repo "$tracking_repo" --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+                fi
+                # Fallback: try without --repo when both repo_name and tracking_repo are empty
+                if [ -z "$pr_info" ] && [ -z "$repo_name" ] && [ -z "$tracking_repo" ]; then
                     pr_info=$(gh_with_timeout 5 pr list --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
                 fi
             fi
@@ -327,15 +359,35 @@ fi
 
 
 
-# Line 1: git info — truncated to terminal width to prevent wrap eating line 2
-short_remote=$(echo "$remote" | sed 's|origin/||;s|upstream/||')
+# Line 1: compact git info — truncate dir to keep branch+PR always visible
 short_pr=$(echo "$pr_text" | sed 's| https://[^ ]*||')
-line1="[Dir: $working_dir | Local: $local_branch$local_status | Remote: $short_remote | PR: $short_pr]"
-cols=$(tput cols 2>/dev/null || echo 120)
-max_len=$((cols - 2))
-if [ ${#line1} -gt "$max_len" ]; then
-    line1="${line1:0:$((max_len - 1))}…"
+
+# Capture tracked upstream for display
+upstream_ref=""
+if [ -n "$local_branch" ]; then
+    upstream_ref=$(git rev-parse --abbrev-ref --symbolic-full-name "$local_branch@{u}" 2>/dev/null)
+    if [ -z "$upstream_ref" ] || [ "$upstream_ref" = "$local_branch@{u}" ]; then
+        upstream_ref=""
+    fi
 fi
+
+cols=$(tput cols 2>/dev/null || echo 120)
+# Account for upstream_ref length in truncation budget
+upstream_len=0
+[ -n "$upstream_ref" ] && upstream_len=$((${#upstream_ref} + 3))  # +3 for " → " prefix
+dir_budget=$(( cols - ${#local_branch} - ${#local_status} - ${#short_pr} - ${upstream_len} - 30 ))
+if [ "$dir_budget" -lt 8 ]; then dir_budget=8; fi
+if [ ${#working_dir} -gt "$dir_budget" ]; then
+    short_dir="${working_dir:0:$((dir_budget - 1))}…"
+else
+    short_dir="$working_dir"
+fi
+
+# Format branch display with upstream tracking
+branch_display="$local_branch$local_status"
+[ -n "$upstream_ref" ] && branch_display="$branch_display → $upstream_ref"
+
+line1="[Dir: $short_dir | Branch: $branch_display | PR: $short_pr]"
 echo -e "\033[1;36m${line1}\033[0m"
 
 # Line 2: context progress bar (always shown; uses ctx% if available, else placeholder)
@@ -363,3 +415,4 @@ echo -e "${bar_color}ctx ${bar} ${ctx_label}\033[0m"
 # Line 3: PR URL (only when a real PR URL exists)
 pr_url=$(echo "$pr_text" | grep -o 'https://[^ ]*' | head -1)
 [ -n "$pr_url" ] && printf '%s\n' "$pr_url"
+exit 0

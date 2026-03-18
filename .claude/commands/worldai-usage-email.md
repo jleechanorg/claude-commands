@@ -1,0 +1,31 @@
+---
+description: WorldAI Usage Email - Send Daily/Weekly Report
+type: executable
+execution_mode: immediate
+---
+
+## EXECUTION INSTRUCTIONS FOR CLAUDE
+
+When this command is invoked, execute the following immediately:
+
+```bash
+EMAIL_PASS=$(grep "EMAIL_PASS=" ~/.bashrc | head -1 | cut -d'"' -f2) && \
+source $HOME/projects/worktree_livingw3/venv/bin/activate && \
+EMAIL_APP_PASSWORD="$EMAIL_PASS" EMAIL_USER="$USER@gmail.com" \
+WORLDAI_DEV_MODE=true GOOGLE_APPLICATION_CREDENTIALS=~/serviceAccountKey.json \
+python3 $HOME/projects/worktree_rlimit4/scripts/daily_campaign_report.py --send-email
+```
+
+If `worktree_livingw3` venv is gone, find another:
+```bash
+find $HOME/projects -name "activate" -path "*/venv/*" | head -5
+```
+Then substitute that path in the `source` command.
+
+## Notes
+
+- **Script**: `scripts/daily_campaign_report.py --send-email`
+- **Password**: `~/.bashrc` → `EMAIL_PASS` (Gmail App Password)
+- **Venv**: Uses `worktree_livingw3/venv` — current worktree has no venv
+- **Output**: Saves to `~/Downloads/campaign-activity-report-YYYY-MM-DD.txt`
+- **Contains**: Last week DAU + Last 4 weeks DAU/WAU + top users + estimated cost

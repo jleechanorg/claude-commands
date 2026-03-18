@@ -13,13 +13,11 @@ execution_mode: immediate
 ### Phase 1: Context Gathering & Memory-Enhanced Validation
 
 **Action Steps:**
-1. **Memory MCP Search with Query Optimization**: Enhanced query memory for architectural patterns using optimization engine
-   - **Query Optimization**: Uses universal composition with `/memory search` for improved architectural pattern discovery
-   - **Smart Search Strategy**: Transform compound architecture queries into optimized single-word searches
-   - **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better architectural insights
-   - **Result Merging**: Combine multiple optimized searches for comprehensive architecture analysis
-   - Search for: architecture decisions, design patterns, performance insights, solo developer patterns
-   - Extract context from enhanced search results for better architectural analysis
+1. **Native Memory Search**: Search native memory for architectural patterns
+   - **Query**: Use `memory_search` for architectural patterns
+   - **Enhanced Search**: Improve pattern discovery through native memory
+   - Search for: architecture decisions, design patterns, performance insights
+   - Extract context from memory for better architectural analysis
    - Log findings: "📚 Found X relevant architectural memories"
 2. **PR Content Validation** (if reviewing a PR/branch):
    - Use `gh api repos/owner/repo/pulls/<PR#>/files --jq '.[].filename'` to get actual PR files
@@ -77,15 +75,15 @@ All four AI perspectives synthesized for MVP shipping priorities:
 6. **Breaking Change Freedom**: Take advantage of MVP flexibility
 7. **Next Feature Readiness**: Will this help or hinder next features?
 
-### Phase 5: Memory MCP Integration (Capture New Learnings)
+### Phase 5: Native Memory Integration (Capture New Learnings)
 
 **Action Steps:**
 Store new architectural insights discovered during review:
-1. **New Decision Capture**: Store key architectural decisions with rationale and trade-offs
+1. **New Decision Capture**: Store key architectural decisions with rationale and trade-offs using `memory_save`
 2. **Pattern Documentation**: Record successful and failed design patterns discovered
 3. **Performance Insights**: Capture performance-related decisions and outcomes
 4. **MVP Lessons**: Document new solo developer learnings and pragmatic approaches
-5. **Relation Building**: Connect new learnings to existing memory patterns from Phase 1
+5. **Search Integration**: Connect new learnings to existing memory patterns using `memory_search`
 
 ### Phase 1: Memory-Enhanced Context & Current State
 
@@ -197,16 +195,16 @@ Store new architectural insights discovered during review:
 
 **MCP Integration**:
 - **Gemini MCP**: `mcp__gemini-cli-mcp__gemini_chat_pro` for alternative perspective analysis
-- **Memory MCP**: `mcp__memory-server__*` for capturing architectural insights and design decisions
+- **Native Memory**: `memory_search` and `memory_save` for capturing architectural insights
 
-**Memory MCP Workflow**:
-1. **Pre-Analysis Memory Search**: Query memory for relevant architectural patterns, decisions, and learnings BEFORE starting review
+**Native Memory Workflow**:
+1. **Pre-Analysis Memory Search**: Query memory for relevant architectural patterns BEFORE starting review
 2. **Context Enhancement**: Integrate found memories into analysis for more informed architectural assessment
 3. **Pattern Recognition**: Identify similar architectural challenges and successful solutions from memory
 4. **Decision History**: Reference previous architectural decisions and their outcomes
 5. **Post-Analysis Capture**: Store new architectural insights, design patterns, and performance learnings
-6. **Relation Building**: Connect new decisions to existing architectural patterns and outcomes
-7. **Entity Types**: `architecture_decision`, `design_pattern`, `performance_insight`, `mvp_tradeoff`, `solo_dev_pattern`
+6. **Search Integration**: Connect new decisions to existing architectural patterns
+7. **Content Types**: `architecture_decision`, `design_pattern`, `performance_insight`, `mvp_tradeoff`, `solo_dev_pattern`
 
 **Output Format**:
 ```
