@@ -87,7 +87,7 @@ class TestCommentValidation(unittest.TestCase):
         self.assertIn(monitor.COMMENT_VALIDATION_MARKER_PREFIX, comment_body)
         self.assertIn(monitor.COMMENT_VALIDATION_MARKER_SUFFIX, comment_body)
         self.assertIn(head_sha, comment_body)
-        self.assertIn("@coderabbit-ai", comment_body)
+        self.assertIn("@coderabbitai", comment_body)
         self.assertIn("@greptileai", comment_body)
         self.assertIn("@bugbot", comment_body)
         self.assertIn("@copilot", comment_body)
