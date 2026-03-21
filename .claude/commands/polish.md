@@ -29,24 +29,36 @@ execution_mode: immediate
 
 ### Loop Algorithm
 
-```
+```text
 for iteration in 1..N:
   1. Run /copilot <PR_NUMBER>   # fetch + triage all comments, fix blocking issues
   2. Run /fixpr <PR_NUMBER>     # fix any remaining inline PR blockers
   3. Run /er                    # check evidence bundle (skip if none present)
-  4. Evaluate 6 green conditions:
-     - gh pr view <PR> --json statusCheckRollup,mergeable,reviewDecision
-     - Check CI: no FAILURE conclusions
-     - Check mergeable: MERGEABLE
-     - Check CodeRabbit: APPROVE/LGTM in latest review
-     - Check Bugbot: NEUTRAL/SUCCESS
-     - Check inline comments: no unresolved Major/Critical
+  4. If changes made → commit + push with /pushl
+  5. Wait for CI to settle (gh run watch or poll statusCheckRollup)
+  6. Evaluate 6 green conditions using GraphQL:
+     # Use GraphQL to get bot-specific reviews and thread resolution
+     gh api graphql -f query='
+       query($owner:String!, $name:String!, $pr:Int!) {
+         repository(owner:$owner, name:$name) {
+           pullRequest(number:$pr) {
+             reviews(last:100) { nodes { author { login } state bodyText } }
+             reviewThreads(first:100) { nodes { isResolved comments(last:20) { nodes { author { login } body } } } }
+           }
+         }
+       }
+     '
+     - Check CI: statusCheckRollup shows no FAILURE
+     - Check mergeable: MERGEABLE (handle UNKNOWN state)
+     - Filter reviews by author.login for "CodeRabbit" → verify state is APPROVED/LGTM
+     - Filter reviews by author.login for "bugbot" or "cursor[bot]" → verify state is NEUTRAL/SUCCESS
+     - Check reviewThreads: verify no unresolved Major/Critical comments
      - Check evidence: /er PASS or no bundle
-  5. If ALL 6 green → STOP, report success
-  6. If changes made → commit + push with /pushl
-  7. Wait for CI to settle (gh run watch or poll statusCheckRollup)
+  7. If ALL 6 green → STOP, report success
   8. Continue to next iteration
 ```
+
+**Note on CI evaluation timing**: Step 6 evaluates CI AFTER the push (step 5), so each iteration's fix will be reflected in the next iteration's evaluation. With N=1, if fixes are needed, the PR won't report green until a second run.
 
 ### After Loop Completes
 
