@@ -36,7 +36,9 @@ for iteration in 1..N:
   3. Run /er                    # check evidence bundle (skip if none present)
   4. If changes made → commit + push with /pushl
   5. Wait for CI to settle (gh run watch or poll statusCheckRollup)
-  6. Evaluate 6 green conditions using GraphQL:
+  6. Evaluate 6 green conditions:
+     # Fetch CI status and mergeability
+     gh pr view <PR_NUMBER> --json statusCheckRollup,mergeable,mergeStateStatus
      # Use GraphQL to get bot-specific reviews and thread resolution
      gh api graphql -f query='
        query($owner:String!, $name:String!, $pr:Int!) {
@@ -50,7 +52,7 @@ for iteration in 1..N:
      '
      - Check CI: statusCheckRollup shows no FAILURE
      - Check mergeable: MERGEABLE (handle UNKNOWN state)
-     - Filter reviews by author.login for "CodeRabbit" → verify state is APPROVED/LGTM
+     - Filter reviews by author.login for "coderabbitai" → verify state is APPROVED/LGTM
      - Filter reviews by author.login for "bugbot" or "cursor[bot]" → verify state is NEUTRAL/SUCCESS
      - Check reviewThreads: verify no unresolved Major/Critical comments
      - Check evidence: /er PASS or no bundle
