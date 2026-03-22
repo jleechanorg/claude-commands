@@ -482,10 +482,11 @@ cd "$REPO_DIR" && git checkout main
 export NEW_BRANCH="export-fresh-$(date +%Y%m%d-%H%M%S)"
 git checkout -b "$NEW_BRANCH"
 
-# CRITICAL: Clear existing directories for fresh export
+# NOTE: Do NOT wipe existing directories. Only overwrite files that exist in source.
+# Files present in the target repo but not in source are preserved intentionally
+# (e.g. /harness.md added directly via PR — we don't want exportcommands to delete it).
 
-rm -rf commands/* orchestration/* scripts/* || true
-echo "Cleared existing export directories for fresh sync"
+echo "Preserving existing files in target repo; only overwriting files present in source"
 ```
 
 **Pre-Export File Filtering**:
