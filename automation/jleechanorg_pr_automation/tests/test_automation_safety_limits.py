@@ -13,6 +13,7 @@ NEW BEHAVIOR: Counts ALL attempts (success + failure) against the limit.
 import json
 import os
 import shutil
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -405,10 +406,13 @@ class TestAutomationIntegration(unittest.TestCase):
 
     def run_automation_script(self):
         """Helper to run automation script"""
-        import subprocess
-        return subprocess.run([
-            "$HOME/projects/worktree_worker2/automation/simple_pr_batch.sh"
-        ], check=False, capture_output=True, text=True)
+        script_path = Path(__file__).resolve().parents[2] / "simple_pr_batch.sh"
+        return subprocess.run(
+            [str(script_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
 
     def read_launchd_plist(self):
         """Helper to read launchd plist file"""
