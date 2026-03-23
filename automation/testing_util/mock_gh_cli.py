@@ -87,7 +87,10 @@ def _handle_pr_view(args: List[str]) -> int:
 
     if "--json" in args:
         idx = args.index("--json")
-        json_fields = args[idx + 1] if idx + 1 < len(args) else ""
+        if idx + 1 >= len(args):
+            print("flag needs an argument: --json", file=sys.stderr)  # noqa: T201
+            return 1
+        json_fields = args[idx + 1]
         fields = [field.strip() for field in json_fields.split(",") if field.strip()]
     else:
         fields = []

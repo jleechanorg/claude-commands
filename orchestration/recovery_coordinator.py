@@ -132,9 +132,11 @@ class RecoveryCoordinator:
 
     def analyze_partial_work(self, agent_name: str) -> list[str]:
         """Analyze what work was completed before failure"""
-        project_base = os.environ.get(
-            "PROJECT_BASE_DIR",
-            os.path.join(os.path.expanduser("~"), "projects", "your-project.com")
+        project_base = os.path.expanduser(
+            os.environ.get(
+                "PROJECT_BASE_DIR",
+                os.path.join(os.path.expanduser("~"), "projects", "your-project.com"),
+            )
         )
         workspace = os.path.join(project_base, "worktree_roadmap", f"agent_workspace_{agent_name}")
         partial_work = []
