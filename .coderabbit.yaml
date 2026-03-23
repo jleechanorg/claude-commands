@@ -1,0 +1,10 @@
+# CodeRabbit configuration for claude-commands template repository
+language: en-US
+reviews:
+  auto_review:
+    enabled: true
+  auto_approve: true
+  request_changes_workflow: false
+  review_profile: chill
+chat:
+  auto_reply: true
