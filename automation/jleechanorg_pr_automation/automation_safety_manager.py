@@ -570,7 +570,7 @@ class AutomationSafetyManager:
 
             write_success = json_manager.atomic_update(self.inflight_file, release_slot, {})
             if not write_success:
-                self.logger.error(f"Failed to release slot for PR {pr_key} - file write failed")
+                self.logger.error("Failed to release slot for PR %s - file write failed", pr_key)
 
     def get_pr_attempts(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
         """Get count of attempts for a specific PR.
