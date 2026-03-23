@@ -45,6 +45,7 @@ class CopilotCommandBase(ABC):
                 capture_output=True,
                 text=True,
                 check=True,
+                timeout=30,
             )
             data = json.loads(result.stdout)
             return data["nameWithOwner"]
@@ -56,6 +57,7 @@ class CopilotCommandBase(ABC):
                     capture_output=True,
                     text=True,
                     check=True,
+                    timeout=30,
                 )
                 url = result.stdout.strip()
                 if "github.com" in url:
@@ -81,6 +83,7 @@ class CopilotCommandBase(ABC):
                 text=True,
                 check=True,
                 cwd=os.getcwd(),
+                timeout=30,
             )
             branch_name = result.stdout.strip()
             return self._sanitize_branch_name(branch_name)

@@ -366,13 +366,14 @@ class TestAutomationIntegration(unittest.TestCase):
         plist_dir = self.plist_path.parent
         plist_dir.mkdir(parents=True, exist_ok=True)
         plist_dir.chmod(0o755)
-        plist_content = """<?xml version="1.0" encoding="UTF-8"?>
+        home_dir = os.path.expanduser("~")
+        plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>$HOME/projects/your-project.com/automation/automation_safety_wrapper.py</string>
+        <string>{home_dir}/projects/your-project.com/automation/automation_safety_wrapper.py</string>
     </array>
 </dict>
 </plist>
