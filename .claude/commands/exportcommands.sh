@@ -19,9 +19,14 @@ REPO_DIR="$(mktemp -d)/claude-commands"
 # ── Cleanup trap — remove temp dir on exit (normal or error) ────────────────
 trap 'rm -rf "$(dirname "$REPO_DIR")"' EXIT
 SOURCE_CLAUDE="$HOME/.claude"
-# Detect project root: honour $PROJECT_ROOT env var, then git root of current dir
-# Set PROJECT_ROOT before running this script if your project isn't in $PWD.
-PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/projects/my-project")}"
+# Detect project root: honour $PROJECT_ROOT env var, then git root of current dir.
+# Fail fast if git rev-parse fails — do not silently export to a bogus path.
+if [[ -z "${PROJECT_ROOT:-}" ]]; then
+  PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+    echo "ERROR: PROJECT_ROOT is unset and git rev-parse failed. Set PROJECT_ROOT before running." >&2
+    exit 1
+  }
+fi
 
 DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
@@ -148,9 +153,10 @@ ok "Filters applied"
 
 # ── Hardcoded path scan ──────────────────────────────────────────────────────
 echo "▶ Scanning for leaked paths..."
-LEAKED=$(grep -rl --include='*.md' --include='*.py' --include='*.sh' \
+LEAKED=$(grep -rl \
+  --include='*.md' --include='*.py' --include='*.sh' --include='*.yml' --include='*.yaml' \
   -e '/Users/jleechan' -e 'jleechantest@gmail' \
-  .claude orchestration automation 2>/dev/null \
+  .claude orchestration automation ralph workflows 2>/dev/null \
   | grep -v exportcommands || true)
 if [[ -n "$LEAKED" ]]; then
   warn "Hardcoded paths found — check filter list:"
@@ -164,7 +170,7 @@ echo "▶ Updating README.md via Claude..."
 DIFF_STAT=$(git diff --stat 2>/dev/null || true)
 NEW_FILES=$(git status --short 2>/dev/null | grep '^?' | awk '{print $2}' | head -20 || true)
 
-if command -v claude >/dev/null 2>&1 && [[ "$DRY_RUN" == "false" ]] && [[ -f "README.md" ]]; then
+if command -v claude >/dev/null 2>&1 && [[ -f "README.md" ]]; then
   EXISTING_README=$(cat README.md)
   COMMANDS_COUNT=$(find .claude/commands -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
   SKILLS_COUNT=$(find .claude/skills -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
@@ -195,13 +201,20 @@ Output ONLY the updated markdown. No preamble, no explanation, no code fences."
   # Write prompt to temp file to avoid shell quoting issues with large README content
   PROMPT_FILE=$(mktemp /tmp/exportcommands_prompt.XXXXXX)
   printf '%s' "$README_PROMPT" > "$PROMPT_FILE"
+  # Always generate README.md.new for preview; only overwrite README.md in non-dry-run
   claude -p "$(cat "$PROMPT_FILE")" > README.md.new 2>/dev/null \
-    && mv README.md.new README.md \
-    && ok "README.md updated (changelog + new commands only)" \
     || { rm -f README.md.new; warn "Claude CLI failed — keeping existing README unchanged"; }
   rm -f "$PROMPT_FILE"
+  if [[ -f "README.md.new" ]]; then
+    if [[ "$DRY_RUN" == "false" ]]; then
+      mv README.md.new README.md
+      ok "README.md updated (changelog + new commands only)"
+    else
+      ok "README.md.new generated for preview (dry-run — not overwriting README.md)"
+    fi
+  fi
 
-elif command -v claude >/dev/null 2>&1 && [[ "$DRY_RUN" == "false" ]] && [[ ! -f "README.md" ]]; then
+elif command -v claude >/dev/null 2>&1 && [[ ! -f "README.md" ]]; then
   # No existing README — generate fresh one (first-time export)
   COMMANDS_COUNT=$(find .claude/commands -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
   SKILLS_COUNT=$(find .claude/skills -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
@@ -217,10 +230,15 @@ elif command -v claude >/dev/null 2>&1 && [[ "$DRY_RUN" == "false" ]] && [[ ! -f
 - Under 120 lines, GitHub-flavored markdown
 - Output ONLY the markdown, no preamble"
 
-  claude -p "$README_PROMPT" > README.md 2>/dev/null && ok "README.md created (first export)" \
-    || warn "Claude CLI failed — no README generated"
+  if [[ "$DRY_RUN" == "false" ]]; then
+    claude -p "$README_PROMPT" > README.md 2>/dev/null && ok "README.md created (first export)" \
+      || warn "Claude CLI failed — no README generated"
+  else
+    claude -p "$README_PROMPT" > README.md.new 2>/dev/null && ok "README.md.new generated for preview (dry-run)" \
+      || warn "Claude CLI failed — no README preview generated"
+  fi
 else
-  warn "Skipping README update (dry-run or claude CLI not found)"
+  warn "Skipping README update (claude CLI not found)"
 fi
 
 # ── Commit & push ────────────────────────────────────────────────────────────
@@ -242,6 +260,7 @@ fi
 
 git push -u origin "$BRANCH"
 
+PR_STDERR=$(mktemp /tmp/exportcommands_pr_err.XXXXXX)
 PR_URL=$(gh api repos/"$TARGET_REPO"/pulls --method POST \
   -f title="Claude Commands Export $(date +%Y-%m-%d)" \
   -f head="$BRANCH" \
@@ -249,7 +268,12 @@ PR_URL=$(gh api repos/"$TARGET_REPO"/pulls --method POST \
   -f body="Automated export. Source files overwrite target; target-only files preserved.
 
 Changed: $CHANGED" \
-  --jq '.html_url' 2>/dev/null || echo "https://github.com/$TARGET_REPO/pulls")
+  --jq '.html_url' 2>"$PR_STDERR") || {
+    warn "PR creation failed: $(cat "$PR_STDERR")"
+    rm -f "$PR_STDERR"
+    exit 1
+  }
+rm -f "$PR_STDERR"
 
 echo ""
 echo "✅ Export complete!"
