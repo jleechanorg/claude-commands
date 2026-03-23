@@ -154,35 +154,66 @@ if [[ -n "$LEAKED" ]]; then
   echo "$LEAKED" | sed 's/^/     /'
 fi
 
-# ── Regenerate README via Claude CLI ─────────────────────────────────────────
-echo "▶ Regenerating README.md via Claude..."
-COMMANDS_COUNT=$(find .claude/commands -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
-SKILLS_COUNT=$(find .claude/skills -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
-HOOKS_COUNT=$(find .claude/hooks -name '*.sh' -o -name '*.py' 2>/dev/null | wc -l | tr -d ' ')
+# ── Update README via Claude CLI (preserve existing, update changelog only) ──
+echo "▶ Updating README.md via Claude..."
 
-README_PROMPT="Generate a concise, clear README.md for the jleechanorg/claude-commands GitHub repository.
+# Capture diff stat BEFORE git add so we know what changed vs previous state
+DIFF_STAT=$(git diff --stat 2>/dev/null || true)
+NEW_FILES=$(git status --short 2>/dev/null | grep '^?' | awk '{print $2}' | head -20 || true)
 
-Context:
-- This repo is a reference export of a Claude Code CLI configuration
-- It contains: $COMMANDS_COUNT slash commands, $SKILLS_COUNT skill files, $HOOKS_COUNT hooks
-- Directories: .claude/commands/, .claude/skills/, .claude/hooks/, .claude/agents/, .claude/scripts/
-- These are generic templates — users adapt them to their own projects
+if command -v claude >/dev/null 2>&1 && [[ "$DRY_RUN" == "false" ]] && [[ -f "README.md" ]]; then
+  EXISTING_README=$(cat README.md)
+  COMMANDS_COUNT=$(find .claude/commands -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+  SKILLS_COUNT=$(find .claude/skills -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
 
-Requirements:
-- Start with a 1-sentence description of what the repo is
-- Include a Quick Start section showing how to install (localexportcommands.sh or manual copy)
-- Include a brief directory structure overview
-- List 5-8 of the most useful slash commands (e.g. /pr, /copilot, /tdd, /harness, /exportcommands, /fixpr, /orch)
-- Keep it under 120 lines total
-- Use GitHub-flavored markdown
-- Do NOT include any WorldArchitect.AI or jleechan-specific content
-- Output ONLY the markdown, no preamble or explanation"
+  README_PROMPT="You are updating the README for the jleechanorg/claude-commands GitHub repository.
 
-if command -v claude >/dev/null 2>&1 && [[ "$DRY_RUN" == "false" ]]; then
-  claude -p "$README_PROMPT" > README.md 2>/dev/null && ok "README.md regenerated" \
-    || { warn "Claude CLI failed — keeping existing README"; }
+Here is the EXISTING README (preserve all text except what needs updating):
+---
+${EXISTING_README}
+---
+
+Here is what changed in this export (git diff --stat):
+${DIFF_STAT:-No file changes detected}
+
+New files added this export:
+${NEW_FILES:-None}
+
+Current counts: ${COMMANDS_COUNT} commands, ${SKILLS_COUNT} skill files.
+
+TASK — make MINIMAL updates only:
+1. Add or update a ## Changelog section near the top with today's date ($(date +%Y-%m-%d)) listing new/changed files briefly
+2. If new slash commands appear in the diff that are not already mentioned in the README, add a one-line entry for each in the relevant section
+3. Update any command/file counts if they changed significantly
+4. Preserve ALL other text EXACTLY as-is — do not rewrite, reformat, or rephrase anything else
+
+Output ONLY the updated markdown. No preamble, no explanation, no code fences."
+
+  claude -p "$README_PROMPT" > README.md.new 2>/dev/null \
+    && mv README.md.new README.md \
+    && ok "README.md updated (changelog + new commands only)" \
+    || { rm -f README.md.new; warn "Claude CLI failed — keeping existing README unchanged"; }
+
+elif command -v claude >/dev/null 2>&1 && [[ "$DRY_RUN" == "false" ]] && [[ ! -f "README.md" ]]; then
+  # No existing README — generate fresh one (first-time export)
+  COMMANDS_COUNT=$(find .claude/commands -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+  SKILLS_COUNT=$(find .claude/skills -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+  HOOKS_COUNT=$(find .claude/hooks \( -name '*.sh' -o -name '*.py' \) 2>/dev/null | wc -l | tr -d ' ')
+
+  README_PROMPT="Generate a concise README.md for the jleechanorg/claude-commands GitHub repository.
+- 1-sentence description: reference export of a Claude Code CLI configuration
+- Contains: ${COMMANDS_COUNT} slash commands, ${SKILLS_COUNT} skill files, ${HOOKS_COUNT} hooks
+- Quick Start: copy .claude/ dirs or run localexportcommands.sh
+- Directory overview: .claude/commands/, .claude/skills/, .claude/hooks/, .claude/agents/, .claude/scripts/
+- List 6-8 useful commands: /pr, /copilot, /tdd, /harness, /exportcommands, /fixpr, /orch, /converge
+- Include ## Changelog section with entry for $(date +%Y-%m-%d): initial export
+- Under 120 lines, GitHub-flavored markdown
+- Output ONLY the markdown, no preamble"
+
+  claude -p "$README_PROMPT" > README.md 2>/dev/null && ok "README.md created (first export)" \
+    || warn "Claude CLI failed — no README generated"
 else
-  warn "Skipping README regeneration (dry-run or claude CLI not found)"
+  warn "Skipping README update (dry-run or claude CLI not found)"
 fi
 
 # ── Commit & push ────────────────────────────────────────────────────────────
