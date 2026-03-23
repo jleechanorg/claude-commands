@@ -1,7 +1,13 @@
 #!/bin/bash
 # Red-Green Test for speculation detection hook
 
-HOOK_SCRIPT="../detect_speculation_and_fake_code.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HOOK_SCRIPT="$SCRIPT_DIR/../../../../detect_speculation_and_fake_code.sh"
+
+if [ ! -f "$HOOK_SCRIPT" ]; then
+  echo "❌ Hook script not found: $HOOK_SCRIPT"
+  exit 1
+fi
 
 echo "=== RED-GREEN TEST: Speculation Detection ==="
 
@@ -9,7 +15,7 @@ echo "=== RED-GREEN TEST: Speculation Detection ==="
 echo "Test 1 (RED): Testing speculation detection..."
 TEST_TEXT="I'll wait for the /commentr command to complete and provide its results before proceeding with any additional work."
 
-echo "$TEST_TEXT"  < /dev/null |  bash "$HOOK_SCRIPT"
+echo "$TEST_TEXT" | bash "$HOOK_SCRIPT"
 RED_RESULT=$?
 
 if [ $RED_RESULT -eq 1 ]; then
