@@ -223,7 +223,7 @@ elif command -v claude >/dev/null 2>&1 && [[ ! -f "README.md" ]]; then
   README_PROMPT="Generate a concise README.md for the jleechanorg/claude-commands GitHub repository.
 - 1-sentence description: reference export of a Claude Code CLI configuration
 - Contains: ${COMMANDS_COUNT} slash commands, ${SKILLS_COUNT} skill files, ${HOOKS_COUNT} hooks
-- Quick Start: copy .claude/ dirs or run localexportcommands.sh
+- Quick Start: copy .claude/ dirs or run bash ~/.claude/commands/exportcommands.sh
 - Directory overview: .claude/commands/, .claude/skills/, .claude/hooks/, .claude/agents/, .claude/scripts/
 - List 6-8 useful commands: /pr, /copilot, /tdd, /harness, /exportcommands, /fixpr, /orch, /converge
 - Include ## Changelog section with entry for $(date +%Y-%m-%d): initial export
