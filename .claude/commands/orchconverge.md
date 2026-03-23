@@ -112,6 +112,13 @@ execution_mode: immediate
    - Commands used and their effectiveness
    - Final PR status and review results
 
+### Phase 5: Validation and Iteration
+
+**Action Steps:**
+1. **Verify Success Criteria**: Check goal achievement against defined acceptance criteria
+2. **Assess PR Status**: Review CI, code review, and merge readiness
+3. **Iterate if Needed**: If criteria not met, return to Phase 2 with updated context
+
 ### Phase 6: Comprehensive Workflow
 
 **Action Steps:**
@@ -139,7 +146,7 @@ execution_mode: immediate
 
 **`/orchconverge` = Existing Orchestration System + Convergence Agent + Final Review Workflow**
 
-```
+```text
 ┌─ Orchestration Setup ─┐    ┌─ Convergence Agent ─┐    ┌─ Final Workflow ─┐
 │ • TaskDispatcher      │ → │ • /converge Loop      │ → │ • /pushl          │
 │ • Current Dir Agent   │   │ • Progress Tracking   │   │ • /reviewdeep     │

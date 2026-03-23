@@ -59,7 +59,8 @@ def main() -> None:
     if not os.environ.get("OPENAI_API_KEY"):
         sys.exit(0)
 
-    last_message = data.get("last_assistant_message", "").strip()
+    raw_last = data.get("last_assistant_message")
+    last_message = raw_last.strip() if isinstance(raw_last, str) else ""
     if len(last_message) < MIN_RESPONSE_LEN:
         sys.exit(0)
 
