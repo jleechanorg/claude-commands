@@ -302,11 +302,9 @@ After posting the consolidated reply, resolve the conversation threads for comme
 2. For each comment where `response` is `FIXED`, `ALREADY_IMPLEMENTED`, or `DEFERRED`:
    - Resolve the conversation thread using GitHub CLI:
    ```bash
-   # For inline review comments (pull_request_review_comment):
-   gh api repos/{owner}/{repo}/pulls/{pull_number}/reviews/comments/{comment_id}/threads -X PATCH -f "resolved=true"
-   
-   # Or use the wrapper if available:
-   gh pr review comment resolve <comment_id>
+   # Resolve via GitHub REST API (no native gh CLI command for this):
+   gh api repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies \
+     --method POST -f body="✅ Addressed"
    ```
 3. Log the count: `Resolved N conversation threads (X fixed, Y deferred)`
 

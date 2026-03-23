@@ -86,8 +86,9 @@ def _handle_pr_view(args: List[str]) -> int:
         return 0
 
     if "--json" in args:
-        json_fields = args[args.index("--json") + 1]
-        fields = [field.strip() for field in json_fields.split(",")]
+        idx = args.index("--json")
+        json_fields = args[idx + 1] if idx + 1 < len(args) else ""
+        fields = [field.strip() for field in json_fields.split(",") if field.strip()]
     else:
         fields = []
 

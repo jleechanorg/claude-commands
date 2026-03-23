@@ -383,7 +383,7 @@ class CommentFetch(CopilotCommandBase):
                     return False
                 # Known bot service names — use word-boundary regex to avoid
                 # false positives (e.g. @precursor_dev matching 'cursor')
-                bot_service_names = ['coderabbit', 'copilot', 'codex', 'cursor', 'bugbot', 'greptile']
+                bot_service_names = ['coderabbitai', 'coderabbit', 'copilot', 'codex', 'cursor', 'bugbot', 'greptile']
                 bot_pattern = re.compile(
                     r'@(?:.*[\W_])?(' + '|'.join(bot_service_names) + r')(?:[\W_]|$)',
                     re.IGNORECASE,

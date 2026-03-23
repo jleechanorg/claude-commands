@@ -26,12 +26,14 @@ if (!firebaseApiKey) {
   process.exit(1);
 }
 
-const child = spawn('node', [mainScript, ...args], {
+// Adapt FIREBASE_PROJECT_ID and FIREBASE_AUTH_DOMAIN for your project.
+const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || 'your-firebase-project-id';
+const child = spawn('node', [mainScript, '--project', firebaseProjectId, ...args], {
   stdio: 'inherit',
   env: {
     ...process.env,
-    FIREBASE_PROJECT_ID: 'worldarchitecture-ai',
-    FIREBASE_AUTH_DOMAIN: 'worldarchitecture-ai.firebaseapp.com',
+    FIREBASE_PROJECT_ID: firebaseProjectId,
+    FIREBASE_AUTH_DOMAIN: `${firebaseProjectId}.firebaseapp.com`,
     FIREBASE_API_KEY: firebaseApiKey
   }
 });
