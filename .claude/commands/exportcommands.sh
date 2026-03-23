@@ -189,10 +189,14 @@ TASK — make MINIMAL updates only:
 
 Output ONLY the updated markdown. No preamble, no explanation, no code fences."
 
-  claude -p "$README_PROMPT" > README.md.new 2>/dev/null \
+  # Write prompt to temp file to avoid shell quoting issues with large README content
+  PROMPT_FILE=$(mktemp /tmp/exportcommands_prompt.XXXXXX)
+  printf '%s' "$README_PROMPT" > "$PROMPT_FILE"
+  claude -p "$(cat "$PROMPT_FILE")" > README.md.new 2>/dev/null \
     && mv README.md.new README.md \
     && ok "README.md updated (changelog + new commands only)" \
     || { rm -f README.md.new; warn "Claude CLI failed — keeping existing README unchanged"; }
+  rm -f "$PROMPT_FILE"
 
 elif command -v claude >/dev/null 2>&1 && [[ "$DRY_RUN" == "false" ]] && [[ ! -f "README.md" ]]; then
   # No existing README — generate fresh one (first-time export)
