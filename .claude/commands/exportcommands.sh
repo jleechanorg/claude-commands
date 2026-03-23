@@ -58,7 +58,7 @@ declare -a SUBS=(
 )
 # mvp_site/ substitution is applied separately, skipping workflow files.
 # GitHub Actions does NOT expand $PROJECT_ROOT in paths: filters or hashFiles().
-MVp_SITE_SUB='s|mvp_site/|\$PROJECT_ROOT/|g'
+MVP_SITE_SUB='s|mvp_site/|\$PROJECT_ROOT/|g'
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 log()  { echo "  $*"; }
@@ -80,7 +80,7 @@ apply_filters() {
   # so substituting it into workflows/*.yml would silently break CI triggers.
   case "$file" in
     workflows/*.yml|workflows/*.yaml) ;;
-    *) perl -pi -e "$MVp_SITE_SUB" "$file" ;;
+    *) perl -pi -e "$MVP_SITE_SUB" "$file" ;;
   esac
 }
 
@@ -91,7 +91,6 @@ cd "$REPO_DIR"
 
 git config user.email "claude-export@anthropic.com"
 git config user.name "Claude Export"
-git config commit.gpgsign false
 
 git checkout main
 git pull --ff-only origin main
@@ -340,7 +339,8 @@ if [[ ${#CONFLICTS[@]} -gt 0 ]]; then
 fi
 
 # ── Commit & push ────────────────────────────────────────────────────────────
-git add -A
+# Stage only the known export directories + README (not arbitrary stray files)
+git add .claude/ orchestration/ automation/ ralph/ README.md README.md.new 2>/dev/null || true
 
 if git diff --cached --quiet; then
   echo "No changes detected — nothing to export."

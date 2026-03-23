@@ -42,38 +42,17 @@ TASK_DESCRIPTION="$ARGUMENTS"
 ### Step 1: Classify task type
 
 ```bash
-# Detect coding tasks (require parallel ao spawn)
-# Matches keywords that indicate real code changes
-is_coding_task() {
-  printf '%s' "$1" | python3 -c "
-import sys, re
-text = sys.stdin.read().lower()
-coding_patterns = [
-    r'\b(fix|resolve|patch)\s+(bug|issue|pr|code|test|error|problem|regression|failure)\b',
-    r'\bimplement\b', r'\bcreate\s+pr\b', r'\bwrite\b.*\bcode\b',
-    r'\bupdate\b.*\bcode\b', r'\brefactor\b', r'\badd\b.*\bfeature\b',
-    r'\bpatch\b', r'\b(add|write|create|implement|update|fix)\s+.*\btest',
-    r'\b(fix|setup|configure|update)\s+.*\bbuild\b', r'\bdeploy\b',
-    r'\bconfigure\b', r'\bset\s*up\b', r'\brewrite\b', r'\benhance\b',
-    r'\boptimize\b', r'\bclean\s*up\b', r'\bremove\b.*\bcode\b',
-    r'\bwork\s*on\b.*\b(bead|issue|pr|branch)\b',
-    r'\bao\s*spawn\b', r'\bdispatch\b',
-    r'\b(?:orch|wa|ao|ra|cc|wc|mt|mm)-[a-z0-9]+\b',  # issue reference (all project prefixes)
-    r'\bpr\s*#?\d+\b',      # PR reference
-    r'\bbranch\b.*\b(feat|fix|bug|orch)\b',
-    r'\bbead\b.*\b(orch|wa|jc|ao)\b',
-]
-for pat in coding_patterns:
-    if re.search(pat, text):
-        sys.exit(0)
-sys.exit(1)
-" 2>/dev/null
-}
+# Classify task type using LLM (not keyword matching — per CLAUDE.md ban on regex intent detection)
+# Falls back to "coding" (safer default: spawns ao session rather than silently doing nothing)
+TASK_TYPE=$(claude -p "Classify this task as exactly one word: 'coding' or 'read_only'.
+- coding: any task that modifies files, writes code, creates PRs, fixes bugs, refactors, deploys, configures systems, or references an issue/bead/PR ID
+- read_only: pure information requests (summarize, explain, list, describe, what is, status check with no action required)
+Task: $TASK_DESCRIPTION
+Reply with only the single word." 2>/dev/null | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
 
-if is_coding_task "$TASK_DESCRIPTION"; then
+# Validate output — if LLM returned something unexpected, default to coding (safe fallback)
+if [[ "$TASK_TYPE" != "coding" && "$TASK_TYPE" != "read_only" ]]; then
   TASK_TYPE="coding"
-else
-  TASK_TYPE="read_only"
 fi
 echo "Task classified as: $TASK_TYPE"
 ```
@@ -85,6 +64,23 @@ echo "Task classified as: $TASK_TYPE"
 ```bash
 if [ "$TASK_TYPE" = "coding" ]; then
   echo "=== PATH A: ao spawn (parallel coding sessions) ==="
+
+  # Pre-spawn capacity check (mandatory per CLAUDE.md)
+  GRAPHQL_REMAINING=$(gh api rate_limit --jq '.resources.graphql.remaining' 2>/dev/null || echo "999")
+  WORKER_SESSIONS=$(tmux list-sessions 2>/dev/null | grep -cE '-(ao|jc|wa|cc|ra|wc)-[0-9]+:' || echo "0")
+  ORCH_SESSIONS=$(tmux list-sessions 2>/dev/null | grep -cE '-(ao|jc|wa|cc|ra|wc)-orchestrator:' || echo "0")
+  if (( GRAPHQL_REMAINING < 200 )); then
+    echo "⛔ GraphQL rate limit low ($GRAPHQL_REMAINING remaining) — cannot spawn AO workers. Use REST fallback for critical ops."
+    exit 1
+  fi
+  if (( WORKER_SESSIONS > 20 )); then
+    echo "⛔ Too many active worker sessions ($WORKER_SESSIONS) — defer spawn until sessions free up."
+    exit 1
+  fi
+  if (( ORCH_SESSIONS > 10 )); then
+    echo "⛔ Too many orchestrator sessions ($ORCH_SESSIONS) — defer spawn."
+    exit 1
+  fi
 
   # Step A1: Extract issue ID from task (e.g. "orch-sq2", "ORCH-sq2", "fix orch-sq2")
   ISSUE_ID=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
