@@ -184,8 +184,8 @@ tests = [{'name': name, 'status': status if status != 'in_progress' else 'failed
          for name, status in scenarios.items()]
 
 print(json.dumps(tests))
-" 2>&1)
-        if [ $? -ne 0 ] || [ -z "$test_details" ]; then
+" 2>&1) || test_details=""
+        if [ -z "$test_details" ]; then
             echo -e "${YELLOW}⚠️  Warning: Failed to parse test details from log, defaulting to empty array${NC}" >&2
             test_details="[]"
         fi

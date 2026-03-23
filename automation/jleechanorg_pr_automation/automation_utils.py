@@ -43,7 +43,7 @@ class AutomationUtils:
         "LOG_DIR": "~/Library/Logs/worldarchitect-automation",
         "DATA_DIR": "~/Library/Application Support/worldarchitect-automation",
         "MAX_SUBPROCESS_TIMEOUT": int(os.getenv("AUTOMATION_SUBPROCESS_TIMEOUT", "300")),  # 5 minutes (configurable)
-        "EMAIL_SUBJECT_PREFIX": "[WorldArchitect Automation]"
+        "EMAIL_SUBJECT_PREFIX": "[Your Project Automation]"
     }
 
     @classmethod
