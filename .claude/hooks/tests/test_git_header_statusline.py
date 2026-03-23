@@ -105,7 +105,7 @@ class TestGitHeaderStatusline:
         stdout, stderr, returncode = run_git_header(git_header_script)
 
         # Should contain directory name, branch, and status in parentheses
-        assert "Branch:" in stdout
+        assert "Local:" in stdout
         assert "(synced)" in stdout or "(no remote)" in stdout  # Initially no remote
         assert "Dir:" in stdout
 
@@ -183,7 +183,8 @@ class TestGitHeaderStatusline:
 
         # Must contain all essential components
         assert "Dir:" in stdout
-        assert "Branch:" in stdout
+        assert "Local:" in stdout
+        assert "Remote:" in stdout
         assert "PR:" in stdout
         assert "(" in stdout and ")" in stdout  # Status always in parentheses
 

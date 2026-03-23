@@ -30,14 +30,14 @@ Based on Memory MCP best practices research (via Perplexity API integration from
   "name": "firebase_auth_timeout_2025_07_23",
   "entityType": "technical_issue",
   "observations": [
-    "Issue: Firebase Auth timeout in mvp_site/firebase_util.py:45",
+    "Issue: Firebase Auth timeout in $PROJECT_ROOT/firebase_util.py:45",
     "Error: 'Request timed out after 30 seconds'",
     "Context: User authentication during campaign creation",
     "Root Cause: Default timeout too short for Firebase Auth API",
     "Solution: Increased timeout to 60 seconds in firebase_util.py:12",
     "Fix Commit: a1b2c3d - 'Increase Firebase Auth timeout to 60s'",
     "Test Results: 15/15 auth tests pass after fix",
-    "Related Files: mvp_site/firebase_util.py, mvp_site/test_auth.py"
+    "Related Files: $PROJECT_ROOT/firebase_util.py, $PROJECT_ROOT/test_auth.py"
   ]
 }
 ```
@@ -53,7 +53,7 @@ Based on Memory MCP best practices research (via Perplexity API integration from
   "observations": [
     "Feature: Character creation form validation",
     "Implementation: Pydantic BaseModel with custom validators",
-    "Location: mvp_site/models/character.py:25-67",
+    "Location: $PROJECT_ROOT/models/character.py:25-67",
     "Key Pattern: @validator('ability_scores') with range checks",
     "Code Snippet: def validate_ability_scores(cls, v):\\n    if not (3 <= v <= 18):\\n        raise ValueError('Ability scores must be between 3 and 18')",
     "Testing: 12 edge cases covered in test_character_validation.py",

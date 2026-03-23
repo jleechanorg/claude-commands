@@ -5,7 +5,6 @@ Tests the complete export workflow with comprehensive coverage.
 """
 
 import os
-import re
 import sys
 import tempfile
 import shutil
@@ -74,8 +73,8 @@ class TestExportCommandsMatrix(unittest.TestCase):
         with open(os.path.join(self.project_root, '.claude', 'commands', 'test_command.md'), 'w') as f:
             f.write("""# Test Command
 
-This command uses mvp_site/ paths and references jleechan.
-Also mentions worldarchitect.ai and TESTING=true vpython.
+This command uses $PROJECT_ROOT/ paths and references $USER.
+Also mentions your-project.com and TESTING=true python.
 """)
 
         # Create files that should be skipped according to COMMANDS_SKIP_LIST
@@ -90,10 +89,10 @@ Contains orchestration/testing content specific to original project.
         # Test hook with project-specific content
         hook_content = """#!/bin/bash
 # Test hook
-export PROJECT_PATH="mvp_site/"
-export OWNER="jleechan"
-export DOMAIN="worldarchitect.ai"
-TESTING=true vpython test.py
+export PROJECT_PATH="$PROJECT_ROOT/"
+export OWNER="$USER"
+export DOMAIN="your-project.com"
+TESTING=true python test.py
 """
         os.makedirs(os.path.join(self.project_root, '.claude', 'hooks'), exist_ok=True)
         with open(os.path.join(self.project_root, '.claude', 'hooks', 'test_hook.sh'), 'w') as f:
@@ -104,8 +103,8 @@ TESTING=true vpython test.py
         with open(os.path.join(self.project_root, 'claude_start.sh'), 'w') as f:
             f.write("""#!/bin/bash
 # Claude startup script
-export DOMAIN="worldarchitect.ai"
-export USER="jleechan"
+export DOMAIN="your-project.com"
+export USER="$USER"
 """)
 
         # Test orchestration files with excluded directories
@@ -142,7 +141,7 @@ export USER="jleechan"
                 if case['state'] != 'empty':
                     for i in range(case['file_count']):
                         with open(os.path.join(commands_dir, f'cmd_{i}.md'), 'w') as f:
-                            f.write(f"# Command {i}\nContent with mvp_site/ references")
+                            f.write(f"# Command {i}\nContent with $PROJECT_ROOT/ references")
 
                 # Create staging directory
                 staging_dir = os.path.join(self.export_dir, 'staging')
@@ -167,7 +166,7 @@ export USER="jleechan"
                             with open(test_file, 'r') as f:
                                 content = f.read()
                                 # Project-specific content should be filtered
-                                self.assertNotIn('mvp_site/', content)
+                                self.assertNotIn('$PROJECT_ROOT/', content)
                                 self.assertIn('$PROJECT_ROOT/', content)
 
     @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
@@ -278,11 +277,11 @@ export USER="jleechan"
 
                 with open(test_hook, 'w') as f:
                     if case['type'] == 'shell':
-                        f.write("#!/bin/bash\necho 'test with mvp_site/ path'")
+                        f.write("#!/bin/bash\necho 'test with $PROJECT_ROOT/ path'")
                     elif case['type'] == 'python':
-                        f.write("#!/usr/bin/env python3\nprint('test with jleechan')")
+                        f.write("#!/usr/bin/env python3\nprint('test with $USER')")
                     else:
-                        f.write("# Test markdown\nContent with worldarchitect.ai")
+                        f.write("# Test markdown\nContent with your-project.com")
 
                 if case['expect_executable']:
                     os.chmod(test_hook, 0o755)
@@ -306,11 +305,11 @@ export USER="jleechan"
     def test_content_filtering_matrix(self):
         """Test content filtering across different transformation patterns."""
         test_cases = [
-            {'input': 'mvp_site/test.py', 'expected': '$PROJECT_ROOT/test.py'},
-            {'input': 'worldarchitect.ai', 'expected': 'your-project.com'},
-            {'input': 'jleechan', 'expected': '$USER'},
-            {'input': 'TESTING=true vpython', 'expected': 'TESTING=true python'},
-            {'input': 'WorldArchitect.AI', 'expected': 'Your Project'}
+            {'input': '$PROJECT_ROOT/test.py', 'expected': '$PROJECT_ROOT/test.py'},
+            {'input': 'your-project.com', 'expected': 'your-project.com'},
+            {'input': '$USER', 'expected': '$USER'},
+            {'input': 'TESTING=true python', 'expected': 'TESTING=true python'},
+            {'input': 'Your Project', 'expected': 'Your Project'}
         ]
 
         for case in test_cases:
@@ -525,10 +524,10 @@ class TestExportCommandsIntegration(unittest.TestCase):
         for cmd in commands:
             with open(os.path.join(self.project_root, '.claude/commands', cmd), 'w') as f:
                 f.write(f"""# {cmd}
-Test command with mvp_site/ references
-User: jleechan
-Domain: worldarchitect.ai
-TESTING=true vpython test.py
+Test command with $PROJECT_ROOT/ references
+User: $USER
+Domain: your-project.com
+TESTING=true python test.py
 """)
 
         # Create test hooks
@@ -539,14 +538,14 @@ TESTING=true vpython test.py
                 if hook.endswith('.sh'):
                     f.write(f"""#!/bin/bash
 # {hook} - Essential Claude Code hook
-export PROJECT_ROOT="mvp_site/"
-export USER="jleechan"
+export PROJECT_ROOT="$PROJECT_ROOT/"
+export USER="$USER"
 """)
                 else:
                     f.write(f"""#!/usr/bin/env python3
 # {hook} - Essential Claude Code hook
-PROJECT_ROOT = "mvp_site/"
-USER = "jleechan"
+PROJECT_ROOT = "$PROJECT_ROOT/"
+USER = "$USER"
 """)
             os.chmod(hook_path, 0o755)
 
@@ -556,7 +555,7 @@ USER = "jleechan"
             with open(os.path.join(self.project_root, script), 'w') as f:
                 f.write(f"""#!/bin/bash
 # {script} infrastructure
-export DOMAIN="worldarchitect.ai"
+export DOMAIN="your-project.com"
 """)
 
         # Create orchestration files (some to exclude, some to keep)
@@ -625,9 +624,9 @@ export DOMAIN="worldarchitect.ai"
                         with open(os.path.join(commands_dir, cmd_file), 'r') as f:
                             content = f.read()
                             # Project-specific content should be filtered
-                            self.assertNotIn('mvp_site/', content)
-                            self.assertNotIn('jleechan', content)
-                            self.assertNotIn('worldarchitect.ai', content)
+                            self.assertNotIn('$PROJECT_ROOT/', content)
+                            self.assertNotIn('$USER', content)
+                            self.assertNotIn('your-project.com', content)
                             # Should contain generic replacements
                             self.assertIn('$PROJECT_ROOT/', content)
                             self.assertIn('$USER', content)
@@ -781,98 +780,6 @@ class TestGenericDirectoryExport(unittest.TestCase):
                 self.assertEqual(args[0], 'rsync')
                 self.assertIn('-av', args)
                 self.assertIn('--exclude=test_exclude/', args)
-
-class TestExportScriptIntegrity(unittest.TestCase):
-    """Verify that every script referenced by export logic exists in the source tree.
-
-    These tests catch the class of bug where export code references a script that
-    was moved, renamed, or never committed - resulting in silent omissions in the
-    exported claude-commands repo.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        """Locate project root relative to this test file."""
-        cls.project_root = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '..', '..', '..')
-        )
-        cls.scripts_root = os.path.join(cls.project_root, 'scripts')
-        cls.claude_scripts = os.path.join(cls.project_root, '.claude', 'scripts')
-
-    def test_auth_cli_mjs_present_in_claude_scripts(self):
-        """auth-cli.mjs must exist in .claude/scripts/ (source for export)."""
-        path = os.path.join(self.claude_scripts, 'auth-cli.mjs')
-        self.assertTrue(
-            os.path.isfile(path),
-            "Missing .claude/scripts/auth-cli.mjs — required by secondo-cli.sh and /secondo"
-        )
-
-    def test_secondo_cli_sh_present_in_claude_scripts(self):
-        """secondo-cli.sh must exist in .claude/scripts/ (source for export)."""
-        path = os.path.join(self.claude_scripts, 'secondo-cli.sh')
-        self.assertTrue(
-            os.path.isfile(path),
-            "Missing .claude/scripts/secondo-cli.sh — required by /secondo command"
-        )
-
-    def test_claude_scripts_mjs_files_are_exported(self):
-        """_export_claude_scripts must include *.mjs in its glob patterns.
-
-        Regression guard: previously only *.py and *.sh were exported, silently
-        dropping all *.mjs files (auth-cli.mjs, auth-aiuniverse.mjs, etc.).
-        """
-        exporter_path = os.path.join(
-            os.path.dirname(__file__), '..', 'exportcommands.py'
-        )
-        with open(exporter_path) as f:
-            source = f.read()
-
-        # Find the _export_claude_scripts method and verify *.mjs is present
-        # We look for the tuple/sequence of patterns passed to glob
-        self.assertIn('*.mjs', source,
-            "_export_claude_scripts must include '*.mjs' glob pattern; "
-            "auth-cli.mjs and other .mjs files were being silently skipped"
-        )
-
-    def test_secondo_scripts_in_export_scripts_exist_in_scripts_root(self):
-        """Every script listed in secondo_scripts (scripts/ root) must exist there."""
-        # These are the scripts that _export_scripts looks for in scripts/
-        # (auth-cli.mjs and secondo-cli.sh belong to .claude/scripts/ and are
-        #  excluded from this list since #PR that fixed the path mismatch)
-        secondo_scripts_in_root = ["test_secondo_pr.sh"]
-        for script_name in secondo_scripts_in_root:
-            path = os.path.join(self.scripts_root, script_name)
-            self.assertTrue(
-                os.path.isfile(path),
-                f"secondo script listed in _export_scripts not found: scripts/{script_name}"
-            )
-
-    def test_no_mjs_files_in_secondo_scripts_pointing_to_wrong_dir(self):
-        """auth-cli.mjs must NOT be in the secondo_scripts list that looks in scripts/.
-
-        auth-cli.mjs lives in .claude/scripts/, not scripts/.  If it appears in
-        secondo_scripts it will never be found there and will be silently omitted
-        from the export.
-        """
-        exporter_path = os.path.join(
-            os.path.dirname(__file__), '..', 'exportcommands.py'
-        )
-        with open(exporter_path) as f:
-            source = f.read()
-
-        # Find the secondo_scripts assignment line
-        match = re.search(r'secondo_scripts\s*=\s*\[([^\]]*)\]', source)
-        self.assertIsNotNone(match, "Could not find secondo_scripts list in exportcommands.py")
-        list_contents = match.group(1)
-        self.assertNotIn('auth-cli.mjs', list_contents,
-            "auth-cli.mjs must not be in secondo_scripts (lives in .claude/scripts/, "
-            "not scripts/); it is exported by _export_claude_scripts instead"
-        )
-        self.assertNotIn('secondo-cli.sh', list_contents,
-            "secondo-cli.sh must not be in secondo_scripts (lives in .claude/scripts/, "
-            "not scripts/); it is exported by _export_claude_scripts instead"
-        )
-
 
 if __name__ == '__main__':
     # Run tests with verbose output

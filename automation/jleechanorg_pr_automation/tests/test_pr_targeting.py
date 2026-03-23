@@ -123,7 +123,7 @@ class TestPRTargeting(unittest.TestCase):
         }
 
         comment_body = monitor._build_codex_comment_body_simple(
-            "jleechanorg/worldarchitect.ai",
+            "jleechanorg/your-project.com",
             42,
             pr_data,
             "abcdef1234567890",

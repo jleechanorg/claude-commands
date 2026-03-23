@@ -59,48 +59,7 @@ def main() -> None:
     if not os.environ.get("OPENAI_API_KEY"):
         sys.exit(0)
 
-    # Read transcript file to extract last assistant message
-    transcript_path = data.get("transcript_path", "")
-    if not transcript_path or not os.path.exists(transcript_path):
-        sys.exit(0)
-
-    # Parse JSONL file (one JSON object per line)
-    entries = []
-    try:
-        with open(transcript_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        entries.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        continue
-    except Exception:
-        sys.exit(0)
-
-    # Extract last assistant message from transcript
-    # JSONL envelope format: {type, message: {role, content}}
-    last_message = ""
-    for entry in reversed(entries):
-        if not isinstance(entry, dict):
-            continue
-        msg = entry.get("message", {})
-        if not isinstance(msg, dict):
-            continue
-        if msg.get("role") == "assistant":
-            content = msg.get("content", "")
-            if isinstance(content, str):
-                last_message = content.strip()
-                break
-            elif isinstance(content, list):
-                # Handle content as array of text blocks
-                for block in content:
-                    if isinstance(block, dict) and block.get("type") == "text":
-                        last_message = block.get("text", "").strip()
-                        break
-                if last_message:
-                    break
-
+    last_message = data.get("last_assistant_message", "").strip()
     if len(last_message) < MIN_RESPONSE_LEN:
         sys.exit(0)
 

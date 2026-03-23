@@ -6,7 +6,7 @@ reply_to_inline_comment() {
     local pr_number="$1"
     local comment_id="$2"
     local reply_body="$3"
-    local repo="jleechanorg/worldarchitect.ai"
+    local repo="jleechanorg/your-project.com"
 
     echo "🔍 Fetching original comment details..."
 
