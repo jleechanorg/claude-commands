@@ -1,4 +1,7 @@
 # CodeRabbit configuration for claude-commands template repository
+# auto_approve: when CR finds 0 actionable items, it posts a formal APPROVED review.
+# This is intentional for this export-driven template repo where PRs are generated
+# by automated export scripts. Downstream consumers should adjust for their own PRs.
 language: en-US
 reviews:
   auto_review:
