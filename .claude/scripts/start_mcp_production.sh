@@ -6,7 +6,7 @@ set -Eeuo pipefail
 trap 'echo "ERROR: start_mcp_production.sh failed at line $LINENO" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR/..")"
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || (cd "$SCRIPT_DIR/../.." && pwd))"
 cd "$PROJECT_ROOT"
 
 # Use shared production environment setup
