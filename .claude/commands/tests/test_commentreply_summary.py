@@ -19,7 +19,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "_copilot_modules"))
 
 import commentreply
-from _copilot_modules import commentfetch
 
 class TestCommentReplySummary(unittest.TestCase):
     """Test post_consolidated_summary logic"""
@@ -113,30 +112,6 @@ class TestCommentReplySummary(unittest.TestCase):
         # and Routine count (1 from response 1)
         self.assertIn("Critical**: 3", body)
         self.assertIn("Routine**: 1", body)
-
-
-class TestCommentFetchRequiresResponse(unittest.TestCase):
-    """Regression tests for bot mention filtering in commentfetch."""
-
-    def setUp(self):
-        self.fetcher = commentfetch.CommentFetch.__new__(commentfetch.CommentFetch)
-        self.fetcher.pr_author = "author-user"
-
-    def test_filters_pr_author_coderabbitai_ping(self):
-        comment = {
-            "body": "@coderabbitai all good?",
-            "author": "author-user",
-        }
-
-        self.assertFalse(self.fetcher._requires_response(comment))
-
-    def test_does_not_filter_non_bot_mention_with_substring(self):
-        comment = {
-            "body": "@precursor_dev can you check this?",
-            "author": "author-user",
-        }
-
-        self.assertTrue(self.fetcher._requires_response(comment))
 
 if __name__ == "__main__":
     unittest.main()

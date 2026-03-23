@@ -107,10 +107,10 @@ Push any commits needed to remote so the PR is updated.
 jleechanorg-pr-monitor
 
 # Monitor specific repository
-jleechanorg-pr-monitor --single-repo worldarchitect.ai
+jleechanorg-pr-monitor --single-repo your-project.com
 
 # Process specific PR
-jleechanorg-pr-monitor --target-pr 123 --target-repo jleechanorg/worldarchitect.ai
+jleechanorg-pr-monitor --target-pr 123 --target-repo $GITHUB_REPOSITORY
 
 # Dry run (discovery only, no comments)
 jleechanorg-pr-monitor --dry-run
@@ -296,7 +296,7 @@ python3 -m orchestrated_pr_runner
 ```
 /tmp/
 ├── pr-orch-bases/              # Base clones (shared)
-│   ├── worldarchitect.ai/
+│   ├── your-project.com/
 │   └── ai_universe/
 └── {repo}/                     # PR workspaces (isolated)
     ├── pr-123-fix-auth/
@@ -534,7 +534,7 @@ killall "Google Chrome" 2>/dev/null
 # DO NOT use editable install (pip install -e .) for cron jobs - breaks in multi-worktree setups
 
 # Option 1: Install from git (pin to tag or commit for reproducibility)
-pip install "git+https://github.com/jleechanorg/worldarchitect.ai.git@<tag-or-commit>#subdirectory=automation"
+pip install "git+https://github.com/$GITHUB_REPOSITORY.git@<tag-or-commit>#subdirectory=automation"
 
 # Option 2: Build and install from source (NOT editable - safe for cron)
 cd automation && pip install .
@@ -595,7 +595,7 @@ If you need features not yet in PyPI:
 
 ```bash
 # Option 1: Install from git (pin to tag or commit for reproducibility)
-pip install "git+https://github.com/jleechanorg/worldarchitect.ai.git@<tag-or-commit>#subdirectory=automation"
+pip install "git+https://github.com/$GITHUB_REPOSITORY.git@<tag-or-commit>#subdirectory=automation"
 
 # Option 2: Build and install from source (NOT editable)
 cd automation
@@ -699,7 +699,7 @@ Both workflows use `AutomationSafetyManager` for rate limiting:
 ~/Library/Application Support/worldarchitect-automation/
 ├── automation_safety_data.json    # Attempt tracking
 └── pr_history/                     # Commit tracking per repo
-    ├── worldarchitect.ai/
+    ├── your-project.com/
     │   ├── main.json
     │   └── feature-branch.json
     └── ai_universe/
@@ -716,14 +716,14 @@ automation-safety-cli status
 # Global runs: 23/50
 # Requires approval: False
 # PR attempts:
-#   worldarchitect.ai-1634: 2/10 (OK)
+#   your-project.com-1634: 2/10 (OK)
 #   ai_universe-42: 10/10 (BLOCKED)
 
 # Clear all data (reset limits)
 automation-safety-cli clear
 
 # Check specific PR
-automation-safety-cli check-pr 123 --repo worldarchitect.ai
+automation-safety-cli check-pr 123 --repo your-project.com
 ```
 
 ---
@@ -822,11 +822,11 @@ python3 -c "from jleechanorg_pr_automation.check_codex_comment import decide; pr
 **Issue**: Worktree creation fails
 ```bash
 # Clean stale worktrees
-cd ~/worldarchitect.ai
+cd ~/your-project.com
 git worktree prune
 
 # Remove old workspace
-rm -rf /tmp/worldarchitect.ai/pr-*
+rm -rf /tmp/your-project.com/pr-*
 ```
 
 **Issue**: Agent not spawning

@@ -1,15 +1,3 @@
-# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
-# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
-# You MUST adapt the following before using:
-# - $GCP_PROJECT_ID → Your Google Cloud project ID
-# - $GITHUB_REPOSITORY → Your repository (owner/repo)
-# - $GITHUB_OWNER → Your GitHub username or org
-# - Service account configurations and secrets
-# - Environment-specific variables and paths
-#
-# See workflows/README.md for integration instructions.
-# ---
-
 name: WorldArchitect Tests (Directory-Based)
 
 # Cancel in-progress runs when new commits are pushed to same branch
@@ -49,7 +37,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
@@ -63,7 +51,7 @@ jobs:
       has-changes: ${{ steps.changes.outputs.has-changes }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
           fetch-depth: 0  # Full history for accurate change detection
 
@@ -101,7 +89,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
           fetch-depth: 0  # Full history needed for merge-base diff
       - name: Run import validation
@@ -141,7 +129,7 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/testing_utils:${{ github.workspace }}/mvp_site:${{ github.workspace }}/automation
     steps:
     - name: Checkout merge commit
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         # Deliberately NOT setting ref — uses default merge commit
         # to validate the PR integrates cleanly with the base branch.
@@ -158,7 +146,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f mvp_site/requirements.txt ]; then pip install -r mvp_site/requirements.txt; fi
+        if [ -f $PROJECT_ROOT/requirements.txt ]; then pip install -r $PROJECT_ROOT/requirements.txt; fi
 
     - name: Validate merge-commit imports
       run: |
@@ -195,8 +183,8 @@ jobs:
         # Run a focused subset of fast tests on the merge commit.
         # These are chosen to exercise cross-module integration points.
         python -m pytest \
-          mvp_site/tests/test_main_state_helper.py \
-          mvp_site/tests/test_game_state.py \
+          $PROJECT_ROOT/tests/test_main_state_helper.py \
+          $PROJECT_ROOT/tests/test_game_state.py \
           -x -q --timeout=60 --no-header \
           2>&1 || {
             echo "::error::Merge-commit smoke tests failed — PR may have integration issues with base branch"
@@ -223,7 +211,7 @@ jobs:
         fi
 
     - name: Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
         # For PRs: checkout the actual head commit, not the synthetic merge commit.
         # testmon fingerprints files using the working tree state; the merge commit
@@ -281,9 +269,9 @@ jobs:
           .testmondata
           .testmondata-shm
           .testmondata-wal
-          mvp_site/.testmondata
-          mvp_site/.testmondata-shm
-          mvp_site/.testmondata-wal
+          $PROJECT_ROOT/.testmondata
+          $PROJECT_ROOT/.testmondata-shm
+          $PROJECT_ROOT/.testmondata-wal
         # Rolling key: GitHub Actions cache is write-once per key, so a static
         # branch-based key can never be updated after first creation.
         # Using run_number makes each run save fresh testmon data under a new
@@ -359,10 +347,10 @@ jobs:
         echo "Event: ${{ github.event_name }}"
         echo ""
         echo "=== Testmon data files ==="
-        ls -la .testmondata mvp_site/.testmondata 2>/dev/null || echo "No .testmondata files found"
+        ls -la .testmondata $PROJECT_ROOT/.testmondata 2>/dev/null || echo "No .testmondata files found"
         echo ""
-        if [ -f mvp_site/.testmondata ] || [ -f .testmondata ]; then
-          DB_FILE="mvp_site/.testmondata"
+        if [ -f $PROJECT_ROOT/.testmondata ] || [ -f .testmondata ]; then
+          DB_FILE="$PROJECT_ROOT/.testmondata"
           [ ! -f "$DB_FILE" ] && DB_FILE=".testmondata"
           echo "=== Testmon DB tables ==="
           sqlite3 "$DB_FILE" ".tables" 2>/dev/null || echo "Cannot read DB"
@@ -437,14 +425,14 @@ jobs:
               # Upgrade pip and install resolver tools with timeout
               timeout 300 "$VENV_PY" -m pip install --upgrade pip setuptools wheel
               # Install core application requirements
-              timeout 600 "$VENV_PIP" install -r mvp_site/requirements.txt
+              timeout 600 "$VENV_PIP" install -r $PROJECT_ROOT/requirements.txt
               # Install pytest tooling for batched worker execution
               timeout 300 "$VENV_PIP" install pytest pytest-xdist pytest-testmon pytest-cov
             fi
 
             case "${{ matrix.test-group }}" in
               "core-mvp-1"|"core-mvp-2"|"core-mvp-3"|"core-tests"|"claude"|"orchestration"|"automation"|"scripts"|"mcp")
-                find . -name "requirements.txt" -not -path "./venv/*" -not -path "./mvp_site/requirements.txt" | while read req_file; do
+                find . -name "requirements.txt" -not -path "./venv/*" -not -path "./$PROJECT_ROOT/requirements.txt" | while read req_file; do
                   echo "Installing $req_file (with 300s timeout)"
                   timeout 300 "$VENV_PIP" install -r "$req_file" || echo "Warning: Failed to install $req_file"
                 done
@@ -505,8 +493,8 @@ jobs:
           CHANGED_FILES=$(git diff --name-only "HEAD~1..HEAD")
         fi
 
-        if echo "$CHANGED_FILES" | grep -q '^mvp_site/frontend_v1/'; then
-          node --test mvp_site/frontend_v1/tests/settings_listeners.test.js
+        if echo "$CHANGED_FILES" | grep -q '^$PROJECT_ROOT/frontend_v1/'; then
+          node --test $PROJECT_ROOT/frontend_v1/tests/settings_listeners.test.js
         else
           echo "No frontend_v1 changes detected; skipping JS unit test."
         fi
@@ -708,7 +696,7 @@ jobs:
       run: |
         # SQLite WAL mode keeps data in -wal files. Checkpoint flushes
         # all data to the main .testmondata so the cache step captures it.
-        for db in .testmondata mvp_site/.testmondata; do
+        for db in .testmondata $PROJECT_ROOT/.testmondata; do
           if [ -f "$db" ]; then
             echo "Checkpointing $db"
             sqlite3 "$db" "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
@@ -722,8 +710,8 @@ jobs:
       with:
         name: test-results-${{ matrix.test-group }}
         path: |
-          mvp_site/test-results/
-          mvp_site/*.log
+          $PROJECT_ROOT/test-results/
+          $PROJECT_ROOT/*.log
         retention-days: 30
         if-no-files-found: warn
 
@@ -773,7 +761,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
           fetch-depth: 0  # Full history needed for git diff (delta coverage)
 
@@ -881,7 +869,7 @@ jobs:
           # These get a reduced threshold until test coverage improves.
           # Standard files: 60% minimum, 80% recommended
           # Exception files: 30% minimum (still enforces SOME coverage)
-          LOW_COVERAGE_FILES="mvp_site/main.py mvp_site/start_flask.py mvp_site/llm_providers/openclaw_provider.py mvp_site/streaming_chunk_logger.py mvp_site/firestore_service.py mvp_site/llm_providers/provider_utils.py mvp_site/llm_service.py mvp_site/settings_validation.py mvp_site/world_logic.py"
+          LOW_COVERAGE_FILES="$PROJECT_ROOT/main.py $PROJECT_ROOT/start_flask.py $PROJECT_ROOT/llm_providers/openclaw_provider.py $PROJECT_ROOT/streaming_chunk_logger.py $PROJECT_ROOT/firestore_service.py $PROJECT_ROOT/llm_providers/provider_utils.py $PROJECT_ROOT/llm_service.py $PROJECT_ROOT/settings_validation.py $PROJECT_ROOT/world_logic.py"
           STANDARD_MIN=60
           STANDARD_REC=80
           REDUCED_MIN=30

@@ -1,15 +1,3 @@
-# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
-# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
-# You MUST adapt the following before using:
-# - $GCP_PROJECT_ID → Your Google Cloud project ID
-# - $GITHUB_REPOSITORY → Your repository (owner/repo)
-# - $GITHUB_OWNER → Your GitHub username or org
-# - Service account configurations and secrets
-# - Environment-specific variables and paths
-#
-# See workflows/README.md for integration instructions.
-# ---
-
 name: Deploy PR Preview (Rotating Pool)
 
 # CI trigger noop: 2026-02-22T14:57:00Z
@@ -23,7 +11,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
     paths:
-      - 'mvp_site/**'
+      - '$PROJECT_ROOT/**'
       - 'infrastructure/**'
       - 'deploy.sh'
       - 'scripts/deploy_common.sh'
@@ -46,7 +34,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
@@ -59,11 +47,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GCP_REGION: us-central1
-      GCP_PROJECT: $GCP_PROJECT_ID
+      GCP_PROJECT: worldarchitecture-ai
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
@@ -141,11 +129,11 @@ jobs:
           IMAGE_TAG="gcr.io/${{ env.GCP_PROJECT }}/$SERVICE_NAME:$PR_HEAD_SHA"
 
           echo "Building Docker image: $IMAGE_TAG"
-          # Create inline cloudbuild.yaml to build from project root with Dockerfile in mvp_site/
+          # Create inline cloudbuild.yaml to build from project root with Dockerfile in $PROJECT_ROOT/
           cat > /tmp/cloudbuild.yaml <<EOF
           steps:
           - name: 'gcr.io/cloud-builders/docker'
-            args: ['build', '-t', '$IMAGE_TAG', '-f', 'mvp_site/Dockerfile', '.']
+            args: ['build', '-t', '$IMAGE_TAG', '-f', '$PROJECT_ROOT/Dockerfile', '.']
           images: ['$IMAGE_TAG']
           EOF
 
