@@ -1,15 +1,3 @@
-# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
-# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
-# You MUST adapt the following before using:
-# - $GCP_PROJECT_ID → Your Google Cloud project ID
-# - $GITHUB_REPOSITORY → Your repository (owner/repo)
-# - $GITHUB_OWNER → Your GitHub username or org
-# - Service account configurations and secrets
-# - Environment-specific variables and paths
-#
-# See workflows/README.md for integration instructions.
-# ---
-
 name: Hook Tests
 
 # Optimized CI triggers - no duplication on PR branches
@@ -34,7 +22,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
@@ -47,7 +35,7 @@ jobs:
     steps:
 
     - name: Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
 
     - name: Set up Python 3.11

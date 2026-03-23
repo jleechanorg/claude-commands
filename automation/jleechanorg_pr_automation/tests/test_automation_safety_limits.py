@@ -372,7 +372,7 @@ class TestAutomationIntegration(unittest.TestCase):
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/jleechan/projects/worldarchitect.ai/automation/automation_safety_wrapper.py</string>
+        <string>/Users/jleechan/projects/your-project.com/automation/automation_safety_wrapper.py</string>
     </array>
 </dict>
 </plist>

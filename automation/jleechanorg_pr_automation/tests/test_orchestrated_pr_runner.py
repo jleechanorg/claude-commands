@@ -787,8 +787,8 @@ def test_multiple_repos_same_pr_number_no_collision(tmp_path, monkeypatch):
 
     # Simulate two PRs with same number from different repos
     pr_worldarchitect = {
-        "repo_full": "jleechanorg/worldarchitect.ai",
-        "repo": "worldarchitect.ai",
+        "repo_full": "jleechanorg/your-project.com",
+        "repo": "your-project.com",
         "number": 318,
         "branch": "fix-doc-size",
         "title": "Fix doc size check",
@@ -806,7 +806,7 @@ def test_multiple_repos_same_pr_number_no_collision(tmp_path, monkeypatch):
     success1 = runner.dispatch_agent_for_pr(FakeDispatcher(), pr_worldarchitect)
     success2 = runner.dispatch_agent_for_pr(FakeDispatcher(), pr_ai_universe)
 
-    assert success1, "Failed to dispatch agent for worldarchitect.ai PR #318"
+    assert success1, "Failed to dispatch agent for your-project.com PR #318"
     assert success2, "Failed to dispatch agent for ai_universe_frontend PR #318"
     assert len(captured_configs) == 2, f"Expected 2 workspace configs, got {len(captured_configs)}"
 
@@ -819,7 +819,7 @@ def test_multiple_repos_same_pr_number_no_collision(tmp_path, monkeypatch):
     )
 
     # Verify correct repo association
-    assert "worldarchitect.ai" in config1["workspace_root"], f"Config1 should contain 'worldarchitect.ai': {config1}"
+    assert "your-project.com" in config1["workspace_root"], f"Config1 should contain 'your-project.com': {config1}"
     assert "ai_universe_frontend" in config2["workspace_root"], (
         f"Config2 should contain 'ai_universe_frontend': {config2}"
     )

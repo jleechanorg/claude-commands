@@ -197,9 +197,9 @@ class TestNoDuplicateCommentsPerSHA:
             "state": "OPEN",
             "isDraft": False,
             "headRefOid": "abc123def",
-            "repository": "worldarchitect.ai",
+            "repository": "your-project.com",
             "headRefName": "copilot/auto_comment_loop",  # Codex branch pattern
-            "repositoryFullName": "jleechanorg/worldarchitect.ai",
+            "repositoryFullName": "jleechanorg/your-project.com",
         }
 
         # Mock _should_skip_pr to indicate PR was already processed (so we hit the bot comment check path)
@@ -231,9 +231,9 @@ class TestNoDuplicateCommentsPerSHA:
             "state": "OPEN",
             "isDraft": False,
             "headRefOid": "d318e327",
-            "repository": "worldarchitect.ai",
+            "repository": "your-project.com",
             "headRefName": "docs/automation-orchestration-guide",  # NOT a Codex branch
-            "repositoryFullName": "jleechanorg/worldarchitect.ai",
+            "repositoryFullName": "jleechanorg/your-project.com",
         }
 
         # Mock to avoid actual GitHub API calls and subprocess calls
@@ -243,7 +243,7 @@ class TestNoDuplicateCommentsPerSHA:
             patch.object(monitor, "_should_skip_pr", return_value=False),
             patch.object(AutomationUtils, "execute_subprocess_with_timeout", return_value=(0, "", "")),
         ):
-            result = monitor.post_codex_instruction_simple("worldarchitect.ai", 5155, pr_data)
+            result = monitor.post_codex_instruction_simple("your-project.com", 5155, pr_data)
             # Should be posted (ALL non-draft PRs get Codex support comments)
             assert result == "posted", \
                 f"ALL branches (including non-Codex) should get Codex support comments in comment-only mode, got: {result}"

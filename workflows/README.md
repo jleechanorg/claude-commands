@@ -101,4 +101,4 @@ Claude Code can assist with adapting these workflows to your specific project. J
 
 ---
 
-**Source**: Exported from [WorldArchitect.AI](https://github.com/jleechanorg/worldarchitect.ai) Claude Code configuration
+**Source**: Exported from [Your Project](https://github.com/jleechanorg/your-project.com) Claude Code configuration

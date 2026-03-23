@@ -191,7 +191,7 @@ run_macos_install_test() {
       <string>sleep \$(( RANDOM % 301 )); exec /opt/homebrew/bin/jleechanorg-pr-monitor --max-prs 10</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/jleechan/projects/worldarchitect.ai/automation</string>
+    <string>/Users/jleechan/projects/your-project.com/automation</string>
   </dict>
 </plist>
 EOF

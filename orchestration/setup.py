@@ -20,7 +20,7 @@ setup(
     long_description_content_type="text/markdown",
     author="jleechan",
     author_email="jlee@jleechan.org",
-    url="https://github.com/jleechanorg/worldarchitect.ai",
+    url="https://github.com/jleechanorg/your-project.com",
     license="MIT",
 
     # Package the orchestration directory
@@ -84,9 +84,9 @@ setup(
     ],
 
     project_urls={
-        "Homepage": "https://github.com/jleechanorg/worldarchitect.ai",
-        "Repository": "https://github.com/jleechanorg/worldarchitect.ai",
-        "Issues": "https://github.com/jleechanorg/worldarchitect.ai/issues",
-        "Documentation": "https://github.com/jleechanorg/worldarchitect.ai/tree/main/orchestration",
+        "Homepage": "https://github.com/jleechanorg/your-project.com",
+        "Repository": "https://github.com/jleechanorg/your-project.com",
+        "Issues": "https://github.com/jleechanorg/your-project.com/issues",
+        "Documentation": "https://github.com/jleechanorg/your-project.com/tree/main/orchestration",
     },
 )

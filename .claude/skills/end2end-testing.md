@@ -195,7 +195,7 @@ TESTING=true python3 -m pytest $PROJECT_ROOT/tests/test_code_execution_dice_roll
 `testing_mcp/README.md` defines many MCP suites as direct-run scripts. Use this split:
 
 - Use `pytest` for:
-  - `mvp_site/tests/...`
+  - `$PROJECT_ROOT/tests/...`
   - `tests/test_end2end/...`
   - Regular unit/integration modules designed for pytest collection
 - Use direct script execution (`vpython <file>.py`) for:

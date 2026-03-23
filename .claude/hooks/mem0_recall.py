@@ -40,7 +40,7 @@ MEM0_CONFIG = {
 
 TOP_K = 6
 SCORE_THRESHOLD = 0.35
-USER_ID = "$USER"
+USER_ID = "jleechan"
 
 
 def main() -> None:

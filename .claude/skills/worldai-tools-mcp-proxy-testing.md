@@ -10,7 +10,7 @@ The WorldAI Tools MCP Proxy (`$PROJECT_ROOT/worldai_tools_mcp_proxy.py`) is an H
 
 ```bash
 # 1. Ensure venv symlink exists in worktree
-ln -sf /home/$USER/projects/your-project.com/venv ./venv
+ln -sf /home/jleechan/projects/your-project.com/venv ./venv
 
 # 2. Kill any lingering processes on test ports
 kill -9 $(lsof -ti:18081,18091) 2>/dev/null

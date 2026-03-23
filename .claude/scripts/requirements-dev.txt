@@ -1,0 +1,4 @@
+# Dev-only dependencies for Claude command scripts and local benchmarking.
+langgraph>=1.0.0
+jsonschema>=4.21.0
+pytest>=9.0.0
