@@ -115,11 +115,12 @@ for dir in "${ROOT_DIRS[@]}"; do
 done
 
 
-# NOTE: settings.json is intentionally NOT exported — it contains MCP server
-# auth tokens, bypassPermissions/dangerouslySkipPermissions flags, and other
-# personal configuration that should never be published to a public template repo.
-# Remove it if it was exported by an older version of this script.
+# ── Remove files that must not be in the public template ─────────────────────
+# settings.json: MCP auth tokens + bypassPermissions flags (never publish)
 rm -f ".claude/settings.json"
+# exportcommands.py: deprecated 2347-line Python script, contains hardcoded paths
+# that cannot be filtered (it's in FILTER_SKIP to protect its regex patterns)
+rm -f ".claude/commands/exportcommands.py"
 
 # ── Copy GitHub workflows (examples only) ───────────────────────────────────
 if [[ -d "$PROJECT_ROOT/.github/workflows" ]]; then
