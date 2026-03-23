@@ -7,11 +7,11 @@
  * Pattern used by: gcloud CLI, Firebase CLI, GitHub CLI
  *
  * Usage:
- *   node .claude/scripts/auth-cli.mjs login                    # Login to ai-universe (default)
- *   node .claude/scripts/auth-cli.mjs login --project custom   # Login to custom project
- *   node .claude/scripts/auth-cli.mjs logout
- *   node .claude/scripts/auth-cli.mjs status
- *   node .claude/scripts/auth-cli.mjs token
+ *   node scripts/auth-cli.mjs login                    # Login to ai-universe (default)
+ *   node scripts/auth-cli.mjs login --project custom   # Login to custom project
+ *   node scripts/auth-cli.mjs logout
+ *   node scripts/auth-cli.mjs status
+ *   node scripts/auth-cli.mjs token
  */
 
 import express from 'express';
@@ -32,20 +32,17 @@ const DEFAULT_PROJECT = {
   id: 'ai-universe-b3551',
   authDomain: 'ai-universe-b3551.firebaseapp.com',
   envPrefix: 'VITE_AI_UNIVERSE_FIREBASE',
-  name: 'AI Universe',
-  mcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp'
+  name: 'AI Universe'
 };
 
 // Known project configurations for convenience
 const KNOWN_PROJECTS = {
-  'ai-universe': DEFAULT_PROJECT,
   'ai-universe-b3551': DEFAULT_PROJECT,
   'worldarchitecture-ai': {
     id: 'worldarchitecture-ai',
     authDomain: 'worldarchitecture-ai.firebaseapp.com',
     envPrefix: 'VITE_FIREBASE',
-    name: 'World Architecture AI',
-    mcpUrl: 'https://worldarchitecture-ai-backend.onrender.com/mcp'
+    name: 'World Architecture AI'
   }
 };
 
@@ -95,8 +92,7 @@ function getProjectConfig(projectOverride) {
     id: projectOverride,
     authDomain: `${projectOverride}.firebaseapp.com`,
     envPrefix: `VITE_${projectOverride.toUpperCase().replace(/-/g, '_')}_FIREBASE`,
-    name: projectOverride,
-    mcpUrl: `https://${projectOverride}.onrender.com/mcp`
+    name: projectOverride
   };
 }
 
@@ -119,7 +115,7 @@ const CONFIG = {
   callbackPort: 9005,
   callbackPath: '/auth/callback',
   tokenPath: join(homedir(), '.ai-universe', `auth-token-${ACTIVE_PROJECT.id}.json`),
-  productionMcpUrl: ACTIVE_PROJECT.mcpUrl || 'https://ai-universe-backend-final.onrender.com/mcp',
+  productionMcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp',
   activeProject: ACTIVE_PROJECT
 };
 
@@ -135,7 +131,7 @@ function validateConfig() {
   if (missingEnvVars.length > 0) {
     console.error(`❌ Firebase configuration missing for ${ACTIVE_PROJECT.name}.`);
     if (ACTIVE_PROJECT.id === 'ai-universe-b3551') {
-      console.error('   Set environment variable: VITE_AI_UNIVERSE_FIREBASE_API_KEY=<your-api-key>');
+      console.error('   Please run: ./scripts/setup-firebase-config.sh');
       console.error('');
     }
     console.error('Or set environment variables:');
@@ -237,14 +233,14 @@ function validateTokenProject(idToken, context) {
   if (aud !== EXPECTED_FIREBASE_PROJECT_ID) {
     throw new Error(
       `[${context}] Token project mismatch: expected "${EXPECTED_FIREBASE_PROJECT_ID}", received "${aud || 'unknown'}". ` +
-      `Run \`node .claude/scripts/auth-cli.mjs login --project ${ACTIVE_PROJECT.id}\` for ${ACTIVE_PROJECT.name}.`
+      `Run \`node scripts/auth-cli.mjs login --project ${ACTIVE_PROJECT.id}\` for ${ACTIVE_PROJECT.name}.`
     );
   }
 
   if (!iss || !iss.endsWith(`/${EXPECTED_FIREBASE_PROJECT_ID}`)) {
     throw new Error(
       `[${context}] Token issuer mismatch: expected Firebase issuer for "${EXPECTED_FIREBASE_PROJECT_ID}", got "${iss || 'unknown'}". ` +
-      `Run \`node .claude/scripts/auth-cli.mjs login --project ${ACTIVE_PROJECT.id}\` for ${ACTIVE_PROJECT.name}.`
+      `Run \`node scripts/auth-cli.mjs login --project ${ACTIVE_PROJECT.id}\` for ${ACTIVE_PROJECT.name}.`
     );
   }
 
@@ -261,9 +257,12 @@ async function refreshIdToken(refreshToken) {
     const response = await fetch(`${REFRESH_TOKEN_URL}?key=${CONFIG.firebaseConfig.apiKey}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/json'
       },
-      body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`
+      body: JSON.stringify({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken
+      })
     });
 
     if (!response.ok) {
@@ -292,7 +291,7 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
     if (returnNullIfMissing) {
       return { tokenData: null, expiresAt: null, now: new Date(), expired: false };
     }
-    throw new Error('Not authenticated. Run: node .claude/scripts/auth-cli.mjs login');
+    throw new Error('Not authenticated. Run: node scripts/auth-cli.mjs login');
   }
 
   let rawToken;
@@ -351,7 +350,7 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
   }
 
   if (expired && !allowExpired) {
-    throw new Error('Token expired. Run: node .claude/scripts/auth-cli.mjs login');
+    throw new Error('Token expired. Run: node scripts/auth-cli.mjs login');
   }
 
   return { tokenData, expiresAt, now, expired };
@@ -365,7 +364,7 @@ function getAuthHtml(callbackUrl) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>${ACTIVE_PROJECT.name} - Sign In</title>
+  <title>AI Universe - Sign In</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
            max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
@@ -378,8 +377,8 @@ function getAuthHtml(callbackUrl) {
   </style>
 </head>
 <body>
-  <h1>🚀 ${ACTIVE_PROJECT.name} Authentication</h1>
-  <p>Sign in with your Google account to access the ${ACTIVE_PROJECT.name} MCP server</p>
+  <h1>🚀 AI Universe Authentication</h1>
+  <p>Sign in with your Google account to access the AI Universe MCP server</p>
   <button onclick="signIn()">Sign in with Google</button>
   <div id="status"></div>
 
@@ -402,8 +401,8 @@ function getAuthHtml(callbackUrl) {
         const user = result.user;
         const idToken = await user.getIdToken();
 
-        // Get refresh token using the documented public Firebase SDK property
-        const refreshToken = user.refreshToken;
+        // Get refresh token (available via stsTokenManager)
+        const refreshToken = user.stsTokenManager?.refreshToken || user.refreshToken;
 
         // Send token back to CLI server
         const response = await fetch('${callbackUrl}', {
@@ -608,7 +607,7 @@ async function refresh() {
     console.log(`   New expiration: ${new Date(tokenData.expiresAt).toLocaleString()}\n`);
   } catch (error) {
     console.error('❌ Refresh failed:', error.message);
-    console.error('   Please run: node .claude/scripts/auth-cli.mjs login');
+    console.error('   Please run: node scripts/auth-cli.mjs login');
     process.exit(1);
   }
 }
@@ -621,7 +620,7 @@ async function status() {
     const { tokenData, expiresAt, expired } = await readTokenData({ allowExpired: true, returnNullIfMissing: true });
 
     if (!tokenData) {
-      console.log('❌ Not authenticated. Run: node .claude/scripts/auth-cli.mjs login');
+      console.log('❌ Not authenticated. Run: node scripts/auth-cli.mjs login');
       process.exit(1);
     }
 
@@ -634,7 +633,7 @@ async function status() {
     console.log(`   Status: ${expired ? '❌ EXPIRED' : '✅ VALID'}\n`);
 
     if (expired) {
-      console.log('⚠️  Token expired. Run: node .claude/scripts/auth-cli.mjs login');
+      console.log('⚠️  Token expired. Run: node scripts/auth-cli.mjs login');
       process.exit(1);
     }
   } catch (error) {
@@ -753,10 +752,10 @@ switch (command) {
     break;
   default:
     console.log(`
-${ACTIVE_PROJECT.name} CLI Authentication Tool
+AI Universe CLI Authentication Tool
 
 Usage:
-  node .claude/scripts/auth-cli.mjs <command> [--project <project-id>]
+  node scripts/auth-cli.mjs <command> [--project <project-id>]
 
 Commands:
   login    - Start browser-based authentication flow
@@ -768,7 +767,7 @@ Commands:
 
 Options:
   --project, -p <id>  - Use a specific Firebase project instead of default
-                        Known projects: ai-universe-b3551, worldarchitecture-ai
+                        Known projects: ai-universe, worldarchitecture-ai
                         Custom project IDs are also supported
 
 Default Project: ai-universe (ai-universe-b3551)
@@ -781,23 +780,23 @@ Token Refresh:
 
 Examples:
   # Authenticate with AI Universe (default)
-  node .claude/scripts/auth-cli.mjs login
+  node scripts/auth-cli.mjs login
 
   # Authenticate with a different project
-  node .claude/scripts/auth-cli.mjs login --project worldarchitecture-ai
-  node .claude/scripts/auth-cli.mjs login -p my-custom-project
+  node scripts/auth-cli.mjs login --project worldarchitecture-ai
+  node scripts/auth-cli.mjs login -p my-custom-project
 
   # Check status
-  node .claude/scripts/auth-cli.mjs status
+  node scripts/auth-cli.mjs status
 
   # Get token (auto-refreshes if expired)
-  TOKEN=$(node .claude/scripts/auth-cli.mjs token)
+  TOKEN=$(node scripts/auth-cli.mjs token)
 
   # Manually refresh token
-  node .claude/scripts/auth-cli.mjs refresh
+  node scripts/auth-cli.mjs refresh
 
   # Use token in HTTPie request
-  TOKEN=$(node .claude/scripts/auth-cli.mjs token)
+  TOKEN=$(node scripts/auth-cli.mjs token)
   echo '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}' | \\
     http POST ${CONFIG.productionMcpUrl} \\
     Accept:'application/json, text/event-stream' \\

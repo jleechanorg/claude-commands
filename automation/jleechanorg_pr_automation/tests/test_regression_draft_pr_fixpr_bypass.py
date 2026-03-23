@@ -57,8 +57,8 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
             "state": "open",
             "isDraft": True,  # THIS IS A DRAFT
             "headRefName": "copilot/sub-pr-4978",
-            "repository": "worldarchitect.ai",
-            "repositoryFullName": "jleechanorg/worldarchitect.ai",
+            "repository": "your-project.com",
+            "repositoryFullName": "jleechanorg/your-project.com",
             "headRefOid": "abc123"
         }
 
@@ -75,7 +75,7 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
 
         # Call _process_pr_fixpr
         result = self.monitor._process_pr_fixpr(
-            repository="worldarchitect.ai",
+            repository="your-project.com",
             pr_number=4979,
             pr_data=pr_data,
             agent_cli="gemini"
@@ -116,8 +116,8 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
             "state": "open",
             "isDraft": True,  # THIS IS A DRAFT
             "headRefName": "copilot/sub-pr-4978-yet-again",
-            "repository": "worldarchitect.ai",
-            "repositoryFullName": "jleechanorg/worldarchitect.ai",
+            "repository": "your-project.com",
+            "repositoryFullName": "jleechanorg/your-project.com",
             "headRefOid": "def456"
         }
 
@@ -133,7 +133,7 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
         self.monitor._get_pr_comment_state = Mock(return_value=("def456", []))
 
         result = self.monitor._process_pr_fixpr(
-            repository="worldarchitect.ai",
+            repository="your-project.com",
             pr_number=4984,
             pr_data=pr_data,
             agent_cli="gemini"
@@ -157,8 +157,8 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
             "state": "open",
             "isDraft": False,  # NOT A DRAFT
             "headRefName": "feature-branch",
-            "repository": "worldarchitect.ai",
-            "repositoryFullName": "jleechanorg/worldarchitect.ai",
+            "repository": "your-project.com",
+            "repositoryFullName": "jleechanorg/your-project.com",
             "headRefOid": "xyz789"
         }
 

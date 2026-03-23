@@ -30,7 +30,7 @@ DEFAULT_CUTOFF_HOURS = 24
 DEFAULT_MAX_PRS = 5
 DEFAULT_TIMEOUT = 30  # baseline timeout per security guideline
 TIMEOUT_SECONDS = DEFAULT_TIMEOUT  # Alias for backward compatibility (fixes NameError in tests)
-CLONE_TIMEOUT = 900  # 15 min - large repos (e.g., 330MB worldarchitect.ai) need more time
+CLONE_TIMEOUT = 900  # 15 min - large repos (e.g., 330MB your-project.com) need more time
 FETCH_TIMEOUT = 120
 API_TIMEOUT = 60
 WORKTREE_TIMEOUT = 60
@@ -822,11 +822,11 @@ def dispatch_agent_for_pr(
         f"     ```bash\n"
         f"     git checkout --ours .beads/issues.jsonl\n"
         f"     ```\n"
-        f"   - For test files (mvp_site/tests/*, testing_mcp/lib/*): Usually use theirs (main branch version)\n"
+        f"   - For test files ($PROJECT_ROOT/tests/*, testing_mcp/lib/*): Usually use theirs (main branch version)\n"
         f"     ```bash\n"
         f"     git checkout --theirs <test_file_path>\n"
         f"     ```\n"
-        f"   - For code files (mvp_site/*.py, automation/*.py): Manually resolve, keeping both changes where appropriate\n"
+        f"   - For code files ($PROJECT_ROOT/*.py, automation/*.py): Manually resolve, keeping both changes where appropriate\n"
         f"     - Read the conflict markers (<<<<<<< HEAD, =======, >>>>>>> origin/main)\n"
         f"     - Keep changes from both branches that don't conflict\n"
         f"     - Remove conflict markers\n"
@@ -1094,7 +1094,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pr",
         metavar="REPO:PR_NUMBER",
-        help="Dispatch for single PR (e.g. jleechanorg/worldarchitect.ai:5965). Skips batch.",
+        help="Dispatch for single PR (e.g. jleechanorg/your-project.com:5965). Skips batch.",
     )
     parser.add_argument(
         "--agent-cli",
@@ -1111,7 +1111,7 @@ if __name__ == "__main__":
 
     if args.pr:
         if ":" not in args.pr:
-            log("--pr must be REPO:PR_NUMBER (e.g. jleechanorg/worldarchitect.ai:5965)")
+            log("--pr must be REPO:PR_NUMBER (e.g. jleechanorg/your-project.com:5965)")
             sys.exit(1)
         repo_full, pr_num_str = args.pr.rsplit(":", 1)
         try:

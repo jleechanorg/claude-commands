@@ -55,7 +55,7 @@ class TestSafetyLimitsFalseRejection:
         """
         # Arrange
         test_pr_number = 3185
-        test_repo = "jleechanorg/worldarchitect.ai"
+        test_repo = "jleechanorg/your-project.com"
         test_branch = "fix/spicy-mode-detection"
 
         # Verify clean state
@@ -108,7 +108,7 @@ class TestSafetyLimitsFalseRejection:
         the source of the bug.
         """
         test_pr_number = 3664
-        test_repo = "jleechanorg/worldarchitect.ai"
+        test_repo = "jleechanorg/your-project.com"
         test_branch = "claude/add-action-resolution-warning"
 
         # Verify clean state

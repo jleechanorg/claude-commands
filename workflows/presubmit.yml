@@ -1,15 +1,3 @@
-# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
-# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
-# You MUST adapt the following before using:
-# - $GCP_PROJECT_ID → Your Google Cloud project ID
-# - $GITHUB_REPOSITORY → Your repository (owner/repo)
-# - $GITHUB_OWNER → Your GitHub username or org
-# - Service account configurations and secrets
-# - Environment-specific variables and paths
-#
-# See workflows/README.md for integration instructions.
-# ---
-
 name: Presubmit Checks
 
 # Cancel in-progress runs when new commits are pushed to same branch
@@ -51,7 +39,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
@@ -62,7 +50,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Enforce game_state schema coverage
         run: |
@@ -104,7 +92,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Install Ruff
         run: |
@@ -140,7 +128,7 @@ jobs:
           fi
 
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Install dependencies
         run: |
@@ -155,13 +143,13 @@ jobs:
           .venv-mypy/bin/pip install mypy==1.13.0
           # Install project dependencies for type checking
           if [ -f requirements.txt ]; then .venv-mypy/bin/pip install -r requirements.txt; fi
-          if [ -f mvp_site/requirements.txt ]; then .venv-mypy/bin/pip install -r mvp_site/requirements.txt; fi
+          if [ -f $PROJECT_ROOT/requirements.txt ]; then .venv-mypy/bin/pip install -r $PROJECT_ROOT/requirements.txt; fi
 
       - name: Run mypy type checker
         run: |
           # Run mypy on the main code directories
           # Non-blocking for incremental adoption - shows errors but doesn't fail CI
-          .venv-mypy/bin/mypy mvp_site/ --config-file mvp_site/mypy.ini --no-error-summary || true
+          .venv-mypy/bin/mypy $PROJECT_ROOT/ --config-file $PROJECT_ROOT/mypy.ini --no-error-summary || true
 
   # JavaScript linting with ESLint
   javascript-lint:
@@ -170,7 +158,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Set up Node.js
         uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
