@@ -125,8 +125,8 @@ Options:
 
 The shell script:
 1. Clones `jleechanorg/claude-commands`
-2. `rsync --no-delete` each directory (source overwrites target; target-only files preserved)
-3. Applies 8 content filter substitutions via `sed`
+2. `rsync -a` each directory (source overwrites target; target-only files preserved by default)
+3. Applies 8 content filter substitutions via `perl -pi -e` (supports `\b` word boundaries on macOS)
 4. Regenerates `README.md` via `claude -p "..."` (Claude CLI)
 5. Commits, pushes, opens PR via `gh pr create`
 
