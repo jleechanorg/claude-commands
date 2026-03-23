@@ -1659,7 +1659,8 @@ The coder has completed the tests and impl beads. Your job is to verify their wo
 """
 
     # MCP setup instructions
-    mcp_setup_instructions = """
+    beads_workspace_root = os.environ.get("PAIR_BEADS_WORKSPACE_ROOT", str(Path.cwd()))
+    mcp_setup_instructions = f"""
 MCP SETUP (Required for Pair Programming):
 
 This session requires two MCP servers for coordination:
@@ -1669,7 +1670,7 @@ This session requires two MCP servers for coordination:
    - If not installed: Follow setup at https://github.com/steveyegge/beads
    - Configuration: Add to ~/.claude/mcp.json (server named "beads")
    - IMPORTANT: Before using any beads MCP tools, FIRST call mcp__beads__context with:
-     action="set", workspace_root="$HOME/projects/worktree_pair2"
+     action="set", workspace_root="{beads_workspace_root}"
      This is required for beads to find the workspace
 
 2. Agent Mail MCP (jleechanorg/mcp_mail) - Inter-agent messaging
@@ -1728,7 +1729,7 @@ Quality Requirements:
 - Ensure test coverage for new code
 
 Beads MCP Integration:
-- FIRST: Call mcp__beads__context with action="set", workspace_root="$HOME/projects/worktree_pair2"
+- FIRST: Call mcp__beads__context with action="set", workspace_root="{beads_workspace_root}"
 - Then update bead status as you progress (use mcp__beads__update)
 - Track your work in the bead system for visibility
 - TDD workflow: tests (todo->done) -> impl (todo->done) -> verification (VERIFIER ONLY)

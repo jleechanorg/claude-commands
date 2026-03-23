@@ -42,7 +42,7 @@ MEM0_CONFIG = {
     "version": "v1.1",
 }
 
-USER_ID = "$USER"
+USER_ID = os.environ.get("USER", "default_user")
 MIN_RESPONSE_LEN = 100  # Skip trivial one-liners
 
 

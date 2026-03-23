@@ -149,6 +149,7 @@ execution_mode: immediate
 
 # Implementation delegates to existing orchestration system
 
+```bash
 /orch "Autonomous convergence: <goal> with max-attempts=N max-hours=H interval=M in current directory"
 ```
 
