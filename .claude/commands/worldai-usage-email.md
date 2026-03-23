@@ -1,29 +1,29 @@
-# WorldAI Usage Email - Send Daily/Weekly Report
+---
+description: Send daily/weekly project usage report email to project owner
+type: git
+execution_mode: manual
+---
+# Project Usage Email - Send Daily/Weekly Report
 
-Sends the Your Project daily + weekly usage report email to $USER@gmail.com.
+Sends the daily + weekly usage report email.
 
 ## Command
 
 ```bash
-EMAIL_PASS=$(grep "EMAIL_PASS=" ~/.bashrc | head -1 | cut -d'"' -f2) && \
-source $HOME/projects/worktree_livingw3/venv/bin/activate && \
-EMAIL_APP_PASSWORD="$EMAIL_PASS" EMAIL_USER="$USER@gmail.com" \
-WORLDAI_DEV_MODE=true GOOGLE_APPLICATION_CREDENTIALS=~/serviceAccountKey.json \
-python3 $HOME/projects/worktree_rlimit4/scripts/daily_campaign_report.py --send-email
+EMAIL_PASS=$(grep "EMAIL_PASS=" ~/.bashrc | head -1 | cut -d'"' -f2) && source ${PROJECT_VENV:-$HOME/projects/your-project/venv}/bin/activate && EMAIL_APP_PASSWORD="$EMAIL_PASS" EMAIL_USER="$USER@gmail.com" WORLDAI_DEV_MODE=true GOOGLE_APPLICATION_CREDENTIALS=~/serviceAccountKey.json python3 ${PROJECT_ROOT:-$HOME/projects/your-project}/scripts/daily_campaign_report.py --send-email
 ```
 
 ## Notes
 
-- **Script**: `scripts/daily_campaign_report.py` in any your-project.com worktree
+- **Script**: `scripts/daily_campaign_report.py` in your project root
 - **Password**: Stored in `~/.bashrc` as `EMAIL_PASS` (Gmail App Password)
-- **Venv**: Uses `worktree_livingw3/venv` since the current worktree may not have one
+- **Venv**: Uses `$PROJECT_VENV` (set before running); defaults to `$HOME/projects/your-project/venv`
 - **Output**: Saves report to `~/Downloads/campaign-activity-report-YYYY-MM-DD.txt`
-- **Contains**: Last week DAU stats + Last 4 weeks DAU/WAU stats + top users + cost
 
-## Alternate worktrees
+## Setup
 
-If `worktree_livingw3` is gone, find another venv:
+Set these env vars before running:
 ```bash
-find $HOME/projects -name "activate" -path "*/venv/*" | head -5
+export PROJECT_ROOT="$HOME/projects/your-project"
+export PROJECT_VENV="$PROJECT_ROOT/venv"
 ```
-Then substitute the path in the `source` command above.

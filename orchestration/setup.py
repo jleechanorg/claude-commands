@@ -18,8 +18,8 @@ setup(
     description="AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="$USER",
-    author_email="jlee@$USER.org",
+    author="your-github-username",
+    author_email="your-email@example.com",
     url="https://github.com/jleechanorg/your-project.com",
     license="MIT",
 

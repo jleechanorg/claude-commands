@@ -61,7 +61,7 @@ echo "   Logs: $LOG_DIR"
 echo "🔧 Configuring launchd service..."
 CURRENT_USER=$(whoami)
 sed "s|$HOME/projects/worktree_worker2|$PROJECT_ROOT|g" "$PLIST_SOURCE" | \
-sed "s|$USER|$CURRENT_USER|g" | \
+sed 's|$USER|$CURRENT_USER|g' | \
 sed "s|\\$GITHUB_TOKEN|$GITHUB_TOKEN|g" > "$PLIST_DEST"
 
 echo "📄 Created plist: $PLIST_DEST"

@@ -1,5 +1,5 @@
 ---
-description: Post "@coderabbit all good?" comment on the PR associated with the current branch
+description: Post "@coderabbitai all good?" comment on the PR associated with the current branch
 type: git
 execution_mode: immediate
 ---
@@ -21,29 +21,29 @@ If the command fails (no PR found), tell the user: "No open PR found for the cur
 
 ### Step 2: Post CodeRabbit Comment
 
-Post a comment on the PR saying exactly `@coderabbit all good?`:
+Post a comment on the PR saying exactly `@coderabbitai all good?`:
 
 ```bash
-gh pr comment <PR_NUMBER> --body "@coderabbit all good?"
+gh pr comment <PR_NUMBER> --body "@coderabbitai all good?"
 ```
 
 ### Step 3: Confirm
 
 Report to the user:
 - The PR number and URL
-- That the comment "@coderabbit all good?" was successfully posted
+- That the comment "@coderabbitai all good?" was successfully posted
 
 ## 📋 REFERENCE DOCUMENTATION
 
 # /coderabbit - Trigger CodeRabbit Review
 
-**Purpose**: Post `@coderabbit all good?` on the PR associated with the current local branch, prompting CodeRabbit to re-review or confirm the PR.
+**Purpose**: Post `@coderabbitai all good?` on the PR associated with the current local branch, prompting CodeRabbit to re-review or confirm the PR.
 
 **Usage**: `/coderabbit` or `/cr`
 
 **What it does**:
 1. Detects the PR linked to the current branch via `gh pr view`
-2. Posts `@coderabbit all good?` as a PR comment
+2. Posts `@coderabbitai all good?` as a PR comment
 3. Reports success with PR URL
 
 **Alias**: `/cr`

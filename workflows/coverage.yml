@@ -14,7 +14,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '$PROJECT_ROOT/**/*.py'
+      - '**/*.py'
       - 'coverage.sh'
       - '.github/workflows/coverage.yml'
 
@@ -43,7 +43,7 @@ jobs:
         with:
           path: |
             ~/.cache/pip
-          key: ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-${{ hashFiles('$PROJECT_ROOT/requirements.txt') }}
+          key: ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-
 

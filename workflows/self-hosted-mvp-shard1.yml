@@ -5,14 +5,14 @@ on:
     branches: [main, dev]
   pull_request:
     paths:
-      - "$PROJECT_ROOT/**"
+      - "**"
       - "tests/**"
       - "run_tests.sh"
       - "scripts/pr_autonomy_metrics.py"
       - "scripts/trace_to_eval_case.py"
       - "scripts/validate_prompt_tool_contracts.py"
       - "scripts/venv_utils.sh"
-      - "$PROJECT_ROOT/schemas/prompt_tool_contracts.json"
+      - "schemas/prompt_tool_contracts.json"
       - ".github/workflows/self-hosted-mvp-shard1.yml"
   workflow_dispatch:
 

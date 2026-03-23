@@ -5,16 +5,16 @@ on:
     paths:
       - '.cursor/rules/*.md*'
       - 'CLAUDE.md'
-      - '$PROJECT_ROOT/tests/test_documentation_performance.py'
-      - '$PROJECT_ROOT/monitor_doc_sizes.sh'
+      - 'tests/test_documentation_performance.py'
+      - 'monitor_doc_sizes.sh'
   push:
     branches:
       - main
     paths:
       - '.cursor/rules/*.md*'
       - 'CLAUDE.md'
-      - '$PROJECT_ROOT/tests/test_documentation_performance.py'
-      - '$PROJECT_ROOT/monitor_doc_sizes.sh'
+      - 'tests/test_documentation_performance.py'
+      - 'monitor_doc_sizes.sh'
 
 jobs:
   limit-pr-runs:
