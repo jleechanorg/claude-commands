@@ -127,8 +127,9 @@ done
 
 
 # ── Remove files that must not be in the public template ─────────────────────
-# settings.json: MCP auth tokens + bypassPermissions flags (never publish)
+# settings.json / settings.local.json: MCP auth tokens + bypassPermissions flags (never publish)
 rm -f ".claude/settings.json"
+rm -f ".claude/settings.local.json"
 # exportcommands.py: deprecated 2347-line Python script, contains hardcoded paths
 # that cannot be filtered (it's in FILTER_SKIP to protect its regex patterns)
 rm -f ".claude/commands/exportcommands.py"
