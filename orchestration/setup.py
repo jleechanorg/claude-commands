@@ -18,9 +18,9 @@ setup(
     description="AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="$USER",
-    author_email="jlee@$USER.org",
-    url="https://github.com/$GITHUB_REPOSITORY",
+    author="your-name",
+    author_email="you@example.com",
+    url="https://github.com/owner/repo",
     license="MIT",
 
     # Package the orchestration directory
@@ -84,9 +84,9 @@ setup(
     ],
 
     project_urls={
-        "Homepage": "https://github.com/$GITHUB_REPOSITORY",
-        "Repository": "https://github.com/$GITHUB_REPOSITORY",
-        "Issues": "https://github.com/$GITHUB_REPOSITORY/issues",
-        "Documentation": "https://github.com/$GITHUB_REPOSITORY/tree/main/orchestration",
+        "Homepage": "https://github.com/owner/repo",
+        "Repository": "https://github.com/owner/repo",
+        "Issues": "https://github.com/owner/repo/issues",
+        "Documentation": "https://github.com/owner/repo/tree/main/orchestration",
     },
 )

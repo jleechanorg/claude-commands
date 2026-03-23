@@ -1,4 +1,4 @@
-#\!/bin/bash
+#!/bin/bash
 # Red-Green Test for speculation detection hook
 
 HOOK_SCRIPT="../detect_speculation_and_fake_code.sh"

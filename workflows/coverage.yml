@@ -14,7 +14,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '$PROJECT_ROOT/**/*.py'
+      - '**/*.py'
       - 'coverage.sh'
       - '.github/workflows/coverage.yml'
 
@@ -43,7 +43,7 @@ jobs:
         with:
           path: |
             ~/.cache/pip
-          key: ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-${{ hashFiles('$PROJECT_ROOT/requirements.txt') }}
+          key: ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-
 
@@ -54,7 +54,7 @@ jobs:
           VENV_PY="$PWD/venv/bin/python"
           VENV_PIP="$PWD/venv/bin/pip"
           "$VENV_PIP" install --upgrade pip setuptools wheel
-          "$VENV_PIP" install -r $PROJECT_ROOT/requirements.txt
+          "$VENV_PIP" install -r requirements.txt
           "$VENV_PIP" install coverage pytest
           echo "$PWD/venv/bin" >> "$GITHUB_PATH"
           echo "VIRTUAL_ENV=$PWD/venv" >> "$GITHUB_ENV"
