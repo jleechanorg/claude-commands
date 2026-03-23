@@ -18,9 +18,9 @@ setup(
     description="AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="jleechan",
-    author_email="jlee@jleechan.org",
-    url="https://github.com/jleechanorg/worldarchitect.ai",
+    author="$USER",
+    author_email="jlee@$USER.org",
+    url="https://github.com/$GITHUB_REPOSITORY",
     license="MIT",
 
     # Package the orchestration directory
@@ -84,9 +84,9 @@ setup(
     ],
 
     project_urls={
-        "Homepage": "https://github.com/jleechanorg/worldarchitect.ai",
-        "Repository": "https://github.com/jleechanorg/worldarchitect.ai",
-        "Issues": "https://github.com/jleechanorg/worldarchitect.ai/issues",
-        "Documentation": "https://github.com/jleechanorg/worldarchitect.ai/tree/main/orchestration",
+        "Homepage": "https://github.com/$GITHUB_REPOSITORY",
+        "Repository": "https://github.com/$GITHUB_REPOSITORY",
+        "Issues": "https://github.com/$GITHUB_REPOSITORY/issues",
+        "Documentation": "https://github.com/$GITHUB_REPOSITORY/tree/main/orchestration",
     },
 )

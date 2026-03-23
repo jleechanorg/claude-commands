@@ -53,9 +53,10 @@ Do not print full JSONL lines.
 ### 4) Find matching Codex rollout sessions for cwd
 
 ```bash
-python3 - <<PY
+python3 - <<'PY'
 from pathlib import Path
-cwd = "$PWD"
+import os
+cwd = os.getcwd()
 files = []
 for p in Path.home().glob(".codex/sessions/*/*/*/rollout-*.jsonl"):
     try:

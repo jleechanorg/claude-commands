@@ -21,7 +21,7 @@ SAMPLE_LIST_RESPONSE = {
             "status": "ready",
             "updated_at": "2026-02-08T02:47:27Z",
             "environment_id": None,
-            "environment_label": "jleechanorg/worldarchitect.ai",
+            "environment_label": "$GITHUB_REPOSITORY",
             "summary": {"files_changed": 1, "lines_added": 5, "lines_removed": 1},
             "is_review": True,
             "attempt_total": 1,
@@ -33,7 +33,7 @@ SAMPLE_LIST_RESPONSE = {
             "status": "pending",
             "updated_at": "2026-02-08T02:39:26Z",
             "environment_id": None,
-            "environment_label": "jleechanorg/worldarchitect.ai",
+            "environment_label": "$GITHUB_REPOSITORY",
             "summary": {"files_changed": 0, "lines_added": 0, "lines_removed": 0},
             "is_review": True,
             "attempt_total": 1,
@@ -45,7 +45,7 @@ SAMPLE_LIST_RESPONSE = {
             "status": "ready",
             "updated_at": "2026-02-08T01:00:00Z",
             "environment_id": None,
-            "environment_label": "jleechanorg/worldarchitect.ai",
+            "environment_label": "$GITHUB_REPOSITORY",
             "summary": {"files_changed": 2, "lines_added": 40, "lines_removed": 10},
             "is_review": False,
             "attempt_total": 1,
@@ -215,7 +215,7 @@ class TestGetStatus(unittest.TestCase):
     @patch("shutil.which", return_value="/usr/local/bin/codex")
     def test_returns_raw_output(self, _mock_which, mock_run):
         mock_run.return_value = MagicMock(
-            stdout="[READY] GitHub Mention: bump deps\njleechanorg/worldarchitect.ai",
+            stdout="[READY] GitHub Mention: bump deps\n$GITHUB_REPOSITORY",
             stderr="",
             returncode=0,
         )
@@ -292,17 +292,17 @@ class TestRepoContextFallback(unittest.TestCase):
         _mock_which,
         _mock_run,
     ):
-        mock_ensure_base_clone.return_value = Path("/tmp/pr-orch-bases/worldarchitect.ai")
+        mock_ensure_base_clone.return_value = Path("/tmp/pr-orch-bases/your-project.com")
         api = CodexCloudAPI()
         task = {
             "id": "task_e_abc123",
-            "environment_label": "jleechanorg/worldarchitect.ai",
+            "environment_label": "$GITHUB_REPOSITORY",
         }
 
         resolved = api._resolve_base_repo_path(task)
 
-        self.assertEqual(resolved, Path("/tmp/pr-orch-bases/worldarchitect.ai"))
-        mock_ensure_base_clone.assert_called_once_with("jleechanorg/worldarchitect.ai")
+        self.assertEqual(resolved, Path("/tmp/pr-orch-bases/your-project.com"))
+        mock_ensure_base_clone.assert_called_once_with("$GITHUB_REPOSITORY")
 
     @patch("subprocess.run")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
@@ -313,13 +313,13 @@ class TestRepoContextFallback(unittest.TestCase):
 
         result = api._find_existing_pr_branch(
             task_title="GitHub Mention: Example",
-            repo_full="jleechanorg/worldarchitect.ai",
+            repo_full="$GITHUB_REPOSITORY",
         )
 
         self.assertIsNone(result)
         cmd = mock_run.call_args[0][0]
         self.assertIn("--repo", cmd)
-        self.assertIn("jleechanorg/worldarchitect.ai", cmd)
+        self.assertIn("$GITHUB_REPOSITORY", cmd)
 
     @patch("subprocess.run")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
@@ -335,7 +335,7 @@ class TestRepoContextFallback(unittest.TestCase):
                 {
                     "number": 5671,
                     "headRefName": "codex/2eee21eb",
-                    "url": "https://github.com/jleechanorg/worldarchitect.ai/pull/5671",
+                    "url": "https://github.com/$GITHUB_REPOSITORY/pull/5671",
                 }
             ]),
             stderr="",
@@ -345,12 +345,12 @@ class TestRepoContextFallback(unittest.TestCase):
 
         result = api._find_existing_pr_by_task_id(
             "task_e_69a7c8d2148c832f9f8cd4e52eee21eb",
-            repo_full="jleechanorg/worldarchitect.ai",
+            repo_full="$GITHUB_REPOSITORY",
         )
 
         self.assertEqual(
             result,
-            ("codex/2eee21eb", "https://github.com/jleechanorg/worldarchitect.ai/pull/5671"),
+            ("codex/2eee21eb", "https://github.com/$GITHUB_REPOSITORY/pull/5671"),
         )
         cmd = mock_run.call_args[0][0]
         self.assertEqual(cmd[:4], ["gh", "pr", "list", "--json"])
@@ -371,7 +371,7 @@ class TestRepoContextFallback(unittest.TestCase):
         api = CodexCloudAPI()
         task = {
             "id": "task_e_abc123",
-            "environment_label": "jleechanorg/worldarchitect.ai",
+            "environment_label": "$GITHUB_REPOSITORY",
         }
 
         with self.assertRaises(RuntimeError):

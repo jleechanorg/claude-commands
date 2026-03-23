@@ -67,9 +67,9 @@ class CopilotCommandBase(ABC):
                         return "/".join(url.split("/")[-2:])
             except subprocess.CalledProcessError:
                 pass
-            # Default fallback - use your-project.com as default repo
-            return os.environ.get(
-                "DEFAULT_REPO", "jleechanorg/your-project.com"
+            # Default fallback - prefer env vars over hardcoded repo name
+            return os.environ.get("DEFAULT_REPO") or os.environ.get(
+                "GITHUB_REPOSITORY", "owner/repo"
             )
 
     def _get_current_branch(self) -> str:
@@ -107,16 +107,20 @@ class CopilotCommandBase(ABC):
             Parsed JSON response (list for paginated, dict/object for single page)
         """
         # Check if --paginate is in command (before modification)
-        is_paginated = '--paginate' in command
-        original_has_jq = '--jq' in command
+        is_paginated = "--paginate" in command
+        original_has_jq = "--jq" in command
 
         try:
             if is_paginated and not original_has_jq:
                 # Add --jq to flatten paginated results
                 # Find where --paginate is and insert --jq after it
-                paginate_idx = command.index('--paginate')
+                paginate_idx = command.index("--paginate")
                 # Use --jq '.[]' to flatten all pages into single array
-                command = command[:paginate_idx+1] + ['--jq', '.[]'] + command[paginate_idx+1:]
+                command = (
+                    command[: paginate_idx + 1]
+                    + ["--jq", ".[]"]
+                    + command[paginate_idx + 1 :]
+                )
 
             result = subprocess.run(command, capture_output=True, text=True, check=True)
             if not result.stdout.strip():
@@ -126,7 +130,7 @@ class CopilotCommandBase(ABC):
             # We only use special parsing if WE added the --jq flag
             if is_paginated and not original_has_jq:
                 items = []
-                for line in result.stdout.strip().split('\n'):
+                for line in result.stdout.strip().split("\n"):
                     if line.strip():
                         try:
                             items.append(json.loads(line))
@@ -141,7 +145,7 @@ class CopilotCommandBase(ABC):
                 # Fallback for user-provided --jq that produces JSONL (e.g. --jq '.[]')
                 if is_paginated and original_has_jq:
                     items = []
-                    for line in result.stdout.strip().split('\n'):
+                    for line in result.stdout.strip().split("\n"):
                         if line.strip():
                             try:
                                 items.append(json.loads(line))
@@ -163,7 +167,9 @@ class CopilotCommandBase(ABC):
         """Log informational message with timestamp in CI environments."""
         if os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"):
             timestamp = datetime.now().strftime("%H:%M:%S")
-            print(f"[{timestamp}] [{self.__class__.__name__}] {message}", file=sys.stderr)
+            print(
+                f"[{timestamp}] [{self.__class__.__name__}] {message}", file=sys.stderr
+            )
         else:
             print(f"[{self.__class__.__name__}] {message}", file=sys.stderr)
 
@@ -246,7 +252,13 @@ class CopilotCommandBase(ABC):
                 f"./{script_path}",
                 f"../../{script_path}",
                 f"../../../{script_path}",
-                str(home_dir / "projects" / project_name / "worktree_human2" / script_path),
+                str(
+                    home_dir
+                    / "projects"
+                    / project_name
+                    / "worktree_human2"
+                    / script_path
+                ),
             ]
 
             result = None
