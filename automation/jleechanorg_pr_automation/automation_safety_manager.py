@@ -809,9 +809,13 @@ class AutomationSafetyManager:
 
         if HAS_KEYRING:
             try:
-                # Legacy service name; credentials may need re-entry if migrated from "worldarchitect-automation"
                 username = keyring.get_password("your-project-automation", "smtp_username")
                 password = keyring.get_password("your-project-automation", "smtp_password")
+                # Backward-compat fallback: try legacy service name used before rebranding
+                if username is None:
+                    username = keyring.get_password("worldarchitect-automation", "smtp_username")
+                if password is None:
+                    password = keyring.get_password("worldarchitect-automation", "smtp_password")
             except Exception:
                 self.logger.debug("Keyring lookup failed for SMTP credentials", exc_info=True)
                 username = None
@@ -846,7 +850,7 @@ class AutomationSafetyManager:
             body = f"""
 {message}
 
-Time: {datetime.now().isoformat()}
+Time: {datetime.now(timezone.utc).isoformat()}
 System: PR Automation Safety Manager
 
 This is an automated notification from the Your Project automation system.
