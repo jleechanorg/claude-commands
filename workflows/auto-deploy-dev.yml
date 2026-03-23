@@ -1,3 +1,4 @@
+# ⚠️ TEMPLATE — adapt GCP project IDs, Cloud Run service names, and region before use.
 # Auto-Deploy to Development Environment
 # Lightweight trigger that delegates to reusable deploy-dev workflow
 # Triggers on push to main OR manual workflow_dispatch

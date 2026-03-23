@@ -1,5 +1,5 @@
 {
-  "description": "Plugin-packaged enforcement hooks for the WorldArchitect.AI workflow.",
+  "description": "Plugin-packaged enforcement hooks for Claude Code workflows.",
   "hooks": {
     "PreToolUse": [
       {
