@@ -32,12 +32,16 @@ CLAUDE_DIRS=(commands skills hooks agents scripts)
 # Dirs from project root → repo root in target repo
 ROOT_DIRS=(orchestration automation ralph)
 
-# Files to exclude from content filtering (contain literal regex patterns)
-FILTER_SKIP=(exportcommands.py exportcommands.sh loc_simple.sh)
+# Files to exclude from content filtering (contain literal regex patterns or are test files
+# that assert on the source strings and must not have them silently replaced)
+FILTER_SKIP=(exportcommands.py exportcommands.sh loc_simple.sh test_exportcommands.py)
 
 # Content filter substitutions (applied to all .md .py .sh .yml files)
 # NOTE: Uses perl -pi -e for cross-platform \b word-boundary support (macOS sed lacks it)
+# IMPORTANT: Specific patterns must come before general ones:
+#   jleechanorg/worldarchitect.ai BEFORE worldarchitect.ai (general would consume specific)
 declare -a SUBS=(
+  's|jleechanorg/worldarchitect\.ai|\$GITHUB_REPOSITORY|g'
   's|worldarchitect\.ai|your-project.com|g'
   's|worldarchitect-ci|\$\{PROJECT_NAME:-your-project\}-ci|g'
   's|/Users/jleechan|\$HOME|g'
@@ -46,7 +50,6 @@ declare -a SUBS=(
   's|mvp_site/|\$PROJECT_ROOT/|g'
   's|WorldArchitect\.AI|Your Project|g'
   's|TESTING=true vpython|TESTING=true python|g'
-  's|jleechanorg/worldarchitect\.ai|\$GITHUB_REPOSITORY|g'
 )
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
