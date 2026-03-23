@@ -185,11 +185,11 @@ def detect_repo_path() -> Optional[Path]:
     """Detect a local git repository path using shared automation conventions.
 
     Checks in order:
-    1. `~/.config/worldarchitect/repo_path`
+    1. `~/.config/your-project/repo_path`
     2. current working directory
     3. `~/projects/your-project.com`
     """
-    config_file = Path.home() / ".config" / "worldarchitect" / "repo_path"
+    config_file = Path.home() / ".config" / "your-project" / "repo_path"
     if config_file.exists():
         repo_path = config_file.read_text().strip()
         if repo_path:

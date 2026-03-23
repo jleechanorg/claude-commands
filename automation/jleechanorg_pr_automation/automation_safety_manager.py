@@ -840,7 +840,7 @@ class AutomationSafetyManager:
             msg = MIMEMultipart()
             msg["From"] = from_email
             msg["To"] = to_email
-            msg["Subject"] = f"[WorldArchitect Automation] {subject}"
+            msg["Subject"] = f"[Your Project Automation] {subject}"
 
             body = f"""
 {message}
