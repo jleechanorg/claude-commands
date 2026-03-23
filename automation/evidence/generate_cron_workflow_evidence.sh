@@ -13,7 +13,7 @@ OUT_DIR="${BASE_TMP}/cron-workflow-evidence/${BRANCH}/${TS_UTC}"
 ART_DIR="${OUT_DIR}/artifacts"
 mkdir -p "$ART_DIR"
 
-TARGET_REPO="${EVIDENCE_TARGET_REPO:-jleechanorg/worldarchitect.ai}"
+TARGET_REPO="${EVIDENCE_TARGET_REPO:-jleechanorg/your-project.com}"
 TARGET_PR="${EVIDENCE_TARGET_PR:-3269}"
 
 if ! [[ "$TARGET_PR" =~ ^[0-9]+$ ]]; then

@@ -1,75 +1,157 @@
 ---
-description: /claw - Send a task to OpenClaw agent natively via WebSocket (fire-and-forget, no MCP timeout)
+description: /claw - Send a task to OpenClaw agent via async gateway HTTP dispatch
 type: orchestration
 execution_mode: immediate
 ---
-# /claw - OpenClaw Native Agent Dispatch
+# /claw - OpenClaw Agent Dispatch (Async Gateway HTTP)
 
 **Usage**: `/claw <task description>`
 
-**Purpose**: Send a task to the OpenClaw agent via the native `openclaw agent` CLI — the same path as typing a message to OpenClaw directly. Uses WebSocket, respects SOUL.md/memory/skills, and supports up to 20-minute autonomous tasks with no timeout killing the job.
+**Purpose**: Send a task to the OpenClaw agent asynchronously via the gateway's streaming HTTP endpoint. Returns immediately with a log file path — no blocking, no Slack needed.
 
 ## Execution Instructions
 
 When this command is invoked with `$ARGUMENTS`:
 
-1. Dispatch in background (fire-and-forget):
+### Step 1: Verify gateway is running
+
 ```bash
-TASK_ID="claw-$(date +%s)-$$"
-LOG_FILE="/tmp/openclaw-${TASK_ID}.log"
-
-nohup openclaw agent --agent main \
-  -m "$ARGUMENTS" \
-  --thinking low \
-  --timeout 1200 \
-  > "$LOG_FILE" 2>&1 &
-
-CLAW_PID=$!
-sleep 0.5
-if kill -0 "$CLAW_PID" 2>/dev/null; then
-  echo "✓ Dispatched to OpenClaw agent (task: $TASK_ID, PID $CLAW_PID)"
-  echo "  Output: tail -f $LOG_FILE"
-  echo "  Gateway logs: tail -f /tmp/openclaw/openclaw-$(date +%F).log"
-else
-  echo "✗ OpenClaw agent exited immediately — check $LOG_FILE for errors"
+if ! lsof -i :18789 | grep -q LISTEN 2>/dev/null; then
+  echo "Gateway not running on port 18789. Start it with: launchctl start gui/$UID/ai.openclaw.gateway"
+  exit 1
 fi
 ```
 
-2. Confirm to the user:
-- Task dispatched via native `openclaw agent` WebSocket path
-- Timeout is 1200s (20 min) — long enough for real coding tasks
-- Output streams to `/tmp/openclaw-<task-id>.log`
-- OpenClaw uses its full agent stack: SOUL.md, memory, skills, tools
-
-## Checking Progress
+### Step 2: Read Gateway Token
 
 ```bash
-# Stream output as it arrives
-tail -f /tmp/openclaw-claw-*.log
-
-# Gateway agent activity (use unbuffered python -u for real-time)
-tail -f /tmp/openclaw/openclaw-$(date +%F).log | grep -E '"(tool|exec|run)' --line-buffered | python3 -u -c "
-import sys, json
-for line in sys.stdin:
-    try:
-        d = json.loads(line.strip())
-        msg = str(d.get('1', '') or d.get('msg', ''))
-        if 'tool' in msg or 'exec' in msg or 'run' in msg:
-            print(d.get('time','')[:19], msg[:120])
-    except: pass
-"
+GATEWAY_TOKEN=$(python3 -c "import json; d=json.load(open('$HOME/.openclaw/openclaw.json')); print(d['gateway']['auth']['token'])" 2>/dev/null)
+if [ -z "$GATEWAY_TOKEN" ]; then
+  echo "Could not read gateway token from ~/.openclaw/openclaw.json"
+  exit 1
+fi
 ```
+
+### Step 3: Build JSON payload safely via python3
+
+```bash
+TASK_DESCRIPTION="$ARGUMENTS"
+LOGFILE="/tmp/openclaw/claw-$(date +%s).log"
+PAYLOAD_FILE="/tmp/openclaw/.claw-payload-$$.json"
+mkdir -p /tmp/openclaw
+
+# Build JSON payload entirely in python3 — no shell interpolation of user text into JSON
+# This fixes orch-n0n1: the old approach used nested shell quoting that broke when
+# task descriptions contained quotes, newlines, or started with certain characters
+# (e.g., "Review PR #273" → JSON parse error "Unexpected token 'R'")
+python3 -c "
+import json, sys
+payload = {
+    'model': 'openclaw',
+    'stream': True,
+    'messages': [{'role': 'user', 'content': sys.argv[1]}]
+}
+with open(sys.argv[2], 'w') as f:
+    json.dump(payload, f)
+" "$TASK_DESCRIPTION" "$PAYLOAD_FILE"
+
+if [ ! -f "$PAYLOAD_FILE" ]; then
+  echo "Failed to build JSON payload"
+  exit 1
+fi
+```
+
+### Step 4: Dispatch async via streaming HTTP
+
+```bash
+# Fire streaming request in background — returns immediately
+nohup bash -c '
+PAYLOAD_FILE="'"$PAYLOAD_FILE"'"
+LOGFILE="'"$LOGFILE"'"
+GATEWAY_TOKEN="'"$GATEWAY_TOKEN"'"
+
+# Capture raw response first to detect gateway errors (orch-glom)
+RAW_RESPONSE=$(curl -s -w "\n__HTTP__%{http_code}" \
+  http://127.0.0.1:18789/v1/chat/completions \
+  -H "Authorization: Bearer $GATEWAY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "x-openclaw-agent-id: main" \
+  --max-time 600 \
+  -d @"$PAYLOAD_FILE" 2>/dev/null)
+
+# Clean up payload file
+rm -f "$PAYLOAD_FILE"
+
+HTTP_CODE=$(echo "$RAW_RESPONSE" | grep "^__HTTP__" | sed "s/__HTTP__//")
+BODY=$(echo "$RAW_RESPONSE" | grep -v "^__HTTP__")
+
+# Check for gateway error response (non-streaming JSON error)
+ERROR_MSG=$(echo "$BODY" | head -1 | python3 -c "
+import sys, json
+try:
+    d = json.loads(sys.stdin.read())
+    if \"error\" in d:
+        print(d[\"error\"].get(\"message\", str(d[\"error\"])))
+except (json.JSONDecodeError, ValueError):
+    pass
+" 2>/dev/null)
+
+if [ -n "$ERROR_MSG" ]; then
+  echo "GATEWAY ERROR (HTTP $HTTP_CODE): $ERROR_MSG"
+else
+  # Parse SSE stream and extract content deltas
+  echo "$BODY" | grep "^data:" | grep -v "\[DONE\]" | while IFS= read -r line; do
+    echo "$line" | sed "s/^data: //" | python3 -c "
+import sys, json
+try:
+    d = json.loads(sys.stdin.read())
+    delta = d[\"choices\"][0].get(\"delta\", {})
+    if \"content\" in delta:
+        print(delta[\"content\"], end=\"\", flush=True)
+except Exception:
+    pass
+"
+  done
+fi
+
+# Completion verification (orch-m6ia): flag empty/minimal output
+echo ""
+SELF_SIZE=$(wc -c < "'"$LOGFILE"'" 2>/dev/null || echo 0)
+if [ "$SELF_SIZE" -lt 100 ]; then
+  echo "--- WARNING: task produced minimal output (${SELF_SIZE}B) — likely failed ---"
+fi
+echo "--- claw task completed $(date) ---"
+' > "$LOGFILE" 2>&1 &
+
+CLAW_PID=$!
+echo "Task dispatched async to OpenClaw gateway"
+echo "PID: $CLAW_PID"
+echo "Log: $LOGFILE"
+echo ""
+echo "Monitor: tail -f $LOGFILE"
+echo "Kill: kill $CLAW_PID"
+```
+
+### Step 5: Confirm to User
+
+Report:
+- Task dispatched (async, non-blocking)
+- PID and log file path
+- How to monitor: `tail -f <logfile>`
+- How to kill: `kill <pid>`
 
 ## Requirements
 
-- OpenClaw gateway running: `lsof -i :18789 | grep LISTEN`
-- `openclaw` CLI in PATH: `which openclaw`
-- OpenAI Codex OAuth token valid (refreshes automatically)
+- OpenClaw gateway running on port 18789
+- Gateway auth token in `~/.openclaw/openclaw.json`
 
 ## Notes
 
-- This bypasses `openclaw-mcp` entirely — no 30s timeout
-- Uses `openclaw agent --agent main` — native WS protocol, same as typing in the OpenClaw UI
-- OpenClaw runs with full context: SOUL.md, memory, skills, agent identity
-- `--timeout 1200` = 20 minutes; increase for very long tasks
-- To wait for result synchronously (blocking): remove `nohup ... &`
+- Tasks run async with a 10-minute timeout (--max-time 600)
+- Output streams to `/tmp/openclaw/claw-<timestamp>.log`
+- The gateway process handles the task — no tmux session, no Slack
+- JSON payload built via python3 (not shell interpolation) to prevent parse errors
+- Gateway errors are detected and logged instead of silently swallowed
+- Tasks producing <100B output are flagged as likely failures
+- For sync (blocking) mode, use: `/claw --sync <task>`
+- Beads: orch-n0n1 (JSON parse fix), orch-glom (empty log detection), orch-m6ia (completion verification)

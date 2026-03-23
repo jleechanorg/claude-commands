@@ -6,7 +6,7 @@ Cursor bot identified 2 additional bugs after the initial fixes:
 1. TOCTOU race condition in atomic_update() file creation
 2. TypeError not caught in _parse_timestamp()
 
-Bug Context: https://github.com/jleechanorg/worldarchitect.ai/pull/3762
+Bug Context: https://github.com/jleechanorg/your-project.com/pull/3762
 """
 
 import json
@@ -52,7 +52,7 @@ def test_toctou_race_concurrent_file_creation(tmp_path):
     Fix: Use single code path with 'a+' mode which doesn't truncate on open,
     and acquire lock BEFORE any truncation happens.
 
-    Cursor comment: https://github.com/jleechanorg/worldarchitect.ai/pull/3762
+    Cursor comment: https://github.com/jleechanorg/your-project.com/pull/3762
     """
     test_file = tmp_path / "concurrent_create.json"
 
@@ -121,7 +121,7 @@ def test_parse_timestamp_with_integer(tmp_path, monkeypatch):
 
     Fix: Add TypeError to exception handler.
 
-    Cursor comment: https://github.com/jleechanorg/worldarchitect.ai/pull/3762
+    Cursor comment: https://github.com/jleechanorg/your-project.com/pull/3762
     """
     safety_data_dir = tmp_path / "safety"
     safety_data_dir.mkdir()

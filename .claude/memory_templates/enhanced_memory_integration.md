@@ -53,7 +53,7 @@ Enhanced Capture:
   "observations": [
     "Issue: Firebase Auth timeout in user authentication flow",
     "Error: 'firebase.auth().signInWithEmailAndPassword() timed out'",
-    "Location: mvp_site/firebase_util.py:45",
+    "Location: $PROJECT_ROOT/firebase_util.py:45",
     "Root Cause: Default 30s timeout insufficient for Auth API",
     "Solution: Increased timeout to 60s via firebase.auth().timeout = 60000",
     "Code Change: Line 12 firebase_util.py timeout parameter",

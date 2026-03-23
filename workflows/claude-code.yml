@@ -44,16 +44,16 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           timeout_minutes: "30"
 
-          # Custom instructions for WorldArchitect.AI context
+          # Custom instructions for Your Project context
           custom_instructions: |
-            You are helping with WorldArchitect.AI, an AI-powered tabletop RPG platform.
+            You are helping with Your Project, an AI-powered tabletop RPG platform.
 
             Key project details:
             - Stack: Python 3.11, Flask, Gunicorn, Gemini API, Firebase Firestore
             - Frontend: Vanilla JS with Bootstrap
             - Deployment: Docker on Google Cloud Run
-            - Testing: Use 'TESTING=true vpython' for tests
-            - Main directories: mvp_site/, testing_http/, testing_ui/
+            - Testing: Use 'TESTING=true python' for tests
+            - Main directories: $PROJECT_ROOT/, testing_http/, testing_ui/
 
             Follow the project's CLAUDE.md rules when making changes.
             Always run tests before completing tasks.
