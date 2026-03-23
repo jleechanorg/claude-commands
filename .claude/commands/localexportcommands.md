@@ -39,7 +39,6 @@ This command copies standard Claude Code directories to ~/.claude:
 - **Settings** (.claude/settings.json) → ~/.claude/settings.json - Configuration
 - **Dependencies** (package.json, package-lock.json) → ~/.claude/ - Node.js dependencies for secondo command
 - **Codex Skills** (.codex/skills/) → ~/.codex/skills/ - Codex CLI skill documentation
-- **Codex Hooks** (.codex/hooks/) → ~/.codex/hooks/ - Codex CLI automation hooks
 - **Ralph Toolkit** (ralph/) → ~/ralph/ - Portable Ralph runtime and libraries
 **🚨 EXCLUDED**: Project-specific directories (schemas, templates, framework, guides, learnings, memory_templates, research) are NOT exported to maintain clean global ~/.claude structure.
 
@@ -185,7 +184,6 @@ mcp_scripts=(
     "start_mcp_production.sh"
     "start_mcp_server.sh"
     "install_mcp_servers.sh"
-    "check-pr-status.sh"
 )
 
 mcp_copied=0
@@ -322,60 +320,6 @@ else
     echo "   ⚠️  .codex/skills/ not found, skipping Codex skills export"
 fi
 
-# Export Codex hooks from .codex/hooks/ to ~/.codex/hooks/
-echo ""
-echo "📦 Exporting Codex hooks..."
-echo "================================="
-
-if [ -d ".codex/hooks" ]; then
-    mkdir -p "$HOME/.codex/hooks"
-
-    # Count hooks before copy
-    codex_hook_count=$(find .codex/hooks -mindepth 1 -maxdepth 1 -type f \( -name "*.sh" -o -name "*.py" \) | wc -l | tr -d ' ')
-
-    # Use rsync if available, otherwise cp -a
-    if command -v rsync >/dev/null 2>&1; then
-        rsync -a ".codex/hooks/" "$HOME/.codex/hooks/"
-    else
-        cp -a ".codex/hooks/." "$HOME/.codex/hooks/"
-    fi
-
-    # Set executable permissions on shell scripts
-    if [ -d "$HOME/.codex/hooks" ]; then
-        if ! find "$HOME/.codex/hooks" -name "*.sh" -exec chmod +x {} \; ; then
-            echo "   ⚠️  Failed to set executable permissions on one or more Codex hooks" >&2
-        fi
-    fi
-
-    echo "   ✅ Exported $codex_hook_count Codex hooks to ~/.codex/hooks/"
-else
-    echo "   ⚠️  .codex/hooks/ not found, skipping Codex hooks export"
-fi
-
-# Export Codex hooks engine config from .codex/hooks.json to ~/.codex/hooks.json
-echo ""
-echo "📦 Exporting Codex hooks config..."
-echo "================================="
-
-if [ -f ".codex/hooks.json" ]; then
-    mkdir -p "$HOME/.codex"
-    cp ".codex/hooks.json" "$HOME/.codex/hooks.json"
-    echo "   ✅ Exported Codex hooks config to ~/.codex/hooks.json"
-else
-    echo "   ⚠️  .codex/hooks.json not found, skipping Codex hooks config export"
-fi
-
-# Enable codex_hooks feature (required by Codex CLI hooks engine)
-if command -v codex >/dev/null 2>&1; then
-    if codex features enable codex_hooks >/dev/null 2>&1; then
-        echo "   ✅ Enabled Codex feature flag: codex_hooks"
-    else
-        echo "   ⚠️  Could not auto-enable codex_hooks feature. Run: codex features enable codex_hooks"
-    fi
-else
-    echo "   ⚠️  codex CLI not found; enable manually after install: codex features enable codex_hooks"
-fi
-
 # Export Ralph toolkit from root ralph/ to ~/ralph/
 echo ""
 echo "📦 Exporting Ralph toolkit..."
@@ -450,9 +394,7 @@ echo "6. Skills directory: $([ -d "$HOME/.claude/skills" ] && echo "✅ Present"
 echo "7. package.json: $([ -f "$HOME/.claude/package.json" ] && echo "✅ Present" || echo "⚠️  Missing (secondo may not work)")"
 echo "8. install_mcp_servers.sh: $([ -f "$HOME/.claude/scripts/install_mcp_servers.sh" ] && echo "✅ Present" || echo "⚠️  Missing")"
 echo "9. Codex skills directory: $([ -d "$HOME/.codex/skills" ] && echo "✅ Present ($(find "$HOME/.codex/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') skills)" || echo "⚠️  Missing")"
-echo "10. Codex hooks directory: $([ -d "$HOME/.codex/hooks" ] && echo "✅ Present ($(find "$HOME/.codex/hooks" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ') hooks)" || echo "⚠️  Missing")"
-echo "11. Codex hooks config: $([ -f "$HOME/.codex/hooks.json" ] && echo "✅ Present" || echo "⚠️  Missing")"
-echo "12. Ralph toolkit entrypoint: $([ -x "$HOME/ralph/ralph.sh" ] && echo "✅ Present" || echo "⚠️  Missing or not executable")"
+echo "10. Ralph toolkit entrypoint: $([ -x "$HOME/ralph/ralph.sh" ] && echo "✅ Present" || echo "⚠️  Missing or not executable")"
 
 echo ""
 echo "🎉 Local export completed successfully!"

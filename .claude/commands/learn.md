@@ -19,21 +19,22 @@ execution_mode: immediate
 
 # /learn Command
 
-**Purpose**: The unified learning command that captures and documents learnings with native memory integration for persistent knowledge storage
+**Purpose**: The unified learning command that captures and documents learnings with Memory MCP integration for persistent knowledge storage
 
 **Usage**: `/learn [optional: specific learning or context]`
 
-**Note**: This is the single, unified `/learn` command. All learning functionality is consolidated here with native memory integration as the default.
+**Note**: This is the single, unified `/learn` command. All learning functionality is consolidated here with Memory MCP integration as the default.
 
 **Enhanced Behavior**:
 1. **Sequential Thinking Analysis**: Use `/think` mode for deep pattern recognition and learning extraction
 2. **Context Analysis**: If no context provided, analyze recent conversation for learnings using enhanced thinking
 3. **Existing Learning Check**: Verify if learning exists in CLAUDE.md or lessons.mdc
 4. **CLAUDE.md Proposals**: Generate specific CLAUDE.md additions with 🚨/⚠️/✅ classifications
-5. **Native Memory Integration**: Persist learnings to Claude's native memory
-   - **Universal Usage**: Use `memory_save` for saving learnings
-   - **Smart Search**: Use `memory_search` for finding related patterns
-   - **Direct Storage**: Save learnings directly with memory_save
+5. **Memory MCP Integration with Query Optimization**: Persist learnings to knowledge graph with enhanced search effectiveness
+   - **Universal Composition**: Use `/memory search` for automatic query optimization and improved learning pattern discovery
+   - **Smart Search Strategy**: Leverage `/memory` command's automatic compound query transformation
+   - **Entity Creation**: Use `/memory learn` for structured learning entity creation with relationship discovery
+   - **Performance Enhancement**: Improve search success from ~30% to 70%+ through intelligent query transformation
 6. **Automatic PR Workflow**: Create separate learning branch and PR for CLAUDE.md updates
 7. **Pattern Recognition**: Identify repeated mistakes and successful recovery patterns
 8. **Auto-Learning Integration**: Support automatic triggering from other commands
@@ -54,10 +55,12 @@ execution_mode: immediate
 1. **Deep Analysis**: Use sequential thinking to analyze patterns and extract insights
 2. **Classification**: Categorize learnings as 🚨 Critical, ⚠️ Mandatory, ✅ Best Practice, or ❌ Anti-Pattern
 3. **Proposal Generation**: Create specific CLAUDE.md rule proposals with exact placement
-4. **Native Memory Integration**: Store learnings persistently in native memory
-   - **Direct Save**: Use `memory_save` for storing learning content
-   - **Search**: Use `memory_search` to find related patterns
-   - **Verification**: Check for duplicate entries before saving
+4. **Memory MCP Integration**: Store learnings persistently in knowledge graph
+   - **Version Check**: Verify backup script is current using `memory/check_backup_version.sh`
+   - **Entity Creation**: Create learning entities with proper schema
+   - **Duplicate Detection**: Search existing graph to prevent redundant entries
+   - **Relation Building**: Connect related learnings and patterns
+   - **Observation Addition**: Add learning content to existing entities when appropriate
 5. **Branch Choice**: Offer user choice between:
    - **Current PR**: Include learning changes in existing work (related context)
    - **Clean Branch**: Create independent learning PR from fresh main branch
@@ -81,13 +84,13 @@ execution_mode: immediate
 - CLAUDE.md for critical rules (via automatic PR)
 - .cursor/rules/lessons.mdc for detailed technical learnings
 - .claude/learnings.md for categorized knowledge base
-- **Native Claude Memory**: Persistent memories across conversations
+- **Memory MCP Knowledge Graph**: Persistent entities and relations across conversations
 - Failure/success pattern tracking for auto-triggers
 - Integration with other slash commands (/integrate, merge detection)
 
-**Enhanced Native Memory Schema**:
+**Enhanced Memory MCP Entity Schema**:
 
-**High-Quality Learning Types**:
+**High-Quality Entity Types**:
 - `technical_learning` - Specific technical solutions with code/errors
 - `implementation_pattern` - Successful code patterns with reusable details
 - `debug_session` - Complete debugging journeys with root causes
@@ -115,7 +118,7 @@ execution_mode: immediate
 
 **Enhanced Relations**: `fixes`, `implemented_in`, `tested_by`, `caused_by`, `prevents`, `optimizes`, `supersedes`, `requires`
 
-**Enhanced Native Memory Implementation Steps**:
+**Enhanced Memory MCP Implementation Steps**:
 
 1. **Enhanced Search & Context**:
    - Extract specific technical terms (file names, error messages, PR numbers)
@@ -162,21 +165,55 @@ execution_mode: immediate
 **Integration Function Calls**:
 ```
 
-# Search for existing similar learnings
+# Check backup script version consistency
 
-memory_search("[key terms from learning]")
+memory/check_backup_version.sh || echo "Warning: Backup script version mismatch"
 
-# Save learning to native memory
+# Search for existing similar learnings (with error handling)
 
-memory_save({
-  "content": "{learning content with context and details}",
-  "category": "technical|pattern|workflow|decision",
-  "tags": ["implementation", "debugging", "security"]
-})
+try:
+    /memory search "[key terms from learning]"
+except Exception as e:
+    log_error("Memory MCP search failed: " + str(e))
+    fallback_to_local_only_mode()
+
+# Create enhanced entity with high-quality patterns (with error handling)
+
+try:
+    mcp__memory-server__create_entities([{
+      "name": "{system}_{issue_type}_{timestamp}",  # Canonical naming
+      "entityType": "{technical_learning|implementation_pattern|debug_session|workflow_insight}",  # Select appropriate type
+      "observations": [
+        "Context: {specific situation with timestamp and circumstances}",
+        "Technical Detail: {exact error message or code with file:line}",
+        "Root Cause: {identified cause with evidence}",
+        "Solution Applied: {specific implementation steps taken}",
+        "Code Changes: {file paths and line numbers modified}",
+        "Verification: {test results, performance metrics, confirmation}",
+        "References: {PR URLs, commit hashes, related documentation}",
+        "Reusable Pattern: {how this solution applies to other contexts}",
+        "Classification: [🚨|⚠️|✅|❌] {reason for classification}"
+      ]
+    }])
+except Exception as e:
+    log_error("Memory MCP entity creation failed: " + str(e))
+    notify_user("Learning saved locally only - Memory MCP unavailable")
+
+# Build relations to related concepts (with error handling)
+
+try:
+    mcp__memory-server__create_relations([{
+      "from": "[learning-name]",
+      "to": "[related-concept]",
+      "relationType": "[relates_to|caused_by|prevents|applies_to]"
+    }])
+except Exception as e:
+    log_error("Memory MCP relation creation failed: " + str(e))
+    # Relations are optional - continue without them
 ```
 
 **Error Handling Strategy**:
-- **Graceful Degradation**: Continue with local file updates if native memory fails
-- **User Notification**: Inform user when memory unavailable but learning saved locally
-- **Fallback Mode**: Local-only operation when memory completely unavailable
-- **Robust Operation**: Never let memory failures prevent learning capture
+- **Graceful Degradation**: Continue with local file updates if Memory MCP fails
+- **User Notification**: Inform user when Memory MCP unavailable but learning saved locally
+- **Fallback Mode**: Local-only operation when Memory MCP completely unavailable
+- **Robust Operation**: Never let Memory MCP failures prevent learning capture
