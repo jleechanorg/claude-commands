@@ -26,15 +26,16 @@ if (!firebaseApiKey) {
   process.exit(1);
 }
 
-// Adapt FIREBASE_PROJECT_ID and FIREBASE_AUTH_DOMAIN for your project.
+// auth-cli.mjs reads VITE_FIREBASE_* for the WorldArchitect.AI project (envPrefix: 'VITE_FIREBASE').
+// Adapt FIREBASE_PROJECT_ID for your project.
 const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || 'your-firebase-project-id';
 const child = spawn('node', [mainScript, '--project', firebaseProjectId, ...args], {
   stdio: 'inherit',
   env: {
     ...process.env,
-    FIREBASE_PROJECT_ID: firebaseProjectId,
-    FIREBASE_AUTH_DOMAIN: `${firebaseProjectId}.firebaseapp.com`,
-    FIREBASE_API_KEY: firebaseApiKey
+    VITE_FIREBASE_API_KEY: firebaseApiKey,
+    VITE_FIREBASE_AUTH_DOMAIN: `${firebaseProjectId}.firebaseapp.com`,
+    VITE_FIREBASE_PROJECT_ID: firebaseProjectId
   }
 });
 

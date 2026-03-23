@@ -26,15 +26,16 @@ if (!firebaseApiKey) {
   process.exit(1);
 }
 
+// auth-cli.mjs reads VITE_AI_UNIVERSE_FIREBASE_* for AI Universe (envPrefix: 'VITE_AI_UNIVERSE_FIREBASE').
 // Adapt FIREBASE_PROJECT_ID for your AI Universe project.
 const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || 'your-firebase-project-id';
 const child = spawn('node', [mainScript, '--project', firebaseProjectId, ...args], {
   stdio: 'inherit',
   env: {
     ...process.env,
-    FIREBASE_PROJECT_ID: firebaseProjectId,
-    FIREBASE_AUTH_DOMAIN: `${firebaseProjectId}.firebaseapp.com`,
-    FIREBASE_API_KEY: firebaseApiKey
+    VITE_AI_UNIVERSE_FIREBASE_API_KEY: firebaseApiKey,
+    VITE_AI_UNIVERSE_FIREBASE_AUTH_DOMAIN: `${firebaseProjectId}.firebaseapp.com`,
+    VITE_AI_UNIVERSE_FIREBASE_PROJECT_ID: firebaseProjectId
   }
 });
 
