@@ -1,15 +1,3 @@
-# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
-# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
-# You MUST adapt the following before using:
-# - $GCP_PROJECT_ID → Your Google Cloud project ID
-# - $GITHUB_REPOSITORY → Your repository (owner/repo)
-# - $GITHUB_OWNER → Your GitHub username or org
-# - Service account configurations and secrets
-# - Environment-specific variables and paths
-#
-# See workflows/README.md for integration instructions.
-# ---
-
 name: Coverage Report
 
 # Cancel in-progress runs when new commits are pushed to same branch
@@ -26,7 +14,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'mvp_site/**/*.py'
+      - '$PROJECT_ROOT/**/*.py'
       - 'coverage.sh'
       - '.github/workflows/coverage.yml'
 
@@ -41,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
           persist-credentials: true
 
@@ -55,7 +43,7 @@ jobs:
         with:
           path: |
             ~/.cache/pip
-          key: ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-${{ hashFiles('mvp_site/requirements.txt') }}
+          key: ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-${{ hashFiles('$PROJECT_ROOT/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-
 
@@ -66,7 +54,7 @@ jobs:
           VENV_PY="$PWD/venv/bin/python"
           VENV_PIP="$PWD/venv/bin/pip"
           "$VENV_PIP" install --upgrade pip setuptools wheel
-          "$VENV_PIP" install -r mvp_site/requirements.txt
+          "$VENV_PIP" install -r $PROJECT_ROOT/requirements.txt
           "$VENV_PIP" install coverage pytest
           echo "$PWD/venv/bin" >> "$GITHUB_PATH"
           echo "VIRTUAL_ENV=$PWD/venv" >> "$GITHUB_ENV"

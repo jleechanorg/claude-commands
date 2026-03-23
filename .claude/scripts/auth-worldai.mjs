@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * World Architecture AI Authentication Wrapper
+ * WorldArchitect.AI Authentication Wrapper
  *
  * Usage:
  *   node auth-worldai.mjs login
@@ -22,17 +22,17 @@ const mainScript = join(__dirname, 'auth-cli.mjs');
 const firebaseApiKey = process.env.WORLDAI_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY;
 
 if (!firebaseApiKey) {
-  console.error('❌ FIREBASE_API_KEY or WORLDAI_FIREBASE_API_KEY must be set for World Architecture AI');
+  console.error('❌ FIREBASE_API_KEY or WORLDAI_FIREBASE_API_KEY must be set for WorldArchitect.AI');
   process.exit(1);
 }
 
-const child = spawn('node', [mainScript, '--project', 'worldarchitecture-ai', ...args], {
+const child = spawn('node', [mainScript, ...args], {
   stdio: 'inherit',
   env: {
     ...process.env,
-    VITE_FIREBASE_PROJECT_ID: 'worldarchitecture-ai',
-    VITE_FIREBASE_AUTH_DOMAIN: 'worldarchitecture-ai.firebaseapp.com',
-    VITE_FIREBASE_API_KEY: firebaseApiKey
+    FIREBASE_PROJECT_ID: 'worldarchitecture-ai',
+    FIREBASE_AUTH_DOMAIN: 'worldarchitecture-ai.firebaseapp.com',
+    FIREBASE_API_KEY: firebaseApiKey
   }
 });
 

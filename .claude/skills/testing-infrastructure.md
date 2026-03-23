@@ -122,7 +122,7 @@ print(f"Debug: {result}")
 - Avoid `pytest testing_mcp/...` for script-style files that parse CLI args or expect script runtime setup.
 
 ### `testing_ui` browser auth bypass
-- Follow `mvp_site/testing_ui/README_TEST_MODE.md` exactly:
+- Follow `$PROJECT_ROOT/testing_ui/README_TEST_MODE.md` exactly:
   - Start backend with `TESTING_AUTH_BYPASS=true`.
   - Open UI with `?test_mode=true&test_user_id=<id>`.
   - Verify browser flow sets/uses:
