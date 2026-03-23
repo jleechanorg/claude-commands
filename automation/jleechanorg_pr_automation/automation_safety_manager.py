@@ -570,7 +570,7 @@ class AutomationSafetyManager:
 
             write_success = json_manager.atomic_update(self.inflight_file, release_slot, {})
             if not write_success:
-                logging.error(f"Failed to release slot for PR {pr_key} - file write failed")
+                self.logger.error(f"Failed to release slot for PR {pr_key} - file write failed")
 
     def get_pr_attempts(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
         """Get count of attempts for a specific PR.
@@ -809,8 +809,9 @@ class AutomationSafetyManager:
 
         if HAS_KEYRING:
             try:
-                username = keyring.get_password("worldarchitect-automation", "smtp_username")
-                password = keyring.get_password("worldarchitect-automation", "smtp_password")
+                # Legacy service name; credentials may need re-entry if migrated from "worldarchitect-automation"
+                username = keyring.get_password("your-project-automation", "smtp_username")
+                password = keyring.get_password("your-project-automation", "smtp_password")
             except Exception:
                 self.logger.debug("Keyring lookup failed for SMTP credentials", exc_info=True)
                 username = None

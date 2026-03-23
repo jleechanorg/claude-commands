@@ -41,6 +41,14 @@ from pair_integration import generate_pair_task_spec, should_trigger_pair
 DEFAULT_REPO_SLUG = os.environ.get("GITHUB_REPOSITORY", "owner/repo")
 
 
+def _validate_repo_slug(slug: str) -> str:
+    """Ensure slug is owner/repo with two non-empty parts; fall back to default."""
+    parts = slug.strip().split("/")
+    if len(parts) == 2 and parts[0] and parts[1]:
+        return f"{parts[0]}/{parts[1]}"
+    return "owner/repo"
+
+
 def log(message: str):
     """Log message with timestamp."""
     timestamp = datetime.now(UTC).isoformat()
@@ -75,16 +83,16 @@ def get_repo_slug() -> str:
             check=False,
         )
         if result.returncode != 0:
-            return DEFAULT_REPO_SLUG
+            return _validate_repo_slug(DEFAULT_REPO_SLUG)
 
         remote_url = result.stdout.strip()
         if "github.com/" in remote_url:
-            return remote_url.split("github.com/", 1)[1].replace(".git", "")
+            return _validate_repo_slug(remote_url.split("github.com/", 1)[1].replace(".git", ""))
         if remote_url.startswith("git@github.com:"):
-            return remote_url.replace("git@github.com:", "").replace(".git", "")
+            return _validate_repo_slug(remote_url.replace("git@github.com:", "").replace(".git", ""))
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
-    return DEFAULT_REPO_SLUG
+    return _validate_repo_slug(DEFAULT_REPO_SLUG)
 
 
 REPO_SLUG = get_repo_slug()
