@@ -12,7 +12,6 @@ Matrix Coverage:
 - Remote states: upstream, no upstream
 """
 
-import glob
 import os
 import shutil
 import subprocess
@@ -181,11 +180,13 @@ class TestGitHeaderStatusline:
         """RED: Test essential output format components"""
         stdout, stderr, returncode = run_git_header(git_header_script)
 
-        # Must contain all essential components
+        # Line 1: dir, branch, sync status in parentheses.
+        # PR: is only emitted on line 2 when a PR is known (see git-header.sh);
+        # bare repos with no remote never print "PR:".
         assert "Dir:" in stdout
         assert "Branch:" in stdout
-        assert "PR:" in stdout
         assert "(" in stdout and ")" in stdout  # Status always in parentheses
+        assert "ctx" in stdout  # Line 2 always includes the context window bar label
 
     def test_red_pr_branch_pattern_detection(self, temp_git_repo, git_header_script):
         """RED: Test PR branch pattern detection (pr-123, feature/pr-456)"""

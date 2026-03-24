@@ -17,12 +17,15 @@ When this command is invoked with `$ARGUMENTS`:
 ```bash
 TASK_ID="claw-$(date +%s)-$$"
 LOG_FILE="/tmp/openclaw-${TASK_ID}.log"
+export CLAW_MSG="$ARGUMENTS"
 
-nohup openclaw agent --agent main \
-  -m "$ARGUMENTS" \
+# bash --login reads ~/.bash_profile/~/.profile (no interactive guard) so API
+# key exports are available. stdin from /dev/null prevents SIGTTIN in nohup.
+nohup bash --login -c 'openclaw agent --agent main \
+  -m "$CLAW_MSG" \
   --thinking low \
-  --timeout 1200 \
-  > "$LOG_FILE" 2>&1 &
+  --timeout 1200' \
+  < /dev/null > "$LOG_FILE" 2>&1 &
 
 CLAW_PID=$!
 sleep 0.5
