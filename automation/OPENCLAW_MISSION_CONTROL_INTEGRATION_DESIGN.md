@@ -1,7 +1,7 @@
 # Design: Integrate `automation/` Cron Jobs with OpenClaw Mission Control
 
 ## Context
-The current `automation/` system in `worldarchitect.ai` uses local cron + shell/python scripts to run PR automation and watchdog tasks. OpenClaw now provides Mission Control + agent orchestration that can supervise long-running flows, route messages, and coordinate multi-model review.
+The current `automation/` system in `your-project.com` uses local cron + shell/python scripts to run PR automation and watchdog tasks. OpenClaw now provides Mission Control + agent orchestration that can supervise long-running flows, route messages, and coordinate multi-model review.
 
 Goal: preserve existing cron reliability while adding Mission Control as the control plane for visibility, approvals, and model-assisted review.
 
@@ -121,7 +121,7 @@ In shadow/dry-run mode, Mission Control writes evidence only and must not publis
 ```json
 {
   "job_type": "design_review",
-  "repo": "jleechanorg/worldarchitect.ai",
+  "repo": "$GITHUB_REPOSITORY",
   "pr_number": 1234,
   "job_id": "mc-2026-1234-abc1234",
   "head_sha": "abc1234def5678",

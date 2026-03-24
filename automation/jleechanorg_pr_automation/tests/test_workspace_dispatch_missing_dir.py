@@ -43,7 +43,7 @@ class TestWorkspaceDispatchMissingDirectory(unittest.TestCase):
         is removed concurrently (external cleanup, reboot/tmpfs cleanup, etc.) before
         shutil.rmtree() runs.
         """
-        repo = "worldarchitect.ai"
+        repo = "your-project.com"
         workspace_name = "pr-2915-fix-social-hp-god-tier-enforcement"
 
         # Workspace exists, but removal races with external cleanup.
@@ -67,7 +67,7 @@ class TestWorkspaceDispatchMissingDirectory(unittest.TestCase):
 
         Scenario: Workspace exists but rmtree fails (permissions, locks, etc.).
         """
-        repo = "worldarchitect.ai"
+        repo = "your-project.com"
         workspace_name = "pr-2909-fix-power-absorption-rewards-protocol"
 
         workspace_path = self.test_root / repo / workspace_name
@@ -88,7 +88,7 @@ class TestWorkspaceDispatchMissingDirectory(unittest.TestCase):
         Scenario: Workspace is a git worktree that was cleaned up
         Expected: Should clean up worktree metadata and proceed
         """
-        repo = "worldarchitect.ai"
+        repo = "your-project.com"
         workspace_name = "pr-2902-claude-test-and-fix-system-prompt-RiZyM"
 
         # Create workspace with .git file (worktree marker)
