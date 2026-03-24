@@ -87,7 +87,7 @@ class TestIsGithubBotComment(unittest.TestCase):
         assert not self.monitor._is_github_bot_comment(comment)  # noqa: SLF001
 
     def test_excludes_human_user(self) -> None:
-        comment = {"author": {"login": "jleechan"}}
+        comment = {"author": {"login": "$USER"}}
         assert not self.monitor._is_github_bot_comment(comment)  # noqa: SLF001
 
     def test_handles_user_field_fallback(self) -> None:

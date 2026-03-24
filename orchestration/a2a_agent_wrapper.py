@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-A2A Agent Wrapper for WorldArchitect.AI Orchestrator
+A2A Agent Wrapper for Your Project Orchestrator
 
 Enhances existing agents with A2A capabilities while preserving
 all existing tmux-based orchestration functionality.

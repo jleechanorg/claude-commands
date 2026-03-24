@@ -1424,7 +1424,7 @@ Your response MUST follow this exact structure for clarity:
             "      - git fetch origin main && git merge origin/main --no-edit\n"
             "      - Resolve conflicts:\n"
             "        * .beads/issues.jsonl: git checkout --ours .beads/issues.jsonl\n"
-            "        * test files (mvp_site/tests/*, testing_mcp/lib/*): git checkout --theirs <file>\n"
+            "        * test files ($PROJECT_ROOT/tests/*, testing_mcp/lib/*): git checkout --theirs <file>\n"
             "        * code files: manually resolve, keeping both changes where appropriate\n"
             f'      - git add -A && git commit -m "{self._build_fix_comment_commit_marker(None)} Merge main to resolve conflicts" && git push\n'
             f"   c) Verify: gh pr view {pr_number} --json mergeable (should show MERGEABLE, not CONFLICTING)\n\n"

@@ -10,10 +10,10 @@ automation can be exercised offline:
 
 It returns deterministic fixture data for three synthetic pull requests:
 
-``#101``  Eligible – no Codex summary comment referencing the head SHA.
-``#102``  Ineligible – includes a Codex summary comment that cites the
+``#101``  Eligible - no Codex summary comment referencing the head SHA.
+``#102``  Ineligible - includes a Codex summary comment that cites the
           current head commit (should trigger the pending-commit skip).
-``#103``  Eligible – contains a historic Codex marker for a different SHA.
+``#103``  Eligible - contains a historic Codex marker for a different SHA.
 
 Usage::
 
@@ -27,14 +27,13 @@ from __future__ import annotations
 
 import json
 import sys
-from typing import Dict, List
 
-PR_FIXTURES: Dict[str, Dict] = {
+PR_FIXTURES: dict[str, dict] = {
     "101": {
         "title": "Fix eligible automation path",
         "headRefName": "feature/eligible",
         "baseRefName": "main",
-        "url": "https://github.com/jleechanorg/your-project.com/pull/101",
+        "url": "https://github.com/$GITHUB_REPOSITORY/pull/101",
         "author": {"login": "dev-user"},
         "headRefOid": "abc1234def5678abc1234def5678abc1234def5",
         "comments": [
@@ -49,7 +48,7 @@ PR_FIXTURES: Dict[str, Dict] = {
         "title": "Pending Codex automation commit",
         "headRefName": "feature/pending",
         "baseRefName": "main",
-        "url": "https://github.com/jleechanorg/your-project.com/pull/102",
+        "url": "https://github.com/$GITHUB_REPOSITORY/pull/102",
         "author": {"login": "automation-bot"},
         "headRefOid": "ffeeddbcaa99887766554433221100ffeeddccbb",
         "comments": [
@@ -64,7 +63,7 @@ PR_FIXTURES: Dict[str, Dict] = {
         "title": "No codex involvement",
         "headRefName": "feature/manual",
         "baseRefName": "main",
-        "url": "https://github.com/jleechanorg/your-project.com/pull/103",
+        "url": "https://github.com/$GITHUB_REPOSITORY/pull/103",
         "author": {"login": "dev-two"},
         "headRefOid": "1234567890abcdef1234567890abcdef12345678",
         "comments": [
@@ -78,53 +77,57 @@ PR_FIXTURES: Dict[str, Dict] = {
 }
 
 
-def _handle_pr_view(args: List[str]) -> int:
+def _handle_pr_view(args: list[str]) -> int:
     pr_number = args[0]
     fixture = PR_FIXTURES.get(pr_number)
     if not fixture:
-        print("{}", end="")
+        print("{}", end="")  # noqa: T201
         return 0
 
     if "--json" in args:
-        json_index = args.index("--json")
-        if json_index + 1 < len(args):
-            json_fields = args[json_index + 1]
-            fields = [field.strip() for field in json_fields.split(",")]
-        else:
-            fields = []
+        idx = args.index("--json")
+        if idx + 1 >= len(args):
+            print("flag needs an argument: --json", file=sys.stderr)  # noqa: T201
+            return 1
+        json_fields = args[idx + 1]
+        fields = [field.strip() for field in json_fields.split(",") if field.strip()]
     else:
         fields = []
 
-    response: Dict[str, object] = {}
+    response: dict[str, object] = {}
     for field in fields:
         if field in {"title", "headRefName", "baseRefName", "url", "author", "headRefOid", "comments"}:
             response[field] = fixture[field]
         elif field == "statusCheckRollup":
             response[field] = [{"name": "ci", "state": "SUCCESS"}]
 
-    print(json.dumps(response))
+    print(json.dumps(response))  # noqa: T201
     return 0
 
 
-def _handle_pr_comment(args: List[str]) -> int:
+MIN_ARGS = 2
+MIN_SUBCOMMAND_ARGS = 3
+
+
+def _handle_pr_comment(args: list[str]) -> int:  # noqa: ARG001
     # We only need to simulate success; the automation logs the comment body.
-    print("Comment posted")
+    print("Comment posted")  # noqa: T201
     return 0
 
 
 def main() -> int:
     args = sys.argv[1:]
-    if len(args) < 2 or args[0] != "pr":
-        print("Unsupported command", file=sys.stderr)
+    if len(args) < MIN_ARGS or args[0] != "pr":
+        print("Unsupported command", file=sys.stderr)  # noqa: T201
         return 1
 
     command = args[1]
-    if command == "view" and len(args) >= 3:
+    if command == "view" and len(args) >= MIN_SUBCOMMAND_ARGS:
         return _handle_pr_view(args[2:])
-    if command == "comment" and len(args) >= 3:
+    if command == "comment" and len(args) >= MIN_SUBCOMMAND_ARGS:
         return _handle_pr_comment(args[2:])
 
-    print("Unsupported command", file=sys.stderr)
+    print("Unsupported command", file=sys.stderr)  # noqa: T201
     return 1
 
 

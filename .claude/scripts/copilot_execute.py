@@ -38,7 +38,7 @@ PAIR_EXECUTE_SCRIPT = str(PROJECT_ROOT / ".claude" / "scripts" / "pair_execute.p
 sys.path.insert(0, PAIR_INTEGRATION_MODULE)
 from pair_integration import generate_pair_task_spec, should_trigger_pair
 
-DEFAULT_REPO_SLUG = "jleechanorg/your-project.com"
+DEFAULT_REPO_SLUG = "$GITHUB_REPOSITORY"
 
 
 def log(message: str):

@@ -135,7 +135,7 @@ This document provides concrete examples of low-quality vs high-quality memory e
     "Resolution: Migrated LLM features TO mature system, deleted parallel implementation",
     "Prevention Checklist: Ask 'Can LLM handle naturally?' before building parsers",
     "Architecture Rule: Enhance existing systems before building parallel new ones",
-    "References: PR #790 https://github.com/jleechan2015/worldarchitect.ai/pull/790",
+    "References: PR #790 https://github.com/jleechan2015/your-project.com/pull/790",
     "Lesson Applied: Trust LLM capabilities, prioritize immediate user value over technical sophistication"
   ]
 }
@@ -186,7 +186,7 @@ This document provides concrete examples of low-quality vs high-quality memory e
     "Testing: 34 new test cases covering all push compliance functionality",
     "Performance: 80% threshold for alerts, calculates compliance rates in real-time",
     "Verification Commands: 'gh pr view' or 'git log origin/branch' to confirm remote changes",
-    "References: PR #609 https://github.com/jleechan2015/worldarchitect.ai/pull/609",
+    "References: PR #609 https://github.com/jleechan2015/your-project.com/pull/609",
     "Outcome: Push compliance rate increased from ~40% to 85% after implementation"
   ]
 }

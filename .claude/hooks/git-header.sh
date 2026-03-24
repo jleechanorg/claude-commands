@@ -4,17 +4,28 @@
 # Works from any directory within a git repository or worktree
 
 # Parse context percentage from Claude Code JSON input (if available)
-# Claude Code sends JSON via stdin with context_window.used_percentage
+# Cache is scoped per repo+branch: /tmp/claude_ctx/<repo>/<branch>
+_ctx_repo=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null)
+_ctx_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | tr '/' '_')
+_ctx_cache="/tmp/claude_ctx/${_ctx_repo}/${_ctx_branch}"
+
 CONTEXT_PCT=""
 if [ -t 0 ]; then
-    # stdin is a terminal (no piped input), skip JSON parsing
-    :
+    # stdin is a terminal — read cached value written by Stop hook
+    [ -r "$_ctx_cache" ] && CONTEXT_PCT=$(cat "$_ctx_cache" 2>/dev/null)
 else
-    # stdin has data, try to parse JSON
+    # stdin has data (or is an empty pipe) — try to parse JSON
     json_input=$(cat)
     if command -v jq >/dev/null 2>&1 && [ -n "$json_input" ]; then
         CONTEXT_PCT=$(printf '%s' "$json_input" | jq -r '.context_window.used_percentage // empty' 2>/dev/null)
+        # Cache for manual invocations that lack stdin
+        if [ -n "$CONTEXT_PCT" ]; then
+            mkdir -p "/tmp/claude_ctx/${_ctx_repo}"
+            printf '%s' "$CONTEXT_PCT" > "$_ctx_cache"
+        fi
     fi
+    # Fallback: stdin was empty pipe (manual Bash tool invocation) — use cache
+    [ -z "$CONTEXT_PCT" ] && [ -r "$_ctx_cache" ] && CONTEXT_PCT=$(cat "$_ctx_cache" 2>/dev/null)
 fi
 
 # Source cross-platform timeout utilities
@@ -58,46 +69,56 @@ working_dir="$(basename "$git_root")"
 local_branch=$(git branch --show-current)
 remote=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "no upstream")
 
+# Parse a remote URL into owner/repo format (standalone function for reuse)
+parse_repo_from_url() {
+    local parsed_url="$1"
+
+    # Match HTTP/HTTPS GitHub format (supports any domain, including enterprise): https://[domain]/owner/repo.git
+    if [[ "$parsed_url" =~ https?://([^@/]+@)?([^/]+)/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+        local domain="${BASH_REMATCH[2]}"
+        local owner="${BASH_REMATCH[3]}"
+        local repo="${BASH_REMATCH[4]}"
+        repo="${repo%.git}"
+        echo "${domain}/${owner}/${repo}"
+        return 0
+    fi
+
+    # Match SSH format (supports any domain, including enterprise): git@[domain]:owner/repo.git
+    if [[ "$parsed_url" =~ git@([^:]+):([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+        local domain="${BASH_REMATCH[1]}"
+        local owner="${BASH_REMATCH[2]}"
+        local repo="${BASH_REMATCH[3]}"
+        repo="${repo%.git}"
+        echo "${domain}/${owner}/${repo}"
+        return 0
+    fi
+
+    # Match ssh:// protocol format: ssh://[user@]host[:port]/owner/repo.git
+    if [[ "$parsed_url" =~ ssh://([^@/]+@)?([^/:]+)(:[0-9]+)?/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+        local domain="${BASH_REMATCH[2]}"
+        local owner="${BASH_REMATCH[4]}"
+        local repo="${BASH_REMATCH[5]}"
+        repo="${repo%.git}"
+        echo "${domain}/${owner}/${repo}"
+        return 0
+    fi
+
+    # Match local proxy format: http://local_proxy@127.0.0.1:PORT/git/owner/repo
+    if [[ "$parsed_url" =~ /git/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+        local owner="${BASH_REMATCH[1]}"
+        local repo="${BASH_REMATCH[2]}"
+        repo="${repo%.git}"
+        echo "${owner}/${repo}"
+        return 0
+    fi
+
+    return 1
+}
+
 # Extract repository (owner/repo) from git remote
 # Prefers upstream remote (for fork workflows) over origin
 get_repo_from_remote() {
     local url
-
-    # Parse a remote URL into owner/repo if possible
-    parse_repo_from_url() {
-        local parsed_url="$1"
-
-        # Match HTTP/HTTPS GitHub format (supports any domain, including enterprise): https://[domain]/owner/repo.git
-        if [[ "$parsed_url" =~ https?://([^@/]+@)?([^/]+)/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
-            local domain="${BASH_REMATCH[2]}"
-            local owner="${BASH_REMATCH[3]}"
-            local repo="${BASH_REMATCH[4]}"
-            repo="${repo%.git}"
-            echo "${domain}/${owner}/${repo}"
-            return 0
-        fi
-
-        # Match SSH format (supports any domain, including enterprise): git@[domain]:owner/repo.git
-        if [[ "$parsed_url" =~ git@([^:]+):([^/]+)/([^/]+)(\.git)?/?$ ]]; then
-            local domain="${BASH_REMATCH[1]}"
-            local owner="${BASH_REMATCH[2]}"
-            local repo="${BASH_REMATCH[3]}"
-            repo="${repo%.git}"
-            echo "${domain}/${owner}/${repo}"
-            return 0
-        fi
-
-        # Match local proxy format: http://local_proxy@127.0.0.1:PORT/git/owner/repo
-        if [[ "$parsed_url" =~ /git/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
-            local owner="${BASH_REMATCH[1]}"
-            local repo="${BASH_REMATCH[2]}"
-            repo="${repo%.git}"
-            echo "${owner}/${repo}"
-            return 0
-        fi
-
-        return 1
-    }
 
     # In fork workflows, upstream points to the main repo where PRs exist
     # Prefer upstream; only fall back to origin when it's the sole remote
@@ -264,8 +285,6 @@ else
         if command -v gh >/dev/null 2>&1; then
             pr_info=""
 
-            # Detect the repo for the tracking remote (handles fork workflows with
-            # non-standard remote names like "jleechanorg")
             tracking_remote_name=""
             tracking_repo=""
             if [ "$remote" != "no upstream" ]; then
@@ -274,15 +293,8 @@ else
             if [ -n "$tracking_remote_name" ]; then
                 tracking_url=$(git remote get-url "$tracking_remote_name" 2>/dev/null)
                 if [ -n "$tracking_url" ]; then
-                    # Use same parser as repo_name to get consistent format (domain/owner/repo)
-                    if [[ "$tracking_url" =~ https?://([^@/]+@)?([^/]+)/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
-                        tracking_repo="${BASH_REMATCH[2]}/${BASH_REMATCH[3]}/${BASH_REMATCH[4]%.git}"
-                    elif [[ "$tracking_url" =~ git@([^:]+):([^/]+)/([^/]+)(\.git)?/?$ ]]; then
-                        tracking_repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}/${BASH_REMATCH[3]%.git}"
-                    elif [[ "$tracking_url" =~ /git/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
-                        # Local proxy format: http://local_proxy@127.0.0.1:PORT/git/owner/repo
-                        tracking_repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]%.git}"
-                    fi
+                    # Use the same shared parser function for consistency
+                    tracking_repo=$(parse_repo_from_url "$tracking_url")
                 fi
             fi
 
@@ -359,7 +371,11 @@ fi
 
 
 
-# Line 1: compact git info — truncate dir to keep branch+PR always visible
+# 3-line layout to avoid truncation on narrow terminals:
+#   Line 1: Dir + Branch (status)
+#   Line 2: upstream ref + PR + ctx bar
+#   Line 3: PR URL (if present)
+
 short_pr=$(echo "$pr_text" | sed 's| https://[^ ]*||')
 
 # Capture tracked upstream for display
@@ -371,26 +387,19 @@ if [ -n "$local_branch" ]; then
     fi
 fi
 
+# Line 1: Dir + Branch (with sync status) — no remote/PR to keep it short
 cols=$(tput cols 2>/dev/null || echo 120)
-# Account for upstream_ref length in truncation budget
-upstream_len=0
-[ -n "$upstream_ref" ] && upstream_len=$((${#upstream_ref} + 3))  # +3 for " → " prefix
-dir_budget=$(( cols - ${#local_branch} - ${#local_status} - ${#short_pr} - ${upstream_len} - 30 ))
+dir_budget=$(( cols - ${#local_branch} - ${#local_status} - 20 ))
 if [ "$dir_budget" -lt 8 ]; then dir_budget=8; fi
 if [ ${#working_dir} -gt "$dir_budget" ]; then
     short_dir="${working_dir:0:$((dir_budget - 1))}…"
 else
     short_dir="$working_dir"
 fi
-
-# Format branch display with upstream tracking
-branch_display="$local_branch$local_status"
-[ -n "$upstream_ref" ] && branch_display="$branch_display → $upstream_ref"
-
-line1="[Dir: $short_dir | Branch: $branch_display | PR: $short_pr]"
+line1="[Dir: $short_dir | Branch: $local_branch$local_status]"
 echo -e "\033[1;36m${line1}\033[0m"
 
-# Line 2: context progress bar (always shown; uses ctx% if available, else placeholder)
+# Line 2: upstream tracking + PR + ctx bar (all secondary info on one line)
 pct_num=0
 [ -n "$CONTEXT_PCT" ] && pct_num=$(echo "$CONTEXT_PCT" | awk '{v=int($1); print (v<0?0:(v>100?100:v))}')
 if [ "$pct_num" -lt 30 ]; then
@@ -410,7 +419,14 @@ bar=""
 [ "$filled" -gt 0 ] && bar=$(printf "%${filled}s" | tr ' ' '#')
 [ "$empty"  -gt 0 ] && bar="${bar}$(printf "%${empty}s" | tr ' ' '-')"
 ctx_label="${CONTEXT_PCT:----}%"
-echo -e "${bar_color}ctx ${bar} ${ctx_label}\033[0m"
+
+line2_parts=""
+[ -n "$upstream_ref" ] && line2_parts="→ $upstream_ref"
+[ -n "$short_pr" ] && [ "$short_pr" != "none" ] && {
+    [ -n "$line2_parts" ] && line2_parts="$line2_parts | "
+    line2_parts="${line2_parts}PR: $short_pr"
+}
+echo -e "${bar_color}${line2_parts:+${line2_parts} | }ctx ${bar} ${ctx_label}\033[0m"
 
 # Line 3: PR URL (only when a real PR URL exists)
 pr_url=$(echo "$pr_text" | grep -o 'https://[^ ]*' | head -1)

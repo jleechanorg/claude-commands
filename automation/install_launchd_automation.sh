@@ -20,11 +20,11 @@ echo "📁 Created log directory: $LOG_DIR"
 
 # Update plist with correct paths
 echo "🔧 Updating plist paths..."
-sed "s|/Users/jleechan/projects/worktree_worker2|$PROJECT_ROOT|g" "$PLIST_SOURCE" > "$PLIST_DEST"
+sed "s|$HOME/projects/worktree_worker2|$PROJECT_ROOT|g" "$PLIST_SOURCE" > "$PLIST_DEST"
 
 # Update username in plist
 CURRENT_USER=$(whoami)
-sed -i '' "s|jleechan|$CURRENT_USER|g" "$PLIST_DEST"
+sed -i '' "s|$USER|$CURRENT_USER|g" "$PLIST_DEST"
 
 echo "📄 Installed plist: $PLIST_DEST"
 

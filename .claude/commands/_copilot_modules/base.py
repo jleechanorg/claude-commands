@@ -69,7 +69,7 @@ class CopilotCommandBase(ABC):
                 pass
             # Default fallback - use your-project.com as default repo
             return os.environ.get(
-                "DEFAULT_REPO", "jleechanorg/your-project.com"
+                "DEFAULT_REPO", "$GITHUB_REPOSITORY"
             )
 
     def _get_current_branch(self) -> str:
