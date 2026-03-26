@@ -6,7 +6,7 @@ This test file verifies that the atomic_update() method in SafeJSONManager
 properly prevents race conditions between concurrent processes that could
 bypass safety limits.
 
-Bug Context: https://github.com/$GITHUB_REPOSITORY/pull/3762
+Bug Context: https://github.com/github-owner/your-project.com/pull/3762
 Reported by: Gemini feedback on PR #3762
 Fixed: Added atomic_update() with file lock held across read-modify-write
 """
@@ -18,9 +18,9 @@ import tempfile
 import time
 from pathlib import Path
 
-from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
-from jleechanorg_pr_automation.utils import SafeJSONManager
-from jleechanorg_pr_automation.tests.conftest import _get_inflight_count
+from github-owner_pr_automation.automation_safety_manager import AutomationSafetyManager
+from github-owner_pr_automation.utils import SafeJSONManager
+from github-owner_pr_automation.tests.conftest import _get_inflight_count
 
 
 # Module-level helper functions for multiprocessing (must be picklable)

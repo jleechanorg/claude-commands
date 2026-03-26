@@ -108,7 +108,7 @@ Kill any stale pr-monitor processes, then run ALL automation cron jobs once usin
 
 2. Run all active crontab automation jobs (in background, matching crontab args exactly):
    ```bash
-   LOG=$HOME/Library/Logs/worldarchitect-automation
+   LOG=$HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation
 
    # [CRON-JOB-ID: pr-monitor]
    nohup jleechanorg-pr-monitor --max-prs 10 >> $LOG/jleechanorg_pr_monitor.log 2>&1 &

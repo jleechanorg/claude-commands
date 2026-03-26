@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simplified A2A Integration for Your Project Orchestrator
+Simplified A2A Integration for WorldArchitect.AI Orchestrator
 
 Lightweight file-based Agent-to-Agent protocol wrapper that enables
 direct agent communication while preserving existing tmux orchestration.

@@ -19,18 +19,18 @@ from pathlib import Path
 
 import requests
 import yaml
-from jleechanorg_pr_automation.codex_config import build_automation_commit_marker
+from ${GITHUB_OWNER}_pr_automation.codex_config import build_automation_commit_marker
 from orchestration import task_dispatcher
 from orchestration.task_dispatcher import TaskDispatcher
 
-ORG = "jleechanorg"
+ORG = "${GITHUB_OWNER}"
 BASE_CLONE_ROOT = Path("/tmp/pr-orch-bases")
 WORKSPACE_ROOT_BASE = Path("/tmp")
 DEFAULT_CUTOFF_HOURS = 24
 DEFAULT_MAX_PRS = 5
 DEFAULT_TIMEOUT = 30  # baseline timeout per security guideline
 TIMEOUT_SECONDS = DEFAULT_TIMEOUT  # Alias for backward compatibility (fixes NameError in tests)
-CLONE_TIMEOUT = 900  # 15 min - large repos (e.g., 330MB your-project.com) need more time
+CLONE_TIMEOUT = 900  # 15 min - large repos (e.g., 330MB ${PROJECT_NAME:-your-project}.com) need more time
 FETCH_TIMEOUT = 120
 API_TIMEOUT = 60
 WORKTREE_TIMEOUT = 60
@@ -822,11 +822,11 @@ def dispatch_agent_for_pr(
         f"     ```bash\n"
         f"     git checkout --ours .beads/issues.jsonl\n"
         f"     ```\n"
-        f"   - For test files ($PROJECT_ROOT/tests/*, testing_mcp/lib/*): Usually use theirs (main branch version)\n"
+        f"   - For test files (mvp_site/tests/*, testing_mcp/lib/*): Usually use theirs (main branch version)\n"
         f"     ```bash\n"
         f"     git checkout --theirs <test_file_path>\n"
         f"     ```\n"
-        f"   - For code files ($PROJECT_ROOT/*.py, automation/*.py): Manually resolve, keeping both changes where appropriate\n"
+        f"   - For code files (mvp_site/*.py, automation/*.py): Manually resolve, keeping both changes where appropriate\n"
         f"     - Read the conflict markers (<<<<<<< HEAD, =======, >>>>>>> origin/main)\n"
         f"     - Keep changes from both branches that don't conflict\n"
         f"     - Remove conflict markers\n"
@@ -858,7 +858,7 @@ def dispatch_agent_for_pr(
         "   - `add_comment_to_pending_review` MCP tool (DISABLED - will fail if called)\n\n"
         "   ✅✅✅ REQUIRED METHOD - Python (NO bash, NO macOS permission prompts):\n"
         f"   ```python\n"
-        f"   from automation.jleechanorg_pr_automation.orchestrated_pr_runner import post_pr_comment_python\n"
+        f"   from automation.${GITHUB_OWNER}_pr_automation.orchestrated_pr_runner import post_pr_comment_python\n"
         f"   # General PR comment:\n"
         f"   post_pr_comment_python('{repo_full}', {pr_number}, 'Your comment text')\n"
         f"   # Reply to inline review comment:\n"
@@ -879,7 +879,7 @@ def dispatch_agent_for_pr(
         "   ⚠️ VERIFICATION & CLEANUP: After posting ANY comment, you MUST check for and delete pending reviews.\n"
         f"   PREFERRED METHOD (Python - NO bash, NO macOS permission prompts):\n"
         f"   ```python\n"
-        f"   from automation.jleechanorg_pr_automation.orchestrated_pr_runner import cleanup_pending_reviews_python\n"
+        f"   from automation.${GITHUB_OWNER}_pr_automation.orchestrated_pr_runner import cleanup_pending_reviews_python\n"
         f"   # Replace 'your-automation-username' with your actual GitHub username\n"
         f"   cleanup_pending_reviews_python('{repo_full}', {pr_number}, 'your-automation-username')\n"
         f"   ```\n"
@@ -893,7 +893,7 @@ def dispatch_agent_for_pr(
         "4) Fetch PR feedback using Python (DO NOT use gh api - triggers macOS prompts):\n"
         f"   ```python\n"
         f"   import requests\n"
-        f"   from automation.jleechanorg_pr_automation.orchestrated_pr_runner import get_github_token\n"
+        f"   from automation.${GITHUB_OWNER}_pr_automation.orchestrated_pr_runner import get_github_token\n"
         f"   token = get_github_token()\n"
         f"   headers = {{'Authorization': f'Bearer {{token}}', 'Accept': 'application/vnd.github.v3+json'}}\n"
         f"   # Issue comments:\n"
@@ -1094,7 +1094,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pr",
         metavar="REPO:PR_NUMBER",
-        help="Dispatch for single PR (e.g. $GITHUB_REPOSITORY:5965). Skips batch.",
+        help="Dispatch for single PR (e.g. ${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com:5965). Skips batch.",
     )
     parser.add_argument(
         "--agent-cli",
@@ -1111,7 +1111,7 @@ if __name__ == "__main__":
 
     if args.pr:
         if ":" not in args.pr:
-            log("--pr must be REPO:PR_NUMBER (e.g. $GITHUB_REPOSITORY:5965)")
+            log("--pr must be REPO:PR_NUMBER (e.g. ${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com:5965)")
             sys.exit(1)
         repo_full, pr_num_str = args.pr.rsplit(":", 1)
         try:

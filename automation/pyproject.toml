@@ -6,7 +6,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "jleechanorg-pr-automation"
+name = "${GITHUB_OWNER}-pr-automation"
 version = "0.2.178"
 description = "GitHub PR automation system with safety limits and actionable counting"
 authors = [
@@ -35,7 +35,7 @@ keywords = [
 requires-python = ">=3.11"
 dependencies = [
     "requests>=2.25.0",
-    "jleechanorg-orchestration>=0.1.88",
+    "${GITHUB_OWNER}-orchestration>=0.1.88",
     "playwright>=1.40.0",
     "playwright-stealth>=2.0.0",
     "aiohttp>=3.8.0",
@@ -55,24 +55,24 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jleechanorg/worldarchitect.ai"
-Repository = "https://github.com/jleechanorg/worldarchitect.ai"
-Issues = "https://github.com/jleechanorg/worldarchitect.ai/issues"
+Homepage = "https://github.com/${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com"
+Repository = "https://github.com/${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com"
+Issues = "https://github.com/${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com/issues"
 
 [project.scripts]
-jleechanorg-pr-monitor = "jleechanorg_pr_automation.jleechanorg_pr_monitor:main"
-automation-safety-cli = "jleechanorg_pr_automation.automation_safety_manager:main"
+${GITHUB_OWNER}-pr-monitor = "${GITHUB_OWNER}_pr_automation.${GITHUB_OWNER}_pr_monitor:main"
+automation-safety-cli = "${GITHUB_OWNER}_pr_automation.automation_safety_manager:main"
 
 [tool.setuptools.packages.find]
 where = [
     ".",
 ]
 include = [
-    "jleechanorg_pr_automation*",
+    "${GITHUB_OWNER}_pr_automation*",
 ]
 
 [tool.setuptools.package-data]
-jleechanorg_pr_automation = [
+${GITHUB_OWNER}_pr_automation = [
     "*.md",
     "*.txt",
 ]
@@ -149,7 +149,7 @@ ignore = [
 
 [tool.pytest.ini_options]
 testpaths = [
-    "jleechanorg_pr_automation/tests",
+    "${GITHUB_OWNER}_pr_automation/tests",
     "tests",
 ]
 python_files = [
@@ -163,7 +163,7 @@ python_functions = [
     "test_*",
 ]
 addopts = [
-    "--cov=jleechanorg_pr_automation",
+    "--cov=${GITHUB_OWNER}_pr_automation",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-fail-under=20",

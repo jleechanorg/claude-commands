@@ -1,3 +1,15 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
 name: MCP Smoke Tests
 
 # Security permissions
@@ -69,7 +81,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
@@ -82,7 +94,7 @@ jobs:
     timeout-minutes: 10
     env:
       GCP_REGION: us-central1
-      GCP_PROJECT: worldarchitecture-ai
+      GCP_PROJECT: $GCP_PROJECT_ID
       PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.12' }}
       TESTING: true
       FLASK_ENV: testing
@@ -134,7 +146,7 @@ jobs:
           return testedSha;
 
     - name: Checkout repository
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
       with:
         ref: ${{ github.event_name == 'workflow_run' && steps.pr_ref.outputs.result || '' }}
         submodules: recursive
@@ -367,7 +379,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GCP_REGION: us-central1
-      GCP_PROJECT: worldarchitecture-ai
+      GCP_PROJECT: $GCP_PROJECT_ID
       MCP_TEST_TIMEOUT_MS: ${{ vars.MCP_TEST_TIMEOUT_MS || '120000' }}
       MCP_TEST_MAX_ATTEMPTS: ${{ vars.MCP_TEST_MAX_ATTEMPTS || '3' }}
       MCP_TEST_RETRY_DELAY_MS: ${{ vars.MCP_TEST_RETRY_DELAY_MS || '2000' }}
@@ -426,7 +438,7 @@ jobs:
             return headRef;
 
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
         with:
           ref: ${{ steps.pr_ref.outputs.result }}
 
