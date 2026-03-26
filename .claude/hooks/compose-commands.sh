@@ -70,6 +70,71 @@ raw_commands=$(echo "$input" | grep -oE '/[a-zA-Z][a-zA-Z0-9_-]*' | tr '\n' ' ')
 # PERFORMANCE OPTIMIZATION: Cache git repository root to avoid repeated calls
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 
+# ── PR number resolution for template variable substitution ──────────────────
+# Resolves {{pr_number}} from branch name (e.g. "fix/pr-123" → "123")
+# so hooks that inject composed prompts can substitute the variable.
+_resolve_pr_number() {
+    local branch
+    branch="$(git branch --show-current 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+    if [[ -z "$branch" ]]; then
+        echo ""
+        return
+    fi
+    # session/* branches are AO session worktrees — never treated as PR-bearing
+    if [[ "$branch" == session/* ]]; then
+        echo ""
+        return
+    fi
+    # Match patterns: pr-123, pr/123, ao-670, jc-123, wc-74, etc.
+    # Anchor to prefix (not bare digits) to avoid session/wc-16 → PR #16
+    local pr_num
+    pr_num="$(echo "$branch" | grep -oE '(?:pr[-/]|ao-|jc-|wa-|cc-|ra-|wc-)([0-9]{2,4})' | tail -1 | grep -oE '[0-9]{2,4}' || echo "")"
+    if [[ -z "$pr_num" ]]; then
+        # Fallback: look up open PR by head branch via gh CLI
+        pr_num="$(gh api "repos/$GITHUB_REPOSITORY/pulls" \
+            --jq ".[] | select(.head.ref == \"$branch\" or .head.ref == \"${branch##*/}\") | .number" \
+            2>/dev/null | head -1 || echo "")"
+    fi
+    echo "$pr_num"
+}
+PR_NUMBER="$(_resolve_pr_number)"
+
+# ── No-PR context guard: skip composition entirely when no PR number resolved ────
+# The green-gate workflow is PR-specific.  In worktrees with no associated PR
+# (e.g. jleechanclaw main, jc-645), skip composition entirely so the prompt
+# passes through unchanged — prevents idle-reminder loops from generating
+# unresolvable template text every 15 minutes.
+if [[ -z "$PR_NUMBER" ]]; then
+    echo "$input"
+    exit 0
+fi
+
+# ── PR Green Check Backoff Guard ───────────────────────────────────────────
+# Check for ANY active skip file for this repo. If active, pass through without
+# slash-command processing. Checks the skip file most recently modified.
+_hook_remote=$(git remote get-url origin 2>/dev/null | sed 's/.git$//' | sed 's|.*github.com[:/]||' | tr '/' '_')
+_now=$(python3 -c "import time; print(int(time.time()))")
+# Find any skip file matching this repo that is still active
+_skip_file=$(python3 -c "
+import json, glob, os, time
+now = int(time.time())
+state_dir = '/tmp/pr_green_check'
+owner = '$_hook_remote'
+for pattern in [f'{state_dir}/.skip_{owner}_*', f'{state_dir}/.skip_*_{owner}_*']:
+    for fp in glob.glob(pattern):
+        try:
+            d = json.load(open(fp))
+            if d.get('until', 0) > now:
+                print(fp)
+                break
+        except:
+            pass
+" 2>/dev/null)
+if [[ -n "$_skip_file" && -f "$_skip_file" ]]; then
+    echo "$input"
+    exit 0
+fi
+
 # CORRECTNESS FIX: Standardize pasted content threshold
 PASTE_COMMAND_THRESHOLD=2
 
@@ -378,6 +443,27 @@ if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
   printf '[%s] NESTED: %s\n' "$timestamp" "$nested_commands" >> "$log_file"
   printf '[%s] OUTPUT: %s\n' "$timestamp" "$output" >> "$log_file"
   printf '[%s] ---\n' "$timestamp" >> "$log_file"
+fi
+
+# ── Substitute {{pr_number}} template variable ─────────────────────────────────
+# If PR_NUMBER was resolved from branch context, replace the placeholder in the
+# composed output. If not resolved (no PR context), leave placeholder as-is so
+# the session can report it as a hook setup issue rather than silently failing.
+if [[ -n "$PR_NUMBER" ]]; then
+    output="${output//\{\{pr_number\}\}/$PR_NUMBER}"
+else
+    # No PR context: strip the full green-gate workflow block to prevent
+    # injecting an unresolvable template into the LLM prompt.  The block starts
+    # at "(STEP -1" and ends at the "📋 Automatically" marker.
+    output=$(echo "$output" | python3 -c "
+import sys, re
+text = sys.stdin.read()
+# Remove green-gate workflow block: from (STEP -1 to 📋 marker (exclusive)
+text = re.sub(r'\(STEP -1.*?\)(?=📋|\Z)', '', text, flags=re.DOTALL)
+# Also remove any remaining unresolved template variables
+text = re.sub(r'\{\{[^}]+\}\}', '', text)
+print(text.strip())
+")
 fi
 
 # Return the output

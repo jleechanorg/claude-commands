@@ -90,6 +90,11 @@
         "hooks": [
           {
             "type": "command",
+            "description": "Rate-limit PR green-check idle reminders — skip merged/closed PRs, exponential backoff.",
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT/.claude/hooks\" \"$PLUGIN/.claude/hooks\" \"$HOME/.claude/hooks\"; do SCRIPT=\"$BASE/pr-green-check.py\"; if [ -f \"$SCRIPT\" ]; then exec python3 \"$SCRIPT\"; fi; done; exit 0'"
+          },
+          {
+            "type": "command",
             "description": "Compose slash commands to support chained invocations.",
             "command": "bash -c 'set -- \"$@\"; PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT/.claude/hooks\" \"$PLUGIN/.claude/hooks\" \"$HOME/.claude/hooks\"; do SCRIPT=\"$BASE/compose-commands.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\" \"$@\"; else exec bash \"$SCRIPT\" \"$@\"; fi; fi; done; printf %s\\n \"$*\"; exit 0' --"
           }

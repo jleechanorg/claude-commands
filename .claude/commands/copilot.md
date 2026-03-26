@@ -293,6 +293,25 @@ rm -f "$REPLY_FILE"
 3. **Fresh CI status**: Run `gh pr checks <PR_NUMBER>` immediately before posting to get current CI state. Do NOT reuse stale CI data from Step 2.
 4. **Total matches responses.json**: Count entries in responses.json and verify it matches X/Y.
 
+### Step 7.5: Resolve Conversation Threads (MANDATORY for FIXED/DEFERRED)
+
+After posting the consolidated reply, resolve the conversation threads for comments that were fixed or deferred. This keeps the PR clean and shows progress.
+
+**Procedure:**
+1. Read `/tmp/<repo>/<branch>/copilot/responses.json`
+2. For each comment where `response` is `FIXED`, `ALREADY_IMPLEMENTED`, or `DEFERRED`:
+   - Resolve the conversation thread using GitHub CLI:
+   ```bash
+   # For inline review comments (pull_request_review_comment):
+   gh api repos/{owner}/{repo}/pulls/{pull_number}/reviews/comments/{comment_id}/threads -X PATCH -f "resolved=true"
+   
+   # Or use the wrapper if available:
+   gh pr review comment resolve <comment_id>
+   ```
+3. Log the count: `Resolved N conversation threads (X fixed, Y deferred)`
+
+**Why this matters:** Resolved threads give reviewers a clear signal that feedback was addressed, reducing follow-up questions and improving PR throughput.
+
 ### Step 8: Verify Coverage (REV-g9fbp fix - severity-based)
 
 Run `/commentcheck` with severity-based coverage requirements:

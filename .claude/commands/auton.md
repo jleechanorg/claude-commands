@@ -128,6 +128,77 @@ After both groups complete, cross-reference:
 2. Check if each CR_REQ PR has an active worker session (from Group A2)
 3. If a CR_REQ PR has **no active session**, flag it as a gap — the orchestrator should be addressing it
 
+### Step 3b: Stalled PR detection (>1hr gap, not 6-green)
+
+For every open PR, check last commit date and compare to current UTC time. Flag any PR that:
+- Is NOT at 6-green (any of: CI failing, merge conflict, CR not APPROVED, unresolved comments, Bugbot blocking)
+- Has >1 hour since the last commit with no visible progress
+
+```bash
+# Stall detection — REST API (works even when GraphQL=0)
+current_epoch=$(date -u +%s)
+echo "=== STALLED PR DETECTION (>1hr gap, not 6-green) ==="
+for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" --jq '.[] | @base64' 2>/dev/null); do
+  pr=$(echo "$pr_json" | base64 -d 2>/dev/null || echo "$pr_json" | base64 -D 2>/dev/null)
+  number=$(echo "$pr" | jq -r '.number')
+  title=$(echo "$pr" | jq -r '.title[0:60]')
+  mergeable=$(echo "$pr" | jq -r '.mergeable_state')
+  branch=$(echo "$pr" | jq -r '.head.ref')
+
+  # Get last commit date
+  last_commit=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/commits" --jq '.[-1].commit.committer.date' 2>/dev/null)
+  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || echo 0)
+  gap_mins=$(( (current_epoch - commit_epoch) / 60 ))
+
+  # Get review state
+  review_state=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/reviews" --jq '[.[] | select(.state != "COMMENTED")] | last | .state // "NONE"' 2>/dev/null)
+
+  # Flag if >60 min gap
+  if [ "$gap_mins" -gt 60 ]; then
+    # Check if worker session exists for this branch
+    has_worker="no"
+    for s in $(tmux list-sessions 2>/dev/null | grep -E "ao-[0-9]+|jc-[0-9]+" | cut -d: -f1); do
+      s_branch=$(tmux capture-pane -t "$s" -p 2>/dev/null | grep -oE "Branch: [^ ]+" | tail -1 | sed 's/Branch: //')
+      [ "$s_branch" = "$branch" ] && has_worker="$s" && break
+    done
+    gap_hrs=$((gap_mins / 60))
+    echo "STALLED #$number | ${gap_hrs}h${gap_mins}m | review=$review_state | mergeable=$mergeable | worker=$has_worker | $title"
+  fi
+done
+```
+
+### Step 3c: 6-Green Rate — Zero-Touch PR Measurement
+
+Measure how many merged PRs went to 6-green without human intervention. A PR is "zero-touch" if ALL commits have the `[agento]` prefix (no human commits).
+
+```bash
+# 6-Green rate — last 7 days
+echo "=== 6-GREEN RATE (last 7 days) ==="
+cutoff=$(date -u -v-7d +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d "7 days ago" +%Y-%m-%dT%H:%M:%SZ)
+zero=0; human=0; total=0
+for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=closed&sort=updated&direction=desc&per_page=50" --jq "[.[] | select(.merged_at != null) | select(.merged_at > \"$cutoff\")] | .[] | @base64" 2>/dev/null); do
+  pr=$(echo "$pr_json" | base64 -D 2>/dev/null || echo "$pr_json" | base64 -d 2>/dev/null)
+  number=$(echo "$pr" | jq -r '.number')
+  title=$(echo "$pr" | jq -r '.title[0:50]')
+  commits=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/commits" --jq '[.[] | .commit.message[0:50]]' 2>/dev/null)
+  human_commits=$(echo "$commits" | jq '[.[] | select(test("\\[agento\\]") | not)] | length')
+  total_commits=$(echo "$commits" | jq 'length')
+  total=$((total + 1))
+  if [ "$human_commits" -eq 0 ]; then
+    zero=$((zero + 1))
+    echo "  ZERO-TOUCH #$number ($total_commits commits) $title"
+  else
+    human=$((human + 1))
+  fi
+done
+echo ""
+echo "TOTAL MERGED: $total | ZERO-TOUCH: $zero | HUMAN-TOUCH: $human"
+if [ "$total" -gt 0 ]; then
+  rate=$((zero * 100 / total))
+  echo "6-GREEN RATE: ${rate}% ($zero/$total zero-touch)"
+fi
+```
+
 ### Step 4: Output diagnostic report
 
 ```
@@ -153,6 +224,12 @@ After both groups complete, cross-reference:
 <List PRs with CR CHANGES_REQUESTED that have NO active session — these need attention>
 (If none, say "All CR_REQ PRs have active sessions ✓")
 
+### Stalled PRs (>1hr gap, not 6-green)
+| PR | Gap | Review state | Mergeable | Worker | Title |
+|---|---|---|---|---|---|
+<List each stalled PR. If worker=no, this is a coverage gap requiring ao spawn.>
+(If none, say "No stalled PRs ✓")
+
 ### Zombie session check
 <Sessions where AO status=killed but tmux still alive — lifecycle-worker is NOT managing these>
 | Session | AO status | tmux alive | PR | Action needed |
@@ -163,6 +240,14 @@ After both groups complete, cross-reference:
 
 ### Lifecycle-worker duplicate check
 <Count per project — only flag if SAME PROJECT has >1 worker. Multi-project = expected.>
+
+### 6-Green Rate (last 7 days)
+| Metric | Value |
+|---|---|
+| Total merged | N |
+| Zero-touch (all [agento] commits) | N (NN%) |
+| Human-touch (had human commits) | N (NN%) |
+<List zero-touch PRs by number>
 
 ### Root cause
 <Primary reason the system is not progressing PRs autonomously>
