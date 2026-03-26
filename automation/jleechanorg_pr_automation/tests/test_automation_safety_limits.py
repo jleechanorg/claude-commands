@@ -19,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
+from github-owner_pr_automation.automation_safety_manager import AutomationSafetyManager
 
 
 class TestAutomationSafetyLimits(unittest.TestCase):
@@ -372,7 +372,7 @@ class TestAutomationIntegration(unittest.TestCase):
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/jleechan/projects/worldarchitect.ai/automation/automation_safety_wrapper.py</string>
+        <string>${HOME}/projects/your-project.com/automation/automation_safety_wrapper.py</string>
     </array>
 </dict>
 </plist>
@@ -406,7 +406,7 @@ class TestAutomationIntegration(unittest.TestCase):
         """Helper to run automation script"""
         import subprocess
         return subprocess.run([
-            "/Users/jleechan/projects/worktree_worker2/automation/simple_pr_batch.sh"
+            "${HOME}/projects/worktree_worker2/automation/simple_pr_batch.sh"
         ], check=False, capture_output=True, text=True)
 
     def read_launchd_plist(self):

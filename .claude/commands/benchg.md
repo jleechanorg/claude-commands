@@ -80,7 +80,7 @@ echo ""
 mkdir -p "$GENESIS_DIR" "$RALPH_DIR"
 
 # Ralph orchestrator path (set via env or use default)
-RALPH_ORCHESTRATOR_PATH="${RALPH_ORCHESTRATOR_PATH:-$HOME/worktree_ralph/orchestration/orchestrate_unified.py}"
+RALPH_ORCHESTRATOR_PATH="${RALPH_ORCHESTRATOR_PATH:-${RALPH_ORCHESTRATOR_PATH:-$HOME/worktree_ralph/orchestration/orchestrate_unified.py}}"
 ```
 
 ### 3. Execute Genesis Implementation

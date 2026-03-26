@@ -314,7 +314,7 @@ class JleechanorgPRMonitor:
         self.no_act = bool(no_act)
 
         # Processing history persisted to permanent location
-        self.history_base_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation" / "pr_history"
+        self.history_base_dir = Path.home() / "Library" / "Logs" / "${PROJECT_NAME:-your-project}-automation" / "pr_history"
         self.history_base_dir.mkdir(parents=True, exist_ok=True)
 
         # Organization settings
@@ -323,7 +323,7 @@ class JleechanorgPRMonitor:
 
         safety_data_dir = os.environ.get("AUTOMATION_SAFETY_DATA_DIR")
         if not safety_data_dir:
-            default_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
+            default_dir = Path.home() / "Library" / "Application Support" / "${PROJECT_NAME:-your-project}-automation"
             default_dir.mkdir(parents=True, exist_ok=True)
             safety_data_dir = str(default_dir)
 
@@ -836,7 +836,7 @@ class JleechanorgPRMonitor:
         current_dir = Path.cwd()
         if is_git_repository(current_dir):
             # Check if this is related to the target repository
-            if repo_name.lower() in current_dir.name.lower() or "worldarchitect" in current_dir.name.lower():
+            if repo_name.lower() in current_dir.name.lower() or "${PROJECT_NAME:-your-project}" in current_dir.name.lower():
                 self.logger.debug(f"🎯 Found local repo (current dir): {current_dir}")
                 return current_dir
 

@@ -3,7 +3,7 @@
 Regression test for draft PR bypass bug in fixpr workflow.
 
 BUG: Draft PRs with conflicts bypass isDraft filter in fixpr workflow
-Location: jleechanorg_pr_monitor.py:3931-3936
+Location: github-owner_pr_monitor.py:3931-3936
 
 When a PR has conflicts, the fixpr workflow bypasses is_pr_actionable() check
 which contains the draft filter. This causes draft PRs to be processed when
@@ -21,7 +21,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch, MagicMock
 
-from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
+from github-owner_pr_automation.github-owner_pr_monitor import JleechanorgPRMonitor
 
 
 class TestRegressionDraftPRFixprBypass(unittest.TestCase):
@@ -29,15 +29,15 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment"""
-        with patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationSafetyManager'):
+        with patch('github-owner_pr_automation.github-owner_pr_monitor.AutomationSafetyManager'):
             self.monitor = JleechanorgPRMonitor(automation_username="test-automation-user")
             self.monitor.safety_manager.fixpr_limit = 10
 
         self.monitor.logger = MagicMock()
         self.monitor.no_act = False
 
-    @patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks')
-    @patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout')
+    @patch('github-owner_pr_automation.github-owner_pr_monitor.has_failing_checks')
+    @patch('github-owner_pr_automation.github-owner_pr_monitor.AutomationUtils.execute_subprocess_with_timeout')
     def test_regression_draft_pr_with_conflicts_should_be_skipped(
         self,
         mock_subprocess,
@@ -57,8 +57,8 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
             "state": "open",
             "isDraft": True,  # THIS IS A DRAFT
             "headRefName": "copilot/sub-pr-4978",
-            "repository": "worldarchitect.ai",
-            "repositoryFullName": "jleechanorg/worldarchitect.ai",
+            "repository": "your-project.com",
+            "repositoryFullName": "github-owner/your-project.com",
             "headRefOid": "abc123"
         }
 
@@ -75,7 +75,7 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
 
         # Call _process_pr_fixpr
         result = self.monitor._process_pr_fixpr(
-            repository="worldarchitect.ai",
+            repository="your-project.com",
             pr_number=4979,
             pr_data=pr_data,
             agent_cli="gemini"
@@ -100,8 +100,8 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
             "Should log that draft PR is being skipped"
         )
 
-    @patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.has_failing_checks')
-    @patch('jleechanorg_pr_automation.jleechanorg_pr_monitor.AutomationUtils.execute_subprocess_with_timeout')
+    @patch('github-owner_pr_automation.github-owner_pr_monitor.has_failing_checks')
+    @patch('github-owner_pr_automation.github-owner_pr_monitor.AutomationUtils.execute_subprocess_with_timeout')
     def test_regression_draft_pr_with_failing_checks_should_be_skipped(
         self,
         mock_subprocess,
@@ -116,8 +116,8 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
             "state": "open",
             "isDraft": True,  # THIS IS A DRAFT
             "headRefName": "copilot/sub-pr-4978-yet-again",
-            "repository": "worldarchitect.ai",
-            "repositoryFullName": "jleechanorg/worldarchitect.ai",
+            "repository": "your-project.com",
+            "repositoryFullName": "github-owner/your-project.com",
             "headRefOid": "def456"
         }
 
@@ -133,7 +133,7 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
         self.monitor._get_pr_comment_state = Mock(return_value=("def456", []))
 
         result = self.monitor._process_pr_fixpr(
-            repository="worldarchitect.ai",
+            repository="your-project.com",
             pr_number=4984,
             pr_data=pr_data,
             agent_cli="gemini"
@@ -157,8 +157,8 @@ class TestRegressionDraftPRFixprBypass(unittest.TestCase):
             "state": "open",
             "isDraft": False,  # NOT A DRAFT
             "headRefName": "feature-branch",
-            "repository": "worldarchitect.ai",
-            "repositoryFullName": "jleechanorg/worldarchitect.ai",
+            "repository": "your-project.com",
+            "repositoryFullName": "github-owner/your-project.com",
             "headRefOid": "xyz789"
         }
 

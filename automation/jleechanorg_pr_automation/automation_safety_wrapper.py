@@ -20,7 +20,7 @@ from .logging_utils import setup_logging as _setup_logging
 
 def setup_logging() -> logging.Logger:
     """Set up logging delegated to centralized logging_utils"""
-    log_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation"
+    log_dir = Path.home() / "Library" / "Logs" / "${PROJECT_NAME:-your-project}-automation"
     log_file = log_dir / "automation_safety.log"
 
     return _setup_logging(__name__, log_file=str(log_file))
@@ -32,7 +32,7 @@ def main() -> int:
     logger.info("🛡️  Starting automation safety wrapper")
 
     # Data directory for safety tracking
-    data_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
+    data_dir = Path.home() / "Library" / "Application Support" / "${PROJECT_NAME:-your-project}-automation"
     data_dir.mkdir(parents=True, exist_ok=True)
 
     # Initialize safety manager

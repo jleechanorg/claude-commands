@@ -168,10 +168,10 @@ Claude analyzes the user's request for:
 **If Superpowers Chrome:**
 ```bash
 # Start Chrome
-./worldarchitect-chrome.sh start
+./${CHROME_SCRIPT:-chrome.sh} start
 
 # Execute task
-./worldarchitect-chrome.sh <task> [args...]
+./${CHROME_SCRIPT:-chrome.sh} <task> [args...]
 
 # Report results
 ```
@@ -179,7 +179,7 @@ Claude analyzes the user's request for:
 **If Playwright:**
 ```bash
 # Execute Playwright test
-cd skills/playwright-worldarchitect
+cd skills/playwright-${PROJECT_NAME:-your-project}
 node run.js <test-script>
 
 # Report results with screenshots
@@ -220,7 +220,7 @@ Analysis:
 - Tool: Playwright
 
 Execution:
-1. cd skills/playwright-worldarchitect
+1. cd skills/playwright-${PROJECT_NAME:-your-project}
 2. node run.js examples/visual-regression-test.js
 
 Result:
@@ -240,7 +240,7 @@ Analysis:
 - Tool: Superpowers Chrome
 
 Execution:
-1. ./worldarchitect-chrome.sh smoke http://localhost:5000
+1. ./${CHROME_SCRIPT:-chrome.sh} smoke http://localhost:5000
 
 Result:
 ✅ All smoke tests passed (18s)
@@ -259,7 +259,7 @@ Analysis:
 - Tool: Playwright (forced)
 
 Execution:
-1. cd skills/playwright-worldarchitect
+1. cd skills/playwright-${PROJECT_NAME:-your-project}
 2. node run.js examples/campaign-flow-test.js
 
 Result:
@@ -292,7 +292,7 @@ Available commands:
 - chrome-ws screenshot 0 > debug.png
 - chrome-ws eval 0 "console.log('debug')"
 
-Session: /tmp/chrome-worldarchitect-<pid>
+Session: /tmp/chrome-${PROJECT_NAME:-your-project}-<pid>
 ```
 
 ## Tool Comparison Quick Reference
@@ -355,7 +355,7 @@ MOBILE_VIEWPORT=375x667
 ### Error: "No browser tool available"
 ```bash
 # Install both tools
-cd skills/playwright-worldarchitect && npm install
+cd skills/playwright-${PROJECT_NAME:-your-project} && npm install
 npm install github:obra/superpowers-chrome
 ```
 
@@ -363,13 +363,13 @@ npm install github:obra/superpowers-chrome
 ```bash
 # Restart Chrome
 pkill chrome
-./worldarchitect-chrome.sh start
+./${CHROME_SCRIPT:-chrome.sh} start
 ```
 
 ### Error: "Playwright browser not found"
 ```bash
 # Install browsers
-cd skills/playwright-worldarchitect
+cd skills/playwright-${PROJECT_NAME:-your-project}
 npx playwright install chromium
 ```
 
@@ -464,10 +464,10 @@ User: /browser (auto-detects MCP, uses superpowers-chrome)
 
 ## Resources
 
-- [Playwright Skill Documentation](../skills/playwright-worldarchitect/SKILL.md)
-- [Superpowers Chrome Documentation](../skills/superpowers-chrome-worldarchitect/README.md)
+- [Playwright Skill Documentation](../skills/playwright-${PROJECT_NAME:-your-project}/SKILL.md)
+- [Superpowers Chrome Documentation](../skills/superpowers-chrome-${PROJECT_NAME:-your-project}/README.md)
 - [Comparison Guide](../docs/BROWSER_AUTOMATION_COMPARISON.md)
-- [Example Workflows](../skills/playwright-worldarchitect/examples/)
+- [Example Workflows](../skills/playwright-${PROJECT_NAME:-your-project}/examples/)
 
 ---
 

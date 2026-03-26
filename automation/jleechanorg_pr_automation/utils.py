@@ -187,7 +187,7 @@ def detect_repo_path() -> Optional[Path]:
     Checks in order:
     1. `~/.config/worldarchitect/repo_path`
     2. current working directory
-    3. `~/projects/worldarchitect.ai`
+    3. `~/projects/${PROJECT_NAME:-your-project}.com`
     """
     config_file = Path.home() / ".config" / "worldarchitect" / "repo_path"
     if config_file.exists():
@@ -201,7 +201,7 @@ def detect_repo_path() -> Optional[Path]:
     if (cwd_path / ".git").exists():
         return cwd_path
 
-    default_path = Path.home() / "projects" / "worldarchitect.ai"
+    default_path = Path.home() / "projects" / "${PROJECT_NAME:-your-project}.com"
     if (default_path / ".git").exists():
         return default_path
 
