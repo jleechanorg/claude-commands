@@ -94,7 +94,7 @@ jobs:
     timeout-minutes: 10
     env:
       GCP_REGION: us-central1
-      GCP_PROJECT: $GCP_PROJECT_ID
+      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
       PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.12' }}
       TESTING: true
       FLASK_ENV: testing
@@ -379,7 +379,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GCP_REGION: us-central1
-      GCP_PROJECT: $GCP_PROJECT_ID
+      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
       MCP_TEST_TIMEOUT_MS: ${{ vars.MCP_TEST_TIMEOUT_MS || '120000' }}
       MCP_TEST_MAX_ATTEMPTS: ${{ vars.MCP_TEST_MAX_ATTEMPTS || '3' }}
       MCP_TEST_RETRY_DELAY_MS: ${{ vars.MCP_TEST_RETRY_DELAY_MS || '2000' }}
