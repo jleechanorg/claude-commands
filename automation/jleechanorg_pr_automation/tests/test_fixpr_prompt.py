@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from jleechanorg_pr_automation import orchestrated_pr_runner as runner
+from github-owner_pr_automation import orchestrated_pr_runner as runner
 
 
 class _FakeDispatcher:
@@ -24,7 +24,7 @@ class _FakeDispatcher:
 class TestFixprPrompt(unittest.TestCase):
     def test_fixpr_commit_message_includes_mode_and_model(self):
         pr_payload = {
-            "repo_full": "$GITHUB_REPOSITORY",
+            "repo_full": "github-owner/your-project.com",
             "repo": "your-project.com",
             "number": 123,
             "title": "Test PR",
@@ -56,7 +56,7 @@ class TestFixprPrompt(unittest.TestCase):
     def test_fixpr_uses_local_branch_name_not_remote_branch(self):
         """Test that fixpr uses local branch name fixpr/{remote_branch} instead of remote branch directly."""
         pr_payload = {
-            "repo_full": "$GITHUB_REPOSITORY",
+            "repo_full": "github-owner/your-project.com",
             "repo": "your-project.com",
             "number": 456,
             "title": "Test PR with feature branch",
@@ -95,7 +95,7 @@ class TestFixprPrompt(unittest.TestCase):
     def test_fixpr_local_branch_name_with_special_chars(self):
         """Test that local branch names are properly sanitized from remote branch names."""
         pr_payload = {
-            "repo_full": "$GITHUB_REPOSITORY",
+            "repo_full": "github-owner/your-project.com",
             "repo": "your-project.com",
             "number": 789,
             "title": "Test PR with special chars in branch",

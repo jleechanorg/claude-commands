@@ -1,6 +1,6 @@
 # A2A (Agent-to-Agent) Protocol Design Document
 
-**Your Project Orchestration System**
+**WorldArchitect.AI Orchestration System**
 **Version 3.0 - Production A2A Implementation**
 
 ## 📋 Table of Contents
@@ -22,7 +22,7 @@
 
 ## System Overview
 
-The A2A (Agent-to-Agent) protocol enables direct communication between AI agents in the Your Project orchestration system. This implementation uses a **file-based messaging system** that provides reliable, auditable, and simple inter-agent communication without external dependencies.
+The A2A (Agent-to-Agent) protocol enables direct communication between AI agents in the WorldArchitect.AI orchestration system. This implementation uses a **file-based messaging system** that provides reliable, auditable, and simple inter-agent communication without external dependencies.
 
 ### Design Philosophy
 
@@ -355,7 +355,7 @@ Simple boundaries are applied consistently:
 
 ```python
 # Any task gets same simple boundaries
-"update $PROJECT_ROOT/readme.md with latest info"
+"update mvp_site/readme.md with latest info"
 → SimpleConstraints(
     max_file_changes=50,
     authorized_by_user=False,
@@ -438,7 +438,7 @@ Simple boundaries are applied consistently:
 
 ```bash
 # User initiates task via Claude Code CLI
-/orch "update $PROJECT_ROOT/readme.md with latest info"
+/orch "update mvp_site/readme.md with latest info"
 
 # System processes request
 ┌─────────────────────────────────────────┐
@@ -511,7 +511,7 @@ for message in messages:
 # Agent completes task and reports results
 result = {
     "status": "completed",
-    "files_modified": ["$PROJECT_ROOT/readme.md"],
+    "files_modified": ["mvp_site/readme.md"],
     "pr_url": "https://github.com/user/repo/pull/123",
     "constraint_compliance": {
         "files_within_limit": True,

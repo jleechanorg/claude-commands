@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 import pytest
 
-from jleechanorg_pr_automation.automation_utils import AutomationUtils
-from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
+from github-owner_pr_automation.automation_utils import AutomationUtils
+from github-owner_pr_automation.github-owner_pr_monitor import JleechanorgPRMonitor
 
 
 class TestDraftPRFiltering:
@@ -84,7 +84,7 @@ class TestCommentValidationMarkerRecognition:
         comments = [
             {
                 "body": f"{marker_prefix}abc123{marker_suffix}\n📝 Requesting reviews",
-                "author": {"login": "$USER"},
+                "author": {"login": "jleechan"},
                 "createdAt": "2026-01-31T10:00:00Z",
             }
         ]
@@ -199,7 +199,7 @@ class TestNoDuplicateCommentsPerSHA:
             "headRefOid": "abc123def",
             "repository": "your-project.com",
             "headRefName": "copilot/auto_comment_loop",  # Codex branch pattern
-            "repositoryFullName": "$GITHUB_REPOSITORY",
+            "repositoryFullName": "github-owner/your-project.com",
         }
 
         # Mock _should_skip_pr to indicate PR was already processed (so we hit the bot comment check path)
@@ -233,7 +233,7 @@ class TestNoDuplicateCommentsPerSHA:
             "headRefOid": "d318e327",
             "repository": "your-project.com",
             "headRefName": "docs/automation-orchestration-guide",  # NOT a Codex branch
-            "repositoryFullName": "$GITHUB_REPOSITORY",
+            "repositoryFullName": "github-owner/your-project.com",
         }
 
         # Mock to avoid actual GitHub API calls and subprocess calls

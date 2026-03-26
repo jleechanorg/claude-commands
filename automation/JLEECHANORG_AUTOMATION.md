@@ -1,15 +1,15 @@
-# jleechanorg Cross-Organization PR Automation
+# ${GITHUB_OWNER} Cross-Organization PR Automation
 
 ## 🎯 Overview
 
-A sophisticated automation system that monitors **ALL open PRs across the entire jleechanorg organization** using isolated worktrees and comprehensive safety limits.
+A sophisticated automation system that monitors **ALL open PRs across the entire ${GITHUB_OWNER} organization** using isolated worktrees and comprehensive safety limits.
 
 ## 🏢 Organization Coverage
 
-**Monitors ALL repositories in jleechanorg:**
+**Monitors ALL repositories in ${GITHUB_OWNER}:**
 - ai_universe (4 open PRs)
 - ai_universe_frontend (2 open PRs)
-- your-project.com (30 open PRs)
+- ${PROJECT_NAME:-your-project}.com (30 open PRs)
 - claude-commands (1 open PR)
 - projects_fake_repo (1 open PR)
 - ai_web_crawler (1 open PR)
@@ -24,9 +24,9 @@ A sophisticated automation system that monitors **ALL open PRs across the entire
 Each PR gets its own isolated environment:
 
 ```
-~/tmp/jleechanorg-pr-workspaces/
+~/tmp/${GITHUB_OWNER}-pr-workspaces/
 ├── ai_universe-pr-11/           # Isolated worktree for PR #11
-├── worldarchitect-ai-pr-1634/   # Isolated worktree for PR #1634
+├── ${PROJECT_NAME:-your-project}-ai-pr-1634/   # Isolated worktree for PR #1634
 ├── claude-commands-pr-42/       # Isolated worktree for PR #42
 └── [repo-name]-pr-[number]/     # Pattern for all PRs
 ```
@@ -56,7 +56,7 @@ python3 automation/automation_safety_manager.py --status
 # Has approval: False
 # PR attempts:
 #   ai_universe-11: 2/10 (OK)
-#   worldarchitect-ai-1634: 1/10 (OK)
+#   ${PROJECT_NAME:-your-project}-ai-1634: 1/10 (OK)
 #   claude-commands-42: 10/10 (BLOCKED)
 ```
 
@@ -69,22 +69,22 @@ brew install gh
 gh auth login
 
 # Verify organization access
-gh repo list jleechanorg --limit 5
+gh repo list ${GITHUB_OWNER} --limit 5
 ```
 
 ### Installation
 ```bash
 # One-command setup
-./automation/install_jleechanorg_automation.sh
+./automation/install_${GITHUB_OWNER}_automation.sh
 
 # Verify service
-launchctl list | grep jleechanorg
+launchctl list | grep ${GITHUB_OWNER}
 ```
 
 ## ⚙️ Processing Workflow
 
 ### Discovery Phase (Every 10 minutes)
-1. **Organization Scan**: `gh repo list jleechanorg` discovers all repositories
+1. **Organization Scan**: `gh repo list ${GITHUB_OWNER}` discovers all repositories
 2. **PR Discovery**: `gh pr list --repo [repo]` finds open PRs per repository
 3. **Safety Check**: Validates global and per-PR attempt limits
 4. **Priority Queue**: Orders PRs for processing (max 10 per cycle)
@@ -110,15 +110,15 @@ launchctl list | grep jleechanorg
 export PR_AUTOMATION_WORKSPACE=/custom/path/to/workspaces
 
 # Safety limits (defaults shown) are configured via CLI flags (not env vars):
-# - jleechanorg-pr-monitor --pr-limit 10 --global-limit 50
-# - jleechanorg-pr-monitor --pr-automation-limit 10 --fix-comment-limit 10 --fixpr-limit 10
+# - ${GITHUB_OWNER}-pr-monitor --pr-limit 10 --global-limit 50
+# - ${GITHUB_OWNER}-pr-monitor --pr-automation-limit 10 --fix-comment-limit 10 --fixpr-limit 10
 
 # Email notifications
 export SMTP_SERVER=smtp.gmail.com
 export SMTP_USERNAME=your_email@gmail.com
 export SMTP_PASSWORD=your_app_password
-export MEMORY_EMAIL_FROM=automation@jleechanorg.com
-export MEMORY_EMAIL_TO=admin@jleechanorg.com
+export MEMORY_EMAIL_FROM=automation@${GITHUB_OWNER}.com
+export MEMORY_EMAIL_TO=admin@${GITHUB_OWNER}.com
 ```
 
 ### Schedule Modification
@@ -138,22 +138,22 @@ Edit launchd plist for different intervals:
 ### Dry Run Testing
 ```bash
 # Test PR discovery only
-python3 automation/jleechanorg_pr_monitor.py --dry-run
+python3 automation/${GITHUB_OWNER}_pr_monitor.py --dry-run
 
 # Test specific repository
-python3 automation/jleechanorg_pr_monitor.py --dry-run --single-repo ai_universe
+python3 automation/${GITHUB_OWNER}_pr_monitor.py --dry-run --single-repo ai_universe
 
 # Limited PR testing
-python3 automation/jleechanorg_pr_monitor.py --dry-run --max-prs 3
+python3 automation/${GITHUB_OWNER}_pr_monitor.py --dry-run --max-prs 3
 ```
 
 ### Live Processing
 ```bash
 # Single manual run
-python3 automation/jleechanorg_pr_monitor.py
+python3 automation/${GITHUB_OWNER}_pr_monitor.py
 
 # Monitor real-time
-tail -f ~/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log
+tail -f ~/Library/Logs/${PROJECT_NAME:-your-project}-automation/${GITHUB_OWNER}_pr_monitor.log
 ```
 
 ## 📊 Monitoring & Management
@@ -161,10 +161,10 @@ tail -f ~/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log
 ### Service Status
 ```bash
 # Check service status
-launchctl list | grep jleechanorg
+launchctl list | grep ${GITHUB_OWNER}
 
 # Recent automation logs
-tail -f ~/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log
+tail -f ~/Library/Logs/${PROJECT_NAME:-your-project}-automation/${GITHUB_OWNER}_pr_monitor.log
 
 # Safety status across all repos
 python3 automation/automation_safety_manager.py --status
@@ -173,7 +173,7 @@ python3 automation/automation_safety_manager.py --status
 ### Manual Intervention
 ```bash
 # Grant approval for continued automation
-python3 automation/automation_safety_manager.py --approve admin@jleechanorg.com
+python3 automation/automation_safety_manager.py --approve admin@${GITHUB_OWNER}.com
 
 # Check specific PR can be processed
 python3 automation/automation_safety_manager.py --check-pr ai_universe-11
@@ -185,14 +185,14 @@ python3 automation/automation_safety_manager.py --record-pr ai_universe-11 succe
 ### Service Management
 ```bash
 # Stop automation
-launchctl unload ~/Library/LaunchAgents/com.jleechanorg.pr-automation.plist
+launchctl unload ~/Library/LaunchAgents/com.${GITHUB_OWNER}.pr-automation.plist
 
 # Start automation
-launchctl load ~/Library/LaunchAgents/com.jleechanorg.pr-automation.plist
+launchctl load ~/Library/LaunchAgents/com.${GITHUB_OWNER}.pr-automation.plist
 
 # Restart automation
-launchctl unload ~/Library/LaunchAgents/com.jleechanorg.pr-automation.plist
-launchctl load ~/Library/LaunchAgents/com.jleechanorg.pr-automation.plist
+launchctl unload ~/Library/LaunchAgents/com.${GITHUB_OWNER}.pr-automation.plist
+launchctl load ~/Library/LaunchAgents/com.${GITHUB_OWNER}.pr-automation.plist
 ```
 
 ## 🔍 Troubleshooting
@@ -205,10 +205,10 @@ launchctl load ~/Library/LaunchAgents/com.jleechanorg.pr-automation.plist
 gh auth status
 
 # Verify organization access
-gh repo list jleechanorg --limit 1
+gh repo list ${GITHUB_OWNER} --limit 1
 
 # Check network connectivity
-curl -s https://api.github.com/orgs/jleechanorg
+curl -s https://api.github.com/orgs/${GITHUB_OWNER}
 ```
 
 **Worktree Creation Fails**
@@ -238,20 +238,20 @@ python3 automation/automation_safety_manager.py --record-pr [repo-pr] success
 ### Log Analysis
 ```bash
 # Service logs
-cat ~/Library/Logs/worldarchitect-automation/jleechanorg-launchd.out
-cat ~/Library/Logs/worldarchitect-automation/jleechanorg-launchd.err
+cat ~/Library/Logs/${PROJECT_NAME:-your-project}-automation/${GITHUB_OWNER}-launchd.out
+cat ~/Library/Logs/${PROJECT_NAME:-your-project}-automation/${GITHUB_OWNER}-launchd.err
 
 # Application logs
-tail -100 ~/Library/Logs/worldarchitect-automation/jleechanorg_pr_monitor.log
+tail -100 ~/Library/Logs/${PROJECT_NAME:-your-project}-automation/${GITHUB_OWNER}_pr_monitor.log
 
 # Safety manager logs
-grep "automation_safety_manager" ~/Library/Logs/worldarchitect-automation/*.log
+grep "automation_safety_manager" ~/Library/Logs/${PROJECT_NAME:-your-project}-automation/*.log
 ```
 
 ## 🎯 Key Features
 
 ### ✅ **Cross-Organization Coverage**
-- Automatically discovers ALL repositories in jleechanorg
+- Automatically discovers ALL repositories in ${GITHUB_OWNER}
 - Processes open PRs across multiple projects simultaneously
 - No manual repository configuration required
 
@@ -283,4 +283,4 @@ grep "automation_safety_manager" ~/Library/Logs/worldarchitect-automation/*.log
 - Resource limits and process management
 - Graceful degradation on failures
 
-This system provides enterprise-grade automation for the entire jleechanorg organization while maintaining safety, isolation, and reliability.
+This system provides enterprise-grade automation for the entire ${GITHUB_OWNER} organization while maintaining safety, isolation, and reliability.

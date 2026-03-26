@@ -30,7 +30,7 @@ FIXCOMMENT_LOG="/tmp/fix-comment.log"
 COMMENT_VAL_LOG="/tmp/comment-validation.log"
 
 # Or from home directory
-HOME_LOGS="$HOME/Library/Logs/worldarchitect-automation/"
+HOME_LOGS="$HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation/"
 ```
 
 ### Step 2: Parse PR Metrics
@@ -61,7 +61,7 @@ SINCE="${1:-6}"
 SINCE_DATE=$(date -v-${SINCE}H +%Y-%m-%dT%H:%M:%SZ)
 
 # Search for automation-authored commits
-gh api repos/$GITHUB_REPOSITORY/commits \
+gh api repos/jleechanorg/your-project.com/commits \
   --since "$SINCE_DATE" \
   --jq '.[] | select(.commit.author.name |
     contains("claude") or
@@ -83,7 +83,7 @@ For each commit found:
 
 ```bash
 # Check commit details
-gh api repos/$GITHUB_REPOSITORY/commits/{sha} \
+gh api repos/jleechanorg/your-project.com/commits/{sha} \
   --jq '.commit.message, .commit.author.name, .authors'
 ```
 
@@ -121,7 +121,7 @@ gh api repos/$GITHUB_REPOSITORY/commits/{sha} \
 - `/tmp/fixpr.log` - fixpr job runs
 - `/tmp/fix-comment.log` - fix-comment job runs
 - `/tmp/comment-validation.log` - comment-validation job runs
-- `$HOME/Library/Logs/worldarchitect-automation/` - persistent logs
+- `$HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation/` - persistent logs
 
 ## Key Log Patterns
 

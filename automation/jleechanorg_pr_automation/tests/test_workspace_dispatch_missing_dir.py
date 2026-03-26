@@ -20,7 +20,7 @@ from unittest.mock import MagicMock, patch
 
 # Import from local source, not installed package
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from jleechanorg_pr_automation.orchestrated_pr_runner import prepare_workspace_dir
+from github-owner_pr_automation.orchestrated_pr_runner import prepare_workspace_dir
 
 
 class TestWorkspaceDispatchMissingDirectory(unittest.TestCase):
@@ -50,9 +50,9 @@ class TestWorkspaceDispatchMissingDirectory(unittest.TestCase):
         workspace_path = self.test_root / repo / workspace_name
         workspace_path.mkdir(parents=True, exist_ok=True)
 
-        with patch("jleechanorg_pr_automation.orchestrated_pr_runner.WORKSPACE_ROOT_BASE", self.test_root):
+        with patch("github-owner_pr_automation.orchestrated_pr_runner.WORKSPACE_ROOT_BASE", self.test_root):
             with patch(
-                "jleechanorg_pr_automation.orchestrated_pr_runner.shutil.rmtree",
+                "github-owner_pr_automation.orchestrated_pr_runner.shutil.rmtree",
                 side_effect=FileNotFoundError("[Errno 2] No such file or directory"),
             ) as mock_rmtree:
                 result = prepare_workspace_dir(repo, workspace_name)
@@ -73,9 +73,9 @@ class TestWorkspaceDispatchMissingDirectory(unittest.TestCase):
         workspace_path = self.test_root / repo / workspace_name
         workspace_path.mkdir(parents=True, exist_ok=True)
 
-        with patch("jleechanorg_pr_automation.orchestrated_pr_runner.WORKSPACE_ROOT_BASE", self.test_root):
+        with patch("github-owner_pr_automation.orchestrated_pr_runner.WORKSPACE_ROOT_BASE", self.test_root):
             with patch(
-                "jleechanorg_pr_automation.orchestrated_pr_runner.shutil.rmtree",
+                "github-owner_pr_automation.orchestrated_pr_runner.shutil.rmtree",
                 side_effect=PermissionError("[Errno 13] Permission denied"),
             ):
                 with self.assertRaises(PermissionError):
@@ -99,13 +99,13 @@ class TestWorkspaceDispatchMissingDirectory(unittest.TestCase):
             f"gitdir: {self.test_root / repo / '.git' / 'worktrees' / workspace_name}"
         )
 
-        with patch("jleechanorg_pr_automation.orchestrated_pr_runner.WORKSPACE_ROOT_BASE", self.test_root):
+        with patch("github-owner_pr_automation.orchestrated_pr_runner.WORKSPACE_ROOT_BASE", self.test_root):
             with patch(
-                "jleechanorg_pr_automation.orchestrated_pr_runner.run_cmd",
+                "github-owner_pr_automation.orchestrated_pr_runner.run_cmd",
                 return_value=MagicMock(returncode=0, stdout="", stderr=""),
             ) as mock_run_cmd:
                 with patch(
-                    "jleechanorg_pr_automation.orchestrated_pr_runner.shutil.rmtree",
+                    "github-owner_pr_automation.orchestrated_pr_runner.shutil.rmtree",
                     side_effect=FileNotFoundError("[Errno 2] No such file or directory"),
                 ):
                     result = prepare_workspace_dir(repo, workspace_name)

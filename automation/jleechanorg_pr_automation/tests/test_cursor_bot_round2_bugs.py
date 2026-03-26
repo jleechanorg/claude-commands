@@ -6,7 +6,7 @@ Cursor bot identified 2 additional bugs after the initial fixes:
 1. TOCTOU race condition in atomic_update() file creation
 2. TypeError not caught in _parse_timestamp()
 
-Bug Context: https://github.com/$GITHUB_REPOSITORY/pull/3762
+Bug Context: https://github.com/github-owner/your-project.com/pull/3762
 """
 
 import json
@@ -18,8 +18,8 @@ from pathlib import Path
 
 import pytest
 
-from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
-from jleechanorg_pr_automation.utils import SafeJSONManager
+from github-owner_pr_automation.automation_safety_manager import AutomationSafetyManager
+from github-owner_pr_automation.utils import SafeJSONManager
 
 
 # Module-level helper for multiprocessing (must be picklable)
@@ -52,7 +52,7 @@ def test_toctou_race_concurrent_file_creation(tmp_path):
     Fix: Use single code path with 'a+' mode which doesn't truncate on open,
     and acquire lock BEFORE any truncation happens.
 
-    Cursor comment: https://github.com/$GITHUB_REPOSITORY/pull/3762
+    Cursor comment: https://github.com/github-owner/your-project.com/pull/3762
     """
     test_file = tmp_path / "concurrent_create.json"
 
@@ -121,7 +121,7 @@ def test_parse_timestamp_with_integer(tmp_path, monkeypatch):
 
     Fix: Add TypeError to exception handler.
 
-    Cursor comment: https://github.com/$GITHUB_REPOSITORY/pull/3762
+    Cursor comment: https://github.com/github-owner/your-project.com/pull/3762
     """
     safety_data_dir = tmp_path / "safety"
     safety_data_dir.mkdir()

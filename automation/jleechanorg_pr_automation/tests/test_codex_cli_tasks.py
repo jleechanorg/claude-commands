@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from jleechanorg_pr_automation.openai_automation.codex_cli_tasks import (
+from github-owner_pr_automation.openai_automation.codex_cli_tasks import (
     CodexCloudAPI,
 )
 
@@ -21,7 +21,7 @@ SAMPLE_LIST_RESPONSE = {
             "status": "ready",
             "updated_at": "2026-02-08T02:47:27Z",
             "environment_id": None,
-            "environment_label": "$GITHUB_REPOSITORY",
+            "environment_label": "github-owner/your-project.com",
             "summary": {"files_changed": 1, "lines_added": 5, "lines_removed": 1},
             "is_review": True,
             "attempt_total": 1,
@@ -33,7 +33,7 @@ SAMPLE_LIST_RESPONSE = {
             "status": "pending",
             "updated_at": "2026-02-08T02:39:26Z",
             "environment_id": None,
-            "environment_label": "$GITHUB_REPOSITORY",
+            "environment_label": "github-owner/your-project.com",
             "summary": {"files_changed": 0, "lines_added": 0, "lines_removed": 0},
             "is_review": True,
             "attempt_total": 1,
@@ -45,7 +45,7 @@ SAMPLE_LIST_RESPONSE = {
             "status": "ready",
             "updated_at": "2026-02-08T01:00:00Z",
             "environment_id": None,
-            "environment_label": "$GITHUB_REPOSITORY",
+            "environment_label": "github-owner/your-project.com",
             "summary": {"files_changed": 2, "lines_added": 40, "lines_removed": 10},
             "is_review": False,
             "attempt_total": 1,
@@ -215,7 +215,7 @@ class TestGetStatus(unittest.TestCase):
     @patch("shutil.which", return_value="/usr/local/bin/codex")
     def test_returns_raw_output(self, _mock_which, mock_run):
         mock_run.return_value = MagicMock(
-            stdout="[READY] GitHub Mention: bump deps\n$GITHUB_REPOSITORY",
+            stdout="[READY] GitHub Mention: bump deps\ngithub-owner/your-project.com",
             stderr="",
             returncode=0,
         )
@@ -263,7 +263,7 @@ class TestApplyDiff(unittest.TestCase):
 
 class TestConstructor(unittest.TestCase):
     @patch("shutil.which")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path")
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path")
     def test_raises_if_binary_not_found(self, mock_detect, mock_which):
         mock_which.return_value = None
         mock_detect.return_value = Path("/mock/repo")
@@ -272,7 +272,7 @@ class TestConstructor(unittest.TestCase):
         self.assertIn("nonexistent", str(ctx.exception))
 
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path")
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path")
     def test_resolves_binary_path(self, mock_detect, mock_which):
         mock_detect.return_value = Path("/mock/repo")
         api = CodexCloudAPI()
@@ -283,8 +283,8 @@ class TestConstructor(unittest.TestCase):
 class TestRepoContextFallback(unittest.TestCase):
     @patch("subprocess.run")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.ensure_base_clone")
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.ensure_base_clone")
     def test_resolve_base_repo_uses_fixpr_clone_strategy(
         self,
         mock_ensure_base_clone,
@@ -296,34 +296,34 @@ class TestRepoContextFallback(unittest.TestCase):
         api = CodexCloudAPI()
         task = {
             "id": "task_e_abc123",
-            "environment_label": "$GITHUB_REPOSITORY",
+            "environment_label": "github-owner/your-project.com",
         }
 
         resolved = api._resolve_base_repo_path(task)
 
         self.assertEqual(resolved, Path("/tmp/pr-orch-bases/your-project.com"))
-        mock_ensure_base_clone.assert_called_once_with("$GITHUB_REPOSITORY")
+        mock_ensure_base_clone.assert_called_once_with("github-owner/your-project.com")
 
     @patch("subprocess.run")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
     def test_find_existing_pr_branch_uses_repo_flag_without_git_cwd(self, _mock_resolve_repo_path, _mock_which, mock_run):
         mock_run.return_value = MagicMock(stdout="[]", stderr="", returncode=0)
         api = CodexCloudAPI()
 
         result = api._find_existing_pr_branch(
             task_title="GitHub Mention: Example",
-            repo_full="$GITHUB_REPOSITORY",
+            repo_full="github-owner/your-project.com",
         )
 
         self.assertIsNone(result)
         cmd = mock_run.call_args[0][0]
         self.assertIn("--repo", cmd)
-        self.assertIn("$GITHUB_REPOSITORY", cmd)
+        self.assertIn("github-owner/your-project.com", cmd)
 
     @patch("subprocess.run")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
     def test_find_existing_pr_by_task_id_uses_deterministic_branch_lookup(
         self,
         _mock_resolve_repo_path,
@@ -335,7 +335,7 @@ class TestRepoContextFallback(unittest.TestCase):
                 {
                     "number": 5671,
                     "headRefName": "codex/2eee21eb",
-                    "url": "https://github.com/$GITHUB_REPOSITORY/pull/5671",
+                    "url": "https://github.com/github-owner/your-project.com/pull/5671",
                 }
             ]),
             stderr="",
@@ -345,12 +345,12 @@ class TestRepoContextFallback(unittest.TestCase):
 
         result = api._find_existing_pr_by_task_id(
             "task_e_69a7c8d2148c832f9f8cd4e52eee21eb",
-            repo_full="$GITHUB_REPOSITORY",
+            repo_full="github-owner/your-project.com",
         )
 
         self.assertEqual(
             result,
-            ("codex/2eee21eb", "https://github.com/$GITHUB_REPOSITORY/pull/5671"),
+            ("codex/2eee21eb", "https://github.com/github-owner/your-project.com/pull/5671"),
         )
         cmd = mock_run.call_args[0][0]
         self.assertEqual(cmd[:4], ["gh", "pr", "list", "--json"])
@@ -359,8 +359,8 @@ class TestRepoContextFallback(unittest.TestCase):
         self.assertNotIn("view", cmd)
 
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/tmp/local-repo"))
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.ensure_base_clone")
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/tmp/local-repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.ensure_base_clone")
     def test_resolve_base_repo_does_not_fallback_when_repo_full_present(
         self,
         mock_ensure_base_clone,
@@ -371,14 +371,14 @@ class TestRepoContextFallback(unittest.TestCase):
         api = CodexCloudAPI()
         task = {
             "id": "task_e_abc123",
-            "environment_label": "$GITHUB_REPOSITORY",
+            "environment_label": "github-owner/your-project.com",
         }
 
         with self.assertRaises(RuntimeError):
             api._resolve_base_repo_path(task)
 
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/tmp/local-repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/tmp/local-repo"))
     def test_resolve_base_repo_uses_local_path_without_env_label(
         self,
         _mock_resolve_repo_path,
@@ -395,7 +395,7 @@ class TestRepoContextFallback(unittest.TestCase):
     @patch("shutil.rmtree")
     @patch("tempfile.mkdtemp", return_value="/tmp/codex_test_worktree")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
     def test_create_worktree_falls_back_to_remote_branch_list(
         self,
         _mock_resolve_repo_path,
@@ -427,7 +427,7 @@ class TestRepoContextFallback(unittest.TestCase):
     @patch("shutil.rmtree")
     @patch("tempfile.mkdtemp", return_value="/tmp/codex_test_worktree_retry")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
     def test_create_worktree_prunes_and_retries_after_add_failure(
         self,
         _mock_resolve_repo_path,
@@ -460,7 +460,7 @@ class TestRepoContextFallback(unittest.TestCase):
 
     @patch("subprocess.run")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
     def test_prune_stale_worktrees_removes_missing_initializing_metadata(
         self,
         _mock_resolve_repo_path,
@@ -489,7 +489,7 @@ class TestRepoContextFallback(unittest.TestCase):
     @patch("shutil.rmtree")
     @patch("tempfile.mkdtemp", return_value="/tmp/codex_test_worktree_locked")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
     def test_create_worktree_retries_locked_missing_entry_with_double_force(
         self,
         _mock_resolve_repo_path,
@@ -534,7 +534,7 @@ class TestRepoContextFallback(unittest.TestCase):
     @patch("shutil.rmtree")
     @patch("tempfile.mkdtemp", return_value="/tmp/codex_test_worktree_no_heads")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=None)
     def test_create_worktree_errors_when_no_compatible_remote_branch(
         self,
         _mock_resolve_repo_path,
@@ -563,7 +563,7 @@ class TestApplyAndPush(unittest.TestCase):
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_success_flow(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test successful apply + git workflow."""
@@ -606,7 +606,7 @@ class TestApplyAndPush(unittest.TestCase):
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_apply_failure(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test failure when codex apply fails."""
@@ -631,7 +631,7 @@ class TestApplyAndPush(unittest.TestCase):
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_apply_corrupt_patch_disables_pr_fallback(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Malformed diffs should fail without attempting the PR fallback path."""
@@ -657,7 +657,7 @@ class TestApplyAndPush(unittest.TestCase):
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_git_push_failure(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test failure when git push fails."""
@@ -684,7 +684,7 @@ class TestApplyAndPush(unittest.TestCase):
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_apply_and_push_uses_detached_remote_checkout_and_head_push_for_new_branch(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """New branch apply+push should avoid local branch attachment entirely."""
@@ -723,7 +723,7 @@ class TestCreatePRFromDiff(unittest.TestCase):
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_success_without_conflicts(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test successful PR creation without conflicts."""
@@ -774,7 +774,7 @@ index 1234567..abcdefg 100644
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_update_existing_pr(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test updating an existing PR instead of creating new one."""
@@ -855,7 +855,7 @@ index 1234567..abcdefg 100644
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_update_existing_pr_returns_error_when_fetch_fails(
         self,
@@ -910,7 +910,7 @@ index 1234567..abcdefg 100644
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_success_with_conflicts(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test successful PR creation with conflict markers."""
@@ -951,7 +951,7 @@ index 1234567..abcdefg 100644
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_corrupt_patch_fails_without_fallback_commit(
         self,
@@ -986,7 +986,7 @@ index 1234567..abcdefg 100644
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_conflict_fallback_fails_cleanly_when_nothing_to_commit(
         self,
@@ -1023,7 +1023,7 @@ index 1234567..abcdefg 100644
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_no_diff_available(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test failure when no diff is available."""
@@ -1047,7 +1047,7 @@ index 1234567..abcdefg 100644
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_gh_pr_create_failure(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test failure when gh pr create fails."""
@@ -1081,7 +1081,7 @@ index 1234567..abcdefg 100644
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_metadata_comment_content(self, _mock_exists, _mock_detect, _mock_which, _mock_prune, mock_run):
         """Test that PR comment includes visible PR# and branch metadata."""
@@ -1142,7 +1142,7 @@ index 1234567..abcdefg 100644
     @patch("subprocess.run")
     @patch.object(CodexCloudAPI, "_prune_stale_worktrees")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     @patch("pathlib.Path.exists", return_value=True)
     def test_create_pr_resets_branch_with_checkout_b(
         self,
@@ -1186,7 +1186,7 @@ index 1234567..abcdefg 100644
         )
 
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     def test_checkout_branch_at_target_allows_branch_checked_out_in_another_worktree(
         self,
         _mock_detect,
@@ -1240,7 +1240,7 @@ index 1234567..abcdefg 100644
 
     @patch("subprocess.run")
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     def test_checkout_branch_at_target_uses_minimum_120_second_timeout(
         self,
         _mock_detect,
@@ -1259,7 +1259,7 @@ index 1234567..abcdefg 100644
     @patch("shutil.rmtree")
     @patch("pathlib.Path.exists", return_value=True)
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     def test_cleanup_worktree_uses_minimum_120_second_timeout(
         self,
         _mock_detect,
@@ -1281,7 +1281,7 @@ index 1234567..abcdefg 100644
     @patch("shutil.rmtree")
     @patch("pathlib.Path.exists", return_value=True)
     @patch("shutil.which", return_value="/usr/local/bin/codex")
-    @patch("jleechanorg_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
+    @patch("github-owner_pr_automation.openai_automation.codex_cli_tasks.resolve_repo_path", return_value=Path("/mock/repo"))
     def test_cleanup_temp_codex_worktree_skips_git_remove(
         self,
         _mock_detect,

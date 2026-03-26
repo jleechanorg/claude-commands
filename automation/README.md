@@ -1,12 +1,12 @@
 # GitHub PR Automation System
 
-**Autonomous PR fixing and code review automation for the jleechanorg organization**
+**Autonomous PR fixing and code review automation for the ${GITHUB_OWNER} organization**
 
 ## 🚀 Quick Start
 
 ```bash
 # 1. Install the automation packages from PyPI
-pip install jleechanorg-orchestration jleechanorg-pr-automation
+pip install ${GITHUB_OWNER}-orchestration ${GITHUB_OWNER}-pr-automation
 
 # 2. Install cron entries (sets up automated workflows)
 cd automation
@@ -31,7 +31,7 @@ All workflows use safety limits, commit tracking, and orchestrated AI agents to 
 
 ### What It Does
 
-The @codex comment agent continuously monitors all open PRs across the jleechanorg organization and posts standardized Codex instruction comments when new commits are pushed. This enables AI assistants (@codex, @coderabbitai, @cursor) to review and improve PRs automatically.
+The @codex comment agent continuously monitors all open PRs across the ${GITHUB_OWNER} organization and posts standardized Codex instruction comments when new commits are pushed. This enables AI assistants (@codex, @coderabbitai, @cursor) to review and improve PRs automatically.
 
 ### How It Works
 
@@ -39,7 +39,7 @@ The @codex comment agent continuously monitors all open PRs across the jleechano
 ┌─────────────────────────────────────────────────────────────┐
 │  1. DISCOVERY PHASE                                         │
 │  ───────────────────────────────────────────────────────────│
-│  • Scan all repositories in jleechanorg organization        │
+│  • Scan all repositories in ${GITHUB_OWNER} organization        │
 │  • Find open PRs updated in last 24 hours                   │
 │  • Filter to actionable PRs (new commits, not drafts)       │
 └─────────────────────────────────────────────────────────────┘
@@ -104,16 +104,16 @@ Push any commits needed to remote so the PR is updated.
 
 ```bash
 # Monitor all repositories (posts comments to actionable PRs)
-jleechanorg-pr-monitor
+${GITHUB_OWNER}-pr-monitor
 
 # Monitor specific repository
-jleechanorg-pr-monitor --single-repo your-project.com
+${GITHUB_OWNER}-pr-monitor --single-repo ${PROJECT_NAME:-your-project}.com
 
 # Process specific PR
-jleechanorg-pr-monitor --target-pr 123 --target-repo $GITHUB_REPOSITORY
+${GITHUB_OWNER}-pr-monitor --target-pr 123 --target-repo ${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com
 
 # Dry run (discovery only, no comments)
-jleechanorg-pr-monitor --dry-run
+${GITHUB_OWNER}-pr-monitor --dry-run
 
 # Check safety status
 automation-safety-cli status
@@ -138,8 +138,8 @@ automation-safety-cli clear
 export GITHUB_TOKEN="your_github_token_here"
 
 # Safety limits (defaults shown). Override via CLI flags (not environment variables):
-# - jleechanorg-pr-monitor --pr-limit 10 --global-limit 50 --approval-hours 24
-# - jleechanorg-pr-monitor --pr-automation-limit 10 --fix-comment-limit 10 --fixpr-limit 10
+# - ${GITHUB_OWNER}-pr-monitor --pr-limit 10 --global-limit 50 --approval-hours 24
+# - ${GITHUB_OWNER}-pr-monitor --pr-automation-limit 10 --fix-comment-limit 10 --fixpr-limit 10
 # Or persist via `automation-safety-cli` which writes `automation_safety_config.json` in the safety data dir.
 
 # Optional - Email Notifications
@@ -244,11 +244,11 @@ python3 -m orchestrated_pr_runner
 python3 -m orchestrated_pr_runner --cutoff-hours 48 --max-prs 10
 
 # Use different AI CLI
-python3 -m jleechanorg_pr_automation.orchestrated_pr_runner --agent-cli codex
-python3 -m jleechanorg_pr_automation.orchestrated_pr_runner --agent-cli gemini
+python3 -m ${GITHUB_OWNER}_pr_automation.orchestrated_pr_runner --agent-cli codex
+python3 -m ${GITHUB_OWNER}_pr_automation.orchestrated_pr_runner --agent-cli gemini
 
 # List actionable PRs without fixing
-jleechanorg-pr-monitor --fixpr --dry-run
+${GITHUB_OWNER}-pr-monitor --fixpr --dry-run
 ```
 
 #### Slash Command Integration
@@ -268,7 +268,7 @@ jleechanorg-pr-monitor --fixpr --dry-run
 
 ```bash
 # Monitor and fix in one command
-jleechanorg-pr-monitor --fixpr --max-prs 5 --cli-agent claude
+${GITHUB_OWNER}-pr-monitor --fixpr --max-prs 5 --cli-agent claude
 ```
 
 ### Agent CLI Options
@@ -296,7 +296,7 @@ python3 -m orchestrated_pr_runner
 ```
 /tmp/
 ├── pr-orch-bases/              # Base clones (shared)
-│   ├── your-project.com/
+│   ├── ${PROJECT_NAME:-your-project}.com/
 │   └── ai_universe/
 └── {repo}/                     # PR workspaces (isolated)
     ├── pr-123-fix-auth/
@@ -398,20 +398,20 @@ curl -s http://localhost:9222/json/version | python3 -m json.tool
 
 ```bash
 # Run automation (connects to existing Chrome on port 9222)
-python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+python3 -m ${GITHUB_OWNER}_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser \
   --cdp-port 9222 \
   --limit 50
 
 # Debug mode with verbose logging
-python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+python3 -m ${GITHUB_OWNER}_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser \
   --cdp-port 9222 \
   --limit 50 \
   --debug
 
 # Process only first 10 tasks
-python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+python3 -m ${GITHUB_OWNER}_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser \
   --cdp-port 9222 \
   --limit 10
@@ -422,14 +422,14 @@ python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
 The automation runs automatically via cron every hour at :15 past the hour (offset from PR monitor):
 
 ```bash
-# Cron entry (installed via install_jleechanorg_automation.sh)
-15 * * * * jleechanorg-pr-monitor --codex-update >> \
-  $HOME/Library/Logs/worldarchitect-automation/codex_automation.log 2>&1
+# Cron entry (installed via install_${GITHUB_OWNER}_automation.sh)
+15 * * * * ${GITHUB_OWNER}-pr-monitor --codex-update >> \
+  $HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation/codex_automation.log 2>&1
 ```
 
 **Note:** The `--codex-update` flag internally calls:
 ```bash
-python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+python3 -m ${GITHUB_OWNER}_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser --cdp-host 127.0.0.1 --cdp-port 9222 --limit 50
 ```
 
@@ -440,7 +440,7 @@ using the settings below before retrying.
 
 ```bash
 # From Claude Code (manual run)
-python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+python3 -m ${GITHUB_OWNER}_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser --cdp-port 9222 --limit 50
 ```
 
@@ -450,14 +450,14 @@ python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
 # Required: Chrome with remote debugging on port 9222
 # (See "Prerequisites" section above)
 
-# Optional: Customize task limit (used by `jleechanorg-pr-monitor --codex-update`)
+# Optional: Customize task limit (used by `${GITHUB_OWNER}-pr-monitor --codex-update`)
 # Default: 50 (matches CLI default; max 200). Override to keep evidence/test runs fast.
-# Use: `jleechanorg-pr-monitor --codex-update --codex-task-limit 200`
+# Use: `${GITHUB_OWNER}-pr-monitor --codex-update --codex-task-limit 200`
 
 # Optional: Auth state file location
 # Default: ~/.chatgpt_codex_auth_state.json
 
-# Optional: CDP self-heal controls (used by jleechanorg-pr-monitor --codex-update)
+# Optional: CDP self-heal controls (used by ${GITHUB_OWNER}-pr-monitor --codex-update)
 export CODEX_CDP_AUTO_START=1            # default: 1 (auto-start Chrome if needed)
 export CODEX_CDP_HOST=127.0.0.1          # default: 127.0.0.1
 export CODEX_CDP_PORT=9222               # default: 9222
@@ -507,7 +507,7 @@ ls -lh ~/.chatgpt_codex_auth_state.json
 **Issue**: "Update branch" button not found
 ```bash
 # Run with debug logging
-python3 -m jleechanorg_pr_automation.openai_automation.codex_github_mentions \
+python3 -m ${GITHUB_OWNER}_pr_automation.openai_automation.codex_github_mentions \
   --use-existing-browser \
   --cdp-port 9222 \
   --debug
@@ -534,18 +534,18 @@ killall "Google Chrome" 2>/dev/null
 # DO NOT use editable install (pip install -e .) for cron jobs - breaks in multi-worktree setups
 
 # Option 1: Install from git (pin to tag or commit for reproducibility)
-pip install "git+https://github.com/$GITHUB_REPOSITORY.git@<tag-or-commit>#subdirectory=automation"
+pip install "git+https://github.com/${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com.git@<tag-or-commit>#subdirectory=automation"
 
 # Option 2: Build and install from source (NOT editable - safe for cron)
 cd automation && pip install .
 
 # Option 3: Wait for PyPI package update (safest)
 # Check your installed version:
-pip show jleechanorg-pr-automation
-# See latest releases on PyPI: https://pypi.org/project/jleechanorg-pr-automation/
+pip show ${GITHUB_OWNER}-pr-automation
+# See latest releases on PyPI: https://pypi.org/project/${GITHUB_OWNER}-pr-automation/
 
 # Verify flag exists
-jleechanorg-pr-monitor --help | grep codex-update
+${GITHUB_OWNER}-pr-monitor --help | grep codex-update
 ```
 
 ---
@@ -556,10 +556,10 @@ jleechanorg-pr-monitor --help | grep codex-update
 
 ```bash
 # Basic installation from PyPI (stable, production-ready)
-pip install jleechanorg-pr-automation
+pip install ${GITHUB_OWNER}-pr-automation
 
 # With email notifications
-pip install jleechanorg-pr-automation[email]
+pip install ${GITHUB_OWNER}-pr-automation[email]
 ```
 
 ✅ **Use this for:**
@@ -595,15 +595,15 @@ If you need features not yet in PyPI:
 
 ```bash
 # Option 1: Install from git (pin to tag or commit for reproducibility)
-pip install "git+https://github.com/$GITHUB_REPOSITORY.git@<tag-or-commit>#subdirectory=automation"
+pip install "git+https://github.com/${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com.git@<tag-or-commit>#subdirectory=automation"
 
 # Option 2: Build and install from source (NOT editable)
 cd automation
 pip install .  # Note: NOT pip install -e .
 
 # Option 3: Wait for PyPI package update (safest)
-# Check your installed version: pip show jleechanorg-pr-automation
-# See latest releases on PyPI: https://pypi.org/project/jleechanorg-pr-automation/
+# Check your installed version: pip show ${GITHUB_OWNER}-pr-automation
+# See latest releases on PyPI: https://pypi.org/project/${GITHUB_OWNER}-pr-automation/
 ```
 
 ### Native Scheduler Installation
@@ -616,8 +616,8 @@ pip install .  # Note: NOT pip install -e .
 ./automation/install.sh --dry-run
 
 # Validate native services after install
-launchctl print "gui/$(id -u)/ai.worldarchitect.pr-automation.pr-monitor"   # macOS
-systemctl --user status worldarchitect-pr-automation-pr-monitor.timer        # Linux
+launchctl print "gui/$(id -u)/ai.${PROJECT_NAME:-your-project}.pr-automation.pr-monitor"   # macOS
+systemctl --user status ${PROJECT_NAME:-your-project}-pr-automation-pr-monitor.timer        # Linux
 
 # Inspect OpenClaw cron state after migration
 openclaw cron list --all --json
@@ -660,11 +660,11 @@ crontab ~/.crontab_backup_YYYYMMDD_HHMMSS
 
 | Schedule | Command | Purpose |
 |----------|---------|---------|
-| Every hour (`:00`) | `jleechanorg-pr-monitor --max-prs 10` | Workflow 1: PR monitoring |
-| Every hour (`:45`) | `jleechanorg-pr-monitor --fix-comment --cli-agent minimax --max-prs 3` | Workflow 2: Fix-comment automation |
-| Every 30 minutes | `jleechanorg-pr-monitor --comment-validation --max-prs 10` | Workflow 3: Comment validation |
-| Every hour (`:30`) | `jleechanorg-pr-monitor --codex-api --codex-apply-and-push --codex-task-limit 10` | Workflow 4: Codex API automation |
-| Every 30 minutes | `jleechanorg-pr-monitor --fixpr --max-prs 10 --cli-agent minimax` | Workflow 5: Fix PRs autonomously |
+| Every hour (`:00`) | `${GITHUB_OWNER}-pr-monitor --max-prs 10` | Workflow 1: PR monitoring |
+| Every hour (`:45`) | `${GITHUB_OWNER}-pr-monitor --fix-comment --cli-agent minimax --max-prs 3` | Workflow 2: Fix-comment automation |
+| Every 30 minutes | `${GITHUB_OWNER}-pr-monitor --comment-validation --max-prs 10` | Workflow 3: Comment validation |
+| Every hour (`:30`) | `${GITHUB_OWNER}-pr-monitor --codex-api --codex-apply-and-push --codex-task-limit 10` | Workflow 4: Codex API automation |
+| Every 30 minutes | `${GITHUB_OWNER}-pr-monitor --fixpr --max-prs 10 --cli-agent minimax` | Workflow 5: Fix PRs autonomously |
 
 ---
 
@@ -696,10 +696,10 @@ Both workflows use `AutomationSafetyManager` for rate limiting:
 ### Safety Data Storage
 
 ```
-~/Library/Application Support/worldarchitect-automation/
+~/Library/Application Support/${PROJECT_NAME:-your-project}-automation/
 ├── automation_safety_data.json    # Attempt tracking
 └── pr_history/                     # Commit tracking per repo
-    ├── your-project.com/
+    ├── ${PROJECT_NAME:-your-project}.com/
     │   ├── main.json
     │   └── feature-branch.json
     └── ai_universe/
@@ -716,14 +716,14 @@ automation-safety-cli status
 # Global runs: 23/50
 # Requires approval: False
 # PR attempts:
-#   your-project.com-1634: 2/10 (OK)
+#   ${PROJECT_NAME:-your-project}.com-1634: 2/10 (OK)
 #   ai_universe-42: 10/10 (BLOCKED)
 
 # Clear all data (reset limits)
 automation-safety-cli clear
 
 # Check specific PR
-automation-safety-cli check-pr 123 --repo your-project.com
+automation-safety-cli check-pr 123 --repo ${PROJECT_NAME:-your-project}.com
 ```
 
 ---
@@ -779,10 +779,10 @@ export GEMINI_MODEL="gemini-3-pro-preview"
 pytest
 
 # With coverage
-pytest --cov=jleechanorg_pr_automation
+pytest --cov=${GITHUB_OWNER}_pr_automation
 
 # Specific test suite
-pytest automation/jleechanorg_pr_automation/tests/test_pr_filtering_matrix.py
+pytest automation/${GITHUB_OWNER}_pr_automation/tests/test_pr_filtering_matrix.py
 ```
 
 ### Code Quality
@@ -793,7 +793,7 @@ black .
 ruff check .
 
 # Type checking
-mypy jleechanorg_pr_automation
+mypy ${GITHUB_OWNER}_pr_automation
 ```
 
 ---
@@ -808,13 +808,13 @@ mypy jleechanorg_pr_automation
 gh auth status
 
 # Verify organization access
-gh repo list jleechanorg --limit 5
+gh repo list ${GITHUB_OWNER} --limit 5
 ```
 
 **Issue**: Duplicate comments on same commit
 ```bash
 # Check commit marker detection
-python3 -c "from jleechanorg_pr_automation.check_codex_comment import decide; print(decide('<!-- codex-automation-commit:', '-->'))"
+python3 -c "from ${GITHUB_OWNER}_pr_automation.check_codex_comment import decide; print(decide('<!-- codex-automation-commit:', '-->'))"
 ```
 
 ### FixPR Workflow
@@ -822,11 +822,11 @@ python3 -c "from jleechanorg_pr_automation.check_codex_comment import decide; pr
 **Issue**: Worktree creation fails
 ```bash
 # Clean stale worktrees
-cd ~/your-project.com
+cd ~/${PROJECT_NAME:-your-project}.com
 git worktree prune
 
 # Remove old workspace
-rm -rf /tmp/your-project.com/pr-*
+rm -rf /tmp/${PROJECT_NAME:-your-project}.com/pr-*
 ```
 
 **Issue**: Agent not spawning

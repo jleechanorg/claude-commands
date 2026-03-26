@@ -50,11 +50,11 @@ setup_fake_environment() {
     local env_root="$1"
     mkdir -p "$env_root/bin" "$env_root/home"
 
-    cat >"$env_root/bin/jleechanorg-pr-monitor" <<'EOF'
+    cat >"$env_root/bin/github-owner-pr-monitor" <<'EOF'
 #!/bin/bash
 exit 0
 EOF
-    chmod +x "$env_root/bin/jleechanorg-pr-monitor"
+    chmod +x "$env_root/bin/github-owner-pr-monitor"
 
     cat >"$env_root/bin/openclaw" <<'EOF'
 #!/bin/bash
@@ -188,10 +188,10 @@ run_macos_install_test() {
     <array>
       <string>/bin/bash</string>
       <string>-lc</string>
-      <string>sleep \$(( RANDOM % 301 )); exec /opt/homebrew/bin/jleechanorg-pr-monitor --max-prs 10</string>
+      <string>sleep \$(( RANDOM % 301 )); exec /opt/homebrew/bin/github-owner-pr-monitor --max-prs 10</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>$HOME/projects/your-project.com/automation</string>
+    <string>${HOME}/projects/your-project.com/automation</string>
   </dict>
 </plist>
 EOF
@@ -220,7 +220,7 @@ EOF
     assert_file_contains "$launchd_dir/ai.worldarchitect.pr-automation.pr-monitor.plist" '<key>MCTRL_TRIGGER_SOURCE</key>' "launchd plist should set trigger source env"
     assert_file_contains "$launchd_dir/ai.worldarchitect.pr-automation.pr-monitor.plist" '<string>catch_up</string>' "launchd plist should mark trigger source as catch_up"
     assert_file_contains "$launchd_dir/ai.worldarchitect.pr-automation.pr-monitor.plist" '<string>--exec</string>' "launchd plist should pass wrapper exec mode"
-    assert_file_contains "$launchd_dir/ai.worldarchitect.pr-automation.pr-monitor.plist" "$env_root/bin/jleechanorg-pr-monitor --max-prs 10" "pr-monitor plist should retain exact monitor command"
+    assert_file_contains "$launchd_dir/ai.worldarchitect.pr-automation.pr-monitor.plist" "$env_root/bin/github-owner-pr-monitor --max-prs 10" "pr-monitor plist should retain exact monitor command"
     assert_file_contains "$launchd_dir/ai.worldarchitect.pr-automation.pr-monitor.plist" "<string>${expected_runtime_root}</string>" "launchd plist should write pr-monitor runtime evidence under the per-user temp root"
     assert_file_contains "$launchd_dir/ai.worldarchitect.pr-automation.pr-monitor.plist" "<string>${expected_runtime_root}/.mctrl.lock</string>" "launchd plist should write lock file under the per-user temp root"
     assert_file_contains "$LAUNCHCTL_CALL_LOG" "launchctl bootout gui/" "macOS install should boot out the existing launchd job before migration"
@@ -277,7 +277,7 @@ run_linux_install_test() {
     assert_file_contains "$systemd_dir/worldarchitect-pr-automation-codex-api.service" "Environment=\"MCTRL_EVIDENCE_ROOT=${expected_runtime_root}\"" "systemd service should write runtime evidence under the per-user temp root"
     assert_file_contains "$systemd_dir/worldarchitect-pr-automation-codex-api.service" "\"--job-type\" \"codex-api\"" "codex-api service should set wrapper job type"
     assert_file_contains "$systemd_dir/worldarchitect-pr-automation-codex-api.service" "ExecStart=\"" "systemd service should render a direct ExecStart command"
-    assert_file_contains "$systemd_dir/worldarchitect-pr-automation-codex-api.service" "\"--exec\" \"$env_root/bin/jleechanorg-pr-monitor --codex-api --codex-apply-and-push --codex-task-limit 10\"" "codex-api service should retain exact command under wrapper exec mode"
+    assert_file_contains "$systemd_dir/worldarchitect-pr-automation-codex-api.service" "\"--exec\" \"$env_root/bin/github-owner-pr-monitor --codex-api --codex-apply-and-push --codex-task-limit 10\"" "codex-api service should retain exact command under wrapper exec mode"
     assert_file_contains "$systemd_dir/worldarchitect-pr-automation-pr-monitor.service" "WorkingDirectory=\"$REPO_AUTOMATION_DIR\"" "systemd service should quote working directory"
     assert_file_contains "$systemd_dir/worldarchitect-pr-automation-pr-monitor.service" "Environment=\"PATH=$env_root/bin:$env_root/home/Path With Spaces:/usr/bin:/bin\"" "systemd service should quote PATH environment"
 

@@ -156,7 +156,7 @@ class ConvergeAgentRestarter:
         # Check various possible workspace locations
         workspace_paths = [
             os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}"),
-            os.path.expanduser(f"~/projects/your-project.com/worktree_human/{agent_name}"),
+            os.path.expanduser(f"~/projects/worldarchitect.ai/worktree_human/{agent_name}"),
         ]
 
         for path in workspace_paths:
@@ -297,7 +297,7 @@ class ConvergeAgentRestarter:
 
             # Create new tmux session with same name (agent_name already validated)
             # Ensure the working directory path is safe
-            work_dir = os.path.expanduser("~/projects/your-project.com/worktree_human")
+            work_dir = os.path.expanduser("~/projects/worldarchitect.ai/worktree_human")
             work_dir = os.path.abspath(work_dir)  # Get absolute path
 
             # Log security event

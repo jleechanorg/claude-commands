@@ -54,7 +54,7 @@ User: /playwright run complete game flow test
 
 ## Test Scripts Location
 - Custom scripts: `/tmp/playwright-test-*.js`
-- Example scripts: `skills/playwright-worldarchitect/examples/`
+- Example scripts: `skills/playwright-${PROJECT_NAME:-your-project}/examples/`
 - Test results: `/tmp/playwright-results/`
 
 ## Available Test Patterns
@@ -112,7 +112,7 @@ TESTING=true                 # Enable test mode
 
 ### Install Playwright Skill
 ```bash
-cd skills/playwright-worldarchitect
+cd skills/playwright-${PROJECT_NAME:-your-project}
 npm install
 npx playwright install chromium
 ```
@@ -165,7 +165,7 @@ python main.py  # Runs on http://localhost:5000
 
 ### Browser doesn't launch
 ```bash
-cd skills/playwright-worldarchitect
+cd skills/playwright-${PROJECT_NAME:-your-project}
 npx playwright install chromium
 ```
 
@@ -207,7 +207,7 @@ await browser.close();
 
 Execute:
 ```bash
-cd skills/playwright-worldarchitect
+cd skills/playwright-${PROJECT_NAME:-your-project}
 node run.js /tmp/custom-campaign-test.js
 ```
 
@@ -236,6 +236,6 @@ node run.js /tmp/custom-campaign-test.js
 
 ---
 
-**Skill Path**: `skills/playwright-worldarchitect/`
-**Documentation**: `skills/playwright-worldarchitect/SKILL.md`
-**Helper Functions**: `skills/playwright-worldarchitect/lib/helpers.js`
+**Skill Path**: `skills/playwright-${PROJECT_NAME:-your-project}/`
+**Documentation**: `skills/playwright-${PROJECT_NAME:-your-project}/SKILL.md`
+**Helper Functions**: `skills/playwright-${PROJECT_NAME:-your-project}/lib/helpers.js`
