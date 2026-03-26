@@ -184,7 +184,7 @@ set_wrapper_args() {
         "$WRAPPER_SCRIPT"
         "--job-id" "$(job_label "$job")"
         "--job-type" "$job"
-        "--repo" "$GITHUB_REPOSITORY"
+        "--repo" "jleechanorg/worldarchitect.ai"
         "--exec" "$exec_command"
     )
 }

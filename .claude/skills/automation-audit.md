@@ -61,7 +61,7 @@ SINCE="${1:-6}"
 SINCE_DATE=$(date -v-${SINCE}H +%Y-%m-%dT%H:%M:%SZ)
 
 # Search for automation-authored commits
-gh api repos/$GITHUB_REPOSITORY/commits \
+gh api repos/jleechanorg/your-project.com/commits \
   --since "$SINCE_DATE" \
   --jq '.[] | select(.commit.author.name |
     contains("claude") or
@@ -83,7 +83,7 @@ For each commit found:
 
 ```bash
 # Check commit details
-gh api repos/$GITHUB_REPOSITORY/commits/{sha} \
+gh api repos/jleechanorg/your-project.com/commits/{sha} \
   --jq '.commit.message, .commit.author.name, .authors'
 ```
 

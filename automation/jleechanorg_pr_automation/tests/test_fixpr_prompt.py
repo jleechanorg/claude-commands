@@ -24,8 +24,8 @@ class _FakeDispatcher:
 class TestFixprPrompt(unittest.TestCase):
     def test_fixpr_commit_message_includes_mode_and_model(self):
         pr_payload = {
-            "repo_full": "$GITHUB_REPOSITORY",
-            "repo": "your-project.com",
+            "repo_full": "jleechanorg/worldarchitect.ai",
+            "repo": "worldarchitect.ai",
             "number": 123,
             "title": "Test PR",
             "branch": "feature/test-fixpr",
@@ -56,8 +56,8 @@ class TestFixprPrompt(unittest.TestCase):
     def test_fixpr_uses_local_branch_name_not_remote_branch(self):
         """Test that fixpr uses local branch name fixpr/{remote_branch} instead of remote branch directly."""
         pr_payload = {
-            "repo_full": "$GITHUB_REPOSITORY",
-            "repo": "your-project.com",
+            "repo_full": "jleechanorg/worldarchitect.ai",
+            "repo": "worldarchitect.ai",
             "number": 456,
             "title": "Test PR with feature branch",
             "branch": "feature/add-cool-feature",
@@ -95,8 +95,8 @@ class TestFixprPrompt(unittest.TestCase):
     def test_fixpr_local_branch_name_with_special_chars(self):
         """Test that local branch names are properly sanitized from remote branch names."""
         pr_payload = {
-            "repo_full": "$GITHUB_REPOSITORY",
-            "repo": "your-project.com",
+            "repo_full": "jleechanorg/worldarchitect.ai",
+            "repo": "worldarchitect.ai",
             "number": 789,
             "title": "Test PR with special chars in branch",
             "branch": "fix/bug#123/urgent",

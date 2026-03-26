@@ -1,3 +1,15 @@
+# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
+# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
+# You MUST adapt the following before using:
+# - $GCP_PROJECT_ID → Your Google Cloud project ID
+# - $GITHUB_REPOSITORY → Your repository (owner/repo)
+# - $GITHUB_OWNER → Your GitHub username or org
+# - Service account configurations and secrets
+# - Environment-specific variables and paths
+#
+# See workflows/README.md for integration instructions.
+# ---
+
 name: WorldArchitect Tests (Directory-Based)
 
 # Cancel in-progress runs when new commits are pushed to same branch
@@ -37,7 +49,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1 # v4.1.1
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
@@ -51,7 +63,7 @@ jobs:
       has-changes: ${{ steps.changes.outputs.has-changes }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
         with:
           fetch-depth: 0  # Full history for accurate change detection
 
@@ -89,7 +101,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
         with:
           fetch-depth: 0  # Full history needed for merge-base diff
       - name: Run import validation
@@ -129,7 +141,7 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/testing_utils:${{ github.workspace }}/mvp_site:${{ github.workspace }}/automation
     steps:
     - name: Checkout merge commit
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
       with:
         # Deliberately NOT setting ref — uses default merge commit
         # to validate the PR integrates cleanly with the base branch.
@@ -211,7 +223,7 @@ jobs:
         fi
 
     - name: Checkout repository
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
       with:
         # For PRs: checkout the actual head commit, not the synthetic merge commit.
         # testmon fingerprints files using the working tree state; the merge commit
@@ -761,7 +773,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4.1.1
         with:
           fetch-depth: 0  # Full history needed for git diff (delta coverage)
 

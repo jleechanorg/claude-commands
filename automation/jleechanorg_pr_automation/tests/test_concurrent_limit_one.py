@@ -43,7 +43,7 @@ class TestConcurrentLimitOne(unittest.TestCase):
         ACTUAL: Up to 50 agents per PR (uses pr_limit=50)
         """
         pr_number = 3664
-        repo = "$GITHUB_REPOSITORY"
+        repo = "jleechanorg/worldarchitect.ai"
         branch = "test-branch"
 
         # First agent reserves slot
@@ -75,7 +75,7 @@ class TestConcurrentLimitOne(unittest.TestCase):
         This validates the correct behavior path works.
         """
         pr_number = 3664
-        repo = "$GITHUB_REPOSITORY"
+        repo = "jleechanorg/worldarchitect.ai"
         branch = "test-branch"
 
         # First agent reserves and releases

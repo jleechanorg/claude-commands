@@ -848,7 +848,7 @@ class AutomationSafetyManager:
 Time: {datetime.now().isoformat()}
 System: PR Automation Safety Manager
 
-This is an automated notification from the Your Project automation system.
+This is an automated notification from the WorldArchitect.AI automation system.
 """
 
             msg.attach(MIMEText(body, "plain"))
