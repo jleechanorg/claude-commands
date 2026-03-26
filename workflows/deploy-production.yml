@@ -169,7 +169,7 @@ jobs:
           environment: production
           service_name: mvp-site-app-stable
           region: us-central1
-          project: $GCP_PROJECT_ID
+          project: ${{ vars.GCP_PROJECT_ID }}
           branch: ${{ github.ref_name }}
           commit_sha: ${{ github.sha }}
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
@@ -189,7 +189,7 @@ jobs:
           environment: production
           service_name: mvp-site-app-stable
           region: us-central1
-          project: $GCP_PROJECT_ID
+          project: ${{ vars.GCP_PROJECT_ID }}
           branch: ${{ github.ref_name }}
           commit_sha: ${{ github.sha }}
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
