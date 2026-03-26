@@ -5,7 +5,7 @@ Tests for Cursor bot round 3 bug fixes
 Cursor bot identified 1 bug after round 2 fixes:
 1. Ignored return value in try_process_pr() allows false positive slot reservation
 
-Bug Context: https://github.com/github-owner/your-project.com/pull/3762
+Bug Context: https://github.com/jleechanorg/worldarchitect.ai/pull/3762
 """
 
 import json
@@ -18,9 +18,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from github-owner_pr_automation.automation_safety_manager import AutomationSafetyManager
-from github-owner_pr_automation.utils import SafeJSONManager
-from github-owner_pr_automation.tests.conftest import _get_inflight_count
+from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
+from jleechanorg_pr_automation.utils import SafeJSONManager
+from jleechanorg_pr_automation.tests.conftest import _get_inflight_count
 
 
 def test_try_process_pr_returns_false_when_write_fails(tmp_path, caplog):
@@ -35,7 +35,7 @@ def test_try_process_pr_returns_false_when_write_fails(tmp_path, caplog):
     Fix: Check atomic_update() return value and only return True if BOTH the reservation
     logic succeeded AND the file write succeeded.
 
-    Cursor comment: https://github.com/github-owner/your-project.com/pull/3762
+    Cursor comment: https://github.com/jleechanorg/worldarchitect.ai/pull/3762
     """
     safety_data_dir = tmp_path / "safety"
     safety_data_dir.mkdir()

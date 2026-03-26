@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 import pytest
 
-from github-owner_pr_automation.automation_utils import AutomationUtils
-from github-owner_pr_automation.github-owner_pr_monitor import JleechanorgPRMonitor
+from jleechanorg_pr_automation.automation_utils import AutomationUtils
+from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 
 
 class TestDraftPRFiltering:
@@ -197,9 +197,9 @@ class TestNoDuplicateCommentsPerSHA:
             "state": "OPEN",
             "isDraft": False,
             "headRefOid": "abc123def",
-            "repository": "your-project.com",
+            "repository": "worldarchitect.ai",
             "headRefName": "copilot/auto_comment_loop",  # Codex branch pattern
-            "repositoryFullName": "github-owner/your-project.com",
+            "repositoryFullName": "jleechanorg/worldarchitect.ai",
         }
 
         # Mock _should_skip_pr to indicate PR was already processed (so we hit the bot comment check path)
@@ -231,9 +231,9 @@ class TestNoDuplicateCommentsPerSHA:
             "state": "OPEN",
             "isDraft": False,
             "headRefOid": "d318e327",
-            "repository": "your-project.com",
+            "repository": "worldarchitect.ai",
             "headRefName": "docs/automation-orchestration-guide",  # NOT a Codex branch
-            "repositoryFullName": "github-owner/your-project.com",
+            "repositoryFullName": "jleechanorg/worldarchitect.ai",
         }
 
         # Mock to avoid actual GitHub API calls and subprocess calls
@@ -243,7 +243,7 @@ class TestNoDuplicateCommentsPerSHA:
             patch.object(monitor, "_should_skip_pr", return_value=False),
             patch.object(AutomationUtils, "execute_subprocess_with_timeout", return_value=(0, "", "")),
         ):
-            result = monitor.post_codex_instruction_simple("your-project.com", 5155, pr_data)
+            result = monitor.post_codex_instruction_simple("worldarchitect.ai", 5155, pr_data)
             # Should be posted (ALL non-draft PRs get Codex support comments)
             assert result == "posted", \
                 f"ALL branches (including non-Codex) should get Codex support comments in comment-only mode, got: {result}"

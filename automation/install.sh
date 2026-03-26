@@ -90,7 +90,7 @@ runtime_state_root() {
     local uid
     uid="$(id -u)"
     base_dir="${base_dir%/}"
-    printf '%s/${PROJECT_NAME:-your-project}-automation/uid-%s/mctrl/%s' "$base_dir" "$uid" "$1"
+    printf '%s/worldarchitect-automation/uid-%s/mctrl/%s' "$base_dir" "$uid" "$1"
 }
 
 detect_platform() {
@@ -129,25 +129,25 @@ resolve_monitor_binary() {
         return 0
     fi
 
-    candidate="$(command -v ${GITHUB_OWNER}-pr-monitor 2>/dev/null || true)"
+    candidate="$(command -v jleechanorg-pr-monitor 2>/dev/null || true)"
     if [[ -n "$candidate" && -x "$candidate" ]]; then
         printf '%s' "$candidate"
         return 0
     fi
 
     for candidate in \
-        "$HOME/.local/bin/${GITHUB_OWNER}-pr-monitor" \
-        "/opt/homebrew/bin/${GITHUB_OWNER}-pr-monitor" \
-        "/usr/local/bin/${GITHUB_OWNER}-pr-monitor" \
-        "/usr/bin/${GITHUB_OWNER}-pr-monitor" \
-        "/bin/${GITHUB_OWNER}-pr-monitor"; do
+        "$HOME/.local/bin/jleechanorg-pr-monitor" \
+        "/opt/homebrew/bin/jleechanorg-pr-monitor" \
+        "/usr/local/bin/jleechanorg-pr-monitor" \
+        "/usr/bin/jleechanorg-pr-monitor" \
+        "/bin/jleechanorg-pr-monitor"; do
         if [[ -x "$candidate" ]]; then
             printf '%s' "$candidate"
             return 0
         fi
     done
 
-    die "Unable to resolve ${GITHUB_OWNER}-pr-monitor. Install it or set PR_MONITOR_BIN=/absolute/path/to/${GITHUB_OWNER}-pr-monitor"
+    die "Unable to resolve jleechanorg-pr-monitor. Install it or set PR_MONITOR_BIN=/absolute/path/to/jleechanorg-pr-monitor"
 }
 
 set_job_args() {
@@ -184,17 +184,17 @@ set_wrapper_args() {
         "$WRAPPER_SCRIPT"
         "--job-id" "$(job_label "$job")"
         "--job-type" "$job"
-        "--repo" "${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com"
+        "--repo" "jleechanorg/worldarchitect.ai"
         "--exec" "$exec_command"
     )
 }
 
 job_label() {
-    printf 'ai.${PROJECT_NAME:-your-project}.pr-automation.%s' "$1"
+    printf 'ai.worldarchitect.pr-automation.%s' "$1"
 }
 
 job_service_name() {
-    printf '${PROJECT_NAME:-your-project}-pr-automation-%s' "$1"
+    printf 'worldarchitect-pr-automation-%s' "$1"
 }
 
 job_log_stem() {
@@ -722,13 +722,13 @@ print_validation_commands() {
                 log "  systemctl status $(job_service_name "$job").service"
                 log "  systemctl status $(job_service_name "$job").timer"
             done
-            log "  systemctl list-timers | grep ${PROJECT_NAME:-your-project}-pr-automation"
+            log "  systemctl list-timers | grep worldarchitect-pr-automation"
         else
             for job in "${JOB_NAMES[@]}"; do
                 log "  systemctl --user status $(job_service_name "$job").service"
                 log "  systemctl --user status $(job_service_name "$job").timer"
             done
-            log "  systemctl --user list-timers | grep ${PROJECT_NAME:-your-project}-pr-automation"
+            log "  systemctl --user list-timers | grep worldarchitect-pr-automation"
         fi
     fi
     log "  openclaw cron list --all --json"
@@ -762,9 +762,9 @@ parse_args "$@"
 PLATFORM="$(detect_platform)"
 MONITOR_BINARY="$(resolve_monitor_binary)"
 if [[ "$PLATFORM" == "linux" ]]; then
-    DEFAULT_LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/${PROJECT_NAME:-your-project}-automation"
+    DEFAULT_LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/worldarchitect-automation"
 else
-    DEFAULT_LOG_DIR="$HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation"
+    DEFAULT_LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
 fi
 LOG_DIR="${AUTOMATION_LOG_DIR:-$DEFAULT_LOG_DIR}"
 LAUNCHD_DIR="${LAUNCHD_DIR:-$HOME/Library/LaunchAgents}"
