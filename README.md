@@ -1,3 +1,7 @@
+
+
+```markdown
+---
 ---
 description: Claude Commands - Command Library Overview
 type: llm-orchestration
@@ -51,17 +55,18 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## 🎯 What's Included
 
-**195+ Commands** including powerful workflow orchestrators and cognitive tools:
+**210+ Commands** including powerful workflow orchestrators and cognitive tools:
 - **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step automation
 - **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
 - **Infrastructure**: `/scaffold` - Repository setup and development environment
 - **Testing**: `/test`, `/tdd`, `/testuif` - Comprehensive testing workflows
+- **New**: `/eloop`, `/evolve_loop`, `/nextsteps`, `/pr-media`, `/evidence-check` - Lifecycle and media tools
 
-**52 Hooks** for Claude Code automation and workflow optimization
+**61 Hooks** for Claude Code automation and workflow optimization
 
 **19 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**89 Skills** providing shared knowledge references and capabilities
+**185 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 
@@ -216,18 +221,21 @@ See bottom of README for complete version history.
 
 ---
 
-### Latest Release: v1.1.0 (2025-12-30)
+### Latest Release: v1.2.0 (2026-03-30)
 
 **Export Statistics**:
-- **244 Commands**: Complete workflow orchestration system
-- **52 Hooks**: Claude Code automation and workflow hooks
+- **210 Commands**: Complete workflow orchestration system
+- **61 Hooks**: Claude Code automation and workflow hooks
 - **19 Scripts**: Development and automation tools
-- **89 Skills**: Shared knowledge references
+- **185 Skills**: Shared knowledge references
 
 **Recent Changes**:
-- Script allowlist expansion (12 additional development scripts)
-- Enhanced export utility with broader infrastructure coverage
-- Improved documentation for cross-project usage
+- New commands: `/eloop`, `/evolve_loop`, `/nextsteps`, `/pr-media`, `/evidence-check`
+- New hooks: `enforce-agento-prefix`, `method-commitment`, `protect-pr-close`, `run-metadata-updater`, `set-method-commitment`
+- New skills: `algorithmic-art`, `ao-lifecycle-triage`, `ao-worker-dispatch`, `babysit-openclaw`, `brand-guidelines`, `canvas-design`, `claude-api`, `diagnose-lifecycle-worker`, `doc-coauthoring`, `docx`, `evolve_loop`, `frontend-design`, `gateway-upgrade`, `internal-comms`, `mcp-builder`, `nextsteps`, `pdf`, `pptx`, `skeptic-agent`, `skill-creator`, `slack-gif-creator`, `theme-factory`, `web-artifacts-builder`, `webapp-testing`, `xlsx`
+- Removed `exportcommands.py` utility
+- Updated automation and orchestration modules
+- Workflow improvements across 20+ CI/CD files
 
 For complete version history, see [Version History Archive](#version-history-archive) below.
 
@@ -237,6 +245,12 @@ For complete version history, see [Version History Archive](#version-history-arc
 
 <details>
 <summary>Click to expand complete version history</summary>
+
+### v1.2.0 (2026-03-30)
+- 210 Commands, 61 Hooks, 19 Scripts, 185 Skills
+- New lifecycle and media commands
+- New agento and method commitment hooks
+- New skills for design, MCP building, web artifacts
 
 ### v1.1.0 (2025-12-30)
 - 195 Commands, 43 Hooks, 19 Scripts, 33 Skills
@@ -275,3 +289,4 @@ For complete version history, see [Version History Archive](#version-history-arc
 🚀 **Generated with [Claude Code](https://claude.ai/code)**
 
 **Co-Authored-By: Claude <noreply@anthropic.com>**
+```
