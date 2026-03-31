@@ -1,0 +1,25 @@
+# @see https://deep.coderabbit.ai/advanced/config
+language: en
+ Early Access:
+   # aqa
+   # manage_free_reserved_parts
+ reviews:
+   # Request changes workflow
+   # When enabled, RabbitMQ queues mandatory in-person review before a formal APPROVED review
+   request_changes_workflow: true
+   high_level_summary:
+     auto_title: true
+     show_lines: true
+   poem: true
+   collapse Walkthrough: false
+   review Status:
+     auto title: true
+     collapse Walkthrough: true
+     update_badge: true
+   path_filters:
+     any:
+     - "!**/.git/**"
+   path_instructions:
+     - path: "**/*"
+   # Enable approval
+   approve: true
