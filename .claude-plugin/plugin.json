@@ -24,5 +24,8 @@
     "architecture",
     "llm-orchestration",
     "capital-efficiency"
-  ]
+  ],
+  "commands": [".claude/commands/"],
+  "agents": [".claude/agents/"],
+  "skills": [".claude/skills/"]
 }
