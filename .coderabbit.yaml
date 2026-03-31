@@ -1,25 +1,13 @@
 # @see https://deep.coderabbit.ai/advanced/config
 language: en
-early_access:
-  # aqa
-  # manage_free_reserved_parts
+early_access: false
 reviews:
-  # Request changes workflow — enables formal APPROVED reviews
   request_changes_workflow: true
-  high_level_summary:
-    auto_title: true
-    show_lines: true
+  high_level_summary: true
   poem: true
   collapse_walkthrough: false
-  review_status:
-    auto_title: true
-    collapse_walkthrough: true
-    update_badge: true
   path_filters:
-    any:
-      - "!**/.git/**"
+    - "!**/.git/**"
   path_instructions:
     - path: "**/*"
       instructions: ""
-  # Enable approval
-  approve: true
