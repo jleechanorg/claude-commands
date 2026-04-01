@@ -1,3 +1,6 @@
+
+
+---
 ---
 description: Claude Commands - Command Library Overview
 type: llm-orchestration
@@ -9,6 +12,16 @@ execution_mode: immediate
 A comprehensive collection of workflow automation commands for Claude Code that transform your development process through intelligent command composition and orchestration.
 
 The YAML frontmatter at the top of this template provides command metadata and should remain intact for downstream tooling.
+
+## Changelog (2026-04-01)
+
+**New Commands**: `/eloop`, `/evidence-check`, `/evolve_loop`, `/nextsteps`, `/pr-media`, `/up`
+
+**Updated Commands**: `/auton`, `/benchg-ts`, `/cerebras` (extract_conversation_context.py), `/evidence_review`, `/agento_report`, `/antigravity-computer-use`
+
+**Automation Updates**: Enhanced automation safety limits, improved orchestration runner, new launchd and cron integration scripts
+
+**Workflows**: Streamlined CI/CD workflows, removed deprecated test-self-hosted-runner.yml and coderabbit-ping-on-push.yml
 
 ## Installation (Human must type the /plugin commands)
 
@@ -51,7 +64,7 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## 🎯 What's Included
 
-**195+ Commands** including powerful workflow orchestrators and cognitive tools:
+**211 Commands** including powerful workflow orchestrators and cognitive tools:
 - **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step automation
 - **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
 - **Infrastructure**: `/scaffold` - Repository setup and development environment
@@ -61,7 +74,7 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 **19 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**89 Skills** providing shared knowledge references and capabilities
+**187 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 
@@ -117,6 +130,51 @@ Rapidly scaffolds essential development infrastructure with intelligent technolo
 ```bash
 /scaffold
 # → Copies 17 development scripts adapted to your tech stack
+```
+
+### `/eloop` - Evolution Loop Pattern
+
+Implements iterative improvement cycles with automatic feedback integration.
+
+```bash
+/eloop "improve code quality"
+# → Analyze → Improve → Evaluate → Repeat until criteria met
+```
+
+### `/evolve_loop` - Continuous Evolution Workflow
+
+Maintains continuous improvement with checkpoint-based evolution tracking.
+
+```bash
+/evolve_loop "refactor module architecture"
+# → Checkpoint → Evolve → Validate → Progress or rollback
+```
+
+### `/nextsteps` - Action Planning
+
+Analyzes current state and generates prioritized next action items.
+
+```bash
+/nextsteps
+# → Analyze context → Identify gaps → Prioritize actions
+```
+
+### `/pr-media` - PR Media Generation
+
+Creates visual assets and media for PR descriptions and documentation.
+
+```bash
+/pr-media
+# → Generate screenshots, diagrams, and visual summaries
+```
+
+### `/up` - Progress Update
+
+Generates status updates and progress reports for ongoing work.
+
+```bash
+/up
+# → Summarize current progress → Format for stakeholders
 ```
 
 ## 💡 Command Composition Architecture
@@ -216,18 +274,20 @@ See bottom of README for complete version history.
 
 ---
 
-### Latest Release: v1.1.0 (2025-12-30)
+### Latest Release: v1.2.0 (2026-04-01)
 
 **Export Statistics**:
-- **244 Commands**: Complete workflow orchestration system
+- **211 Commands**: Complete workflow orchestration system
 - **52 Hooks**: Claude Code automation and workflow hooks
 - **19 Scripts**: Development and automation tools
-- **89 Skills**: Shared knowledge references
+- **187 Skills**: Shared knowledge references
 
 **Recent Changes**:
-- Script allowlist expansion (12 additional development scripts)
-- Enhanced export utility with broader infrastructure coverage
-- Improved documentation for cross-project usage
+- Added evolution loop commands (`/eloop`, `/evolve_loop`)
+- Added evidence-check and nextsteps commands
+- Added pr-media for visual PR documentation
+- Enhanced automation safety with new launchd integration
+- Updated workflow CI/CD pipelines
 
 For complete version history, see [Version History Archive](#version-history-archive) below.
 
@@ -237,6 +297,11 @@ For complete version history, see [Version History Archive](#version-history-arc
 
 <details>
 <summary>Click to expand complete version history</summary>
+
+### v1.2.0 (2026-04-01)
+- 211 Commands, 52 Hooks, 19 Scripts, 187 Skills
+- Evolution loop commands, evidence-check, pr-media
+- Automation safety enhancements, workflow updates
 
 ### v1.1.0 (2025-12-30)
 - 195 Commands, 43 Hooks, 19 Scripts, 33 Skills

@@ -23,7 +23,6 @@ When this command is invoked with `$ARGUMENTS`:
 Determine what to review from `$ARGUMENTS`:
 - If a file/directory path: read those artifacts
 - If a description: extract relevant claims and artifacts from the recent conversation
-- If empty: review the most recent work described in the conversation (e.g., last fix, test run, deployment)
 
 ### Step 2: Try Codex Dispatch via Orchestration Library
 
