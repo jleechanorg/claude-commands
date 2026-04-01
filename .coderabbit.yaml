@@ -1,0 +1,13 @@
+# @see https://deep.coderabbit.ai/advanced/config
+language: en
+early_access: false
+reviews:
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: true
+  collapse_walkthrough: false
+  path_filters:
+    - "!**/.git/**"
+  path_instructions:
+    - path: "**/*"
+      instructions: ""
