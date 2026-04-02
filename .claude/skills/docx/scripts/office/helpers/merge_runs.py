@@ -185,7 +185,7 @@ def _elements_equal(e1, e2) -> bool:
     if len(children1) != len(children2):
         return False
 
-    for c1, c2 in zip(children1, children2):
+    for c1, c2 in zip(children1, children2, strict=True):
         if not _elements_equal(c1, c2):
             return False
 

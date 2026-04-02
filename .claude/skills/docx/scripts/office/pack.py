@@ -22,6 +22,7 @@ from pathlib import Path
 import defusedxml.minidom
 
 from validators import DOCXSchemaValidator, PPTXSchemaValidator, RedliningValidator
+from helpers.simplify_redlines import infer_author
 
 def pack(
     input_directory: str,
@@ -178,6 +179,7 @@ if __name__ == "__main__":
         args.output_file,
         original_file=args.original,
         validate=args.validate,
+        infer_author_func=infer_author if args.original else None,
     )
     print(message)
 
