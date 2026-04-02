@@ -12,6 +12,7 @@ Examples:
 """
 
 import argparse
+import os
 import sys
 import shutil
 import tempfile
@@ -39,32 +40,44 @@ def pack(
     if suffix not in {".docx", ".pptx", ".xlsx"}:
         return False, f"Error: {output_file} must be a .docx, .pptx, or .xlsx file"
 
+    original_path = None
     if validate and original_file:
         original_path = Path(original_file)
         if not original_path.exists():
             return False, f"Error: Original file {original_file} does not exist; cannot run validation"
 
-        success, output = _run_validation(
-            input_dir, original_path, suffix, infer_author_func
-        )
-        if output:
-            print(output)
-        if not success:
-            return False, f"Error: Validation failed for {input_dir}"
-
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_content_dir = Path(temp_dir) / "content"
         shutil.copytree(input_dir, temp_content_dir)
+
+        # Side-effect free validation: run against the copied tree
+        if validate and original_path:
+            success, output = _run_validation(
+                temp_content_dir, original_path, suffix, infer_author_func
+            )
+            if output:
+                print(output)
+            if not success:
+                return False, f"Error: Validation failed for {input_dir}"
 
         for pattern in ["*.xml", "*.rels"]:
             for xml_file in temp_content_dir.rglob(pattern):
                 _condense_xml(xml_file)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            for f in temp_content_dir.rglob("*"):
-                if f.is_file():
-                    zf.write(f, f.relative_to(temp_content_dir))
+        
+        # Atomic write for the zip file
+        fd, tmp_zip = tempfile.mkstemp(dir=output_path.parent, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                with zipfile.ZipFile(f, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for item in temp_content_dir.rglob("*"):
+                        if item.is_file():
+                            zf.write(item, item.relative_to(temp_content_dir))
+            os.replace(tmp_zip, output_path)
+        except Exception:
+            os.unlink(tmp_zip)
+            raise
 
     return True, f"Successfully packed {input_dir} to {output_file}"
 

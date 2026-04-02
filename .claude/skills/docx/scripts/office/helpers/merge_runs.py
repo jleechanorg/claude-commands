@@ -21,35 +21,29 @@ def merge_runs(input_dir: str) -> tuple[int, str]:
     if not doc_xml.exists():
         raise FileNotFoundError(f"Error: {doc_xml} not found")
 
+    dom = defusedxml.minidom.parseString(doc_xml.read_text(encoding="utf-8"))
+    root = dom.documentElement
+
+    _remove_elements(root, "proofErr")
+    _strip_run_rsid_attrs(root)
+
+    containers = {run.parentNode for run in _find_elements(root, "r")}
+
+    merge_count = 0
+    for container in containers:
+        merge_count += _merge_runs_in(container)
+
+    # Atomic write
+    fd, tmp_path = tempfile.mkstemp(dir=doc_xml.parent, suffix=".tmp")
     try:
-        dom = defusedxml.minidom.parseString(doc_xml.read_text(encoding="utf-8"))
-        root = dom.documentElement
+        with os.fdopen(fd, "wb") as f:
+            f.write(dom.toxml(encoding="UTF-8"))
+        os.replace(tmp_path, doc_xml)
+    except Exception:
+        os.unlink(tmp_path)
+        raise
 
-        _remove_elements(root, "proofErr")
-        _strip_run_rsid_attrs(root)
-
-        containers = {run.parentNode for run in _find_elements(root, "r")}
-
-        merge_count = 0
-        for container in containers:
-            merge_count += _merge_runs_in(container)
-
-        # Atomic write
-        fd, tmp_path = tempfile.mkstemp(dir=doc_xml.parent, suffix=".tmp")
-        try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(dom.toxml(encoding="UTF-8"))
-            os.replace(tmp_path, doc_xml)
-        except Exception:
-            os.unlink(tmp_path)
-            raise
-
-        return merge_count, f"Merged {merge_count} runs"
-
-    except Exception as e:
-        if isinstance(e, FileNotFoundError):
-            raise
-        return 0, f"Error: {e}"
+    return merge_count, f"Merged {merge_count} runs"
 
 
 def _find_elements(root, tag: str) -> list:

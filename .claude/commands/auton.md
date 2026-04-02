@@ -114,10 +114,10 @@ gh api rate_limit --jq '.resources | {core: .core.remaining, graphql: .graphql.r
 gh pr list --repo jleechanorg/agent-orchestrator --state open --json number,title,mergeable,reviewDecision,statusCheckRollup --jq '.[] | {number, title, mergeable, reviewDecision, ci: (.statusCheckRollup // [] | map(select(.conclusion != "")) | map(.conclusion) | unique)}'
 
 # B3. Non-green reasons from poller log
-tail -100 /tmp/ao-pr-poller.log 2>/dev/null | grep -E "not green|SKIP|WARNING|ERROR" | tail -20
+tail -100 /tmp/ao-orchestrators.log 2>/dev/null | grep -E "not green|SKIP|WARNING|ERROR" | tail -20
 
 # B4. Recent spawning activity
-tail -50 /tmp/ao-pr-poller.log 2>/dev/null | grep -E "Spawning|SUCCESS" | tail -10
+tail -50 /tmp/ao-orchestrators.log 2>/dev/null | grep -E "Spawning|SUCCESS" | tail -10
 
 # B5. PR worker coverage check (deterministic — exits non-zero if uncovered PRs)
 $HOME/.openclaw/scripts/check-pr-worker-coverage.sh 2>/dev/null || echo "Coverage script not found or returned non-zero (uncovered PRs exist)"

@@ -24,6 +24,12 @@ PROJECTS_DIR="${PROJECTS_DIR:-$HOME/projects}"
 PROJECTS_OTHER_DIR="${PROJECTS_OTHER_DIR:-$HOME/projects_other}"
 WORKTREE_RALPH_DIR="${WORKTREE_RALPH_DIR:-$PROJECTS_DIR/worktree_ralph}"
 
+# Define benchmark parameters early
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+BENCHMARK_LOG="/tmp/ts_migration_benchmark_$TIMESTAMP.log"
+# Fallback for PROJECT_ROOT if not set
+PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+
 # Verify source repository
 if [[ ! -d "$WORKTREE_RALPH_DIR" ]]; then
     echo "❌ Error: Source repository not found at $WORKTREE_RALPH_DIR"
@@ -104,9 +110,6 @@ echo "  Test Cases: $TEST_CASE_COUNT files in testing_llm/"
 echo "  Log File: $BENCHMARK_LOG"
 echo ""
 
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-BENCHMARK_LOG="/tmp/ts_migration_benchmark_$TIMESTAMP.log"
-
 echo "🚀 PHASE 1: GENESIS EXECUTION"
 echo "=================================="
 echo ""
@@ -120,19 +123,20 @@ echo "   Target: $GENESIS_DIR"
 echo "   Goal File: roadmap/genesis_typescript_migration_benchmark.md"
 echo ""
 
-# Execute Genesis using /gene command
-cd "$WORKTREE_RALPH_DIR"
+# Execute Genesis using /gene command in background subshell to capture correct PID
+(
+    cd "$WORKTREE_RALPH_DIR"
+    python3 genesis/genesis.py \
+        --session "$GENESIS_SESSION" \
+        --goal roadmap/genesis_typescript_migration_benchmark.md \
+        --output-dir "$GENESIS_DIR" \
+        --max-iterations 50 \
+        --verbose \
+        2>&1 | tee -a "$BENCHMARK_LOG" | tee "/tmp/genesis_benchmark_$TIMESTAMP.log"
+) &
+GENESIS_PID=$!
 
-# Create Genesis orchestration command
-python3 genesis/genesis.py \
-    --session "$GENESIS_SESSION" \
-    --goal roadmap/genesis_typescript_migration_benchmark.md \
-    --output-dir "$GENESIS_DIR" \
-    --max-iterations 50 \
-    --verbose \
-    2>&1 | tee -a "$BENCHMARK_LOG" | tee "/tmp/genesis_benchmark_$TIMESTAMP.log" &
-
-echo "✅ Genesis launched in background (PID: $!)"
+echo "✅ Genesis launched in background (PID: $GENESIS_PID)"
 echo ""
 
 echo "🚀 PHASE 2: RALPH EXECUTION"
@@ -148,18 +152,20 @@ echo "   Target: $RALPH_DIR"
 echo "   Goal File: roadmap/ralph_typescript_migration_benchmark.md"
 echo ""
 
-# Execute Ralph
-cd "$PROJECTS_OTHER_DIR/ralph-orchestrator"
+# Execute Ralph in background subshell to capture correct PID
+(
+    cd "$PROJECTS_OTHER_DIR/ralph-orchestrator"
+    python -m ralph_orchestrator \
+        "$WORKTREE_RALPH_DIR/roadmap/ralph_typescript_migration_benchmark.md" \
+        --output-dir "$RALPH_DIR" \
+        --agent codex \
+        --max-iterations 50 \
+        --verbose \
+        2>&1 | tee -a "$BENCHMARK_LOG" | tee "/tmp/ralph_benchmark_$TIMESTAMP.log"
+) &
+RALPH_PID=$!
 
-python -m ralph_orchestrator \
-    "$WORKTREE_RALPH_DIR/roadmap/ralph_typescript_migration_benchmark.md" \
-    --output-dir "$RALPH_DIR" \
-    --agent codex \
-    --max-iterations 50 \
-    --verbose \
-    2>&1 | tee -a "$BENCHMARK_LOG" | tee "/tmp/ralph_benchmark_$TIMESTAMP.log" &
-
-echo "✅ Ralph launched in background (PID: $!)"
+echo "✅ Ralph launched in background (PID: $RALPH_PID)"
 echo ""
 
 echo "📊 MONITORING"

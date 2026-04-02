@@ -39,7 +39,8 @@ for i in range(len(args) - 2):
         break
 
 if start_index is not None:
-    flags_with_arg = {'--repo', '-R'}
+    # Flags that take a following argument (which should be skipped)
+    flags_with_arg = {'--repo', '-R', '--comment', '-c'}
     i = start_index
     while i < len(args):
         arg = args[i]
@@ -142,8 +143,8 @@ try:
         print("ERROR:API_FAILED")
         sys.exit(0)
 
-    # Look for "Superseded by #<number>" pattern
-    if re.search(r'Superseded\s+by\s+#\d+', body):
+    # Look for "Superseded by #<number>" pattern (case-insensitive)
+    if re.search(r'Superseded\s+by\s+#\d+', body, re.IGNORECASE):
         print("ALLOWED")
     else:
         print("BLOCKED")
