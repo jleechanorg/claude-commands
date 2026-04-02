@@ -17,6 +17,7 @@ import argparse
 import random
 import shutil
 import sys
+import xml.sax.saxutils
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -242,11 +243,11 @@ def add_comment(
         "w:comments",
         COMMENT_XML.format(
             id=comment_id,
-            author=author,
+            author=xml.sax.saxutils.escape(author),
             date=ts,
-            initials=initials,
+            initials=xml.sax.saxutils.escape(initials),
             para_id=para_id,
-            text=text,  
+            text=xml.sax.saxutils.escape(text),  
         ),
     )
 
