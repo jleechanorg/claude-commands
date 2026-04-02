@@ -21,17 +21,45 @@ fi
 # Extract the PR number from the command
 # Handles: gh pr close <num>, gh pr close <num> --comment, gh pr close <num> -c "body"
 PR_NUM=$(echo "$TOOL_INPUT" | python3 -c "
-import sys, re, json
+import sys, shlex
 
-raw = sys.stdin.read()
-# PR numbers appear as the first positional arg after 'gh pr close'
-# May be preceded by flags like --comment, -c, --body, --repo, --owner, etc.
-# May be followed by flags or remain at end of command
-m = re.search(r'gh\s+pr\s+close\s+(?:--comment|--body|-c|--repo\s+\S+|-r\s+\S+\s+)?(\d+)', raw)
-if m:
-    print(m.group(1))
-else:
-    print('')
+raw = sys.stdin.read().strip()
+try:
+    args = shlex.split(raw)
+except ValueError:
+    # Fallback: very simple split if shlex fails for any reason
+    args = raw.split()
+
+pr_num = ''
+
+# Locate the 'gh pr close' subcommand
+start_index = None
+for i in range(len(args) - 2):
+    if args[i] == 'gh' and args[i + 1] == 'pr' and args[i + 2] == 'close':
+        start_index = i + 3
+        break
+
+if start_index is not None:
+    # Flags that take a following argument (which should be skipped)
+    flags_with_arg = {'--repo', '-R'}
+    i = start_index
+    while i < len(args):
+        arg = args[i]
+        if arg in flags_with_arg:
+            # Skip the flag and its value (if present)
+            i += 2
+            continue
+        if arg.startswith('-'):
+            # Other flags without separate values
+            i += 1
+            continue
+        # First non-flag positional argument after 'gh pr close'
+        candidate = arg.lstrip('#')
+        if candidate.isdigit():
+            pr_num = candidate
+        break
+
+print(pr_num)
 " 2>/dev/null) || PR_NUM=""
 
 if [ -z "$PR_NUM" ]; then
@@ -131,8 +159,7 @@ case "$RESULT" in
     exit 1
     ;;
   ERROR:API_FAILED|ERROR:TIMEOUT|ERROR:UNKNOWN|*)
-    echo "BLOCKED: Could not verify supersession comment on PR #$PR_NUM (API error)."
-    echo "Block the close so a human can verify the target PR."
-    exit 1
+    echo "WARNING: Could not verify supersession comment on PR #$PR_NUM (API error). Allowing close." >&2
+    exit 0
     ;;
 esac

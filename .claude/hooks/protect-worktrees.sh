@@ -27,9 +27,7 @@ cmd = re.sub(r"'[^']*'", "''", cmd)
 
 # AO worktree name pattern
 # Covers: ao-1350 (numeric), ao-pr263-fix (PR claim), ao-pr263 (PR claim), etc.
-# AO spawn creates worktrees with ao-<descriptive> naming.
-# Human worktrees typically use: worktree_*, bare names (pr263-fix), feature/...
-AO_PATTERN = re.compile(r'^(ao|jc|wa|cc|ra|wc)-[a-z0-9-]+$')
+AO_PATTERN = re.compile(r'^(ao|jc|wa|cc|ra|wc)-(\d+|pr\d+(-[a-z0-9-]+)?)$')
 
 # Split on common shell separators
 parts = re.split(r'[;&|\n]+', cmd)

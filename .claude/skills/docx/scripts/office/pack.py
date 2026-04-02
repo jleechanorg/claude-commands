@@ -27,27 +27,29 @@ def pack(
     original_file: str | None = None,
     validate: bool = True,
     infer_author_func=None,
-) -> tuple[None, str]:
+) -> str:
     input_dir = Path(input_directory)
     output_path = Path(output_file)
     suffix = output_path.suffix.lower()
 
     if not input_dir.is_dir():
-        return None, f"Error: {input_dir} is not a directory"
+        return f"Error: {input_dir} is not a directory"
 
     if suffix not in {".docx", ".pptx", ".xlsx"}:
-        return None, f"Error: {output_file} must be a .docx, .pptx, or .xlsx file"
+        return f"Error: {output_file} must be a .docx, .pptx, or .xlsx file"
 
     if validate and original_file:
         original_path = Path(original_file)
-        if original_path.exists():
-            success, output = _run_validation(
-                input_dir, original_path, suffix, infer_author_func
-            )
-            if output:
-                print(output)
-            if not success:
-                return None, f"Error: Validation failed for {input_dir}"
+        if not original_path.exists():
+            return f"Error: Original file {original_file} does not exist; cannot run validation"
+
+        success, output = _run_validation(
+            input_dir, original_path, suffix, infer_author_func
+        )
+        if output:
+            print(output)
+        if not success:
+            return f"Error: Validation failed for {input_dir}"
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_content_dir = Path(temp_dir) / "content"
@@ -63,7 +65,7 @@ def pack(
                 if f.is_file():
                     zf.write(f, f.relative_to(temp_content_dir))
 
-    return None, f"Successfully packed {input_dir} to {output_file}"
+    return f"Successfully packed {input_dir} to {output_file}"
 
 
 def _run_validation(
@@ -147,7 +149,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    _, message = pack(
+    message = pack(
         args.input_directory,
         args.output_file,
         original_file=args.original,
