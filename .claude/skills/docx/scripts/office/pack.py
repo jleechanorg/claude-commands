@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Pack a directory into a DOCX, PPTX, or XLSX file.
 
 Validates with auto-repair, condenses XML formatting, and creates the Office file.
@@ -27,21 +28,21 @@ def pack(
     original_file: str | None = None,
     validate: bool = True,
     infer_author_func=None,
-) -> str:
+) -> tuple[bool, str]:
     input_dir = Path(input_directory)
     output_path = Path(output_file)
     suffix = output_path.suffix.lower()
 
     if not input_dir.is_dir():
-        return f"Error: {input_dir} is not a directory"
+        return False, f"Error: {input_dir} is not a directory"
 
     if suffix not in {".docx", ".pptx", ".xlsx"}:
-        return f"Error: {output_file} must be a .docx, .pptx, or .xlsx file"
+        return False, f"Error: {output_file} must be a .docx, .pptx, or .xlsx file"
 
     if validate and original_file:
         original_path = Path(original_file)
         if not original_path.exists():
-            return f"Error: Original file {original_file} does not exist; cannot run validation"
+            return False, f"Error: Original file {original_file} does not exist; cannot run validation"
 
         success, output = _run_validation(
             input_dir, original_path, suffix, infer_author_func
@@ -49,7 +50,7 @@ def pack(
         if output:
             print(output)
         if not success:
-            return f"Error: Validation failed for {input_dir}"
+            return False, f"Error: Validation failed for {input_dir}"
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_content_dir = Path(temp_dir) / "content"
@@ -65,7 +66,7 @@ def pack(
                 if f.is_file():
                     zf.write(f, f.relative_to(temp_content_dir))
 
-    return f"Successfully packed {input_dir} to {output_file}"
+    return True, f"Successfully packed {input_dir} to {output_file}"
 
 
 def _run_validation(
@@ -132,6 +133,14 @@ def _condense_xml(xml_file: Path) -> None:
         raise
 
 
+def parse_bool(value: str) -> bool:
+    if value.lower() in ("true", "yes", "1"):
+        return True
+    if value.lower() in ("false", "no", "0"):
+        return False
+    raise argparse.ArgumentTypeError(f"Invalid boolean value: {value}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Pack a directory into a DOCX, PPTX, or XLSX file"
@@ -144,14 +153,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--validate",
-        type=lambda x: x.lower() == "true",
+        type=parse_bool,
         default=True,
         metavar="true|false",
         help="Run validation with auto-repair (default: true)",
     )
     args = parser.parse_args()
 
-    message = pack(
+    success, message = pack(
         args.input_directory,
         args.output_file,
         original_file=args.original,
@@ -159,5 +168,5 @@ if __name__ == "__main__":
     )
     print(message)
 
-    if "Error" in message:
+    if not success:
         sys.exit(1)

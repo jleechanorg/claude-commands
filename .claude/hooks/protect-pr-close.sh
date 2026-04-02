@@ -19,18 +19,17 @@ if ! echo "$TOOL_INPUT" | grep -qE 'gh\s+pr\s+close'; then
 fi
 
 # Extract the PR number from the command
-# Handles: gh pr close <num>, gh pr close <num> --comment, gh pr close <num> -c "body"
+# Handles: gh pr close <num>, gh pr close <num> --comment, gh pr close <num> -c "body", URLs, branch names
 PR_NUM=$(echo "$TOOL_INPUT" | python3 -c "
-import sys, shlex
+import sys, shlex, subprocess, json
 
 raw = sys.stdin.read().strip()
 try:
     args = shlex.split(raw)
 except ValueError:
-    # Fallback: very simple split if shlex fails for any reason
     args = raw.split()
 
-pr_num = ''
+candidate = ''
 
 # Locate the 'gh pr close' subcommand
 start_index = None
@@ -40,48 +39,60 @@ for i in range(len(args) - 2):
         break
 
 if start_index is not None:
-    # Flags that take a following argument (which should be skipped)
     flags_with_arg = {'--repo', '-R'}
     i = start_index
     while i < len(args):
         arg = args[i]
         if arg in flags_with_arg:
-            # Skip the flag and its value (if present)
             i += 2
             continue
         if arg.startswith('-'):
-            # Other flags without separate values
             i += 1
             continue
-        # First non-flag positional argument after 'gh pr close'
-        candidate = arg.lstrip('#')
-        if candidate.isdigit():
-            pr_num = candidate
+        candidate = arg
         break
 
-print(pr_num)
+if candidate:
+    # Attempt to resolve candidate to a PR number
+    try:
+        res = subprocess.run(['gh', 'pr', 'view', candidate, '--json', 'number'], 
+                             capture_output=True, text=True, timeout=10)
+        if res.returncode == 0:
+            print(json.loads(res.stdout).get('number', ''))
+        else:
+            # Fallback if view fails (e.g. candidate is already a number but repo not found yet)
+            print(candidate.lstrip('#') if candidate.lstrip('#').isdigit() else '')
+    except Exception:
+        print('')
+else:
+    print('')
 " 2>/dev/null) || PR_NUM=""
 
 if [ -z "$PR_NUM" ]; then
-  echo "BLOCKED: Could not extract PR number from 'gh pr close' command."
+  echo "BLOCKED: Could not extract/resolve PR number from 'gh pr close' command."
   echo "Block the close so a human can verify the target PR."
   exit 1
 fi
 
 # Determine the repo from the command or infer from git remote
-REPO_ARG=$(echo "$TOOL_INPUT" | python3 -c "
-import sys, re
-raw = sys.stdin.read()
-m = re.search(r'--repo\s+(\S+)', raw)
-if m:
-    print(m.group(1))
-else:
-    print('')
-" 2>/dev/null) || REPO_ARG=""
+REPO=$(echo "$TOOL_INPUT" | python3 -c "
+import sys, shlex
+raw = sys.stdin.read().strip()
+try:
+    args = shlex.split(raw)
+except ValueError:
+    args = raw.split()
 
-if [ -n "$REPO_ARG" ]; then
-  REPO="$REPO_ARG"
-else
+repo = ''
+flags_with_arg = {'--repo', '-R'}
+for i in range(len(args) - 1):
+    if args[i] in flags_with_arg:
+        repo = args[i+1]
+        break
+print(repo)
+" 2>/dev/null) || REPO=""
+
+if [ -z "$REPO" ]; then
   # Infer repo from git remote
   REPO=$(git remote get-url origin 2>/dev/null | python3 -c "
 import sys, re
@@ -108,28 +119,30 @@ import sys, subprocess, re
 repo = sys.argv[1]
 pr_num = sys.argv[2]
 
-try:
-    # Get all issue/PR comments on this PR
-    result = subprocess.run(
-        ["gh", "api", f"repos/{repo}/issues/{pr_num}/comments",
-         "--jq", ".[].body"],
-        capture_output=True, text=True, timeout=30
-    )
-    if result.returncode != 0:
-        # Fallback: try pulls endpoint
+def check_comments(endpoint):
+    try:
+        # Aggregated check with pagination
         result = subprocess.run(
-            ["gh", "api", f"repos/{repo}/pulls/{pr_num}/comments",
-             "--jq", ".[].body"],
+            ["gh", "api", f"repos/{repo}/{endpoint}/{pr_num}/comments",
+             "--paginate", "--jq", ".[].body"],
             capture_output=True, text=True, timeout=30
         )
-        if result.returncode != 0:
-            print("ERROR:API_FAILED")
-            sys.exit(0)
+        if result.returncode == 0:
+            return result.stdout
+    except Exception:
+        pass
+    return None
 
-    body = result.stdout
+try:
+    body = check_comments("issues")
+    if body is None:
+        body = check_comments("pulls")
+    
+    if body is None:
+        print("ERROR:API_FAILED")
+        sys.exit(0)
 
     # Look for "Superseded by #<number>" pattern
-    # Must have a number after the # (not just "Superseded by #" alone)
     if re.search(r'Superseded\s+by\s+#\d+', body):
         print("ALLOWED")
     else:

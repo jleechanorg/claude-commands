@@ -157,8 +157,19 @@ for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" 
   # Get review state
   review_state=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/reviews" --jq '[.[] | select(.state != "COMMENTED")] | last | .state // "NONE"' 2>/dev/null)
 
-  # Skip if already green enough (Gate 2 & 3 pass) — skeptic-cron should handle these
-  if [ "$review_state" = "APPROVED" ] && [ "$mergeable" = "CLEAN" ]; then
+  # Check 6-green state
+  head_sha=$(echo "$pr" | jq -r '.head.sha')
+  checks_state=$(gh api "repos/jleechanorg/agent-orchestrator/commits/$head_sha/status" --jq '.state' 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo "pending")
+  unresolved_comments=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/comments" --jq '[.[] | select(.in_reply_to_id == null)] | length' 2>/dev/null || echo "0")
+  mergeable_clean=$(echo "$mergeable" | tr '[:upper:]' '[:lower:]')
+  
+  not_six_green=false
+  if [ "$checks_state" != "success" ] || [ "$mergeable_clean" != "clean" ] || [ "$review_state" != "APPROVED" ] || [ "$unresolved_comments" -gt 0 ]; then
+    not_six_green=true
+  fi
+
+  # Skip if already fully green — skeptic-cron should handle these
+  if [ "$not_six_green" = "false" ]; then
     continue
   fi
 

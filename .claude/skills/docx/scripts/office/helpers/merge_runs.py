@@ -8,6 +8,8 @@ Also:
 - Removes proofErr elements (spell/grammar markers that block merging)
 """
 
+import os
+import tempfile
 from pathlib import Path
 
 import defusedxml.minidom
@@ -17,7 +19,7 @@ def merge_runs(input_dir: str) -> tuple[int, str]:
     doc_xml = Path(input_dir) / "word" / "document.xml"
 
     if not doc_xml.exists():
-        return 0, f"Error: {doc_xml} not found"
+        raise FileNotFoundError(f"Error: {doc_xml} not found")
 
     try:
         dom = defusedxml.minidom.parseString(doc_xml.read_text(encoding="utf-8"))
@@ -32,13 +34,22 @@ def merge_runs(input_dir: str) -> tuple[int, str]:
         for container in containers:
             merge_count += _merge_runs_in(container)
 
-        doc_xml.write_bytes(dom.toxml(encoding="UTF-8"))
+        # Atomic write
+        fd, tmp_path = tempfile.mkstemp(dir=doc_xml.parent, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(dom.toxml(encoding="UTF-8"))
+            os.replace(tmp_path, doc_xml)
+        except Exception:
+            os.unlink(tmp_path)
+            raise
+
         return merge_count, f"Merged {merge_count} runs"
 
     except Exception as e:
+        if isinstance(e, FileNotFoundError):
+            raise
         return 0, f"Error: {e}"
-
-
 
 
 def _find_elements(root, tag: str) -> list:
@@ -88,8 +99,6 @@ def _is_adjacent(elem1, elem2) -> bool:
     return False
 
 
-
-
 def _remove_elements(root, tag: str):
     for elem in _find_elements(root, tag):
         if elem.parentNode:
@@ -101,8 +110,6 @@ def _strip_run_rsid_attrs(root):
         for attr in list(run.attributes.values()):
             if "rsid" in attr.name.lower():
                 run.removeAttribute(attr.name)
-
-
 
 
 def _merge_runs_in(container) -> int:
