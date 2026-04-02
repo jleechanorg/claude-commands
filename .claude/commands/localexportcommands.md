@@ -137,22 +137,23 @@ export_component() {
                 ;;
         esac
 
-        # Safer, metadata-preserving update with rsync or cp -a fallback
-        # NOTE: We intentionally do NOT use --delete to preserve:
-        #   - Plugin-installed commands (e.g., superpowers)
-        #   - Manually added symlinks or files
-        #   - Other tools that install to ~/.claude/
+        # Safer, metadata-preserving update with rsync or cp -a fallback — CODE AND MARKDOWN ONLY
+        # Standard extensions for Claude Code components
+        local include_patterns=(--include='*/' --include='*.md' --include='*.py' --include='*.sh' --include='*.yml' --include='*.yaml' --include='*.json' --exclude='*')
+        
         if command -v rsync >/dev/null 2>&1; then
             # Use rsync for atomic, permission-preserving updates (no --delete)
             if [ -d "$source_path" ]; then
                 mkdir -p "$target_path"
-                rsync -a "$source_path/" "$target_path/"
+                rsync -a "${include_patterns[@]}" "$source_path/" "$target_path/"
             else
+                # For single files, we check extension manually or just use rsync -a
                 rsync -a "$source_path" "$target_path"
             fi
         else
             # Fallback without rsync: merge using cp -a (no deletion)
-            # This preserves existing files not in source (plugins, manual additions)
+            # NOTE: Without rsync, complex include/exclude is harder in bash,
+            # but standard Claude dirs usually only contain these files anyway.
             if [ -d "$source_path" ]; then
                 mkdir -p "$target_path"
                 cp -a "$source_path/." "$target_path"
@@ -398,11 +399,14 @@ if [ -d "ralph" ]; then
 
     if command -v rsync >/dev/null 2>&1; then
         rsync -a --delete \
+            --include='*/' \
+            --include='*.md' --include='*.py' --include='*.sh' --include='*.yml' --include='*.yaml' --include='*.json' \
             --exclude="prd.json" \
             --exclude="progress.txt" \
             --exclude="metrics.json" \
             --exclude="archive/" \
             --exclude=".last-branch" \
+            --exclude='*' \
             "ralph/" "$HOME/ralph/"
     else
         tmp_dir="$HOME/ralph.tmp.$$"

@@ -50,6 +50,23 @@ echo "🧪 Project-specific test commands:"
 grep -r "TESTING=true python\|\$PROJECT_ROOT/test" .claude/commands --include="*.md" --include="*.sh" | head -3
 
 echo ""
+echo "🖼️ Checking for asset files (should be excluded)..."
+ASSET_EXTS=("*.png" "*.jpg" "*.jpeg" "*.pdf" "*.gif" "*.webp" "*.mp4" "*.mov")
+ASSET_FOUND=0
+for ext in "${ASSET_EXTS[@]}"; do
+    FOUND=$(find .claude orchestration automation ralph -name "$ext" -type f 2>/dev/null | head -n 5)
+    if [[ -n "$FOUND" ]]; then
+        echo "❌ Found asset files matching $ext (SHOULD BE EXCLUDED):"
+        echo "$FOUND" | sed 's/^/  /'
+        ASSET_FOUND=$((ASSET_FOUND + 1))
+    fi
+done
+
+if [[ $ASSET_FOUND -eq 0 ]]; then
+    echo "✅ No asset files found in code directories."
+fi
+
+echo ""
 echo "✅ Export filtering validation complete!"
 echo "📊 Summary:"
 echo "   - Found $(find .claude/commands -name "*.sh" -not -path "*/tests/*" | wc -l) shell scripts"

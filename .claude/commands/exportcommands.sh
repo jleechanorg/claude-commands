@@ -115,12 +115,15 @@ union_dir() {
   local dst=".claude/$dir"
   mkdir -p "$dst"
 
-  # Collect union of all relative paths from both sources
+  # Collect union of all relative paths from both sources — CODE AND MARKDOWN ONLY
   local all_relpaths=()
+  # Standard extensions for Claude Code components
+  local ext_patterns=( -name '*.md' -o -name '*.py' -o -name '*.sh' -o -name '*.yml' -o -name '*.yaml' -o -name '*.json' )
+
   while IFS= read -r -d '' f; do
     all_relpaths+=("${f#$global_src/}")
   done < <(find "$global_src" -type f \
-    \( -not -name '*.pyc' \) \
+    \( "${ext_patterns[@]}" \) \
     \( -not -name '.DS_Store' \) \
     \( -not -path '*/__pycache__/*' \) \
     \( -not -path '*/.ruff_cache/*' \) \
@@ -133,7 +136,7 @@ union_dir() {
     for r in "${all_relpaths[@]:-}"; do [[ "$r" == "$relpath" ]] && already=true && break; done
     $already || all_relpaths+=("$relpath")
   done < <(find "$project_src" -type f \
-    \( -not -name '*.pyc' \) \
+    \( "${ext_patterns[@]}" \) \
     \( -not -name '.DS_Store' \) \
     \( -not -path '*/__pycache__/*' \) \
     \( -not -path '*/.ruff_cache/*' \) \
@@ -197,7 +200,7 @@ for dir in "${CLAUDE_DIRS[@]}"; do
 done
 
 # ── Rsync root-level directories ─────────────────────────────────────────────
-echo "▶ Syncing root directories..."
+echo "▶ Syncing root directories (CODE AND MARKDOWN ONLY)..."
 for dir in "${ROOT_DIRS[@]}"; do
   src="$PROJECT_ROOT/$dir/"
   dst="./$dir/"
@@ -206,10 +209,14 @@ for dir in "${ROOT_DIRS[@]}"; do
     continue
   fi
   mkdir -p "$dst"
+  # Standard extensions for Claude Code components
   rsync -a \
+    --include='*/' \
+    --include='*.md' --include='*.py' --include='*.sh' --include='*.yml' --include='*.yaml' --include='*.json' \
     --exclude='*.pyc' \
     --exclude='__pycache__/' \
     --exclude='.DS_Store' \
+    --exclude='*' \
     "$src" "$dst"
   ok "$dir"
 done
@@ -237,14 +244,14 @@ echo "▶ Applying content filters..."
 while IFS= read -r -d '' file; do
   apply_filters "$file"
 done < <(find .claude orchestration automation ralph workflows \
-  -type f \( -name '*.md' -o -name '*.py' -o -name '*.sh' -o -name '*.yml' -o -name '*.yaml' \) \
+  -type f \( -name '*.md' -o -name '*.py' -o -name '*.sh' -o -name '*.yml' -o -name '*.yaml' -o -name '*.json' \) \
   -print0 2>/dev/null)
 ok "Filters applied"
 
 # ── Hardcoded path scan ──────────────────────────────────────────────────────
 echo "▶ Scanning for leaked paths..."
 LEAKED=$(grep -rl \
-  --include='*.md' --include='*.py' --include='*.sh' --include='*.yml' --include='*.yaml' \
+  --include='*.md' --include='*.py' --include='*.sh' --include='*.yml' --include='*.yaml' --include='*.json' \
   -e '/Users/jleechan' -e 'jleechantest@gmail' \
   .claude orchestration automation ralph workflows 2>/dev/null \
   | grep -v exportcommands || true)
