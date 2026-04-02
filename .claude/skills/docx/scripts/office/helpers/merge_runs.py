@@ -164,7 +164,31 @@ def _can_merge(run1, run2) -> bool:
         return False
     if rpr1 is None:
         return True
-    return rpr1.toxml() == rpr2.toxml()
+    return _elements_equal(rpr1, rpr2)
+
+
+def _elements_equal(e1, e2) -> bool:
+    """Check if two XML elements are structurally equal, ignoring attribute order and namespaces."""
+    if (e1.localName or e1.tagName) != (e2.localName or e2.tagName):
+        return False
+
+    # Compare attributes (ignoring order)
+    attrs1 = {a.name.split(":")[-1]: a.value for a in e1.attributes.values()}
+    attrs2 = {a.name.split(":")[-1]: a.value for a in e2.attributes.values()}
+    if attrs1 != attrs2:
+        return False
+
+    # Compare children
+    children1 = [c for c in e1.childNodes if c.nodeType == c.ELEMENT_NODE]
+    children2 = [c for c in e2.childNodes if c.nodeType == c.ELEMENT_NODE]
+    if len(children1) != len(children2):
+        return False
+
+    for c1, c2 in zip(children1, children2):
+        if not _elements_equal(c1, c2):
+            return False
+
+    return True
 
 
 def _merge_run_content(target, source):

@@ -34,28 +34,32 @@ ACCEPT_CHANGES_MACRO = """<?xml version="1.0" encoding="UTF-8"?>
 def accept_changes(
     input_file: str,
     output_file: str,
-) -> tuple[None, str]:
+) -> tuple[bool, str]:
     input_path = Path(input_file)
     output_path = Path(output_file)
 
     if not input_path.exists():
-        return None, f"Error: Input file not found: {input_file}"
+        return False, f"Error: Input file not found: {input_file}"
 
     if not input_path.suffix.lower() == ".docx":
-        return None, f"Error: Input file is not a DOCX file: {input_file}"
+        return False, f"Error: Input file is not a DOCX file: {input_file}"
 
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(input_path, output_path)
     except Exception as e:
-        return None, f"Error: Failed to copy input file to output location: {e}"
+        return False, f"Error: Failed to copy input file to output location: {e}"
+
+    soffice_path = shutil.which("soffice")
+    if not soffice_path:
+        return False, "Error: LibreOffice executable 'soffice' not found in PATH"
 
     with tempfile.TemporaryDirectory(prefix="libreoffice_docx_profile_") as profile_dir:
-        if not _setup_libreoffice_macro(profile_dir):
-            return None, "Error: Failed to setup LibreOffice macro"
+        if not _setup_libreoffice_macro(profile_dir, soffice_path):
+            return False, "Error: Failed to setup LibreOffice macro"
 
         cmd = [
-            "soffice",
+            soffice_path,
             "--headless",
             f"-env:UserInstallation=file://{profile_dir}",
             "--norestore",
@@ -74,26 +78,26 @@ def accept_changes(
             )
         except subprocess.TimeoutExpired:
             return (
-                None,
+                False,
                 f"Error: LibreOffice timed out while accepting tracked changes: {input_file} -> {output_file}",
             )
 
         if result.returncode != 0:
-            return None, f"Error: LibreOffice failed: {result.stderr}"
+            return False, f"Error: LibreOffice failed: {result.stderr}"
 
     return (
-        None,
+        True,
         f"Successfully accepted all tracked changes: {input_file} -> {output_file}",
     )
 
 
-def _setup_libreoffice_macro(profile_dir: str) -> bool:
+def _setup_libreoffice_macro(profile_dir: str, soffice_path: str) -> bool:
     macro_dir = Path(profile_dir) / "user" / "basic" / "Standard"
     macro_file = macro_dir / "Module1.xba"
 
     subprocess.run(
         [
-            "soffice",
+            soffice_path,
             "--headless",
             f"-env:UserInstallation=file://{profile_dir}",
             "--terminate_after_init",
@@ -123,8 +127,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    _, message = accept_changes(args.input_file, args.output_file)
+    success, message = accept_changes(args.input_file, args.output_file)
     print(message)
 
-    if "Error" in message:
+    if not success:
         raise SystemExit(1)

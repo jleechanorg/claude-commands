@@ -178,6 +178,17 @@ def infer_author(modified_dir: Path, original_docx: Path, default: str = "Claude
 
     original_authors = _get_authors_from_docx(original_docx)
 
+    # Priority 1: New authors not in original document
+    new_authors = set(modified_authors.keys()) - set(original_authors.keys())
+    if len(new_authors) == 1:
+        return next(iter(new_authors))
+    if len(new_authors) > 1:
+        raise ValueError(
+            f"Multiple new authors added changes: {new_authors}. "
+            "Cannot infer which author to validate."
+        )
+
+    # Priority 2: Author with increased count (heuristic, may be broken by simplification)
     new_changes: dict[str, int] = {}
     for author, count in modified_authors.items():
         original_count = original_authors.get(author, 0)
@@ -186,12 +197,15 @@ def infer_author(modified_dir: Path, original_docx: Path, default: str = "Claude
             new_changes[author] = diff
 
     if not new_changes:
+        # If no positive delta, but only one author in modified doc, use them
+        if len(modified_authors) == 1:
+            return next(iter(modified_authors))
         return default
 
     if len(new_changes) == 1:
         return next(iter(new_changes))
 
     raise ValueError(
-        f"Multiple authors added new changes: {new_changes}. "
+        f"Multiple authors have positive change deltas: {new_changes}. "
         "Cannot infer which author to validate."
     )

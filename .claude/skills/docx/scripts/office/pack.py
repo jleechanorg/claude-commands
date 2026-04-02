@@ -113,7 +113,9 @@ def _condense_xml(xml_file: Path) -> None:
             dom = defusedxml.minidom.parse(f)
 
         for element in dom.getElementsByTagName("*"):
-            if element.tagName.endswith(":t"):
+            if element.tagName.endswith(
+                (":t", ":delText", ":instrText", ":delInstrText")
+            ) or element.getAttribute("xml:space") == "preserve":
                 continue
 
             for child in list(element.childNodes):

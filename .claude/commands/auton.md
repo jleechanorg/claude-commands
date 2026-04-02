@@ -157,6 +157,11 @@ for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" 
   # Get review state
   review_state=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/reviews" --jq '[.[] | select(.state != "COMMENTED")] | last | .state // "NONE"' 2>/dev/null)
 
+  # Skip if already green enough (Gate 2 & 3 pass) — skeptic-cron should handle these
+  if [ "$review_state" = "APPROVED" ] && [ "$mergeable" = "CLEAN" ]; then
+    continue
+  fi
+
   # Flag if >60 min gap
   if [ "$gap_mins" -gt 60 ]; then
     # Check if worker session exists for this branch
@@ -166,14 +171,15 @@ for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" 
       [ "$s_branch" = "$branch" ] && has_worker="$s" && break
     done
     gap_hrs=$((gap_mins / 60))
-    echo "STALLED #$number | ${gap_hrs}h${gap_mins}m | review=$review_state | mergeable=$mergeable | worker=$has_worker | $title"
+    gap_min_rem=$((gap_mins % 60))
+    echo "STALLED #$number | ${gap_hrs}h${gap_min_rem}m | review=$review_state | mergeable=$mergeable | worker=$has_worker | $title"
   fi
 done
 ```
 
 ### Step 3c: 6-Green Rate — Zero-Touch PR Measurement
 
-Measure how many merged PRs were truly autonomous. A PR is "zero-touch" ONLY if `merged_by` is `github-actions[bot]` (skeptic-cron auto-merge). Commit prefixes alone are insufficient — manual merges by jleechan2015 are NOT zero-touch.
+Measure how many merged PRs were truly autonomous. A PR is "zero-touch" ONLY if `merged_by` is `github-actions[bot]` (skeptic-cron auto-merge). Manual merges are NOT zero-touch.
 
 ```bash
 # 6-Green rate + merge quality — last 7 days
@@ -209,8 +215,13 @@ Pick one APPROVED PR (if any exist) and verify skeptic-cron's gate checks agree 
 ```bash
 echo "=== SKEPTIC-CRON CORRECTNESS SPOT-CHECK ==="
 # Find an APPROVED PR
-APPROVED_PR=$(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" \
-  --jq '[.[] | select(.draft == false)] | .[0].number' 2>/dev/null)
+APPROVED_PR=$(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" --jq '.[] | select(.draft == false) | .number' 2>/dev/null | while read num; do
+  state=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$num/reviews" --jq '[.[] | select(.user.login == "coderabbitai[bot]") | select(.state == "APPROVED")] | length' 2>/dev/null)
+  if [ "$state" -gt 0 ]; then
+    echo "$num"
+    break
+  fi
+done)
 if [ -n "$APPROVED_PR" ]; then
   echo "Spot-checking PR #$APPROVED_PR"
 
@@ -328,7 +339,7 @@ For each recently merged PR, check and report:
 | Total merged | N |
 | Auto-merged (merged_by=github-actions[bot]) | N (NN%) |
 | Manual-merged (merged_by=human) | N (NN%) |
-| Zero-touch (auto-merged + all [agento] commits) | N (NN%) |
+| Zero-touch (canonical: merged_by=github-actions[bot]) | N (NN%) |
 <List zero-touch PRs by number>
 
 ### Root cause

@@ -31,7 +31,7 @@ using Anthropic.Models.Messages;
 
 var parameters = new MessageCreateParams
 {
-    Model = Model.ClaudeOpus4_6,
+    Model = "claude-opus-4-6",
     MaxTokens = 16000,
     Messages = [new() { Role = Role.User, Content = "What is the capital of France?" }]
 };
@@ -55,7 +55,7 @@ using Anthropic.Models.Messages;
 
 var parameters = new MessageCreateParams
 {
-    Model = Model.ClaudeOpus4_6,
+    Model = "claude-opus-4-6",
     MaxTokens = 64000,
     Messages = [new() { Role = Role.User, Content = "Write a haiku" }]
 };
@@ -83,7 +83,7 @@ using Anthropic.Models.Messages;
 
 var response = await client.Messages.Create(new MessageCreateParams
 {
-    Model = Model.ClaudeOpus4_6,
+    Model = "claude-opus-4-6",
     MaxTokens = 16000,
     // ThinkingConfigParam? implicitly converts from the concrete variant classes —
     // no wrapper needed.
@@ -126,7 +126,7 @@ using Anthropic.Models.Messages;
 
 var parameters = new MessageCreateParams
 {
-    Model = Model.ClaudeSonnet4_6,
+    Model = "claude-3-5-sonnet-20241022",
     MaxTokens = 16000,
     Tools = [
         new Tool {
@@ -231,7 +231,7 @@ using Anthropic.Models.Beta.Messages;
 
 var betaParams = new MessageCreateParams   // no Beta prefix — one of only 2 unprefixed
 {
-    Model = Model.ClaudeOpus4_6,
+    Model = "claude-opus-4-6",
     MaxTokens = 16000,
     Betas = ["compact-2026-01-12"],
     ContextManagement = new BetaContextManagementConfig
@@ -320,7 +320,7 @@ Verify hits via `response.Usage.CacheCreationInputTokens` / `response.Usage.Cach
 
 ```csharp
 MessageTokensCount result = await client.Messages.CountTokens(new MessageCountTokensParams {
-    Model = Model.ClaudeOpus4_6,
+    Model = "claude-opus-4-6",
     Messages = [new() { Role = Role.User, Content = "Hello" }],
 });
 long tokens = result.InputTokens;

@@ -139,36 +139,32 @@ def _ensure_comment_relationships(unpacked_dir: Path) -> None:
     if not rels_path.exists():
         return
 
-    if _has_relationship(rels_path, "comments.xml"):
-        return  
+    targets = [
+        "comments.xml",
+        "commentsExtended.xml",
+        "commentsIds.xml",
+        "commentsExtensible.xml",
+    ]
+    
+    missing_targets = [t for t in targets if not _has_relationship(rels_path, t)]
+    if not missing_targets:
+        return
 
     dom = defusedxml.minidom.parseString(rels_path.read_text(encoding="utf-8"))
     root = dom.documentElement
     next_rid = _get_next_rid(rels_path)
 
-    rels = [
-        (
-            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-            "comments.xml",
-        ),
-        (
-            "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
-            "commentsExtended.xml",
-        ),
-        (
-            "http://schemas.microsoft.com/office/2016/09/relationships/commentsIds",
-            "commentsIds.xml",
-        ),
-        (
-            "http://schemas.microsoft.com/office/2018/08/relationships/commentsExtensible",
-            "commentsExtensible.xml",
-        ),
-    ]
+    rels_map = {
+        "comments.xml": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+        "commentsExtended.xml": "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
+        "commentsIds.xml": "http://schemas.microsoft.com/office/2016/09/relationships/commentsIds",
+        "commentsExtensible.xml": "http://schemas.microsoft.com/office/2018/08/relationships/commentsExtensible",
+    }
 
-    for rel_type, target in rels:
+    for target in missing_targets:
         rel = dom.createElement("Relationship")
         rel.setAttribute("Id", f"rId{next_rid}")
-        rel.setAttribute("Type", rel_type)
+        rel.setAttribute("Type", rels_map[target])
         rel.setAttribute("Target", target)
         root.appendChild(rel)  
         next_rid += 1
@@ -181,35 +177,31 @@ def _ensure_comment_content_types(unpacked_dir: Path) -> None:
     if not ct_path.exists():
         return
 
-    if _has_content_type(ct_path, "/word/comments.xml"):
-        return  
+    parts = [
+        "/word/comments.xml",
+        "/word/commentsExtended.xml",
+        "/word/commentsIds.xml",
+        "/word/commentsExtensible.xml",
+    ]
+    
+    missing_parts = [p for p in parts if not _has_content_type(ct_path, p)]
+    if not missing_parts:
+        return
 
     dom = defusedxml.minidom.parseString(ct_path.read_text(encoding="utf-8"))
     root = dom.documentElement
 
-    overrides = [
-        (
-            "/word/comments.xml",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
-        ),
-        (
-            "/word/commentsExtended.xml",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml",
-        ),
-        (
-            "/word/commentsIds.xml",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsIds+xml",
-        ),
-        (
-            "/word/commentsExtensible.xml",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtensible+xml",
-        ),
-    ]
+    types_map = {
+        "/word/comments.xml": "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+        "/word/commentsExtended.xml": "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml",
+        "/word/commentsIds.xml": "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsIds+xml",
+        "/word/commentsExtensible.xml": "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtensible+xml",
+    }
 
-    for part_name, content_type in overrides:
+    for part_name in missing_parts:
         override = dom.createElement("Override")
         override.setAttribute("PartName", part_name)
-        override.setAttribute("ContentType", content_type)
+        override.setAttribute("ContentType", types_map[part_name])
         root.appendChild(override)  
 
     ct_path.write_bytes(dom.toxml(encoding="UTF-8"))
@@ -231,11 +223,20 @@ def add_comment(
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     comments = word / "comments.xml"
+    
+    # Validate parent_id before any mutation
+    parent_para = None
+    if parent_id is not None:
+        if not comments.exists():
+            return "", f"Error: Parent comment {parent_id} not found (comments.xml missing)"
+        parent_para = _find_para_id(comments, parent_id)
+        if not parent_para:
+            return "", f"Error: Parent comment {parent_id} not found"
+
     first_comment = not comments.exists()
     if first_comment:
         shutil.copy(TEMPLATE_DIR / "comments.xml", comments)
-        _ensure_comment_relationships(Path(unpacked_dir))
-        _ensure_comment_content_types(Path(unpacked_dir))
+        
     _append_xml(
         comments,
         "w:comments",
@@ -252,10 +253,8 @@ def add_comment(
     ext = word / "commentsExtended.xml"
     if not ext.exists():
         shutil.copy(TEMPLATE_DIR / "commentsExtended.xml", ext)
-    if parent_id is not None:
-        parent_para = _find_para_id(comments, parent_id)
-        if not parent_para:
-            return "", f"Error: Parent comment {parent_id} not found"
+    
+    if parent_para:
         _append_xml(
             ext,
             "w15:commentsEx",
@@ -285,6 +284,10 @@ def add_comment(
         "w16cex:commentsExtensible",
         f'<w16cex:commentExtensible w16cex:durableId="{durable_id}" w16cex:dateUtc="{ts}"/>',
     )
+
+    # Ensure all relationships and content types are wired
+    _ensure_comment_relationships(Path(unpacked_dir))
+    _ensure_comment_content_types(Path(unpacked_dir))
 
     action = "reply" if parent_id is not None else "comment"
     return para_id, f"Added {action} {comment_id} (para_id={para_id})"
