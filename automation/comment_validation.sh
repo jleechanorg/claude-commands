@@ -56,7 +56,7 @@ send_email_notification() {
 Issue Type: $issue_type
 Details: $details
 
-PR URL: https://github.com/${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com/pull/$pr_number
+PR URL: https://github.com/jleechanorg/worldarchitect.ai/pull/$pr_number
 
 Automated validation attempts have been exhausted. Please review manually.
 

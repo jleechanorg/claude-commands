@@ -125,7 +125,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
-        TEST_MAX_WORKERS: 2
+        TEST_MAX_WORKERS: 1
         TEST_SHARD_TOTAL: "3"
         TEST_SHARD_INDEX: "0"
 
@@ -177,7 +177,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
-        TEST_MAX_WORKERS: 2
+        TEST_MAX_WORKERS: 1
         TEST_SHARD_TOTAL: "3"
         TEST_SHARD_INDEX: "1"
 
@@ -230,7 +230,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
-        TEST_MAX_WORKERS: 2
+        TEST_MAX_WORKERS: 1
         TEST_SHARD_TOTAL: "3"
         TEST_SHARD_INDEX: "2"
 

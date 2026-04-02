@@ -44,7 +44,7 @@ jobs:
       issues: write
       pull-requests: read
     env:
-      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      GCP_PROJECT: $GCP_PROJECT_ID
       GCP_REGION: us-central1
       SERVICE_NAME: mvp-site-app-dev
       DEPLOY_REASON: ${{ inputs.reason || github.event.inputs.reason || 'auto-deploy (dev)' }}

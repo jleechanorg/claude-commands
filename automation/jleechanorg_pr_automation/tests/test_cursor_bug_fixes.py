@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from github-owner_pr_automation.automation_safety_manager import AutomationSafetyManager
+from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
 
 
 def test_invalid_window_hours_env_var_graceful_fallback(tmp_path, monkeypatch):
@@ -28,7 +28,7 @@ def test_invalid_window_hours_env_var_graceful_fallback(tmp_path, monkeypatch):
 
     Fix: Use coerce_positive_int() which returns default on invalid input.
 
-    Cursor comment: https://github.com/github-owner/your-project.com/pull/3762
+    Cursor comment: https://github.com/jleechanorg/worldarchitect.ai/pull/3762
     """
     safety_data_dir = tmp_path / "safety"
     safety_data_dir.mkdir()
@@ -94,7 +94,7 @@ def test_get_pr_attempts_consistent_with_can_process_pr(tmp_path, monkeypatch):
 
     Fix: Both methods now use same rolling window logic with same env var.
 
-    Cursor comment: https://github.com/github-owner/your-project.com/pull/3762
+    Cursor comment: https://github.com/jleechanorg/worldarchitect.ai/pull/3762
     """
     safety_data_dir = tmp_path / "safety"
     safety_data_dir.mkdir()

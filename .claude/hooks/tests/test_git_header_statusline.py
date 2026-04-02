@@ -142,21 +142,26 @@ class TestGitHeaderStatusline:
         # Set up a real bare remote so upstream tracking works correctly
         remote_dir = os.path.join(temp_git_repo, "remote_bare")
         os.makedirs(remote_dir)
-        subprocess.run(["git", "init", "--bare", remote_dir], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "init", "--bare", remote_dir], check=True, capture_output=True
+        )
         subprocess.run(
             ["git", "remote", "add", "origin", remote_dir],
             check=True,
         )
         subprocess.run(
             ["git", "push", "-u", "origin", current_branch],
-            check=True, capture_output=True,
+            check=True,
+            capture_output=True,
         )
 
         # Create local commits ahead of remote
         with open("local_commit.txt", "w") as f:
             f.write("local change")
         subprocess.run(["git", "add", "local_commit.txt"], check=True)
-        subprocess.run(["git", "commit", "-m", "Local commit"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Local commit"], check=True, capture_output=True
+        )
 
         stdout, stderr, returncode = run_git_header(git_header_script)
 
@@ -273,12 +278,21 @@ class TestGitHeaderPRCache:
             remote_dir = Path(temp_dir) / "remote"
             remote_dir.mkdir()
             subprocess.run(["git", "init", "--bare", str(remote_dir)], check=True)
-            subprocess.run(["git", "remote", "add", remote_name, str(remote_dir)], check=True)
-            subprocess.run(["git", "push", "-u", remote_name, current_branch], check=True)
+            subprocess.run(
+                ["git", "remote", "add", remote_name, str(remote_dir)], check=True
+            )
+            subprocess.run(
+                ["git", "push", "-u", remote_name, current_branch], check=True
+            )
 
             subprocess.run(["git", "fetch", remote_name], check=True)
             subprocess.run(
-                ["git", "branch", "--set-upstream-to", f"{remote_name}/{current_branch}"],
+                [
+                    "git",
+                    "branch",
+                    "--set-upstream-to",
+                    f"{remote_name}/{current_branch}",
+                ],
                 check=True,
             )
 
@@ -343,7 +357,9 @@ echo "called" >>"${GH_CALL_LOG}"
         repo_dir, branch_name, _ = make_temp_repo_with_remote()
 
         git_dir = (
-            subprocess.check_output(["git", "rev-parse", "--git-common-dir"], cwd=repo_dir)
+            subprocess.check_output(
+                ["git", "rev-parse", "--git-common-dir"], cwd=repo_dir
+            )
             .decode()
             .strip()
         )
@@ -408,7 +424,9 @@ echo "called" >>"${GH_CALL_LOG}"
         os.utime(cache_file, None)
 
         git_dir = (
-            subprocess.check_output(["git", "rev-parse", "--git-common-dir"], cwd=repo_dir)
+            subprocess.check_output(
+                ["git", "rev-parse", "--git-common-dir"], cwd=repo_dir
+            )
             .decode()
             .strip()
         )
@@ -437,13 +455,17 @@ echo "called" >>"${GH_CALL_LOG}"
         os.utime(cache_file, None)
 
         git_dir = (
-            subprocess.check_output(["git", "rev-parse", "--git-common-dir"], cwd=repo_dir)
+            subprocess.check_output(
+                ["git", "rev-parse", "--git-common-dir"], cwd=repo_dir
+            )
             .decode()
             .strip()
         )
         packed_refs = Path(git_dir) / "packed-refs"
 
-        subprocess.run(["git", "pack-refs", "--all", "--prune"], cwd=repo_dir, check=True)
+        subprocess.run(
+            ["git", "pack-refs", "--all", "--prune"], cwd=repo_dir, check=True
+        )
         loose_ref = Path(git_dir) / "refs" / "remotes" / remote_name / branch_name
         if loose_ref.exists():
             loose_ref.unlink()
@@ -459,7 +481,6 @@ echo "called" >>"${GH_CALL_LOG}"
         assert call_log.read_text().strip() == "called"
 
 
-
 # Integration test for real script behavior
 class TestGitHeaderIntegration:
     """Integration tests running actual git-header.sh script"""
@@ -470,9 +491,9 @@ class TestGitHeaderIntegration:
         script_path = test_dir.parent / "git-header.sh"
 
         assert script_path.exists(), f"git-header.sh not found at {script_path}"
-        assert os.access(
-            script_path, os.X_OK
-        ), f"git-header.sh not executable at {script_path}"
+        assert os.access(script_path, os.X_OK), (
+            f"git-header.sh not executable at {script_path}"
+        )
 
     def test_red_status_only_flag_supported(self):
         """RED: Test --status-only flag is supported"""

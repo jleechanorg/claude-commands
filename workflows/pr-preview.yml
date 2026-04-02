@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GCP_REGION: us-central1
-      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      GCP_PROJECT: $GCP_PROJECT_ID
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
     steps:
       - name: Checkout repository
@@ -161,7 +161,8 @@ jobs:
             .)
           echo "Build submitted: $BUILD_ID"
 
-          MAX_WAIT=900
+          # Allow Cloud Build queue time on top of the 15m execution timeout.
+          MAX_WAIT=1200
           POLL_INTERVAL=30
           ELAPSED=0
           BUILD_STATUS=""

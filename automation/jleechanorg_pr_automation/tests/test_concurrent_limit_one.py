@@ -19,7 +19,7 @@ import shutil
 import tempfile
 import unittest
 
-from github-owner_pr_automation.automation_safety_manager import AutomationSafetyManager
+from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
 
 
 class TestConcurrentLimitOne(unittest.TestCase):
@@ -43,7 +43,7 @@ class TestConcurrentLimitOne(unittest.TestCase):
         ACTUAL: Up to 50 agents per PR (uses pr_limit=50)
         """
         pr_number = 3664
-        repo = "github-owner/your-project.com"
+        repo = "jleechanorg/worldarchitect.ai"
         branch = "test-branch"
 
         # First agent reserves slot
@@ -75,7 +75,7 @@ class TestConcurrentLimitOne(unittest.TestCase):
         This validates the correct behavior path works.
         """
         pr_number = 3664
-        repo = "github-owner/your-project.com"
+        repo = "jleechanorg/worldarchitect.ai"
         branch = "test-branch"
 
         # First agent reserves and releases

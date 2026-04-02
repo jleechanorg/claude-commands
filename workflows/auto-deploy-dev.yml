@@ -61,7 +61,7 @@ jobs:
     timeout-minutes: 20
     env:
       GCP_REGION: us-central1
-      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      GCP_PROJECT: $GCP_PROJECT_ID
       SERVICE_NAME: mvp-site-app-dev
 
     steps:

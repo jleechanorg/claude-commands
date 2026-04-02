@@ -208,7 +208,8 @@ jobs:
     name: Directory tests (${{ matrix.test-group }})
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # core-tests and scripts on GitHub-hosted to avoid self-hosted sudo issues; core-mvp-* stay on self-hosted
+    runs-on: ${{ (matrix.test-group == 'core-tests' || matrix.test-group == 'scripts') && 'ubuntu-latest' || fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     # Core group runs with coverage enabled and sequential execution, which can exceed 15m.
     timeout-minutes: 30
     strategy:
@@ -240,6 +241,7 @@ jobs:
         node-version: '20'
 
     - name: Prepare runner tool cache for setup actions
+      if: matrix.test-group != 'core-tests' && matrix.test-group != 'scripts'
       run: |
         chmod +x scripts/ci/setup-runner-tool-cache.sh
         ./scripts/ci/setup-runner-tool-cache.sh

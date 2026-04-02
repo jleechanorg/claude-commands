@@ -30,7 +30,7 @@ DRY_RUN=0
 MODEL_EXPLICIT=0
 
 SAFETY_DATA_DIR="${AUTOMATION_SAFETY_DATA_DIR:-/tmp/automation_safety}"
-SAFETY_MANAGER_MODULE="${GITHUB_OWNER}_pr_automation.automation_safety_manager"
+SAFETY_MANAGER_MODULE="jleechanorg_pr_automation.automation_safety_manager"
 LOCK_FILE=""
 METRICS_FILE=""
 HEALTH_FILE=""
@@ -45,7 +45,7 @@ JOB_ID="${MCTRL_JOB_ID:-${MISSION_CONTROL_JOB_ID:-}}"
 JOB_TYPE="${MCTRL_JOB_TYPE:-${MISSION_CONTROL_JOB_TYPE:-design_review}}"
 PR_NUMBER="${MCTRL_PR_NUMBER:-${MISSION_CONTROL_PR_NUMBER:-}}"
 HEAD_SHA="${MCTRL_HEAD_SHA:-${MISSION_CONTROL_HEAD_SHA:-}}"
-REPO_NAME="${MCTRL_REPO:-${MISSION_CONTROL_REPO:-${GITHUB_OWNER}/${PROJECT_NAME:-your-project}.com}}"
+REPO_NAME="${MCTRL_REPO:-${MISSION_CONTROL_REPO:-jleechanorg/${PROJECT_DOMAIN:-your-project}.com}}"
 BRANCH_NAME="${MCTRL_BRANCH:-${MISSION_CONTROL_BRANCH:-}}"
 TRIGGER_SOURCE="${MCTRL_TRIGGER_SOURCE:-${MISSION_CONTROL_TRIGGER_SOURCE:-catch_up}}"
 WORKFLOW_LANE="${MCTRL_WORKFLOW_LANE:-${MISSION_CONTROL_WORKFLOW_LANE:-${JOB_TYPE}}}"
@@ -375,7 +375,7 @@ if [[ "${DRY_RUN}" != "1" ]]; then
   if ! python3 - <<'PY'
 import importlib.util
 import sys
-sys.exit(0 if importlib.util.find_spec("${GITHUB_OWNER}_pr_automation.automation_safety_manager") else 1)
+sys.exit(0 if importlib.util.find_spec("jleechanorg_pr_automation.automation_safety_manager") else 1)
 PY
   then
     echo "Error [${ERR_TAXONOMY_SAFETY}]: safety manager module unavailable; refusing to run" >&2

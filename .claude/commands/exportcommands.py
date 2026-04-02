@@ -5,6 +5,7 @@ Exports Claude Code command system to GitHub repository with automatic PR creati
 """
 
 import os
+import sys
 import time
 import subprocess
 import tempfile
@@ -51,16 +52,32 @@ class ClaudeCommandsExporter:
     # Patterns that indicate hardcoded user/project paths (should be filtered)
     HARDCODED_PATH_PATTERNS = [
         (r"/Users/jleechan/", "hardcoded /Users/jleechan/ - use $HOME/"),
-        (r"/Users/\$USER/projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
-        (r"/Users/\$USER/projects_other/ralph-orchestrator", "hardcoded ralph-orchestrator - use $RALPH_REPO"),
-        (r"projects_other/ralph-orchestrator", "hardcoded projects_other - use $RALPH_REPO"),
+        (
+            r"/Users/\$USER/projects/worktree_ralph",
+            "hardcoded worktree_ralph - use $PROJECT_ROOT",
+        ),
+        (
+            r"/Users/\$USER/projects_other/ralph-orchestrator",
+            "hardcoded ralph-orchestrator - use $RALPH_REPO",
+        ),
+        (
+            r"projects_other/ralph-orchestrator",
+            "hardcoded projects_other - use $RALPH_REPO",
+        ),
         (r"projects/worktree_ralph", "hardcoded worktree_ralph - use $PROJECT_ROOT"),
         (r"orch_worldai_ralph", "project-specific orch path - use $PROJECT_ROOT"),
-        (r"worldai_genesis2|worldai_ralph2", "project-specific clone dir - use generic"),
-        (r"worldarchitect-ci", "hardcoded worldarchitect-ci - use ${PROJECT_NAME:-your-project}-ci"),
+        (
+            r"worldai_genesis2|worldai_ralph2",
+            "project-specific clone dir - use generic",
+        ),
+        (
+            r"worldarchitect-ci",
+            "hardcoded worldarchitect-ci - use ${PROJECT_NAME:-your-project}-ci",
+        ),
     ]
 
-    def __init__(self):
+    def __init__(self, dry_run=False):
+        self.dry_run = dry_run
         self.project_root = self._get_project_root()
         self.export_dir = os.path.join(
             tempfile.gettempdir(), f"claude_commands_export_{int(time.time())}"
@@ -127,40 +144,60 @@ class ClaudeCommandsExporter:
         # Data-driven directory export configuration
         # Single source of truth for all directory exports
         self.EXPORT_DIRECTORIES = {
-            'commands': {
-                'source': '.claude/commands',
-                'exclude_dirs': [],
-                'exclude_files': self.COMMANDS_SKIP_LIST,
+            "commands": {
+                "source": ".claude/commands",
+                "exclude_dirs": [],
+                "exclude_files": self.COMMANDS_SKIP_LIST,
             },
-            'hooks': {
-                'source': '.claude/hooks',
-                'exclude_dirs': ['.claude'],  # Avoid nested .claude directories
-                'exclude_files': [],
+            "hooks": {
+                "source": ".claude/hooks",
+                "exclude_dirs": [".claude"],  # Avoid nested .claude directories
+                "exclude_files": [],
             },
-            'orchestration': {
-                'source': 'orchestration',
-                'exclude_dirs': ['analysis', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks', 'task-agent-create-autono-slash'],
-                'exclude_files': [],
+            "orchestration": {
+                "source": "orchestration",
+                "exclude_dirs": [
+                    "analysis",
+                    "claude-bot-commands",
+                    "coding_prompts",
+                    "prototype",
+                    "tasks",
+                    "task-agent-create-autono-slash",
+                ],
+                "exclude_files": [],
             },
-            'automation': {
-                'source': 'automation',
-                'exclude_dirs': ['__pycache__', '.pytest_cache', 'dist', 'build', '*.egg-info', 'testing_util'],
-                'exclude_files': ['*.pyc', '*.pyo', '*.swp', '*.tmp', 'simple_pr_batch.sh'],
+            "automation": {
+                "source": "automation",
+                "exclude_dirs": [
+                    "__pycache__",
+                    ".pytest_cache",
+                    "dist",
+                    "build",
+                    "*.egg-info",
+                    "testing_util",
+                ],
+                "exclude_files": [
+                    "*.pyc",
+                    "*.pyo",
+                    "*.swp",
+                    "*.tmp",
+                    "simple_pr_batch.sh",
+                ],
             },
-            'ralph': {
-                'source': 'ralph',
-                'exclude_dirs': ['archive'],
-                'exclude_files': ['.last-branch'],
+            "ralph": {
+                "source": "ralph",
+                "exclude_dirs": ["archive"],
+                "exclude_files": [".last-branch"],
             },
-            'codex_skills': {
-                'source': '.codex/skills',
-                'exclude_dirs': [],
-                'exclude_files': [],
+            "codex_skills": {
+                "source": ".codex/skills",
+                "exclude_dirs": [],
+                "exclude_files": [],
             },
-            'codex_hooks': {
-                'source': '.codex/hooks',
-                'exclude_dirs': [],
-                'exclude_files': [],
+            "codex_hooks": {
+                "source": ".codex/hooks",
+                "exclude_dirs": [],
+                "exclude_files": [],
             },
         }
 
@@ -184,7 +221,7 @@ class ClaudeCommandsExporter:
                 - exclude_files: List of file patterns to exclude
             staging_dir: Target staging directory for export
         """
-        source_dir = os.path.join(self.project_root, config['source'])
+        source_dir = os.path.join(self.project_root, config["source"])
 
         if not os.path.exists(source_dir):
             print(f"⚠️  {name.title()} directory not found - skipping")
@@ -193,26 +230,30 @@ class ClaudeCommandsExporter:
         target_dir = os.path.join(staging_dir, name)
         os.makedirs(target_dir, exist_ok=True)
 
-        exclude_dirs = config.get('exclude_dirs', [])
-        exclude_files = config.get('exclude_files', [])
+        exclude_dirs = config.get("exclude_dirs", [])
+        exclude_files = config.get("exclude_files", [])
 
         # Try rsync first for better performance
         try:
             # Build exclusion patterns
             exclude_patterns = []
             for exc_dir in exclude_dirs:
-                if exc_dir.endswith('.egg-info'):
-                    exclude_patterns.append('--exclude=*.egg-info/')
+                if exc_dir.endswith(".egg-info"):
+                    exclude_patterns.append("--exclude=*.egg-info/")
                 else:
-                    exclude_patterns.append(f'--exclude={exc_dir}/')
+                    exclude_patterns.append(f"--exclude={exc_dir}/")
 
             for exc_file in exclude_files:
-                if exc_file.startswith('*.'):
-                    exclude_patterns.append(f'--exclude={exc_file}')
+                if exc_file.startswith("*."):
+                    exclude_patterns.append(f"--exclude={exc_file}")
                 else:
-                    exclude_patterns.append(f'--exclude={exc_file}')
+                    exclude_patterns.append(f"--exclude={exc_file}")
 
-            cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
+            cmd = (
+                ["rsync", "-av"]
+                + exclude_patterns
+                + [f"{source_dir}/", f"{target_dir}/"]
+            )
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             if result.returncode != 0:
@@ -223,10 +264,14 @@ class ClaudeCommandsExporter:
 
         except (FileNotFoundError, PermissionError):
             # Fallback to manual copy for Windows or when rsync unavailable
-            self._manual_directory_copy(source_dir, target_dir, exclude_dirs, exclude_files)
+            self._manual_directory_copy(
+                source_dir, target_dir, exclude_dirs, exclude_files
+            )
             print(f"✅ {name.title()} exported using manual copy")
 
-    def _manual_directory_copy(self, source_dir, target_dir, exclude_dirs, exclude_files):
+    def _manual_directory_copy(
+        self, source_dir, target_dir, exclude_dirs, exclude_files
+    ):
         """Manual directory copy with exclusions for cross-platform compatibility.
 
         Args:
@@ -238,21 +283,23 @@ class ClaudeCommandsExporter:
         # Normalize exclude_dirs to handle .egg-info pattern
         normalized_exclude_dirs = set()
         for exc_dir in exclude_dirs:
-            if exc_dir == '*.egg-info':
-                normalized_exclude_dirs.add('*.egg-info')
+            if exc_dir == "*.egg-info":
+                normalized_exclude_dirs.add("*.egg-info")
             else:
                 normalized_exclude_dirs.add(exc_dir)
 
         for root, dirs, files in os.walk(source_dir):
             # Filter directories in-place to prevent walking into excluded dirs
             dirs[:] = [
-                d for d in dirs
-                if d not in normalized_exclude_dirs
-                and not d.endswith('.egg-info')
+                d
+                for d in dirs
+                if d not in normalized_exclude_dirs and not d.endswith(".egg-info")
             ]
 
             rel_path = os.path.relpath(root, source_dir)
-            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
+            target_root = (
+                os.path.join(target_dir, rel_path) if rel_path != "." else target_dir
+            )
             os.makedirs(target_root, exist_ok=True)
 
             for file in files:
@@ -261,7 +308,7 @@ class ClaudeCommandsExporter:
 
                 # Check against exclude_files patterns
                 for pattern in exclude_files:
-                    if pattern.startswith('*.'):
+                    if pattern.startswith("*."):
                         # Wildcard pattern
                         if fnmatch.fnmatch(file, pattern):
                             should_exclude = True
@@ -614,11 +661,13 @@ class ClaudeCommandsExporter:
         # Export all runner setup scripts from self-hosted/scripts/ directory
         if os.path.exists(runner_scripts_dir):
             for script_name in os.listdir(runner_scripts_dir):
-                if script_name.endswith(('.sh', '.md', '.txt')):
+                if script_name.endswith((".sh", ".md", ".txt")):
                     script_path = os.path.join(runner_scripts_dir, script_name)
                     if os.path.isfile(script_path):
                         # Create self-hosted/scripts/ subdirectory in target
-                        runner_target_dir = os.path.join(target_dir, "self-hosted", "scripts")
+                        runner_target_dir = os.path.join(
+                            target_dir, "self-hosted", "scripts"
+                        )
                         os.makedirs(runner_target_dir, exist_ok=True)
                         target_path = os.path.join(runner_target_dir, script_name)
                         shutil.copy2(script_path, target_path)
@@ -627,7 +676,7 @@ class ClaudeCommandsExporter:
                         print(f"   • self-hosted/scripts/{script_name} (runner setup)")
                         self.scripts_count += 1
         else:
-            print(f"   ⚠️  Warning: self-hosted/scripts/ directory not found")
+            print("   ⚠️  Warning: self-hosted/scripts/ directory not found")
 
         # Export scripts referenced in settings.json from scripts/ subdirectory
         for script_name in settings_scripts:
@@ -901,9 +950,7 @@ Customize the following for your project:
     def _export_ralph(self, staging_dir):
         """Export Ralph PRD-driven autonomous workflow toolkit"""
         print("🐺 Exporting ralph...")
-        self._export_directory(
-            "ralph", self.EXPORT_DIRECTORIES["ralph"], staging_dir
-        )
+        self._export_directory("ralph", self.EXPORT_DIRECTORIES["ralph"], staging_dir)
 
     def _export_codex_skills(self, staging_dir):
         """Export Codex CLI skills"""
@@ -927,7 +974,9 @@ Customize the following for your project:
                     try:
                         os.chmod(hook_path, 0o755)
                     except (OSError, NotImplementedError) as exc:
-                        print(f"⚠️  Warning: Could not set executable bit on {hook_path}: {exc}")
+                        print(
+                            f"⚠️  Warning: Could not set executable bit on {hook_path}: {exc}"
+                        )
 
     def _export_codex_hooks_config(self, staging_dir):
         """Export Codex hooks.json engine config file."""
@@ -999,15 +1048,15 @@ Customize the following for your project:
             )
             content = re.sub(r"worldarchitecture-ai", "$GCP_PROJECT_ID", content)
             content = re.sub(r"worldarchitect\.ai", "your-project.com", content)
-            content = re.sub(r"worldarchitect-ci", "${PROJECT_NAME:-your-project}-ci", content)
+            content = re.sub(
+                r"worldarchitect-ci", "${PROJECT_NAME:-your-project}-ci", content
+            )
             content = re.sub(r"jleechanorg", "$GITHUB_OWNER", content)
             content = re.sub(r"\bjleechan\b", "$USER", content)
 
             # Replace runner-control-plane with inline stub (action not exported to claude-commands)
-            _runner_cp_pattern = (
-                r"(- name: Runner control plane\s*\n\s+id: control-plane\s*\n)\s+uses: \.\/\.github\/actions\/runner-control-plane\s*\n"
-            )
-            _runner_cp_repl = r'''\1        run: |
+            _runner_cp_pattern = r"(- name: Runner control plane\s*\n\s+id: control-plane\s*\n)\s+uses: \.\/\.github\/actions\/runner-control-plane\s*\n"
+            _runner_cp_repl = r"""\1        run: |
           echo "preflight_exit_code=0" >> "$GITHUB_OUTPUT"
           echo "infra_failure_class=" >> "$GITHUB_OUTPUT"
           echo "preflight_json=${RUNNER_TEMP:-/tmp}/runner_health.json" >> "$GITHUB_OUTPUT"
@@ -1015,7 +1064,7 @@ Customize the following for your project:
           echo "score=0" >> "$GITHUB_OUTPUT"
           echo "::notice::Runner control plane skipped - add .github/actions/runner-control-plane for full preflight"
 
-'''
+"""
             content = re.sub(_runner_cp_pattern, _runner_cp_repl, content)
 
             # Update outdated GitHub Actions to latest secure versions
@@ -1023,7 +1072,7 @@ Customize the following for your project:
             content = re.sub(
                 r"actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11",
                 "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1",
-                content
+                content,
             )
 
             # Add header comment to the file indicating it's an example
@@ -1214,8 +1263,12 @@ Claude Code can assist with adapting these workflows to your specific project. J
             # - loc_simple.sh (uses relative paths intentionally)
             # Compare by filename because the staging copy lives in a different directory than the source file.
             # Normalize path for cross-platform compatibility (Windows uses backslashes)
-            normalized_path = file_path.replace(os.sep, '/')
-            is_test_file = filename.startswith("test_") and filename.endswith(".py") and "/tests/" in normalized_path
+            normalized_path = file_path.replace(os.sep, "/")
+            is_test_file = (
+                filename.startswith("test_")
+                and filename.endswith(".py")
+                and "/tests/" in normalized_path
+            )
             skip_all_transforms = filename == Path(__file__).name or is_test_file
             skip_mvp_transform = filename == "loc_simple.sh"
 
@@ -1786,7 +1839,7 @@ This is a filtered reference export from a working Claude Code project. Commands
         print("\n🚀 Phase 2: Publishing to GitHub...")
         print("-" * 40)
 
-        if not self.github_token:
+        if not self.github_token and not self.dry_run:
             raise GitHubAPIError("GITHUB_TOKEN environment variable not set")
 
         # Clone repository
@@ -1803,6 +1856,15 @@ This is a filtered reference export from a working Claude Code project. Commands
 
         # Validate no hardcoded paths slipped through
         self._validate_no_hardcoded_paths()
+
+        if self.dry_run:
+            print("\n🧪 DRY RUN: skipping git commit, push, and gh pr create")
+            print(f"   Prepared clone: {self.repo_dir}")
+            dry_url = (
+                "https://github.com/jleechanorg/claude-commands/compare/main...DRY-RUN"
+            )
+            # Dry-run compare URL is emitted once at end of report_success (final stdout line).
+            return dry_url
 
         # Commit and push
         self._commit_and_push()
@@ -1844,8 +1906,9 @@ This is a filtered reference export from a working Claude Code project. Commands
         if result.returncode != 0:
             raise GitRepositoryError(f"Repository clone failed: {result.stderr}")
 
-        # Configure git to use GITHUB_TOKEN for authentication
-        if self.github_token:
+        # Configure git to use GITHUB_TOKEN for authentication (skip in dry-run so the
+        # temporary clone never stores the token in .git/config — Bugbot: token leak).
+        if self.github_token and not self.dry_run:
             original_cwd = os.getcwd()
             try:
                 os.chdir(self.repo_dir)
@@ -2060,7 +2123,9 @@ This is a filtered reference export from a working Claude Code project. Commands
                     if re.search(pattern, content):
                         found.append((rel, pattern, description))
         if found:
-            print("⚠️  WARNING: Possible hardcoded paths detected (add to export filter):")
+            print(
+                "⚠️  WARNING: Possible hardcoded paths detected (add to export filter):"
+            )
             for rel, _pat, desc in found[:15]:  # Cap at 15 to avoid noise
                 print(f"   • {rel}: {desc}")
             if len(found) > 15:
@@ -2253,10 +2318,14 @@ This is a filtered reference export. Commands may need adaptation for specific e
                     gh_cmd,
                     "pr",
                     "create",
-                    "--title", pr_title,
-                    "--body-file", body_file_path,
-                    "--base", "main",
-                    "--repo", "jleechanorg/claude-commands",
+                    "--title",
+                    pr_title,
+                    "--body-file",
+                    body_file_path,
+                    "--base",
+                    "main",
+                    "--repo",
+                    "jleechanorg/claude-commands",
                 ],
                 capture_output=True,
                 text=True,
@@ -2278,7 +2347,7 @@ This is a filtered reference export. Commands may need adaptation for specific e
                 f"Unexpected gh pr create output (no URL found): {result.stdout}"
             )
 
-        print(f"✅ Pull request created: {pr_url}")
+        # PR URL is printed once at end of report_success (contract: final stdout line).
         return pr_url
 
     def report_success(self, pr_url):
@@ -2292,7 +2361,12 @@ This is a filtered reference export. Commands may need adaptation for specific e
         if archive_files:
             print(f"📦 Archive: {archive_files[0]}")
         print(f"🌟 Branch: {self.export_branch}")
-        print(f"🔗 Pull Request: {pr_url}")
+        if self.dry_run:
+            print(
+                "🔗 (Compare URL is printed as the final line below — no PR created.)"
+            )
+        else:
+            print("🔗 (Pull request URL is printed as the final line below.)")
         print("\n📊 Export Summary:")
         print(f"   Commands: {self.commands_count}")
         print(f"   Hooks: {self.hooks_count}")
@@ -2303,7 +2377,16 @@ This is a filtered reference export. Commands may need adaptation for specific e
         print(
             "   Excluded: analysis/, claude-bot-commands/, coding_prompts/, prototype/"
         )
-        print("\n🎯 The export has been published and is ready for review!")
+        if self.dry_run:
+            print(
+                "\n🧪 Dry run only — nothing was committed, pushed, or published "
+                "to GitHub."
+            )
+        else:
+            print("\n🎯 The export has been published and is ready for review!")
+        # Contract (exportcommands.md): real PR URL after full run; dry-run compare URL
+        # when --dry-run — must be the last line for automation.
+        print(pr_url)
 
     def handle_error(self, error):
         """Handle export errors gracefully"""
@@ -2398,5 +2481,8 @@ def sync_files_differential(source_dir, target_dir):
 
 
 if __name__ == "__main__":
-    exporter = ClaudeCommandsExporter()
+    dry_run = "--dry-run" in sys.argv
+    if dry_run:
+        sys.argv = [a for a in sys.argv if a != "--dry-run"]
+    exporter = ClaudeCommandsExporter(dry_run=dry_run)
     exporter.export()

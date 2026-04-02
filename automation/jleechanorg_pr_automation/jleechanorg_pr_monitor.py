@@ -836,7 +836,7 @@ class JleechanorgPRMonitor:
         current_dir = Path.cwd()
         if is_git_repository(current_dir):
             # Check if this is related to the target repository
-            if repo_name.lower() in current_dir.name.lower() or "${PROJECT_NAME:-your-project}" in current_dir.name.lower():
+            if repo_name.lower() in current_dir.name.lower() or "worldarchitect" in current_dir.name.lower():
                 self.logger.debug(f"🎯 Found local repo (current dir): {current_dir}")
                 return current_dir
 

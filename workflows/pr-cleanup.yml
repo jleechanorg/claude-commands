@@ -29,7 +29,7 @@ jobs:
       success: ${{ steps.mark-success.outputs.success }}
     env:
       GCP_REGION: us-central1
-      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      GCP_PROJECT: $GCP_PROJECT_ID
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -152,7 +152,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GCP_REGION: us-central1
-      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      GCP_PROJECT: $GCP_PROJECT_ID
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
       GH_TOKEN: ${{ github.token }}
     steps:

@@ -88,6 +88,18 @@ Lead with architectural thinking, follow with tactical execution. Write code as 
 
 1. Operates in worktree directory | 2. `TESTING_AUTH_BYPASS=true vpython` for direct/local real-mode test runs | 3. `from google import genai` | 4. Use `~` for paths | 5. MCP tools primary, `gh` fallback | 6. No `_v2`, `_new`, `_backup` files | 7. Cross-platform | 8. Use Read tool | 9. Never `exit 1` | 10. Read/Grep → Edit → Bash | 11. TodoWrite for 3+ steps | 12. Slash commands: `.claude/commands/*.md`
 
+## Autonomy & Proactiveness
+
+**Default: execute fully, don't ask.** The user rarely wants commands to run manually.
+
+- **Test locally → test on GCP preview → commit → push** — do the full chain automatically
+- After local tests pass, immediately run against GCP preview (`--preview-url <preview_url>`) unless there's a clear reason not to
+- After work is done and tests pass: commit and push without asking
+- After push: notify tails (or other reviewer) automatically
+- **Never hand back a command for the user to run.** Run it yourself.
+- GCP preview auto-deploys on every PR push — wait for it (`gh run watch`) then test against it
+- PR preview URL: `gh pr view <PR> --json comments --jq '.comments[].body' | grep -o 'https://mvp-site-app-s[^ )]*' | tail -n 1`
+
 ## Diagnostic Efficiency
 
 **Config debugging**: Read source code first (Read tool on consuming file), not exploratory Bash. Max 3 diagnostic attempts before reassessing.

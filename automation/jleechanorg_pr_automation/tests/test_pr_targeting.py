@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test PR targeting functionality for github-owner_pr_monitor - Codex Strategy Tests Only
+Test PR targeting functionality for jleechanorg_pr_monitor - Codex Strategy Tests Only
 """
 
 import unittest
@@ -13,8 +13,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "sc
 # Add automation source root to path to ensure we test local code, not installed package
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from github-owner_pr_automation.codex_config import build_comment_intro
-from github-owner_pr_automation.github-owner_pr_monitor import JleechanorgPRMonitor
+from jleechanorg_pr_automation.codex_config import build_comment_intro
+from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 
 
 class TestPRTargeting(unittest.TestCase):
@@ -123,7 +123,7 @@ class TestPRTargeting(unittest.TestCase):
         }
 
         comment_body = monitor._build_codex_comment_body_simple(
-            "github-owner/your-project.com",
+            "jleechanorg/worldarchitect.ai",
             42,
             pr_data,
             "abcdef1234567890",
