@@ -19,7 +19,7 @@ If you are the **OpenClaw embedded agent** receiving this task from the gateway:
 
 **DO NOT run this task inline.** Inline execution has no worktree, no PR, no branch.
 
-**INSTEAD — follow the `dispatch-task` skill** (in this repo: `skills/dispatch-task/SKILL.md`):
+**INSTEAD — follow the `dispatch-task` skill** (`~/.claude/skills/dispatch-task/SKILL.md` or repo-local `.claude/skills/dispatch-task/SKILL.md`):
 1. Create/claim a bead (`br create ...` or `br update ... --status in_progress`; see CLAUDE.md for `br` examples)
 2. Determine the ao project ID: `ao projects list`
 3. Spawn: `ao spawn ORCH-xxx -p <project-id>`
@@ -328,7 +328,7 @@ except Exception:
   fi
   if [ -z "$SESSION_NAME" ] && [ -n "$ISSUE_ID" ]; then
     # Filter ao session ls by issue ID suffix — avoid picking an unrelated session
-    SESSION_NAME=$(ao session ls 2>/dev/null | grep -oE '[a-z]+-[0-9]+' | grep -F "$(echo "$ISSUE_ID" | cut -d- -f2-)" | tail -1 || true)
+    SESSION_NAME=$(ao session ls 2>/dev/null | grep -oE '[a-z]+-[a-z0-9]+' | grep -F "$(echo "$ISSUE_ID" | cut -d- -f2-)" | tail -1 || true)
     [ -n "$SESSION_NAME" ] && echo "Session detected via ao session ls filter: $SESSION_NAME"
   fi
   if [ -z "$SESSION_NAME" ]; then
