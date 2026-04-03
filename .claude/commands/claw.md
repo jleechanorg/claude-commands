@@ -39,7 +39,67 @@ When this command is invoked with `$ARGUMENTS`:
 TASK_DESCRIPTION="$ARGUMENTS"
 ```
 
-### Step 1: Classify task type
+### Step 1: Shared helper — resolve slash commands
+
+```bash
+# resolve_slash_command() — resolves a slash command embedded in a task string.
+# Input:  task text (positional arg 1)
+# Output: task text with slash command inlined; prints resolution source to stdout.
+#         Returns 0 if resolved, 1 if no slash command found.
+resolve_slash_command() {
+  _src_text="$1"
+  _resolved_text="$_src_text"
+
+  _slash_cmd=$(printf '%s' "$_src_text" | python3 -c "
+import sys, re
+text = sys.stdin.read().strip()
+clean = re.sub(r'https?://\S+', '', text)
+m = re.search(r'(?:^|\s)/([\w-]+)', clean)
+if m:
+    print(m.group(1))
+" 2>/dev/null)
+
+  if [ -z "$_slash_cmd" ]; then
+    return 1
+  fi
+
+  _resolved_content=""
+  _resolved_source=""
+  for _search_dir in ".claude/commands" "$HOME/.claude/commands"; do
+    if [ -f "$_search_dir/$_slash_cmd.md" ]; then
+      _resolved_content=$(cat "$_search_dir/$_slash_cmd.md" 2>/dev/null)
+      _resolved_source="$_search_dir/$_slash_cmd.md"
+      break
+    fi
+  done
+  if [ -z "$_resolved_content" ]; then
+    for _search_dir in ".claude/skills" "$HOME/.claude/skills"; do
+      if [ -f "$_search_dir/$_slash_cmd/SKILL.md" ]; then
+        _resolved_content=$(cat "$_search_dir/$_slash_cmd/SKILL.md" 2>/dev/null)
+        _resolved_source="$_search_dir/$_slash_cmd/SKILL.md"
+        break
+      elif [ -f "$_search_dir/$_slash_cmd.md" ]; then
+        _resolved_content=$(cat "$_search_dir/$_slash_cmd.md" 2>/dev/null)
+        _resolved_source="$_search_dir/$_slash_cmd.md"
+        break
+      fi
+    done
+  fi
+  if [ -n "$_resolved_content" ]; then
+    echo "Resolved /$_slash_cmd from $_resolved_source"
+    _resolved_text="The user asked: $_src_text
+
+Below is the full definition of /$_slash_cmd (resolved from $_resolved_source). Execute it as instructed:
+
+---
+$_resolved_content
+---"
+  fi
+  printf '%s' "$_resolved_text"
+}
+```
+
+### Step 2: Classify task type
 
 ```bash
 # Detect coding tasks (require parallel ao spawn)
@@ -147,52 +207,11 @@ sys.exit(1)
     echo "WARNING: agent-orchestrator.yaml not found in usual paths — ao spawn may still work if ao is configured elsewhere"
   fi
 
-  # Step A5: Resolve slash commands (same as original /claw)
-  # (inline the slash command resolution from Step 2.5 of the original)
-  TASK_WITH_RESOLVED_COMMANDS="$TASK_DESCRIPTION"
-
-  SLASH_CMD=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
-import sys, re
-text = sys.stdin.read().strip()
-clean = re.sub(r'https?://\S+', '', text)
-m = re.search(r'(?:^|\s)/([\w-]+)', clean)
-if m:
-    print(m.group(1))
-" 2>/dev/null)
-
-  if [ -n "$SLASH_CMD" ]; then
-    RESOLVED_CONTENT=""
-    RESOLVED_SOURCE=""
-    for search_dir in ".claude/commands" "$HOME/.claude/commands"; do
-      if [ -f "$search_dir/$SLASH_CMD.md" ]; then
-        RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
-        RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
-        break
-      fi
-    done
-    if [ -z "$RESOLVED_CONTENT" ]; then
-      for search_dir in ".claude/skills" "$HOME/.claude/skills"; do
-        if [ -f "$search_dir/$SLASH_CMD/SKILL.md" ]; then
-          RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD/SKILL.md" 2>/dev/null)
-          RESOLVED_SOURCE="$search_dir/$SLASH_CMD/SKILL.md"
-          break
-        elif [ -f "$search_dir/$SLASH_CMD.md" ]; then
-          RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
-          RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
-          break
-        fi
-      done
-    fi
-    if [ -n "$RESOLVED_CONTENT" ]; then
-      echo "Resolved /$SLASH_CMD from $RESOLVED_SOURCE"
-      TASK_WITH_RESOLVED_COMMANDS="The user asked: $TASK_DESCRIPTION
-
-Below is the full definition of /$SLASH_CMD (resolved from $RESOLVED_SOURCE). Execute it as instructed:
-
----
-$RESOLVED_CONTENT
----"
-    fi
+  # Step A5: Resolve slash commands using shared helper
+  if TASK_WITH_RESOLVED_COMMANDS=$(resolve_slash_command "$TASK_DESCRIPTION"); then
+    : # helper already printed the "Resolved /cmd from source" line
+  else
+    TASK_WITH_RESOLVED_COMMANDS="$TASK_DESCRIPTION"
   fi
 
   # Step A5.5: Learning-loop gate
@@ -386,56 +405,24 @@ fi
 # === PATH B: Gateway HTTP (read-only / summarize tasks) ===
 echo "=== PATH B: Gateway HTTP (non-coding tasks) ==="
 
-# Verify gateway is running
-if ! lsof -i :18789 2>/dev/null | grep -q LISTEN; then
-  echo "Gateway not running on port 18789. Start it with: launchctl start gui/$UID/ai.openclaw.gateway"
+# Verify gateway is running — prefer HTTP probe; fall back to socket check
+if command -v curl >/dev/null 2>&1 && curl -s --max-time 2 http://127.0.0.1:18789/ -o /dev/null -w "%{http_code}" 2>/dev/null | grep -qe '^[23]'; then
+  echo "Gateway is healthy (HTTP probe)"
+elif curl -s --max-time 2 http://127.0.0.1:18789/health -o /dev/null -w "%{http_code}" 2>/dev/null | grep -qe '^[23]'; then
+  echo "Gateway is healthy (/health endpoint)"
+elif (command -v ss >/dev/null 2>&1 && ss -ltn 2>/dev/null | grep -q ':18789') || \
+     (command -v netstat >/dev/null 2>&1 && netstat -an 2>/dev/null | grep -q ':18789.*LISTEN'); then
+  echo "Gateway is listening on port 18789 (socket check)"
+else
+  echo "Gateway not running on port 18789. Start it with: launchctl start gui/\$(id -u)/ai.openclaw.gateway"
   exit 1
 fi
 
-# Resolve slash commands (same resolution as Path A)
-TASK_WITH_RESOLVED="$TASK_DESCRIPTION"
-
-SLASH_CMD=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
-import sys, re
-text = sys.stdin.read().strip()
-clean = re.sub(r'https?://\S+', '', text)
-m = re.search(r'(?:^|\s)/([\w-]+)', clean)
-if m:
-    print(m.group(1))
-" 2>/dev/null)
-
-if [ -n "$SLASH_CMD" ]; then
-  RESOLVED_CONTENT=""
-  for search_dir in ".claude/commands" "$HOME/.claude/commands"; do
-    if [ -f "$search_dir/$SLASH_CMD.md" ]; then
-      RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
-      RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
-      break
-    fi
-  done
-  if [ -z "$RESOLVED_CONTENT" ]; then
-    for search_dir in ".claude/skills" "$HOME/.claude/skills"; do
-      if [ -f "$search_dir/$SLASH_CMD/SKILL.md" ]; then
-        RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD/SKILL.md" 2>/dev/null)
-        RESOLVED_SOURCE="$search_dir/$SLASH_CMD/SKILL.md"
-        break
-      elif [ -f "$search_dir/$SLASH_CMD.md" ]; then
-        RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
-        RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
-        break
-      fi
-    done
-  fi
-  if [ -n "$RESOLVED_CONTENT" ]; then
-    echo "Resolved /$SLASH_CMD from $RESOLVED_SOURCE"
-    TASK_WITH_RESOLVED="The user asked: $TASK_DESCRIPTION
-
-Below is the full definition of /$SLASH_CMD (resolved from $RESOLVED_SOURCE). Execute it as instructed:
-
----
-$RESOLVED_CONTENT
----"
-  fi
+# Resolve slash commands using shared helper (deduplicated from Path A)
+if TASK_WITH_RESOLVED=$(resolve_slash_command "$TASK_DESCRIPTION"); then
+  : # helper already printed the "Resolved /cmd from source" line
+else
+  TASK_WITH_RESOLVED="$TASK_DESCRIPTION"
 fi
 
 # Build JSON payload
@@ -470,11 +457,16 @@ PAYLOAD_FILE="$PAYLOAD_FILE" LOGFILE="$LOGFILE" nohup bash -c '
 # Read token inside subshell — never visible as parent-shell variable or Python argv
 GATEWAY_TOKEN=$(python3 -c "
 import json, sys
+d=json.load(open(sys.argv[1]))
+# Try .gateway.token first (current openclaw.json schema),
+# fall back to .gateway.auth.token (legacy schema).
 try:
-    d=json.load(open(sys.argv[1]))
-    print(d[\"gateway\"][\"auth\"][\"token\"])
-except Exception:
-    sys.exit(1)
+    print(d['gateway']['token'])
+except KeyError:
+    try:
+        print(d['gateway']['auth']['token'])
+    except KeyError:
+        sys.exit(1)
 " "$HOME/.openclaw/openclaw.json" 2>/dev/null)
 if [ -z "$GATEWAY_TOKEN" ]; then
     echo "TOKEN ERROR: could not read gateway token" >&2
