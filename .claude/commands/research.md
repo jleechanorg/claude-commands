@@ -10,6 +10,24 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
+### Phase 0: Check Prior Knowledge in Claude Memories
+
+**Action Steps:**
+1. **Discover memory files** (current project only):
+   ```python
+   import glob, os, subprocess
+   try:
+       git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
+       project_key = git_root.replace('/', '-')  # preserve leading dash: /Users/... → -Users-...
+       pattern = os.path.expanduser(f'~/.claude/projects/{project_key}/memory/*.md')
+   except Exception:
+       pattern = None  # no fallback — skip if not in a git repo
+   memory_files = [f for f in glob.glob(pattern) if not f.endswith('MEMORY.md')] if pattern else []
+   ```
+2. **Filter by research topic**: Keyword match against file content using research topic terms
+3. **If matches found**: Display "📍 Prior Knowledge Found" section with relevant memory content; note these should inform the research to avoid re-discovering known facts
+4. **If no matches**: Continue directly to Phase 1
+
 ### Phase 1: Execution Standards
 
 **Action Steps:**
@@ -18,7 +36,7 @@ execution_mode: immediate
 3. ❌ **Unverified Citations**: Never present search result URLs as evidence without reading
 4. ❌ **Assumption Claims**: Never claim source content based on search descriptions
 
-### Phase 1: Research Planning (`/thinku`)
+### Phase 2: Research Planning (extended thinking)
 
 **Action Steps:**
 **Ultra-depth Thinking Process**:
@@ -28,7 +46,7 @@ execution_mode: immediate
 4. Anticipate knowledge gaps and validation needs
 5. Plan integration approach for multiple information sources
 
-### Phase 2: Multi-source Information Gathering (`/perp`)
+### Phase 3: Multi-source Information Gathering (multi-search)
 
 **Action Steps:**
 **Comprehensive Search Execution**:
@@ -40,7 +58,7 @@ execution_mode: immediate
 6. Cross-validate information across all engines
 7. Extract and organize findings by source and credibility
 
-### Phase 3: Deep Analysis Integration (`/thinku` + findings)
+### Phase 4: Deep Analysis Integration (extended thinking + findings)
 
 **Action Steps:**
 **Sequential Thinking Applied to Research Results**:
@@ -50,13 +68,13 @@ execution_mode: immediate
 4. Generate insights beyond individual source limitations
 5. Develop evidence-based conclusions and recommendations
 
-### Phase 4: Structured Documentation
+### Phase 5: Structured Documentation
 
 **Action Steps:**
 **Research Summary with Methodology Transparency**:
-1. **Research Planning**: Show `/thinku` analysis process
-2. **Information Sources**: Document `/perp` search results by engine
-3. **Analysis Integration**: Present `/thinku` synthesis of findings
+1. **Research Planning**: Show analysis process
+2. **Information Sources**: Document search results by engine
+3. **Analysis Integration**: Present synthesis of findings
 4. **Conclusions**: Evidence-based recommendations with source attribution
 
 ## 📋 REFERENCE DOCUMENTATION

@@ -465,7 +465,7 @@ User: /browser (auto-detects MCP, uses superpowers-chrome)
 ## Resources
 
 - [Playwright Skill Documentation](../skills/playwright-${PROJECT_NAME:-your-project}/SKILL.md)
-- [Superpowers Chrome Documentation](../skills/superpowers-chrome-${PROJECT_NAME:-your-project}/README.md)
+- [Superpowers Chrome Documentation](../skills/superpowers-chrome-worldarchitect/README.md)
 - [Comparison Guide](../docs/BROWSER_AUTOMATION_COMPARISON.md)
 - [Example Workflows](../skills/playwright-${PROJECT_NAME:-your-project}/examples/)
 
