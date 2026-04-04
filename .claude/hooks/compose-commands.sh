@@ -55,6 +55,23 @@ except (json.JSONDecodeError, ValueError):
     print(sys.stdin.read())
 ' 2>/dev/null || echo "$raw_input")
 
+# Detect if this is the orchestrator idle hook injection (self-generated hook text)
+# These have no real user intent and should not trigger command composition
+is_idle_hook=false
+# Match only when the whole payload is a single idle line (first line matches; no other non-whitespace).
+# Avoids suppressing multi-line user prompts that quote this text on a later line. The "\+?" after [0-9]
+# is an optional literal plus in messages like "15+ minutes", not a regex quantifier on the digit run.
+idle_line_pattern='^[[:space:]]*Your agent session has been idle( for [0-9]+\+? minutes)?[[:space:]]*$'
+first_line=$(printf '%s' "$input" | head -n 1)
+remainder=$(printf '%s' "$input" | tail -n +2)
+remainder_has_text=false
+if [[ -n "$remainder" ]] && printf '%s' "$remainder" | grep -q '[^[:space:]]' 2>/dev/null; then
+  remainder_has_text=true
+fi
+if [[ "$remainder_has_text" == false ]] && printf '%s' "$first_line" | grep -qE "$idle_line_pattern" 2>/dev/null; then
+  is_idle_hook=true
+fi
+
 # Detect if this is likely pasted content (like a GitHub PR page)
 # Heuristics: GitHub UI patterns, PR formatting, commit stats
 is_pasted_content=false
@@ -183,6 +200,17 @@ done
 # Normalize whitespace for aggregated command strings before further processing
 commands=$(printf '%s' "$commands" | normalize_whitespace)
 nested_commands=$(printf '%s' "$nested_commands" | normalize_whitespace)
+
+# Exit early if this is the orchestrator idle hook — suppress entirely, don't echo it back
+# This prevents the idle hook text from polluting the conversation context
+if [[ "$is_idle_hook" == "true" ]]; then
+    if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
+        echo "COMPOSE_DEBUG: SKIPPING_IDLE_HOOK_INPUT" >&2
+    fi
+    # Output exactly one newline so Claude Code gets a blank line (not the idle text)
+    printf '\n'
+    exit 0
+fi
 
 # Exit early if no real slash commands found
 if [[ -z "$commands" ]]; then

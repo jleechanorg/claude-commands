@@ -124,6 +124,10 @@ union_dir() {
     \( -not -name '.DS_Store' \) \
     \( -not -path '*/__pycache__/*' \) \
     \( -not -path '*/.ruff_cache/*' \) \
+    \( -name '*.sh' -o -name '*.py' -o -name '*.md' -o -name '*.json' \
+       -o -name '*.toml' -o -name '*.txt' -o -name '*.yaml' -o -name '*.yml' \
+       -o -name '*.js' -o -name '*.ts' -o -name '*.css' -o -name '*.html' \
+       -o -name '*.cfg' -o -name '*.ini' -o -name '*.conf' \) \
     -print0 2>/dev/null || true)
 
   while IFS= read -r -d '' f; do
@@ -138,6 +142,10 @@ union_dir() {
     \( -not -path '*/__pycache__/*' \) \
     \( -not -path '*/.ruff_cache/*' \) \
     -not -name 'exportcommands.py' \
+    \( -name '*.sh' -o -name '*.py' -o -name '*.md' -o -name '*.json' \
+       -o -name '*.toml' -o -name '*.txt' -o -name '*.yaml' -o -name '*.yml' \
+       -o -name '*.js' -o -name '*.ts' -o -name '*.css' -o -name '*.html' \
+       -o -name '*.cfg' -o -name '*.ini' -o -name '*.conf' \) \
     -print0 2>/dev/null || true)
 
   local only_global=0 only_project=0 identical=0 auto_resolved=0
@@ -210,6 +218,25 @@ for dir in "${ROOT_DIRS[@]}"; do
     --exclude='*.pyc' \
     --exclude='__pycache__/' \
     --exclude='.DS_Store' \
+    --exclude='*.ttf' \
+    --exclude='*.otf' \
+    --exclude='*.woff' \
+    --exclude='*.woff2' \
+    --exclude='*.eot' \
+    --exclude='*.png' \
+    --exclude='*.jpg' \
+    --exclude='*.jpeg' \
+    --exclude='*.gif' \
+    --exclude='*.ico' \
+    --exclude='*.svg' \
+    --exclude='*.webp' \
+    --exclude='*.mp4' \
+    --exclude='*.mp3' \
+    --exclude='*.wav' \
+    --exclude='*.pdf' \
+    --exclude='*.zip' \
+    --exclude='*.tar' \
+    --exclude='*.gz' \
     "$src" "$dst"
   ok "$dir"
 done
