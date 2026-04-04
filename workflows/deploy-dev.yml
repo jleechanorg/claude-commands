@@ -1,15 +1,3 @@
-# ⚠️ EXAMPLE WORKFLOW - REQUIRES INTEGRATION
-# This workflow was exported from a working project and serves as an EXAMPLE ONLY.
-# You MUST adapt the following before using:
-# - $GCP_PROJECT_ID → Your Google Cloud project ID
-# - $GITHUB_REPOSITORY → Your repository (owner/repo)
-# - $GITHUB_OWNER → Your GitHub username or org
-# - Service account configurations and secrets
-# - Environment-specific variables and paths
-#
-# See workflows/README.md for integration instructions.
-# ---
-
 name: Deploy Dev
 
 on:
@@ -44,7 +32,7 @@ jobs:
       issues: write
       pull-requests: read
     env:
-      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      GCP_PROJECT: worldarchitecture-ai
       GCP_REGION: us-central1
       SERVICE_NAME: mvp-site-app-dev
       DEPLOY_REASON: ${{ inputs.reason || github.event.inputs.reason || 'auto-deploy (dev)' }}
@@ -52,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1  # v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2

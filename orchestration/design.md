@@ -141,7 +141,7 @@ agent_spec = {
 **Phase 3: Workspace Isolation**
 ```python
 # Create git worktree in isolated directory
-worktree_path = "~/projects/orch_worldarchitect.ai/task-agent-fix-tests-1234/"
+worktree_path = "~/projects/orch_your-project.com/task-agent-fix-tests-1234/"
 branch_name = "task-agent-fix-tests-1234-work"
 
 subprocess.run([
@@ -294,7 +294,7 @@ class AgentMonitor:
             status["recent_output"] = result.stdout.split('\n')[-5:]
 
         # Check workspace modifications
-        workspace_path = f"~/projects/orch_worldarchitect.ai/{agent_name}/"
+        workspace_path = f"~/projects/orch_your-project.com/{agent_name}/"
         if os.path.exists(workspace_path):
             stat = os.stat(workspace_path)
             status["last_modified"] = datetime.fromtimestamp(stat.st_mtime)
