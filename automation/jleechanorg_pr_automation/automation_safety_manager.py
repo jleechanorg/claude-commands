@@ -18,10 +18,9 @@ import os
 import smtplib
 import sys
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Dict, Optional, Union
 
 REAL_DATETIME = datetime
 
@@ -39,8 +38,8 @@ else:
 
 # Import shared utilities
 from .utils import (
-    get_automation_limits_with_overrides,
     coerce_positive_int,
+    get_automation_limits_with_overrides,
     json_manager,
     setup_logging,
 )
@@ -49,7 +48,7 @@ from .utils import (
 class AutomationSafetyManager:
     """Thread-safe automation safety manager with configurable limits"""
 
-    def __init__(self, data_dir: str, limits: Optional[Dict[str, int]] = None):
+    def __init__(self, data_dir: str, limits: dict[str, int] | None = None):
         self.data_dir = data_dir
         self.lock = threading.RLock()  # Use RLock to prevent deadlock
         self.logger = setup_logging(__name__)
@@ -83,9 +82,9 @@ class AutomationSafetyManager:
         # In-memory counters for thread safety
         self._pr_attempts_cache = {}
         self._global_runs_cache = 0
-        self._pr_inflight_cache: Dict[str, int] = {}
-        self._pr_inflight_updated_at: Dict[str, str] = {}
-        self._pr_overrides_cache: Dict[str, int] = {}  # Per-PR limit overrides (0 = unlimited)
+        self._pr_inflight_cache: dict[str, int] = {}
+        self._pr_inflight_updated_at: dict[str, str] = {}
+        self._pr_overrides_cache: dict[str, int] = {}  # Per-PR limit overrides (0 = unlimited)
 
         # Initialize files if they don't exist
         self._ensure_files_exist()
@@ -108,7 +107,7 @@ class AutomationSafetyManager:
             self._write_json_file(self.pr_attempts_file, {})
 
         if not os.path.exists(self.global_runs_file):
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             today = now.date().isoformat()
             self._write_json_file(self.global_runs_file, {
                 "runs": [],
@@ -155,8 +154,11 @@ class AutomationSafetyManager:
             }
             self._write_json_file(self.config_file, default_config)
 
-    def _apply_limit_overrides(self, overrides: Dict[str, object]) -> None:
+    def _apply_limit_overrides(self, overrides: dict[str, object]) -> None:
         """Apply override dict, clamping to positive ints and leaving others unchanged."""
+        if not isinstance(overrides, dict):
+            self.logger.warning("Ignoring invalid limit override payload type: %s", type(overrides).__name__)
+            return
         defaults = get_automation_limits_with_overrides()
         if "pr_limit" in overrides:
             self.pr_limit = coerce_positive_int(overrides.get("pr_limit"), default=defaults["pr_limit"])
@@ -174,6 +176,21 @@ class AutomationSafetyManager:
             self.codex_update_limit = coerce_positive_int(overrides.get("codex_update_limit"), default=defaults["codex_update_limit"])
         if "fixpr_limit" in overrides:
             self.fixpr_limit = coerce_positive_int(overrides.get("fixpr_limit"), default=defaults["fixpr_limit"])
+
+    def _rebuild_pr_overrides_cache_from_payload(self, overrides_data: object) -> None:
+        """Replace in-memory PR override cache from JSON; tolerate non-dict files and bad values."""
+        self._pr_overrides_cache = {}
+        if not isinstance(overrides_data, dict):
+            self.logger.warning(
+                "Ignoring invalid PR overrides payload type: %s",
+                type(overrides_data).__name__,
+            )
+            return
+        for k, v in overrides_data.items():
+            try:
+                self._pr_overrides_cache[k] = int(v)
+            except (TypeError, ValueError):
+                self.logger.warning("Ignoring invalid override for %s: %r", k, v)
 
     def _load_state_from_files(self):
         """Load state from files into memory cache"""
@@ -194,8 +211,7 @@ class AutomationSafetyManager:
             self._pr_inflight_updated_at = inflight_updated
 
             # Load PR limit overrides
-            overrides_data = self._read_json_file(self.pr_overrides_file)
-            self._pr_overrides_cache = {k: int(v) for k, v in overrides_data.items()}
+            self._rebuild_pr_overrides_cache_from_payload(self._read_json_file(self.pr_overrides_file))
 
     def _sync_state_to_files(self):
         """Sync in-memory state to files"""
@@ -214,10 +230,10 @@ class AutomationSafetyManager:
         """
         parsed = self._parse_timestamp_value(timestamp_str, return_none_on_fail=False)
         if parsed is None:
-            return datetime(1970, 1, 1, tzinfo=timezone.utc)
+            return datetime(1970, 1, 1, tzinfo=UTC)
         return parsed
 
-    def _parse_inflight_entry(self, value: object) -> tuple[int, Optional[str]]:
+    def _parse_inflight_entry(self, value: object) -> tuple[int, str | None]:
         """Parse inflight entry into count + updated_at (if present)."""
         if isinstance(value, dict):
             raw_count = value.get("count", 0)
@@ -232,9 +248,9 @@ class AutomationSafetyManager:
         except (TypeError, ValueError):
             return 0, None
 
-    def _parse_inflight_data(self, inflight_data: dict) -> tuple[Dict[str, int], Dict[str, str]]:
-        counts: Dict[str, int] = {}
-        updated: Dict[str, str] = {}
+    def _parse_inflight_data(self, inflight_data: dict) -> tuple[dict[str, int], dict[str, str]]:
+        counts: dict[str, int] = {}
+        updated: dict[str, str] = {}
         for key, value in inflight_data.items():
             count, updated_at = self._parse_inflight_entry(value)
             counts[key] = count
@@ -242,8 +258,8 @@ class AutomationSafetyManager:
                 updated[key] = updated_at
         return counts, updated
 
-    def _serialize_inflight_data(self) -> Dict[str, object]:
-        payload: Dict[str, object] = {}
+    def _serialize_inflight_data(self) -> dict[str, object]:
+        payload: dict[str, object] = {}
         for key, count in self._pr_inflight_cache.items():
             updated_at = self._pr_inflight_updated_at.get(key)
             if updated_at:
@@ -260,24 +276,24 @@ class AutomationSafetyManager:
     def _is_inflight_stale(
         self,
         *,
-        updated_at: Optional[str],
-        file_mtime: Optional[float],
+        updated_at: str | None,
+        file_mtime: float | None,
     ) -> bool:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stale_seconds = self._get_inflight_stale_seconds()
         if updated_at:
             last_update = self._parse_timestamp(updated_at)
             return (now - last_update) > timedelta(seconds=stale_seconds)
         if file_mtime is None:
             return False
-        mtime_dt = datetime.fromtimestamp(file_mtime, tz=timezone.utc)
+        mtime_dt = datetime.fromtimestamp(file_mtime, tz=UTC)
         return (now - mtime_dt) > timedelta(seconds=stale_seconds)
 
     def _make_pr_key(
         self,
-        pr_number: Union[int, str],
-        repo: Optional[str] = None,
-        branch: Optional[str] = None,
+        pr_number: int | str,
+        repo: str | None = None,
+        branch: str | None = None,
     ) -> str:
         """Create a labeled key for PR attempt tracking."""
 
@@ -286,10 +302,10 @@ class AutomationSafetyManager:
         branch_part = f"b={branch or ''}"
         return "||".join((repo_part, pr_part, branch_part))
 
-    def _normalize_pr_attempt_keys(self, raw_data: Dict) -> Dict[str, list]:
+    def _normalize_pr_attempt_keys(self, raw_data: dict) -> dict[str, list]:
         """Normalize legacy PR attempt keys to the labeled format."""
 
-        normalized: Dict[str, list] = {}
+        normalized: dict[str, list] = {}
 
         for key, value in (raw_data or {}).items():
             if not isinstance(value, list):
@@ -306,7 +322,7 @@ class AutomationSafetyManager:
 
             repo = None
             branch = None
-            pr_number: Union[str, int] = ""
+            pr_number: str | int = ""
 
             if isinstance(key, str):
                 parts = key.split("::")
@@ -340,14 +356,14 @@ class AutomationSafetyManager:
 
     def _normalize_global_run_payload(
         self,
-        payload: Optional[dict],
+        payload: dict | None,
         *,
-        now: Optional[datetime] = None,
-        add_run: Optional[datetime] = None,
+        now: datetime | None = None,
+        add_run: datetime | None = None,
     ) -> tuple[dict, int, bool]:
         """Normalize persisted global run data for rolling window accounting."""
 
-        current_time = now or datetime.now(timezone.utc)
+        current_time = now or datetime.now(UTC)
         data = dict(payload) if isinstance(payload, dict) else {}
 
         # Ensure start_date is always present and well-formed
@@ -421,7 +437,7 @@ class AutomationSafetyManager:
             default=24,
         )
 
-    def _parse_global_run_timestamp(self, timestamp: object) -> Optional[datetime]:
+    def _parse_global_run_timestamp(self, timestamp: object) -> datetime | None:
         """Parse global run timestamps into timezone-aware datetime."""
         return self._parse_timestamp_value(timestamp, return_none_on_fail=True)
 
@@ -430,23 +446,23 @@ class AutomationSafetyManager:
         timestamp: object,
         *,
         return_none_on_fail: bool,
-    ) -> Optional[datetime]:
+    ) -> datetime | None:
         """Parse ISO timestamp strings into UTC datetimes."""
         if not isinstance(timestamp, str) or not timestamp:
-            return None if return_none_on_fail else datetime(1970, 1, 1, tzinfo=timezone.utc)
+            return None if return_none_on_fail else datetime(1970, 1, 1, tzinfo=UTC)
 
         try:
             dt = REAL_DATETIME.fromisoformat(timestamp)
         except (ValueError, AttributeError, TypeError):
-            return None if return_none_on_fail else datetime(1970, 1, 1, tzinfo=timezone.utc)
+            return None if return_none_on_fail else datetime(1970, 1, 1, tzinfo=UTC)
 
         if dt.tzinfo is None:
-            local_tz = datetime.now().astimezone().tzinfo or timezone.utc
+            local_tz = datetime.now().astimezone().tzinfo or UTC
             dt = dt.replace(tzinfo=local_tz)
 
-        return dt.astimezone(timezone.utc)
+        return dt.astimezone(UTC)
 
-    def can_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
+    def can_process_pr(self, pr_number: int | str, repo: str | None = None, branch: str | None = None) -> bool:
         """Check if PR can be processed (under attempt limit).
 
         NEW BEHAVIOR: Uses rolling window (default 24 hours) instead of daily reset.
@@ -473,7 +489,7 @@ class AutomationSafetyManager:
                 os.environ.get("AUTOMATION_ATTEMPT_WINDOW_HOURS", "24"),
                 default=24
             )
-            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+            cutoff_time = datetime.now(UTC) - timedelta(hours=window_hours)
 
             window_attempts = [
                 attempt for attempt in attempts
@@ -486,7 +502,7 @@ class AutomationSafetyManager:
             # Check against effective limit
             return total_attempts < effective_limit
 
-    def try_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
+    def try_process_pr(self, pr_number: int | str, repo: str | None = None, branch: str | None = None) -> bool:
         """Atomically reserve a processing slot for PR with proper cross-process locking."""
         with self.lock:
             # Check consecutive failure limit first
@@ -537,7 +553,7 @@ class AutomationSafetyManager:
 
                 # Reserve a processing slot
                 self._pr_inflight_cache[pr_key] = inflight + 1
-                self._pr_inflight_updated_at[pr_key] = datetime.now(timezone.utc).isoformat()
+                self._pr_inflight_updated_at[pr_key] = datetime.now(UTC).isoformat()
                 success = True
                 return self._serialize_inflight_data()
 
@@ -545,7 +561,7 @@ class AutomationSafetyManager:
             # Only return True if BOTH reservation logic AND file write succeeded
             return success and write_success
 
-    def release_pr_slot(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
+    def release_pr_slot(self, pr_number: int | str, repo: str | None = None, branch: str | None = None):
         """Release a processing slot for PR (call in finally block) with atomic cross-process locking."""
         with self.lock:
             pr_key = self._make_pr_key(pr_number, repo, branch)
@@ -564,7 +580,7 @@ class AutomationSafetyManager:
                         self._pr_inflight_cache.pop(pr_key, None)
                         self._pr_inflight_updated_at.pop(pr_key, None)
                     else:
-                        self._pr_inflight_updated_at[pr_key] = datetime.now(timezone.utc).isoformat()
+                        self._pr_inflight_updated_at[pr_key] = datetime.now(UTC).isoformat()
 
                 return self._serialize_inflight_data()
 
@@ -572,7 +588,7 @@ class AutomationSafetyManager:
             if not write_success:
                 logging.error(f"Failed to release slot for PR {pr_key} - file write failed")
 
-    def get_pr_attempts(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
+    def get_pr_attempts(self, pr_number: int | str, repo: str | None = None, branch: str | None = None):
         """Get count of attempts for a specific PR.
 
         NEW BEHAVIOR: Uses rolling window (consistent with can_process_pr()).
@@ -590,7 +606,7 @@ class AutomationSafetyManager:
                 os.environ.get("AUTOMATION_ATTEMPT_WINDOW_HOURS", "24"),
                 default=24
             )
-            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+            cutoff_time = datetime.now(UTC) - timedelta(hours=window_hours)
 
             window_attempts = [
                 attempt for attempt in attempts
@@ -600,7 +616,7 @@ class AutomationSafetyManager:
             # Return count of attempts within rolling window
             return len(window_attempts)
 
-    def get_pr_attempt_list(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
+    def get_pr_attempt_list(self, pr_number: int | str, repo: str | None = None, branch: str | None = None):
         """Get list of attempts for a specific PR (for detailed analysis)"""
         with self.lock:
             # Reload from disk to ensure consistency across multiple managers
@@ -609,7 +625,7 @@ class AutomationSafetyManager:
             pr_key = self._make_pr_key(pr_number, repo, branch)
             return self._pr_attempts_cache.get(pr_key, [])
 
-    def record_pr_attempt(self, pr_number: Union[int, str], result: str, repo: str = None, branch: str = None):
+    def record_pr_attempt(self, pr_number: int | str, result: str, repo: str | None = None, branch: str | None = None):
         """Record a PR attempt (success or failure)"""
         with self.lock:
             pr_key = self._make_pr_key(pr_number, repo, branch)
@@ -617,7 +633,7 @@ class AutomationSafetyManager:
             # Create attempt record
             attempt_record = {
                 "result": result,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "pr_number": pr_number,
                 "repo": repo,
                 "branch": branch
@@ -636,7 +652,7 @@ class AutomationSafetyManager:
                     self._pr_inflight_updated_at.pop(pr_key, None)
                 else:
                     self._pr_inflight_cache[pr_key] = inflight - 1
-                    self._pr_inflight_updated_at[pr_key] = datetime.now(timezone.utc).isoformat()
+                    self._pr_inflight_updated_at[pr_key] = datetime.now(UTC).isoformat()
 
             # Sync to file for persistence
             self._sync_state_to_files()
@@ -663,7 +679,7 @@ class AutomationSafetyManager:
         with self.lock:
             normalized_total = 0
 
-            def _refresh(payload: Optional[dict]):
+            def _refresh(payload: dict | None):
                 nonlocal normalized_total
                 normalized, total, _ = self._normalize_global_run_payload(payload)
                 normalized_total = normalized["total_runs"]
@@ -683,23 +699,23 @@ class AutomationSafetyManager:
 
     def record_global_run(self):
         """Record a global automation run atomically"""
-        self._record_global_run_at_time(datetime.now(timezone.utc))
+        self._record_global_run_at_time(datetime.now(UTC))
 
-    def _record_global_run_at_time(self, run_time: datetime, *, now: Optional[datetime] = None):
+    def _record_global_run_at_time(self, run_time: datetime, *, now: datetime | None = None):
         """Record a global run at a specific time (test helper)."""
         with self.lock:
             new_total = 0
-            current_time = now or datetime.now(timezone.utc)
+            current_time = now or datetime.now(UTC)
             if current_time.tzinfo is None:
-                current_time = current_time.replace(tzinfo=timezone.utc)
+                current_time = current_time.replace(tzinfo=UTC)
             else:
-                current_time = current_time.astimezone(timezone.utc)
+                current_time = current_time.astimezone(UTC)
             if run_time.tzinfo is None:
-                run_time = run_time.replace(tzinfo=timezone.utc)
+                run_time = run_time.replace(tzinfo=UTC)
             else:
-                run_time = run_time.astimezone(timezone.utc)
+                run_time = run_time.astimezone(UTC)
 
-            def _increment(payload: Optional[dict]):
+            def _increment(payload: dict | None):
                 nonlocal new_total
                 normalized, total, _ = self._normalize_global_run_payload(
                     payload,
@@ -789,7 +805,7 @@ class AutomationSafetyManager:
             self.logger.debug("Notification subject: %s", subject)
             self.logger.debug("Notification body: %s", message)
 
-    def grant_manual_approval(self, approver_email: str, approval_time: Optional[datetime] = None):
+    def grant_manual_approval(self, approver_email: str, approval_time: datetime | None = None):
         """Grant manual approval for continued automation"""
         with self.lock:
             approval_time = approval_time or datetime.now()
@@ -848,7 +864,7 @@ class AutomationSafetyManager:
 Time: {datetime.now().isoformat()}
 System: PR Automation Safety Manager
 
-This is an automated notification from the WorldArchitect.AI automation system.
+This is an automated notification from the Your Project automation system.
 """
 
             msg.attach(MIMEText(body, "plain"))
@@ -892,7 +908,7 @@ This is an automated notification from the WorldArchitect.AI automation system.
             data["runs"] = []
             data["total_runs"] = 0
             data.pop("last_run", None)
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             data["current_date"] = now.date().isoformat()
             data["last_reset"] = now.isoformat()
             self._write_json_file(self.global_runs_file, data)
@@ -948,7 +964,7 @@ This is an automated notification from the WorldArchitect.AI automation system.
         except Exception:
             return False
 
-    def _get_effective_pr_limit(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> int:
+    def _get_effective_pr_limit(self, pr_number: int | str, repo: str | None = None, branch: str | None = None) -> int:
         """Get effective PR limit for a specific PR (returns override if set, else default).
 
         Args:
@@ -961,8 +977,7 @@ This is an automated notification from the WorldArchitect.AI automation system.
         """
         with self.lock:
             # Reload PR override file to stay in sync with CLI updates from other processes.
-            overrides_data = self._read_json_file(self.pr_overrides_file)
-            self._pr_overrides_cache = {k: int(v) for k, v in overrides_data.items()}
+            self._rebuild_pr_overrides_cache_from_payload(self._read_json_file(self.pr_overrides_file))
 
             pr_key = self._make_pr_key(pr_number, repo, branch)
             override = self._pr_overrides_cache.get(pr_key)
@@ -970,10 +985,9 @@ This is an automated notification from the WorldArchitect.AI automation system.
             if override is not None:
                 # 0 means unlimited
                 return sys.maxsize if override == 0 else override
-            else:
-                return self.pr_limit
+            return self.pr_limit
 
-    def clear_pr_attempts(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
+    def clear_pr_attempts(self, pr_number: int | str, repo: str | None = None, branch: str | None = None) -> bool:
         """Clear all attempts for a specific PR.
 
         Args:
@@ -1004,7 +1018,7 @@ This is an automated notification from the WorldArchitect.AI automation system.
             self.logger.info(f"✅ Cleared all attempts for PR {pr_key}")
             return True
 
-    def set_pr_limit_override(self, pr_number: Union[int, str], limit: int, repo: str = None, branch: str = None) -> bool:
+    def set_pr_limit_override(self, pr_number: int | str, limit: int, repo: str | None = None, branch: str | None = None) -> bool:
         """Set custom limit for a specific PR (0 = unlimited).
 
         Args:
@@ -1036,7 +1050,7 @@ This is an automated notification from the WorldArchitect.AI automation system.
                 self.logger.info(f"✅ Set custom limit {limit} for PR {pr_key}")
             return True
 
-    def clear_pr_limit_override(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
+    def clear_pr_limit_override(self, pr_number: int | str, repo: str | None = None, branch: str | None = None) -> bool:
         """Remove limit override for a specific PR, revert to default.
 
         Args:
@@ -1060,7 +1074,7 @@ This is an automated notification from the WorldArchitect.AI automation system.
             self.logger.info(f"✅ Cleared limit override for PR {pr_key}, reverted to default ({self.pr_limit})")
             return True
 
-    def get_pr_limit_override(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> Optional[int]:
+    def get_pr_limit_override(self, pr_number: int | str, repo: str | None = None, branch: str | None = None) -> int | None:
         """Get current limit override for a specific PR.
 
         Args:

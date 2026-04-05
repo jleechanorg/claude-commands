@@ -2,6 +2,8 @@
 
 **Usage**: Diagnose what OpenClaw is actually doing locally — which model it uses, whether it's running, what the gateway is forwarding, and whether WorldArchitect is correctly routing through it.
 
+> **UI automation**: To click/type/interact with OpenClaw or Antigravity via Peekaboo, use the `antigravity-computer-use` skill (which itself extends `claude-code-computer-use`). This skill covers bash diagnostics only.
+
 ## The Key Insight
 
 WorldArchitect logs `provider=openclaw, model=openclaw/gemini-3-flash-preview` — that is the model string **our code sends** in the request body. OpenClaw ignores it. The gateway uses its **own configured model** (`agents.defaults.model.primary` in `~/.openclaw/openclaw.json`).
@@ -101,10 +103,52 @@ for line in open('/tmp/openclaw/openclaw-$(date +%Y-%m-%d).log'):
 
 ---
 
+## Slack Not Responding — Debug Flow
+
+**Always check `~/.openclaw/logs/gateway.err.log` first.** Do not guess at token validity.
+
+```bash
+tail -30 ~/.openclaw/logs/gateway.err.log | grep -i "slack\|auth\|socket\|error"
+```
+
+Common patterns:
+- `socket mode failed to start due to non-recoverable auth error` — Slack Socket Mode can't connect
+- `auto-restart attempt N/10` — gateway is retrying, something is wrong
+
+**Before concluding a token is bad:**
+1. Check when the failures started relative to any gateway restarts — a restart may have loaded a stale plist
+2. Try `openclaw channels status` — if it says `stopped, error:An API error occurred: invalid_auth`, check the plist value
+3. Do NOT treat a single `apps.connections.open` → `invalid_auth` response as definitive. Slack API can return this transiently or if the request was malformed. Test it twice.
+4. Try `openclaw gateway restart` FIRST before touching tokens — the most common cause is the gateway not having picked up its latest plist env vars
+
+**Token architecture:**
+- `openclaw.json` stores `"appToken": "${OPENCLAW_SLACK_APP_TOKEN}"` — an env var reference
+- The gateway reads this ref and resolves it from its launchd env (set in `~/Library/LaunchAgents/ai.openclaw.gateway.plist`)
+- If the gateway was restarted without reloading the plist (e.g. `kill -HUP` instead of launchctl stop/start), the new plist values are not picked up
+- `openclaw gateway restart` is the correct restart command — it reloads the plist
+
+**To check what token the plist actually has:**
+```bash
+plutil -convert json -o - ~/Library/LaunchAgents/ai.openclaw.gateway.plist \
+  | jq -r '.EnvironmentVariables.OPENCLAW_SLACK_APP_TOKEN' | head -c 40
+```
+
+**If you must test the xapp token manually:**
+```bash
+TOKEN="$(plutil -convert json -o - ~/Library/LaunchAgents/ai.openclaw.gateway.plist | jq -r '.EnvironmentVariables.OPENCLAW_SLACK_APP_TOKEN')"
+curl -s -X POST https://slack.com/api/apps.connections.open -H "Authorization: Bearer $TOKEN" | jq .
+```
+**WARNING: This test is unreliable when the gateway is actively retrying.** If the gateway has been retrying `apps.connections.open` repeatedly (check logs for `auto-restart attempt N/10`), Slack rate-limits further connection attempts and returns `invalid_auth` for ALL calls — including your manual test — even with a valid token. Always `openclaw gateway restart` first to clear the retry storm, THEN test if needed.
+
+---
+
 ## Common Issues & Fixes
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
+| Slack `stopped, error:invalid_auth` after plist change | Gateway didn't pick up new plist env vars | `openclaw gateway restart` |
+| Slack `stopped, error:invalid_auth` persists after restart | xapp token in plist is genuinely invalid/revoked | Regenerate at api.slack.com/apps → Basic Information → App-Level Tokens |
+| Gateway token mismatch (RPC fails) | `health-check.sh` ran `openclaw gateway install --force` without `--token`, wiping plist token | Inject token: `plutil -replace EnvironmentVariables.OPENCLAW_GATEWAY_TOKEN -string "$OPENCLAW_GATEWAY_TOKEN" ~/Library/LaunchAgents/ai.openclaw.gateway.plist && openclaw gateway restart` |
 | Gateway not listening on 18789 | `ai.openclaw.consensus` holds port 18792, crashing gateway | `kill $(lsof -t -i :18792); launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway` |
 | Config parse error: `DISCORD_BOT_TOKEN` | Disabled discord channel still has `${VAR}` placeholder | Set `channels.discord.token = ""` in openclaw.json |
 | Config parse error: `SECOND_OPINION_MCP_URL` | Disabled plugin still has env var refs | Clear `plugins.entries.openclaw-mcp-adapter.config.servers = []` |

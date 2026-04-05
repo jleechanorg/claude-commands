@@ -83,8 +83,8 @@ def _resolve_version() -> str:
 
 
 __version__ = _resolve_version()
-__author__ = "jleechan"
-__email__ = "jlee@jleechan.org"
+__author__ = "$USER"
+__email__ = "jlee@$USER.org"
 
 __all__ = [
     "AutomationSafetyManager",

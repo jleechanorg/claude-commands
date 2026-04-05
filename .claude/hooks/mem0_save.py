@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Stop hook: extract facts from the last exchange and save to mem0.
+"""Stop hook: extract facts from the last exchange and save to mem0 + markdown.
 
 Fires when Claude finishes a response. Uses mem0's LLM extraction (infer=True)
 to distill facts from the last assistant message + prompt context.
+
+Dual-writes to:
+  1. Qdrant (openclaw_mem0 collection) — for semantic search via mem0_recall.py
+  2. Markdown file in the project's auto-memory dir — for human-readable log
 
 Guards:
 - stop_hook_active=True → skip (prevent infinite loop)
@@ -13,37 +17,45 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import sys
+from datetime import datetime, timezone
 
-MEM0_CONFIG = {
-    "vector_store": {
-        "provider": "qdrant",
-        "config": {
-            "host": "127.0.0.1",
-            "port": 6333,
-            "collection_name": "openclaw_mem0",
-            "embedding_model_dims": 1536,
-        },
-    },
-    "embedder": {
-        "provider": "openai",
-        "config": {
-            "model": "text-embedding-3-small",
-            "api_key": os.environ.get("OPENAI_API_KEY", ""),
-        },
-    },
-    "llm": {
-        "provider": "openai",
-        "config": {
-            "model": "gpt-4o-mini",
-            "api_key": os.environ.get("OPENAI_API_KEY", ""),
-        },
-    },
-    "version": "v1.1",
-}
-
-USER_ID = "$USER"
+from mem0_config import MEM0_CONFIG, USER_ID  # type: ignore
 MIN_RESPONSE_LEN = 100  # Skip trivial one-liners
+
+
+def _project_memory_dir(transcript_path: str | None) -> pathlib.Path | None:
+    """Derive the project auto-memory dir from the session transcript path.
+
+    Claude stores sessions at:
+      ~/.claude/projects/<escaped-cwd>/sessions/<session-id>.jsonl
+    The memory dir lives at:
+      ~/.claude/projects/<escaped-cwd>/memory/
+
+    Walk up ancestors until we find the directory whose parent is named
+    "projects" — that is the slug dir, regardless of nesting depth.
+    """
+    if not transcript_path:
+        return None
+    try:
+        p = pathlib.Path(transcript_path)
+        for ancestor in p.parents:
+            if ancestor.parent.name == "projects":
+                return ancestor / "memory"
+    except Exception:
+        pass
+    return None
+
+
+def _append_to_markdown(memory_dir: pathlib.Path, facts: list[str]) -> None:
+    """Append extracted facts to mem0_extractions.md in the project memory dir."""
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    md_path = memory_dir / "mem0_extractions.md"
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    lines = [f"\n## {ts}"] + [f"- {f}" for f in facts] + [""]
+    with open(md_path, "a", encoding="utf-8") as fh:
+        fh.write("\n".join(lines))
 
 
 def main() -> None:
@@ -56,51 +68,11 @@ def main() -> None:
     if data.get("stop_hook_active"):
         sys.exit(0)
 
-    if not os.environ.get("OPENAI_API_KEY"):
+    # Skip if GROQ_API_KEY not set (used for LLM inference; embedder uses local Ollama)
+    if not os.environ.get("GROQ_API_KEY"):
         sys.exit(0)
 
-    # Read transcript file to extract last assistant message
-    transcript_path = data.get("transcript_path", "")
-    if not transcript_path or not os.path.exists(transcript_path):
-        sys.exit(0)
-
-    # Parse JSONL file (one JSON object per line)
-    entries = []
-    try:
-        with open(transcript_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        entries.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        continue
-    except Exception:
-        sys.exit(0)
-
-    # Extract last assistant message from transcript
-    # JSONL envelope format: {type, message: {role, content}}
-    last_message = ""
-    for entry in reversed(entries):
-        if not isinstance(entry, dict):
-            continue
-        msg = entry.get("message", {})
-        if not isinstance(msg, dict):
-            continue
-        if msg.get("role") == "assistant":
-            content = msg.get("content", "")
-            if isinstance(content, str):
-                last_message = content.strip()
-                break
-            elif isinstance(content, list):
-                # Handle content as array of text blocks
-                for block in content:
-                    if isinstance(block, dict) and block.get("type") == "text":
-                        last_message = block.get("text", "").strip()
-                        break
-                if last_message:
-                    break
-
+    last_message = data.get("last_assistant_message", "").strip()
     if len(last_message) < MIN_RESPONSE_LEN:
         sys.exit(0)
 
@@ -108,14 +80,29 @@ def main() -> None:
     if last_message.count(". ") < 2 and last_message.count("\n") > 20:
         sys.exit(0)
 
+    transcript_path = data.get("transcript_path")
+    memory_dir = _project_memory_dir(transcript_path)
+
     try:
         from mem0 import Memory  # type: ignore
 
         m = Memory.from_config(MEM0_CONFIG)
         # Use infer=True: mem0 LLM extracts facts from the message
         result = m.add(last_message, user_id=USER_ID, infer=True)
-        # Normalize result — some versions return dict with "results" key
-        _ = result  # fire-and-forget
+
+        # Dual-write: also append extracted facts to markdown
+        if memory_dir:
+            results_list = (
+                result.get("results", []) if isinstance(result, dict) else
+                (result if isinstance(result, list) else [])
+            )
+            facts = [
+                r.get("memory", r.get("data", ""))
+                for r in results_list
+                if r.get("event") in ("ADD", "UPDATE") and r.get("memory", r.get("data"))
+            ]
+            if facts:
+                _append_to_markdown(memory_dir, facts)
     except Exception:
         pass  # Never block
 

@@ -178,6 +178,45 @@ execution_mode: immediate
 - **Knowledge continuity** across session boundaries
 - **Strategic approach** recommendations based on history
 
+### Claude Auto-Memory Write (File-Based)
+
+When `--summary` mode identifies significant insights, write them to Claude auto-memory:
+
+**Action Steps:**
+1. **For each major insight** identified in the session summary:
+   ```python
+   import os, re, datetime, subprocess
+   try:
+       git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
+       project_key = git_root.replace('/', '-')  # preserve leading dash: /Users/... → -Users-...
+       memory_dir = os.path.expanduser(f'~/.claude/projects/{project_key}/memory/')
+   except Exception:
+       memory_dir = os.path.expanduser('~/.claude/projects/unknown/memory/')
+   os.makedirs(memory_dir, exist_ok=True)
+   today = datetime.date.today().isoformat()
+   slug = re.sub(r'[^\w]+', '_', insight_title.lower())[:40].strip('_')
+   filename = f'project_{today}_{slug}.md'
+   content = f"""---
+name: checkpoint_{today}_{slug}
+description: Session checkpoint: {brief_description}
+type: project
+---
+
+**What**: {key_insight_or_decision}
+**Why**: {motivation_or_constraint}
+**How to apply**: {when_this_matters_in_future}
+"""
+   try:
+       with open(os.path.join(memory_dir, filename), 'w') as f:
+           f.write(content)
+       with open(os.path.join(memory_dir, 'MEMORY.md'), 'a') as f:
+           f.write(f'\n- [checkpoint_{today}_{slug}]({filename}) — {brief_description}')
+   except Exception as e:
+       print(f'Warning: checkpoint memory write failed: {e}')
+   ```
+2. **Only write** if insight is durable (architectural decision, workflow rule, environment discovery) — skip ephemeral task state
+3. **Confirm**: Report `✅ Checkpoint memory saved: {filename}`
+
 ## Advanced Features
 
 ### Smart Recommendations:

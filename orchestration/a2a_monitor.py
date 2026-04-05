@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-A2A Monitor for WorldArchitect.AI Orchestrator
+A2A Monitor for Your Project Orchestrator
 
 Monitors A2A system health, cleans up stale registrations,
 and provides system status reporting.

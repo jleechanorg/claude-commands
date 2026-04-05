@@ -1161,9 +1161,73 @@ done
 
 **Why per-file:** Easier to verify individual artifacts; no need to parse a combined file.
 
+## Video Evidence — ALWAYS REQUIRED (Both Types)
+
+**Every non-trivial verification requires TWO videos.** Neither alone is sufficient.
+
+| Type | Proves | Required when |
+|------|--------|---------------|
+| **Tmux/terminal video** | Code ran against a specific commit, tests passed, no tampering | Any code change, test run, deploy, agent session |
+| **UI/browser video** | Visual behavior and click flows occurred as claimed | Any claim touching rendered UI, user flows, or browser behavior |
+
+If your work has no UI component, tmux video alone is acceptable. If your work has both terminal and UI steps, both are required.
+
+---
+
+### Tmux / Terminal Video — Quick Checklist
+
+Full template: `~/.claude/skills/tmux-video-evidence.md`
+
+**Tool**: `asciinema` + `agg` (`.cast` → `.gif`)
+
+**Mandatory sections (in order):**
+
+| # | Section | Must show |
+|---|---------|-----------|
+| 1 | Git Provenance | `git rev-parse HEAD`, branch, merge-base |
+| 2 | Commit Log | `git log --oneline origin/main..HEAD` |
+| 3 | Code Diffs | `git diff origin/main...HEAD` (not just `--stat`) |
+| 4 | PR Status | `gh pr view <N>` |
+| 5 | Live Work | Real test/deploy/command output |
+| 6 | Post-run SHA | Same `git rev-parse HEAD` — must match section 1 |
+
+**Hard blocks** (evidence rejected if any apply):
+- Pre/post SHA mismatch
+- `echo "PASS"` instead of real test runner output
+- `--stat` only (no actual diff shown)
+- Section 1 missing
+
+---
+
+### UI / Browser Video — Quick Checklist
+
+Full template: `~/.claude/skills/ui-video-evidence.md`
+
+**Tool**: `mcp__claude-in-chrome__gif_creator` (agent sessions) or Kap (manual)
+
+**Mandatory frames (in order):**
+
+| # | Frame | Must show |
+|---|-------|-----------|
+| 1 | URL + Page Load | Full address bar with the route under test |
+| 2 | Before State | Initial state before the action |
+| 3 | Action | The click, input, or navigation |
+| 4 | After State | Result — success message, data change, navigation |
+| 5 | Git Linkage | Terminal split or console log showing `git rev-parse HEAD` |
+
+**Hard blocks** (evidence rejected if any apply):
+- URL bar cropped out
+- Only success state shown (no before/action)
+- No git SHA linkage
+- Static screenshot used instead of GIF for a flow claim
+
+---
+
 ## Related Standards
 
 - `CLAUDE.md` - Three Evidence Rule (lines 110-113)
 - `generatetest.toml` - Mock mode prohibition (lines 433-441)
 - `end2end-testing.md` - Test mode commands (/teste, /tester, /testerc)
 - `browser-testing-ocr-validation.md` - OCR evidence for visual claims
+- `tmux-video-evidence.md` - Full tmux/asciinema recording template
+- `ui-video-evidence.md` - Full UI/browser GIF recording template

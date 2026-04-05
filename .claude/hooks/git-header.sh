@@ -190,7 +190,11 @@ fi
 
 # Fast detection from branch naming patterns
 pr_text="none"
-if [[ "$local_branch" =~ pr-([0-9]+) ]]; then
+# Skip PR inference for AO-managed session/worktree branches (no PR context)
+if [[ "$local_branch" =~ ^(session|ao|jc|wa|cc|ra|wc)- ]]; then
+    # AO-managed branch — skip regex inference, rely on commit-based lookup below
+    pr_text="none"
+elif [[ "$local_branch" =~ pr-([0-9]+) ]]; then
     pr_text="#${BASH_REMATCH[1]} (inferred)"
 elif [[ "$local_branch" =~ /pr-([0-9]+) ]]; then
     pr_text="#${BASH_REMATCH[1]} (inferred)"

@@ -14,10 +14,10 @@ Shows a complete overview of the PR associated with the current branch including
 
 ## Current Context
 - Working directory: !`pwd`
-- Branch and PR status: !`/header`
+- Branch and PR status: !`~/.claude/hooks/git-header.sh --status-only 2>/dev/null || true`
 
 ## Status Execution
-!`python3 .claude/commands/status.py "$ARGUMENTS"`
+!`python3 ~/.claude/commands/status.py "$ARGUMENTS"`
 
 ## Information Displayed
 

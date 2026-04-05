@@ -1,12 +1,12 @@
 ---
 name: agento_report
-description: Generate a full agento PR status report — 6-point green checks per PR, display inline, and post to Slack #ai-slack-test.
+description: Generate a full agento PR status report — 6-point green checks, zero-touch rate, display inline, and post to Slack #ai-slack-test.
 type: skill
 ---
 
 ## Purpose
 
-Produce a comprehensive status report for all PRs agento is handling in the `jleechanorg/jleechanclaw` repo. Display the report inline in the conversation AND post a summary to Slack `#ai-slack-test`.
+Produce a comprehensive status report for all PRs agento is handling in `jleechanorg/agent-orchestrator`. Includes per-PR 6-green checks AND zero-touch-by-operator rate analysis. Display inline and post summary to Slack.
 
 ---
 
@@ -14,129 +14,149 @@ Produce a comprehensive status report for all PRs agento is handling in the `jle
 
 ### Step 1 — Collect open PRs
 
-Use the list endpoint only for number, branch, and title (the list endpoint does NOT return `mergeable`/`mergeable_state`):
+Use REST (not GraphQL — GraphQL is frequently exhausted):
 
 ```bash
-gh api "repos/jleechanorg/jleechanclaw/pulls?state=open&per_page=30&sort=updated" \
-  | jq -r '.[] | "\(.number)\t\(.head.ref)\t\(.title[:60])"'
+gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open&per_page=30&sort=updated" \
+  --jq '.[] | "\(.number)\t\(.head.ref)\t\(.title[:60])"'
 ```
 
-Also collect recently merged (last 12h):
+Also collect recently merged (last 24h):
 ```bash
-gh api "repos/jleechanorg/jleechanclaw/pulls?state=closed&per_page=15&sort=updated" \
-  | jq -r '.[] | select(.merged_at != null) | "MERGED\t\(.number)\t\(.head.ref)\t\(.title[:60])"'
+gh api "repos/jleechanorg/agent-orchestrator/pulls?state=closed&per_page=30&sort=updated&direction=desc" \
+  --jq '.[] | select(.merged_at != null) | "\(.number)\t\(.head.ref)\t\(.title[:70])\t\(.merged_at)"'
 ```
-Filter merged ones to last 12h by comparing `.merged_at` timestamp to current time.
+Filter merged ones to last 24h by comparing `.merged_at` timestamp.
 
-### Step 2 — Per-PR data fetch
+### Step 2 — Per-PR data fetch (open PRs)
 
-For each open PR number NUM, fetch mergeability, CI, and reviews in one batch:
+For each open PR number NUM, fetch mergeability, CI, and reviews via REST:
 
 ```bash
-# Mergeability + CI status + draft state
-gh pr view NUM --repo jleechanorg/jleechanclaw \
-  --json number,mergeable,mergeStateStatus,statusCheckRollup,isDraft \
-  | jq '{mergeable, mergeStateStatus, isDraft, checks: [.statusCheckRollup[] | {name, status, conclusion}]}'
+# Mergeability (REST returns boolean mergeable + string mergeable_state)
+gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM" \
+  --jq '{mergeable, mergeable_state}'
+
+# CI checks
+SHA=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM" --jq '.head.sha')
+gh api "repos/jleechanorg/agent-orchestrator/commits/$SHA/check-runs" \
+  --jq '.check_runs[] | {name, status, conclusion}'
 
 # Reviews
-gh api "repos/jleechanorg/jleechanclaw/pulls/NUM/reviews" \
-  | jq '[.[] | select(.user.login == "coderabbitai[bot]")] | last | {state, body_len: (.body | length)}'
-gh api "repos/jleechanorg/jleechanclaw/pulls/NUM/reviews" \
-  | jq '[.[] | select(.user.login == "cursor[bot]")] | last | {state}'
+gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM/reviews" \
+  --jq '.[] | {user: .user.login, state}'
 
-# Evidence PASS comment check
-gh api "repos/jleechanorg/jleechanclaw/issues/NUM/comments" \
-  | jq -r '[.[] | .body | select(contains("**PASS** — evidence review: agent self-reviewed"))] | length'
+# Inline comments (check for High Severity / Critical / Major blockers)
+gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM/comments" \
+  --jq '[.[] | select(.body | test("High Severity|Critical|Major"))] | length'
 ```
 
 ### Step 3 — 6-point green check per open PR
 
-Apply all 6 conditions using the data from Step 2:
+Apply all 6 conditions:
 
 | # | Condition | Pass criteria |
 |---|-----------|---------------|
-| 1 | Mergeable | `mergeable == "MERGEABLE"` (GraphQL string; REST returns boolean — REST: `mergeable == true`) |
-| 2 | No conflict | `mergeStateStatus` is not `DIRTY` (dirty = merge conflict) |
-| 3 | CI passing | All `statusCheckRollup` checks: conclusion is `SUCCESS`, `NEUTRAL`, or `SKIPPED` — no `FAILURE`. State `UNSTABLE` → CI_FAILED (not CONFLICT) |
-| 4 | CodeRabbit APPROVED | Last CR review: `state == APPROVED` AND body length > 0 |
-| 5 | Bugbot not blocking | Last `cursor[bot]` review state is not `CHANGES_REQUESTED` |
-| 6 | Evidence PASS | A comment containing the exact string `**PASS** — evidence review: agent self-reviewed ✅, CR reviewed ✅, codex passed ✅` exists (bare `**PASS**` is insufficient per CLAUDE.md) |
+| 1 | CI passing | All check-runs completed with SUCCESS, NEUTRAL, or SKIPPED — no FAILURE |
+| 2 | No conflict | `mergeable_state` is `clean` (not `dirty` or `unstable`) |
+| 3 | CodeRabbit APPROVED | Last `coderabbitai[bot]` review state is `APPROVED` |
+| 4 | Bugbot OK | Last `cursor[bot]` check conclusion is `neutral` or `success` |
+| 5 | No blocking comments | Zero inline comments with "High Severity", "Critical", or "Major" |
+| 6 | Evidence PASS | `/er` comment with PASS exists (skip if no evidence bundle) |
 
 **Status label** (pick worst failing condition):
 - `GREEN` — all 6 pass
-- `CONFLICT` — condition 1 or 2 fails (`mergeable == false` or `mergeStateStatus == DIRTY`)
-- `CI_FAILED` — condition 3 fails (any check has `FAILURE` conclusion, or `mergeStateStatus == UNSTABLE`)
-- `CI_PENDING` — CI checks still `IN_PROGRESS`
-- `NO_CR` — condition 4 fails (CR hasn't APPROVED or approved with empty body)
-- `BUGBOT_BLOCKING` — condition 5 fails
-- `NO_EVIDENCE` — condition 6 fails (skip this check if the PR has no evidence bundle)
-- `COMMENTS` — unresolved Major/Critical comments from any reviewer
+- `CONFLICT` — mergeable_state is `dirty`
+- `CI_FAILED` — any check has FAILURE conclusion
+- `CI_PENDING` — checks still in_progress
+- `NO_CR` — CodeRabbit hasn't APPROVED
+- `CR_CHANGES_REQUESTED` — CodeRabbit posted CHANGES_REQUESTED
+- `COMMENTS` — unresolved High/Critical/Major comments
+- `NO_EVIDENCE` — evidence check failed (skip if N/A)
 
-### Step 4 — Check AO sessions (optional, graceful if `ao` not in PATH)
+### Step 4 — Zero-touch rate analysis (KEY ADDITION)
+
+**Definition** (from `~/.openclaw/SOUL.md`): Zero-touch-by-operator is measured by the **`[agento]`** prefix in the PR title. A merged PR with `[agento]` prefix means AO produced the work and brought it to merge without operator intervention.
+
+For each merged PR in the window:
 
 ```bash
-ao status 2>/dev/null | head -40 || echo "(ao not available)"
+gh api "repos/jleechanorg/agent-orchestrator/pulls?state=closed&per_page=30&sort=updated&direction=desc" \
+  --jq '.[] | select(.merged_at != null) | {
+    number,
+    title: .title[:70],
+    merged_at,
+    agento: (.title | test("^\\[agento\\]"))
+  }'
 ```
 
-Note which sessions have PR-numbered branches and cross-reference with the PR list.
+Calculate:
+- **Total merged** in window
+- **[agento] tagged** (zero-touch)
+- **Non-[agento]** (operator-assisted)
+- **Zero-touch rate** = agento_count / total_merged * 100
+
+For each non-[agento] PR, note WHY it wasn't zero-touch — common reasons:
+- Missing `[agento]` prefix (worker didn't tag it)
+- Operator had to fix lint/build errors on main
+- Operator manually resolved merge conflicts
+- Operator directly pushed code fixes
+- CR review required operator comments
 
 ### Step 5 — Format and display the report inline
-
-Display a formatted report in the conversation:
 
 ```
 ## Agento Status Report — YYYY-MM-DD HH:MM
 
 ### Summary
-- Open PRs tracked: N (jleechanorg/jleechanclaw)
+- Repo: jleechanorg/agent-orchestrator
+- Open PRs: N
 - GREEN (ready to merge): N
 - Not green: N
-- Merged (last 12h): N
+- Merged (last 24h): N
+- Zero-touch rate (24h): X% (N/M [agento]-tagged of M total merged)
 
 ### Open PRs
 
 | PR | Branch | Status | Blockers |
 |----|--------|--------|----------|
-| #123 [title] | branch-name | ✅ GREEN | — |
-| #124 [title] | branch-name | ⚠️ NO_CR | CodeRabbit not APPROVED |
-| #125 [title] | branch-name | ❌ CI_FAILED | CI check "pytest" FAILURE |
+| [#NUM](URL) title | branch | GREEN/status | blocker details |
 
-### Merged (last 12h)
-- #120 branch-foo — merged ✅
+### Merged (last 24h)
+
+| PR | Title | Zero-touch? | Notes |
+|----|-------|-------------|-------|
+| [#NUM](URL) | title | [agento] YES / NO | reason if NO |
+
+### Zero-Touch Analysis
+- Rate: X% (N/M)
+- Non-zero-touch PRs and why:
+  - #NUM: reason (e.g., "operator fixed lint on main before CI could pass")
+  - #NUM: reason (e.g., "worker didn't add [agento] prefix")
 
 ### AO Sessions
-(paste ao status output or "(ao not available)")
+(tmux session count + key worker status)
 ```
-
-Link each PR number to its GitHub URL: `https://github.com/jleechanorg/jleechanclaw/pull/NUM`
 
 ### Step 6 — Post Slack summary via MCP
 
-Post to `#ai-slack-test` (channel ID: `C0AKALZ4CKW`) using the Slack MCP tool:
+Post to `#ai-slack-test` (channel ID: `C0AKALZ4CKW`):
 
 ```
 mcp__slack__conversations_add_message(
   channel_id="C0AKALZ4CKW",
-  text="*Agento Status Report — YYYY-MM-DD HH:MM*\n\n✅ GREEN: N PRs\n⚠️ Not green: N PRs\n🔀 Merged (12h): N PRs\n\n<details per PR>\n\nFull report in Claude conversation."
+  text="*Agento Status Report — YYYY-MM-DD HH:MM*\n\nRepo: jleechanorg/agent-orchestrator\nOpen: N PRs | GREEN: N | Not green: N\nMerged (24h): N | Zero-touch rate: X%\n\n<per-PR details>"
 )
 ```
-
-Keep the Slack message concise (under 40 lines). Use:
-- `✅` for GREEN
-- `⚠️` for not-green with the status label
-- `🔀` for merged
-- Include PR URLs as `<URL|#NUM title>` for Slack hyperlinks
 
 ---
 
 ## Notes
 
-- Scope: `jleechanorg/jleechanclaw` only (not all jleechanorg repos).
-- The list endpoint (`pulls?state=open`) does NOT return `mergeable`/`mergeable_state` — always use `gh pr view NUM --json mergeable,mergeStateStatus` per-PR for those fields.
-- `mergeable` from `gh pr view --json` (GraphQL) is a **string**: "MERGEABLE", "CONFLICTING", or "UNKNOWN" — compare with `== "MERGEABLE"`, not `== true`. The REST endpoint (`gh api .../pulls/NUM`) returns boolean true/false/null.
-- `mergeStateStatus == UNSTABLE` means CI is failing, not a merge conflict — maps to `CI_FAILED`.
-- If `ao status` is unavailable, skip it gracefully — don't fail the report.
-- Always display the inline report FIRST, then post Slack.
-- The Slack post uses MCP (`mcp__slack__conversations_add_message`), NOT curl.
-- Target channel: `#ai-slack-test` (`C0AKALZ4CKW`). The bot is not in `#all-$USER-ai` (C09GRLXF9GR).
-- Evidence condition 6 is skipped if the PR clearly has no evidence bundle.
+- Scope: `jleechanorg/agent-orchestrator` (not jleechanclaw — that repo is deprecated for AO work).
+- Use REST API (`gh api`) not GraphQL (`gh pr view --json`) — GraphQL is frequently exhausted.
+- `mergeable_state` from REST: `clean`, `dirty`, `unstable`, `unknown`.
+- Zero-touch convention: `[agento]` prefix in PR title (from `~/.openclaw/SOUL.md`).
+- If `ao status` is unavailable, use `tmux list-sessions | grep -E 'ao-[0-9]+'` as fallback.
+- Always display inline report FIRST, then post Slack.
+- The Slack post uses MCP, NOT curl.

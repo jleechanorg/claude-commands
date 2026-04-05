@@ -18,11 +18,12 @@ import smtplib
 import subprocess
 import tempfile
 import time
+from collections.abc import Sequence
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any
 
 from .logging_utils import setup_logging as _setup_logging
 
@@ -47,7 +48,7 @@ class AutomationUtils:
     }
 
     @classmethod
-    def setup_logging(cls, name: str, log_filename: str = None) -> logging.Logger:
+    def setup_logging(cls, name: str, log_filename: str | None = None) -> logging.Logger:
         """Unified logging setup delegated to centralized logging_utils.
 
         Args:
@@ -96,7 +97,7 @@ class AutomationUtils:
         return data_dir
 
     @classmethod
-    def get_smtp_credentials(cls) -> Tuple[Optional[str], Optional[str]]:
+    def get_smtp_credentials(cls) -> tuple[str | None, str | None]:
         """Securely get SMTP credentials from keyring or environment"""
         username = None
         password = None
@@ -105,8 +106,11 @@ class AutomationUtils:
             try:
                 username = keyring.get_password("${PROJECT_NAME:-your-project}-automation", "smtp_username")
                 password = keyring.get_password("${PROJECT_NAME:-your-project}-automation", "smtp_password")
-            except Exception:
-                pass  # Fall back to environment variables
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Keyring lookup failed; falling back to environment variables: %s",
+                    exc,
+                )
 
         # Fallback to environment variables if keyring fails or unavailable
         if not username:
@@ -156,7 +160,7 @@ class AutomationUtils:
 Time: {datetime.now().isoformat()}
 System: WorldArchitect Automation
 
-This is an automated notification from the WorldArchitect.AI automation system."""
+This is an automated notification from the Your Project automation system."""
 
             msg.attach(MIMEText(full_message, "plain"))
 
@@ -189,7 +193,7 @@ This is an automated notification from the WorldArchitect.AI automation system."
                                       retry_attempts: int = 1,
                                       retry_backoff_seconds: float = 1.0,
                                       retry_backoff_multiplier: float = 2.0,
-                                      retry_on_stderr_substrings: Optional[Sequence[str]] = None) -> subprocess.CompletedProcess:
+                                      retry_on_stderr_substrings: Sequence[str] | None = None) -> subprocess.CompletedProcess:
         """Execute subprocess with standardized timeout and error handling
 
         Args:
@@ -217,8 +221,7 @@ This is an automated notification from the WorldArchitect.AI automation system."
             retry_attempts_int = int(retry_attempts)
         except (TypeError, ValueError):
             retry_attempts_int = 1
-        if retry_attempts_int < 1:
-            retry_attempts_int = 1
+        retry_attempts_int = max(retry_attempts_int, 1)
 
         attempt = 1
         while True:
@@ -295,7 +298,7 @@ This is an automated notification from the WorldArchitect.AI automation system."
             raise RuntimeError(f"Failed to write JSON file {file_path}: {e}") from e
 
     @classmethod
-    def get_memory_config(cls) -> Dict[str, str]:
+    def get_memory_config(cls) -> dict[str, str]:
         """Load memory email configuration (for backward compatibility)"""
         config = {}
         config_file = Path.home() / ".memory_email_config"
@@ -320,7 +323,7 @@ This is an automated notification from the WorldArchitect.AI automation system."
 
 
 # Convenience functions for backward compatibility
-def setup_logging(name: str, log_filename: str = None) -> logging.Logger:
+def setup_logging(name: str, log_filename: str | None = None) -> logging.Logger:
     """Convenience function for setup_logging"""
     return AutomationUtils.setup_logging(name, log_filename)
 

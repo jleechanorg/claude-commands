@@ -10,6 +10,24 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
+### Phase 0: Check Claude Memories for Prior Occurrences
+
+**Action Steps:**
+1. **Discover memory files** (current project only, exclude index):
+   ```python
+   import glob, os, subprocess
+   try:
+       git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
+       project_key = git_root.replace('/', '-')  # preserve leading dash: /Users/... → -Users-...
+       pattern = os.path.expanduser(f'~/.claude/projects/{project_key}/memory/*.md')
+       memory_files = [f for f in glob.glob(pattern) if not f.endswith('MEMORY.md')]
+   except Exception:
+       memory_files = []  # skip if not in a git repo — no cross-project fallback
+   ```
+2. **Filter by bug keywords**: Extract key error terms/file names from debug task; match against memory content
+3. **If match found**: Display prominently as "🔴 SEEN BEFORE — Check memory first:" with the full memory content
+4. **If no match**: Continue to Phase 1 checklist
+
 ### Phase 1: Debug Checklist
 
 **Action Steps:**
@@ -27,6 +45,12 @@ When `/debug` is active, ensure:
 11. [ ] Fix is validated with tests
 12. [ ] **Anti-bias check**: "What should NOT be working?" tested
 13. [ ] Learning captured (automatic `/learn` trigger when debugging succeeds)
+14. [ ] **Claude auto-memory written** — On successful resolution, write feedback memory file:
+    - Derive `memory_dir` from `git rev-parse --show-toplevel` → replace `/` with `-` → `~/.claude/projects/<project-key>/memory/`
+    - File: `feedback_debug_<YYYY-MM-DD>_<slug>.md` (slug: lowercase, punctuation→underscore, max 40 chars)
+    - Format: frontmatter (name/description/type=feedback) + Bug/Root cause/Fix/How to apply fields
+    - Create `memory_dir` with `os.makedirs(..., exist_ok=True)` before writing
+    - Append pointer to MEMORY.md index; wrap writes in try/except (graceful failure)
 
 ## 📋 REFERENCE DOCUMENTATION
 

@@ -25,8 +25,11 @@ cmd = re.sub(r'"[^"]*"', '""', cmd)
 # Remove single-quoted strings
 cmd = re.sub(r"'[^']*'", "''", cmd)
 
-# AO session name pattern
-AO_PATTERN = re.compile(r'^(ao|jc|wa|cc|ra|wc)-[0-9]+$')
+# AO worktree name pattern
+# Covers: ao-1350 (numeric), ao-pr263-fix (PR claim), ao-pr263 (PR claim), etc.
+# AO spawn creates worktrees with ao-<descriptive> naming.
+# Human worktrees typically use: worktree_*, bare names (pr263-fix), feature/...
+AO_PATTERN = re.compile(r'^(ao|jc|wa|cc|ra|wc)-[a-z0-9-]+$')
 
 # Split on common shell separators
 parts = re.split(r'[;&|\n]+', cmd)
@@ -75,7 +78,7 @@ PYEOF
 )
 
 if [ "$BLOCKED" = "BLOCKED" ]; then
-  echo "BLOCKED: This worktree is not an AO-managed session. Only AO worktrees (ao-NNN) can be removed by agents." >&2
+  echo "BLOCKED: This worktree is not an AO-managed session. Only AO worktrees (ao-*, jc-*, wc-*, etc.) can be removed by agents." >&2
   echo "Human-created worktrees require manual removal." >&2
   exit 2
 fi

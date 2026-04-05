@@ -10,7 +10,7 @@ import sys
 import tempfile
 import shutil
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 # Add the parent directory ('.claude/commands') to path for importing
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -448,6 +448,28 @@ export USER="jleechan"
                             result = self.exporter.phase2_github_publish()
                             self.assertIn('github.com', result)
 
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
+    def test_dry_run_clone_skips_git_remote_set_url_with_token(self):
+        """Dry-run must not configure token-bearing git remote (avoids .git/config leak)."""
+        with patch.object(ClaudeCommandsExporter, '_get_project_root', return_value=self.project_root):
+            exporter = ClaudeCommandsExporter(dry_run=True)
+            exporter.export_dir = self.export_dir
+            exporter.repo_dir = self.repo_dir
+            exporter.github_token = 'secret_token_for_test'
+
+        with patch.object(ClaudeCommandsExporter, '_configure_authenticated_remote') as mock_cfg:
+            with patch('shutil.which', return_value='/usr/bin/gh'):
+                with patch('subprocess.run') as mock_run:
+                    mock_run.return_value = MagicMock(returncode=0, stdout='', stderr='')
+                    exporter._clone_repository()
+
+        mock_cfg.assert_not_called()
+        self.assertTrue(mock_run.called, "clone must invoke subprocess for gh repo clone")
+        first_cmd = mock_run.call_args_list[0][0][0]
+        self.assertEqual(first_cmd[0], '/usr/bin/gh')
+        self.assertIn('repo', first_cmd)
+        self.assertIn('clone', first_cmd)
+
     def test_error_handling_matrix(self):
         """Test error handling across different failure scenarios."""
         if ClaudeCommandsExporter is None:
@@ -871,6 +893,36 @@ class TestExportScriptIntegrity(unittest.TestCase):
         self.assertNotIn('secondo-cli.sh', list_contents,
             "secondo-cli.sh must not be in secondo_scripts (lives in .claude/scripts/, "
             "not scripts/); it is exported by _export_claude_scripts instead"
+        )
+
+
+class TestExportcommandsAgentCliDocs(unittest.TestCase):
+    """exportcommands.md documents orchestrated runs with --agent-cli minimax."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.project_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..', '..', '..')
+        )
+        cls.exportcommands_md = os.path.join(
+            cls.project_root, '.claude', 'commands', 'exportcommands.md'
+        )
+
+    def test_exportcommands_md_documents_minimax_agent_cli(self):
+        """Slash command doc must describe ai_orch / runner.py with minimax."""
+        path = self.exportcommands_md
+        self.assertTrue(os.path.isfile(path), f"missing {path}")
+        with open(path, encoding='utf-8') as f:
+            text = f.read()
+        self.assertIn('--agent-cli minimax', text)
+        self.assertIn('MINIMAX_API_KEY', text)
+        self.assertIn('orchestration/runner.py', text)
+        self.assertIn('ai_orch', text)
+        self.assertIn('CLI_PROFILES', text)
+        self.assertIn(
+            'argument-hint:',
+            text[:800],
+            'frontmatter should advertise orchestrated CLI hint',
         )
 
 
