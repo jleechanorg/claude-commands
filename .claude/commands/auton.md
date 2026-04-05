@@ -149,7 +149,7 @@ for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" 
 
   # Get last commit date
   last_commit=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/commits" --jq '.[-1].commit.committer.date' 2>/dev/null)
-  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || echo 0)
+  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || date -u -d "$last_commit" +%s 2>/dev/null || echo 0)
   gap_mins=$(( (current_epoch - commit_epoch) / 60 ))
 
   # Get review state
@@ -220,9 +220,17 @@ if [ -n "$APPROVED_PR" ]; then
     echo "  Gate 3 OK: $CR_ACTIONABLE"
   fi
 
-  # Gate 5: Unresolved comments — REST has no isResolved
-  REST_COMMENTS=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/comments"     --jq '[.[] | select(.in_reply_to_id == null)] | length' 2>/dev/null)
-  GQL_UNRESOLVED=$(gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{isResolved}}}}}'     -f owner="jleechanorg" -f repo="agent-orchestrator" -F pr="$APPROVED_PR"     --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo "graphql_failed")
+  # Gate 5: Unresolved review threads via GraphQL (has isResolved field)
+  GQL_UNRESOLVED=$(gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{isResolved}}}}}' \
+    -f owner="jleechanorg" -f repo="agent-orchestrator" -F pr="$APPROVED_PR" \
+    --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo "graphql_failed")
+  if [ "$GQL_UNRESOLVED" = "graphql_failed" ]; then
+    echo "  Gate 5 SKIP: GraphQL unavailable"
+  elif [ "$GQL_UNRESOLVED" -gt 0 ]; then
+    echo "  FAIL Gate 5: $GQL_UNRESOLVED unresolved threads"
+  else
+    echo "  Gate 5 OK: 0 unresolved"
+  first:100){nodes{isResolved}}}}}'     -f owner="jleechanorg" -f repo="agent-orchestrator" -F pr="$APPROVED_PR"     --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo "graphql_failed")
   if [ "$REST_COMMENTS" != "$GQL_UNRESOLVED" ]; then
     echo "  MISMATCH Gate 5: REST root comments=$REST_COMMENTS vs GraphQL unresolved=$GQL_UNRESOLVED (skeptic-cron uses REST — BUG if REST>0)"
   else
