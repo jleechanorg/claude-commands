@@ -37,7 +37,7 @@ class CopilotCommandBase(ABC):
 
         # No caching - always fetch fresh data from GitHub API
 
-    def _get_repo_info(self) -> str:
+    def _get_repo_info(self) -> Optional[str]:
         """Get repository info from GitHub CLI or git remote."""
         try:
             result = subprocess.run(
