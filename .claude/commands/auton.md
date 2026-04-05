@@ -230,11 +230,6 @@ if [ -n "$APPROVED_PR" ]; then
     echo "  FAIL Gate 5: $GQL_UNRESOLVED unresolved threads"
   else
     echo "  Gate 5 OK: 0 unresolved"
-  first:100){nodes{isResolved}}}}}'     -f owner="jleechanorg" -f repo="agent-orchestrator" -F pr="$APPROVED_PR"     --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo "graphql_failed")
-  if [ "$REST_COMMENTS" != "$GQL_UNRESOLVED" ]; then
-    echo "  MISMATCH Gate 5: REST root comments=$REST_COMMENTS vs GraphQL unresolved=$GQL_UNRESOLVED (skeptic-cron uses REST — BUG if REST>0)"
-  else
-    echo "  Gate 5 OK: $GQL_UNRESOLVED unresolved"
   fi
 
   # Check last skeptic-cron run
