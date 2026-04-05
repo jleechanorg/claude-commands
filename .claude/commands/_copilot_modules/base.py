@@ -69,8 +69,8 @@ class CopilotCommandBase(ABC):
                 pass
             # Default fallback — prefer GITHUB_REPOSITORY env var (set in CI/Actions)
             return (
-                os.environ.get("DEFAULT_REPO")
-                or os.environ.get("GITHUB_REPOSITORY")
+                os.environ.get("GITHUB_REPOSITORY")
+                or os.environ.get("DEFAULT_REPO")
                 or None  # No valid fallback — caller must handle None or set env vars
             )
 
