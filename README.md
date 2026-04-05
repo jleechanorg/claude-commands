@@ -57,11 +57,11 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 - **Infrastructure**: `/scaffold` - Repository setup and development environment
 - **Testing**: `/test`, `/tdd`, `/testuif` - Comprehensive testing workflows
 
-**52 Hooks** for Claude Code automation and workflow optimization
+**60 Hooks** for Claude Code automation and workflow optimization
 
 **22 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**89 Skills** providing shared knowledge references and capabilities
+**192 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 
