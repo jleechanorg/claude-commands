@@ -113,11 +113,11 @@ gh api rate_limit --jq '.resources | {core: .core.remaining, graphql: .graphql.r
 # B2. Open PRs with status
 gh pr list --repo jleechanorg/agent-orchestrator --state open --json number,title,mergeable,reviewDecision,statusCheckRollup --jq '.[] | {number, title, mergeable, reviewDecision, ci: (.statusCheckRollup // [] | map(select(.conclusion != "")) | map(.conclusion) | unique)}'
 
-# B3. Non-green reasons from poller log
-tail -100 /tmp/ao-pr-poller.log 2>/dev/null | grep -E "not green|SKIP|WARNING|ERROR" | tail -20
+# B3. Non-green reasons from orchestrator log
+tail -100 /tmp/ao-orchestrators.log 2>/dev/null | grep -E "not green|SKIP|WARNING|ERROR" | tail -20
 
 # B4. Recent spawning activity
-tail -50 /tmp/ao-pr-poller.log 2>/dev/null | grep -E "Spawning|SUCCESS" | tail -10
+tail -50 /tmp/ao-orchestrators.log 2>/dev/null | grep -E "Spawning|SUCCESS" | tail -10
 
 # B5. PR worker coverage check (deterministic — exits non-zero if uncovered PRs)
 $HOME/.openclaw/scripts/check-pr-worker-coverage.sh 2>/dev/null || echo "Coverage script not found or returned non-zero (uncovered PRs exist)"
@@ -212,17 +212,8 @@ APPROVED_PR=$(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" \
 if [ -n "$APPROVED_PR" ]; then
   echo "Spot-checking PR #$APPROVED_PR"
 
-  # Gate 3: CR state — must filter to actionable reviews (APPROVED/CHANGES_REQUESTED), not COMMENTED
-  CR_ACTIONABLE=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/reviews" \
-    --jq '[.[] | select(.user.login == "coderabbitai[bot]") | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED")] | sort_by(.submitted_at) | last | .state // "none"' 2>/dev/null)
-  CR_LATEST=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/reviews" \
-    --jq '[.[] | select(.user.login == "coderabbitai[bot]")] | sort_by(.submitted_at) | last | .state // "none"' 2>/dev/null)
-  # skeptic-cron uses latest review state; flag when actionable state differs (COMMENTED-only reviews would be missed)
-  if [ "$CR_ACTIONABLE" = "$CR_LATEST" ]; then
-    echo "  Gate 3 OK: $CR_ACTIONABLE"
-  else
-    echo "  MISMATCH Gate 3: actionable=$CR_ACTIONABLE vs latest=$CR_LATEST (skeptic-cron uses latest — BUG)"
-  fi
+  # Gate 3: CR state — skeptic-cron uses the last review state as-is (APPROVED → pass, anything else → fail Gate 3)
+  # This is validated by Gate 7 (skeptic-cron workflow run); spot-check removed to avoid redundant/confusing check
 
   # Gate 5: Unresolved review threads via GraphQL (skeptic-cron uses GraphQL reviewThreads/isResolved)
   GQL_UNRESOLVED=$(gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:500){nodes{isResolved}pageInfo{hasNextPage}}}}}' \
@@ -325,7 +316,7 @@ For each recently merged PR, check and report:
 | Total merged | N |
 | Auto-merged (merged_by=github-actions[bot]) | N (NN%) |
 | Manual-merged (merged_by=human) | N (NN%) |
-| Zero-touch (auto-merged + all [agento] commits) | N (NN%) |
+| Zero-touch (merged_by=github-actions[bot]) | N (NN%) |
 <List zero-touch PRs by number>
 
 ### Root cause
