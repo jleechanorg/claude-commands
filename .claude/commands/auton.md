@@ -208,7 +208,7 @@ Pick one APPROVED PR (if any exist) and verify skeptic-cron's gate checks agree 
 echo "=== SKEPTIC-CRON CORRECTNESS SPOT-CHECK ==="
 # Find an APPROVED PR
 APPROVED_PR=$(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" \
-  --jq '[.[] | select(.draft == false)] | .[0].number' 2>/dev/null)
+  --jq '[.[] | select(.draft == false and .review_decision == "APPROVED")] | .[0].number // empty' 2>/dev/null)
 if [ -n "$APPROVED_PR" ]; then
   echo "Spot-checking PR #$APPROVED_PR"
 
@@ -221,6 +221,8 @@ if [ -n "$APPROVED_PR" ]; then
     --jq 'if [.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage] | any then "graphql_TRUNCATED" else [.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length end' 2>/dev/null || echo "graphql_failed")
   if [ "$GQL_UNRESOLVED" = "graphql_TRUNCATED" ]; then
     echo "  FAIL Gate 5: GraphQL thread pagination truncated (>500 threads) — cannot determine unresolved count"
+  elif [ "$GQL_UNRESOLVED" = "graphql_failed" ]; then
+    echo "  FAIL Gate 5: GraphQL query failed"
   else
     echo "  Gate 5 OK: $GQL_UNRESOLVED unresolved threads"
   fi
