@@ -99,7 +99,7 @@ launchctl print gui/$(id -u)/ai.agento.orchestrators 2>/dev/null | grep -E "stat
 tail -5 /tmp/ao-orchestrators.log 2>/dev/null || echo "No orchestrator log"
 
 # A5. Stray worktrees blocking spawns?
-git -C ~/.openclaw worktree list 2>/dev/null | grep -v "~/.openclaw\b\|~/.worktrees" || true
+git -C ~/.openclaw worktree list 2>/dev/null | grep -v "~/.openclaw\|~/.worktrees" || true
 ```
 
 #### Group B — GitHub & Rate Limits
@@ -178,7 +178,7 @@ Measure how many merged PRs were truly autonomous. A PR is "zero-touch" ONLY if 
 echo "=== MERGE QUALITY AUDIT (last 7 days) ==="
 cutoff=$(date -u -v-7d +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d "7 days ago" +%Y-%m-%dT%H:%M:%SZ)
 auto=0; manual=0; total=0
-for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=closed&sort=updated&direction=desc&per_page=50" --jq "[.[] | select(.merged_at != null) | select(.merged_at > \"$cutoff\")] | .[] | @base64" 2>/dev/null); do
+for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=closed&sort=updated&direction=desc&per_page=50" --jq "[.[] | select(.merged_at != null) | select(.merged_at > "$cutoff")] | .[] | @base64" 2>/dev/null); do
   pr=$(echo "$pr_json" | base64 -D 2>/dev/null || echo "$pr_json" | base64 -d 2>/dev/null)
   number=$(echo "$pr" | jq -r '.number')
   title=$(echo "$pr" | jq -r '.title[0:50]')
@@ -207,16 +207,13 @@ Pick one APPROVED PR (if any exist) and verify skeptic-cron's gate checks agree 
 ```bash
 echo "=== SKEPTIC-CRON CORRECTNESS SPOT-CHECK ==="
 # Find an APPROVED PR
-APPROVED_PR=$(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" \
-  --jq '[.[] | select(.draft == false)] | .[0].number' 2>/dev/null)
+APPROVED_PR=$(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open"   --jq '[.[] | select(.draft == false)] | .[0].number' 2>/dev/null)
 if [ -n "$APPROVED_PR" ]; then
   echo "Spot-checking PR #$APPROVED_PR"
 
   # Gate 3: CR state — must filter to actionable reviews (APPROVED/CHANGES_REQUESTED), not COMMENTED
-  CR_ACTIONABLE=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/reviews" \
-    --jq '[.[] | select(.user.login == "coderabbitai[bot]") | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED")] | sort_by(.submitted_at) | last | .state // "none"' 2>/dev/null)
-  CR_LATEST=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/reviews" \
-    --jq '[.[] | select(.user.login == "coderabbitai[bot]")] | sort_by(.submitted_at) | last | .state // "none"' 2>/dev/null)
+  CR_ACTIONABLE=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/reviews"     --jq '[.[] | select(.user.login == "coderabbitai[bot]") | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED")] | sort_by(.submitted_at) | last | .state // "none"' 2>/dev/null)
+  CR_LATEST=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/reviews"     --jq '[.[] | select(.user.login == "coderabbitai[bot]")] | sort_by(.submitted_at) | last | .state // "none"' 2>/dev/null)
   if [ "$CR_ACTIONABLE" != "$CR_LATEST" ]; then
     echo "  MISMATCH Gate 3: actionable=$CR_ACTIONABLE vs latest=$CR_LATEST (skeptic-cron uses latest — BUG)"
   else
@@ -224,11 +221,8 @@ if [ -n "$APPROVED_PR" ]; then
   fi
 
   # Gate 5: Unresolved comments — REST has no isResolved
-  REST_COMMENTS=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/comments" \
-    --jq '[.[] | select(.in_reply_to_id == null)] | length' 2>/dev/null)
-  GQL_UNRESOLVED=$(gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{isResolved}}}}}' \
-    -f owner="jleechanorg" -f repo="agent-orchestrator" -F pr="$APPROVED_PR" \
-    --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo "graphql_failed")
+  REST_COMMENTS=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/comments"     --jq '[.[] | select(.in_reply_to_id == null)] | length' 2>/dev/null)
+  GQL_UNRESOLVED=$(gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{isResolved}}}}}'     -f owner="jleechanorg" -f repo="agent-orchestrator" -F pr="$APPROVED_PR"     --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo "graphql_failed")
   if [ "$REST_COMMENTS" != "$GQL_UNRESOLVED" ]; then
     echo "  MISMATCH Gate 5: REST root comments=$REST_COMMENTS vs GraphQL unresolved=$GQL_UNRESOLVED (skeptic-cron uses REST — BUG if REST>0)"
   else
@@ -236,8 +230,7 @@ if [ -n "$APPROVED_PR" ]; then
   fi
 
   # Check last skeptic-cron run
-  LAST_CRON=$(gh api "repos/jleechanorg/agent-orchestrator/actions/workflows/skeptic-cron.yml/runs?per_page=3" \
-    --jq '.workflow_runs[] | "\(.conclusion) \(.created_at[0:16])"' 2>/dev/null)
+  LAST_CRON=$(gh api "repos/jleechanorg/agent-orchestrator/actions/workflows/skeptic-cron.yml/runs?per_page=3"     --jq '.workflow_runs[] | "\(.conclusion) \(.created_at[0:16])"' 2>/dev/null)
   echo "  Last skeptic-cron runs: $LAST_CRON"
 fi
 ```
@@ -255,7 +248,7 @@ for sess in $(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E '(ao
   case "$sess" in
     ao-*) repo="jleechanorg/agent-orchestrator" ;;
     jc-*) repo="jleechanorg/jleechanclaw" ;;
-    wa-*) repo="$GITHUB_REPOSITORY" ;;
+    wa-*) repo="${GITHUB_REPOSITORY:-owner/worldarchitect.ai}" ;;  # set GITHUB_REPOSITORY or hardcode your repo
     wc-*) repo="jleechanorg/worldai_claw" ;;
     *) continue ;;
   esac
