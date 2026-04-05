@@ -219,7 +219,7 @@ npm test src/components/test_file.js
 
 ## 📚 Version History
 
-## Changelog
+## Version History
 
 See above for current changelog. For complete version history, see below.
 
