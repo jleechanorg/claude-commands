@@ -226,10 +226,12 @@ if [ -n "$APPROVED_PR" ]; then
   # Gate 5: Unresolved comments — REST has no isResolved
   REST_COMMENTS=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/comments" \
     --jq '[.[] | select(.in_reply_to_id == null)] | length' 2>/dev/null)
-  GQL_UNRESOLVED=$(gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{isResolved}}}}}' \
+  GQL_UNRESOLVED=$(gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:500){nodes{isResolved}pageInfo{hasNextPage}}}}}' \
     -f owner="jleechanorg" -f repo="agent-orchestrator" -F pr="$APPROVED_PR" \
-    --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo "graphql_failed")
-  if [ "$REST_COMMENTS" != "$GQL_UNRESOLVED" ]; then
+    --jq 'if [.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage] | any then "graphql_TRUNCATED" else [.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length end' 2>/dev/null || echo "graphql_failed")
+  if [ "$GQL_UNRESOLVED" = "graphql_TRUNCATED" ]; then
+    echo "  FAIL Gate 5: GraphQL thread pagination truncated (>500 threads) — cannot determine unresolved count"
+  elif [ "$REST_COMMENTS" != "$GQL_UNRESOLVED" ]; then
     echo "  MISMATCH Gate 5: REST root comments=$REST_COMMENTS vs GraphQL unresolved=$GQL_UNRESOLVED (skeptic-cron uses REST — BUG if REST>0)"
   else
     echo "  Gate 5 OK: $GQL_UNRESOLVED unresolved"
