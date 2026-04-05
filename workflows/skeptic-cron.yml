@@ -24,6 +24,7 @@ jobs:
       pull-requests: write
       issues: write
       statuses: read
+      checks: read
     outputs:
       merged_count: ${{ steps.merge_prs.outputs.merged_count }}
     steps:
@@ -38,28 +39,27 @@ jobs:
           # NOTE: gh api --paginate exits non-zero if ANY page fails.
           # We use || true to ensure the step doesn't fail on transient errors,
           # then validate output and retry once without --paginate if needed.
-          PR_JSON=$(gh api repos/${{ github.repository }}/pulls \
+          PR_NUMBERS=$(gh api repos/${{ github.repository }}/pulls \
             --paginate \
             --jq '[.[] | select(.draft == false) | {number, title, head: {ref: .head.ref, sha: .head.sha}, base: {ref: .base.ref}, mergeable: (.mergeable | tostring)}]' 2>&1 || true)
 
           # Validate output: must be a non-empty JSON array.
           # gh api --paginate can exit non-zero on transient page errors; || true above
           # captures the last stdout (possibly an error page). Validate and retry once if bad.
-          if ! echo "$PR_JSON" | jq -e 'if type == "array" and length > 0 then true else empty end' > /dev/null 2>&1; then
+          if ! echo "$PR_NUMBERS" | jq -e 'if type == "array" and length > 0 then true else empty end' > /dev/null 2>&1; then
             echo "WARNING: gh api --paginate returned non-array or empty output — retrying without pagination"
-            PR_JSON=$(gh api repos/${{ github.repository }}/pulls \
-              --jq '[.[] | select(.draft == false) | {number, title, head: {ref: .head.ref, sha: .head.sha}, base: {ref: .base.ref}, mergeable: (.mergeable | tostring)}]' 2>&1 || echo "[]")
+            PR_NUMBERS=$(gh api repos/${{ github.repository }}/pulls \
+              --jq '[.[] | select(.draft == false) | {number, title, head: {ref: .head.ref, sha: .head.sha}, base: {ref: .base.ref}, mergeable}]' 2>&1 || echo "[]")
           fi
 
           echo "Open non-draft PRs found:"
-          echo "$PR_JSON" | jq -c '.[]' 2>/dev/null || echo "$PR_JSON"
+          echo "$PR_NUMBERS" | jq -c '.[]' 2>/dev/null || echo "$PR_NUMBERS"
 
-          # Write PR list to a temp file (avoids GITHUB_OUTPUT size/encoding issues
-          # with large JSON payloads). Nothing goes to GITHUB_OUTPUT from this step.
-          PR_LIST_FILE="${RUNNER_TEMP}/pr_list.json"
-          echo "$PR_JSON" > "$PR_LIST_FILE"
-          echo "pr_list_file=$PR_LIST_FILE" >> "$GITHUB_OUTPUT"
-          echo "Open non-draft PRs found: $(echo "$PR_JSON" | jq 'length')"
+          # Write only PR numbers (space-separated) to avoid GITHUB_OUTPUT 50KB size limit
+          # when there are many open PRs. Steps 2/3 fetch per-PR metadata from the API.
+          # Use -rs (slurp+raw) with `add` to handle multi-page output from --paginate,
+          # which produces one JSON array per page. `add` merges all pages into one array.
+          echo "pr_numbers=$(echo "$PR_NUMBERS" | jq -rs 'add // [] | [.[].number] | join(" ")')" >> "$GITHUB_OUTPUT"
 
       # ----------------------------------------------------------------
       # Step 2: Filter to 6-green eligible PRs, post trigger comments.
@@ -70,17 +70,20 @@ jobs:
         id: post_triggers
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_JSON: ${{ steps.list_prs.outputs.pr_numbers }}
+          PR_NUMBERS: ${{ steps.list_prs.outputs.pr_numbers }}
         run: |
           TRIGGERED=0
           SKIPPED_DOCS=0
           SKIPPED_NOT_6GREEN=0
 
-          for PR in $(jq -r '.[] | @base64' "$PR_LIST_FILE"); do
-            PR_DATA=$(echo "$PR" | base64 -d)
-            PR_NUM=$(echo "$PR_DATA" | jq -r '.number')
-            PR_TITLE=$(echo "$PR_DATA" | jq -r '.title')
-            PR_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+          for PR_NUM in $PR_NUMBERS; do
+            # Fetch per-PR metadata (title, sha, base ref) from API
+            PR_DETAIL=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" \
+              --jq '{title, head_sha: .head.sha, base_ref: .base.ref}' 2>/dev/null \
+              || echo '{"title":"unknown","head_sha":"","base_ref":"main"}')
+            PR_TITLE=$(echo "$PR_DETAIL" | jq -r '.title')
+            PR_SHA=$(echo "$PR_DETAIL" | jq -r '.head_sha')
+            PR_BASE_REF=$(echo "$PR_DETAIL" | jq -r '.base_ref')
 
             echo ""
             echo "=== Evaluating PR #${PR_NUM}: ${PR_TITLE} ==="
@@ -92,7 +95,6 @@ jobs:
             # Skip only when ALL files are docs (DIFF_FILES == TOTAL_FILES).
             # Process when the diff contains any code files (skeptically review the docs).
             # ----------------------------------------------------------------
-            PR_BASE_REF=$(echo "$PR_DATA" | jq -r '.base.ref')
             DIFF_FILES=$(gh api repos/${{ github.repository }}/compare/"${PR_BASE_REF}...${PR_SHA}" \
               --jq '[.files[].filename] | map(select(test("\\.(js|ts|jsx|tsx|py|rs|go|java|cs|cpp|h|c|mk|toml|yaml|yml|json|xml|sh|bash|ps1|rb|php|swift|kt|gradle)$"; "i") | not))' \
               2>/dev/null | jq 'length' || echo 0)
@@ -144,18 +146,24 @@ jobs:
             echo "  [GATE-3] CR=$LATEST_CR"
 
             # ----------------------------------------------------------------
-            # Gate 4: Bugbot clean
+            # Gate 4: Bugbot clean — use Cursor Bugbot CI check conclusion.
+            # Inline review comments are unreliable (stale across commits, false positives).
+            # CI conclusion is the authoritative signal: failure/action_required = blocking.
             # ----------------------------------------------------------------
-            BUGBOT_ERRORS=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/comments \
-              --paginate \
-              --jq '[.[] | select(.user.login == "cursor[bot]" and (.body | test("error"; "i")))] | length' \
-              2>/dev/null || echo 0)
-            if [ "${BUGBOT_ERRORS:-0}" -gt 0 ]; then
-              echo "  [SKIP] Gate-4 FAIL: Bugbot=$BUGBOT_ERRORS error(s)"
+            # --paginate: check-runs can exceed one page; match skeptic-gate Bugbot handling.
+            BUGBOT_CONCLUSION=$(gh api repos/${{ github.repository }}/commits/"$PR_SHA"/check-runs \
+              --paginate 2>/dev/null \
+              | jq -rs '[.[] | .check_runs[]?] | map(select(.name | test("Cursor Bugbot"; "i"))) | sort_by(.completed_at) | last | .conclusion // "none"' \
+              2>/dev/null || echo "error")
+            # Fail-closed: only pass on success/neutral/skipped. timed_out/cancelled/none
+            # are treated as failing — Bugbot must have actually completed cleanly.
+            if [ "$BUGBOT_CONCLUSION" = "success" ] || [ "$BUGBOT_CONCLUSION" = "neutral" ] || [ "$BUGBOT_CONCLUSION" = "skipped" ]; then
+              echo "  [GATE-4] Bugbot=$BUGBOT_CONCLUSION (clean)"
+            else
+              echo "  [SKIP] Gate-4 FAIL: Bugbot=$BUGBOT_CONCLUSION"
               SKIPPED_NOT_6GREEN=$((SKIPPED_NOT_6GREEN + 1))
               continue
             fi
-            echo "  [GATE-4] Bugbot=clean"
 
             # ----------------------------------------------------------------
             # Gate 5: Inline comments resolved (GraphQL — REST lacks isResolved)
@@ -233,7 +241,7 @@ jobs:
         id: merge_prs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_LIST_FILE: ${{ steps.list_prs.outputs.pr_list_file }}
+          PR_NUMBERS: ${{ steps.list_prs.outputs.pr_numbers }}
           STALE_HOURS: ${{ vars.STALE_HOURS || '3' }}
           # Default to github-actions[bot] — aligns with skeptic-gate.yml polling.
           # AO worker posts verdict via GITHUB_TOKEN (authenticates as github-actions[bot]).
@@ -241,18 +249,19 @@ jobs:
         run: |
           MERGED=0
 
-          for PR in $(jq -r '.[] | @base64' "$PR_LIST_FILE"); do
-            PR_DATA=$(echo "$PR" | base64 -d)
-            PR_NUM=$(echo "$PR_DATA" | jq -r '.number')
-            PR_TITLE=$(echo "$PR_DATA" | jq -r '.title')
+          for PR_NUM in $PR_NUMBERS; do
+            # Fetch per-PR metadata in a single API call (title, created_at, head SHA)
+            PR_META_FULL=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" \
+              --jq '{title, created_at, head_sha: .head.sha}' 2>/dev/null \
+              || echo '{"title":"unknown","created_at":null,"head_sha":""}')
+            PR_TITLE=$(echo "$PR_META_FULL" | jq -r '.title')
+            HEAD_SHA=$(echo "$PR_META_FULL" | jq -r '.head_sha')
 
             echo ""
             echo "--- Checking 7-green for PR #${PR_NUM}: ${PR_TITLE} ---"
 
             # Track PR age for staleness reporting
-            PR_DETAIL=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" \
-              --jq '{created_at: .created_at}' 2>/dev/null || echo '{"created_at":null}')
-            CREATED=$(echo "$PR_DETAIL" | jq -r '.created_at')
+            CREATED=$(echo "$PR_META_FULL" | jq -r '.created_at')
             if [ "$CREATED" != "null" ] && [ -n "$CREATED" ]; then
               epoch_now=$(date +%s)
               epoch_created=$(date -d "$CREATED" +%s 2>/dev/null) || epoch_created=0
@@ -270,8 +279,7 @@ jobs:
               fi
             fi
 
-            # 1. CI green
-            HEAD_SHA=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.head.sha')
+            # 1. CI green — HEAD_SHA already fetched above (no second API call needed)
             CI_STATUS=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/status \
               --jq '.state' 2>/dev/null || echo "error")
             CI_RESULT=$([ "$CI_STATUS" = "success" ] && echo "PASS" || echo "FAIL (state=$CI_STATUS)")
@@ -285,19 +293,23 @@ jobs:
             MERGE_CONFLICT=$(if [ "$MERGEABLE" = "true" ] || [ "$MERGED_FLAG" = "true" ]; then echo "PASS"; else echo "FAIL (mergeable=$MERGEABLE)"; fi)
             echo "  [2] No merge conflicts: $MERGE_CONFLICT"
 
-            # 3. CR APPROVED
+            # 3. CR APPROVED — separate --paginate from --jq to avoid per-page scalar emission.
+            # --paginate + --jq emits one scalar per page; pipe to jq -s instead.
             LATEST_CR=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/reviews \
-              --paginate \
-              --jq '[.[] | select(.user.login == "coderabbitai[bot]" and (.state == "APPROVED" or .state == "CHANGES_REQUESTED"))] | sort_by(.submitted_at) | reverse | .[0].state // "none"' 2>/dev/null || echo "none")
+              --paginate 2>/dev/null \
+              | jq -rs 'add | [.[] | select(.user.login == "coderabbitai[bot]" and (.state == "APPROVED" or .state == "CHANGES_REQUESTED"))] | sort_by(.submitted_at) | last | .state // "none"' \
+              2>/dev/null || echo "none")
             CR_STATE="${LATEST_CR:-none}"
             CR_APPROVED=$([ "$CR_STATE" = "APPROVED" ] && echo "PASS" || echo "FAIL (state=$CR_STATE)")
             echo "  [3] CR APPROVED:        $CR_APPROVED"
 
-            # 4. Bugbot clean
-            BUGBOT_ERRORS=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/comments \
-              --paginate \
-              --jq '[.[] | select(.user.login == "cursor[bot]" and (.body | test("error"; "i")))] | length' 2>/dev/null || echo 0)
-            BUGBOT_STATUS=$(if [ "$BUGBOT_ERRORS" = "0" ] || [ -z "$BUGBOT_ERRORS" ]; then echo "PASS"; else echo "FAIL ($BUGBOT_ERRORS error(s))"; fi)
+            # 4. Bugbot clean — fail-closed (allowlist): only pass on success/neutral/skipped.
+            # timed_out/cancelled/none (no check-run) are treated as FAIL.
+            BUGBOT_CONCLUSION=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/check-runs \
+              --paginate 2>/dev/null \
+              | jq -rs '[.[] | .check_runs[]?] | map(select(.name | test("Cursor Bugbot"; "i"))) | sort_by(.completed_at) | last | .conclusion // "none"' \
+              2>/dev/null || echo "error")
+            BUGBOT_STATUS=$(if [ "$BUGBOT_CONCLUSION" = "success" ] || [ "$BUGBOT_CONCLUSION" = "neutral" ] || [ "$BUGBOT_CONCLUSION" = "skipped" ]; then echo "PASS"; else echo "FAIL (conclusion=$BUGBOT_CONCLUSION)"; fi)
             echo "  [4] Bugbot clean:       $BUGBOT_STATUS"
 
             # 5. Inline comments resolved (GraphQL — REST lacks isResolved)
@@ -347,13 +359,20 @@ jobs:
             echo "  [6] Evidence review:    $EVIDENCE_STATUS"
 
             # 7. Skeptic verdict — look for VERDICT comment from AO worker.
-            # Filter by author + VERDICT: keyword + SHA marker (skeptic-cron-trigger-<SHA>)
+            # Filter by author + VERDICT: keyword + SHA marker.
+            # Accepts both skeptic-cron-trigger-<SHA> (legacy) and skeptic-gate-trigger-<SHA>
+            # (posted by `ao skeptic verify` via lifecycle-manager). Both patterns are valid.
             # so old verdicts don't incorrectly pass. Uses --paginate for full coverage.
             # NOTE: --paginate and --jq are mutually exclusive; pipe to external jq instead.
             SKEPTIC_RAW=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
               --paginate 2>/dev/null || echo "[]")
             # Use 'add' (not '.[0][]') to flatten ALL pages before filtering.
-            SKEPTIC_VERDICT=$(echo "$SKEPTIC_RAW" | jq -s "add | map(select(.user.login == \"${SKEPTIC_BOT_AUTHOR}\" and (.body | test(\"VERDICT:\"; \"i\")) and (.body | test(\"skeptic-cron-trigger-\" + \"$HEAD_SHA\"; \"i\")))) | last.body // empty" 2>/dev/null || echo "")
+            SKEPTIC_VERDICT=$(echo "$SKEPTIC_RAW" | jq -s --arg author "$SKEPTIC_BOT_AUTHOR" --arg sha "$HEAD_SHA" \
+              'add | map(select(
+                ((.user.login == $author) or (.user.login == "github-actions[bot]"))
+                and (.body | test("VERDICT:"; "i"))
+                and (.body | test("skeptic-(cron|gate)-trigger-" + $sha; "i"))
+              )) | last.body // empty' 2>/dev/null || echo "")
             if echo "$SKEPTIC_VERDICT" | grep -qi "VERDICT: PASS"; then
               SKEPTIC_STATUS="PASS"
             elif echo "$SKEPTIC_VERDICT" | grep -qi "VERDICT: FAIL"; then

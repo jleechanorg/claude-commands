@@ -38,6 +38,7 @@ jobs:
       issues: write
       contents: read
       statuses: read
+      checks: read
     outputs:
       trigger_updated: ${{ steps.post_trigger.outputs.trigger_updated }}
       trigger_sha: ${{ steps.post_trigger.outputs.trigger_sha }}
@@ -87,9 +88,11 @@ jobs:
             echo "GATE-2 PASS: no conflicts"
           fi
 
-          # Gate 3: CR APPROVED
+          # Gate 3: CR APPROVED — take the latest non-COMMENTED review from coderabbitai.
+          # Filtering to only APPROVED first would miss a later CHANGES_REQUESTED.
+          # COMMENTED reviews don't override approval in GitHub's effective review state.
           LATEST_CR=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/reviews \
-            --jq '[.[] | select(.user.login == "coderabbitai[bot]" and .state == "APPROVED")] | sort_by(.submitted_at) | reverse | .[0].state // "none"' \
+            --jq '[.[] | select(.user.login == "coderabbitai[bot]" and .state != "COMMENTED")] | sort_by(.submitted_at) | last | .state // "none"' \
             2>/dev/null || echo "none")
           if [ "$LATEST_CR" != "APPROVED" ]; then
             echo "GATE-3 FAIL: CR=$LATEST_CR"
@@ -98,15 +101,20 @@ jobs:
             echo "GATE-3 PASS: CR=APPROVED"
           fi
 
-          # Gate 4: Bugbot clean
-          BUGBOT_ERRORS=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/comments \
-            --jq '[.[] | select(.user.login == "cursor[bot]" and (.body | test("error"; "i")))] | length' \
-            2>/dev/null || echo 0)
-          if [ "${BUGBOT_ERRORS:-0}" -gt 0 ]; then
-            echo "GATE-4 FAIL: Bugbot=$BUGBOT_ERRORS error(s)"
-            ELIGIBLE=false
+          # Gate 4: Bugbot clean — use CI check-run conclusion, not inline comment count.
+          # Inline comment count is unreliable: stale comments from old commits persist and
+          # produce false positives. CI check-run conclusion is the authoritative signal.
+          # Fail-closed: only pass on success/neutral/skipped. Treat timed_out/cancelled/none
+          # the same as failure — Bugbot must have actually completed cleanly to pass.
+          BUGBOT_CONCLUSION=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/check-runs \
+            --paginate 2>/dev/null \
+            | jq -rs '[.[] | .check_runs[]?] | map(select(.name | test("Cursor Bugbot"; "i"))) | sort_by(.completed_at) | last | .conclusion // "none"' \
+            2>/dev/null || echo "error")
+          if [ "$BUGBOT_CONCLUSION" = "success" ] || [ "$BUGBOT_CONCLUSION" = "neutral" ] || [ "$BUGBOT_CONCLUSION" = "skipped" ]; then
+            echo "GATE-4 PASS: Bugbot=$BUGBOT_CONCLUSION (clean)"
           else
-            echo "GATE-4 PASS: Bugbot=clean"
+            echo "GATE-4 FAIL: Bugbot=$BUGBOT_CONCLUSION"
+            ELIGIBLE=false
           fi
 
           # Gate 5: Inline comments resolved (GraphQL — REST lacks isResolved)
@@ -281,7 +289,7 @@ jobs:
                 --arg tu "$TRIGGER_UPDATED" --arg ts "$TRIGGER_SHA" \
                 'add
                 | map(select(
-                    ((.user.login == $author) or (.user.login == "github-actions[bot]") or (.user.login == "jleechan2015"))
+                    ((.user.login == $author) or (.user.login == "github-actions[bot]"))
                     and (.body | test("VERDICT:"; "i"))
                     and (((.updated_at // "") | if test("\\.[0-9]+Z$") then sub("\\.[0-9]+Z$"; "Z") else . end)
                          >= ($tu | if test("\\.[0-9]+Z$") then sub("\\.[0-9]+Z$"; "Z") else . end))
