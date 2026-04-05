@@ -250,22 +250,22 @@ For complete version history, see [Version History Archive](#version-history-arc
 - Script allowlist expansion for development tools
 - Enhanced export utility coverage
 
-### v1.1.0 (2025-12-19)
+### v1.1.1 (2025-12-19)
 - 194 Commands, 43 Hooks, 19 Scripts, 28 Skills
 - Development workflow tools integration
 - Improved script categorization
 
-### v1.1.0 (2025-12-16)
+### v1.1.2 (2025-12-16)
 - 194 Commands, 43 Hooks, 19 Scripts, 25 Skills
 - Enhanced automation patterns
 - Documentation improvements
 
-### v1.1.0 (2025-12-11)
+### v1.1.3 (2025-12-11)
 - 194 Commands, 43 Hooks, 19 Scripts, 24 Skills
 - Infrastructure deployment enhancements
 - Cross-project compatibility improvements
 
-### v1.7.0 (2025-11-22)
+### v1.0.0 (2025-11-22)
 - 191 Commands, 43 Hooks, 19 Scripts, 20 Skills
 - Testing framework enhancements
 - Command composition improvements
