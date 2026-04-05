@@ -8,6 +8,22 @@ type: skill
 
 Autonomous self-improving loop that observes the AO ecosystem, measures zero-touch rate, diagnoses friction, creates beads for gaps, dispatches fixes via /claw, and records everything. Runs via `/loop 10m` for max 12 hours.
 
+## AUTONOMOUS CONTINUATION — MANDATORY
+
+**After completing Phase 7 (Recap), IMMEDIATELY start Phase 1 of the next cycle. Do NOT:**
+- Ask "want me to continue?"
+- Ask "shall I proceed to the next cycle?"
+- Pause for user confirmation between cycles
+- Output "Cycle N done" and wait
+
+**The loop runs autonomously until one of these termination conditions:**
+1. User explicitly says "stop" or "pause"
+2. 12 hours elapsed since first cycle
+3. Context window > 90% consumed (use `/checkpoint` before hitting limit)
+4. System is 100% stable for 3 consecutive healthy cycles (all canary checks pass, 0 pong warnings, 0 lock issues, 0 orphan processes)
+
+**If the user said "keep going" or "until stable" — that is a STANDING DIRECTIVE. Treat it as permanently active until a termination condition is met.**
+
 ---
 
 ## Adaptive Behavior — NOT Every Phase Every Cycle

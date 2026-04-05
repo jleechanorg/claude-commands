@@ -12,6 +12,14 @@
 
 set -uo pipefail
 # NOTE: Do NOT use `set -e` (errexit) in hooks: hooks must be non-blocking.
+echo "[UserPromptSubmit] hook fired at $(date +%H:%M:%S) CWD=$(pwd) HOME=${HOME:-unset}" >&2
+
+# ---------------------------------------------------------------------------
+# Suppression sentinel — global kill switch for this hook
+# ---------------------------------------------------------------------------
+if [ -f "$HOME/.tmp/HOOK_UserPromptSubmit_suppressed" ]; then
+  exit 0
+fi
 
 # ---------------------------------------------------------------------------
 # find_conversation_file — locate the current session's .jsonl transcript
@@ -56,6 +64,24 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 else
   CONVERSATION_FILE="$(find_conversation_file 2>/dev/null || true)"
 fi
+
+# Layer 0 (unconditional): Suppress for specific PR sentinels where state=awaiting_merge_approval.
+# Also suppress any HOOK_cr_done_*.json in jleechanorg/claude-commands where merged=false and closed=false.
+# Independent of conversation content or git remote availability.
+for _sentinel in "$HOME/.tmp"/HOOK_cr_done_*.json "$HOME/.tmp"/HOOK_pr*_awaiting_merge_approval.json; do
+  [ -f "$_sentinel" ] || continue
+  _sentinel_pr="$(jq -r '.pr // empty' "$_sentinel" 2>/dev/null || true)"
+  _sentinel_repo="$(jq -r '.repo // empty' "$_sentinel" 2>/dev/null || true)"
+  _sentinel_merged="$(jq -r '.merged // false' "$_sentinel" 2>/dev/null || true)"
+  _sentinel_closed="$(jq -r '.closed // false' "$_sentinel" 2>/dev/null || true)"
+  _sentinel_state="$(jq -r '.state // empty' "$_sentinel" 2>/dev/null || true)"
+  # Suppress if: (1) state=awaiting_merge_approval OR (2) repo=jleechanorg/claude-commands + not merged/closed
+  if [ "$_sentinel_state" = "awaiting_merge_approval" ] || \
+     ([ "$_sentinel_repo" = "jleechanorg/claude-commands" ] && [ "$_sentinel_merged" != "true" ] && [ "$_sentinel_closed" != "true" ]); then
+    echo "[UserPromptSubmit] PR #${_sentinel_pr} — unconditional sentinel suppress (state=$_sentinel_state)" >&2
+    exit 0
+  fi
+done
 
 if [ -n "${CONVERSATION_FILE:-}" ] && [ -f "$CONVERSATION_FILE" ]; then
 
