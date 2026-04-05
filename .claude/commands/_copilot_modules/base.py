@@ -71,7 +71,7 @@ class CopilotCommandBase(ABC):
             return (
                 os.environ.get("DEFAULT_REPO")
                 or os.environ.get("GITHUB_REPOSITORY")
-                or "$GITHUB_REPOSITORY"
+                or None  # No valid fallback — caller must handle None or set env vars
             )
 
     def _get_current_branch(self) -> str:
