@@ -121,9 +121,36 @@ union_dir() {
     all_relpaths+=("${f#$global_src/}")
   done < <(find "$global_src" -type f \
     \( -not -name '*.pyc' \) \
+    \( -not -name '*.pyo' \) \
     \( -not -name '.DS_Store' \) \
     \( -not -path '*/__pycache__/*' \) \
     \( -not -path '*/.ruff_cache/*' \) \
+    \( -not -path '*/canvas-fonts/*' \) \
+    \( -not -name '*.ttf' \) \
+    \( -not -name '*.otf' \) \
+    \( -not -name '*.woff' \) \
+    \( -not -name '*.woff2' \) \
+    \( -not -name '*.eot' \) \
+    \( -not -name '*.png' \) \
+    \( -not -name '*.jpg' \) \
+    \( -not -name '*.jpeg' \) \
+    \( -not -name '*.gif' \) \
+    \( -not -name '*.ico' \) \
+    \( -not -name '*.webp' \) \
+    \( -not -name '*.svg' \) \
+    \( -not -name '*.mp4' \) \
+    \( -not -name '*.mp3' \) \
+    \( -not -name '*.wav' \) \
+    \( -not -name '*.pdf' \) \
+    \( -not -name '*.zip' \) \
+    \( -not -name '*.tar' \) \
+    \( -not -name '*.gz' \) \
+    \( -not -name '*.db' \) \
+    \( -not -name '*.sqlite' \) \
+    \( -not -name '*.sqlite3' \) \
+    \( -not -name '*.xsd' \) \
+    \( -not -name '*.xml' \) \
+    \( -not -name '*.testmondata' \) \
     -print0 2>/dev/null || true)
 
   while IFS= read -r -d '' f; do
@@ -137,7 +164,12 @@ union_dir() {
     \( -not -name '.DS_Store' \) \
     \( -not -path '*/__pycache__/*' \) \
     \( -not -path '*/.ruff_cache/*' \) \
+    \( -not -path '*/canvas-fonts/*' \) \
     -not -name 'exportcommands.py' \
+    \( -name '*.sh' -o -name '*.py' -o -name '*.md' -o -name '*.json' \
+       -o -name '*.toml' -o -name '*.yaml' -o -name '*.yml' \
+       -o -name '*.js' -o -name '*.ts' -o -name '*.css' -o -name '*.html' \
+       -o -name '*.cfg' -o -name '*.ini' -o -name '*.conf' \) \
     -print0 2>/dev/null || true)
 
   local only_global=0 only_project=0 identical=0 auto_resolved=0
@@ -210,6 +242,31 @@ for dir in "${ROOT_DIRS[@]}"; do
     --exclude='*.pyc' \
     --exclude='__pycache__/' \
     --exclude='.DS_Store' \
+    --exclude='*.ttf' \
+    --exclude='*.otf' \
+    --exclude='*.woff' \
+    --exclude='*.woff2' \
+    --exclude='*.eot' \
+    --exclude='*.png' \
+    --exclude='*.jpg' \
+    --exclude='*.jpeg' \
+    --exclude='*.gif' \
+    --exclude='*.ico' \
+    --exclude='*.svg' \
+    --exclude='*.webp' \
+    --exclude='*.mp4' \
+    --exclude='*.mp3' \
+    --exclude='*.wav' \
+    --exclude='*.pdf' \
+    --exclude='*.zip' \
+    --exclude='*.tar' \
+    --exclude='*.gz' \
+    --exclude='*.xsd' \
+    --exclude='*.xml' \
+    --exclude='*.testmondata' \
+    --exclude='*.db' \
+    --exclude='*.sqlite' \
+    --exclude='*.sqlite3' \
     "$src" "$dst"
   ok "$dir"
 done
@@ -291,9 +348,13 @@ Output ONLY the updated markdown. No preamble, no explanation, no code fences."
   # Write prompt to temp file to avoid shell quoting issues with large README content
   PROMPT_FILE=$(mktemp /tmp/exportcommands_prompt.XXXXXX)
   printf '%s' "$README_PROMPT" > "$PROMPT_FILE"
+  # Run claude from a neutral temp dir (no CLAUDE.md, no git repo) to prevent the
+  # exported CLAUDE.md's mandatory git-header.sh ending from corrupting README output.
+  CLAUDE_NEUTRAL_DIR=$(mktemp -d /tmp/exportcommands_neutral.XXXXXX)
   # Always generate README.md.new for preview; only overwrite README.md in non-dry-run
-  claude -p "$(cat "$PROMPT_FILE")" > README.md.new 2>/dev/null \
+  (cd "$CLAUDE_NEUTRAL_DIR" && claude -p "$(cat "$PROMPT_FILE")") > README.md.new 2>/dev/null \
     || { rm -f README.md.new; warn "Claude CLI failed — keeping existing README unchanged"; }
+  rm -rf "$CLAUDE_NEUTRAL_DIR"
   rm -f "$PROMPT_FILE"
   if [[ -f "README.md.new" ]]; then
     if [[ "$DRY_RUN" == "false" ]]; then
@@ -320,13 +381,17 @@ elif command -v claude >/dev/null 2>&1 && [[ ! -f "README.md" ]]; then
 - Under 120 lines, GitHub-flavored markdown
 - Output ONLY the markdown, no preamble"
 
+  CLAUDE_NEUTRAL_DIR=$(mktemp -d /tmp/exportcommands_neutral.XXXXXX)
   if [[ "$DRY_RUN" == "false" ]]; then
-    claude -p "$README_PROMPT" > README.md 2>/dev/null && ok "README.md created (first export)" \
+    (cd "$CLAUDE_NEUTRAL_DIR" && claude -p "$README_PROMPT") > README.md 2>/dev/null \
+      && ok "README.md created (first export)" \
       || warn "Claude CLI failed — no README generated"
   else
-    claude -p "$README_PROMPT" > README.md.new 2>/dev/null && ok "README.md.new generated for preview (dry-run)" \
+    (cd "$CLAUDE_NEUTRAL_DIR" && claude -p "$README_PROMPT") > README.md.new 2>/dev/null \
+      && ok "README.md.new generated for preview (dry-run)" \
       || warn "Claude CLI failed — no README preview generated"
   fi
+  rm -rf "$CLAUDE_NEUTRAL_DIR"
 else
   warn "Skipping README update (claude CLI not found)"
 fi

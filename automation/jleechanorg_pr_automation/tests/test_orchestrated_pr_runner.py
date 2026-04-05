@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import automation.github-owner_pr_automation.orchestrated_pr_runner as runner
+import automation.jleechanorg_pr_automation.orchestrated_pr_runner as runner
 import pytest
 import requests
 import yaml
@@ -355,7 +355,7 @@ def test_has_failing_checks_uses_conclusion_field(monkeypatch):
             return checks_response
         return Mock(status_code=200, json=dict, raise_for_status=Mock())
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is True
 
 
@@ -385,7 +385,7 @@ def test_has_failing_checks_uses_state_fallback(monkeypatch):
             return checks_response
         return Mock(status_code=200, json=dict, raise_for_status=Mock())
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is True
 
 
@@ -422,7 +422,7 @@ def test_has_failing_checks_conclusion_failure(monkeypatch):
     """Test FAILURE conclusion triggers True (authoritative checkpoint)."""
     check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "ci.yml"}]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is True
 
 
@@ -430,7 +430,7 @@ def test_has_failing_checks_state_failure_fallback(monkeypatch):
     """Test FAILURE state triggers True when conclusion is None (check still running)."""
     check_runs = [{"name": "ci", "state": "FAILURE", "conclusion": None, "workflow": "ci.yml"}]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is True
 
 
@@ -438,7 +438,7 @@ def test_has_failing_checks_state_cancelled(monkeypatch):
     """Test CANCELLED state triggers True."""
     check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "CANCELLED", "workflow": "ci.yml"}]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is True
 
 
@@ -446,7 +446,7 @@ def test_has_failing_checks_state_timed_out(monkeypatch):
     """Test TIMED_OUT conclusion triggers True."""
     check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "TIMED_OUT", "workflow": "ci.yml"}]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is True
 
 
@@ -454,7 +454,7 @@ def test_has_failing_checks_state_action_required(monkeypatch):
     """Test ACTION_REQUIRED conclusion triggers True."""
     check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "ACTION_REQUIRED", "workflow": "ci.yml"}]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is True
 
 
@@ -462,7 +462,7 @@ def test_has_failing_checks_conclusion_success(monkeypatch):
     """Test SUCCESS conclusion returns False."""
     check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "ci.yml"}]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is False
 
 
@@ -470,7 +470,7 @@ def test_has_failing_checks_conclusion_neutral(monkeypatch):
     """Test NEUTRAL conclusion returns False (not treated as failure)."""
     check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "NEUTRAL", "workflow": "ci.yml"}]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is False
 
 
@@ -478,7 +478,7 @@ def test_has_failing_checks_state_success_with_failure_conclusion(monkeypatch):
     """Test that conclusion takes precedence over state."""
     check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "FAILURE", "workflow": "ci.yml"}]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is True
 
 
@@ -486,7 +486,7 @@ def test_has_failing_checks_state_pending(monkeypatch):
     """Test PENDING state returns False."""
     check_runs = [{"name": "ci", "state": "PENDING", "conclusion": None, "workflow": "ci.yml"}]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is False
 
 
@@ -494,7 +494,7 @@ def test_has_failing_checks_empty_state(monkeypatch):
     """Test empty/None conclusion returns False."""
     check_runs = [{"name": "ci", "state": "COMPLETED", "conclusion": "", "workflow": "ci.yml"}]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is False
 
 
@@ -506,7 +506,7 @@ def test_has_failing_checks_multiple_all_pass(monkeypatch):
         {"name": "test", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "test.yml"},
     ]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is False
 
 
@@ -518,7 +518,7 @@ def test_has_failing_checks_multiple_mixed(monkeypatch):
         {"name": "test", "state": "COMPLETED", "conclusion": "SUCCESS", "workflow": "test.yml"},
     ]
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is True
 
 
@@ -526,7 +526,7 @@ def test_has_failing_checks_empty_array(monkeypatch):
     """Test empty check_runs array returns False."""
     check_runs = []
     mock_get = _mock_has_failing_checks_responses(monkeypatch, 1, check_runs)
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         assert runner.has_failing_checks("org/repo", 1) is False
 
 
@@ -541,7 +541,7 @@ def test_has_failing_checks_api_error(monkeypatch):
     http_error.response = mock_response
     mock_response.raise_for_status = Mock(side_effect=http_error)
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_response):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_response):
         assert runner.has_failing_checks("org/repo", 1) is False
 
 
@@ -787,7 +787,7 @@ def test_multiple_repos_same_pr_number_no_collision(tmp_path, monkeypatch):
 
     # Simulate two PRs with same number from different repos
     pr_worldarchitect = {
-        "repo_full": "github-owner/your-project.com",
+        "repo_full": "$GITHUB_REPOSITORY",
         "repo": "your-project.com",
         "number": 318,
         "branch": "fix-doc-size",
@@ -795,7 +795,7 @@ def test_multiple_repos_same_pr_number_no_collision(tmp_path, monkeypatch):
     }
 
     pr_ai_universe = {
-        "repo_full": "github-owner/ai_universe_frontend",
+        "repo_full": "jleechanorg/ai_universe_frontend",
         "repo": "ai_universe_frontend",
         "number": 318,
         "branch": "fix-playwright-tests",
@@ -844,7 +844,7 @@ def test_dispatch_agent_for_pr_accepts_model_for_all_clis(monkeypatch, tmp_path)
     monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
 
     pr = {
-        "repo_full": "github-owner/test-repo",
+        "repo_full": "jleechanorg/test-repo",
         "repo": "test-repo",
         "number": 123,
         "branch": "test-branch",
@@ -879,7 +879,7 @@ def test_dispatch_agent_for_pr_rejects_invalid_model(monkeypatch, tmp_path):
     monkeypatch.setattr(runner, "prepare_workspace_dir", lambda repo, name: None)
 
     pr = {
-        "repo_full": "github-owner/test-repo",
+        "repo_full": "jleechanorg/test-repo",
         "repo": "test-repo",
         "number": 123,
         "branch": "test-branch",
@@ -1075,8 +1075,8 @@ def test_post_pr_comment_python_success(monkeypatch):
     mock_response.status_code = 201
     mock_response.raise_for_status = Mock()
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.post", return_value=mock_response):
-        with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.log") as mock_log:
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", return_value=mock_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
             result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
 
             assert result is True
@@ -1097,7 +1097,7 @@ def test_post_pr_comment_python_reply(monkeypatch):
         post_calls.append({"url": url, "json": json, "headers": headers})
         return mock_response
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.post", side_effect=mock_post):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", side_effect=mock_post):
         result = runner.post_pr_comment_python("owner/repo", 123, "Reply comment", in_reply_to=456)
 
         assert result is True
@@ -1112,7 +1112,7 @@ def test_post_pr_comment_python_no_token(monkeypatch):
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.setattr(runner, "get_github_token", lambda: None)
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.log") as mock_log:
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
         result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
 
         assert result is False
@@ -1129,8 +1129,8 @@ def test_post_pr_comment_python_api_error(monkeypatch):
     http_error = requests.HTTPError("API Error")
     http_error.response = mock_response
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.post", return_value=mock_response):
-        with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.log") as mock_log:
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.post", return_value=mock_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
             # Mock raise_for_status to raise the HTTPError
             mock_response.raise_for_status = Mock(side_effect=http_error)
             result = runner.post_pr_comment_python("owner/repo", 123, "Test comment")
@@ -1187,11 +1187,11 @@ def test_cleanup_pending_reviews_python_success(monkeypatch):
         delete_calls.append({"url": url, "headers": headers})
         return mock_delete_response
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         with patch(
-            "automation.github-owner_pr_automation.orchestrated_pr_runner.requests.delete", side_effect=mock_delete
+            "automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.delete", side_effect=mock_delete
         ):
-            with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.log") as mock_log:
+            with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
                 runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
 
                 # Should fetch reviews once
@@ -1239,9 +1239,9 @@ def test_cleanup_pending_reviews_python_no_pending(monkeypatch):
         delete_calls.append(url)
         return Mock(status_code=204)
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", side_effect=mock_get):
         with patch(
-            "automation.github-owner_pr_automation.orchestrated_pr_runner.requests.delete", side_effect=mock_delete
+            "automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.delete", side_effect=mock_delete
         ):
             runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
 
@@ -1254,7 +1254,7 @@ def test_cleanup_pending_reviews_python_no_token(monkeypatch):
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.setattr(runner, "get_github_token", lambda: None)
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.log") as mock_log:
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
         runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
 
         mock_log.assert_any_call("⚠️ No GitHub token available for cleanup")
@@ -1270,8 +1270,8 @@ def test_cleanup_pending_reviews_python_api_error(monkeypatch):
     http_error = requests.HTTPError("API Error")
     http_error.response = mock_response
 
-    with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_response):
-        with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.log") as mock_log:
+    with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_response):
+        with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
             # Mock raise_for_status to raise the HTTPError
             mock_response.raise_for_status = Mock(side_effect=http_error)
             runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
@@ -1303,13 +1303,13 @@ def test_cleanup_pending_reviews_python_delete_failure(monkeypatch):
     mock_delete_response.status_code = 500  # Server error
 
     with patch(
-        "automation.github-owner_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_get_response
+        "automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.get", return_value=mock_get_response
     ):
         with patch(
-            "automation.github-owner_pr_automation.orchestrated_pr_runner.requests.delete",
+            "automation.jleechanorg_pr_automation.orchestrated_pr_runner.requests.delete",
             return_value=mock_delete_response,
         ):
-            with patch("automation.github-owner_pr_automation.orchestrated_pr_runner.log") as mock_log:
+            with patch("automation.jleechanorg_pr_automation.orchestrated_pr_runner.log") as mock_log:
                 runner.cleanup_pending_reviews_python("owner/repo", 123, "automation-user")
 
                 mock_log.assert_any_call("⚠️ Failed to delete review 1001: 500")

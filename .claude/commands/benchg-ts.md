@@ -22,28 +22,28 @@ echo "🔍 PREREQUISITE VERIFICATION"
 echo "============================"
 
 # Verify source repository
-if [[ ! -d "$PROJECT_ROOT" ]]; then
-    echo "❌ ERROR: Source repository not found at $PROJECT_ROOT"
+if [[ ! -d "/Users/$USER/projects/worktree_ralph" ]]; then
+    echo "❌ ERROR: Source repository not found at /Users/$USER/projects/worktree_ralph"
     exit 1
 fi
 echo "✅ Source repository found"
 
 # Verify credentials
-if [[ ! -f "$PROJECT_ROOT/testing_http/testing_full/.env" ]]; then
+if [[ ! -f "/Users/$USER/projects/worktree_ralph/testing_http/testing_full/.env" ]]; then
     echo "❌ ERROR: Credentials (.env) not found at testing_http/testing_full/.env"
     exit 1
 fi
 echo "✅ Credentials found"
 
 # Verify engineering design document
-if [[ ! -f "$PROJECT_ROOT/roadmap/mvp_site_typescript_migration_eng_design.md" ]]; then
+if [[ ! -f "/Users/$USER/projects/worktree_ralph/roadmap/mvp_site_typescript_migration_eng_design.md" ]]; then
     echo "❌ ERROR: Engineering design document not found"
     exit 1
 fi
 echo "✅ Engineering design found"
 
 # Verify test cases
-TEST_CASE_COUNT=$(find $PROJECT_ROOT/testing_llm -name "*.md" 2>/dev/null | wc -l)
+TEST_CASE_COUNT=$(find /Users/$USER/projects/worktree_ralph/testing_llm -name "*.md" 2>/dev/null | wc -l)
 if [[ $TEST_CASE_COUNT -eq 0 ]]; then
     echo "❌ ERROR: No test cases found in testing_llm/ directory"
     exit 1
@@ -51,39 +51,39 @@ fi
 echo "✅ Found $TEST_CASE_COUNT test cases"
 
 # Verify Ralph installation
-if [[ ! -d "$RALPH_REPO" ]]; then
-    echo "❌ ERROR: Ralph not found at $RALPH_REPO"
+if [[ ! -d "/Users/$USER/projects_other/ralph-orchestrator" ]]; then
+    echo "❌ ERROR: Ralph not found at /Users/$USER/projects_other/ralph-orchestrator"
     exit 1
 fi
 echo "✅ Ralph installation found"
 
 # Verify Genesis installation
-if [[ ! -f "$PROJECT_ROOT/genesis/genesis.py" ]]; then
-    echo "❌ ERROR: Genesis not found at $PROJECT_ROOT/genesis/genesis.py"
+if [[ ! -f "/Users/$USER/projects/worktree_ralph/genesis/genesis.py" ]]; then
+    echo "❌ ERROR: Genesis not found at /Users/$USER/projects/worktree_ralph/genesis/genesis.py"
     exit 1
 fi
 echo "✅ Genesis installation found"
 
 # Verify benchmark goal files
-if [[ ! -f "$PROJECT_ROOT/roadmap/genesis_typescript_migration_benchmark.md" ]]; then
+if [[ ! -f "/Users/$USER/projects/worktree_ralph/roadmap/genesis_typescript_migration_benchmark.md" ]]; then
     echo "❌ ERROR: Genesis benchmark goal file not found"
     exit 1
 fi
-if [[ ! -f "$PROJECT_ROOT/roadmap/ralph_typescript_migration_benchmark.md" ]]; then
+if [[ ! -f "/Users/$USER/projects/worktree_ralph/roadmap/ralph_typescript_migration_benchmark.md" ]]; then
     echo "❌ ERROR: Ralph benchmark goal file not found"
     exit 1
 fi
 echo "✅ Benchmark goal files found"
 
 # Verify target directories don't exist
-if [[ -d "$HOME/projects/worldai_genesis2" ]]; then
+if [[ -d "/Users/$USER/projects_other/worldai_genesis2" ]]; then
     echo "❌ ERROR: worldai_genesis2 already exists - remove before starting benchmark"
-    echo "   Run: rm -rf $HOME/projects/worldai_genesis2"
+    echo "   Run: rm -rf /Users/$USER/projects_other/worldai_genesis2"
     exit 1
 fi
-if [[ -d "$HOME/projects/worldai_ralph2" ]]; then
+if [[ -d "/Users/$USER/projects_other/worldai_ralph2" ]]; then
     echo "❌ ERROR: worldai_ralph2 already exists - remove before starting benchmark"
-    echo "   Run: rm -rf $HOME/projects/worldai_ralph2"
+    echo "   Run: rm -rf /Users/$USER/projects_other/worldai_ralph2"
     exit 1
 fi
 echo "✅ Clean state verified - no existing benchmark directories"
@@ -103,9 +103,9 @@ echo "🏆 TYPESCRIPT MIGRATION BENCHMARK: Genesis vs Ralph"
 echo "===================================================="
 echo ""
 echo "📋 Configuration:"
-echo "  Source: $PROJECT_ROOT"
-echo "  Genesis Target: $HOME/projects/worldai_genesis2"
-echo "  Ralph Target: $HOME/projects/worldai_ralph2"
+echo "  Source: /Users/$USER/projects/worktree_ralph/$PROJECT_ROOT/"
+echo "  Genesis Target: /Users/$USER/projects_other/worldai_genesis2"
+echo "  Ralph Target: /Users/$USER/projects_other/worldai_ralph2"
 echo "  Max Iterations: 50 per agent"
 echo "  Test Cases: $TEST_CASE_COUNT files in testing_llm/"
 echo "  Log File: $BENCHMARK_LOG"
@@ -123,7 +123,7 @@ echo "=================================="
 echo ""
 
 GENESIS_SESSION="genesis-ts-migration-$(date +%Y%m%d-%H%M%S)"
-GENESIS_DIR="$HOME/projects/worldai_genesis2"
+GENESIS_DIR="/Users/$USER/projects_other/worldai_genesis2"
 
 echo "📋 Launching Genesis with orchestration command:"
 echo "   Session: $GENESIS_SESSION"
@@ -132,7 +132,7 @@ echo "   Goal File: roadmap/genesis_typescript_migration_benchmark.md"
 echo ""
 
 # Execute Genesis using /gene command
-cd $PROJECT_ROOT
+cd /Users/$USER/projects/worktree_ralph
 
 # Create Genesis orchestration command
 python3 genesis/genesis.py \
@@ -157,7 +157,7 @@ echo "==============================="
 echo ""
 
 RALPH_SESSION="ralph-ts-migration-$(date +%Y%m%d-%H%M%S)"
-RALPH_DIR="$HOME/projects/worldai_ralph2"
+RALPH_DIR="/Users/$USER/projects_other/worldai_ralph2"
 
 echo "📋 Launching Ralph with orchestration command:"
 echo "   Session: $RALPH_SESSION"
@@ -166,10 +166,10 @@ echo "   Goal File: roadmap/ralph_typescript_migration_benchmark.md"
 echo ""
 
 # Execute Ralph
-cd $RALPH_REPO
+cd /Users/$USER/projects_other/ralph-orchestrator
 
 python -m ralph_orchestrator \
-    $PROJECT_ROOT/roadmap/ralph_typescript_migration_benchmark.md \
+    /Users/$USER/projects/worktree_ralph/roadmap/ralph_typescript_migration_benchmark.md \
     --agent codex \
     --max-iterations 50 \
     --verbose \

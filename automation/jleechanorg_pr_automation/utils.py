@@ -15,9 +15,10 @@ import logging
 import os
 import tempfile
 import threading
+from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional
+from typing import Any
 
 from .logging_utils import setup_logging  # noqa: F401
 
@@ -146,7 +147,7 @@ class SafeJSONManager:
                 # FIX: Use single code path to avoid TOCTOU race condition
                 # 'a+' mode creates file if missing, doesn't truncate if exists
                 # Lock is acquired BEFORE any truncation happens
-                with open(file_path, 'a+') as f:
+                with open(file_path, "a+") as f:
                     # Acquire EXCLUSIVE lock for entire read-modify-write
                     fcntl.flock(f.fileno(), fcntl.LOCK_EX)
                     try:
@@ -181,13 +182,13 @@ class SafeJSONManager:
 json_manager = SafeJSONManager()
 
 
-def detect_repo_path() -> Optional[Path]:
+def detect_repo_path() -> Path | None:
     """Detect a local git repository path using shared automation conventions.
 
     Checks in order:
     1. `~/.config/worldarchitect/repo_path`
     2. current working directory
-    3. `~/projects/${PROJECT_NAME:-your-project}.com`
+    3. `~/projects/${PROJECT_DOMAIN:-your-project}.com`
     """
     config_file = Path.home() / ".config" / "worldarchitect" / "repo_path"
     if config_file.exists():
@@ -201,19 +202,19 @@ def detect_repo_path() -> Optional[Path]:
     if (cwd_path / ".git").exists():
         return cwd_path
 
-    default_path = Path.home() / "projects" / "${PROJECT_NAME:-your-project}.com"
+    default_path = Path.home() / "projects" / "${PROJECT_DOMAIN:-your-project}.com"
     if (default_path / ".git").exists():
         return default_path
 
     return None
 
 
-def resolve_repo_path(repo_path: Optional[str | Path], logger: Optional[logging.Logger] = None) -> Optional[Path]:
+def resolve_repo_path(repo_path: str | Path | None, logger: logging.Logger | None = None) -> Path | None:
     """Normalize and validate a repository path, with optional auto-detection.
 
     Returns a resolved path only when it exists and has a `.git` directory.
     """
-    candidate: Optional[Path]
+    candidate: Path | None
     if repo_path is None:
         candidate = detect_repo_path()
     else:
@@ -237,7 +238,7 @@ def resolve_repo_path(repo_path: Optional[str | Path], logger: Optional[logging.
     return candidate
 
 
-def resolve_repo_full_from_environment_label(task: Mapping[str, Any]) -> Optional[str]:
+def resolve_repo_full_from_environment_label(task: Mapping[str, Any]) -> str | None:
     """Resolve `owner/repo` from a task's `environment_label`."""
     label = str(task.get("environment_label") or "").strip()
     if "/" not in label:
@@ -248,7 +249,7 @@ def resolve_repo_full_from_environment_label(task: Mapping[str, Any]) -> Optiona
     return f"{owner}/{repo}"
 
 
-def get_env_config(prefix: str = "AUTOMATION_") -> Dict[str, str]:
+def get_env_config(prefix: str = "AUTOMATION_") -> dict[str, str]:
     """Get all environment variables with specified prefix"""
     config = {}
     for key, value in os.environ.items():
@@ -259,7 +260,7 @@ def get_env_config(prefix: str = "AUTOMATION_") -> Dict[str, str]:
     return config
 
 
-def get_email_config() -> Dict[str, str]:
+def get_email_config() -> dict[str, str]:
     """Get email configuration from environment variables"""
     email_config = {
         "smtp_server": os.getenv("SMTP_SERVER", "localhost"),
@@ -272,13 +273,13 @@ def get_email_config() -> Dict[str, str]:
     return email_config
 
 
-def validate_email_config(config: Dict[str, str]) -> bool:
+def validate_email_config(config: dict[str, str]) -> bool:
     """Validate that required email configuration is present"""
     required_fields = ["smtp_server", "email_user", "email_pass", "email_to"]
     return all(config.get(field) for field in required_fields)
 
 
-def get_automation_limits() -> Dict[str, int]:
+def get_automation_limits() -> dict[str, int]:
     """Get automation safety limits from defaults with optional overrides.
 
     Supports workflow-specific limits:
@@ -298,7 +299,7 @@ def coerce_positive_int(value: Any, *, default: int) -> int:
     return parsed if parsed > 0 else default
 
 
-def get_automation_limits_with_overrides(overrides: Optional[Mapping[str, Any]] = None) -> Dict[str, int]:
+def get_automation_limits_with_overrides(overrides: Mapping[str, Any] | None = None) -> dict[str, int]:
     """Internal helper to keep defaults centralized and overrides explicit.
 
     New limit structure:
@@ -312,7 +313,7 @@ def get_automation_limits_with_overrides(overrides: Optional[Mapping[str, Any]] 
     # Per-workflow limit: 10 attempts per workflow
     workflow_limit_default = 10
 
-    defaults: Dict[str, int] = {
+    defaults: dict[str, int] = {
         # Global PR limit: counts ALL attempts across ALL workflows
         "pr_limit": pr_limit,
         "global_limit": coerce_positive_int(os.getenv("AUTOMATION_GLOBAL_LIMIT"), default=100),
@@ -372,7 +373,7 @@ def parse_timestamp(timestamp_str: str) -> datetime:
     return datetime.fromisoformat(timestamp_str)
 
 
-def get_test_email_config() -> Dict[str, str]:
+def get_test_email_config() -> dict[str, str]:
     """Get standardized test email configuration"""
     return {
         "SMTP_SERVER": "smtp.example.com",

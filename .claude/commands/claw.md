@@ -19,7 +19,7 @@ If you are the **OpenClaw embedded agent** receiving this task from the gateway:
 
 **DO NOT run this task inline.** Inline execution has no worktree, no PR, no branch.
 
-**INSTEAD — follow the `dispatch-task` skill** (`~/.claude/skills/dispatch-task/SKILL.md` or repo-local `.claude/skills/dispatch-task/SKILL.md`):
+**INSTEAD — follow the `dispatch-task` skill** (in this repo: `skills/dispatch-task/SKILL.md`):
 1. Create/claim a bead (`br create ...` or `br update ... --status in_progress`; see CLAUDE.md for `br` examples)
 2. Determine the ao project ID: `ao projects list`
 3. Spawn: `ao spawn ORCH-xxx -p <project-id>`
@@ -39,67 +39,7 @@ When this command is invoked with `$ARGUMENTS`:
 TASK_DESCRIPTION="$ARGUMENTS"
 ```
 
-### Step 1: Shared helper — resolve slash commands
-
-```bash
-# resolve_slash_command() — resolves a slash command embedded in a task string.
-# Input:  task text (positional arg 1)
-# Output: task text with slash command inlined; prints resolution source to stdout.
-#         Returns 0 if resolved, 1 if no slash command found.
-resolve_slash_command() {
-  _src_text="$1"
-  _resolved_text="$_src_text"
-
-  _slash_cmd=$(printf '%s' "$_src_text" | python3 -c "
-import sys, re
-text = sys.stdin.read().strip()
-clean = re.sub(r'https?://\S+', '', text)
-m = re.search(r'(?:^|\s)/([\w-]+)', clean)
-if m:
-    print(m.group(1))
-" 2>/dev/null)
-
-  if [ -z "$_slash_cmd" ]; then
-    return 1
-  fi
-
-  _resolved_content=""
-  _resolved_source=""
-  for _search_dir in ".claude/commands" "$HOME/.claude/commands"; do
-    if [ -f "$_search_dir/$_slash_cmd.md" ]; then
-      _resolved_content=$(cat "$_search_dir/$_slash_cmd.md" 2>/dev/null)
-      _resolved_source="$_search_dir/$_slash_cmd.md"
-      break
-    fi
-  done
-  if [ -z "$_resolved_content" ]; then
-    for _search_dir in ".claude/skills" "$HOME/.claude/skills"; do
-      if [ -f "$_search_dir/$_slash_cmd/SKILL.md" ]; then
-        _resolved_content=$(cat "$_search_dir/$_slash_cmd/SKILL.md" 2>/dev/null)
-        _resolved_source="$_search_dir/$_slash_cmd/SKILL.md"
-        break
-      elif [ -f "$_search_dir/$_slash_cmd.md" ]; then
-        _resolved_content=$(cat "$_search_dir/$_slash_cmd.md" 2>/dev/null)
-        _resolved_source="$_search_dir/$_slash_cmd.md"
-        break
-      fi
-    done
-  fi
-  if [ -n "$_resolved_content" ]; then
-    echo "Resolved /$_slash_cmd from $_resolved_source"
-    _resolved_text="The user asked: $_src_text
-
-Below is the full definition of /$_slash_cmd (resolved from $_resolved_source). Execute it as instructed:
-
----
-$_resolved_content
----"
-  fi
-  printf '%s' "$_resolved_text"
-}
-```
-
-### Step 2: Classify task type
+### Step 1: Classify task type
 
 ```bash
 # Detect coding tasks (require parallel ao spawn)
@@ -207,11 +147,52 @@ sys.exit(1)
     echo "WARNING: agent-orchestrator.yaml not found in usual paths — ao spawn may still work if ao is configured elsewhere"
   fi
 
-  # Step A5: Resolve slash commands using shared helper
-  if TASK_WITH_RESOLVED_COMMANDS=$(resolve_slash_command "$TASK_DESCRIPTION"); then
-    : # helper already printed the "Resolved /cmd from source" line
-  else
-    TASK_WITH_RESOLVED_COMMANDS="$TASK_DESCRIPTION"
+  # Step A5: Resolve slash commands (same as original /claw)
+  # (inline the slash command resolution from Step 2.5 of the original)
+  TASK_WITH_RESOLVED_COMMANDS="$TASK_DESCRIPTION"
+
+  SLASH_CMD=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
+import sys, re
+text = sys.stdin.read().strip()
+clean = re.sub(r'https?://\S+', '', text)
+m = re.search(r'(?:^|\s)/([\w-]+)', clean)
+if m:
+    print(m.group(1))
+" 2>/dev/null)
+
+  if [ -n "$SLASH_CMD" ]; then
+    RESOLVED_CONTENT=""
+    RESOLVED_SOURCE=""
+    for search_dir in ".claude/commands" "$HOME/.claude/commands"; do
+      if [ -f "$search_dir/$SLASH_CMD.md" ]; then
+        RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
+        RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
+        break
+      fi
+    done
+    if [ -z "$RESOLVED_CONTENT" ]; then
+      for search_dir in ".claude/skills" "$HOME/.claude/skills"; do
+        if [ -f "$search_dir/$SLASH_CMD/SKILL.md" ]; then
+          RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD/SKILL.md" 2>/dev/null)
+          RESOLVED_SOURCE="$search_dir/$SLASH_CMD/SKILL.md"
+          break
+        elif [ -f "$search_dir/$SLASH_CMD.md" ]; then
+          RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
+          RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
+          break
+        fi
+      done
+    fi
+    if [ -n "$RESOLVED_CONTENT" ]; then
+      echo "Resolved /$SLASH_CMD from $RESOLVED_SOURCE"
+      TASK_WITH_RESOLVED_COMMANDS="The user asked: $TASK_DESCRIPTION
+
+Below is the full definition of /$SLASH_CMD (resolved from $RESOLVED_SOURCE). Execute it as instructed:
+
+---
+$RESOLVED_CONTENT
+---"
+    fi
   fi
 
   # Step A5.5: Learning-loop gate
@@ -223,12 +204,10 @@ import sys, re
 text = sys.stdin.read().lower()
 has_integrate = bool(re.search(r'/integrate\b', text))
 has_learn = bool(re.search(r'/learn\b', text))
-# Flexible N/A separator: matches 'learning n/a', 'learning: n/a', 'learning - n/a'
-has_na = bool(re.search(r'\blearning(?:\s*[-_:]\s*|\s+)n/?a\b|\bskip[-_\s]*learn\b', text))
+has_na = bool(re.search(r'learning.*n/?a|no.*learning|skip.*learn', text))
 print('yes' if (has_integrate or has_learn or has_na) else 'no')
 " 2>/dev/null)
-  # Treat empty HAS_LEARN (python3 error) as 'no' — fail closed (append /learn)
-  if [ "${HAS_LEARN:-no}" != "yes" ]; then
+  if [ "$HAS_LEARN" = "no" ]; then
     echo "Learning-loop gate: appending /learn step (no /integrate or /learn found in task)"
     TASK_WITH_RESOLVED_COMMANDS="${TASK_WITH_RESOLVED_COMMANDS}
 
@@ -272,15 +251,10 @@ After completing all work and creating the PR, run /learn to capture any reusabl
   else
     # No issue ID — create a bead first, then spawn
     echo "No issue ID detected — creating a bead..."
-    if ! command -v br &>/dev/null; then
-      echo "ERROR: 'br' command not found. Install beads or provide an issue ID."
-      rm -f "$TASK_FILE" "$SPAWN_OUTPUT_FILE"
-      exit 1
-    fi
     BEAD_TITLE=$(printf '%s' "$TASK_DESCRIPTION" | cut -c1-80)
     BEAD_OUTPUT=$(br create "$BEAD_TITLE" --type task --priority 2 2>&1)
     echo "Bead creation: $BEAD_OUTPUT"
-    ISSUE_ID=$(echo "$BEAD_OUTPUT" | python3 -c "import sys,re; t=sys.stdin.read(); m=re.search(r'ORCH-[A-Za-z0-9]+', t, re.IGNORECASE); print(m.group(0).lower() if m else '')" 2>/dev/null)
+    ISSUE_ID=$(echo "$BEAD_OUTPUT" | python3 -c "import sys,re; t=sys.stdin.read(); m=re.search(r'ORCH-[A-Za-z0-9]+', t); print(m.group(0).lower() if m else '')" 2>/dev/null)
     if [ -z "$ISSUE_ID" ]; then
       echo "ERROR: Failed to create bead from task"
       rm -f "$TASK_FILE" "$SPAWN_OUTPUT_FILE"
@@ -326,17 +300,8 @@ except Exception:
     pass
 ' 2>/dev/null || true)
   fi
-  if [ -z "$SESSION_NAME" ] && [ -n "$ISSUE_ID" ]; then
-    # Filter ao session ls by issue ID suffix — avoid picking an unrelated session
-    SESSION_NAME=$(ao session ls 2>/dev/null | grep -oE '[a-z]+-[a-z0-9]+' | grep -F "$(echo "$ISSUE_ID" | cut -d- -f2-)" | tail -1 || true)
-    [ -n "$SESSION_NAME" ] && echo "Session detected via ao session ls filter: $SESSION_NAME"
-  fi
   if [ -z "$SESSION_NAME" ]; then
-    echo "ERROR: Could not detect session name for ${ISSUE_ID:-task} — task will not be delivered"
-    echo "  Check: ao status --project $PROJECT_ID"
-    echo "  Send manually: ao send <session> --file $TASK_FILE"
-    rm -f "$SPAWN_OUTPUT_FILE"
-    exit 1
+    SESSION_NAME=$(ao session ls 2>/dev/null | grep -oE '[a-z]+-[0-9]+' | tail -1 || true)
   fi
 
   echo ""
@@ -356,23 +321,19 @@ except Exception:
     if [ $SEND_EXIT -eq 0 ]; then
       echo "Task sent successfully to $SESSION_NAME"
       # Verify delivery: peek at tmux to confirm session is actively processing (not idle)
-      # Derive tmux target by scanning for a session containing SESSION_NAME — avoids
-      # a hardcoded host-specific prefix (ao session names include a device prefix).
       sleep 5
-      TMUX_FULL_TARGET=$(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -F "${SESSION_NAME}" | head -1)
-      TMUX_FULL_TARGET="${TMUX_FULL_TARGET:-${SESSION_NAME}}"
-      TMUX_PANE_OUTPUT=$(tmux capture-pane -t "$TMUX_FULL_TARGET" -p -S -5 2>/dev/null | tail -5)
+      TMUX_PANE_OUTPUT=$(tmux capture-pane -t "bb5e6b7f8db3-${SESSION_NAME}" -p -S -5 2>/dev/null | tail -5)
       if echo "$TMUX_PANE_OUTPUT" | grep -qE "Press up to edit|queued messages"; then
         echo "WARNING: task appears queued but not submitted — sending Enter to trigger"
-        tmux send-keys -t "$TMUX_FULL_TARGET" "" Enter 2>/dev/null || true
+        tmux send-keys -t "bb5e6b7f8db3-${SESSION_NAME}" "" Enter 2>/dev/null || true
         sleep 3
       fi
     else
-      echo "ERROR: ao send failed with exit code $SEND_EXIT — task not delivered"
-      echo "  Session: $SESSION_NAME  |  Task file kept: $TASK_FILE"
-      rm -f "$SPAWN_OUTPUT_FILE"
-      exit 1
+      echo "WARNING: ao send exited with code $SEND_EXIT"
     fi
+  else
+    echo "WARNING: Could not detect session name — task may not be delivered"
+    echo "To send manually: ao send <session> --file $TASK_FILE"
   fi
 
   # Step A10: Report to user
@@ -395,6 +356,27 @@ except Exception:
   # Clean up temp files (keep task file for manual send if needed)
   rm -f "$SPAWN_OUTPUT_FILE"
 
+  # Step A11: Delivery tracking — verify session produces output
+  # Write a tracking marker so the calling agent can verify delivery later
+  TRACKING_FILE="/tmp/openclaw/.claw-track-${ISSUE_ID:-unknown}"
+  cat > "$TRACKING_FILE" <<TRACK_EOF
+ISSUE_ID=${ISSUE_ID:-unknown}
+SESSION_NAME=${SESSION_NAME:-unknown}
+PROJECT_ID=$PROJECT_ID
+SPAWNED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+TASK_FILE=$TASK_FILE
+STATUS=spawned
+TRACK_EOF
+  chmod 600 "$TRACKING_FILE" 2>/dev/null || true
+
+  echo ""
+  echo "Tracking: $TRACKING_FILE"
+  echo ""
+  echo "IMPORTANT: Verify delivery before reporting done:"
+  echo "  1. tmux has-session -t bb5e6b7f8db3-${SESSION_NAME} 2>/dev/null  # session alive?"
+  echo "  2. gh pr list -R <repo> --search '${ISSUE_ID}' --json number     # PR created?"
+  echo "  If session died with no PR: respawn immediately or flag to user."
+
   exit 0
 fi
 ```
@@ -405,24 +387,64 @@ fi
 # === PATH B: Gateway HTTP (read-only / summarize tasks) ===
 echo "=== PATH B: Gateway HTTP (non-coding tasks) ==="
 
-# Verify gateway is running — prefer HTTP probe; fall back to socket check
-if command -v curl >/dev/null 2>&1 && curl -s --max-time 2 http://127.0.0.1:18789/ -o /dev/null -w "%{http_code}" 2>/dev/null | grep -qe '^[23]'; then
-  echo "Gateway is healthy (HTTP probe)"
-elif curl -s --max-time 2 http://127.0.0.1:18789/health -o /dev/null -w "%{http_code}" 2>/dev/null | grep -qe '^[23]'; then
-  echo "Gateway is healthy (/health endpoint)"
-elif (command -v ss >/dev/null 2>&1 && ss -ltn 2>/dev/null | grep -q ':18789') || \
-     (command -v netstat >/dev/null 2>&1 && netstat -an 2>/dev/null | grep -q ':18789.*LISTEN'); then
-  echo "Gateway is listening on port 18789 (socket check)"
-else
-  echo "Gateway not running on port 18789. Start it with: launchctl start gui/\$(id -u)/ai.openclaw.gateway"
+# Verify gateway is running
+if ! lsof -i :18789 2>/dev/null | grep -q LISTEN; then
+  echo "Gateway not running on port 18789. Start it with: launchctl start gui/$UID/ai.openclaw.gateway"
   exit 1
 fi
 
-# Resolve slash commands using shared helper (deduplicated from Path A)
-if TASK_WITH_RESOLVED=$(resolve_slash_command "$TASK_DESCRIPTION"); then
-  : # helper already printed the "Resolved /cmd from source" line
-else
-  TASK_WITH_RESOLVED="$TASK_DESCRIPTION"
+# Read Gateway Token
+GATEWAY_TOKEN=$(python3 -c "import json; d=json.load(open('$HOME/.openclaw/openclaw.json')); print(d['gateway']['auth']['token'])" 2>/dev/null)
+if [ -z "$GATEWAY_TOKEN" ]; then
+  echo "Could not read gateway token from ~/.openclaw/openclaw.json"
+  exit 1
+fi
+
+# Resolve slash commands (same resolution as Path A)
+TASK_WITH_RESOLVED="$TASK_DESCRIPTION"
+
+SLASH_CMD=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
+import sys, re
+text = sys.stdin.read().strip()
+clean = re.sub(r'https?://\S+', '', text)
+m = re.search(r'(?:^|\s)/([\w-]+)', clean)
+if m:
+    print(m.group(1))
+" 2>/dev/null)
+
+if [ -n "$SLASH_CMD" ]; then
+  RESOLVED_CONTENT=""
+  RESOLVED_SOURCE=""
+  for search_dir in ".claude/commands" "$HOME/.claude/commands"; do
+    if [ -f "$search_dir/$SLASH_CMD.md" ]; then
+      RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
+      RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
+      break
+    fi
+  done
+  if [ -z "$RESOLVED_CONTENT" ]; then
+    for search_dir in ".claude/skills" "$HOME/.claude/skills"; do
+      if [ -f "$search_dir/$SLASH_CMD/SKILL.md" ]; then
+        RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD/SKILL.md" 2>/dev/null)
+        RESOLVED_SOURCE="$search_dir/$SLASH_CMD/SKILL.md"
+        break
+      elif [ -f "$search_dir/$SLASH_CMD.md" ]; then
+        RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
+        RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
+        break
+      fi
+    done
+  fi
+  if [ -n "$RESOLVED_CONTENT" ]; then
+    echo "Resolved /$SLASH_CMD from $RESOLVED_SOURCE"
+    TASK_WITH_RESOLVED="The user asked: $TASK_DESCRIPTION
+
+Below is the full definition of /$SLASH_CMD (resolved from $RESOLVED_SOURCE). Execute it as instructed:
+
+---
+$RESOLVED_CONTENT
+---"
+  fi
 fi
 
 # Build JSON payload
@@ -450,44 +472,20 @@ if [ $py_rc -ne 0 ] || [ ! -s "$PAYLOAD_FILE" ]; then
   exit 1
 fi
 
-# Dispatch async — all token handling stays inside the subshell (no parent-shell env/argv leak)
-# Note: no parent-shell trap needed — the subshell's cleanup trap handles PAYLOAD_FILE removal
-# on any exit (including if the nohup itself fails to start).
-PAYLOAD_FILE="$PAYLOAD_FILE" LOGFILE="$LOGFILE" nohup bash -c '
-# Read token inside subshell — never visible as parent-shell variable or Python argv
-GATEWAY_TOKEN=$(python3 -c "
-import json, sys
-d=json.load(open(sys.argv[1]))
-# Try .gateway.token first (current openclaw.json schema),
-# fall back to .gateway.auth.token (legacy schema).
-try:
-    print(d['gateway']['token'])
-except KeyError:
-    try:
-        print(d['gateway']['auth']['token'])
-    except KeyError:
-        sys.exit(1)
-" "$HOME/.openclaw/openclaw.json" 2>/dev/null)
-if [ -z "$GATEWAY_TOKEN" ]; then
-    echo "TOKEN ERROR: could not read gateway token" >&2
-    exit 1
-fi
+# Dispatch async
+TOKEN_FILE="$(mktemp /tmp/openclaw/.claw-token-XXXXXXXX)"
+chmod 600 "$TOKEN_FILE" 2>/dev/null || true
+printf '%s' "$GATEWAY_TOKEN" > "$TOKEN_FILE"
+unset GATEWAY_TOKEN
 
-# Token validation guard — reject empty or too-short tokens
-# (length-only check; openclaw token format is opaque, so we avoid
-# restricting the character class and breaking valid tokens with . + / etc.)
-if [ ${#GATEWAY_TOKEN} -lt 20 ]; then
-    echo "TOKEN ERROR: token is too short or empty" >&2
-    exit 1
-fi
+# Pass paths into nohup child (inner bash -c does not inherit unexported parent vars reliably)
+PAYLOAD_FILE="$PAYLOAD_FILE" LOGFILE="$LOGFILE" TOKEN_FILE="$TOKEN_FILE" nohup bash -c '
+GATEWAY_TOKEN=$(cat "$TOKEN_FILE" 2>/dev/null)
+rm -f "$TOKEN_FILE"
+if [ -z "$GATEWAY_TOKEN" ]; then echo "TOKEN ERROR"; exit 1; fi
 
-# All temp files use mktemp with random suffix — no predictable paths
-BODY_FILE="$(mktemp /tmp/openclaw/.claw-body-XXXXXXXX)"
-HTTP_CODE_FILE="$(mktemp /tmp/openclaw/.claw-http-XXXXXXXX)"
-
-# Ensure cleanup on any exit from this subshell
-cleanup() { rm -f "$BODY_FILE" "$HTTP_CODE_FILE" "$PAYLOAD_FILE" 2>/dev/null; }
-trap cleanup EXIT INT TERM HUP
+RAW_BODY_FILE="$(mktemp /tmp/openclaw/.claw-body-XXXXXXXX)"
+HTTP_META_FILE="$(mktemp /tmp/openclaw/.claw-http-XXXXXXXX)"
 
 curl -sS -N \
   http://127.0.0.1:18789/v1/chat/completions \
@@ -496,42 +494,43 @@ curl -sS -N \
   -H "x-openclaw-agent-id: main" \
   --max-time 600 \
   -d @"$PAYLOAD_FILE" \
-  -o "$BODY_FILE" \
-  -w "%{http_code}" >"$HTTP_CODE_FILE" 2>/dev/null
+  -o "$RAW_BODY_FILE" \
+  -w "%{http_code}" >"$HTTP_META_FILE" 2>/dev/null
 
 CURL_EXIT=$?
 if [ $CURL_EXIT -ne 0 ]; then
-  echo "CURL ERROR: request failed with exit code $CURL_EXIT" >&2
+  echo "CURL ERROR: request failed with exit code $CURL_EXIT"
+  rm -f "$PAYLOAD_FILE" "$RAW_BODY_FILE" "$HTTP_META_FILE"
+  unset GATEWAY_TOKEN
   exit 1
 fi
 
-HTTP_CODE=$(cat "$HTTP_CODE_FILE" 2>/dev/null || echo "")
+rm -f "$PAYLOAD_FILE"
+unset GATEWAY_TOKEN
 
-# HTTP 4xx/5xx detection — check status code before attempting JSON parse
-if [[ -n "$HTTP_CODE" && "$HTTP_CODE" =~ ^[4-5][0-9][0-9]$ ]]; then
-  BODY_PREVIEW=$(head -c 512 "$BODY_FILE" 2>/dev/null || echo "")
-  # Try to extract JSON error message; if not JSON, show raw preview
-  JSON_ERR=$(printf "%s" "$BODY_PREVIEW" | python3 -c "
+HTTP_CODE=$(cat "$HTTP_META_FILE" 2>/dev/null || echo "")
+
+ERROR_MSG=$(head -1 "$RAW_BODY_FILE" 2>/dev/null | python3 -c "
 import sys, json
 try:
-    d=json.loads(sys.stdin.read())
+    d = json.loads(sys.stdin.read())
     if \"error\" in d:
-        e=d[\"error\"]
-        print(e.get(\"message\", str(e)) if isinstance(e,dict) else str(e))
+        err = d[\"error\"]
+        if isinstance(err, dict):
+            print(err.get(\"message\", str(err)))
+        else:
+            print(str(err))
 except Exception:
     pass
 " 2>/dev/null)
-  if [ -n "$JSON_ERR" ]; then
-    echo "GATEWAY ERROR (HTTP $HTTP_CODE): $JSON_ERR" >&2
-  else
-    echo "GATEWAY ERROR: HTTP $HTTP_CODE" >&2
-    echo "$BODY_PREVIEW" >&2
-  fi
-  exit 1
-fi
 
-# SSE multi-line parser via Python heredoc — no process substitution, no shell variable buffering
-python3 - "$BODY_FILE" <<SSEOF
+if [ -n "$ERROR_MSG" ]; then
+  echo "GATEWAY ERROR (HTTP $HTTP_CODE): $ERROR_MSG"
+elif [[ -n "$HTTP_CODE" && "$HTTP_CODE" =~ ^[4-5][0-9][0-9]$ ]]; then
+  echo "GATEWAY ERROR: HTTP $HTTP_CODE"
+  head -5 "$RAW_BODY_FILE" 2>/dev/null
+else
+  python3 - "$RAW_BODY_FILE" <<SSEOF
 import json, sys
 buf = []
 with open(sys.argv[1], "r", errors="replace") as f:
@@ -545,7 +544,7 @@ with open(sys.argv[1], "r", errors="replace") as f:
                     continue
                 try:
                     d = json.loads(payload)
-                    delta = d.get("choices", [{}])[0].get("delta", {})
+                    delta = d["choices"][0].get("delta", {})
                     if "content" in delta:
                         print(delta["content"], end="", flush=True)
                 except Exception:
@@ -558,13 +557,14 @@ with open(sys.argv[1], "r", errors="replace") as f:
         if payload.strip() != "[DONE]":
             try:
                 d = json.loads(payload)
-                delta = d.get("choices", [{}])[0].get("delta", {})
+                delta = d["choices"][0].get("delta", {})
                 if "content" in delta:
                     print(delta["content"], end="", flush=True)
             except Exception:
                 pass
 SSEOF
-
+fi
+rm -f "$HTTP_META_FILE" "$RAW_BODY_FILE"
 echo ""
 echo "--- claw task completed $(date) ---"
 ' > "$LOGFILE" 2>&1 &
@@ -597,7 +597,6 @@ echo "Kill: kill $CLAW_PID"
 
 - **Parallelism**: Multiple `/claw` invocations with coding tasks each spawn independent `ao` sessions in parallel tmux windows — no longer sequential through the gateway
 - **Slash commands**: Resolved before dispatch in both paths (command definition inlined into task)
-- **Task file cleanup**: Temp task files are kept at `/tmp/openclaw/.claw-task-*` for manual resend if needed
+- **Task file cleanup**: Temp task files are kept at `/tmp/openclaw/.claw-task-*.txt` for manual resend if needed
 - **Bead creation**: If no issue ID is detected in a coding task, a bead is created automatically via `br create`
 - **Beads**: orch-sq2 (parallel ao spawn routing)
-- **Antigravity runtime**: If the task mentions `antig` or `antigravity`, Path A adds `--runtime antigravity` to `ao spawn`
