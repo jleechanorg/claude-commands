@@ -10,7 +10,47 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 1: 2. **Integrated Workflow Execution**
+### Phase 0: Survey Current Situation
+
+**Action Steps:**
+1. **Read Claude auto-memories** for roadmap-relevant context:
+   ```python
+   import subprocess, glob, os, re
+   # Derive current project's memory dir from git root
+   try:
+       git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
+       project_key = git_root.replace('/', '-')  # preserve leading dash: /Users/... → -Users-...
+       memory_dir = os.path.expanduser(f'~/.claude/projects/{project_key}/memory/')
+       memory_files = glob.glob(os.path.join(memory_dir, '*.md'))
+   except Exception:
+       memory_files = []
+   # Keyword filter: roadmap, planning, architecture, decision, goals
+   keywords = ['roadmap', 'planning', 'architecture', 'decision', 'goal']
+   relevant = [f for f in memory_files if any(k in open(f).read().lower() for k in keywords)]
+   ```
+   Display any matches as "📍 From Memory" before proceeding.
+
+2. **Scan roadmap/ directory** for existing docs:
+   ```python
+   import subprocess, os, glob
+   git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
+   roadmap_files = glob.glob(os.path.join(git_root, 'roadmap', '*.md'))
+   ```
+   - Show titles (first H1 or filename) and modification dates
+   - If a doc matches the current task topic (keyword match against filenames + first 5 lines), flag it as "EXISTING — consider updating"
+
+3. **Scan beads** for related open items:
+   - Run: `br list --status open 2>/dev/null`
+   - Keyword-match against current task input
+   - If matches found, show them as "EXISTING BEADS — consider updating these instead of creating new ones"
+
+4. **Report situation summary** before asking for input or proceeding:
+   - N existing roadmap docs found (list titles)
+   - N related open beads found (list IDs + titles)
+   - N memory entries found
+   - Recommendation: UPDATE existing vs CREATE new
+
+### Phase 1: Integrated Workflow Execution
 
 **Action Steps:**
 For each task, execute in sequence:
@@ -54,13 +94,17 @@ For each task, execute in sequence:
    - **Large**: ALWAYS create comprehensive `roadmap/scratchpad_task[NUMBER]_[brief-description].md` with architecture and phases
    - **Any Detailed Task**: If defining tasks to a detailed degree during planning, ALWAYS create scratchpad files regardless of classification
 
+   **Find-or-Create Logic** (apply after Phase 0 situation survey):
+   - **For beads**: If Phase 0 found a matching open bead → update it with `br update <id> --status in_progress` + add notes. Do NOT create a duplicate. If no matching bead → create with `br create "<title>" --type task --priority 2`
+   - **For roadmap docs**: If Phase 0 found a matching roadmap/*.md file → open and UPDATE it (add a dated section at the bottom: `## Update YYYY-MM-DD\n<new content>`). If no matching doc → create new: `roadmap/TOPIC_SLUG_YYYY-MM-DD.md`
+
 4. **Autonomy Validation**: Before finalizing, verify each task has sufficient detail for independent execution
 
 5. Record current branch name
 
-6. If not on main branch:
-   - Check for uncommitted changes with `git status`
-   - If changes exist, commit them with descriptive message
+6. Check for uncommitted changes regardless of current branch:
+   - Run `git status --porcelain`
+   - If changes exist, commit them with a descriptive message before any branch switch
 
 7. Switch to main branch: `git checkout main`
 
@@ -68,9 +112,9 @@ For each task, execute in sequence:
 
 9. Create clean roadmap update branch: `git checkout -b roadmap-update-[timestamp]`
 
-10. Make requested changes to:
-   - `roadmap/roadmap.md` (main roadmap file)
-   - `roadmap/sprint_current.md` (current sprint status)
+10. Make requested changes to roadmap files (create if missing):
+   - `roadmap/roadmap.md` (main roadmap file — create with `# Roadmap\n` header if absent)
+   - `roadmap/sprint_current.md` (current sprint status — create with `# Current Sprint\n` header if absent)
    - `roadmap/scratchpad_task[NUMBER]_[description].md` (if applicable)
 
 11. Commit changes with format: `docs(roadmap): [description]`
@@ -82,6 +126,35 @@ For each task, execute in sequence:
 14. Switch back to original branch: `git checkout [original-branch]`
 
 15. **MANDATORY**: Explicitly report merge status: "✅ PR CREATED" with PR link for user to merge
+
+16. **Claude Memory Write** (only if session produced real decisions/plans, skip for read-only invocations):
+   - Derive memory dir from git root (same method as Phase 0 step 1)
+   - Fill in `<topic>`, `<one_liner>`, `<what>`, `<why>`, `<how_to_apply>` from the session's actual content
+   ```python
+   import subprocess, os, datetime, textwrap
+   git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
+   project_key = git_root.replace('/', '-')  # preserve leading dash: /Users/... → -Users-...
+   memory_dir = os.path.expanduser(f'~/.claude/projects/{project_key}/memory/')
+   today = datetime.date.today().isoformat()
+   slug = '<topic>'.lower().replace(' ', '_')[:40]
+   filename = f'project_roadmap_{today}_{slug}.md'
+   content = textwrap.dedent(f"""\
+       ---
+       name: roadmap_{today}_{slug}
+       description: Roadmap decision: <one_liner>
+       type: project
+       ---
+
+       **What**: <what_was_decided_or_planned>
+       **Why**: <motivation>
+       **How to apply**: When working on <topic_keywords>, check this first.
+   """)
+   os.makedirs(memory_dir, exist_ok=True)
+   with open(os.path.join(memory_dir, filename), 'w') as f:
+       f.write(content)
+   with open(os.path.join(memory_dir, 'MEMORY.md'), 'a') as f:
+       f.write(f'\n- [roadmap_{today}_{slug}]({filename}) — <one_liner>')
+   ```
 
 **Files Updated**: `roadmap/roadmap.md`, `roadmap/sprint_current.md`, and task scratchpads as needed
 
@@ -134,7 +207,8 @@ For each task, execute in sequence:
 ## Example Multi-Task Usage
 
 ```
-User: /roadmap implement auth system, create API docs, add unit testsAssistant: I'll process these 3 tasks in parallel. Let me analyze each one:
+User: /roadmap implement auth system, create API docs, add unit tests
+Assistant: I'll process these 3 tasks in parallel. Let me analyze each one:
 
 [Executes /think light for each task]
 
