@@ -113,11 +113,11 @@ gh api rate_limit --jq '.resources | {core: .core.remaining, graphql: .graphql.r
 # B2. Open PRs with status
 gh pr list --repo jleechanorg/agent-orchestrator --state open --json number,title,mergeable,reviewDecision,statusCheckRollup --jq '.[] | {number, title, mergeable, reviewDecision, ci: (.statusCheckRollup // [] | map(select(.conclusion != "")) | map(.conclusion) | unique)}'
 
-# B3. Non-green reasons from orchestrator log
-tail -100 /tmp/ao-orchestrators.log 2>/dev/null | grep -E "not green|SKIP|WARNING|ERROR" | tail -20
+# B3. Non-green reasons from poller log
+tail -100 /tmp/ao-pr-poller.log 2>/dev/null | grep -E "not green|SKIP|WARNING|ERROR" | tail -20
 
 # B4. Recent spawning activity
-tail -50 /tmp/ao-orchestrators.log 2>/dev/null | grep -E "Spawning|SUCCESS" | tail -10
+tail -50 /tmp/ao-pr-poller.log 2>/dev/null | grep -E "Spawning|SUCCESS" | tail -10
 
 # B5. PR worker coverage check (deterministic — exits non-zero if uncovered PRs)
 $HOME/.openclaw/scripts/check-pr-worker-coverage.sh 2>/dev/null || echo "Coverage script not found or returned non-zero (uncovered PRs exist)"
@@ -149,7 +149,7 @@ for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" 
 
   # Get last commit date
   last_commit=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/commits" --jq '.[-1].commit.committer.date' 2>/dev/null)
-  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || date -u -d "$last_commit" +%s 2>/dev/null || echo 0)
+  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || echo 0)
   gap_mins=$(( (current_epoch - commit_epoch) / 60 ))
 
   # Get review state
@@ -208,23 +208,31 @@ Pick one APPROVED PR (if any exist) and verify skeptic-cron's gate checks agree 
 echo "=== SKEPTIC-CRON CORRECTNESS SPOT-CHECK ==="
 # Find an APPROVED PR
 APPROVED_PR=$(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" \
-  --jq '[.[] | select(.draft == false and .review_decision == "APPROVED")] | .[0].number // empty' 2>/dev/null)
+  --jq '[.[] | select(.draft == false)] | .[0].number' 2>/dev/null)
 if [ -n "$APPROVED_PR" ]; then
   echo "Spot-checking PR #$APPROVED_PR"
 
-  # Gate 3: CR state — skeptic-cron uses the last review state as-is (APPROVED → pass, anything else → fail Gate 3)
-  # This is validated by Gate 7 (skeptic-cron workflow run); spot-check removed to avoid redundant/confusing check
-
-  # Gate 5: Unresolved review threads via GraphQL (skeptic-cron uses GraphQL reviewThreads/isResolved)
-  GQL_UNRESOLVED=$(gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:500){nodes{isResolved}pageInfo{hasNextPage}}}}}' \
-    -f owner="jleechanorg" -f repo="agent-orchestrator" -F pr="$APPROVED_PR" \
-    --jq 'if [.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage] | any then "graphql_TRUNCATED" else [.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length end' 2>/dev/null || echo "graphql_failed")
-  if [ "$GQL_UNRESOLVED" = "graphql_TRUNCATED" ]; then
-    echo "  FAIL Gate 5: GraphQL thread pagination truncated (>500 threads) — cannot determine unresolved count"
-  elif [ "$GQL_UNRESOLVED" = "graphql_failed" ]; then
-    echo "  FAIL Gate 5: GraphQL query failed"
+  # Gate 3: CR state — must filter to actionable reviews (APPROVED/CHANGES_REQUESTED), not COMMENTED
+  CR_ACTIONABLE=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/reviews" \
+    --jq '[.[] | select(.user.login == "coderabbitai[bot]") | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED")] | sort_by(.submitted_at) | last | .state // "none"' 2>/dev/null)
+  CR_LATEST=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/reviews" \
+    --jq '[.[] | select(.user.login == "coderabbitai[bot]")] | sort_by(.submitted_at) | last | .state // "none"' 2>/dev/null)
+  if [ "$CR_ACTIONABLE" != "$CR_LATEST" ]; then
+    echo "  MISMATCH Gate 3: actionable=$CR_ACTIONABLE vs latest=$CR_LATEST (skeptic-cron uses latest — BUG)"
   else
-    echo "  Gate 5 OK: $GQL_UNRESOLVED unresolved threads"
+    echo "  Gate 3 OK: $CR_ACTIONABLE"
+  fi
+
+  # Gate 5: Unresolved comments — REST has no isResolved
+  REST_COMMENTS=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/comments" \
+    --jq '[.[] | select(.in_reply_to_id == null)] | length' 2>/dev/null)
+  GQL_UNRESOLVED=$(gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{isResolved}}}}}' \
+    -f owner="jleechanorg" -f repo="agent-orchestrator" -F pr="$APPROVED_PR" \
+    --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo "graphql_failed")
+  if [ "$REST_COMMENTS" != "$GQL_UNRESOLVED" ]; then
+    echo "  MISMATCH Gate 5: REST root comments=$REST_COMMENTS vs GraphQL unresolved=$GQL_UNRESOLVED (skeptic-cron uses REST — BUG if REST>0)"
+  else
+    echo "  Gate 5 OK: $GQL_UNRESOLVED unresolved"
   fi
 
   # Check last skeptic-cron run
@@ -245,10 +253,10 @@ for sess in $(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E '(ao
   [ -z "$pr_num" ] && continue
   # Detect repo from session prefix
   case "$sess" in
-    ao-*|*-ao-*) repo="jleechanorg/agent-orchestrator" ;;
-    jc-*|*-jc-*) repo="jleechanorg/jleechanclaw" ;;
-    wa-*|*-wa-*) repo="${GITHUB_REPOSITORY:-jleechanorg/worldai_claw}" ;;
-    wc-*|*-wc-*) repo="jleechanorg/worldai_claw" ;;
+    ao-*) repo="jleechanorg/agent-orchestrator" ;;
+    jc-*) repo="jleechanorg/jleechanclaw" ;;
+    wa-*) repo="$GITHUB_REPOSITORY" ;;
+    wc-*) repo="jleechanorg/worldai_claw" ;;
     *) continue ;;
   esac
   merged=$(gh api "repos/$repo/pulls/$pr_num" --jq '.merged' 2>/dev/null)
@@ -318,7 +326,7 @@ For each recently merged PR, check and report:
 | Total merged | N |
 | Auto-merged (merged_by=github-actions[bot]) | N (NN%) |
 | Manual-merged (merged_by=human) | N (NN%) |
-| Zero-touch (merged_by=github-actions[bot]) | N (NN%) |
+| Zero-touch (auto-merged + all [agento] commits) | N (NN%) |
 <List zero-touch PRs by number>
 
 ### Root cause
