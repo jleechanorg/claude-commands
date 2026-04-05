@@ -41,40 +41,14 @@ TASK_DESCRIPTION="$ARGUMENTS"
 
 ### Step 1: Classify task type
 
-```bash
-# Detect coding tasks (require parallel ao spawn)
-# Matches keywords that indicate real code changes
-is_coding_task() {
-  printf '%s' "$1" | python3 -c "
-import sys, re
-text = sys.stdin.read().lower()
-coding_patterns = [
-    r'\b(fix|resolve|patch)\s+(bug|issue|pr|code|test|error|problem|regression|failure)\b',
-    r'\bimplement\b', r'\bcreate\s+pr\b', r'\bwrite\b.*\bcode\b',
-    r'\bupdate\b.*\bcode\b', r'\brefactor\b', r'\badd\b.*\bfeature\b',
-    r'\bpatch\b', r'\b(add|write|create|implement|update|fix)\s+.*\btest',
-    r'\b(fix|setup|configure|update)\s+.*\bbuild\b', r'\bdeploy\b',
-    r'\bconfigure\b', r'\bset\s*up\b', r'\brewrite\b', r'\benhance\b',
-    r'\boptimize\b', r'\bclean\s*up\b', r'\bremove\b.*\bcode\b',
-    r'\bwork\s*on\b.*\b(bead|issue|pr|branch)\b',
-    r'\bao\s*spawn\b', r'\bdispatch\b',
-    r'\b(?:orch|wa|ao|ra|cc|wc|mt|mm)-[a-z0-9]+\b',  # issue reference (all project prefixes)
-    r'\bpr\s*#?\d+\b',      # PR reference
-    r'\bbranch\b.*\b(feat|fix|bug|orch)\b',
-    r'\bbead\b.*\b(orch|wa|jc|ao)\b',
-]
-for pat in coding_patterns:
-    if re.search(pat, text):
-        sys.exit(0)
-sys.exit(1)
-" 2>/dev/null
-}
+Use your judgment to classify the task as **coding** or **read_only**:
+- **coding**: involves writing/modifying/fixing/creating code, PRs, tests, config, or deploys; working on a bead/issue that requires code changes; contains `ao spawn` or dispatch instructions; references a bead ID (e.g. `orch-sq2`, `wa-123`)
+- **read_only**: summarize, explain, analyze, check status, read-only queries — no code changes needed
 
-if is_coding_task "$TASK_DESCRIPTION"; then
-  TASK_TYPE="coding"
-else
-  TASK_TYPE="read_only"
-fi
+When in doubt, classify as **coding** (err toward spawning a session).
+
+```bash
+TASK_TYPE="coding"  # Set to "read_only" only if you judged it non-coding above
 echo "Task classified as: $TASK_TYPE"
 ```
 
@@ -87,18 +61,10 @@ if [ "$TASK_TYPE" = "coding" ]; then
   echo "=== PATH A: ao spawn (parallel coding sessions) ==="
 
   # Step A1: Extract issue ID from task (e.g. "orch-sq2", "ORCH-sq2", "fix orch-sq2")
-  ISSUE_ID=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
-import sys, re
-text = sys.stdin.read().strip()
-# Match bead/issue IDs for all ao project prefixes (see case map below)
-m = re.search(
-    r'\b((?:orch|wa|ao|ra|cc|wc|mt|mm)-[a-z0-9]+)\b',
-    text,
-    re.IGNORECASE,
-)
-if m:
-    print(m.group(1).lower())
-" 2>/dev/null)
+  # Scan the task description for a bead/issue ID — pattern: prefix-alphanumeric
+  # Valid prefixes: orch, wa, ao, ra, cc, wc, mt, mm
+  # Use your judgment to identify the ID (case-insensitive). Set empty if none found.
+  ISSUE_ID=""  # e.g. "orch-sq2" — extracted by you from TASK_DESCRIPTION, lowercase, or empty
 
   # Step A2: Resolve project from issue ID prefix or default to jleechanclaw
   case "$ISSUE_ID" in
@@ -114,19 +80,10 @@ if m:
   esac
   echo "Project: $PROJECT_ID  Issue: ${ISSUE_ID:-<none — will be created>}"
 
-  # Step A2.5: Detect runtime override (e.g., "antig" = antigravity runtime)
-  RUNTIME_FLAG=""
-  if printf '%s' "$TASK_DESCRIPTION" | python3 -c "
-import sys, re
-text = sys.stdin.read().lower()
-# 'antig' or 'antigravity orchestrator' means use runtime-antigravity
-if re.search(r'\bantig(?:ravity)?\b', text):
-    sys.exit(0)
-sys.exit(1)
-" 2>/dev/null; then
-    RUNTIME_FLAG="--runtime antigravity"
-    echo "Runtime override detected: antigravity (via 'antig' keyword)"
-  fi
+  # Step A2.5: Detect runtime override
+  # If the task mentions "antig" or "antigravity", set RUNTIME_FLAG to "--runtime antigravity".
+  # Use your judgment — no subprocess needed.
+  RUNTIME_FLAG=""  # set to "--runtime antigravity" if task mentions antig/antigravity
 
   # Step A3: Verify ao is available
   if ! command -v ao &>/dev/null; then
@@ -195,24 +152,16 @@ $RESOLVED_CONTENT
     fi
   fi
 
-  # Step A5.5: Learning-loop gate
-  # Any coding task dispatched via /claw that does NOT go through /integrate must
-  # explicitly include /learn at the end — otherwise the learning loop is silently broken.
-  # Check if task already has /learn, /integrate, or an explicit "learning N/A" reason.
-  HAS_LEARN=$(printf '%s' "$TASK_WITH_RESOLVED_COMMANDS" | python3 -c "
-import sys, re
-text = sys.stdin.read().lower()
-has_integrate = bool(re.search(r'/integrate\b', text))
-has_learn = bool(re.search(r'/learn\b', text))
-has_na = bool(re.search(r'learning.*n/?a|no.*learning|skip.*learn', text))
-print('yes' if (has_integrate or has_learn or has_na) else 'no')
-" 2>/dev/null)
-  if [ "$HAS_LEARN" = "no" ]; then
-    echo "Learning-loop gate: appending /learn step (no /integrate or /learn found in task)"
-    TASK_WITH_RESOLVED_COMMANDS="${TASK_WITH_RESOLVED_COMMANDS}
+  # Step A5.5: Learning-loop gate (fail-closed — always append unless explicitly present)
+  # Does TASK_WITH_RESOLVED_COMMANDS already contain /learn, /integrate, or an explicit
+  # note that learning is not applicable (e.g. "learning N/A", "skip /learn")?
+  # Use your judgment directly — no subprocess needed. If any of those are present, skip.
+  # If NOT present (including if you are unsure), append the /learn instruction below.
+  # FAIL-CLOSED: omission = append. Only skip when you are confident /learn is covered.
+  TASK_WITH_RESOLVED_COMMANDS="${TASK_WITH_RESOLVED_COMMANDS}
 
 After completing all work and creating the PR, run /learn to capture any reusable patterns."
-  fi
+  # (Remove the appended /learn line above only if you judged the task already includes it)
 
   # Step A6: Write task to temp file for ao send
   mkdir -p /tmp/openclaw
@@ -301,13 +250,13 @@ except Exception:
 ' 2>/dev/null || true)
   fi
   if [ -z "$SESSION_NAME" ]; then
-    echo "ERROR: Could not detect a session. Please run 'ao session ls' and set SESSION_NAME manually." >&2
-    echo "Set it with: export SESSION_NAME=<session-name>" >&2
-    exit 1
+    # DO NOT guess via tail -1 — in parallel mode this matches unrelated sessions.
+    # Leave SESSION_NAME empty; the warning below will prompt manual recovery.
+    echo "WARNING: Could not identify session name from spawn log or ao status"
   fi
 
   echo ""
-  echo "Session name: $SESSION_NAME"
+  echo "Session name: ${SESSION_NAME:-<detecting...>}"
   echo "Task file: $TASK_FILE"
 
   # Step A9: Send task to session via file

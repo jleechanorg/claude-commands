@@ -348,11 +348,11 @@ Output ONLY the updated markdown. No preamble, no explanation, no code fences."
   # Write prompt to temp file to avoid shell quoting issues with large README content
   PROMPT_FILE=$(mktemp /tmp/exportcommands_prompt.XXXXXX)
   printf '%s' "$README_PROMPT" > "$PROMPT_FILE"
-  # Run claude from a neutral temp dir (no CLAUDE.md, no git repo) to prevent the
-  # exported CLAUDE.md's mandatory git-header.sh ending from corrupting README output.
+  # Run claude with --tools "" to disable all tools (forces plain text stdout, no Write tool).
+  # Also run from a neutral temp dir (no CLAUDE.md) to prevent hook corruption of output.
   CLAUDE_NEUTRAL_DIR=$(mktemp -d /tmp/exportcommands_neutral.XXXXXX)
   # Always generate README.md.new for preview; only overwrite README.md in non-dry-run
-  (cd "$CLAUDE_NEUTRAL_DIR" && claude -p "$(cat "$PROMPT_FILE")") > README.md.new 2>/dev/null \
+  (cd "$CLAUDE_NEUTRAL_DIR" && claude --tools "" -p "$(cat "$PROMPT_FILE")") > README.md.new 2>/dev/null \
     || { rm -f README.md.new; warn "Claude CLI failed — keeping existing README unchanged"; }
   rm -rf "$CLAUDE_NEUTRAL_DIR"
   rm -f "$PROMPT_FILE"
@@ -383,11 +383,11 @@ elif command -v claude >/dev/null 2>&1 && [[ ! -f "README.md" ]]; then
 
   CLAUDE_NEUTRAL_DIR=$(mktemp -d /tmp/exportcommands_neutral.XXXXXX)
   if [[ "$DRY_RUN" == "false" ]]; then
-    (cd "$CLAUDE_NEUTRAL_DIR" && claude -p "$README_PROMPT") > README.md 2>/dev/null \
+    (cd "$CLAUDE_NEUTRAL_DIR" && claude --tools "" -p "$README_PROMPT") > README.md 2>/dev/null \
       && ok "README.md created (first export)" \
       || warn "Claude CLI failed — no README generated"
   else
-    (cd "$CLAUDE_NEUTRAL_DIR" && claude -p "$README_PROMPT") > README.md.new 2>/dev/null \
+    (cd "$CLAUDE_NEUTRAL_DIR" && claude --tools "" -p "$README_PROMPT") > README.md.new 2>/dev/null \
       && ok "README.md.new generated for preview (dry-run)" \
       || warn "Claude CLI failed — no README preview generated"
   fi

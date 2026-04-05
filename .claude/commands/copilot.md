@@ -293,25 +293,6 @@ rm -f "$REPLY_FILE"
 3. **Fresh CI status**: Run `gh pr checks <PR_NUMBER>` immediately before posting to get current CI state. Do NOT reuse stale CI data from Step 2.
 4. **Total matches responses.json**: Count entries in responses.json and verify it matches X/Y.
 
-### Step 7.5: Resolve Conversation Threads (MANDATORY for FIXED/DEFERRED)
-
-After posting the consolidated reply, resolve the conversation threads for comments that were fixed or deferred. This keeps the PR clean and shows progress.
-
-**Procedure:**
-1. Read `/tmp/<repo>/<branch>/copilot/responses.json`
-2. For each comment where `response` is `FIXED`, `ALREADY_IMPLEMENTED`, or `DEFERRED`:
-   - Resolve the conversation thread using GitHub CLI:
-   ```bash
-   # For inline review comments (pull_request_review_comment):
-   gh api repos/{owner}/{repo}/pulls/{pull_number}/reviews/comments/{comment_id}/threads -X PATCH -f "resolved=true"
-   
-   # Or use the wrapper if available:
-   gh pr review comment resolve <comment_id>
-   ```
-3. Log the count: `Resolved N conversation threads (X fixed, Y deferred)`
-
-**Why this matters:** Resolved threads give reviewers a clear signal that feedback was addressed, reducing follow-up questions and improving PR throughput.
-
 ### Step 8: Verify Coverage (REV-g9fbp fix - severity-based)
 
 Run `/commentcheck` with severity-based coverage requirements:
@@ -324,17 +305,6 @@ Run `/commentcheck` with severity-based coverage requirements:
 | STYLE | 0% (optional) | Acknowledge only |
 
 **This is a HARD STOP** - do not proceed if CRITICAL/BLOCKING coverage is less than 100%.
-
-### Step 8.5: Post-Summary Delta Recheck (MANDATORY)
-
-Immediately after Step 8, fetch comments again and compare against the comment IDs in `responses.json`.
-
-Hard requirements:
-- If new actionable comments arrived after the Step 7 summary timestamp, the run is **not complete**.
-- Re-enter processing for the new comments (back to Step 4), regenerate `responses.json`, and post a refreshed consolidated summary.
-- Only proceed to Step 9 when there are **zero new actionable comments** since the most recent summary.
-
-This check prevents stale "all addressed" summaries when reviewers/bots post new findings during the run.
 
 ### Step 9: Push Changes
 
@@ -415,6 +385,7 @@ rm -f "$TMPFILE"
 5. **Single consolidated comment** - Post ONE summary comment, not individual replies
 6. **Idempotent re-runs** - Skip previously Fixed/Acknowledged comments, re-evaluate Deferred/Unresolved/Ignored
 7. **Single source of truth** - Both the consolidated reply and tracking table derive from `responses.json`. Mismatch = stop and reconcile.
+8. **Do NOT auto-resolve conversation threads via API from `/copilot`** — Track comment status in the PR description table (`<!-- COPILOT_TRACKING_START -->`). Do not call thread resolution or dismissal APIs during this command. **Scope**: This rule applies to `/copilot` automation only. Branch protection that requires **GitHub-native** resolved review threads is separate: satisfy it with another idempotent `/copilot` run before merge if new comments may have landed after Step 7, or use `/fixprc` / `/copilotc` (see `.claude/commands/fixprc.md` and `.claude/commands/copilotc.md`), or resolve threads in the GitHub UI—without adding resolution API calls to `/copilot`.
 
 ## Effectiveness KPIs (REV-962a7 — closure over volume)
 

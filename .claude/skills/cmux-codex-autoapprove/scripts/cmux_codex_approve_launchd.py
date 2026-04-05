@@ -1,4 +1,15 @@
 #!/opt/homebrew/bin/python3
+"""cmux-codex auto-approver — model-first, no regex intent detection.
+
+Architecture:
+  1. Read each cmux surface screen.
+  2. Strip ANSI codes; skip if last non-empty line is an idle shell prompt.
+  3. Everything else → classify_tail() (model API call) → ENTER/1/y/SKIP/DENY.
+
+Regex is used only for:
+  - ANSI escape code stripping (syntax, not semantics)
+  - Idle shell prompt detection (deterministic syntax check, not judgment)
+"""
 from __future__ import annotations
 
 import hashlib
@@ -8,31 +19,11 @@ import re
 import shutil
 import subprocess
 import tempfile
-import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
-
-try:
-    import numpy as np
-    _NUMPY_AVAILABLE = True
-except Exception:
-    np = None  # type: ignore[assignment]
-    _NUMPY_AVAILABLE = False
-
-_USER_SCOPE = "$HOME/projects_other/user_scope/scripts"
-try:
-    import sys as _sys
-    if _USER_SCOPE not in _sys.path:
-        _sys.path.insert(0, _USER_SCOPE)
-    from semantic_classifier import SemanticClassifier as _SemanticClassifier
-    _SEMANTIC_CLASSIFIER_AVAILABLE = True
-except Exception:
-    _SemanticClassifier = None  # type: ignore[assignment, misc]
-    _SEMANTIC_CLASSIFIER_AVAILABLE = False
-
 
 HOME = Path(os.environ.get("HOME", "$HOME"))
 CLI_PATH = os.pathsep.join(
@@ -49,7 +40,7 @@ CLI_PATH = os.pathsep.join(
 LOG_FILE = Path(os.environ.get("LOG_FILE", "/tmp/cmux-codex-autoapprove.log"))
 STATE_FILE = Path(os.environ.get("STATE_FILE", HOME / ".claude/supervisor/cmux-codex-launchd-state.json"))
 LINES = int(os.environ.get("LINES", "80"))
-TAIL_LINES = int(os.environ.get("TAIL_LINES", "20"))
+TAIL_LINES = int(os.environ.get("TAIL_LINES", "30"))
 CLASSIFY_TIMEOUT = int(os.environ.get("CLASSIFY_TIMEOUT", "30"))
 ESCALATION_TIMEOUT = int(os.environ.get("ESCALATION_TIMEOUT", "30"))
 CODEX_MODEL = os.environ.get("CODEX_MODEL", "")
@@ -57,138 +48,36 @@ CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "")
 WORKSPACE_FILTER = os.environ.get("WORKSPACE_FILTER", "")
 SURFACE_FILTER = os.environ.get("SURFACE_FILTER", "")
 SURFACE_TITLE_FILTER = os.environ.get("SURFACE_TITLE_FILTER", "")
-POLL_INTERVAL = float(os.environ.get("POLL_INTERVAL", "10"))
 WORKER_POOL_SIZE = max(1, int(os.environ.get("WORKER_POOL_SIZE", "5")))
-DAEMON_MODE = os.environ.get("DAEMON_MODE", "").lower() in {"1", "true", "yes"}
 POST_APPROVE_WATCH_SECONDS = float(os.environ.get("POST_APPROVE_WATCH_SECONDS", "6"))
 POST_APPROVE_POLL_SECONDS = float(os.environ.get("POST_APPROVE_POLL_SECONDS", "0.75"))
 STUCK_COOLDOWN_SECONDS = float(os.environ.get("STUCK_COOLDOWN_SECONDS", "45"))
-SEARCH_LINES = int(os.environ.get("SEARCH_LINES", "28"))
-CANDIDATE_WINDOW_LINES = int(os.environ.get("CANDIDATE_WINDOW_LINES", "12"))
-APPROVAL_BLOCK_MAX_LINES = int(os.environ.get("APPROVAL_BLOCK_MAX_LINES", "18"))
 
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-CANDIDATE_RE = re.compile(
-    r"Hook PreToolUse:|requires confirmation for this tool|Do you want to\b"
-    r"|Would you like to\b"
-    r"|requires approval by policy|Allow this command|Allow this operation"
-    r"|Tool call needs your approval|enter to submit \| esc to cancel"
-    r"|written up a plan and is ready"
-)
-BOTTOM_APPROVAL_RE = re.compile(
-    r"Do you want to\b|Would you like to run the following command\?"
-    r"|Esc to cancel|Tab to amend|requires confirmation|Tool call needs your approval"
-    r"|enter to submit \| esc to cancel"
-)
-SHELL_PROMPT_RE = re.compile(r"[$%#>]$")
-NUMBERED_ALLOW_RE = re.compile(r"^[^\S\r\n]*(?:[›❯>][^\S\r\n]*)?1\.\s*(?:Allow|Yes)\b", re.IGNORECASE | re.MULTILINE)
-NUMBERED_CANCEL_RE = re.compile(r"^[^\S\r\n]*2\.\s*(?:Cancel|No|Yes, and don't ask again)\b", re.IGNORECASE | re.MULTILINE)
-YN_APPROVE_RE = re.compile(r"\b(?:\[y/N\]|\[Y/n\]|y/n|yes/no)\b", re.IGNORECASE)
-OPTION1_Y_RE = re.compile(r"^[^\S\r\n]*(?:[›❯>][^\S\r\n]*)?1\.\s*Yes,?\s*proceed\s*\(y\)", re.IGNORECASE | re.MULTILINE)
-SELECTED_OPTION_1_RE = re.compile(r"^[^\S\r\n]*[›❯>][^\S\r\n]*1\.", re.MULTILINE)
-ENTER_SUBMIT_RE = re.compile(r"enter to submit\s*\|\s*esc to cancel", re.IGNORECASE)
-# Second-round structural gate: confirms the surface is actually waiting for input,
-# not just agent output that mentions approval-like phrases.
-INTERACTIVE_PROMPT_RE = re.compile(
-    r"(?:[›❯>]\s*1\.)"          # cursor on option 1
-    r"|\[y/N\]|\[Y/n\]"          # y/n prompt
-    r"|enter to submit.{0,15}esc to cancel"  # Claude/Codex standard footer
-    r"|^1\.\s*(?:Yes|Allow|No)\b"  # bare numbered list
-    r"|requires confirmation|Hook PreToolUse",
-    re.IGNORECASE | re.MULTILINE,
-)
-EDIT_PROMPT_RE = re.compile(r"do you want to make this edit", re.IGNORECASE)
-ESC_TAB_AMEND_RE = re.compile(r"esc to cancel\s*[·|]\s*tab to amend", re.IGNORECASE)
-VIEW_ALL_RE = re.compile(r"ctrl\s*\+\s*a\s+view\s+all", re.IGNORECASE)
-ALLOW_CANCEL_PROMPT_RE = re.compile(
-    r"tool call needs your approval.*?1\.\s*allow.*?2\.\s*cancel.*?enter to submit\s*\|\s*esc to cancel",
-    re.IGNORECASE | re.DOTALL,
-)
-APPROVAL_BLOCK_ANCHOR_RE = re.compile(
-    r"Tool call needs your approval|Would you like to run the following command\?"
-    r"|Do you want to proceed\?|Would you like to proceed\?|Do you want to make this edit"
-    r"|1\.\s*(?:Allow|Yes)"
-    r"|2\.\s*(?:Cancel|No|Yes, and don't ask again)|enter to submit\s*\|\s*esc to cancel",
-    re.IGNORECASE,
-)
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+SHELL_PROMPT_RE = re.compile(r"[$%#>]\s*$")
 
 
-# --- SemanticClassifier candidate gate ---
-# Uses SemanticClassifier from user_scope/scripts/semantic_classifier.py
-# (same strategy as $PROJECT_ROOT/intent_classifier.py).
-_APPROVAL_ANCHORS = {
-    "approval": [
-        "do you want to proceed?",
-        "would you like to proceed?",
-        "claude has written up a plan and is ready to execute",
-        "do you want to create this?",
-        "do you want to create this file?",
-        "do you want to make this change?",
-        "would you like to run the following command?",
-        "tool call needs your approval",
-        "allow this command?",
-        "enter to submit esc to cancel",
-        "requires confirmation",
-        "1. yes 2. yes and allow claude to edit 3. no",
-        "yes and allow claude to edit settings for this session",
-        "approve this action 1. yes 2. no",
-        "confirm would you like to allow",
-        "hook pretooluse",
-    ],
-}
-_EMBED_SIMILARITY_THRESHOLD = 0.72
-
-_approval_clf = None
-_clf_lock = threading.Lock()
+def is_idle_prompt(line: str) -> bool:
+    """True if line is a bare shell prompt with no pending input."""
+    stripped = line.strip()
+    if not stripped:
+        return False
+    if stripped in {"❯", ">", ">>"}:
+        return True
+    return bool(SHELL_PROMPT_RE.search(stripped))
 
 
-def _get_approval_classifier():
-    global _approval_clf
-    if _approval_clf is not None:
-        return _approval_clf
-    with _clf_lock:
-        if _approval_clf is not None:
-            return _approval_clf
-        if not _SEMANTIC_CLASSIFIER_AVAILABLE:
-            return None
-        try:
-            clf = _SemanticClassifier(
-                anchor_phrases=_APPROVAL_ANCHORS,
-                default_label="SKIP",
-                similarity_threshold=_EMBED_SIMILARITY_THRESHOLD,
-            )
-            clf.initialize_async()
-            _approval_clf = clf
-            log(f"EMBED_CLASSIFIER_INIT anchors={len(_APPROVAL_ANCHORS['approval'])}")
-        except Exception as exc:
-            log(f"EMBED_CLASSIFIER_INIT_ERROR {exc}")
-    return _approval_clf
-
-
-def is_approval_candidate_semantic(tail_text: str) -> bool:
-    """Two-stage gate:
-    1. Semantic classifier (catches novel phrasing, rejects idle text).
-    2. Structural regex (confirms terminal is actually waiting for input,
-       not just agent output mentioning approval-like phrases).
-    Falls back to original regex gate when classifier unavailable.
-    """
-    clf = _get_approval_classifier()
-    if clf is None:
-        return bool(CANDIDATE_RE.search(tail_text) and BOTTOM_APPROVAL_RE.search(tail_text))
-    try:
-        label, score = clf.predict(tail_text)
-        semantic_pass = label == "approval"
-        structural_pass = bool(INTERACTIVE_PROMPT_RE.search(tail_text))
-        if semantic_pass:
-            log(f"EMBED_SIM best={score:.3f} threshold={_EMBED_SIMILARITY_THRESHOLD} semantic={semantic_pass} structural={structural_pass}")
-            if not structural_pass:
-                snippet = tail_text.replace("\n", " | ")[:120]
-                log(f"EMBED_SIM_MISS snippet={snippet!r}")
-        return semantic_pass and structural_pass
-    except Exception:
-        return bool(CANDIDATE_RE.search(tail_text) and BOTTOM_APPROVAL_RE.search(tail_text))
+def extract_screen_tail(screen: str) -> str:
+    """Strip ANSI, return last TAIL_LINES of screen. Empty string if idle."""
+    clean = ANSI_RE.sub("", screen)
+    lines = [line.rstrip() for line in clean.splitlines()]
+    non_empty = [line for line in lines if line.strip()]
+    if not non_empty or is_idle_prompt(non_empty[-1]):
+        return ""
+    return "\n".join(lines[-TAIL_LINES:])
 
 
 def log(message: str) -> None:
@@ -236,11 +125,7 @@ def find_cli(name: str) -> str | None:
 
 
 def cmux_tree() -> list[dict[str, str]]:
-    # Use absolute path to avoid the user-scope cmux shim
-    cmux_path = "/opt/homebrew/bin/cmux"
-    proc = run([cmux_path, "--json", "tree", "--all"], check=False, timeout=30)
-    if proc.returncode != 0:
-        return []  # cmux unavailable or socket busy — skip this cycle
+    proc = run(["cmux", "--json", "tree", "--all"], check=True, timeout=5)
     data = json.loads(proc.stdout)
     rows: list[dict[str, str]] = []
     for window in data.get("windows", []):
@@ -274,93 +159,6 @@ def read_screen(workspace: str, surface: str) -> str:
     except subprocess.TimeoutExpired:
         log(f"READ_TIMEOUT workspace={workspace} surface={surface}")
         return ""
-
-
-def is_idle_prompt(line: str) -> bool:
-    stripped = line.strip()
-    if not stripped:
-        return False
-    if re.match(r"^❯\s*(?:1\.|Yes\b)", stripped):
-        return False
-    if stripped in {"❯", ">", ">>"}:
-        return True
-    return bool(SHELL_PROMPT_RE.search(stripped))
-
-
-def extract_candidate_tail(screen: str) -> str:
-    lines = [line.rstrip() for line in screen.splitlines()]
-    non_empty = [line for line in lines if line.strip()]
-    if not non_empty:
-        return ""
-
-    if is_idle_prompt(non_empty[-1]):
-        return ""
-
-    region = lines[-SEARCH_LINES:]
-    last_nonempty_index = -1
-    for index, line in enumerate(region):
-        if line.strip():
-            last_nonempty_index = index
-
-    anchor_index = -1
-    for index, line in enumerate(region):
-        if APPROVAL_BLOCK_ANCHOR_RE.search(line):
-            anchor_index = index
-
-    if anchor_index >= 0 and anchor_index == last_nonempty_index:
-        start = anchor_index
-        while start > 0 and region[start - 1].strip():
-            start -= 1
-        start = max(start, anchor_index - APPROVAL_BLOCK_MAX_LINES + 1)
-        block_lines = region[start : anchor_index + 1]
-        block_text = "\n".join(line for line in block_lines if line.strip())
-        if is_approval_candidate_semantic(block_text) or (
-            VIEW_ALL_RE.search(block_text)
-            and OPTION1_Y_RE.search(block_text)
-            and NUMBERED_CANCEL_RE.search(block_text)
-        ):
-            return block_text
-
-    latest_match = ""
-    for start in range(len(region)):
-        max_end = min(len(region), start + CANDIDATE_WINDOW_LINES)
-        for end in range(max_end, start + 1, -1):
-            if end - 1 != last_nonempty_index:
-                continue
-            window_lines = region[start:end]
-            window_text = "\n".join(line for line in window_lines if line.strip())
-            if not window_text:
-                continue
-            if is_approval_candidate_semantic(window_text) or (
-                VIEW_ALL_RE.search(window_text)
-                and OPTION1_Y_RE.search(window_text)
-                and NUMBERED_CANCEL_RE.search(window_text)
-            ):
-                latest_match = window_text
-                break
-    return latest_match
-
-
-def heuristic_decision(tail_text: str) -> str:
-    if SELECTED_OPTION_1_RE.search(tail_text) and ENTER_SUBMIT_RE.search(tail_text):
-        return "ENTER"
-    if EDIT_PROMPT_RE.search(tail_text) and SELECTED_OPTION_1_RE.search(tail_text) and ESC_TAB_AMEND_RE.search(tail_text):
-        return "ENTER"
-    # Cursor is already on option 1 (❯ 1.) and that option is Yes/Allow — press Enter.
-    # Covers 2-option AND 3-option dialogs (e.g. "3. No" instead of "2. No").
-    if SELECTED_OPTION_1_RE.search(tail_text) and NUMBERED_ALLOW_RE.search(tail_text):
-        return "ENTER"
-    if OPTION1_Y_RE.search(tail_text) and NUMBERED_CANCEL_RE.search(tail_text):
-        return "y"
-    if NUMBERED_ALLOW_RE.search(tail_text) and ENTER_SUBMIT_RE.search(tail_text):
-        return "ENTER"
-    if ALLOW_CANCEL_PROMPT_RE.search(tail_text):
-        return "ENTER"
-    if NUMBERED_ALLOW_RE.search(tail_text) and NUMBERED_CANCEL_RE.search(tail_text):
-        return "1"
-    if YN_APPROVE_RE.search(tail_text):
-        return "y"
-    return ""
 
 
 def extract_decision_token(text: str) -> str:
@@ -588,7 +386,7 @@ def monitor_after_approve(
             log(f"POST_APPROVE_PROGRESS workspace={workspace} surface={surface} status=screen_unreadable")
             return "", 0.0
 
-        latest_tail = extract_candidate_tail(screen)
+        latest_tail = extract_screen_tail(screen)
         if not latest_tail:
             log(f"POST_APPROVE_PROGRESS workspace={workspace} surface={surface} status=prompt_cleared")
             return "", 0.0
@@ -616,9 +414,7 @@ def monitor_after_approve(
         ),
         timeout_seconds=ESCALATION_TIMEOUT,
     )
-    log(
-        f"POST_APPROVE_ESCALATION workspace={workspace} surface={surface} decision={followup_decision}"
-    )
+    log(f"POST_APPROVE_ESCALATION workspace={workspace} surface={surface} decision={followup_decision}")
     if followup_decision in {"ENTER", "1", "y"} and followup_decision != prior_decision:
         approve(workspace, surface, followup_decision)
         return latest_tail, time.time() + STUCK_COOLDOWN_SECONDS
@@ -637,14 +433,9 @@ def process_surface(
     if not screen:
         return state_key, None
 
-    tail_text = extract_candidate_tail(screen)
+    tail_text = extract_screen_tail(screen)
     if not tail_text:
         return state_key, None
-
-    # Strip ANSI escape codes once here so heuristic regexes (SELECTED_OPTION_1_RE,
-    # NUMBERED_ALLOW_RE, etc.) and classify_tail all see clean text.
-    # The ❯ cursor is typically wrapped in \x1b[32m...\x1b[0m color codes.
-    tail_text = re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', tail_text)
 
     digest = digest_text(tail_text)
     cooldown_until = float(state_entry.get("cooldown_until", 0.0) or 0.0)
@@ -658,16 +449,9 @@ def process_surface(
         f'CANDIDATE workspace={row["workspace"]} title={row["title"]} '
         f'surface={row["surface"]} surface_title={row["surface_title"]}'
     )
-    decision = heuristic_decision(tail_text)
-    if decision:
-        log(
-            f'HEURISTIC workspace={row["workspace"]} surface={row["surface"]} decision={decision}'
-        )
-    else:
-        decision = classify_tail(row["workspace"], row["title"], row["surface"], row["surface_title"], tail_text)
-    log(
-        f'DECISION workspace={row["workspace"]} surface={row["surface"]} decision={decision}'
-    )
+    decision = classify_tail(row["workspace"], row["title"], row["surface"], row["surface_title"], tail_text)
+    log(f'DECISION workspace={row["workspace"]} surface={row["surface"]} decision={decision}')
+
     if decision in {"ENTER", "1", "y"}:
         approve(row["workspace"], row["surface"], decision)
         watched_tail, updated_cooldown_until = monitor_after_approve(

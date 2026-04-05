@@ -190,7 +190,6 @@ class TestGitHeaderStatusline:
         # bare repos with no remote never print "PR:".
         assert "Dir:" in stdout
         assert "Branch:" in stdout
-        # PR: only appears when a real PR is found (not "none")
         assert "(" in stdout and ")" in stdout  # Status always in parentheses
         assert "ctx" in stdout  # Line 2 always includes the context window bar label
 

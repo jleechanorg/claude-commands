@@ -236,3 +236,24 @@ After processing all comments, `/copilot` updates the PR description with a trac
 ```
 
 **Implementation**: `commentreply.py` calls `update_pr_description_with_tracking()` after posting the consolidated summary comment. Uses `<!-- COPILOT_TRACKING_START -->` / `<!-- COPILOT_TRACKING_END -->` markers for idempotent replacement on re-runs.
+
+---
+
+## Thread Resolution Policy
+
+**DO NOT resolve GitHub conversation threads via API from the `/copilot` workflow.**
+
+The PR description tracking table (`<!-- COPILOT_TRACKING_START -->`) is the **authoritative record** for `/copilot` tracking. Do NOT call GitHub thread resolution or comment dismissal APIs from `/copilot`. Merge gates that require resolved threads in GitHub’s UI are satisfied separately (another `/copilot` pass, `/fixprc` / `/copilotc`, or manual resolution). This policy:
+
+- Eliminates API calls to thread resolution or dismissal endpoints
+- Avoids permission errors (requires maintainer/write access)
+- Prevents rate-limit pressure from resolution state transitions
+- Keeps resolution state human-readable and auditable in the PR description
+
+**What IS allowed:**
+- Posting comments in threads (via `in_reply_to`)
+- Editing the PR description to update tracking table
+
+**What is NOT allowed:**
+- Programmatically resolving or unresolving review conversation threads via API (for example, GraphQL mutations such as `resolveReviewThread` or `unresolveReviewThread`)
+- Any API call whose primary effect is to mark a review comment, review thread, or conversation as resolved, dismissed, or otherwise hidden
