@@ -301,11 +301,13 @@ except Exception:
 ' 2>/dev/null || true)
   fi
   if [ -z "$SESSION_NAME" ]; then
-    SESSION_NAME=$(ao session ls 2>/dev/null | grep -oE '[a-z]+-[0-9]+' | tail -1 || true)
+    echo "ERROR: Could not detect a session. Please run 'ao session ls' and set SESSION_NAME manually." >&2
+    echo "Set it with: export SESSION_NAME=<session-name>" >&2
+    exit 1
   fi
 
   echo ""
-  echo "Session name: ${SESSION_NAME:-<detecting...>}"
+  echo "Session name: $SESSION_NAME"
   echo "Task file: $TASK_FILE"
 
   # Step A9: Send task to session via file

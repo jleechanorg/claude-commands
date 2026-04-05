@@ -253,10 +253,10 @@ for sess in $(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E '(ao
   [ -z "$pr_num" ] && continue
   # Detect repo from session prefix
   case "$sess" in
-    *-ao-*) repo="jleechanorg/agent-orchestrator" ;;
-    *-jc-*) repo="jleechanorg/jleechanclaw" ;;
-    *-wa-*) repo="$GITHUB_REPOSITORY" ;;
-    *-wc-*) repo="jleechanorg/worldai_claw" ;;
+    ao-*|*-ao-*) repo="jleechanorg/agent-orchestrator" ;;
+    jc-*|*-jc-*) repo="jleechanorg/jleechanclaw" ;;
+    wa-*|*-wa-*) repo="${GITHUB_REPOSITORY:-jleechanorg/worldai_claw}" ;;
+    wc-*|*-wc-*) repo="jleechanorg/worldai_claw" ;;
     *) continue ;;
   esac
   merged=$(gh api "repos/$repo/pulls/$pr_num" --jq '.merged' 2>/dev/null)
