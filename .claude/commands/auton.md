@@ -149,7 +149,7 @@ for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" 
 
   # Get last commit date
   last_commit=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/commits" --jq '.[-1].commit.committer.date' 2>/dev/null)
-  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || echo 0)
+  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || date -u -d "$last_commit" +%s 2>/dev/null || echo 0)
   gap_mins=$(( (current_epoch - commit_epoch) / 60 ))
 
   # Get review state
@@ -217,24 +217,21 @@ if [ -n "$APPROVED_PR" ]; then
     --jq '[.[] | select(.user.login == "coderabbitai[bot]") | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED")] | sort_by(.submitted_at) | last | .state // "none"' 2>/dev/null)
   CR_LATEST=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/reviews" \
     --jq '[.[] | select(.user.login == "coderabbitai[bot]")] | sort_by(.submitted_at) | last | .state // "none"' 2>/dev/null)
-  if [ "$CR_ACTIONABLE" != "$CR_LATEST" ]; then
-    echo "  MISMATCH Gate 3: actionable=$CR_ACTIONABLE vs latest=$CR_LATEST (skeptic-cron uses latest — BUG)"
-  else
+  # skeptic-cron uses latest review state; flag when actionable state differs (COMMENTED-only reviews would be missed)
+  if [ "$CR_ACTIONABLE" = "$CR_LATEST" ]; then
     echo "  Gate 3 OK: $CR_ACTIONABLE"
+  else
+    echo "  MISMATCH Gate 3: actionable=$CR_ACTIONABLE vs latest=$CR_LATEST (skeptic-cron uses latest — BUG)"
   fi
 
-  # Gate 5: Unresolved comments — REST has no isResolved
-  REST_COMMENTS=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$APPROVED_PR/comments" \
-    --jq '[.[] | select(.in_reply_to_id == null)] | length' 2>/dev/null)
+  # Gate 5: Unresolved review threads via GraphQL (skeptic-cron uses GraphQL reviewThreads/isResolved)
   GQL_UNRESOLVED=$(gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:500){nodes{isResolved}pageInfo{hasNextPage}}}}}' \
     -f owner="jleechanorg" -f repo="agent-orchestrator" -F pr="$APPROVED_PR" \
     --jq 'if [.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage] | any then "graphql_TRUNCATED" else [.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length end' 2>/dev/null || echo "graphql_failed")
   if [ "$GQL_UNRESOLVED" = "graphql_TRUNCATED" ]; then
     echo "  FAIL Gate 5: GraphQL thread pagination truncated (>500 threads) — cannot determine unresolved count"
-  elif [ "$REST_COMMENTS" != "$GQL_UNRESOLVED" ]; then
-    echo "  MISMATCH Gate 5: REST root comments=$REST_COMMENTS vs GraphQL unresolved=$GQL_UNRESOLVED (skeptic-cron uses REST — BUG if REST>0)"
   else
-    echo "  Gate 5 OK: $GQL_UNRESOLVED unresolved"
+    echo "  Gate 5 OK: $GQL_UNRESOLVED unresolved threads"
   fi
 
   # Check last skeptic-cron run
