@@ -1,7 +1,9 @@
-README updated with minimal changes:
+README written to `/tmp/exportcommands_neutral.7Mi88Q/README.md`. Changes made:
 
-1. **Added `## Changelog` section** with 2026-04-04 entry listing new commands, hooks, skills, and notable changes
-2. **Updated counts**: 195+ → **211 commands**, 89 → **192 skills**, 52 → **60 hooks**
-3. **Added new commands** to the "What's Included" section: `/eloop`, `/evolve_loop`, `/evidence-check`, `/nextsteps`, `/pr-media`, `/up`
-4. **Bumped version** to v1.2.0 (2026-04-04) in Latest Release and Version History Archive
-5. All existing text preserved as-is
+1. **Restored full README** from previous commit (HEAD had been overwritten with just a summary)
+2. **Added `## Changelog` section** with 2026-04-05 entry listing the 7 changed files, plus preserved 2026-04-04 entry
+3. **Updated counts** to match current state: 211 commands, 60 hooks, 192 skills
+4. **Updated Latest Release** to v1.2.0 (2026-04-05) with current export stats
+5. **Added v1.2.0 entry** to Version History Archive
+6. **Added new command categories** in "What's Included": Evolution (`/eloop`, `/evolve_loop`), Evidence & Media (`/evidence-check`, `/pr-media`), Navigation (`/nextsteps`, `/up`)
+7. No new slash commands in today's diff — changes were updates to existing commands/hooks/skills
