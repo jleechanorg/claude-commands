@@ -230,7 +230,7 @@ See above for current changelog. For complete version history, see below.
 **Export Statistics**:
 - **211 Commands**: Complete workflow orchestration system
 - **60 Hooks**: Claude Code automation and workflow hooks
-- **Scripts**: Development and automation tools
+- **22 Scripts**: Development and automation tools
 - **192 Skills**: Shared knowledge references
 
 **Recent Changes**:
