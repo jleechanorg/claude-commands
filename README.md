@@ -19,24 +19,17 @@ A comprehensive collection of workflow automation commands for Claude Code that 
 
 ## Installation
 
-To install Claude Commands in Claude Code CLI, first register the marketplace:
+To install Claude Commands, use the included installer script (recommended):
 
 ```bash
-/plugin marketplace add jleechanorg/claude-commands
+./install-claude-commands.sh
 ```
 
-Then browse available commands with `/plugin` and install:
+This installs commands/hooks/scripts/skills into your local `~/.claude` directories and prints a validation summary.
 
-```bash
-/plugin install claude-commands@claude-commands
-```
-
-After installation, restart your Claude Code CLI session for the plugin to take effect.
-
-To verify successful installation, run `/help` to check that commands appear.
+To verify installation, run `/help` and confirm command availability.
 
 ### Alternative: Intelligent Self-Setup
-
 Let Claude Code analyze and set up what you need by asking:
 
 ```text
