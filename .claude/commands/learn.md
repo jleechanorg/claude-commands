@@ -10,7 +10,16 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 1: Execute Documented Workflow
+### Phase 1: Memory Search Context (parallel subagent)
+
+**Action Steps:**
+1. **Run memory search in background** using `/e` to gather context from all memory sources:
+   ```
+   /e /memory_search "$ARGUMENTS"
+   ```
+2. Continue to Phase 2 while memory search runs in parallel.
+
+### Phase 2: Execute Documented Workflow
 
 **Action Steps:**
 1. Review the reference documentation below and execute the detailed steps sequentially.
