@@ -1,16 +1,20 @@
 ---
 name: evolve_loop
-description: 12-hour autonomous evolution loop — observe, measure, diagnose, fix, repeat every 10min. Drives zero-touch rate up by finding friction and dispatching fixes.
+description: Run the evolve-loop skill. Canonical instructions live in ~/.claude/skills/evolve-loop/SKILL.md.
 type: skill
 ---
 
-## Purpose
+# /eloop
 
-Autonomous self-improving loop that observes the AO ecosystem, measures zero-touch rate, diagnoses friction, creates beads for gaps, dispatches fixes via /claw, and records everything. Runs via `/loop 10m` for max 12 hours.
+Use the canonical evolve-loop skill at:
 
-## AUTONOMOUS CONTINUATION — MANDATORY
+- `$HOME/.claude/skills/evolve-loop/SKILL.md`
 
-**After completing Phase 7 (Recap), IMMEDIATELY start Phase 1 of the next cycle. Do NOT:**
+Execution rule:
+- Load that skill and follow it as the source of truth.
+- For non-Claude runtimes, prefer the skill file over this wrapper.
+- If repo-local automation needs a loop body, read the skill file directly rather than duplicating the command text.
+e 7 (Recap), IMMEDIATELY start Phase 1 of the next cycle. Do NOT:**
 - Ask "want me to continue?"
 - Ask "shall I proceed to the next cycle?"
 - Pause for user confirmation between cycles

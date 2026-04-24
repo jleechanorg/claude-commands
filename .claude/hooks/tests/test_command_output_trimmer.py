@@ -21,10 +21,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from command_output_trimmer import (
     CompressionStats,
     Config,
-    main,
-)
-from command_output_trimmer import (
     OptimizedCommandOutputTrimmer as CommandOutputTrimmer,
+    main,
 )
 
 
@@ -34,26 +32,24 @@ class TestCommandOutputTrimmer(unittest.TestCase):
     def setUp(self):
         """Set up test environment"""
         self.temp_dir = tempfile.mkdtemp()
-        self.settings_file = os.path.join(self.temp_dir, '.claude', 'settings.json')
+        self.settings_file = os.path.join(self.temp_dir, ".claude", "settings.json")
         os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
 
         # Create basic settings
-        settings = {
-            "output_trimmer": {
-                "enabled": True
-            }
-        }
-        with open(self.settings_file, 'w') as f:
+        settings = {"output_trimmer": {"enabled": True}}
+        with open(self.settings_file, "w") as f:
             json.dump(settings, f)
 
         original_expanduser = os.path.expanduser
 
         def mock_expanduser(path):
-            if path == '~/.claude/settings.json':
+            if path == "~/.claude/settings.json":
                 return self.settings_file
             return original_expanduser(path)
 
-        self.expanduser_patcher = patch('command_output_trimmer.os.path.expanduser', side_effect=mock_expanduser)
+        self.expanduser_patcher = patch(
+            "command_output_trimmer.os.path.expanduser", side_effect=mock_expanduser
+        )
         self.expanduser_patcher.start()
 
         CommandOutputTrimmer._reset_singleton_for_testing()
@@ -63,7 +59,7 @@ class TestCommandOutputTrimmer(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment"""
         CommandOutputTrimmer._reset_singleton_for_testing()
-        if hasattr(self, 'expanduser_patcher'):
+        if hasattr(self, "expanduser_patcher"):
             self.expanduser_patcher.stop()
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
@@ -74,7 +70,7 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         test_example.py::test_function PASSED
         test_another.py::test_method FAILED
         """
-        self.assertEqual(self.trimmer.detect_command_type(test_output), 'test')
+        self.assertEqual(self.trimmer.detect_command_type(test_output), "test")
 
     def test_detect_command_type_pushl(self):
         """Test detection of pushl command output"""
@@ -83,7 +79,7 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         https://github.com/user/repo/pull/123
         PR created successfully
         """
-        self.assertEqual(self.trimmer.detect_command_type(pushl_output), 'pushl')
+        self.assertEqual(self.trimmer.detect_command_type(pushl_output), "pushl")
 
     def test_detect_command_type_copilot(self):
         """Test detection of copilot command output"""
@@ -92,7 +88,7 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         Copilot autonomous mode activated
         Phase 2: Execution
         """
-        self.assertEqual(self.trimmer.detect_command_type(copilot_output), 'copilot')
+        self.assertEqual(self.trimmer.detect_command_type(copilot_output), "copilot")
 
     def test_detect_command_type_coverage(self):
         """Test detection of coverage command output"""
@@ -103,7 +99,7 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         TOTAL                     35      7    80%
         Coverage HTML written to htmlcov/index.html
         """
-        self.assertEqual(self.trimmer.detect_command_type(coverage_output), 'coverage')
+        self.assertEqual(self.trimmer.detect_command_type(coverage_output), "coverage")
 
     def test_detect_command_type_execute(self):
         """Test detection of execute command output"""
@@ -112,7 +108,7 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         🔄 In progress
         TODO: Next steps
         """
-        self.assertEqual(self.trimmer.detect_command_type(execute_output), 'execute')
+        self.assertEqual(self.trimmer.detect_command_type(execute_output), "execute")
 
     def test_detect_command_type_generic(self):
         """Test generic fallback detection"""
@@ -120,7 +116,7 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         Some random command output
         with no specific patterns
         """
-        self.assertEqual(self.trimmer.detect_command_type(generic_output), 'generic')
+        self.assertEqual(self.trimmer.detect_command_type(generic_output), "generic")
 
     def test_compress_test_output_preserve_errors(self):
         """Test that test compression preserves error messages"""
@@ -136,17 +132,27 @@ class TestCommandOutputTrimmer(unittest.TestCase):
             "AssertionError: Values don't match",
             "test_b.py::test_6 PASSED",
             "========== SUMMARY ==========",
-            "5 passed, 1 failed"
+            "5 passed, 1 failed",
         ]
 
         compressed = self.trimmer.compress_test_output(test_lines)
 
         # Should preserve errors and traceback
-        error_lines = [line for line in compressed if 'ERROR' in line or 'Traceback' in line or 'AssertionError' in line]
-        self.assertTrue(len(error_lines) >= 3, "Should preserve error, traceback, and assertion")
+        error_lines = [
+            line
+            for line in compressed
+            if "ERROR" in line or "Traceback" in line or "AssertionError" in line
+        ]
+        self.assertTrue(
+            len(error_lines) >= 3, "Should preserve error, traceback, and assertion"
+        )
 
         # Should preserve summary
-        summary_lines = [line for line in compressed if 'SUMMARY' in line or 'passed, 1 failed' in line]
+        summary_lines = [
+            line
+            for line in compressed
+            if "SUMMARY" in line or "passed, 1 failed" in line
+        ]
         self.assertTrue(len(summary_lines) >= 1, "Should preserve summary")
 
     def test_compress_test_output_limit_passed_tests(self):
@@ -154,18 +160,21 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         test_lines = [f"test_{i}.py::test_method PASSED" for i in range(10)]
         compressed = self.trimmer.compress_test_output(test_lines)
 
-        # Debug: Print the compression result
-        # print(f"Original: {len(test_lines)} lines")
-        # print(f"Compressed: {len(compressed)} lines")
-        # print(f"Compressed content: {compressed}")
-
         # Should limit passed tests and add compression indicator
-        passed_lines = [line for line in compressed if 'PASSED' in line and 'compressed' not in line]
-        compression_indicator = [line for line in compressed if 'compressed' in line]
+        passed_lines = [
+            line for line in compressed if "PASSED" in line and "compressed" not in line
+        ]
+        compression_indicator = [line for line in compressed if "compressed" in line]
 
-        self.assertLessEqual(len(passed_lines), 3, f"Should limit passed test lines, got {len(passed_lines)}: {passed_lines}")
+        self.assertLessEqual(
+            len(passed_lines),
+            3,
+            f"Should limit passed test lines, got {len(passed_lines)}: {passed_lines}",
+        )
         if len(test_lines) > 3:
-            self.assertTrue(len(compression_indicator) >= 1, "Should indicate compression")
+            self.assertTrue(
+                len(compression_indicator) >= 1, "Should indicate compression"
+            )
 
     def test_compress_pushl_output_preserve_pr_links(self):
         """Test that pushl compression preserves PR links"""
@@ -175,20 +184,33 @@ class TestCommandOutputTrimmer(unittest.TestCase):
             "Delta compression using up to 8 threads",
             "Creating pull request...",
             "PR #123: https://github.com/user/repo/pull/123",
-            "PR created successfully"
+            "PR created successfully",
         ]
 
         compressed = self.trimmer.compress_pushl_output(pushl_lines)
 
         # Should preserve PR links
-        pr_links = [line for line in compressed if 'github.com' in line]
+        pr_links = [line for line in compressed if "github.com" in line]
         self.assertTrue(len(pr_links) >= 1, "Should preserve GitHub PR links")
 
         # Should compress git operations
-        git_ops = [line for line in compressed if 'Enumerating' in line or 'Delta compression' in line]
-        if len([line for line in pushl_lines if 'Enumerating' in line or 'Delta compression' in line]) > 2:
-            compression_indicator = [line for line in compressed if 'compressed' in line]
-            self.assertTrue(len(compression_indicator) >= 1, "Should compress verbose git operations")
+        if (
+            len(
+                [
+                    line
+                    for line in pushl_lines
+                    if "Enumerating" in line or "Delta compression" in line
+                ]
+            )
+            > 2
+        ):
+            compression_indicator = [
+                line for line in compressed if "compressed" in line
+            ]
+            self.assertTrue(
+                len(compression_indicator) >= 1,
+                "Should compress verbose git operations",
+            )
 
     def test_compress_copilot_output_preserve_phases(self):
         """Test that copilot compression preserves phase information"""
@@ -202,17 +224,17 @@ class TestCommandOutputTrimmer(unittest.TestCase):
             "Duration: 2.1s",
             "✅ Phase 2 complete",
             "=== Phase 3: Validation ===",
-            "Validating results..."
+            "Validating results...",
         ]
 
         compressed = self.trimmer.compress_copilot_output(copilot_lines)
 
         # Should preserve phase markers
-        phase_lines = [line for line in compressed if 'Phase' in line and '===' in line]
+        phase_lines = [line for line in compressed if "Phase" in line and "===" in line]
         self.assertTrue(len(phase_lines) >= 2, "Should preserve phase markers")
 
         # Should preserve results
-        result_lines = [line for line in compressed if '✅' in line]
+        result_lines = [line for line in compressed if "✅" in line]
         self.assertTrue(len(result_lines) >= 1, "Should preserve result indicators")
 
     def test_compress_coverage_output_preserve_percentages(self):
@@ -224,18 +246,20 @@ class TestCommandOutputTrimmer(unittest.TestCase):
             "third.py                  10      1    90%",
             "fourth.py                  8      0   100%",
             "fifth.py                  12      3    75%",
-            "TOTAL                     65     11    83%"
+            "TOTAL                     65     11    83%",
         ]
 
         compressed = self.trimmer.compress_coverage_output(coverage_lines)
 
         # Should preserve total percentage
-        total_lines = [line for line in compressed if 'TOTAL' in line]
+        total_lines = [line for line in compressed if "TOTAL" in line]
         self.assertTrue(len(total_lines) >= 1, "Should preserve total coverage")
 
         # Should preserve percentage lines
-        percentage_lines = [line for line in compressed if '%' in line]
-        self.assertTrue(len(percentage_lines) >= 1, "Should preserve percentage information")
+        percentage_lines = [line for line in compressed if "%" in line]
+        self.assertTrue(
+            len(percentage_lines) >= 1, "Should preserve percentage information"
+        )
 
     def test_compress_execute_output_preserve_todo_states(self):
         """Test that execute compression preserves TODO states"""
@@ -250,17 +274,19 @@ class TestCommandOutputTrimmer(unittest.TestCase):
             "More reasoning text...",
             "TODO: Next steps to take",
             "- [x] Completed item",
-            "- [ ] Pending item"
+            "- [ ] Pending item",
         ]
 
         compressed = self.trimmer.compress_execute_output(execute_lines)
 
         # Should preserve TODO states
-        todo_lines = [line for line in compressed if '✅' in line or '🔄' in line or '❌' in line]
+        todo_lines = [
+            line for line in compressed if "✅" in line or "🔄" in line or "❌" in line
+        ]
         self.assertTrue(len(todo_lines) >= 3, "Should preserve TODO state indicators")
 
         # Should preserve checklist items
-        checklist_lines = [line for line in compressed if '- [' in line]
+        checklist_lines = [line for line in compressed if "- [" in line]
         self.assertTrue(len(checklist_lines) >= 2, "Should preserve checklist items")
 
     def test_compress_generic_output_fallback(self):
@@ -277,15 +303,23 @@ class TestCommandOutputTrimmer(unittest.TestCase):
 
         # Should keep first and last lines
         self.assertTrue(compressed[0] == generic_lines[0], "Should preserve first line")
-        self.assertTrue(compressed[-1] == generic_lines[-1], "Should preserve last line")
+        self.assertTrue(
+            compressed[-1] == generic_lines[-1], "Should preserve last line"
+        )
 
         # Should preserve important patterns
-        important_lines = [line for line in compressed if 'ERROR:' in line or 'https://' in line]
+        important_lines = [
+            line for line in compressed if "ERROR:" in line or "https://" in line
+        ]
         self.assertTrue(len(important_lines) >= 2, "Should preserve important patterns")
 
         # Should indicate intelligent summarization
-        summary_indicator = [line for line in compressed if 'SUMMARY' in line or 'compressed' in line]
-        self.assertTrue(len(summary_indicator) >= 1, "Should indicate compression or summarization")
+        summary_indicator = [
+            line for line in compressed if "SUMMARY" in line or "compressed" in line
+        ]
+        self.assertTrue(
+            len(summary_indicator) >= 1, "Should indicate compression or summarization"
+        )
 
     def test_compression_stats_calculation(self):
         """Test compression statistics calculation"""
@@ -305,29 +339,31 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         )
 
         processed = self.trimmer.process_command_output(long_output)
-        self.assertEqual(processed, long_output, "Natural language request should bypass trimming")
+        self.assertEqual(
+            processed, long_output, "Natural language request should bypass trimming"
+        )
 
         # Verify that without the request the output would be trimmed
         CommandOutputTrimmer._reset_singleton_for_testing()
         trimmer_without_request = CommandOutputTrimmer()
-        long_output_without_request = "\n".join(f"Line {i}: Some detailed output" for i in range(150))
-        processed_without_request = trimmer_without_request.process_command_output(long_output_without_request)
+        long_output_without_request = "\n".join(
+            f"Line {i}: Some detailed output" for i in range(150)
+        )
+        processed_without_request = trimmer_without_request.process_command_output(
+            long_output_without_request
+        )
         self.assertNotEqual(
             processed_without_request,
             long_output_without_request,
-            "Without bypass request, output should be trimmed"
+            "Without bypass request, output should be trimmed",
         )
 
     def test_settings_disabled(self):
         """Test that trimming can be disabled via settings"""
         # For the singleton pattern, we'll test the config loading directly
         # rather than trying to reload it at runtime
-        settings = {
-            "output_trimmer": {
-                "enabled": False
-            }
-        }
-        with open(self.settings_file, 'w') as f:
+        settings = {"output_trimmer": {"enabled": False}}
+        with open(self.settings_file, "w") as f:
             json.dump(settings, f)
 
         # Reset singleton and create new trimmer that will load from the test settings
@@ -344,11 +380,11 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         """Test main function with command line arguments"""
         test_args = ["script_name", "test", "output", "content"]
 
-        with patch('sys.argv', test_args):
+        with patch("sys.argv", test_args):
             fake_buf = io.BytesIO(b"test input data")
             stdin_stub = types.SimpleNamespace(buffer=fake_buf)
-            with patch('command_output_trimmer.sys.stdin', new=stdin_stub):
-                with patch('sys.stdout.write') as mock_stdout:
+            with patch("command_output_trimmer.sys.stdin", new=stdin_stub):
+                with patch("sys.stdout.write") as mock_stdout:
                     result = main()
 
                     self.assertEqual(result, 0)
@@ -357,7 +393,7 @@ class TestCommandOutputTrimmer(unittest.TestCase):
     def test_error_handling(self):
         """Test error handling in compression"""
         # Test with malformed settings
-        with open(self.settings_file, 'w') as f:
+        with open(self.settings_file, "w") as f:
             f.write("invalid json")
 
         # Should not crash, should use defaults
@@ -372,21 +408,183 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         """Ensure byte-based truncation works for multi-byte input"""
 
         unicorn_text = "🦄" * 32  # Multi-byte characters
-        raw_bytes = unicorn_text.encode('utf-8')
+        raw_bytes = unicorn_text.encode("utf-8")
 
-        with patch('sys.argv', ['command_output_trimmer']):
+        with patch("sys.argv", ["command_output_trimmer"]):
             fake_buf = io.BytesIO(raw_bytes)
             stdin_stub = types.SimpleNamespace(buffer=fake_buf)
-            with patch.object(Config, 'MAX_INPUT_SIZE', 16):
-                with patch('command_output_trimmer.sys.stdin', new=stdin_stub):
-                    with patch('sys.stderr.write') as mock_stderr:
-                        with patch('sys.stdout.write') as mock_stdout:
+            with patch.object(Config, "MAX_INPUT_SIZE", 16):
+                with patch("command_output_trimmer.sys.stdin", new=stdin_stub):
+                    with patch("sys.stderr.write") as mock_stderr:
+                        with patch("sys.stdout.write") as mock_stdout:
                             result = main()
 
         self.assertEqual(result, 0)
         self.assertTrue(mock_stdout.called)
-        warning_calls = [call for call in mock_stderr.call_args_list if 'Warning: Input exceeds' in ''.join(call.args)]
+        warning_calls = [
+            call
+            for call in mock_stderr.call_args_list
+            if "Warning: Input exceeds" in "".join(call.args)
+        ]
         self.assertTrue(warning_calls, "Expected byte-limit warning for unicode input")
+
+    def test_process_command_output_summarizes_edit_and_write_hook_payloads(self):
+        """Hook JSON payloads should be compact and preserve debugging metadata."""
+
+        payloads = [
+            (
+                "Edit",
+                {
+                    "file_path": "/home/$USER/projects/worktree_level3/$PROJECT_ROOT/world_logic.py",
+                    "new_string": "NEW-" * 700,
+                    "old_string": "OLD-" * 500,
+                    "replace_all": False,
+                },
+            ),
+            (
+                "Write",
+                {
+                    "file_path": "/home/$USER/projects/worktree_level3/testing_mcp/lib/base_test.py",
+                    "content": "CONTENT-" * 800,
+                    "replace_all": True,
+                },
+            ),
+            (
+                "MultiEdit",
+                {
+                    "file_path": "/home/$USER/projects/worktree_level3/.claude/hooks/git-header.sh",
+                    "edits": [
+                        {
+                            "old_string": "OLD-A-" * 200,
+                            "new_string": "NEW-A-" * 250,
+                        },
+                        {
+                            "old_string": "OLD-B-" * 150,
+                            "new_string": "NEW-B-" * 175,
+                        },
+                    ],
+                },
+            ),
+        ]
+
+        for tool_name, tool_input in payloads:
+            with self.subTest(tool_name=tool_name):
+                payload = {
+                    "session_id": "session-123",
+                    "cwd": "/home/$USER/projects/worktree_level3",
+                    "hook_event_name": "PostToolUse",
+                    "permission_mode": "default",
+                    "tool_name": tool_name,
+                    "tool_use_id": "tool-abc",
+                    "transcript_path": "/tmp/transcript.jsonl",
+                    "tool_input": tool_input,
+                    "tool_response": {
+                        "type": "tool_result",
+                        "success": True,
+                        "message": "applied",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "RESULT-" * 1200,
+                            }
+                        ],
+                    },
+                }
+
+                input_text = json.dumps(payload)
+                processed = self.trimmer.process_command_output(input_text)
+                result = json.loads(processed)
+
+                self.assertLess(len(processed), len(input_text))
+                self.assertEqual(result["hook_event_name"], "PostToolUse")
+                self.assertEqual(result["tool_name"], tool_name)
+                self.assertEqual(result["tool_use_id"], "tool-abc")
+                self.assertEqual(
+                    result["cwd"], "/home/$USER/projects/worktree_level3"
+                )
+                self.assertEqual(result["session_id"], "session-123")
+                self.assertTrue(result["truncated"])
+                self.assertEqual(result["summary_version"], 1)
+
+                if tool_name == "Edit":
+                    self.assertEqual(
+                        result["tool_input"]["file_path"]["preview"],
+                        tool_input["file_path"],
+                    )
+                    self.assertFalse(result["tool_input"]["file_path"]["truncated"])
+                    self.assertEqual(result["tool_input"]["replace_all"], False)
+                    self.assertEqual(
+                        result["tool_input"]["new_string"]["bytes"],
+                        len(tool_input["new_string"].encode("utf-8")),
+                    )
+                    self.assertTrue(result["tool_input"]["new_string"]["truncated"])
+                    self.assertEqual(
+                        result["tool_input"]["old_string"]["bytes"],
+                        len(tool_input["old_string"].encode("utf-8")),
+                    )
+                elif tool_name == "Write":
+                    self.assertEqual(
+                        result["tool_input"]["file_path"]["preview"],
+                        tool_input["file_path"],
+                    )
+                    self.assertFalse(result["tool_input"]["file_path"]["truncated"])
+                    self.assertEqual(result["tool_input"]["replace_all"], True)
+                    self.assertEqual(
+                        result["tool_input"]["content"]["bytes"],
+                        len(tool_input["content"].encode("utf-8")),
+                    )
+                    self.assertTrue(result["tool_input"]["content"]["truncated"])
+                else:
+                    self.assertEqual(
+                        result["tool_input"]["file_path"]["preview"],
+                        tool_input["file_path"],
+                    )
+                    self.assertFalse(result["tool_input"]["file_path"]["truncated"])
+                    self.assertEqual(result["tool_input"]["edits"]["kind"], "list")
+                    self.assertEqual(result["tool_input"]["edits"]["length"], 2)
+                    self.assertEqual(
+                        result["tool_input"]["edits"]["items"][0]["kind"],
+                        "dict",
+                    )
+                    self.assertEqual(
+                        result["tool_input"]["edits"]["items"][1]["kind"],
+                        "dict",
+                    )
+                    self.assertTrue(
+                        result["tool_input"]["edits"]["items"][0]["truncated"]
+                    )
+                    self.assertGreater(
+                        result["tool_input"]["edits"]["items"][1]["bytes"], 0
+                    )
+                    self.assertIn(
+                        "old_string",
+                        result["tool_input"]["edits"]["items"][0]["preview"],
+                    )
+
+                self.assertEqual(
+                    result["tool_response"]["kind"],
+                    "dict",
+                )
+                self.assertTrue(result["tool_response"]["truncated"])
+                self.assertGreater(result["tool_response"]["bytes"], 0)
+                self.assertLess(len(json.dumps(result["tool_response"])), 1400)
+                self.assertLess(len(processed), 4000)
+
+    def test_process_output_keeps_raw_output_when_summary_is_larger(self):
+        """Hook payload summaries should not replace smaller raw payloads."""
+
+        raw_output = '{"kind":"short"}'
+        oversized_summary = '{"kind":"summary","preview":"' + ("x" * 200) + '"}'
+
+        with patch.object(
+            self.trimmer,
+            "_summarize_hook_payload",
+            return_value=oversized_summary,
+        ):
+            processed = self.trimmer.process_command_output(raw_output)
+
+        self.assertEqual(processed, raw_output)
+
 
 class TestIntegration(unittest.TestCase):
     """Integration tests for the command output trimmer"""
@@ -410,7 +608,7 @@ collected 45 items
         # Add many PASSED tests to trigger compression
         for i in range(20):
             for j in range(3):
-                pytest_output += f"tests/test_file_{i}.py::test_method_{j} PASSED                          [{i*15+j*5:2d}%]\n"
+                pytest_output += f"tests/test_file_{i}.py::test_method_{j} PASSED                          [{i * 15 + j * 5:2d}%]\n"
 
         pytest_output += """
 ================================== FAILURES ==================================
@@ -437,16 +635,17 @@ ERROR tests/test_utils.py::test_helper_function - ImportError: No module named '
         compressed, stats = trimmer.compress_output(pytest_output)
 
         # Should preserve failures and errors
-        self.assertIn('FAILURES', compressed)
-        self.assertIn('ERRORS', compressed)
-        self.assertIn('AssertionError', compressed)
-        self.assertIn('ImportError', compressed)
+        self.assertIn("FAILURES", compressed)
+        self.assertIn("ERRORS", compressed)
+        self.assertIn("AssertionError", compressed)
+        self.assertIn("ImportError", compressed)
 
         # Should preserve summary
-        self.assertIn('43 passed, 1 failed, 1 error', compressed)
+        self.assertIn("43 passed, 1 failed, 1 error", compressed)
 
         # Should have reasonable compression
         self.assertGreater(stats.compression_ratio, 0.1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

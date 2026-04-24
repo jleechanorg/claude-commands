@@ -1,41 +1,48 @@
+---
+name: nextsteps
+description: Situational assessment, beads + roadmap sync after a work block; optional brief from user.
+---
+
 # /nextsteps — Situational Assessment & Roadmap Update
 
-## Purpose
-Assess current session context, find relevant beads issues and roadmap docs, then update or create them to reflect new information. Use subagents for parallel work.
+## When invoked
 
-## Input
-Optional: brief description of what just happened or what to assess. If omitted, assess from git log, beads status, and recent session context.
+1. **Gather context in parallel**
+   - `git log --oneline -10`
+   - `br list --status open` (or `bd` if project uses bd)
+   - `ls roadmap/` (or list `roadmap/README.md` recent section)
+   - Use any user-provided line after `/nextsteps` as extra context.
 
-## Execution Steps
+2. **Assess**
+   - Match recent commits to open beads; close or update status.
+   - Note gaps → new `br create` issues.
+   - Update `roadmap/README.md` **Recent activity (rolling)** with date + bullets.
 
-### Phase 0 — Gather context (parallel)
-Run these in parallel:
-1. `git log --oneline -10` — recent commits
-2. `br list --status open` — open beads issues
-3. `ls roadmap/` — available roadmap docs
-4. `git diff HEAD~3..HEAD --stat` — what changed recently
+3. **Execute**
+   - Prefer parallel tasks (subagents) for: beads updates, new issues, roadmap edits.
+   - **User learnings log:** before appending to `$HOME/roadmap/learnings-<YYYY-MM>.md`, run `mkdir -p "$HOME/roadmap"` (directory may not exist on fresh machines).
+   - **Claude auto-memory:** before writing under `$HOME/.claude/projects/<project_key>/memory/`, run `mkdir -p` on that directory. Full step-by-step: `~/.claude/skills/nextsteps/SKILL.md`.
 
-### Phase 1 — Assess
-Based on gathered context and any provided input:
-- Identify themes (bug fixes, new features, infrastructure changes, policy updates)
-- Match themes to existing beads issues or roadmap docs
-- Identify gaps: what's missing from the issue tracker or roadmap
+4. **Report**
+   - IDs, paths changed, recommended next actions.
 
-### Phase 2 — Update/Create (parallel subagents)
+## Optional: parallel subagents
+
 For each identified update, dispatch in parallel:
 
 **Beads updates** (for each relevant open issue):
 ```bash
-br update <id> --status <new_status>
-br show <id>  # verify before updating
+bd update <id> --status <new_status>
+bd show <id>  # verify before updating
 ```
+(Use `br` if that is the project’s CLI.)
 
 **New beads issues** (for gaps not tracked):
 ```bash
-br create "<title>" --type <task|bug|feature|chore> --priority <0-4> --description "<details>"
+bd create "<title>" ...
 ```
 
-**Roadmap doc updates** (edit existing `roadmap/*.md`):
+**Roadmap doc updates** (edit existing repo `roadmap/*.md`):
 - Add new decisions, findings, or status to relevant docs
 - Keep updates concise — append, don't rewrite
 
@@ -43,8 +50,10 @@ br create "<title>" --type <task|bug|feature|chore> --priority <0-4> --descripti
 - Create `roadmap/<TOPIC>.md` following existing doc style
 - Include: Background, Current Status, Next Steps, Open Questions
 
-### Phase 3 — Report
+### Report
+
 Summarize:
 - Issues updated/created (with IDs)
 - Docs updated/created (with paths)
+- `~/roadmap/learnings-*.md` and memory files touched
 - Recommended next actions
