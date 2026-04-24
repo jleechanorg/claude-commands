@@ -47,7 +47,7 @@ python .claude/commands/savetmp.py "<work_name>" \
 ├── methodology.md + .sha256
 ├── evidence.md + .sha256
 ├── notes.md + .sha256
-├── metadata.json + .sha256   # Includes git_provenance
+├── metadata.json + .sha256   # Includes provenance + checksum_mode
 ├── README.md + .sha256
 ├── git_provenance_full.txt + .sha256   # Optional, with --capture-git-provenance-full
 └── artifacts/

@@ -2,14 +2,17 @@
 description: Analyze failures and fix the harness (instructions, skills, tests, CI) rather than just the symptom
 type: quality
 execution_mode: deferred
+scope: user
 ---
 # /harness — Fix the harness, not just the symptom
+
+**Scope:** **User-level (general).** This file lives at `~/.claude/commands/harness.md` and applies to **any** repository unless a project overrides it. **Collision rule:** if a workspace contains **`.claude/commands/harness.md`**, read repo-local content **after** this file — it adds project-specific harness rules (for example OpenClaw gateway). **Canonical copy in git:** [jleechanclaw `docs/harness/user-command-harness.md`](https://github.com/jleechanorg/jleechanclaw/blob/main/docs/harness/user-command-harness.md) (sync with `scripts/sync-harness-user-scope.sh` in that repo).
 
 ## Instructions for Claude
 
 When this command is invoked, analyze the current situation for harness-level gaps and propose/implement fixes that prevent the same class of mistake from recurring.
 
-**Skill reference**: `~/.claude/skills/harness-engineering.md`
+**Skill reference**: `~/.claude/skills/harness-engineering/SKILL.md`
 
 ## Usage
 
@@ -27,8 +30,9 @@ When this command is invoked, analyze the current situation for harness-level ga
 3. **Check existing harness**: Read these files to see what's already covered:
    - `~/.claude/CLAUDE.md` (global instructions)
    - Repo-local `CLAUDE.md` (project instructions)
+   - Workspace **`.claude/commands/harness.md`** and **`.claude/skills/*/`** when present (repository overlay)
    - `~/.codex/AGENTS.md` (Codex instructions)
-   - `~/.claude/skills/harness-engineering.md` (the skill itself)
+   - `~/.claude/skills/harness-engineering/SKILL.md` (the skill itself)
    - `~/.claude/projects/*/memory/` (relevant memories)
 4. **Run 5 Whys — Technical**: Ask "Why?" five times about the technical failure. Drill to root cause. **This is mandatory.**
 5. **Run 5 Whys — Agent path**: Ask "Why?" five times about why the agent (Claude Code or any coding LLM) went down the wrong path. **This is mandatory.** Focus on: Did the agent trust without verifying? Did it analyze at the wrong abstraction level? Was there no skill/instruction to redirect it?
@@ -119,6 +123,22 @@ Report findings as a table:
 → 5 Whys technical: cleanup fn uses wrong grep key → porcelain format not verified → no test for cleanup path → ...
 → 5 Whys agent: agent said "cleanup present" without running it → assumed present = working → skill doesn't mandate verifying harness script correctness → ...
 → Fix script, add verification step to skill, add integration test for cleanup path
+
+**AO worker spawned on original PR branch instead of isolated clone**:
+→ Failure class: LLM path error — wrong abstraction level (agent acted at "spawn worker" level without verifying branch isolation)
+→ 5 Whys technical: `ao spawn` reuses existing worktrees → `--claim-pr` only adds dashboard tracking → no clone created → worker lands on original branch → pushes commits directly to live PR
+→ 5 Whys agent: request said "spawn for PR 6198" → agent assumed `ao spawn` would create isolation → flag name implies PR association but not branch isolation → no skill/instruction to redirect to clone-before-spawn → harness had no rule for this failure class
+→ Fix: add clone-before-spawn rule to jleechanclaw CLAUDE.md, add verification to team-mini.md, add failure class to harness.md, save feedback memory
+
+**General principle — tool semantic mismatch**:
+Many tools have names that imply capabilities they don't actually provide. When a tool name suggests isolation, atomicity, or safety guarantees that the implementation doesn't enforce, agents will trust the name and skip verification. This is a recurring failure class: LLM path error driven by misleading tool semantics.
+
+Common examples:
+- `ao spawn --claim-pr` implies PR isolation — it provides only dashboard tracking
+- `git checkout -b` implies a new branch — but it can be from HEAD, not an isolated PR clone
+- `gh pr checkout` checks out the PR branch directly — not a clone
+
+Rule: When a tool's name semantically promises isolation or safety guarantees, verify those guarantees exist in the implementation before relying on them. If the tool's name over-promises relative to its behavior, the harness gap is the misleading name — fix in docs/skill rather than expecting agents to discover the gap.
 
 ## Input
 

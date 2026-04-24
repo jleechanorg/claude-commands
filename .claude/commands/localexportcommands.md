@@ -185,7 +185,6 @@ mcp_scripts=(
     "start_mcp_production.sh"
     "start_mcp_server.sh"
     "install_mcp_servers.sh"
-    "check-pr-status.sh"
 )
 
 mcp_copied=0

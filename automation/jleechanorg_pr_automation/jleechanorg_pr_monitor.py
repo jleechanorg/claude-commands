@@ -1103,7 +1103,7 @@ class JleechanorgPRMonitor:
         )
 
     def post_comment_validation_request(self, repository: str, pr_number: int, pr_data: dict) -> str:
-        """Post comment validation request to PR (asks AI bots minus Codex to review)"""
+        """Post comment validation request to PR (asks AI bots, including @codex review)."""
         return self._post_pr_comment_common(
             repository=repository,
             pr_number=pr_number,
@@ -1242,9 +1242,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         pr_data: dict,
         head_sha: str,
     ) -> str:
-        """Build comment body that requests AI bots (minus Codex) to review PR and ensure comments are addressed"""
+        """Build comment body asking AI bots, including @codex review, to review PR comments."""
 
-        comment_body = f"""@coderabbitai @greptileai @bugbot @copilot
+        comment_body = f"""@coderabbitai @greptileai @bugbot @copilot @codex review
 
 **Summary (Review Flow):**
 1. Review every outstanding PR comment to understand required fixes and clarifications.
@@ -4311,7 +4311,7 @@ def main():
     parser.add_argument(
         "--comment-validation",
         action="store_true",
-        help="Run comment validation mode (request AI bots minus Codex to review PRs)",
+        help="Run comment validation mode (request AI bots, including @codex review, to review PRs)",
     )
     parser.add_argument(
         "--fix-comment-watch",

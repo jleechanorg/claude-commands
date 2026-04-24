@@ -10,23 +10,15 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 0: Check Prior Knowledge in Claude Memories
+### Phase 0: Memory Search Context (parallel subagent)
 
 **Action Steps:**
-1. **Discover memory files** (current project only):
-   ```python
-   import glob, os, subprocess
-   try:
-       git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
-       project_key = git_root.replace('/', '-')  # preserve leading dash: /Users/... → -Users-...
-       pattern = os.path.expanduser(f'~/.claude/projects/{project_key}/memory/*.md')
-   except Exception:
-       pattern = None  # no fallback — skip if not in a git repo
-   memory_files = [f for f in glob.glob(pattern) if not f.endswith('MEMORY.md')] if pattern else []
+1. **Run full memory search** in background using `/e` to gather context from ALL memory sources:
    ```
-2. **Filter by research topic**: Keyword match against file content using research topic terms
-3. **If matches found**: Display "📍 Prior Knowledge Found" section with relevant memory content; note these should inform the research to avoid re-discovering known facts
-4. **If no matches**: Continue directly to Phase 1
+   /e /memory_search "$ARGUMENTS"
+   ```
+2. Display results as "📍 Prior Knowledge Found" — these should inform the research to avoid re-discovering known facts
+3. Continue to Phase 1 while memory search runs in parallel
 
 ### Phase 1: Execution Standards
 
@@ -252,6 +244,13 @@ Processing findings from all sources...
 
 **vs. Other Commands**:
 - `/perp` - Multi-engine search alone (without deep thinking integration)
+- `/thinku` - Deep thinking alone (without comprehensive search)
+- Regular search - Single-source quick lookups
+- `/arch` - Architecture-specific design research
+- **`/research` = `/thinku` + `/perp` + integration** - Full academic research methodology
+
+**Memory Enhancement**: This command automatically searches memory context using Memory MCP for relevant past research methodologies, information sources, and research patterns to enhance research strategy and result quality. See CLAUDE.md Memory Enhancement Protocol for details.
+lone (without deep thinking integration)
 - `/thinku` - Deep thinking alone (without comprehensive search)
 - Regular search - Single-source quick lookups
 - `/arch` - Architecture-specific design research

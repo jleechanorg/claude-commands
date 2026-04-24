@@ -1,114 +1,103 @@
 ---
-description: /claw - Send a task to ao spawn (parallel tmux) for coding, gateway HTTP for read-only
+description: /claw - Route tasks through Hermes gateway inference
 type: orchestration
 execution_mode: immediate
 ---
-# /claw - OpenClaw Agent Dispatch (Parallel AO Sessions for Coding)
+# /claw - Hermes Gateway Inference
 
 **Usage**: `/claw <task description>`
 
-**Purpose**: Routes to the right execution path:
-- **Coding tasks** (fix, implement, write code, create PR, update code, etc.) → `ao spawn` + `ao send` for parallel tmux sessions
-- **Non-coding tasks** (summarize, read-only, explain, etc.) → OpenClaw gateway HTTP (existing behavior)
+`/claw` is a thin wrapper. The operational behavior lives in:
 
-This replaces sequential single-agent processing with parallel multi-session execution.
+- `~/.claude/skills/claw-dispatch/SKILL.md`
 
-## ⚠️ OPENCLAW AGENT — MANDATORY ROUTING RULE (orch-nkg)
+If the `/claw` task dispatches or supervises AO workers, also follow:
 
-If you are the **OpenClaw embedded agent** receiving this task from the gateway:
+- `~/.claude/commands/ao.md`
+- `~/.claude/skills/ao-operator-discipline/SKILL.md`
 
-**DO NOT run this task inline.** Inline execution has no worktree, no PR, no branch.
+## Rules
 
-**INSTEAD — follow the `dispatch-task` skill** (in this repo: `skills/dispatch-task/SKILL.md`):
-1. Create/claim a bead (`br create ...` or `br update ... --status in_progress`; see CLAUDE.md for `br` examples)
-2. Determine the ao project ID: `ao projects list`
-3. Spawn: `ao spawn ORCH-xxx -p <project-id>`
-4. Send: write task to tmp file, `ao send <session-name> --file <file>`
+- User-specified AO parameters are mandatory and must not be weakened or ignored.
+- Post-spawn AO verification is required when `/claw` crosses into AO.
+- Keep this command file thin; update the skill for behavioral changes.
 
-This applies to ALL tasks involving code, files, or PRs — see SOUL.md "Agent Dispatch Policy."
+## Execution
 
-**How this interacts with Path A / Path B below:** Path A already runs `ao spawn` from this shell for classified **coding** tasks. This rule still applies when coding work reaches you through **Path B** (gateway HTTP), a misclassified task, or any non-`/claw` gateway traffic—use `dispatch-task` instead of executing inline.
+When invoked with `$ARGUMENTS`, read `~/.claude/skills/claw-dispatch/SKILL.md` and execute that workflow with the provided task description.
+.7). OpenClaw is dead.
 
-## Execution Instructions
+## Execution
 
 When this command is invoked with `$ARGUMENTS`:
 
-### Step 0: Parse task
-
 ```bash
 TASK_DESCRIPTION="$ARGUMENTS"
-```
+set -euo pipefail
 
-### Step 1: Classify task type
+LOGDIR="/tmp/hermes"
+mkdir -p "$LOGDIR"
+chmod 700 "$LOGDIR" 2>/dev/null || true
+STATUS_LOG="$(mktemp "$LOGDIR/.claw-status-XXXXXXXX")"
+LAUNCHD_PLIST="$HOME/Library/LaunchAgents/ai.hermes.prod.plist"
 
-Use your judgment to classify the task as **coding** or **read_only**:
-- **coding**: involves writing/modifying/fixing/creating code, PRs, tests, config, or deploys; working on a bead/issue that requires code changes; contains `ao spawn` or dispatch instructions; references a bead ID (e.g. `orch-sq2`, `wa-123`)
-- **read_only**: summarize, explain, analyze, check status, read-only queries — no code changes needed
+# If a launchd gateway is installed, prefer its env over CLI defaults.
+# This keeps /claw aligned with the actual running service.
+if [ -f "$LAUNCHD_PLIST" ]; then
+  while IFS='=' read -r key value; do
+    [ -n "$key" ] || continue
+    export "$key=$value"
+  done < <(
+    python3 - "$LAUNCHD_PLIST" <<'PY'
+import plistlib
+import sys
 
-When in doubt, classify as **coding** (err toward spawning a session).
+path = sys.argv[1]
+try:
+    with open(path, "rb") as fh:
+        data = plistlib.load(fh)
+except FileNotFoundError:
+    raise SystemExit(0)
 
-```bash
-TASK_TYPE="coding"  # Set to "read_only" only if you judged it non-coding above
-echo "Task classified as: $TASK_TYPE"
-```
+env = data.get("EnvironmentVariables") or {}
+for key in ("HERMES_HOME", "HERMES_LOG_LEVEL"):
+    value = env.get(key)
+    if value:
+        print(f"{key}={value}")
+PY
+  )
+fi
 
-### Step 2: Route
+# Ensure HERMES_HOME is set (prod by default)
+export HERMES_HOME="${HERMES_HOME:-$HOME/.hermes_prod}"
 
-#### Path A — Coding Tasks: ao spawn (parallel)
+# Verify config.yaml exists and is valid YAML
+HERMES_CFG="$HERMES_HOME/config.yaml"
+if [ ! -f "$HERMES_CFG" ]; then
+  echo "Hermes config not found: $HERMES_CFG"
+  exit 1
+fi
+if ! python3 -c "import yaml; yaml.safe_load(open('$HERMES_CFG'))" 2>/dev/null; then
+  echo "Hermes config is not valid YAML: $HERMES_CFG"
+  exit 1
+fi
 
-```bash
-if [ "$TASK_TYPE" = "coding" ]; then
-  echo "=== PATH A: ao spawn (parallel coding sessions) ==="
+# Verify the gateway is running
+if ! HERMES_HOME="$HERMES_HOME" hermes gateway status >"$STATUS_LOG" 2>&1; then
+  echo "Hermes gateway is not running."
+  sed -n '1,80p' "$STATUS_LOG"
+  exit 1
+fi
+if ! grep -q 'Gateway is running' "$STATUS_LOG"; then
+  echo "Hermes gateway is not healthy."
+  sed -n '1,80p' "$STATUS_LOG"
+  exit 1
+fi
 
-  # Step A1: Extract issue ID from task (e.g. "orch-sq2", "ORCH-sq2", "fix orch-sq2")
-  # Scan the task description for a bead/issue ID — pattern: prefix-alphanumeric
-  # Valid prefixes: orch, wa, ao, ra, cc, wc, mt, mm
-  # Use your judgment to identify the ID (case-insensitive). Set empty if none found.
-  ISSUE_ID=""  # e.g. "orch-sq2" — extracted by you from TASK_DESCRIPTION, lowercase, or empty
+# Resolve slash commands
+TASK_WITH_RESOLVED="$TASK_DESCRIPTION"
 
-  # Step A2: Resolve project from issue ID prefix or default to jleechanclaw
-  case "$ISSUE_ID" in
-    orch-*) PROJECT_ID="jleechanclaw" ;;
-    wa-*)   PROJECT_ID="worldarchitect" ;;
-    ao-*)   PROJECT_ID="agent-orchestrator" ;;
-    ra-*)   PROJECT_ID="ralph" ;;
-    cc-*)   PROJECT_ID="claude-commands" ;;
-    wc-*)   PROJECT_ID="worldai-claw" ;;
-    mt-*)   PROJECT_ID="mctrl-test" ;;
-    mm-*)   PROJECT_ID="mcp-mail" ;;
-    *)      PROJECT_ID="jleechanclaw" ;;
-  esac
-  echo "Project: $PROJECT_ID  Issue: ${ISSUE_ID:-<none — will be created>}"
-
-  # Step A2.5: Detect runtime override
-  # If the task mentions "antig" or "antigravity", set RUNTIME_FLAG to "--runtime antigravity".
-  # Use your judgment — no subprocess needed.
-  RUNTIME_FLAG=""  # set to "--runtime antigravity" if task mentions antig/antigravity
-
-  # Step A3: Verify ao is available
-  if ! command -v ao &>/dev/null; then
-    echo "ERROR: 'ao' command not found. Is agent-orchestrator installed?"
-    echo "Install: npm install -g @agent-orchestrator/core  (or pip install agent-orchestrator)"
-    exit 1
-  fi
-
-  # Step A4: Verify ao is configured (common locations; ao may still use defaults)
-  AO_CONFIG=""
-  for _cand in "$HOME/agent-orchestrator.yaml" "$HOME/project_jleechanclaw/jleechanclaw/agent-orchestrator.yaml" "./agent-orchestrator.yaml"; do
-    if [ -f "$_cand" ]; then
-      AO_CONFIG="$_cand"
-      break
-    fi
-  done
-  if [ -z "$AO_CONFIG" ]; then
-    echo "WARNING: agent-orchestrator.yaml not found in usual paths — ao spawn may still work if ao is configured elsewhere"
-  fi
-
-  # Step A5: Resolve slash commands (same as original /claw)
-  # (inline the slash command resolution from Step 2.5 of the original)
-  TASK_WITH_RESOLVED_COMMANDS="$TASK_DESCRIPTION"
-
-  SLASH_CMD=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
+SLASH_CMD=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
 import sys, re
 text = sys.stdin.read().strip()
 clean = re.sub(r'https?://\S+', '', text)
@@ -117,46 +106,131 @@ if m:
     print(m.group(1))
 " 2>/dev/null)
 
-  if [ -n "$SLASH_CMD" ]; then
-    RESOLVED_CONTENT=""
-    RESOLVED_SOURCE=""
-    for search_dir in ".claude/commands" "$HOME/.claude/commands"; do
-      if [ -f "$search_dir/$SLASH_CMD.md" ]; then
+if [ -n "$SLASH_CMD" ]; then
+  RESOLVED_CONTENT=""
+  RESOLVED_SOURCE=""
+  for search_dir in ".claude/commands" "$HOME/.claude/commands"; do
+    if [ -f "$search_dir/$SLASH_CMD.md" ]; then
+      RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
+      RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
+      break
+    fi
+  done
+  if [ -z "$RESOLVED_CONTENT" ]; then
+    for search_dir in ".claude/skills" "$HOME/.claude/skills"; do
+      if [ -f "$search_dir/$SLASH_CMD/SKILL.md" ]; then
+        RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD/SKILL.md" 2>/dev/null)
+        RESOLVED_SOURCE="$search_dir/$SLASH_CMD/SKILL.md"
+        break
+      elif [ -f "$search_dir/$SLASH_CMD.md" ]; then
         RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
         RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
         break
       fi
     done
-    if [ -z "$RESOLVED_CONTENT" ]; then
-      for search_dir in ".claude/skills" "$HOME/.claude/skills"; do
-        if [ -f "$search_dir/$SLASH_CMD/SKILL.md" ]; then
-          RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD/SKILL.md" 2>/dev/null)
-          RESOLVED_SOURCE="$search_dir/$SLASH_CMD/SKILL.md"
-          break
-        elif [ -f "$search_dir/$SLASH_CMD.md" ]; then
-          RESOLVED_CONTENT=$(cat "$search_dir/$SLASH_CMD.md" 2>/dev/null)
-          RESOLVED_SOURCE="$search_dir/$SLASH_CMD.md"
-          break
-        fi
-      done
-    fi
-    if [ -n "$RESOLVED_CONTENT" ]; then
-      echo "Resolved /$SLASH_CMD from $RESOLVED_SOURCE"
-      TASK_WITH_RESOLVED_COMMANDS="The user asked: $TASK_DESCRIPTION
+  fi
+  if [ -n "$RESOLVED_CONTENT" ]; then
+    echo "Resolved /$SLASH_CMD from $RESOLVED_SOURCE"
+    TASK_WITH_RESOLVED="The user asked: $TASK_DESCRIPTION
 
 Below is the full definition of /$SLASH_CMD (resolved from $RESOLVED_SOURCE). Execute it as instructed:
 
 ---
 $RESOLVED_CONTENT
 ---"
-    fi
   fi
+fi
 
-  # Step A5.5: Learning-loop gate (fail-closed — always append unless explicitly present)
-  # Does TASK_WITH_RESOLVED_COMMANDS already contain /learn, /integrate, or an explicit
-  # note that learning is not applicable (e.g. "learning N/A", "skip /learn")?
-  # Use your judgment directly — no subprocess needed. If any of those are present, skip.
-  # If NOT present (including if you are unsure), append the /learn instruction below.
+TASK_FILE="$(mktemp "$LOGDIR/.claw-task-XXXXXXXX")"
+chmod 600 "$TASK_FILE" 2>/dev/null || true
+printf '%s' "$TASK_WITH_RESOLVED" >"$TASK_FILE"
+if [ ! -s "$TASK_FILE" ]; then
+  echo "Failed to build Hermes task file"
+  exit 1
+fi
+
+LOGFILE="$LOGDIR/claw-$(date +%s).log"
+nohup hermes chat \
+  -q "$(cat "$TASK_FILE")" \
+  --yolo \
+  --max-turns 90 \
+  -Q \
+  --source tool \
+  >"$LOGFILE" 2>&1 &
+
+CLAW_PID=$!
+sleep 3
+if ! kill -0 "$CLAW_PID" 2>/dev/null; then
+  echo "Hermes agent exited immediately."
+  sed -n '1,80p' "$LOGFILE"
+  exit 1
+fi
+
+echo "Task dispatched to Hermes gateway (PID: $CLAW_PID)"
+echo "Log: $LOGFILE"
+echo "Monitor: tail -f $LOGFILE"
+echo "Kill: kill $CLAW_PID"
+```
+
+## Requirements
+
+- Hermes gateway running via `hermes gateway status`
+- `config.yaml` valid at `$HERMES_HOME/config.yaml`
+- Slash command resolution: looks up `.claude/commands/` and `.claude/skills/` directories
+
+## Notes
+
+- All tasks route through Hermes agent inference (MiniMax M2.7 default).
+- Hermes replaced OpenClaw as THE agent (2026-04-12).
+- Slash commands are resolved before dispatch.
+- When `/claw` leads to AO worker dispatch, AO session metadata and launch commands must be verified after spawn. A spawned worker is not valid proof unless it matches the requested agent/runtime.
+- Log file written to `/tmp/hermes/claw-<timestamp>.log`
+- `--source tool` tag hides /claw sessions from `hermes sessions` user lists.
+- `--yolo` bypasses tool approval prompts for autonomous execution.
+- `-Q` (quiet) suppresses banner/spinner for clean log output.
+medium",
+            "--json",
+            "--message",
+            message,
+        ]
+    )
+)
+PY
+
+CLAW_PID=$!
+sleep 2
+if ! kill -0 "$CLAW_PID" 2>/dev/null; then
+  echo "OpenClaw agent exited immediately."
+  sed -n '1,80p' "$LOGFILE"
+  exit 1
+fi
+if grep -Eq 'gateway connect failed|falling back to embedded|unauthorized:' "$LOGFILE"; then
+  kill "$CLAW_PID" 2>/dev/null || true
+  echo "OpenClaw gateway path failed; refusing to continue via degraded fallback."
+  sed -n '1,80p' "$LOGFILE"
+  exit 1
+fi
+
+echo "Task dispatched to OpenClaw gateway (PID: $CLAW_PID)"
+echo "Log: $LOGFILE"
+echo "Monitor: tail -f $LOGFILE"
+echo "Kill: kill $CLAW_PID"
+```
+
+## Requirements
+
+- OpenClaw gateway healthy via `openclaw gateway status`
+- `gateway.remote.token` must match `gateway.auth.token`
+- Slash command resolution: looks up `.claude/commands/` and `.claude/skills/` directories
+
+## Notes
+
+- All tasks route through OpenClaw gateway inference.
+- If an OpenClaw session needs to spawn an AO sub-task, it calls the `dispatch-task` skill internally — NOT directly from `/claw`.
+- `/claw` fails closed if the OpenClaw CLI tries to degrade into embedded mode instead of using the gateway path.
+- Slash commands are resolved before dispatch.
+- Log file written to `/tmp/openclaw/claw-<timestamp>.log`
+ing if you are unsure), append the /learn instruction below.
   # FAIL-CLOSED: omission = append. Only skip when you are confident /learn is covered.
   TASK_WITH_RESOLVED_COMMANDS="${TASK_WITH_RESOLVED_COMMANDS}
 
@@ -203,7 +277,8 @@ After completing all work and creating the PR, run /learn to capture any reusabl
     BEAD_TITLE=$(printf '%s' "$TASK_DESCRIPTION" | cut -c1-80)
     BEAD_OUTPUT=$(br create "$BEAD_TITLE" --type task --priority 2 2>&1)
     echo "Bead creation: $BEAD_OUTPUT"
-    ISSUE_ID=$(echo "$BEAD_OUTPUT" | python3 -c "import sys,re; t=sys.stdin.read(); m=re.search(r'ORCH-[A-Za-z0-9]+', t); print(m.group(0).lower() if m else '')" 2>/dev/null)
+    # Parse first bead/issue id from br output (common shapes: bd-*, orch-*; extend regex if your br uses other prefixes)
+    ISSUE_ID=$(echo "$BEAD_OUTPUT" | python3 -c "import sys,re; t=sys.stdin.read(); m=re.search(r'\b((?:bd|orch)-[a-z0-9]+)\b', t, re.I); print(m.group(1).lower() if m else '')" 2>/dev/null)
     if [ -z "$ISSUE_ID" ]; then
       echo "ERROR: Failed to create bead from task"
       rm -f "$TASK_FILE" "$SPAWN_OUTPUT_FILE"
@@ -534,7 +609,7 @@ echo "Kill: kill $CLAW_PID"
 | Pattern | Route |
 |---------|-------|
 | Contains `fix`, `implement`, `write code`, `create PR`, `refactor` | **ao spawn** (Path A) |
-| Contains issue ID like `orch-xxxx`, `wa-xxxx` | **ao spawn** (Path A) |
+| Contains issue ID like `orch-xxxx`, `wa-xxxx`, or other tracker ids | **ao spawn** (Path A) |
 | Contains PR reference like `PR #123` | **ao spawn** (Path A) |
 | Contains `summarize`, `explain`, `read-only`, `what is`, `list` | **Gateway HTTP** (Path B) |
 | No coding keywords detected | **Gateway HTTP** (Path B) |
@@ -550,4 +625,5 @@ echo "Kill: kill $CLAW_PID"
 - **Slash commands**: Resolved before dispatch in both paths (command definition inlined into task)
 - **Task file cleanup**: Temp task files are kept at `/tmp/openclaw/.claw-task-*.txt` for manual resend if needed
 - **Bead creation**: If no issue ID is detected in a coding task, a bead is created automatically via `br create`
-- **Beads**: orch-sq2 (parallel ao spawn routing)
+- **Per-repo / per-machine overrides**: The prefix → `PROJECT_ID` map is **example data**. Do **not** fork this file for every repository — add a **`bd-*)` → your-project** arm (or change the default `*)`) in **user scope** `~/.claude/commands/claw.md`, or rely on **`ao spawn` from the repo root** so AO picks the project from config/cwd. Same for tmux session name prefix if your namespace differs from `bb5e6b7f8db3-`.
+- **Bead routing reference**: see bead **orch-sq2** (parallel `ao spawn` routing) in your tracker if used.

@@ -37,7 +37,7 @@ class CopilotCommandBase(ABC):
 
         # No caching - always fetch fresh data from GitHub API
 
-    def _get_repo_info(self) -> Optional[str]:
+    def _get_repo_info(self) -> str:
         """Get repository info from GitHub CLI or git remote."""
         try:
             result = subprocess.run(
@@ -67,17 +67,10 @@ class CopilotCommandBase(ABC):
                         return "/".join(url.split("/")[-2:])
             except subprocess.CalledProcessError:
                 pass
-            # Default fallback — prefer GITHUB_REPOSITORY env var (set in CI/Actions)
-            repo = (
-                os.environ.get("GITHUB_REPOSITORY")
-                or os.environ.get("DEFAULT_REPO")
+            # Default fallback - use your-project.com as default repo
+            return os.environ.get(
+                "DEFAULT_REPO", "$GITHUB_REPOSITORY"
             )
-            if not repo:
-                raise ValueError(
-                    "Repository could not be determined. "
-                    "Set GITHUB_REPOSITORY or DEFAULT_REPO env var, or run in a git repo with gh CLI."
-                )
-            return repo
 
     def _get_current_branch(self) -> str:
         """Get current git branch for branch-specific file naming."""

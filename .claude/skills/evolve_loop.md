@@ -251,3 +251,50 @@ touch /tmp/evolve_loop_last_run
 - `~/.openclaw/SOUL.md` — zero-touch convention ([agento] prefix)
 - `~/.openclaw/agent-orchestrator.yaml` — agentRules config
 - `novel/` — worker friction narratives
+se cycle summary:
+```
+## Evolve Loop Cycle — HH:MM
+- Zero-touch rate: X% (trend: ↑/↓/→)
+- Workers: N alive, N dead, N stuck
+- PRs: N open, N merged since last cycle
+- Friction: N new points found
+- Fixes: N dispatched via /claw, N direct
+- Beads: N created, N updated
+- Roadmap: pushed to main
+```
+
+Touch the timestamp file for next cycle:
+```bash
+touch /tmp/evolve_loop_last_run
+```
+
+---
+
+## Invocation
+
+```bash
+# Start the loop (via /loop skill)
+/loop 10m /eloop
+
+# Or manually for one cycle
+/eloop
+```
+
+The `/loop` wrapper handles the 12-hour max and 10-minute interval. Each `/eloop` invocation runs one complete cycle.
+
+## Anti-Stall Rules
+
+- If GraphQL is exhausted, switch to REST immediately — never sleep-retry
+- If session cap is hit (>30), do not spawn — report and defer
+- If a worker is stuck (same output 3 consecutive checks), kill and respawn
+- If /claw fails twice on the same bead, create PR directly
+- If main repo is on wrong branch, fix it silently (git checkout main)
+- If build is broken on main, fix it before dispatching workers
+
+## Key Files
+
+- `roadmap/evolve-loop-findings.md` — cumulative findings log
+- `.beads/issues.jsonl` — bead tracker
+- `~/.openclaw/SOUL.md` — zero-touch convention ([agento] prefix)
+- `~/.openclaw/agent-orchestrator.yaml` — agentRules config
+- `novel/` — worker friction narratives
