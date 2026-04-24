@@ -250,3 +250,10 @@ Processing findings from all sources...
 - **`/research` = `/thinku` + `/perp` + integration** - Full academic research methodology
 
 **Memory Enhancement**: This command automatically searches memory context using Memory MCP for relevant past research methodologies, information sources, and research patterns to enhance research strategy and result quality. See CLAUDE.md Memory Enhancement Protocol for details.
+lone (without deep thinking integration)
+- `/thinku` - Deep thinking alone (without comprehensive search)
+- Regular search - Single-source quick lookups
+- `/arch` - Architecture-specific design research
+- **`/research` = `/thinku` + `/perp` + integration** - Full academic research methodology
+
+**Memory Enhancement**: This command automatically searches memory context using Memory MCP for relevant past research methodologies, information sources, and research patterns to enhance research strategy and result quality. See CLAUDE.md Memory Enhancement Protocol for details.
