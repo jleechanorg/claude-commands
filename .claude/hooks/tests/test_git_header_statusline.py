@@ -40,6 +40,32 @@ def run_git_header(script_path, env=None, cwd=None):
         pytest.fail("git-header.sh timed out (>5 seconds)")
 
 
+def run_git_header_with_open_stdin(script_path, cwd=None):
+    """Run git-header.sh while keeping stdin open to verify it does not hang."""
+    read_fd, write_fd = os.pipe()
+    try:
+        proc = subprocess.Popen(
+            ["bash", script_path, "--status-only"],
+            stdin=read_fd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=cwd,
+        )
+        os.close(read_fd)
+        read_fd = None
+        stdout, stderr = proc.communicate(timeout=3)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        stdout, stderr = proc.communicate()
+        pytest.fail("git-header.sh hung while stdin remained open")
+    finally:
+        if read_fd is not None:
+            os.close(read_fd)
+        os.close(write_fd)
+    return stdout.strip(), stderr.strip(), proc.returncode
+
+
 @pytest.fixture
 def temp_git_repo():
     """Create temporary git repository for testing"""
@@ -104,7 +130,7 @@ class TestGitHeaderStatusline:
         stdout, stderr, returncode = run_git_header(git_header_script)
 
         # Should contain directory name, branch, and status in parentheses
-        assert "Branch:" in stdout
+        assert "Local:" in stdout
         assert "(synced)" in stdout or "(no remote)" in stdout  # Initially no remote
         assert "Dir:" in stdout
 
@@ -181,17 +207,34 @@ class TestGitHeaderStatusline:
         assert execution_time < 5.0, f"Script took {execution_time:.2f}s, should be <5s"
         assert execution_time < 1.0, f"Script took {execution_time:.2f}s, target <1s"
 
+    def test_returns_zero_without_pr_url(self, temp_git_repo, git_header_script):
+        """No-PR repositories should still produce a successful header."""
+        stdout, stderr, returncode = run_git_header(git_header_script)
+
+        assert stdout
+        assert returncode == 0
+
+    def test_open_stdin_times_out_instead_of_hanging(
+        self, temp_git_repo, git_header_script
+    ):
+        """Open pipes should not block header generation indefinitely."""
+        stdout, stderr, returncode = run_git_header_with_open_stdin(
+            git_header_script, cwd=temp_git_repo
+        )
+
+        assert "Dir:" in stdout
+        assert returncode == 0
+
     def test_red_essential_output_format(self, temp_git_repo, git_header_script):
         """RED: Test essential output format components"""
         stdout, stderr, returncode = run_git_header(git_header_script)
 
-        # Line 1: dir, branch, sync status in parentheses.
-        # PR: is only emitted on line 2 when a PR is known (see git-header.sh);
-        # bare repos with no remote never print "PR:".
+        # Must contain all essential components
         assert "Dir:" in stdout
-        assert "Branch:" in stdout
+        assert "Local:" in stdout
+        assert "Remote:" in stdout
+        assert "PR:" in stdout
         assert "(" in stdout and ")" in stdout  # Status always in parentheses
-        assert "ctx" in stdout  # Line 2 always includes the context window bar label
 
     def test_red_pr_branch_pattern_detection(self, temp_git_repo, git_header_script):
         """RED: Test PR branch pattern detection (pr-123, feature/pr-456)"""

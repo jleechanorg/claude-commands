@@ -2,7 +2,7 @@
 
 **Usage**: Diagnose what OpenClaw is actually doing locally — which model it uses, whether it's running, what the gateway is forwarding, and whether WorldArchitect is correctly routing through it.
 
-> **UI automation**: To click/type/interact with OpenClaw or Antigravity via Peekaboo, use the `antigravity-computer-use` skill (which itself extends `claude-code-computer-use`). This skill covers bash diagnostics only.
+> **UI automation**: To click/type/interact with OpenClaw or Antigravity via Peekaboo, use the `antigravity-computer-use` skill (which itself extends `claude-code-computer-use`). This diagnostics guide covers bash diagnostics only.
 
 ## The Key Insight
 
@@ -29,7 +29,8 @@ Expected: `Gateway service · LaunchAgent installed · loaded · running (pid XX
 ```bash
 python3 -c "
 import json
-d = json.load(open('$HOME/.openclaw/openclaw.json'))
+import os
+d = json.load(open(os.path.expanduser('~/.openclaw/openclaw.json')))
 ag = d.get('agents', {}).get('defaults', {}).get('model', {})
 print('Primary model:', ag.get('primary'))
 print('Fallbacks:', ag.get('fallbacks'))
@@ -130,13 +131,17 @@ Common patterns:
 **To check what token the plist actually has:**
 ```bash
 plutil -convert json -o - ~/Library/LaunchAgents/ai.openclaw.gateway.plist \
-  | jq -r '.EnvironmentVariables.OPENCLAW_SLACK_APP_TOKEN' | head -c 40
+  | jq -r '.EnvironmentVariables.OPENCLAW_SLACK_APP_TOKEN' \
+  | python3 -c "import sys; t=sys.stdin.read().strip(); print('token_present=' + str(bool(t)) + ', length=' + str(len(t)))"
 ```
 
 **If you must test the xapp token manually:**
 ```bash
 TOKEN="$(plutil -convert json -o - ~/Library/LaunchAgents/ai.openclaw.gateway.plist | jq -r '.EnvironmentVariables.OPENCLAW_SLACK_APP_TOKEN')"
-curl -s -X POST https://slack.com/api/apps.connections.open -H "Authorization: Bearer $TOKEN" | jq .
+HEADER_FILE="$(mktemp)"
+trap 'rm -f "$HEADER_FILE"' EXIT
+printf 'Authorization: Bearer %s\n' "$TOKEN" > "$HEADER_FILE"
+curl -s -X POST https://slack.com/api/apps.connections.open -H "@$HEADER_FILE" | jq .
 ```
 **WARNING: This test is unreliable when the gateway is actively retrying.** If the gateway has been retrying `apps.connections.open` repeatedly (check logs for `auto-restart attempt N/10`), Slack rate-limits further connection attempts and returns `invalid_auth` for ALL calls — including your manual test — even with a valid token. Always `openclaw gateway restart` first to clear the retry storm, THEN test if needed.
 
@@ -148,7 +153,7 @@ curl -s -X POST https://slack.com/api/apps.connections.open -H "Authorization: B
 |---------|-------|-----|
 | Slack `stopped, error:invalid_auth` after plist change | Gateway didn't pick up new plist env vars | `openclaw gateway restart` |
 | Slack `stopped, error:invalid_auth` persists after restart | xapp token in plist is genuinely invalid/revoked | Regenerate at api.slack.com/apps → Basic Information → App-Level Tokens |
-| Gateway token mismatch (RPC fails) | `health-check.sh` ran `openclaw gateway install --force` without `--token`, wiping plist token | Inject token: `plutil -replace EnvironmentVariables.OPENCLAW_GATEWAY_TOKEN -string "$OPENCLAW_GATEWAY_TOKEN" ~/Library/LaunchAgents/ai.openclaw.gateway.plist && openclaw gateway restart` |
+| Gateway token mismatch (RPC fails) | `health-check.sh` ran `openclaw gateway install --force` without `--token`, wiping plist token | Inject token: `test -n "$OPENCLAW_GATEWAY_TOKEN" || { echo "OPENCLAW_GATEWAY_TOKEN is unset"; exit 1; }; plutil -replace EnvironmentVariables.OPENCLAW_GATEWAY_TOKEN -string "$OPENCLAW_GATEWAY_TOKEN" ~/Library/LaunchAgents/ai.openclaw.gateway.plist && openclaw gateway restart` |
 | Gateway not listening on 18789 | `ai.openclaw.consensus` holds port 18792, crashing gateway | `kill $(lsof -t -i :18792); launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway` |
 | Config parse error: `DISCORD_BOT_TOKEN` | Disabled discord channel still has `${VAR}` placeholder | Set `channels.discord.token = ""` in openclaw.json |
 | Config parse error: `SECOND_OPINION_MCP_URL` | Disabled plugin still has env var refs | Clear `plugins.entries.openclaw-mcp-adapter.config.servers = []` |

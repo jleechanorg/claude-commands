@@ -108,7 +108,13 @@ Kill any stale pr-monitor processes, then run ALL automation cron jobs once usin
 
 2. Run all active crontab automation jobs (in background, matching crontab args exactly):
    ```bash
-   LOG=$HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation
+   if [[ "$(uname -s)" == "Darwin" ]]; then
+     DEFAULT_LOG_DIR="$HOME/Library/Logs/${PROJECT_NAME:-$(basename "$PWD")}-automation"
+   else
+     DEFAULT_LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/${PROJECT_NAME:-$(basename "$PWD")}-automation"
+   fi
+   LOG="${AUTOMATION_LOG_DIR:-$DEFAULT_LOG_DIR}"
+   mkdir -p "$LOG"
 
    # [CRON-JOB-ID: pr-monitor]
    nohup jleechanorg-pr-monitor --max-prs 10 >> $LOG/jleechanorg_pr_monitor.log 2>&1 &

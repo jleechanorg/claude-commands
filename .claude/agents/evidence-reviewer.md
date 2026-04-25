@@ -32,7 +32,7 @@ tools:
 Provide the evidence bundle path:
 
 ```
-/tmp/your-project.com/<branch>/<test_name>/iteration_NNN/
+/tmp/worldarchitect.ai/<branch>/<test_name>/iteration_NNN/
 ```
 
 Or the `latest/` path. The agent reads all files independently.

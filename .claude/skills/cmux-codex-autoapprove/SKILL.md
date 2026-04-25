@@ -7,15 +7,28 @@ user-invocable: true
 # cmux Codex Autoapprove
 
 Canonical files:
-- Skill root: `$HOME/.claude/skills/cmux-codex-autoapprove`
-- Worker script: `$HOME/.claude/skills/cmux-codex-autoapprove/scripts/cmux_codex_approve_launchd.py`
-- LaunchAgent: `$HOME/Library/LaunchAgents/com.$USER.cmux-codex-approve.plist`
-- Logs: `$HOME/.claude/supervisor/cmux-codex-launchd.log`
-- State: `$HOME/.claude/supervisor/cmux-codex-launchd-state.json`
+- Skill root: `/Users/jleechan/.claude/skills/cmux-codex-autoapprove`
+- Worker script: `/Users/jleechan/.claude/skills/cmux-codex-autoapprove/scripts/cmux_codex_approve_launchd.py`
+- LaunchAgent: `/Users/jleechan/Library/LaunchAgents/com.jleechan.cmux-codex-approve.plist`
+- Plist backup: `~/.claude/skills/cmux-codex-autoapprove/com.jleechan.cmux-codex-approve.plist`
+
+## Install / Restore
+
+On a new machine, copy the plist and load it:
+
+```bash
+cp ~/.claude/skills/cmux-codex-autoapprove/com.jleechan.cmux-codex-approve.plist \
+   ~/Library/LaunchAgents/com.jleechan.cmux-codex-approve.plist
+launchctl load ~/Library/LaunchAgents/com.jleechan.cmux-codex-approve.plist
+```
+
+**PATH requirement:** The plist must include `/Users/jleechan/bin` in PATH (where `cmux` lives). Current plist already has this.
+- Logs: `/Users/jleechan/.claude/supervisor/cmux-codex-launchd.log`
+- State: `/Users/jleechan/.claude/supervisor/cmux-codex-launchd-state.json`
 
 Compatibility paths:
-- Wrapper path used by older flows: `$HOME/.claude/bin/cmux_codex_approve_launchd.py`
-- Codex skill symlink: `$HOME/.codex/skills/cmux-codex-autoapprove`
+- Wrapper path used by older flows: `/Users/jleechan/.claude/bin/cmux_codex_approve_launchd.py`
+- Codex skill symlink: `/Users/jleechan/.codex/skills/cmux-codex-autoapprove`
 
 ## Purpose
 
@@ -40,14 +53,14 @@ cmux read-screen --workspace <workspace> --surface <surface> --lines 24
 2. If you need a one-shot run, execute:
 
 ```bash
-/opt/homebrew/bin/python3 $HOME/.claude/skills/cmux-codex-autoapprove/scripts/cmux_codex_approve_launchd.py
+/opt/homebrew/bin/python3 /Users/jleechan/.claude/skills/cmux-codex-autoapprove/scripts/cmux_codex_approve_launchd.py
 ```
 
 3. For the scheduled agent, use:
 
 ```bash
-launchctl kickstart -k gui/501/com.$USER.cmux-codex-approve
-launchctl print gui/501/com.$USER.cmux-codex-approve
+launchctl kickstart -k gui/501/com.jleechan.cmux-codex-approve
+launchctl print gui/501/com.jleechan.cmux-codex-approve
 ```
 
 ## Behavior Notes
@@ -65,7 +78,7 @@ Edit the worker script when:
 - prompt wording changes and the regexes need to expand
 
 Check these first when debugging:
-- `$HOME/.claude/supervisor/cmux-codex-launchd.log`
-- `$HOME/.claude/supervisor/cmux-codex-launchd.stderr.log`
-- `$HOME/.claude/supervisor/cmux-codex-launchd-state.json`
+- `/Users/jleechan/.claude/supervisor/cmux-codex-launchd.log`
+- `/Users/jleechan/.claude/supervisor/cmux-codex-launchd.stderr.log`
+- `/Users/jleechan/.claude/supervisor/cmux-codex-launchd-state.json`
 

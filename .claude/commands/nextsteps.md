@@ -1,6 +1,8 @@
-# /nextsteps — Situational Assessment & Roadmap Update
+# /nextsteps
 
-Assess current context, update beads issues and roadmap docs to reflect recent work. Dispatches parallel subagents for speed.
+Situational assessment and roadmap sync after a work block.
+
+**Skill:** `~/.claude/skills/nextsteps/SKILL.md`
 
 ## Usage
 ```

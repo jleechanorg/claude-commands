@@ -14,7 +14,6 @@ def capture_provenance():
     provenance = {}
 
     # === GIT PROVENANCE (MANDATORY) ===
-    subprocess.run(["git", "fetch", "origin", "main"], timeout=10, capture_output=True)
     provenance["git_head"] = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], text=True).strip()
     provenance["git_branch"] = subprocess.check_output(
@@ -30,6 +29,7 @@ def capture_provenance():
     port = BASE_URL.split(":")[-1].rstrip("/")
     pids = subprocess.check_output(
         ["lsof", "-i", f":{port}", "-t"], text=True).strip().split("\n")
+    pids = [pid for pid in pids if pid]
     provenance["server"] = {
         "pid": pids[0] if pids else None,
         "port": port,
@@ -117,12 +117,12 @@ environment. Evidence from `--start-local --evidence` is valid proof.
 | File | Purpose | Required Keys |
 |------|---------|---------------|
 | `run.json` | Test results | `scenarios[*].name`, `scenarios[*].campaign_id`, `scenarios[*].errors` |
-| `metadata.json` | Git/server provenance | `git_provenance`, `server`, `timestamp` |
+| `metadata.json` | Git/server provenance | `provenance`, `timestamp_utc`, `checksum_mode` |
 | `evidence.md` | Human-readable summary | Pass/fail counts matching run.json |
 | `methodology.md` | Test methodology | Environment, steps, validation |
 | `README.md` | Package manifest | Git commit, branch, collection time |
-| `request_responses.jsonl` | Raw MCP captures | Full request/response pairs |
-| `llm_request_responses.jsonl` | Raw LLM request/response payloads | `type` field (`request` or `response`) |
+| `request_responses.jsonl` | Required for LLM/API-claim bundles or base-class local-server traces | Full request/response pairs |
+| `llm_request_responses.jsonl` | Required for LLM/API-claim bundles or base-class local-server traces | `type` field (`request` or `response`) |
 
 **DEPRECATED:** `evidence.json` - use `run.json` + `metadata.json` instead.
 
@@ -155,7 +155,8 @@ results = {
 
 ### Evidence Integrity (Checksums)
 
-**ALL evidence files MUST have separate checksum files:**
+**Per-file checksum mode:** When `metadata.json.checksum_mode = "per_file_checksums"`,
+all evidence files MUST have separate checksum files:
 
 ```bash
 # Generate checksums AFTER finalizing content
@@ -172,7 +173,7 @@ sha256sum -c run.json.sha256
 (e.g., `run.json`), not a nested path like `artifacts/run_.../run.json`.
 This ensures `sha256sum -c` works when run from the evidence directory.
 
-**ALL evidence files require checksums, including:**
+**In per-file checksum mode, ALL evidence files require checksums, including:**
 - Individual test result files (PASS_*.json, FAIL_*.json)
 - Aggregated files (request_responses.jsonl)
 - Server logs (artifacts/server.log)
@@ -330,7 +331,6 @@ bug-fix claims, include a pre-fix reproduction and a post-fix run.
 Every evidence bundle MUST capture:
 
 ```bash
-git fetch origin main  # Ensure origin/main is current
 git rev-parse HEAD     # Exact commit being tested
 git rev-parse origin/main  # Base comparison point
 git branch --show-current  # Branch name
@@ -390,6 +390,7 @@ lsof -p $PID 2>/dev/null | grep -E "^p|^fcwd|^n/"
 | Field | Description | Example |
 |-------|-------------|---------|
 | `bundle_version` | Evidence format version | `"1.1.0"` |
+| `checksum_mode` | Checksum packaging strategy for this bundle | `"per_file_checksums"` |
 | `run_id` | Unique identifier for this run | `"llm_guardrails_exploits-003-20260101T221620"` |
 | `iteration` | Run number within this test | `3` |
 
@@ -420,7 +421,7 @@ Example metadata.json with versioning:
 ├── evidence.md.sha256
 ├── notes.md               # Additional context, TODOs, follow-ups
 ├── notes.md.sha256
-├── metadata.json          # Machine-readable: git_provenance, timestamps
+├── metadata.json          # Machine-readable: provenance, timestamps, checksum mode
 ├── metadata.json.sha256
 ├── pr_diff.txt            # Optional (PR mode): full diff origin/main...HEAD
 ├── pr_diff_summary.txt    # Optional (PR mode): diff summary
@@ -457,12 +458,38 @@ cat > "${EVIDENCE_DIR}/README.md" <<EOF
 - Collected At (UTC): ${TIMESTAMP}
 EOF
 
+cat > "${EVIDENCE_DIR}/run.json" <<EOF
+{
+  "test_name": "${WORK}",
+  "scenarios": [
+    {
+      "name": "manual_shell_capture",
+      "campaign_id": "manual-${TIMESTAMP}",
+      "passed": true,
+      "errors": [],
+      "checks": {
+        "git_head": "captured",
+        "git_commit_info": "captured",
+        "changed_files": "captured"
+      }
+    }
+  ]
+}
+EOF
+
 cat > "${EVIDENCE_DIR}/metadata.json" <<EOF
 {
-  "repository": "${REPO}",
+  "repo": "${REPO}",
   "branch": "${BRANCH}",
-  "work_item": "${WORK}",
-  "timestamp": "${TIMESTAMP}",
+  "work_name": "${WORK}",
+  "checksum_mode": "per_file_checksums",
+  "timestamp_utc": "${TIMESTAMP}",
+  "provenance": {
+    "head_commit": "$(cat "${EVIDENCE_DIR}/git_head.txt")",
+    "git_commit_info_file": "git_commit_info.txt",
+    "changed_files_file": "changed_files.txt",
+    "branch": "${BRANCH}"
+  },
   "created_by": "manual_shell_example"
 }
 EOF
@@ -474,17 +501,15 @@ echo "# Notes" > "${EVIDENCE_DIR}/notes.md"
 
 # Generate checksums
 cd "${EVIDENCE_DIR}" || { echo "Failed to enter evidence directory" >&2; exit 1; }
-shopt -s nullglob
-for f in *.md *.txt *.json; do
+while IFS= read -r -d '' f; do
   [ -f "$f" ] && sha256sum "$f" > "${f}.sha256"
-done
-shopt -u nullglob
+done < <(find . -type f ! -name "*.sha256" -print0)
 
 # After populating methodology.md, evidence.md, and notes.md with real content,
 # regenerate checksums to reflect the final state:
-# for f in *.md *.txt *.json; do
+# while IFS= read -r -d '' f; do
 #   [ -f "$f" ] && sha256sum "$f" > "${f}.sha256"
-# done
+# done < <(find . -type f ! -name "*.sha256" -print0)
 ```
 
 **Alternative format** (still valid for specialized tests):
@@ -510,7 +535,8 @@ Evidence MUST include:
 ### For Prompt Enforcement Claims
 
 If you claim a specific system instruction or enforcement block was included in a live LLM call:
-- Capture runtime prompt filenames (`debug_info.system_instruction_files`). Record `system_instruction_char_count` when available.
+- Capture runtime prompt filenames (`debug_info.system_instruction_files`) and `system_instruction_char_count` when available.
+- Capture full prompt text only when `CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS > 0`.
 - Tie it to the same execution that produced the response (timestamp + request/response evidence)
 - Static code references alone are insufficient
 
@@ -528,9 +554,10 @@ When enabled, full system instruction text appears in `debug_info.system_instruc
 
 **Prompt Tracking (default):**
 
-Capture prompt filenames (and char count when available):
+Capture prompt filenames by default, and full prompt text only when gated:
 - `debug_info.system_instruction_files`: List of prompt files loaded (e.g., `["prompts/master_directive.md", "prompts/game_state_instruction.md"]`)
 - `debug_info.system_instruction_char_count`: Total character count of combined prompts (optional)
+- `debug_info.system_instruction_text`: Full text only when `CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS > 0`
 
 This proves which prompts were used without the ~100KB overhead per response. The file list provides provenance while keeping evidence bundles manageable.
 
@@ -541,7 +568,7 @@ When using lightweight prompt tracking, evidence files MUST include explicit doc
 ```json
 {
   "evidence_mode": "lightweight_prompt_tracking",
-  "evidence_mode_notes": "System instruction captured as filenames + char_count (not full text). Full raw_response_text from LLM is captured. Server logs in artifacts/."
+  "evidence_mode_notes": "System instruction captured as filenames + char_count by default. Full system_instruction_text and raw_request_payload/raw_response_text are gated and only captured when explicitly enabled."
 }
 ```
 
@@ -575,7 +602,7 @@ When proving LLM or API behavior, evidence MUST capture the full request/respons
 **Required captures:**
 1. **Raw request payload** - The exact input sent to the API/LLM
 2. **Raw response payload** - The exact output returned, before any parsing or transformation
-3. **System instructions/prompts** - Prompt filenames; char count optional; full text only when explicitly requested
+3. **System instructions/prompts** - Prompt filenames; char count optional; full text only when gated
 4. **Timestamps** - When each request was made and response received
 
 **Mandatory 2-layer trace set for `testing_mcp/lib/base_test.py` runs:**
@@ -611,32 +638,33 @@ request_responses.jsonl   # One JSON object per line, each containing:
 ```
 
 **Required debug_info fields for LLM claims:**
-- `system_instruction_text` - The system prompt (captured by default)
-- `raw_request_payload` - The user prompt/action sent to LLM (requires `CAPTURE_RAW_LLM=true`)
-- `raw_response_text` - Raw LLM output before parsing (requires `CAPTURE_RAW_LLM=true`)
+- `system_instruction_files` - Always captured
+- `system_instruction_char_count` - Record when available
+- `system_instruction_text` - The full system prompt, only when `CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS > 0`
+- `raw_request_payload` - The user prompt/action sent to LLM, only when `CAPTURE_RAW_LLM=true`
+- `raw_response_text` - Raw LLM output before parsing, only when `CAPTURE_RAW_LLM=true`
 
 **Server configuration:**
 - Enable full request/response logging in your server
-- Set capture limits high enough to avoid truncation (e.g., 80K+ chars for LLM responses)
+- Set capture limits high enough to avoid truncation when gated full capture is needed
 - Capture prompt filenames at runtime; full prompt text only when explicitly requested
 
 **Default Evidence Capture:**
 
-Raw LLM capture is **enabled by default** in the server (`$PROJECT_ROOT/llm_service.py`):
-- `CAPTURE_RAW_LLM` defaults to `"true"` - no env var required
-- Server default limit: 20,000 chars (sufficient for most use cases)
+Lightweight prompt tracking is the default. Full raw LLM capture is **opt-in**
+and should be enabled only when the claim requires the raw payloads.
 
-For tests needing higher limits, `server_utils.DEFAULT_EVIDENCE_ENV` provides overrides:
+For tests needing higher limits or raw capture, `server_utils.DEFAULT_EVIDENCE_ENV` provides overrides:
 
 ```python
 DEFAULT_EVIDENCE_ENV = {
-    "CAPTURE_RAW_LLM": "true",  # Server default, included for explicitness
-    "CAPTURE_RAW_LLM_MAX_CHARS": "50000",  # Test override (server: 20000)
-    "CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS": "120000",
+    "CAPTURE_RAW_LLM": "true",  # Enable only when raw payloads are required
+    "CAPTURE_RAW_LLM_MAX_CHARS": "50000",  # Increase when raw payloads are required
+    "CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS": "120000",  # Increase when full prompt text is required
 }
 ```
 
-This ensures raw request/response capture works automatically without manual configuration.
+This keeps the lightweight path cheap while preserving a documented opt-in path for full raw capture.
 
 ### For Test Result Portability
 
@@ -982,7 +1010,7 @@ If you're about to:
 
 Evidence JSON files must use **relative paths** for portability:
 
-```json
+```jsonc
 // ❌ BAD - Absolute paths break when bundle is moved
 {
   "artifacts_dir": "/tmp/worktree_worker7/dev123/e2e_test",
@@ -1001,17 +1029,31 @@ Evidence JSON files must use **relative paths** for portability:
 2. If absolute paths exist, update them to be bundle-relative
 3. Or document the original source location separately
 
-## Single Checksum Layer
+## Checksum Packaging Modes
 
-Evidence bundles must have **exactly one layer** of checksums:
+Record `metadata.json.checksum_mode` and pick one mode per bundle:
 
-| Strategy | When to Use |
-|----------|-------------|
-| Per-file `.sha256` | Simple bundles, few files |
-| Root `checksums.sha256` | Complex bundles, many files |
-| **NEVER both** | Causes `.sha256.sha256` pollution |
+| Mode | Bundle shape | Rule |
+|------|--------------|------|
+| `per_file_checksums` | Simple bundles, few files | Every evidence file gets its own `.sha256`; verify with `sha256sum -c`. |
+| `bundle_checksum` | Complex bundles, many files | One root `checksums.sha256` covers the bundle; no per-file `.sha256` files in the same bundle. |
 
 **When packaging artifacts that already have checksums:**
+- Remove any pre-existing `.sha256` files from the source before copying.
+- Regenerate checksums in the selected bundle mode after the final content is in place.
+
+**Per-file mode example:**
+
+```bash
+# Generate checksums AFTER finalizing content
+sha256sum run.json > run.json.sha256
+sha256sum metadata.json > metadata.json.sha256
+
+# Verify checksums
+sha256sum -c run.json.sha256
+```
+
+**Bundle mode example:**
 
 ```bash
 # Clean existing checksums before copying
@@ -1019,15 +1061,8 @@ find /path/to/source -name "*.sha256" -delete
 
 # Then copy artifacts to bundle
 cp -r /path/to/source "${EVIDENCE_DIR}/artifacts/"
-```
 
-**Manual cleanup alternative:**
-
-```bash
-# Remove all .sha256 files from artifact source before copying
-find /path/to/source -name "*.sha256" -delete
-
-# Then create fresh checksums at bundle level
+# Generate a single root checksum manifest from the bundle root
 cd /bundle/root
 find . -type f ! -name "*.sha256" -exec sha256sum {} \; > checksums.sha256
 ```
@@ -1142,9 +1177,10 @@ $(git diff --name-only origin/main...HEAD)
 EOF
 ```
 
-### Per-File Checksums (Preferred for Important Artifacts)
+### Per-File Checksums (Preferred for Important Artifacts in Per-File Mode)
 
-For key evidence files, use per-file checksums alongside the artifact:
+When the bundle uses `checksum_mode = "per_file_checksums"`, use per-file
+checksums alongside the artifact:
 
 ```bash
 # Generate per-file checksums
@@ -1161,6 +1197,81 @@ done
 
 **Why per-file:** Easier to verify individual artifacts; no need to parse a combined file.
 
+## Self-Contained PR Evidence — The "Clean Computer" Rule
+
+**A PR is self-contained when a stranger on a brand-new computer, with no prior access to the repo, can:**
+1. Follow the linked gist URL from the PR description
+2. Read the gist README and clone the repo
+3. Install dependencies and run the exact commands shown
+4. Observe the same results as claimed — without asking you anything
+
+**Gist MUST contain** (not just link to):
+- `git clone` URL + branch checkout command
+- All dependencies (pip install / npm install / service account requirements)
+- Exact test invocation commands copy-pasteable into a terminal
+- Expected output (pass counts, scenario names)
+- Links to the GIF and downloadable MP4 so reviewer can view without a GitHub account
+
+**PR description MUST contain:**
+- GIF embedded inline (renders without clicking) — must be on a **public** URL
+- Downloadable MP4 link — direct download, not a page requiring login
+- Caption naming: what test ran, pass/fail result, key behavior
+- Gist link for reproduction instructions
+
+**What "self-contained" is NOT:**
+- "See evidence/ directory in the repo" (requires repo access)
+- "Run the test locally" with no further instructions
+- GIF hosted on a private repo (404 for anyone without repo access)
+- Raw MP4 binaries embedded in normal git history as the only distribution path
+  - Video artifacts in `evidence/<bundle>/` must be provided as directly downloadable URLs, or via a supported large-file workflow such as Git LFS with a note pointing to the LFS-stored file.
+  - Raw MP4 binaries must not be committed directly to ordinary git history.
+
+---
+
+## Video Hosting — Always Use a Public Repo
+
+**Rule: GIFs and MP4s MUST be hosted on a public GitHub repo release.**
+
+Private repo release assets are inaccessible to anonymous viewers and will not render as inline images in GitHub PR descriptions.
+
+### Correct Pattern
+
+```bash
+# Upload to a public repo (e.g. agent-orchestrator)
+gh release create evidence-pr-<N>-v<M> \
+  terminal_demo.gif terminal_demo.mp4 \
+  browser_ui_demo.gif browser_ui_demo.mp4 \
+  --title "PR #N Evidence vM" \
+  --notes "Evidence for PR jleechanorg/worldarchitect.ai#N" \
+  -R jleechanorg/agent-orchestrator
+
+# Verify accessibility (expect HTTP/2 302 → CDN redirect = accessible)
+curl -sI "https://github.com/jleechanorg/agent-orchestrator/releases/download/evidence-pr-<N>-v<M>/browser_ui_demo.gif" | head -2
+```
+
+### URL Format
+```
+https://github.com/jleechanorg/agent-orchestrator/releases/download/<tag>/<filename>
+```
+
+### Verification (mandatory before adding to PR)
+```bash
+# Via gh CLI (authenticated) — all states must be "uploaded"
+gh api repos/jleechanorg/agent-orchestrator/releases/tags/<tag> \
+  --jq '.assets[] | {name: .name, state: .state}'
+
+# Repo must be public (private=false)
+gh api repos/jleechanorg/agent-orchestrator --jq '.private'
+```
+
+### Anti-patterns (will cause broken GIFs)
+- `releases/download/...` from a **private** repo → 404 for viewers
+- GitHub native video attachment (`.mp4` attached to PR comment) → not downloadable via direct URL
+- Raw binary committed to ordinary git history in `evidence/` → requires cloning the repo and bloats history; use public release URLs or a supported large-file workflow such as Git LFS with a pointer note
+- Gist attachments for binary files → Gist API doesn't support binary uploads
+
+---
+
 ## Video Evidence — ALWAYS REQUIRED (Both Types)
 
 **Every non-trivial verification requires TWO videos.** Neither alone is sufficient.
@@ -1171,6 +1282,14 @@ done
 | **UI/browser video** | Visual behavior and click flows occurred as claimed | Any claim touching rendered UI, user flows, or browser behavior |
 
 If your work has no UI component, tmux video alone is acceptable. If your work has both terminal and UI steps, both are required.
+
+**Mandatory gate — `testing_ui/` test file existence triggers browser video requirement:**
+If any `testing_ui/test_*.py` file is added or modified in a PR, the PR MUST include:
+1. A `.gif`, `.mp4`, or `.webm` captured from a real browser run of that test
+2. The video linked in the PR description under a "Video Evidence" section
+3. A video artifact reference stored under `evidence/<bundle>/` alongside the JSON artifacts, either as a public/downloadable URL note or as a supported large-file pointer such as Git LFS
+
+Reviewer checklist: `git diff --name-only origin/main...HEAD | grep -E '^testing_ui/test_.*\.py$'` — if non-empty, reject evidence as MISSING until video artifact exists.
 
 ---
 
@@ -1220,6 +1339,19 @@ Full template: `~/.claude/skills/ui-video-evidence.md`
 - Only success state shown (no before/action)
 - No git SHA linkage
 - Static screenshot used instead of GIF for a flow claim
+
+---
+
+## Direct Assessment Ownership
+
+`evidence-standards` defines what acceptable evidence must contain. `/er` and
+direct evidence assessment must load `evidence-review`, which owns the executable
+review procedure, checksum verification logic, verification-report ceiling, scope
+note handling, and verdict rubric.
+
+Do not duplicate enforcement scripts in this standards file. If the assessment
+procedure needs to change, update `evidence-review` and keep this section as the
+ownership pointer.
 
 ---
 

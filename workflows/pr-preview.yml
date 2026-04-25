@@ -27,7 +27,7 @@ permissions:
 jobs:
   limit-pr-runs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     permissions:
       actions: write
       contents: read
@@ -35,6 +35,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
@@ -44,7 +47,7 @@ jobs:
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.fork == false &&
       github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     env:
       GCP_REGION: us-central1
       GCP_PROJECT: worldarchitecture-ai
@@ -52,6 +55,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
@@ -174,6 +180,10 @@ jobs:
             exit 1
           fi
           echo "Docker image built: $IMAGE_TAG"
+
+          # Preview shard uses 1Gi (lower cost for ephemeral deployments)
+          # Production/staging default to 4Gi (set in shared_config.sh)
+          export WORLDARCH_MEMORY="1Gi"
 
           # Source shared config for consistent resource allocation
           source scripts/shared_config.sh
