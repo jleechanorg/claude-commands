@@ -1,7 +1,8 @@
 import sys
+import tempfile
 import unittest
-from unittest.mock import MagicMock, patch
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 # Add parent directory to path to import savetmp
 sys.path.append(str(Path(__file__).parent.parent))
@@ -137,6 +138,136 @@ class TestSaveTmpGit(unittest.TestCase):
             "Both git diff strategies failed", self.mock_logging.warning.call_args[0][0]
         )
         self.assertEqual(provenance["changed_files"], [])
+
+
+class TestSaveTmpValidation(unittest.TestCase):
+    def _write_file(self, path: Path, content: str) -> None:
+        path.write_text(content, encoding="utf-8")
+
+    def _write_checksum(self, path: Path) -> None:
+        digest = savetmp.hashlib.sha256(path.read_bytes()).hexdigest()
+        path.with_suffix(path.suffix + ".sha256").write_text(
+            f"{digest}  {path.name}\n",
+            encoding="utf-8",
+        )
+
+    def test_validate_bundle_requires_run_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_dir = Path(tmpdir)
+            evidence_path = run_dir / "evidence.md"
+            self._write_file(evidence_path, "# Evidence\n")
+            self._write_checksum(evidence_path)
+
+            errors, warnings = savetmp._validate_bundle(run_dir, llm_claims=False)
+
+            self.assertIn(
+                "run.json is required for validated evidence bundles.", errors
+            )
+            self.assertEqual(warnings, [])
+
+    def test_validate_bundle_requires_scenarios_array(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_dir = Path(tmpdir)
+            run_json_path = run_dir / "run.json"
+            self._write_file(run_json_path, '{"test_result": {"passed": true}}\n')
+            self._write_checksum(run_json_path)
+
+            errors, warnings = savetmp._validate_bundle(run_dir, llm_claims=False)
+
+            self.assertIn(
+                "run.json must include a top-level scenarios array for bundle validation.",
+                errors,
+            )
+            self.assertEqual(warnings, [])
+
+    def test_validate_bundle_accepts_scenarios_array(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_dir = Path(tmpdir)
+            run_json_path = run_dir / "run.json"
+            self._write_file(
+                run_json_path,
+                '{"scenarios": [{"name": "ok", "campaign_id": "camp-1", "errors": []}]}\n',
+            )
+            self._write_checksum(run_json_path)
+
+            errors, warnings = savetmp._validate_bundle(run_dir, llm_claims=False)
+
+            self.assertEqual(errors, [])
+            self.assertEqual(warnings, [])
+
+    def test_validate_bundle_accepts_empty_scenarios_array(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_dir = Path(tmpdir)
+            run_json_path = run_dir / "run.json"
+            self._write_file(
+                run_json_path,
+                '{"run_id": "ts", "work_name": "generic", "scenarios": []}\n',
+            )
+            self._write_checksum(run_json_path)
+
+            errors, warnings = savetmp._validate_bundle(run_dir, llm_claims=False)
+
+            self.assertEqual(errors, [])
+            self.assertEqual(warnings, [])
+
+    def test_validate_bundle_requires_run_json_object(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_dir = Path(tmpdir)
+            run_json_path = run_dir / "run.json"
+            self._write_file(run_json_path, '["not-an-object"]\n')
+            self._write_checksum(run_json_path)
+
+            errors, warnings = savetmp._validate_bundle(run_dir, llm_claims=False)
+
+            self.assertIn("run.json must contain a top-level JSON object.", errors)
+            self.assertEqual(warnings, [])
+
+    def test_validate_bundle_requires_scenario_traceability_fields(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_dir = Path(tmpdir)
+            run_json_path = run_dir / "run.json"
+            self._write_file(run_json_path, '{"scenarios": [{}]}\n')
+            self._write_checksum(run_json_path)
+
+            errors, warnings = savetmp._validate_bundle(run_dir, llm_claims=False)
+
+            self.assertIn(
+                "run.json scenarios[0].name must be a non-empty string.",
+                errors,
+            )
+            self.assertIn(
+                "run.json scenarios[0].campaign_id must be a non-empty string or integer.",
+                errors,
+            )
+            self.assertIn("run.json scenarios[0].errors must be a list.", errors)
+            self.assertEqual(warnings, [])
+
+
+class TestSaveTmpMain(unittest.TestCase):
+    def test_main_validate_creates_generic_run_json(self):
+        work_name = f"generic-evidence-{next(tempfile._get_candidate_names())}"
+        base_dir = Path("/tmp") / "repo" / "branch" / work_name
+        try:
+            with patch.object(savetmp, "_resolve_repo_info") as mock_repo_info:
+                mock_repo_info.return_value = ("repo", "branch", None)
+                exit_code = savetmp.main([work_name, "--validate", "--skip-git"])
+
+            self.assertEqual(exit_code, 0)
+
+            run_dirs = [path for path in base_dir.iterdir() if path.is_dir()]
+            self.assertEqual(len(run_dirs), 1)
+
+            run_dir = run_dirs[0]
+            run_json_path = run_dir / "run.json"
+            self.assertTrue(run_json_path.exists())
+
+            run_json = savetmp.json.loads(run_json_path.read_text(encoding="utf-8"))
+            self.assertEqual(run_json["work_name"], work_name)
+            self.assertEqual(run_json["scenarios"], [])
+            self.assertTrue((run_dir / "run.json.sha256").exists())
+        finally:
+            if base_dir.exists():
+                savetmp.shutil.rmtree(base_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":

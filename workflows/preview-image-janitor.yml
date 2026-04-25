@@ -1,0 +1,52 @@
+name: Preview Image Janitor
+
+on:
+  schedule:
+    - cron: '37 3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no deletes)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: read
+
+jobs:
+  prune-preview-images:
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 60
+    env:
+      GCP_PROJECT: worldarchitecture-ai
+      GCP_REGION: us-central1
+      CLOUDSDK_CORE_DISABLE_PROMPTS: '1'
+      PARALLELISM: '12'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          persist-credentials: false
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Prune stale preview image digests
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
+          FAIL_ON_DELETE_FAILURES: 'false'
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/prune-preview-image-digests.sh
+          .github/scripts/prune-preview-image-digests.sh

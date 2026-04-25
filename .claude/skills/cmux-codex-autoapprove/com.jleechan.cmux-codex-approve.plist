@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.jleechan.cmux-codex-approve</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/Users/jleechan/projects/worldarchitect.ai/venv/bin/python3</string>
+      <string>/Users/jleechan/.claude/skills/cmux-codex-autoapprove/scripts/cmux_codex_approve_launchd.py</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>10</integer>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/Users/jleechan/bin:/Users/jleechan/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+      <key>WORKER_POOL_SIZE</key>
+      <string>5</string>
+      <key>LOG_FILE</key>
+      <string>/Users/jleechan/.claude/supervisor/cmux-codex-launchd.log</string>
+      <key>STATE_FILE</key>
+      <string>/Users/jleechan/.claude/supervisor/cmux-codex-launchd-state.json</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/jleechan/.claude/supervisor/cmux-codex-launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jleechan/.claude/supervisor/cmux-codex-launchd.stderr.log</string>
+  </dict>
+</plist>

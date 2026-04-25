@@ -141,10 +141,12 @@ def _resolve_repo_info(
     # This avoids treating purely-local scratch branches as PRs while still producing
     # a useful diff base for pushed branches.
     upstream_ref = results.get("upstream") or ""
-    tracks_remote_branch = bool(branch) and bool(upstream_ref) and upstream_ref.endswith(
-        f"/{branch}"
+    tracks_remote_branch = (
+        bool(branch) and bool(upstream_ref) and upstream_ref.endswith(f"/{branch}")
     )
-    is_pr_branch = bool(branch) and branch not in ("main", "master") and tracks_remote_branch
+    is_pr_branch = (
+        bool(branch) and branch not in ("main", "master") and tracks_remote_branch
+    )
 
     # In PR mode (explicit or auto-detected), always use origin/main to capture full PR diff
     if pr_mode or is_pr_branch:
@@ -169,12 +171,18 @@ def _resolve_repo_info(
 
         # Log the result of the three-dot diff attempt
         if changed_files_output is None:
-            logging_util.debug(f"Three-dot diff failed for base={base_ref}, trying two-dot fallback")
+            logging_util.debug(
+                f"Three-dot diff failed for base={base_ref}, trying two-dot fallback"
+            )
         elif changed_files_output == "":
-            logging_util.debug(f"Three-dot diff succeeded but found no changes (base={base_ref})")
+            logging_util.debug(
+                f"Three-dot diff succeeded but found no changes (base={base_ref})"
+            )
         else:
             num_files = len(changed_files_output.strip().splitlines())
-            logging_util.debug(f"Three-dot diff succeeded: {num_files} files changed (base={str(base_ref)[:8]})")
+            logging_util.debug(
+                f"Three-dot diff succeeded: {num_files} files changed (base={str(base_ref)[:8]})"
+            )
 
         # If command failed (None) or returned empty string (no changes found by 3-dot),
         # try two-dot (all differences) just in case, though 3-dot is standard for PRs.
@@ -193,12 +201,18 @@ def _resolve_repo_info(
                         f"changed_files will be empty."
                     )
                 else:
-                    logging_util.debug("Two-dot fallback failed, keeping 3-dot result (empty).")
+                    logging_util.debug(
+                        "Two-dot fallback failed, keeping 3-dot result (empty)."
+                    )
             elif two_dot_output == "":
-                logging_util.debug(f"Two-dot diff succeeded but found no changes (base={base_ref})")
+                logging_util.debug(
+                    f"Two-dot diff succeeded but found no changes (base={base_ref})"
+                )
             else:
                 num_files = len(two_dot_output.strip().splitlines())
-                logging_util.debug(f"Two-dot diff succeeded: {num_files} files changed (base={str(base_ref)[:8]})")
+                logging_util.debug(
+                    f"Two-dot diff succeeded: {num_files} files changed (base={str(base_ref)[:8]})"
+                )
 
             # Use two-dot output if three-dot failed or was empty, but only if two-dot succeeded
             if two_dot_output is not None:
@@ -405,6 +419,8 @@ def _validate_bundle(run_dir: Path, llm_claims: bool) -> Tuple[List[str], List[s
     errors: List[str] = []
     warnings: List[str] = []
     all_files = [p for p in run_dir.rglob("*") if p.is_file()]
+    run_json_path = run_dir / "run.json"
+    run_json_data: Optional[object] = None
 
     # Missing checksums
     missing_checksums = []
@@ -429,18 +445,50 @@ def _validate_bundle(run_dir: Path, llm_claims: bool) -> Tuple[List[str], List[s
         except Exception as exc:
             warnings.append(f"Could not parse JSON: {json_path} ({exc})")
             continue
+        if json_path == run_json_path:
+            run_json_data = data
         if not llm_detected and _json_has_llm_claims(data):
             llm_detected = True
         _collect_absolute_paths(data, "", absolute_paths, limit=50)
 
     if absolute_paths:
-        sample = [
-            f"{path_key} = {value}" for path_key, value in absolute_paths[:10]
-        ]
+        sample = [f"{path_key} = {value}" for path_key, value in absolute_paths[:10]]
         warnings.append(
-            "Absolute paths found in JSON (portability risk):\n  "
-            + "\n  ".join(sample)
+            "Absolute paths found in JSON (portability risk):\n  " + "\n  ".join(sample)
         )
+
+    if run_json_data is None:
+        errors.append("run.json is required for validated evidence bundles.")
+    elif not isinstance(run_json_data, dict):
+        errors.append("run.json must contain a top-level JSON object.")
+    else:
+        scenarios = run_json_data.get("scenarios")
+        if not isinstance(scenarios, list):
+            errors.append(
+                "run.json must include a top-level scenarios array for bundle validation."
+            )
+        else:
+            for index, scenario in enumerate(scenarios):
+                prefix = f"run.json scenarios[{index}]"
+                if not isinstance(scenario, dict):
+                    errors.append(f"{prefix} must be a JSON object.")
+                    continue
+
+                name = scenario.get("name")
+                if not isinstance(name, str) or not name.strip():
+                    errors.append(f"{prefix}.name must be a non-empty string.")
+
+                campaign_id = scenario.get("campaign_id")
+                if not (
+                    isinstance(campaign_id, int)
+                    or (isinstance(campaign_id, str) and campaign_id.strip())
+                ):
+                    errors.append(
+                        f"{prefix}.campaign_id must be a non-empty string or integer."
+                    )
+
+                if not isinstance(scenario.get("errors"), list):
+                    errors.append(f"{prefix}.errors must be a list.")
 
     if not llm_claims:
         llm_claims = llm_detected
@@ -628,12 +676,25 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
             checksum_files.extend(_write_artifact_checksums(dest_path, run_dir))
 
+    run_json = {
+        "run_id": timestamp,
+        "work_name": work_name,
+        "scenarios": [],
+    }
+    run_json_path = run_dir / "run.json"
+    run_json_path.write_text(
+        json.dumps(run_json, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    checksum_files.append(_write_checksum(run_json_path, run_dir))
+
     # Metadata includes git provenance per evidence-standards.md (if available)
     metadata = {
         "repo": repo_name,
         "branch": branch,
         "work_name": work_name,
         "work_name_input": args.work_name,
+        "checksum_mode": "per_file_checksums",
         "timestamp_utc": timestamp,
         "run_directory": str(run_dir),
         "sections": saved_sections,
@@ -641,7 +702,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         "evidence_standards": _find_evidence_standards(),
     }
     if git_provenance:
+        # Dual-write for consumers migrating from git_provenance -> provenance.
         metadata["git_provenance"] = git_provenance
+        metadata["provenance"] = git_provenance
     metadata_path = run_dir / "metadata.json"
     metadata_path.write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n",

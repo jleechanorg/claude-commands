@@ -43,14 +43,14 @@ When this command is invoked with a goal:
 ## ⚠️ Important: Genesis vs Ralph
 
 **Genesis** = WorldArchitect.ai orchestration system (this command)
-- Located at: `$HOME/projects/worktree_ralph/genesis/genesis.py`
+- Located at: `/Users/jleechan/projects/worktree_ralph/genesis/genesis.py`
 - **Uses Codex CLI by default** (200K context via OpenRouter)
 - Can override with `--claude` flag to use Claude Code CLI
 - Integrated with WorldArchitect.ai project
 - Fast-gen mode with Cerebras integration
 
 **Ralph** = Standalone ralph-orchestrator fork (different system!)
-- Located at: `$HOME/projects_other/ralph-orchestrator`
+- Located at: `/Users/jleechan/projects_other/ralph-orchestrator`
 - Uses Codex CLI by default (200K context)
 - Separate codebase, different architecture
 - See `/ralph` command for Ralph execution
@@ -131,7 +131,7 @@ echo "# Copy and execute this Python code to run via orchestration:"
 echo ""
 echo "python3 -c \""
 echo "import sys"
-echo "sys.path.append('$HOME/projects/worktree_ralph')"
+echo "sys.path.append('/Users/jleechan/projects/worktree_ralph')"
 echo "from orchestrate import TaskOrchestrator"
 echo ""
 echo "# Genesis Agent Configuration"
@@ -265,7 +265,7 @@ Genesis automatically completes when consensus assessment contains:
 
 python3 -c "
 import sys
-sys.path.append('$HOME/projects/worktree_ralph')
+sys.path.append('/Users/jleechan/projects/worktree_ralph')
 from orchestrate import TaskOrchestrator
 
 # Genesis Agent Configuration
@@ -274,8 +274,8 @@ agent_config = {
     'id': 'genesis-gene-20250923-0945',
     'type': 'genesis',
     'session_name': 'gene-20250923-0945',
-    'working_dir': '$HOME/projects_other/codex_plus',
-    'genesis_cmd': 'python $HOME/projects/worktree_ralph/genesis/genesis.py --refine "build a REST API for user management with authentication" 5 --iterate',
+    'working_dir': '/Users/jleechan/projects_other/codex_plus',
+    'genesis_cmd': 'python /Users/jleechan/projects/worktree_ralph/genesis/genesis.py --refine "build a REST API for user management with authentication" 5 --iterate',
     'environment': {},
     'requires_llm': False
 }
@@ -290,7 +290,7 @@ print(f'Genesis task result: {result}')
 =======================================
 
 📋 Alternative: Direct tmux execution
-tmux new-session -d -s 'gene-20250923-0945' bash -c 'cd $HOME/projects_other/codex_plus && python $HOME/projects/worktree_ralph/genesis/genesis.py --refine "build a REST API for user management with authentication" 5 --iterate; exec bash'
+tmux new-session -d -s 'gene-20250923-0945' bash -c 'cd /Users/jleechan/projects_other/codex_plus && python /Users/jleechan/projects/worktree_ralph/genesis/genesis.py --refine "build a REST API for user management with authentication" 5 --iterate; exec bash'
 
 🔄 Session Management:
   Attach:     tmux attach -t gene-20250923-0945

@@ -13,7 +13,7 @@ Source: adapted from anthropics/claude-plugins-official/feature-dev
 
 # Feature Development
 
-You are helping implement a new feature for Your Project (AI-powered tabletop RPG platform, Python/Flask/Firebase/Gemini). Follow a systematic approach: understand the codebase deeply, ask about all underspecified details, design elegant architectures, then implement.
+You are helping implement a new feature for WorldArchitect.AI (AI-powered tabletop RPG platform, Python/Flask/Firebase/Gemini). Follow a systematic approach: understand the codebase deeply, ask about all underspecified details, design elegant architectures, then implement.
 
 ## Core Principles
 

@@ -147,7 +147,7 @@ Remaining issues are minor and fixable:
 - **Immediate Tweaks**: Add a "Delta Log" in status blocks (e.g., "+124gp from skirmish: 200 base + 124 spoils") for all resources, enforceable via prompt.
 - **Testing Protocol**: Run a 10-turn variant with espionage focus to probe remaining scalability; target 95% coherence by quantifying errors (e.g., <5% deviation in gold/timestamps).
 - **Enhancements**: Integrate dynamic DCs (e.g., Scene 14's 21 vs. DC 12) with level ties for deeper progression; clarify calendar (Hammer 1 = mid-winter) to ground timestamps in Forgotten Realms lore.
-- **Next Iteration Priority**: Audit full evidence directory (/tmp/your-project.com/.../iteration_005) for hidden reversals in non-sampled scenes.
+- **Next Iteration Priority**: Audit full evidence directory (/tmp/worldarchitect.ai/.../iteration_005) for hidden reversals in non-sampled scenes.
 
 This analysis confirms the fixes as a solid foundation, positioning the system for expansive campaigns.
 

@@ -17,8 +17,18 @@ For the core screenshot-decide-act loop, see the `claude-code-computer-use` skil
 ## MANDATORY: Allow Dialog Check — After EVERY Screenshot
 
 ### Mandatory lesson log (most recent first)
+- 2026-04-05: Sidebar spinner is UNRELIABLE for detecting active conversations — spinner ◌ persists even when conversation is dead/idle; MUST cross-check with red stop square in bottom-right of chat input area AND the status bar model indicator; three failure modes: (1) zombie spinner = spinner + no red square + send arrow → conversation dead, send "Continue"; (2) frozen-active = spinner + red square + timestamp >1h → stuck in loop, interrupt and redirect; (3) actually working = spinner + red square + timestamp <30m → leave alone; status bar shows "Claude Opus 4.6 (Thinking)" with red ■ = active, "Gemini 3.1 Pro (High)" with send → = idle
+- 2026-04-05: VS Code "Remote Window" dialog can open in editor windows (shows SSH/container options) — blocks agent silently; press Escape to close, then verify red-stop still present to confirm agent resumes
+- 2026-04-05: win 902 gutter FP — x≈2 (retina x=4) at left edge is always a VS Code diff/edit gutter indicator; add `cx//2 > 30` filter (logical x > 30) to PIL scan to skip all left-edge detections in editor windows
+- 2026-04-05: Manager window IDs change every Antigravity relaunch — ALWAYS re-run `peekaboo window list` at session start; never cache window IDs across restarts; current session IDs: Manager=1191, worldai_claw editor=902
+- 2026-04-05: Clicking conversation sidebar items by elem_N sometimes doesn't switch view when another conversation is actively generating — use coordinate click at approximate sidebar y position instead; if coord also fails, try a different y offset (items are ~25px apart logical)
+- 2026-04-05: "New Conversation" (elem_22) click in Manager sometimes routes message to wrong conversation (the one already selected, not the new one) — after clicking New Conversation, verify the title bar changed before pasting; use `agy chat --mode agent --reuse-window "prompt"` from the target workspace directory as alternative
+- 2026-04-05: Opening a workspace folder from Manager (clicking "Open Folder" or workspace item) closes the Manager floating window and opens an editor window with inline Agent panel — the Manager window_id becomes invalid; use "Open Agent Manager" button or "Switch to Agent Manager" in the editor to reopen
+- 2026-04-05: Editor Agent panel text field coords: window at x=-28,y=-998,w=1189,h=857 → text input at logical x≈987, y≈390 → screen (959,-608); use these as starting coords, adjust if click misses
+- 2026-04-05: Manager conversation input at screen (860,-230) when Manager is at x=429,y=-1005,w=1437,h=849 — reliable across sessions as long as Manager hasn't been resized
+- 2026-04-05: Red stop square (active generation indicator) in editor Agent panel appears at retina x≈2312-2331, y≈1608-1627 (for win 902 1189x857) = logical x≈1156, y≈804 — bottom-right of Agent panel; filter right-side only (x > 80% of image width) to avoid false positives from left-side gutter
 - 2026-04-05: win313/319/334 FPs — light-blue code highlights [136,201,245] and blue UI elements in non-Manager editor windows persist after click; muted blue with G>130 is NOT a button; add all persistent coords to FP_SET after first click-persist confirmation; check G<165 threshold before counting as real Allow
-- 2026-04-05: win319 ($USER—list window at 186,-990) generates multiple stacked Allow dialogs — each click reveals next one; scan persists showing new coords; click each until CLEAN; FP after 2nd persistence
+- 2026-04-05: win319 (jleechan—list window at 186,-990) generates multiple stacked Allow dialogs — each click reveals next one; scan persists showing new coords; click each until CLEAN; FP after 2nd persistence
 - 2026-04-04: Tab bar FP — Antigravity's blue active-tab indicator spans the full window width at retina y=0-120 (logical y=0-60); skip rows < 120 retina to avoid detecting tab bar blue as Allow dialogs; bottom status bar also fires at retina y>1600 with muted blue [70,127,161] — skip if B<165 or if G>130 (muted blue is not Allow button)
 - 2026-04-04: PIL scan thresholds were too strict — B>150, R<150, B>R+50 missed Allow button with edge pixels having R up to 197; real Allow button had B~203, R~39 mean but gradients/edges up to R=197; CORRECT thresholds: B>130, R<180, B>R+30, G<B; also scan from row 0 (not h//2) since dialogs can appear anywhere; min pixel threshold raised to 200 to compensate for looser thresholds
 - 2026-04-04: MANDATORY — keep 3 conversations active at all times; check at every cycle end; if <3 active, click idle 24h conversations in reverse-cron order and send continuation tasks until 3 are generating (confirmed via red stop square, not just A11y spinner which lags)
@@ -148,7 +158,7 @@ FP = {
     '83,623', '83,586', '91,585',
     # win313 (x=-28,y=-998): light blue [136,201,245] code highlights — G=201 is muted/sky blue, not button blue
     '556,-742', '560,-764',
-    # win319 (x=186,y=-990): blue content in $USER—list workspace — persists after click
+    # win319 (x=186,y=-990): blue content in jleechan—list workspace — persists after click
     '547,-682', '579,-767',
     # win334 stack (x=264+,y=159+): blue UI element at 713,781 — persists; real Allow cleared at win334
     '713,781',
@@ -156,6 +166,8 @@ FP = {
 ```
 
 **Gutter FP rule**: any coord with screen x < 100 in the fullscreen window (0,37,1728,1080) is a VS Code diff/edit gutter indicator — always skip. Real Allow dialogs appear in the center-right of the window (x > 300).
+
+**Editor window left-edge rule (2026-04-05)**: in any editor window, `cx//2 < 30` (logical x < 30) is always a VS Code diff/edit gutter indicator — add `cx//2 > 30` to the PIL scan filter. This catches the recurring x≈2 FP in win 902.
 
 **Detection rule**: if click does NOT dismiss the dialog (same coord detected again after click), add to FP. Real Allow dialogs disappear after click.
 
@@ -189,12 +201,60 @@ def is_busy_red_square(img_path, win_x, win_y):
     bottom = arr[int(h*0.85):, :]
     # Red square: R>160, G<100, B<100
     red_mask = (bottom[:,:,0] > 160) & (bottom[:,:,1] < 100) & (bottom[:,:,2] < 100)
-    return np.sum(red_mask) > 30  # threshold: enough red pixels for a square button
+    # IMPORTANT: filter to right 80% of image to avoid left-side gutter FPs
+    right_mask = np.zeros_like(red_mask)
+    right_mask[:, int(w*0.8):] = red_mask[:, int(w*0.8):]
+    return np.sum(right_mask) > 30  # threshold: enough red pixels for a square button
 ```
 
 The red square appears at approximately screen `(win_x + w*0.54, win_y + h*0.93)` in the Manager window (right side of input box).
 
+**Known red-stop location (2026-04-05)**: in win 902 (x=-28, y=-998, w=1189, h=857), the red stop is at retina pixels x≈2312-2331, y≈1608-1627 (logical x≈1156, y≈804). Always filter x > 80% of image width to exclude gutter noise.
+
 **Use A11y method first** (no screenshot needed). Use PIL red-square only to verify the currently-displayed conversation's state when A11y is ambiguous.
+
+### 3. Conversation Health Classification (MANDATORY — use this, not spinner alone)
+
+**The sidebar spinner icon (◌) is UNRELIABLE.** It persists after conversations die. Always cross-check with TWO additional signals:
+- **Red stop square** (■) in bottom-right of chat input area — PIL detection
+- **Status bar indicator** — bottom of window shows model name + button type
+
+**Four conversation states:**
+
+| State | Sidebar | Red ■ | Status bar | Timestamp | Action |
+|-------|---------|-------|------------|-----------|--------|
+| **Actually working** | spinner ◌ | YES | "Claude Opus 4.6 (Thinking)" + red ■ | < 30m | Leave alone |
+| **Frozen-active** | spinner ◌ | YES | "...Thinking" + red ■ | > 1h | Interrupt: send "why did you freeze? Use a fresh terminal" |
+| **Zombie spinner** | spinner ◌ | NO | "Gemini 3.1 Pro (High)" + send → | any | Dead conversation. Send "Continue with the next task" |
+| **Cleanly idle** | no spinner | NO | model name + send → | any | Send new task if slot needed |
+
+**Detection procedure (for each conversation):**
+1. Click conversation in sidebar to select it
+2. Screenshot the bottom 15% of the Manager window
+3. Check for red stop square with `is_busy_red_square()`
+4. Check status bar text: look for "Thinking" + red ■ vs model name + send arrow →
+5. Read sidebar timestamp (Xm, Xh, Xd)
+6. Classify using table above
+
+**Status bar PIL detection — send arrow (→) vs red stop (■):**
+```python
+def classify_status_bar(img_path):
+    """Returns 'generating' or 'idle' based on bottom status bar."""
+    from PIL import Image
+    import numpy as np
+    img = Image.open(img_path)
+    arr = np.array(img)
+    h, w = arr.shape[:2]
+    # Status bar = bottom 5% of window, right 30%
+    bar = arr[int(h*0.95):, int(w*0.7):]
+    # Red stop: R>160, G<100, B<100
+    red = (bar[:,:,0] > 160) & (bar[:,:,1] < 100) & (bar[:,:,2] < 100)
+    if np.sum(red) > 20:
+        return 'generating'
+    return 'idle'
+```
+
+**CRITICAL**: A conversation showing "Gemini 3.1 Pro (High)" with a send arrow (→) in the status bar is **IDLE** regardless of what the sidebar spinner shows. The spinner is a stale UI artifact.
 
 ---
 
@@ -211,10 +271,30 @@ At every cycle end, check the active count. If < 3:
    - If idle, send a continuation prompt
 4. Report at cycle end: "Active: N/3 — [titles of active convos]"
 
-**Detecting active vs idle (use BOTH checks):**
-- A11y: `progress_activity` in button label = definitely active
-- PIL red square in input area bottom-right (px > 30) = currently-viewed convo is generating
-- A11y spinner may lag 5-10s after sending a message — always confirm with red square
+**Detecting active vs idle (use health classification above, NOT spinner alone):**
+- **DO NOT trust sidebar spinner (◌) alone** — it persists on dead conversations
+- For each conversation, click it to select, then check:
+  1. Red stop square in bottom-right of input area (PIL `is_busy_red_square()`)
+  2. Status bar: "...Thinking" + red ■ = generating; model name + send → = idle
+  3. Sidebar timestamp: if > 1h with red square = frozen-active (stuck in loop)
+- Classify as: actually-working / frozen-active / zombie-spinner / cleanly-idle (see §3 above)
+- **Zombie spinners** (spinner + no red square) are the most common failure — treat as idle, send "Continue"
+- **Frozen-active** (spinner + red square + >1h) — interrupt with "why did you freeze? Use a fresh terminal"
+
+**Sidebar click reliability (2026-04-05):**
+- Clicking a conversation's `elem_N` in the Manager may NOT switch the view if another conversation is actively generating — the generating convo stays displayed
+- Fallback: use coordinate click at the sidebar item's approximate y position; items are ~25px apart in logical coords
+- If elem click and coord click both fail to switch, wait for the active convo to finish (or send it a message) then retry
+
+**Reliable input field coordinates (2026-04-05):**
+- Manager (x=429, y=-1005, w=1437, h=849): input at screen `(860, -230)` — reliable across sessions if Manager not resized
+- Editor Agent panel win 902 (x=-28, y=-998, w=1189, h=857): input at screen `(959, -608)`
+- Always cmd+a → delete to clear before pasting to avoid accumulated text
+
+**Opening a workspace folder closes the Manager (2026-04-05):**
+- Clicking a workspace item in the startup picker or using `agy chat --new-window` can open a new editor window and close the floating Manager window
+- After opening a workspace, use "Switch to Agent Manager" (visible in left panel) or "Open Agent Manager" button in the title bar to restore the Manager
+- Re-enumerate windows after any workspace open: `peekaboo window list --app Antigravity --json`
 
 Scan conversations active in the last 24 hours, continue idle ones, keep 3 running at once.
 
@@ -1256,7 +1336,7 @@ The "New conversation in > [workspace]" dropdown is **web-rendered and cannot be
 ```bash
 # The dropdown says "agent-orchestrator" but you want worldai_claw? Don't try to switch it.
 # Just include the workspace path explicitly in the prompt:
-peekaboo paste --app Antigravity --text "You are working in $HOME/project_worldaiclaw/worldai_claw on branch main. <your task here>"
+peekaboo paste --app Antigravity --text "You are working in /Users/jleechan/project_worldaiclaw/worldai_claw on branch main. <your task here>"
 ```
 
 This works because Antigravity agents resolve the workspace from the path in the prompt, regardless of which workspace the dropdown shows. The dropdown only sets the default context — explicit paths override it.
