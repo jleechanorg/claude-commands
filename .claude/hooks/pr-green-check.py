@@ -34,8 +34,8 @@ BACKOFF_MULTIPLIER = 2.0
 JITTER_FRAC = 0.15         # ±15% jitter
 
 
-def get_git_context() -> tuple[Optional[str], Optional[str], Optional[str]]:
-    """Return (owner, repo, pr_number) from git remotes and current branch."""
+def get_git_context() -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+    """Return (owner, repo, pr_number, branch_name) from git remotes and current branch."""
     try:
         # Get remote URL
         remote = (
@@ -49,7 +49,7 @@ def get_git_context() -> tuple[Optional[str], Optional[str], Optional[str]]:
             ).stdout.strip()
         )
         if not remote:
-            return None, None, None
+            return None, None, None, None
 
         # Parse owner/repo from URL
         # Supports: https://github.com/owner/repo.git, git@github.com:owner/repo.git
@@ -63,7 +63,7 @@ def get_git_context() -> tuple[Optional[str], Optional[str], Optional[str]]:
             path_part = remote.rstrip("/").replace(".git", "").split("/")[-2:]
 
         if len(path_part) < 2:
-            return None, None, None
+            return None, None, None, None
         owner, repo = path_part[-2].replace(".git", ""), path_part[-1].replace(".git", "")
 
         # Get current branch
@@ -78,17 +78,51 @@ def get_git_context() -> tuple[Optional[str], Optional[str], Optional[str]]:
             ).stdout.strip()
         )
         if not branch:
-            return owner, repo, None
+            return owner, repo, None, None
 
-        # Extract PR number from branch name (e.g. "fix/auton-poller-131", "session/ao-670")
+        # Extract PR number from branch name (e.g. "fix/auton-poller-131", "session/ao-670", "fix/phase2-p0-determinism")
         import re
-        m = re.search(r'(?:pr[-/]?)?(\d{2,4})(?:/|$)', branch)
+        # 1. Try to match pr-NNN pattern (backwards-compatible for "pr-74" style)
+        m = re.search(r'(?:pr-)(\d+)(?:/|$)', branch)
         if m:
-            return owner, repo, m.group(1)
-        return owner, repo, None
+            return owner, repo, m.group(1), branch
+        # 2. Fallback: match any 2-4 digit run anywhere in branch name
+        m = re.search(r'(\d{2,4})', branch)
+        if m:
+            return owner, repo, m.group(1), branch
+        # 3. Last-resort fallback: look up open PR by head branch via REST API
+        try:
+            result = subprocess.run(
+                ["gh", "api", f"repos/{owner}/{repo}/pulls",
+                 "--method", "GET", "--field", f"head={owner}:{branch}", "--field", "state=open", "--jq", ".[0].number"],
+                capture_output=True, text=True, timeout=15,
+            )
+            if result.returncode == 0 and result.stdout.strip().isdigit():
+                pr_by_branch = result.stdout.strip()
+                return owner, repo, pr_by_branch, branch
+        except Exception:
+            pass
+        return owner, repo, None, branch
 
     except Exception:
-        return None, None, None
+        return None, None, None, None
+
+
+def pr_belongs_to_branch(owner: str, repo: str, pr_num: str, branch: str) -> bool:
+    """Check if PR #pr_num's head.ref matches (any segment of) the current branch."""
+    try:
+        result = subprocess.run(
+            ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_num}"],
+            capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode != 0:
+            return False
+        pr = json.loads(result.stdout)
+        pr_branch = pr.get("head", {}).get("ref", "")
+        # Accept exact match OR match of the branch's last segment (handles "session/wc-18" vs "wc-18")
+        return pr_branch == branch or pr_branch == branch.split("/")[-1]
+    except Exception:
+        return False
 
 
 def get_pr_state_via_rest(owner: str, repo: str, pr_num: str) -> dict:
@@ -159,9 +193,16 @@ def exponential_backoff(state: dict) -> tuple[float, float]:
 
 
 def main() -> None:
-    owner, repo, pr_num = get_git_context()
+    owner, repo, pr_num, branch = get_git_context()
     if not all([owner, repo, pr_num]):
         sys.exit(0)  # Not in a PR context — skip
+
+    # Guard: skip if the extracted PR number belongs to a DIFFERENT branch.
+    # This prevents sessions on AO worktrees like "wc-18" from incorrectly matching
+    # an unrelated closed PR #18 in the same repo.
+    if branch and not pr_belongs_to_branch(owner, repo, pr_num, branch):
+        # PR number was extracted from branch name but belongs to a different branch — not our PR
+        sys.exit(0)
 
     fp = state_file(owner, repo, pr_num)
     state = read_state(fp)
@@ -170,7 +211,11 @@ def main() -> None:
     # Always hit the API to get current state — avoids persisting stale "OPEN" that
     # prevents the merged-closed guard from firing after auto-merge completes.
     pr_info = get_pr_state_via_rest(owner, repo, pr_num)
-    current_pr_state = pr_info.get("state", "OPEN").upper()
+    if not pr_info:
+        # 404 / not found — treat as CLOSED so the state guard below skips the hook
+        current_pr_state = "CLOSED"
+    else:
+        current_pr_state = pr_info.get("state", "OPEN").upper()
 
     # ── 2. State guard: skip if PR is MERGED or CLOSED ────────────────────────
     if current_pr_state in ("MERGED", "CLOSED"):
@@ -202,15 +247,14 @@ def main() -> None:
     delay, new_multiplier = exponential_backoff(state)
 
     if last_check > 0 and (now - last_check) < delay:
-        # Within backoff window — suppress the idle prompt's green-check output
-        print(
-            f"[pr-green-check] SKIP — backoff active "
-            f"(elapsed={now-last_check:.0f}s < {delay:.0f}s, "
-            f"next_check_in={delay-(now-last_check):.0f}s) "
-            f"PR {owner}/{repo}#{pr_num}",
-            file=sys.stderr,
-        )
-        sys.exit(0)  # Still exit 0 — don't block the prompt
+        # Within backoff window — write skip flag so compose-commands.sh exits early
+        skip_flag = STATE_DIR / f".skip_{owner}_{repo}_{pr_num}"
+        skip_flag.write_text(json.dumps({
+            "until": now + delay,
+            "reason": f"backoff {delay:.0f}s",
+            "pr_num": pr_num,
+        }))
+        sys.exit(0)  # Exit 0 — don't block subsequent hooks, but signal skip
 
     # ── 5. Allow check to proceed — update state ──────────────────────────────
     state["last_check_at"] = now

@@ -168,10 +168,10 @@ Claude analyzes the user's request for:
 **If Superpowers Chrome:**
 ```bash
 # Start Chrome
-./${CHROME_SCRIPT:-chrome.sh} start
+./skills/superpowers-chrome-${PROJECT_NAME:-your-project}/${PROJECT_NAME:-your-project}-chrome.sh start
 
 # Execute task
-./${CHROME_SCRIPT:-chrome.sh} <task> [args...]
+./skills/superpowers-chrome-${PROJECT_NAME:-your-project}/${PROJECT_NAME:-your-project}-chrome.sh <task> [args...]
 
 # Report results
 ```
@@ -240,7 +240,7 @@ Analysis:
 - Tool: Superpowers Chrome
 
 Execution:
-1. ./${CHROME_SCRIPT:-chrome.sh} smoke http://localhost:5000
+1. ./skills/superpowers-chrome-${PROJECT_NAME:-your-project}/${PROJECT_NAME:-your-project}-chrome.sh smoke http://localhost:5000
 
 Result:
 ✅ All smoke tests passed (18s)
@@ -292,7 +292,7 @@ Available commands:
 - chrome-ws screenshot 0 > debug.png
 - chrome-ws eval 0 "console.log('debug')"
 
-Session: /tmp/chrome-${PROJECT_NAME:-your-project}-<pid>
+Session: /tmp/chrome-worldarchitect-<pid>
 ```
 
 ## Tool Comparison Quick Reference
@@ -363,7 +363,7 @@ npm install github:obra/superpowers-chrome
 ```bash
 # Restart Chrome
 pkill chrome
-./${CHROME_SCRIPT:-chrome.sh} start
+./skills/superpowers-chrome-${PROJECT_NAME:-your-project}/${PROJECT_NAME:-your-project}-chrome.sh start
 ```
 
 ### Error: "Playwright browser not found"
@@ -464,10 +464,10 @@ User: /browser (auto-detects MCP, uses superpowers-chrome)
 
 ## Resources
 
-- [Playwright Skill Documentation](../skills/playwright-${PROJECT_NAME:-your-project}/SKILL.md)
-- [Superpowers Chrome Documentation](../skills/superpowers-chrome-worldarchitect/README.md)
+- [Playwright Skill Documentation](../../skills/playwright-${PROJECT_NAME:-your-project}/SKILL.md)
+- [Superpowers Chrome Documentation](../../skills/superpowers-chrome-${PROJECT_NAME:-your-project}/README.md)
 - [Comparison Guide](../docs/BROWSER_AUTOMATION_COMPARISON.md)
-- [Example Workflows](../skills/playwright-${PROJECT_NAME:-your-project}/examples/)
+- [Example Workflows](../../skills/playwright-${PROJECT_NAME:-your-project}/examples/)
 
 ---
 

@@ -50,6 +50,10 @@ declare -a SUBS=(
   's|jleechanorg/worldarchitect\.ai|\$GITHUB_REPOSITORY|g'
   's|worldarchitect\.ai|your-project.com|g'
   's|worldarchitect-ci|\$\{PROJECT_NAME:-your-project\}-ci|g'
+  's|worldarchitect-automation|\$\{PROJECT_NAME:-your-project\}-automation|g'
+  's|worldarchitect-chrome\.sh|\$\{PROJECT_NAME:-your-project\}-chrome.sh|g'
+  's|playwright-worldarchitect|playwright-\$\{PROJECT_NAME:-your-project\}|g'
+  's|superpowers-chrome-worldarchitect|superpowers-chrome-\$\{PROJECT_NAME:-your-project\}|g'
   's|/Users/jleechan|\$HOME|g'
   's|\bjleechan\b|\$USER|g'
   's|jleechantest\@gmail\.com|<your-email\@gmail.com>|g'
@@ -58,7 +62,7 @@ declare -a SUBS=(
 )
 # mvp_site/ substitution is applied separately, skipping workflow files.
 # GitHub Actions does NOT expand $PROJECT_ROOT in paths: filters or hashFiles().
-MVp_SITE_SUB='s|mvp_site/|\$PROJECT_ROOT/|g'
+MVP_SITE_SUB='s|mvp_site/|\$PROJECT_ROOT/|g'
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 log()  { echo "  $*"; }
@@ -80,7 +84,7 @@ apply_filters() {
   # so substituting it into workflows/*.yml would silently break CI triggers.
   case "$file" in
     workflows/*.yml|workflows/*.yaml) ;;
-    *) perl -pi -e "$MVp_SITE_SUB" "$file" ;;
+    *) perl -pi -e "$MVP_SITE_SUB" "$file" ;;
   esac
 }
 
@@ -196,8 +200,8 @@ union_dir() {
     else
       # Both exist and differ — resolve by mtime
       local gmtime ptime
-      gmtime=$(stat -f %m "$gfile" 2>/dev/null || stat -c %Y "$gfile" 2>/dev/null)
-      ptime=$(stat -f  %m "$pfile" 2>/dev/null || stat -c %Y "$pfile" 2>/dev/null)
+      gmtime=$(stat -c %Y "$gfile" 2>/dev/null) || gmtime=$(stat -f %m "$gfile" 2>/dev/null) || gmtime=0
+      ptime=$(stat -c %Y "$pfile" 2>/dev/null) || ptime=$(stat -f %m "$pfile" 2>/dev/null) || ptime=0
       local diff_secs=$(( gmtime - ptime ))
       [[ $diff_secs -lt 0 ]] && diff_secs=$(( -diff_secs ))
 
@@ -321,6 +325,20 @@ if command -v claude >/dev/null 2>&1 && [[ -f "README.md" ]]; then
   EXISTING_README=$(cat README.md)
   COMMANDS_COUNT=$(find .claude/commands -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
   SKILLS_COUNT=$(find .claude/skills -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+  README_LINE_COUNT=$(wc -l < README.md | tr -d ' ')
+
+  # Validate README looks like real markdown (not a corrupt script-output file).
+  # Real READMEs start with '---' (frontmatter) or '#' (heading) and have >20 lines.
+  README_FIRST_LINE=$(head -1 README.md)
+  README_IS_VALID=false
+  if [[ "$README_FIRST_LINE" == "---"* || "$README_FIRST_LINE" == "#"* ]] && [[ "$README_LINE_COUNT" -gt 20 ]]; then
+    README_IS_VALID=true
+  fi
+
+  if [[ "$README_IS_VALID" == "false" ]]; then
+    warn "README.md appears corrupted (starts with: '${README_FIRST_LINE:0:60}', $README_LINE_COUNT lines) — skipping Claude update, keeping existing file"
+    EXISTING_README=""
+  fi
 
   README_PROMPT="You are updating the README for the jleechanorg/claude-commands GitHub repository.
 
@@ -345,25 +363,29 @@ TASK — make MINIMAL updates only:
 
 Output ONLY the updated markdown. No preamble, no explanation, no code fences."
 
-  # Write prompt to temp file to avoid shell quoting issues with large README content
-  PROMPT_FILE=$(mktemp /tmp/exportcommands_prompt.XXXXXX)
-  printf '%s' "$README_PROMPT" > "$PROMPT_FILE"
-  # Run claude with --tools "" to disable all tools (forces plain text stdout, no Write tool).
-  # Also run from a neutral temp dir (no CLAUDE.md) to prevent hook corruption of output.
-  CLAUDE_NEUTRAL_DIR=$(mktemp -d /tmp/exportcommands_neutral.XXXXXX)
-  # Always generate README.md.new for preview; only overwrite README.md in non-dry-run
-  (cd "$CLAUDE_NEUTRAL_DIR" && claude --tools "" -p "$(cat "$PROMPT_FILE")") > README.md.new 2>/dev/null \
-    || { rm -f README.md.new; warn "Claude CLI failed — keeping existing README unchanged"; }
-  rm -rf "$CLAUDE_NEUTRAL_DIR"
-  rm -f "$PROMPT_FILE"
-  if [[ -f "README.md.new" ]]; then
-    if [[ "$DRY_RUN" == "false" ]]; then
-      mv README.md.new README.md
-      ok "README.md updated (changelog + new commands only)"
-    else
-      ok "README.md.new generated for preview (dry-run — not overwriting README.md)"
+  if [[ "$README_IS_VALID" == "false" ]]; then
+    : # Skip Claude update — already warned above
+  else
+    # Write prompt to temp file to avoid shell quoting issues with large README content
+    PROMPT_FILE=$(mktemp /tmp/exportcommands_prompt.XXXXXX)
+    printf '%s' "$README_PROMPT" > "$PROMPT_FILE"
+    # Run claude with --tools "" to disable all tools (forces plain text stdout, no Write tool).
+    # Also run from a neutral temp dir (no CLAUDE.md) to prevent hook corruption of output.
+    CLAUDE_NEUTRAL_DIR=$(mktemp -d /tmp/exportcommands_neutral.XXXXXX)
+    # Always generate README.md.new for preview; only overwrite README.md in non-dry-run
+    (cd "$CLAUDE_NEUTRAL_DIR" && claude --tools "" -p "$(cat "$PROMPT_FILE")") > README.md.new 2>/dev/null \
+      || { rm -f README.md.new; warn "Claude CLI failed — keeping existing README unchanged"; }
+    rm -rf "$CLAUDE_NEUTRAL_DIR"
+    rm -f "$PROMPT_FILE"
+    if [[ -f "README.md.new" ]]; then
+      if [[ "$DRY_RUN" == "false" ]]; then
+        mv README.md.new README.md
+        ok "README.md updated (changelog + new commands only)"
+      else
+        ok "README.md.new generated for preview (dry-run — not overwriting README.md)"
+      fi
     fi
-  fi
+  fi  # end README_IS_VALID check
 
 elif command -v claude >/dev/null 2>&1 && [[ ! -f "README.md" ]]; then
   # No existing README — generate fresh one (first-time export)

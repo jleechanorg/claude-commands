@@ -9,4 +9,4 @@ execution_mode: immediate
 
 Execute `/roadmap` with all provided arguments: $ARGUMENTS
 
-Follow the complete `/roadmap` workflow as documented in `~/.claude/commands/roadmap.md`.
+Follow the complete `/roadmap` workflow as documented in `.claude/commands/roadmap.md`.

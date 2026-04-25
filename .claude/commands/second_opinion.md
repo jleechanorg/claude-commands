@@ -129,6 +129,16 @@ If MCP CLI is not available or fails, use the manual HTTP approach with authenti
 
 ---
 
+### Phase 0: Memory Search Context (parallel subagent)
+
+**Action Steps:**
+1. **Run full memory search** in background using `/e` to gather context from ALL memory sources:
+   ```
+   /e /memory_search "$ARGUMENTS"
+   ```
+2. Display results as "📍 Prior Context Found" — these should inform the second opinion to avoid re-analyzing known issues
+3. Continue to authentication while memory search runs in parallel
+
 ### Step 0: Authentication Setup (Auto-Refresh)
 
 **Note**: Only required for FALLBACK approach. MCP CLI handles auth automatically.

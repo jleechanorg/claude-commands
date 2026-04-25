@@ -27,20 +27,28 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
-  try-self-hosted:
+  doc-size-check:
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
     runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 10
-    continue-on-error: true
     outputs:
       success: ${{ steps.mark-success.outputs.success }}
 
     steps:
 
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        persist-credentials: false
 
 
     - name: Set up Python
@@ -49,7 +57,7 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Run documentation checks in pinned container
+    - name: Run documentation checks
       run: |
           set -euo pipefail
           python3 mvp_site/tests/test_documentation_performance.py
@@ -73,13 +81,18 @@ jobs:
       if: success()
       run: echo "success=true" >> $GITHUB_OUTPUT
 
-  fallback-github-hosted:
-    needs: try-self-hosted
-    if: needs.try-self-hosted.outputs.success != 'true'
+  retry-self-hosted:
+    needs: doc-size-check
+    if: needs.doc-size-check.outputs.success != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+    # same self-hosted pool: this is a job-level retry path, not runner-level failover.
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        persist-credentials: false
 
     - name: Set up Python
       uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
@@ -88,7 +101,7 @@ jobs:
 
     - name: Run documentation size check
       run: |
-        echo "🔄 Running on GitHub-hosted fallback..."
+        echo "🔄 Running on retry self-hosted path..."
         python3 mvp_site/tests/test_documentation_performance.py
 
     - name: Quick size monitor
@@ -105,5 +118,5 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: '⚠️ **Documentation Size Warning** (via GitHub-hosted fallback)\n\nSome documentation files exceed recommended size limits and may cause API timeouts.\n\nPlease run `python3 mvp_site/tests/test_documentation_performance.py` locally to see which files need reduction.'
+            body: '⚠️ **Documentation Size Warning** (via retry self-hosted path)\n\nSome documentation files exceed recommended size limits and may cause API timeouts.\n\nPlease run `python3 mvp_site/tests/test_documentation_performance.py` locally to see which files need reduction.'
           })

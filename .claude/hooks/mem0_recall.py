@@ -12,8 +12,9 @@ import sys
 
 from mem0_config import MEM0_CONFIG, USER_ID  # type: ignore
 
-TOP_K = 6
-SCORE_THRESHOLD = 0.35
+# bd-992w mem0 recall tuning. Rollback: TOP_K=6, SCORE_THRESHOLD=0.35
+TOP_K = 3
+SCORE_THRESHOLD = 0.60
 
 
 def main() -> None:
@@ -50,6 +51,29 @@ def main() -> None:
         lines = ["## Relevant memories (from past sessions)"]
         for r in hits:
             mem = r.get("memory", r.get("data", "")).strip()
+            score = r.get("score", 0)
+            if mem:
+                lines.append(f"- [{score:.2f}] {mem}")
+
+        context = "\n".join(lines)
+
+        # Return as additionalContext (quiet injection, not shown as hook output)
+        print(json.dumps({
+            "hookSpecificOutput": {
+                "hookEventName": "UserPromptSubmit",
+                "additionalContext": context,
+            }
+        }))
+
+    except Exception:
+        pass  # Never block the prompt
+
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
+ip()
             score = r.get("score", 0)
             if mem:
                 lines.append(f"- [{score:.2f}] {mem}")
