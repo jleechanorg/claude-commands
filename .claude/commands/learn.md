@@ -10,7 +10,16 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 1: Execute Documented Workflow
+### Phase 1: Memory Search Context (parallel subagent)
+
+**Action Steps:**
+1. **Run memory search in background** using `/e` to gather context from all memory sources:
+   ```
+   /e /memory_search "$ARGUMENTS"
+   ```
+2. Continue to Phase 2 while memory search runs in parallel.
+
+### Phase 2: Execute Documented Workflow
 
 **Action Steps:**
 1. Review the reference documentation below and execute the detailed steps sequentially.
@@ -254,3 +263,65 @@ type: {memory_type}
    ```
 4. **Confirm**: Report `✅ Claude auto-memory written: {filename}`
 5. **Graceful failure**: If write fails (permissions, disk), log warning and continue — do not block learning capture
+
+### Phase N+2: Save to mem0 (Qdrant vector store)
+
+**Action Steps:**
+1. **Check availability**: skip if `~/.openclaw/.claude/hooks/mem0_save.py` absent or `GROQ_API_KEY` unset
+2. **Build mem0 text**: `"{learning_title}: {one_liner}. {body_summary_1_sentence}"`
+3. **Call mem0_save.py**:
+   ```bash
+   echo '{"memory": "<text>", "user_id": "$USER"}' \
+     | python3 ~/.openclaw/.claude/hooks/mem0_save.py
+   ```
+4. **Confirm**: Report `✅ mem0 saved` or `⚠️ mem0 unavailable (skipped)`
+5. **Graceful failure**: Never block on mem0 errors
+
+### Phase N+3: Append to ~/roadmap learnings log
+
+**Action Steps:**
+1. **File**: `~/roadmap/learnings-<YYYY-MM>.md` (create if absent)
+2. **Entry format**:
+   ```markdown
+   ## <YYYY-MM-DD> — <learning_title>
+   - **Type**: [feedback|project|reference]
+   - **Classification**: [🚨|⚠️|✅|❌]
+   - **Summary**: <one_liner>
+   - **Bead**: <bd-id if exists, else "none">
+   - **Files**: <comma-separated paths changed>
+   ```
+3. **Confirm**: Report `✅ roadmap/learnings-<YYYY-MM>.md updated`
+
+### Phase N+4: Create or reference a bead
+
+**Action Steps:**
+1. **Check if bead exists** for this learning:
+   ```bash
+   python3 -c "
+   import json
+   with open('.beads/issues.jsonl') as f:
+       beads = [json.loads(l) for l in f if l.strip()]
+   matches = [b for b in beads if '<keyword>' in b.get('title','').lower()]
+   for m in matches[:3]: print(m['id'], m['title'])
+   " 2>/dev/null || echo "no beads file"
+   ```
+2. **If no matching bead**: create one via `python3` inline:
+   ```python
+   import json, datetime, random, string
+   # generate id: bd-<5 random alphanum>
+   bid = 'bd-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
+   bead = {
+     "id": bid, "title": "<learning_title>", "status": "closed",
+     "description": "<one_liner>", "priority": 3,
+     "issue_type": "task", "labels": ["learning", "documentation"],
+     "created_at": datetime.datetime.utcnow().isoformat() + "Z",
+     "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
+     "created_by": "$USER", "source_repo": "."
+   }
+   with open('.beads/issues.jsonl', 'a') as f:
+       f.write(json.dumps(bead) + '\n')
+   print(bid)
+   ```
+3. **Record bead ID** in roadmap entry and Claude auto-memory frontmatter (`bead: <id>`)
+4. **Confirm**: Report `✅ bead <bd-id> created/referenced`
+

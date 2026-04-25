@@ -30,7 +30,10 @@ FIXCOMMENT_LOG="/tmp/fix-comment.log"
 COMMENT_VAL_LOG="/tmp/comment-validation.log"
 
 # Or from home directory
-HOME_LOGS="$HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation/"
+PROJECT_NAME="${PROJECT_NAME:-worldarchitect}"
+REPO_NAME="${MCTRL_REPO:-${MISSION_CONTROL_REPO:-$GITHUB_REPOSITORY}}"
+HOME_LOGS="${AUTOMATION_LOG_DIR:-$HOME/Library/Logs/${PROJECT_NAME}-automation}"
+mkdir -p "$HOME_LOGS"
 ```
 
 ### Step 2: Parse PR Metrics
@@ -61,7 +64,7 @@ SINCE="${1:-6}"
 SINCE_DATE=$(date -v-${SINCE}H +%Y-%m-%dT%H:%M:%SZ)
 
 # Search for automation-authored commits
-gh api repos/jleechanorg/${PROJECT_DOMAIN:-your-project}.com/commits \
+gh api "repos/${REPO_NAME}/commits" \
   --since "$SINCE_DATE" \
   --jq '.[] | select(.commit.author.name |
     contains("claude") or
@@ -83,7 +86,8 @@ For each commit found:
 
 ```bash
 # Check commit details
-gh api repos/jleechanorg/${PROJECT_DOMAIN:-your-project}.com/commits/{sha} \
+SHA="${1:?commit SHA required}"
+gh api "repos/${REPO_NAME}/commits/${SHA}" \
   --jq '.commit.message, .commit.author.name, .authors'
 ```
 
@@ -121,7 +125,7 @@ gh api repos/jleechanorg/${PROJECT_DOMAIN:-your-project}.com/commits/{sha} \
 - `/tmp/fixpr.log` - fixpr job runs
 - `/tmp/fix-comment.log` - fix-comment job runs
 - `/tmp/comment-validation.log` - comment-validation job runs
-- `$HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation/` - persistent logs
+- `${AUTOMATION_LOG_DIR:-$HOME/Library/Logs/${PROJECT_NAME:-worldarchitect}-automation}` - persistent logs
 
 ## Key Log Patterns
 

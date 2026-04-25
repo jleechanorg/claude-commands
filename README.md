@@ -1,3 +1,13 @@
+
+
+## Changelog (2026-04-24)
+
+**New Commands**: `/ao`, `/browserclaw`, `/cmux-steer`, `/es`, `/green`, `/loop_level_zfc`, `/memory_search`, `/ms`, `/repro`, `/repro_copy`, `/wiki-evolve`, `/wiki-search`
+
+**New Hooks**: `allow-claude-dir.sh`, `autoapprove.py`, `block-merge.sh`, `openclaw-config-guard.sh`, `pre-commit-detached-guard.sh`
+
+**Updated**: `antigravity-computer-use/SKILL.md`, `cmux_codex_approve_launchd.py`, `evidence-standards.md`, `git-header.sh`, `skeptic-cron.yml`, workflow files, and test suite expansions
+
 ---
 description: Claude Commands - Command Library Overview
 type: llm-orchestration
@@ -51,17 +61,17 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## 🎯 What's Included
 
-**211 Commands** including powerful workflow orchestrators and cognitive tools:
+**224 Commands** including powerful workflow orchestrators and cognitive tools:
 - **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step automation
 - **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
 - **Infrastructure**: `/scaffold` - Repository setup and development environment
 - **Testing**: `/test`, `/tdd`, `/testuif` - Comprehensive testing workflows
 
-**60 Hooks** for Claude Code automation and workflow optimization
+**65 Hooks** for Claude Code automation and workflow optimization
 
 **22 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**192 Skills** providing shared knowledge references and capabilities
+**559 Skill files** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 

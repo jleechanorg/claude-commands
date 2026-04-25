@@ -44,11 +44,16 @@ execution_mode: immediate
 2. **Load Safety Manager**: Initialize safety manager with data directory
    ```python
    import os
+   import sys
    from pathlib import Path
 
+   project_name = os.environ.get("PROJECT_NAME") or Path.cwd().name
    data_dir = os.environ.get('AUTOMATION_SAFETY_DATA_DIR')
    if not data_dir:
-       default_dir = Path.home() / "Library" / "Application Support" / "${PROJECT_NAME:-your-project}-automation"
+       if sys.platform == "darwin":
+           default_dir = Path.home() / "Library" / "Application Support" / f"{project_name}-automation"
+       else:
+           default_dir = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local" / "state"))) / f"{project_name}-automation"
        default_dir.mkdir(parents=True, exist_ok=True)
        data_dir = str(default_dir)
 
@@ -90,11 +95,16 @@ execution_mode: immediate
 2. **Initialize Safety Manager**: Initialize with data directory and verify PR can be processed
    ```python
    import os
+   import sys
    from pathlib import Path
 
+   project_name = os.environ.get("PROJECT_NAME") or Path.cwd().name
    data_dir = os.environ.get('AUTOMATION_SAFETY_DATA_DIR')
    if not data_dir:
-       default_dir = Path.home() / "Library" / "Application Support" / "${PROJECT_NAME:-your-project}-automation"
+       if sys.platform == "darwin":
+           default_dir = Path.home() / "Library" / "Application Support" / f"{project_name}-automation"
+       else:
+           default_dir = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local" / "state"))) / f"{project_name}-automation"
        default_dir.mkdir(parents=True, exist_ok=True)
        data_dir = str(default_dir)
 
