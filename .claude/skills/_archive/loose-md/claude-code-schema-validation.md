@@ -7,7 +7,7 @@
 As of **September 29, 2025**, Anthropic provides official JSON Schema validation for Claude Code settings.
 
 ### Official Schema URL
-```
+```text
 https://json.schemastore.org/claude-code-settings.json
 ```
 

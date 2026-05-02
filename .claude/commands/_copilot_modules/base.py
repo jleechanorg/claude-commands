@@ -48,7 +48,7 @@ class CopilotCommandBase(ABC):
             )
             data = json.loads(result.stdout)
             return data["nameWithOwner"]
-        except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError, KeyError):
             # Fallback to git remote parsing
             try:
                 result = subprocess.run(
@@ -65,7 +65,7 @@ class CopilotCommandBase(ABC):
                         return url.split(":")[-1]
                     else:
                         return "/".join(url.split("/")[-2:])
-            except subprocess.CalledProcessError:
+            except (subprocess.CalledProcessError, FileNotFoundError):
                 pass
             # Default fallback - prefer GITHUB_REPOSITORY (set in CI/Actions), then DEFAULT_REPO
             return os.environ.get(
