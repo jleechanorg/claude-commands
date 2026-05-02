@@ -161,5 +161,5 @@ mcp__slack__conversations_add_message(
 - Always display inline report FIRST, then post Slack.
 - The Slack post uses MCP, NOT curl.
 nversations_add_message`), NOT curl.
-- Target channel: `#ai-slack-test` (`C0AKALZ4CKW`). The bot is not in `#all-$USER-ai` (C09GRLXF9GR).
+- Target channel: `#ai-slack-test` (`C0AKALZ4CKW`). The bot is not in `#all-jleechan-ai` (C09GRLXF9GR).
 - Evidence condition 6 is skipped if the PR clearly has no evidence bundle.

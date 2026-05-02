@@ -6,7 +6,7 @@ Check the status of the worldai-workstreams team agents and report on their prog
 
 1. Check TaskList for all tasks (workstreams 1-5)
 2. Report which agents are done, running, or stuck
-3. Check if any new commits were pushed to your-project.com or llm_wiki
+3. Check if any new commits were pushed to worldarchitect.ai or llm_wiki
 4. Check for any new beads created via sqlite3
 5. Report to user with status update
 

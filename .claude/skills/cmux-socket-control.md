@@ -80,7 +80,7 @@ printf "read_screen 1 --lines 40\n" | nc -U $SOCK
 printf "read_screen 1 --lines 60 --scrollback\n" | nc -U $SOCK
 
 # Fallback when cross-workspace: check git for coder progress
-git -C $HOME/projects_reference/cmux_ubuntu log --oneline -5
+git -C /Users/jleechan/projects_reference/cmux_ubuntu log --oneline -5
 ```
 
 ---
@@ -130,7 +130,7 @@ if [ "$result" = "OK" ]; then
   printf "send_key_surface $CODER_UUID enter\n" | nc -U $SOCK
 else
   echo "Coder busy — checking git for progress"
-  git -C $HOME/projects_reference/cmux_ubuntu log --oneline -3
+  git -C /Users/jleechan/projects_reference/cmux_ubuntu log --oneline -3
 fi
 ```
 

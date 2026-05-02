@@ -51,7 +51,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 ### Step 1 — Update config (surgical)
 
 ```bash
-HERMES_HOME=$HOME/.hermes_prod hermes config set model.default <model-name>
+HERMES_HOME=/Users/jleechan/.hermes_prod hermes config set model.default <model-name>
 ```
 
 Or edit `~/.hermes_prod/config.yaml` directly.
@@ -63,21 +63,21 @@ launchctl bootout gui/$(id -u)/ai.hermes.prod
 sleep 2
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.hermes.prod.plist
 # or for non-launchd:
-HERMES_HOME=$HOME/.hermes_prod hermes gateway run --replace &
+HERMES_HOME=/Users/jleechan/.hermes_prod hermes gateway run --replace &
 ```
 
 ### Step 3 — Verify
 
 ```bash
-HERMES_HOME=$HOME/.hermes_prod hermes gateway status
-HERMES_HOME=$HOME/.hermes_prod hermes status  # shows model + Slack connectivity
+HERMES_HOME=/Users/jleechan/.hermes_prod hermes gateway status
+HERMES_HOME=/Users/jleechan/.hermes_prod hermes status  # shows model + Slack connectivity
 ```
 
 ## Gateway health check
 
 ```bash
 curl -fsS -m 8 http://127.0.0.1:18789/health   # only works if Hermes is on 18789
-HERMES_HOME=$HOME/.hermes_prod hermes gateway status
+HERMES_HOME=/Users/jleechan/.hermes_prod hermes gateway status
 ```
 
 **Note**: Hermes prod gateway runs as `ai.hermes.prod` launchd service. Hermes STAGING runs as `ai.hermes-staging`. Only ONE should be active at a time — Slack token conflicts if both claim the same bot.
@@ -87,6 +87,6 @@ HERMES_HOME=$HOME/.hermes_prod hermes gateway status
 | Symptom | Cause | Fix |
 |---|---|---|
 | HTTP 400 on Slack mention | Wrong model for context, or MiniMax rejecting the model | Check `config.yaml` model.default matches a plan-supported model |
-| Gateway not responding | Wrong HERMES_HOME or port conflict | Verify `HERMES_HOME=$HOME/.hermes_prod` and only one gateway running |
+| Gateway not responding | Wrong HERMES_HOME or port conflict | Verify `HERMES_HOME=/Users/jleechan/.hermes_prod` and only one gateway running |
 | Slack bot not replying | Bot token mismatch or gateway not started | Check `hermes gateway status` and `hermes status` |
 | HTTP 529 overloaded | MiniMax API overloaded | Retry with backoff; reduce concurrency |

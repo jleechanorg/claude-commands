@@ -379,21 +379,7 @@ def main():
         print("Make sure you're in a git repository with GitHub remote")
         return 1
     
-    # Allow PR number as a CLI argument (e.g. status.py 461)
-    if len(sys.argv) > 1 and sys.argv[1].isdigit():
-        arg_pr = int(sys.argv[1])
-        pr_data = run_command(["gh", "pr", "view", str(arg_pr), "--json", "number,url"])
-        if pr_data:
-            try:
-                d = json.loads(pr_data)
-                pr_number, pr_url = d.get("number"), d.get("url")
-            except json.JSONDecodeError:
-                pr_number, pr_url = None, None
-        else:
-            pr_number, pr_url = None, None
-    else:
-        pr_number, pr_url = get_current_pr()
-
+    pr_number, pr_url = get_current_pr()
     if not pr_number:
         print(f"❌ **No PR found** for current branch")
         print("Create a PR first or switch to a branch with an existing PR")

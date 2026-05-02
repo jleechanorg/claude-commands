@@ -52,7 +52,7 @@ python technique_bandit/technique_selector.py --update --PR <pr> --score <score>
 
 ### 6. Close the PR (evaluation artifact, never merge)
 ```
-gh pr close <pr> --repo $GITHUB_REPOSITORY \
+gh pr close <pr> --repo jleechanorg/worldarchitect.ai \
   --comment "autor eval: $tech score=$score. Closing — evaluation artifact, not a merge candidate."
 ```
 Autor PRs are **evaluation artifacts**, not merge candidates. Always open as draft, always close after scoring. Do not leave them open.

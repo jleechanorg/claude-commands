@@ -16,7 +16,7 @@ Assess any wiki directory against Karpathy gist pattern:
 ## Execution
 
 ### Phase 1: Check wiki exists
-Accept path argument or default to $HOME/llm_wiki/wiki
+Accept path argument or default to /Users/jleechan/llm_wiki/wiki
 
 ### Phase 2: Count pages
 ```bash

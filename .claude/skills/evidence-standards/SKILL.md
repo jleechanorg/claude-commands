@@ -1210,7 +1210,7 @@ gh release create evidence-pr-<N>-v<M> \
   terminal_demo.gif terminal_demo.mp4 \
   browser_ui_demo.gif browser_ui_demo.mp4 \
   --title "PR #N Evidence vM" \
-  --notes "Evidence for PR $GITHUB_REPOSITORY#N" \
+  --notes "Evidence for PR jleechanorg/worldarchitect.ai#N" \
   -R jleechanorg/agent-orchestrator
 
 # Verify accessibility (expect HTTP/2 302 → CDN redirect = accessible)

@@ -29,7 +29,7 @@ Expected: `Gateway service · LaunchAgent installed · loaded · running (pid XX
 ```bash
 python3 -c "
 import json
-d = json.load(open('$HOME/.openclaw/openclaw.json'))
+d = json.load(open('/Users/jleechan/.openclaw/openclaw.json'))
 ag = d.get('agents', {}).get('defaults', {}).get('model', {})
 print('Primary model:', ag.get('primary'))
 print('Fallbacks:', ag.get('fallbacks'))

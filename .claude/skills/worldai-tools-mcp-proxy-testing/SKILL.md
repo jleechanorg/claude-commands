@@ -10,7 +10,7 @@ The WorldAI Tools MCP Proxy (`$PROJECT_ROOT/worldai_tools_mcp_proxy.py`) is an H
 
 ```bash
 # 1. Ensure venv symlink exists in worktree
-ln -sf /home/$USER/projects/your-project.com/venv ./venv
+ln -sf /home/jleechan/projects/worldarchitect.ai/venv ./venv
 
 # 2. Kill any lingering processes on test ports
 kill -9 $(lsof -ti:18081,18091) 2>/dev/null
@@ -40,9 +40,9 @@ PYTHONPATH=$(pwd) WORLDAI_DEV_MODE=true \
 WORLDAI_GOOGLE_APPLICATION_CREDENTIALS=~/serviceAccountKey.json \
 WORLDTOOLS_UPSTREAM_MCP_URL=http://127.0.0.1:18081/mcp \
 WORLDTOOLS_PROXY_PORT=18091 \
-WORLDTOOLS_SUPPORT_ADMINS=<your-email@gmail.com> \
-WORLDTOOLS_OPS_ADMINS=<your-email@gmail.com> \
-WORLDTOOLS_DEPLOY_ADMINS=<your-email@gmail.com> \
+WORLDTOOLS_SUPPORT_ADMINS=jleechantest@gmail.com \
+WORLDTOOLS_OPS_ADMINS=jleechantest@gmail.com \
+WORLDTOOLS_DEPLOY_ADMINS=jleechantest@gmail.com \
 ./venv/bin/python -m mvp_site.worldai_tools_mcp_proxy
 ```
 
@@ -57,7 +57,7 @@ curl -s -X POST http://127.0.0.1:18091/mcp \
 # Read a Firestore document (requires ops_admin role)
 curl -s -X POST http://127.0.0.1:18091/mcp \
   -H "Content-Type: application/json" \
-  -H "X-Worldtools-Actor-Email: <your-email@gmail.com>" \
+  -H "X-Worldtools-Actor-Email: jleechantest@gmail.com" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"ops_firestore_read_document","arguments":{"document_path":"users/0wf6sCREyLcgynidU5LjyZEfm7D2/campaigns/06PTI05cBPY8t5m4hYzj","reason":"ops read","ticket_id":"OPS-001"}}}' | jq '.result'
 ```
 
@@ -67,9 +67,9 @@ curl -s -X POST http://127.0.0.1:18091/mcp \
 |---|---|---|
 | `WORLDTOOLS_UPSTREAM_MCP_URL` | Upstream MCP endpoint | `http://127.0.0.1:18081/mcp` |
 | `WORLDTOOLS_PROXY_PORT` | Proxy listen port | `18091` |
-| `WORLDTOOLS_SUPPORT_ADMINS` | CSV emails for admin_ tools | `<your-email@gmail.com>` |
-| `WORLDTOOLS_OPS_ADMINS` | CSV emails for ops_ tools | `<your-email@gmail.com>` |
-| `WORLDTOOLS_DEPLOY_ADMINS` | CSV emails for deploy tools | `<your-email@gmail.com>` |
+| `WORLDTOOLS_SUPPORT_ADMINS` | CSV emails for admin_ tools | `jleechantest@gmail.com` |
+| `WORLDTOOLS_OPS_ADMINS` | CSV emails for ops_ tools | `jleechantest@gmail.com` |
+| `WORLDTOOLS_DEPLOY_ADMINS` | CSV emails for deploy tools | `jleechantest@gmail.com` |
 | `WORLDTOOLS_GCLOUD_PROJECT_ALLOWLIST` | Allowed GCP projects | `worldarchitecture-ai` |
 | `WORLDTOOLS_FIRESTORE_PATH_PREFIXES` | Allowed doc path prefixes | `users/` (default) |
 | `WORLDAI_DEV_MODE` | Required for dev credentials | `true` |
@@ -100,7 +100,7 @@ curl -s -X POST http://127.0.0.1:18091/mcp \
 
 ## Real Test Data
 
-- **Test user**: `<your-email@gmail.com>` -> UID `0wf6sCREyLcgynidU5LjyZEfm7D2`
+- **Test user**: `jleechantest@gmail.com` -> UID `0wf6sCREyLcgynidU5LjyZEfm7D2`
 - **Real campaign**: `06PTI05cBPY8t5m4hYzj` ("The Merchant's War")
 - **Document path**: `users/0wf6sCREyLcgynidU5LjyZEfm7D2/campaigns/06PTI05cBPY8t5m4hYzj`
 - **GCP project**: `worldarchitecture-ai`

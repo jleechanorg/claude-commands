@@ -120,7 +120,7 @@ thinclaw is installed via Claude Desktop config at `~/Library/Application Suppor
   "mcpServers": {
     "thinclaw": {
       "command": "node",
-      "args": ["$HOME/thinclaw/server.js"],
+      "args": ["/Users/jleechan/thinclaw/server.js"],
       "env": { "GATEWAY_TOKEN": "..." }
     }
   }

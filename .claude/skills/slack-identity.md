@@ -20,8 +20,8 @@ type: policy
 - The gateway only ignores messages from **its own bot account** (`$OPENCLAW_BOT_USER_ID`) to prevent self-loops
 - `mcp__slack__conversations_add_message` posts as the openclaw bot (`$OPENCLAW_BOT_USER_ID`) — it will NOT trigger Hermes (self-loop prevention)
 - **For canary / health checks**: use the mcp_mail bot token (`~/.mcp_mail/credentials.json: SLACK_BOT_TOKEN`). Do NOT use `$SLACK_USER_TOKEN` for automated tests
-- **To post as $USER specifically** (e.g., authorization-sensitive actions): `source ~/.profile` then curl with `$SLACK_USER_TOKEN`
-- DM channel to $USER: `$JLEECHAN_DM_CHANNEL`. Test channel: `#ai-slack-test` (`$SLACK_TEST_CHANNEL`)
+- **To post as jleechan specifically** (e.g., authorization-sensitive actions): `source ~/.profile` then curl with `$SLACK_USER_TOKEN`
+- DM channel to jleechan: `$JLEECHAN_DM_CHANNEL`. Test channel: `#ai-slack-test` (`$SLACK_TEST_CHANNEL`)
 
 ## Hermes/OpenClaw operator messages — bot, not human
 

@@ -1,6 +1,6 @@
 ---
 description: ZFC Level-Up Architecture — M0 cleanup, compliance probe, legacy deletion, and enforcement
-scope: your-project.com/mvp_site
+scope: worldarchitect.ai/mvp_site
 ---
 
 # Level-Up ZFC Skill

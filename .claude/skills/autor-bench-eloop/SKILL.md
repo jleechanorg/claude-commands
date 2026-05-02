@@ -47,7 +47,7 @@ for k, v in sorted(d['techniques'].items(), key=lambda x: -x[1].get('mean',0)):
 
 # Check SWE-bench results if available
 if [ -f ~/.swes/eval_results/latest.json ]; then
-  python3 -c "import json; d=json.load(open('$HOME/.swes/eval_results/latest.json')); print(f'SWE-bench: {d[\"resolved\"]}/{d[\"total\"]} = {d[\"resolved\"]/max(d[\"total\"],1)*100:.1f}%')"
+  python3 -c "import json; d=json.load(open('/Users/jleechan/.swes/eval_results/latest.json')); print(f'SWE-bench: {d[\"resolved\"]}/{d[\"total\"]} = {d[\"resolved\"]/max(d[\"total\"],1)*100:.1f}%')"
 fi
 ```
 
@@ -90,7 +90,7 @@ touch /tmp/autor_bench_eloop_last_run
 
 **6a. Run autor experiment:**
 ```bash
-cd $HOME/llm-wiki-autor-phase3
+cd /Users/jleechan/llm-wiki-autor-phase3
 python scripts/run_autor_experiment.py --technique <chosen> --prs 6265,6261,6245,6269 --n 1 --outdir research-wiki/scores
 ```
 

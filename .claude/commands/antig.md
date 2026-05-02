@@ -17,7 +17,7 @@ When you encounter a new failure mode or workaround while using Antigravity:
    - YYYY-MM-DD: <what failed> → <what works instead>
    ```
 
-2. **Update the skill file** at `$HOME/.claude/skills/antigravity-computer-use/SKILL.md`:
+2. **Update the skill file** at `/Users/jleechan/.claude/skills/antigravity-computer-use/SKILL.md`:
    - Add the new workaround to the relevant section
    - Update the "MANDATORY" section if it's a universal check
    - Keep entries concise and actionable

@@ -59,7 +59,7 @@ For each learning/finding:
 2. Build text: `"{title}: {one_liner}. {body_1_sentence}"`
 3. Run:
    ```bash
-   echo '{"memory": "<text>", "user_id": "$USER"}' \
+   echo '{"memory": "<text>", "user_id": "jleechan"}' \
      | python3 ~/.openclaw/.claude/hooks/mem0_save.py
    ```
 4. Report: `✅ mem0 saved` or `⚠️ mem0 unavailable (skipped)`
@@ -107,7 +107,7 @@ For each gap/finding that warrants tracking:
      "issue_type": "task", "labels": ["evidence", "enforcement"],
      "created_at": datetime.datetime.utcnow().isoformat() + "Z",
      "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
-     "created_by": "$USER", "source_repo": "."
+     "created_by": "jleechan", "source_repo": "."
    }
    with open('.beads/issues.jsonl', 'a') as f:
        f.write(json.dumps(bead) + '\n')

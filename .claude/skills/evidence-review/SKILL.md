@@ -194,6 +194,6 @@ Produce output in this format:
 
 ## Historical Lessons (keep the bar high)
 
-- **2026-04-11 PR #6161**: GIFs hosted on private `your-project.com` release returned 404. Moved to public `agent-orchestrator` release. → Added mandatory check 5.
+- **2026-04-11 PR #6161**: GIFs hosted on private `worldarchitect.ai` release returned 404. Moved to public `agent-orchestrator` release. → Added mandatory check 5.
 - **Pre-existing**: dirty GREEN captures (working tree dirty during the run that produced the artifact) require explicit exception in `verification_report.json` with rationale.
 - **Pre-existing**: WARN verdict in `verification_report.json` is a ceiling — never promote to PASS without resolving each recorded violation.

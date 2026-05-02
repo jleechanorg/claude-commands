@@ -1,6 +1,6 @@
 # A2A (Agent-to-Agent) Protocol Design Document
 
-**Your Project Orchestration System**
+**WorldArchitect.AI Orchestration System**
 **Version 3.0 - Production A2A Implementation**
 
 ## 📋 Table of Contents
@@ -22,7 +22,7 @@
 
 ## System Overview
 
-The A2A (Agent-to-Agent) protocol enables direct communication between AI agents in the Your Project orchestration system. This implementation uses a **file-based messaging system** that provides reliable, auditable, and simple inter-agent communication without external dependencies.
+The A2A (Agent-to-Agent) protocol enables direct communication between AI agents in the WorldArchitect.AI orchestration system. This implementation uses a **file-based messaging system** that provides reliable, auditable, and simple inter-agent communication without external dependencies.
 
 ### Design Philosophy
 
