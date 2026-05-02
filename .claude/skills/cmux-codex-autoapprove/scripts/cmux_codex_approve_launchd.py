@@ -1,15 +1,4 @@
 #!/opt/homebrew/bin/python3
-"""cmux-codex auto-approver — model-first, no regex intent detection.
-
-Architecture:
-  1. Read each cmux surface screen.
-  2. Strip ANSI codes; skip if last non-empty line is an idle shell prompt.
-  3. Everything else → classify_tail() (model API call) → ENTER/1/y/SKIP/DENY.
-
-Regex is used only for:
-  - ANSI escape code stripping (syntax, not semantics)
-  - Idle shell prompt detection (deterministic syntax check, not judgment)
-"""
 from __future__ import annotations
 
 import hashlib
@@ -19,11 +8,31 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+
+try:
+    import numpy as np
+    _NUMPY_AVAILABLE = True
+except Exception:
+    np = None  # type: ignore[assignment]
+    _NUMPY_AVAILABLE = False
+
+_USER_SCOPE = "$HOME/projects_other/user_scope/scripts"
+try:
+    import sys as _sys
+    if _USER_SCOPE not in _sys.path:
+        _sys.path.insert(0, _USER_SCOPE)
+    from semantic_classifier import SemanticClassifier as _SemanticClassifier
+    _SEMANTIC_CLASSIFIER_AVAILABLE = True
+except Exception:
+    _SemanticClassifier = None  # type: ignore[assignment, misc]
+    _SEMANTIC_CLASSIFIER_AVAILABLE = False
+
 
 HOME = Path(os.environ.get("HOME", "$HOME"))
 CLI_PATH = os.pathsep.join(
@@ -40,7 +49,7 @@ CLI_PATH = os.pathsep.join(
 LOG_FILE = Path(os.environ.get("LOG_FILE", "/tmp/cmux-codex-autoapprove.log"))
 STATE_FILE = Path(os.environ.get("STATE_FILE", HOME / ".claude/supervisor/cmux-codex-launchd-state.json"))
 LINES = int(os.environ.get("LINES", "80"))
-TAIL_LINES = int(os.environ.get("TAIL_LINES", "30"))
+TAIL_LINES = int(os.environ.get("TAIL_LINES", "20"))
 CLASSIFY_TIMEOUT = int(os.environ.get("CLASSIFY_TIMEOUT", "30"))
 ESCALATION_TIMEOUT = int(os.environ.get("ESCALATION_TIMEOUT", "30"))
 CODEX_MODEL = os.environ.get("CODEX_MODEL", "")
@@ -48,36 +57,197 @@ CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "")
 WORKSPACE_FILTER = os.environ.get("WORKSPACE_FILTER", "")
 SURFACE_FILTER = os.environ.get("SURFACE_FILTER", "")
 SURFACE_TITLE_FILTER = os.environ.get("SURFACE_TITLE_FILTER", "")
+POLL_INTERVAL = float(os.environ.get("POLL_INTERVAL", "10"))
 WORKER_POOL_SIZE = max(1, int(os.environ.get("WORKER_POOL_SIZE", "5")))
+DAEMON_MODE = os.environ.get("DAEMON_MODE", "").lower() in {"1", "true", "yes"}
 POST_APPROVE_WATCH_SECONDS = float(os.environ.get("POST_APPROVE_WATCH_SECONDS", "6"))
 POST_APPROVE_POLL_SECONDS = float(os.environ.get("POST_APPROVE_POLL_SECONDS", "0.75"))
 STUCK_COOLDOWN_SECONDS = float(os.environ.get("STUCK_COOLDOWN_SECONDS", "45"))
+SEARCH_LINES = int(os.environ.get("SEARCH_LINES", "28"))
+CANDIDATE_WINDOW_LINES = int(os.environ.get("CANDIDATE_WINDOW_LINES", "20"))
+APPROVAL_BLOCK_MAX_LINES = int(os.environ.get("APPROVAL_BLOCK_MAX_LINES", "18"))
+TRAINING_DATA_FILE = Path(os.environ.get(
+    "TRAINING_DATA_FILE",
+    HOME / ".claude" / "supervisor" / "autoapprove-training.jsonl",
+))
 
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
-SHELL_PROMPT_RE = re.compile(r"[$%#>]\s*$")
+CANDIDATE_RE = re.compile(
+    r"Hook PreToolUse:|requires confirmation for this tool|Do you want to\b"
+    r"|Would you like to\b"
+    r"|requires approval by policy|Allow this command|Allow this operation"
+    r"|Tool call needs your approval|enter to submit \| esc to cancel"
+    r"|written up a plan and is ready"
+    r"|Are you sure\b|Proceed with this action\b|Do you want to delete\b"
+    r"|Do you want to create\b|Do you want to run\b"
+)
+BOTTOM_APPROVAL_RE = re.compile(
+    r"Do you want to\b|Would you like to run the following command\?"
+    r"|Esc to cancel|Tab to amend|requires confirmation|Tool call needs your approval"
+    r"|enter to submit \| esc to cancel|Are you sure\b"
+)
+SHELL_PROMPT_RE = re.compile(r"[$%#>]$")
+NUMBERED_ALLOW_RE = re.compile(r"^[^\S\r\n]*(?:[›❯>→•][^\S\r\n]*)?1\.\s*(?:Allow|Yes|Proceed|Continue|Apply|Run)\b", re.IGNORECASE | re.MULTILINE)
+NUMBERED_CANCEL_RE = re.compile(r"^[^\S\r\n]*2\.\s*(?:Cancel|No|Yes, and don't ask again)\b", re.IGNORECASE | re.MULTILINE)
+# 3-option Codex dialog: 1=Yes  2=Yes allow all (session)  3=No
+THREE_OPTION_CODEX_RE = re.compile(r"2\.\s*Yes,\s*allow\s+all\b.*?3\.\s*No\b", re.IGNORECASE | re.DOTALL)
+YN_APPROVE_RE = re.compile(r"\b(?:\[y/N\]|\[Y/n\]|y/n|yes/no)\b", re.IGNORECASE)
+OPTION1_Y_RE = re.compile(r"^[^\S\r\n]*(?:[›❯>][^\S\r\n]*)?1\.\s*Yes,?\s*proceed\s*\(y\)", re.IGNORECASE | re.MULTILINE)
+SELECTED_OPTION_1_RE = re.compile(r"^[^\S\r\n]*[›❯>→•][^\S\r\n]*1\.", re.MULTILINE)
+# cursor on option 2 that is also affirmative (e.g. "❯ 2. Yes, and allow Claude to edit...")
+OPT2_AFFIRMATIVE_RE = re.compile(r"^[^\S\r\n]*[›❯>→•][^\S\r\n]*2\.\s*(?:Yes|Allow)\b", re.IGNORECASE | re.MULTILINE)
+ENTER_SUBMIT_RE = re.compile(r"enter to submit\s*\|\s*esc to cancel", re.IGNORECASE)
+# Second-round structural gate: confirms the surface is actually waiting for input,
+# not just agent output that mentions approval-like phrases.
+INTERACTIVE_PROMPT_RE = re.compile(
+    r"(?:[›❯>→•]\s*1\.)"         # cursor on option 1 (multiple cursor symbols)
+    r"|(?:[›❯>→•]\s*2\.\s*(?:Yes|Allow))"  # cursor on affirmative option 2
+    r"|\[y/N\]|\[Y/n\]"           # y/n prompt (bracket form)
+    r"|\(y/n\)|\(Y/n\)"           # y/n prompt (paren form)
+    r"|\by/n\b|\byes/no\b"        # y/n prompt (bare/spelled-out form)
+    r"|enter to submit.{0,15}esc to cancel"   # Claude/Codex standard footer
+    r"|esc to cancel.{0,20}enter to submit"   # reversed footer order
+    r"|^1\.\s*(?:Yes|Allow|No|Proceed|Continue|Apply|Run)\b"  # bare numbered list
+    r"|requires confirmation|Hook PreToolUse"
+    r"|^\s*3\.\s*No\b"            # 3-option dialog (1=Yes, 2=Yes+allow, 3=No)
+    r"|esc to cancel\s*[·|·]\s*tab to amend",  # Codex footer variant
+    re.IGNORECASE | re.MULTILINE,
+)
+EDIT_PROMPT_RE = re.compile(r"do you want to make this edit", re.IGNORECASE)
+ESC_TAB_AMEND_RE = re.compile(r"esc to cancel\s*[·|]\s*tab to amend", re.IGNORECASE)
+# "Esc to cancel · Enter to submit" — reversed order vs standard "enter to submit | esc to cancel"
+ESC_CANCEL_ENTER_RE = re.compile(r"esc to cancel\s*[·|]\s*enter to submit", re.IGNORECASE)
+VIEW_ALL_RE = re.compile(r"ctrl\s*\+\s*a\s+view\s+all", re.IGNORECASE)
+ALLOW_CANCEL_PROMPT_RE = re.compile(
+    r"tool call needs your approval.*?1\.\s*allow.*?2\.\s*cancel.*?enter to submit\s*\|\s*esc to cancel",
+    re.IGNORECASE | re.DOTALL,
+)
+APPROVAL_BLOCK_ANCHOR_RE = re.compile(
+    r"Tool call needs your approval|Would you like to run the following command\?"
+    r"|Do you want to proceed\?|Would you like to proceed\?|Do you want to make this edit"
+    r"|1\.\s*(?:Allow|Yes)"
+    r"|2\.\s*(?:Cancel|No|Yes, and don't ask again)|enter to submit\s*\|\s*esc to cancel",
+    re.IGNORECASE,
+)
 
 
-def is_idle_prompt(line: str) -> bool:
-    """True if line is a bare shell prompt with no pending input."""
-    stripped = line.strip()
-    if not stripped:
-        return False
-    if stripped in {"❯", ">", ">>"}:
-        return True
-    return bool(SHELL_PROMPT_RE.search(stripped))
+# --- SemanticClassifier candidate gate ---
+# Uses SemanticClassifier from user_scope/scripts/semantic_classifier.py
+# (same strategy as $PROJECT_ROOT/intent_classifier.py).
+_APPROVAL_ANCHORS = {
+    "approval": [
+        "do you want to proceed?",
+        "would you like to proceed?",
+        "claude has written up a plan and is ready to execute",
+        "do you want to create this?",
+        "do you want to create this file?",
+        "do you want to make this change?",
+        "would you like to run the following command?",
+        "tool call needs your approval",
+        "allow this command?",
+        "enter to submit esc to cancel",
+        "esc to cancel enter to submit",
+        "requires confirmation",
+        "1. yes 2. yes and allow claude to edit 3. no",
+        "yes and allow claude to edit settings for this session",
+        "yes and don't ask again for this session",
+        "approve this action 1. yes 2. no",
+        "confirm would you like to allow",
+        "hook pretooluse",
+        "do you want to delete this file?",
+        "do you want to run this command?",
+        "are you sure you want to proceed?",
+        "1. yes 2. no",
+        "1. allow 2. cancel",
+        "1. proceed 2. cancel",
+    ],
+}
+_EMBED_SIMILARITY_THRESHOLD = 0.72
+
+_approval_clf = None
+_clf_lock = threading.Lock()
 
 
-def extract_screen_tail(screen: str) -> str:
-    """Strip ANSI, return last TAIL_LINES of screen. Empty string if idle."""
-    clean = ANSI_RE.sub("", screen)
-    lines = [line.rstrip() for line in clean.splitlines()]
-    non_empty = [line for line in lines if line.strip()]
-    if not non_empty or is_idle_prompt(non_empty[-1]):
-        return ""
-    return "\n".join(lines[-TAIL_LINES:])
+def _get_approval_classifier():
+    global _approval_clf
+    if _approval_clf is not None:
+        return _approval_clf
+    with _clf_lock:
+        if _approval_clf is not None:
+            return _approval_clf
+        if not _SEMANTIC_CLASSIFIER_AVAILABLE:
+            return None
+        try:
+            clf = _SemanticClassifier(
+                anchor_phrases=_APPROVAL_ANCHORS,
+                default_label="SKIP",
+                similarity_threshold=_EMBED_SIMILARITY_THRESHOLD,
+            )
+            clf.initialize_async()
+            _approval_clf = clf
+            log(f"EMBED_CLASSIFIER_INIT anchors={len(_APPROVAL_ANCHORS['approval'])}")
+        except Exception as exc:
+            log(f"EMBED_CLASSIFIER_INIT_ERROR {exc}")
+    return _approval_clf
+
+
+def _semantic_observe(tail_text: str, structural_pass: bool) -> None:
+    """Background: run semantic classifier, log divergences, save training data.
+
+    Never blocks the caller.  The structural result is ground truth for now;
+    the classifier is a trainee observed in parallel.
+    """
+    clf = _get_approval_classifier()
+    if clf is None:
+        return
+    try:
+        label, score = clf.predict(tail_text)
+        semantic_pass = label == "approval"
+        log(
+            f"EMBED_SIM score={score:.3f} threshold={_EMBED_SIMILARITY_THRESHOLD}"
+            f" semantic={semantic_pass} structural={structural_pass}"
+        )
+        if semantic_pass != structural_pass:
+            snippet = tail_text.replace("\n", " | ")[:120]
+            log(f"CLASSIFIER_DIVERGE structural={structural_pass} semantic={semantic_pass} snippet={snippet!r}")
+        # Save every example (agreement + divergence) — both are useful for training.
+        try:
+            TRAINING_DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+            record = {
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "text": tail_text,
+                "label": structural_pass,          # regexp ground truth
+                "semantic_pass": semantic_pass,
+                "semantic_score": round(score, 4),
+                "diverge": semantic_pass != structural_pass,
+            }
+            with TRAINING_DATA_FILE.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except Exception as exc:
+            log(f"TRAINING_WRITE_ERROR {exc}")
+    except Exception as exc:
+        log(f"EMBED_SIM_ERROR {exc}")
+
+
+def is_approval_candidate_semantic(tail_text: str) -> bool:
+    """Structural-first gate. Regexp decides immediately; semantic observes in background.
+
+    The semantic classifier was previously the primary gate but suffered from
+    score dilution when dialog windows also contained diff content or UI chrome.
+    Now regexp (CANDIDATE_RE + INTERACTIVE_PROMPT_RE) is the authoritative signal.
+    The classifier runs in a daemon thread, logs divergences, and saves training
+    data so we can retrain it on real captures later.
+    """
+    structural_pass = bool(CANDIDATE_RE.search(tail_text) and INTERACTIVE_PROMPT_RE.search(tail_text))
+    threading.Thread(
+        target=_semantic_observe,
+        args=(tail_text, structural_pass),
+        daemon=True,
+        name="semantic-observe",
+    ).start()
+    return structural_pass
 
 
 def log(message: str) -> None:
@@ -159,6 +329,127 @@ def read_screen(workspace: str, surface: str) -> str:
     except subprocess.TimeoutExpired:
         log(f"READ_TIMEOUT workspace={workspace} surface={surface}")
         return ""
+
+
+def is_idle_prompt(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return False
+    if re.match(r"^❯\s*(?:1\.|Yes\b)", stripped):
+        return False
+    if stripped in {"❯", ">", ">>"}:
+        return True
+    return bool(SHELL_PROMPT_RE.search(stripped))
+
+
+def extract_candidate_tail(screen: str) -> str:
+    lines = [line.rstrip() for line in screen.splitlines()]
+    non_empty = [line for line in lines if line.strip()]
+    if not non_empty:
+        return ""
+
+    if is_idle_prompt(non_empty[-1]):
+        return ""
+
+    region = lines[-SEARCH_LINES:]
+    last_nonempty_index = -1
+    for index, line in enumerate(region):
+        if line.strip():
+            last_nonempty_index = index
+
+    anchor_index = -1
+    for index, line in enumerate(region):
+        if APPROVAL_BLOCK_ANCHOR_RE.search(line):
+            anchor_index = index
+
+    if anchor_index >= 0 and anchor_index == last_nonempty_index:
+        start = anchor_index
+        while start > 0 and region[start - 1].strip():
+            start -= 1
+        start = max(start, anchor_index - APPROVAL_BLOCK_MAX_LINES + 1)
+        block_lines = region[start : anchor_index + 1]
+        block_text = "\n".join(line for line in block_lines if line.strip())
+        if is_approval_candidate_semantic(block_text) or (
+            VIEW_ALL_RE.search(block_text)
+            and OPTION1_Y_RE.search(block_text)
+            and NUMBERED_CANCEL_RE.search(block_text)
+        ):
+            return block_text
+
+    # Secondary anchor path: anchor is near the bottom (Claude Code TUI has input box BELOW
+    # the dialog, so anchor_index != last_nonempty_index). When the anchor is within
+    # CANDIDATE_WINDOW_LINES of the bottom AND the block passes structural, return it without
+    # requiring semantic (semantic gets diluted by surrounding diff content and UI elements).
+    if anchor_index >= 0 and (last_nonempty_index - anchor_index) < CANDIDATE_WINDOW_LINES:
+        block_start = max(0, anchor_index - 3)  # include a few lines above for question context
+        block_lines = region[block_start : last_nonempty_index + 1]
+        block_text = "\n".join(line for line in block_lines if line.strip())
+        if INTERACTIVE_PROMPT_RE.search(block_text):
+            return block_text
+        if is_approval_candidate_semantic(block_text) or (
+            VIEW_ALL_RE.search(block_text)
+            and OPTION1_Y_RE.search(block_text)
+            and NUMBERED_CANCEL_RE.search(block_text)
+        ):
+            return block_text
+
+    latest_match = ""
+    for start in range(len(region)):
+        max_end = min(len(region), start + CANDIDATE_WINDOW_LINES)
+        for end in range(max_end, start + 1, -1):
+            if end - 1 != last_nonempty_index:
+                continue
+            window_lines = region[start:end]
+            window_text = "\n".join(line for line in window_lines if line.strip())
+            if not window_text:
+                continue
+            if is_approval_candidate_semantic(window_text) or (
+                VIEW_ALL_RE.search(window_text)
+                and OPTION1_Y_RE.search(window_text)
+                and NUMBERED_CANCEL_RE.search(window_text)
+            ) or (
+                # Structural-only fallback: semantic gets diluted by surrounding noise
+                # (diff content, UI boxes). If the window has both an approval trigger
+                # phrase AND approval UI patterns, accept without semantic confirmation.
+                CANDIDATE_RE.search(window_text)
+                and INTERACTIVE_PROMPT_RE.search(window_text)
+            ):
+                latest_match = window_text
+                break
+    return latest_match
+
+
+def heuristic_decision(tail_text: str) -> str:
+    if SELECTED_OPTION_1_RE.search(tail_text) and ENTER_SUBMIT_RE.search(tail_text):
+        return "ENTER"
+    if EDIT_PROMPT_RE.search(tail_text) and SELECTED_OPTION_1_RE.search(tail_text) and ESC_TAB_AMEND_RE.search(tail_text):
+        return "ENTER"
+    # "Esc to cancel · Enter to submit" reversed-order footer — cursor already on option 1.
+    if SELECTED_OPTION_1_RE.search(tail_text) and ESC_CANCEL_ENTER_RE.search(tail_text):
+        return "ENTER"
+    # Cursor is already on option 1 (❯ 1.) and that option is Yes/Allow — press Enter.
+    # Covers 2-option AND 3-option dialogs (e.g. "3. No" instead of "2. No").
+    if SELECTED_OPTION_1_RE.search(tail_text) and NUMBERED_ALLOW_RE.search(tail_text):
+        return "ENTER"
+    if OPTION1_Y_RE.search(tail_text) and NUMBERED_CANCEL_RE.search(tail_text):
+        return "y"
+    if NUMBERED_ALLOW_RE.search(tail_text) and ENTER_SUBMIT_RE.search(tail_text):
+        return "ENTER"
+    if ALLOW_CANCEL_PROMPT_RE.search(tail_text):
+        return "ENTER"
+    if NUMBERED_ALLOW_RE.search(tail_text) and NUMBERED_CANCEL_RE.search(tail_text):
+        return "1"
+    # 3-option Codex dialog: cursor defaults to option 1, so Enter confirms it.
+    # send "1" via cmux send just types a character and doesn't confirm.
+    if THREE_OPTION_CODEX_RE.search(tail_text):
+        return "ENTER"
+    # Cursor on option 2 and that option is affirmative (e.g. "❯ 2. Yes, and allow Claude...")
+    # Option 2 is still a "Yes" — pressing Enter selects it, which is fine.
+    if OPT2_AFFIRMATIVE_RE.search(tail_text):
+        return "ENTER"
+    if YN_APPROVE_RE.search(tail_text):
+        return "y"
+    return ""
 
 
 def extract_decision_token(text: str) -> str:
@@ -386,7 +677,7 @@ def monitor_after_approve(
             log(f"POST_APPROVE_PROGRESS workspace={workspace} surface={surface} status=screen_unreadable")
             return "", 0.0
 
-        latest_tail = extract_screen_tail(screen)
+        latest_tail = extract_candidate_tail(screen)
         if not latest_tail:
             log(f"POST_APPROVE_PROGRESS workspace={workspace} surface={surface} status=prompt_cleared")
             return "", 0.0
@@ -414,7 +705,9 @@ def monitor_after_approve(
         ),
         timeout_seconds=ESCALATION_TIMEOUT,
     )
-    log(f"POST_APPROVE_ESCALATION workspace={workspace} surface={surface} decision={followup_decision}")
+    log(
+        f"POST_APPROVE_ESCALATION workspace={workspace} surface={surface} decision={followup_decision}"
+    )
     if followup_decision in {"ENTER", "1", "y"} and followup_decision != prior_decision:
         approve(workspace, surface, followup_decision)
         return latest_tail, time.time() + STUCK_COOLDOWN_SECONDS
@@ -433,7 +726,10 @@ def process_surface(
     if not screen:
         return state_key, None
 
-    tail_text = extract_screen_tail(screen)
+    # Strip ANSI before candidate extraction so ❯ cursor patterns match correctly.
+    screen = re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', screen)
+
+    tail_text = extract_candidate_tail(screen)
     if not tail_text:
         return state_key, None
 
@@ -449,9 +745,18 @@ def process_surface(
         f'CANDIDATE workspace={row["workspace"]} title={row["title"]} '
         f'surface={row["surface"]} surface_title={row["surface_title"]}'
     )
-    decision = classify_tail(row["workspace"], row["title"], row["surface"], row["surface_title"], tail_text)
-    log(f'DECISION workspace={row["workspace"]} surface={row["surface"]} decision={decision}')
-
+    decision = heuristic_decision(tail_text)
+    if decision:
+        log(f'HEURISTIC workspace={row["workspace"]} surface={row["surface"]} decision={decision}')
+    else:
+        # Classifier already confirmed this is an approval dialog (gate passed above).
+        # Heuristic couldn't determine the key — ENTER is the safe default since
+        # the cursor is on option 1 in all standard approval dialogs.
+        decision = "ENTER"
+        log(f'HEURISTIC_FALLBACK workspace={row["workspace"]} surface={row["surface"]} decision=ENTER')
+    log(
+        f'DECISION workspace={row["workspace"]} surface={row["surface"]} decision={decision}'
+    )
     if decision in {"ENTER", "1", "y"}:
         approve(row["workspace"], row["surface"], decision)
         watched_tail, updated_cooldown_until = monitor_after_approve(
@@ -507,7 +812,19 @@ def run_scan() -> int:
 
 
 def main() -> int:
-    return run_scan()
+    if not DAEMON_MODE:
+        return run_scan()
+
+    log(
+        "cmux-codex-launchd-python daemon "
+        f"poll_interval={POLL_INTERVAL}s"
+    )
+    while True:
+        try:
+            run_scan()
+        except Exception as exc:
+            log(f"LOOP_ERROR type={type(exc).__name__} detail={exc}")
+        time.sleep(POLL_INTERVAL)
 
 
 if __name__ == "__main__":

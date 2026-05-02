@@ -22,10 +22,10 @@ execution_mode: immediate
 
 1. **CI passing** — all statusCheckRollup checks show SUCCESS/NEUTRAL/SKIPPED (no FAILURE, ERROR, TIMED_OUT, CANCELLED, ACTION_REQUIRED). If any check has `status: IN_PROGRESS` → not pass — poll/retry until all are COMPLETED, then verify conclusions.
 2. **No merge conflicts** — `mergeable: MERGEABLE` (handle UNKNOWN by retrying/poll)
-3. **CodeRabbit APPROVED** — latest review by "coderabbitai[bot]" has state `APPROVED`
-4. **Cursor Bugbot finished** — if Bugbot is absent from `statusCheckRollup` → acceptable (not configured). If present: conclusion `SUCCESS`/`NEUTRAL`/`SKIPPED` → pass. If present with `conclusion: null` and `status: IN_PROGRESS` → poll/retry until complete. Treat `FAILURE`, `ERROR`, `TIMED_OUT`, `CANCELLED`, `ACTION_REQUIRED` as red, consistent with condition 1.
+3. **CodeRabbit APPROVED** — `coderabbitai[bot]` has a passing review state per **skeptic-cron** Gate 3 logic: **any** APPROVED review counts, even if a later CHANGES_REQUESTED exists (DISMISSED doesn't erase older approval). This is intentionally more permissive than `green-gate.yml` which requires the *latest* non-COMMENTED review to be APPROVED. If the latest substantive review is **CHANGES_REQUESTED**, that blocks until addressed.
+4. **Cursor Bugbot finished** — prefer **check-run** conclusion on the PR head commit (same as skeptic-cron Gate 4). If Bugbot is absent from `statusCheckRollup` → acceptable (not configured). If present: conclusion `SUCCESS`/`NEUTRAL`/`SKIPPED` → pass. If present with `conclusion: null` and `status: IN_PROGRESS` → poll/retry until complete. Treat `FAILURE`, `ERROR`, `TIMED_OUT`, `CANCELLED`, `ACTION_REQUIRED` as red, consistent with condition 1.
 5. **All inline comments resolved** — Major/Critical from any bot/human are blockers
-6. **Evidence review passed** — `/er` returns PASS (skip if no evidence bundle)
+6. **Evidence review passed (fail-closed)** — **No silent skip.** When the PR touches evidence-bearing paths (MCP/UI per repo policy), resolve the canonical evidence bundle path under `/tmp/your-project.com/.../latest/` **before** `/er`. Pass only when **`/er` returns PASS** *and* automation would pass Gate 6: **`evidence-review-bot` APPROVED on current HEAD** and/or **Evidence Gate / Evidence Review** check-runs succeeded on that HEAD. If evidence is required but missing or stale for the current SHA, treat as **red** until fixed (aligns with skeptic-cron posting an evidence-request comment when Gate 6 fails).
 
 ---
 
@@ -41,7 +41,7 @@ PR="<PR_NUMBER>"
 for iteration in 1..N:
   1. Run /copilot <PR_NUMBER>   # fetch + triage all comments, fix blocking issues
   2. Run /fixpr <PR_NUMBER>     # fix any remaining inline PR blockers
-  3. Run /er                    # check evidence bundle (skip if none present)
+  3. Resolve evidence bundle path when applicable; run /er  # fail-closed — do not skip required evidence
   4. If changes made → commit + push with /pushl
   5. Wait for CI to settle (gh run watch or poll statusCheckRollup)
   6. Evaluate 6 green conditions:
@@ -83,7 +83,7 @@ for iteration in 1..N:
      - Filter reviews by author.login matching "coderabbitai" (GitHub GraphQL may return bot logins with or without the `[bot]` suffix — test both `coderabbitai` and `coderabbitai[bot]`) → sort chronologically using `submittedAt`, find most recent APPROVED. If the most recent CR review is NOT APPROVED, fail. Additionally: if the most recent APPROVED has a more recent CHANGES_REQUESTED or COMMENTED after it, the APPROVED is stale — fail in that case too. Only pass when the latest CR review IS APPROVED and no newer CHANGES_REQUESTED/COMMENTED exists after it.
      - Filter statusCheckRollup by name containing "Bugbot" → if absent from statusCheckRollup entirely → acceptable (Bugbot not configured for this repo). If present with conclusion SUCCESS/NEUTRAL/SKIPPED → pass. If present with conclusion null AND status IN_PROGRESS → poll/retry (not pass). Treat FAILURE, ERROR, TIMED_OUT, CANCELLED, ACTION_REQUIRED as red.
      - Check reviewThreads: verify no unresolved Major/Critical comments
-     - Check evidence: /er PASS or no bundle
+     - Check evidence (fail-closed): /er PASS when a bundle applies; bot APPROVED @ HEAD or evidence checks green on HEAD when automation enforces Gate 6
   7. If ALL 6 green → STOP, report success
   8. Continue to next iteration
 ```
@@ -122,4 +122,3 @@ Report final status:
 - Whether PR is ready to merge
 
 Print a final status table with all 6 conditions and their current state.
-

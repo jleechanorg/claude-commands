@@ -115,32 +115,35 @@ While the Python implementation generates a comprehensive README, this LLM can p
 ### Phase 8: EXECUTION
 
 **Action Steps:**
-**🚀 PRIMARY EXECUTION PATH**: Use the Python implementation for reliable export
+**🚀 PRIMARY EXECUTION PATH**: Use the shell script (replaces Python implementation)
 ```bash
-python3 .claude/commands/exportcommands.py
+bash ~/.claude/commands/exportcommands.sh
 ```
 
-**🧠 LLM ENHANCEMENT CAPABILITIES**:
-1. Generate contextual README sections based on current command inventory
-2. Analyze command composition patterns for documentation
-3. Provide intelligent adaptation guidance for different project types
-4. Generate usage examples tailored to the exported command set
+Options:
+- `--dry-run` — clone, rsync, filter, but skip push and PR creation
 
-### Phase 9: IMPLEMENTATION EXECUTION
+The shell script:
+1. Clones `jleechanorg/claude-commands`
+2. `rsync -a` each directory (source overwrites target; target-only files preserved by default)
+3. Applies 8 content filter substitutions via `perl -pi -e` (supports `\b` word boundaries on macOS)
+4. Regenerates `README.md` via `claude -p "..."` (Claude CLI)
+5. Commits, pushes, opens PR via `gh pr create`
+
+**[DEPRECATED]**: `exportcommands.py` (2347 lines) — kept as fallback only
+```bash
+python3 ~/.claude/commands/exportcommands.py
+```
+
+> [!WARNING]
+> The shell script above is the only actionable execution path. The sections below are legacy reference only and should not be run.
+
+### Phase 10: Legacy Reference — Historical Notes (Do Not Run)
 
 **Action Steps:**
-Let me now execute the export using the Python implementation:
-
-```python
-import os
-import subprocess
-
-### Phase 10: Step 2: Execute Python Implementation
-
-**Action Steps:**
 ```python
 
-### Phase 11: Step 3: LLM-Enhanced README Generation with Version Intelligence
+### Phase 11: Legacy Reference — LLM README Notes (Do Not Run)
 
 **Action Steps:**
 🚨 **VERSION GENERATION BY LLM**: The LLM now intelligently generates version numbers and change summaries rather than mechanical Python incrementing.
@@ -170,14 +173,14 @@ While the Python implementation generates a comprehensive README, this LLM can p
 **Command Pattern Analysis**: Analyze which commands are compositional powerhouses
 ```python
 
-### Phase 12: Step 4: Enhanced Main README.md Update
+### Phase 12: Legacy Reference — README Update Notes (Do Not Run)
 
 **Action Steps:**
 🚨 **MANDATORY STEP**: Update the main README.md (not create variants) with command combination superpowers:
 
 ```bash
 
-### Phase 13: 🎯 Revolutionary Multi-Command Workflows
+### Phase 13: Legacy Reference — Multi-Command Examples (Do Not Run)
 
 **Action Steps:**
 **Break the One-Command Limit**: Normally, Claude can only handle one command per sentence. This system lets you chain multiple commands in a single prompt, creating sophisticated multi-step workflows.
@@ -192,15 +195,15 @@ While the Python implementation generates a comprehensive README, this LLM can p
   6. Automatically runs: `/think` → `/execute` → `/push` → `/copilot` → `/review`
   7. Full end-to-end automation with zero manual intervention
 
-### Phase 14: 🔄 Complete Workflow Automation
+### Phase 14: Legacy Reference — Workflow Notes (Do Not Run)
 
 **Action Steps:**
 **The `/copilot` Advantage**: Responds to GitHub comments and makes fixes automatically, handling the entire feedback loop without manual intervention.
 
-### Phase 15: EXECUTION
+### Phase 15: Legacy Reference — Python Path (Do Not Run)
 
 **Action Steps:**
-**🚀 PRIMARY EXECUTION PATH**: Use the Python implementation for reliable export
+**[DEPRECATED]** Python implementation reference only
 ```bash
 python3 .claude/commands/exportcommands.py
 ```
@@ -211,10 +214,10 @@ python3 .claude/commands/exportcommands.py
 3. Provide intelligent adaptation guidance for different project types
 4. Generate usage examples tailored to the exported command set
 
-### Phase 16: IMPLEMENTATION EXECUTION
+### Phase 16: Legacy Reference — Implementation Example (Do Not Run)
 
 **Action Steps:**
-Let me now execute the export using the Python implementation:
+Legacy example: the export implementation would have looked like this:
 
 ```python
 import os
@@ -482,10 +485,11 @@ cd "$REPO_DIR" && git checkout main
 export NEW_BRANCH="export-fresh-$(date +%Y%m%d-%H%M%S)"
 git checkout -b "$NEW_BRANCH"
 
-# CRITICAL: Clear existing directories for fresh export
+# NOTE: Do NOT wipe existing directories. Only overwrite files that exist in source.
+# Files present in the target repo but not in source are preserved intentionally
+# (e.g. /harness.md added directly via PR — we don't want exportcommands to delete it).
 
-rm -rf commands/* orchestration/* scripts/* || true
-echo "Cleared existing export directories for fresh sync"
+echo "Preserving existing files in target repo; only overwriting files present in source"
 ```
 
 **Pre-Export File Filtering**:

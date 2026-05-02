@@ -12,7 +12,6 @@ jobs:
   try-self-hosted:
     runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 10
-    continue-on-error: true
     outputs:
       success: ${{ steps.mark-success.outputs.success }}
     env:
@@ -24,6 +23,9 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
@@ -58,8 +60,21 @@ jobs:
 
           echo "✅ Found server assignment: $SERVER (service: $SERVICE_NAME)"
 
-      - name: Remove PR label from service
+      - name: Prune stale preview images for service
+        id: prune
         if: steps.release.outputs.service_name != 'null'
+        continue-on-error: true
+        env:
+          SERVICE_NAME: ${{ steps.release.outputs.service_name }}
+          RETENTION_DAYS: '7'
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/prune-preview-image-digests.sh
+          TARGET_SERVICE_NAME="${SERVICE_NAME}" PRUNE_UNTAGGED_ONLY=true \
+            .github/scripts/prune-preview-image-digests.sh
+
+      - name: Remove PR label from service
+        if: always() && steps.release.outputs.service_name != 'null'
         env:
           SERVICE_NAME: ${{ steps.release.outputs.service_name }}
           SERVER: ${{ steps.release.outputs.server }}
@@ -93,22 +108,30 @@ jobs:
           .github/scripts/pr-server-pool.sh status
 
       - name: Post cleanup comment
-        if: steps.release.outputs.service_name != 'null'
+        if: always() && steps.release.outputs.service_name != 'null'
         env:
           SERVER: ${{ steps.release.outputs.server }}
           SERVICE_NAME: ${{ steps.release.outputs.service_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PRUNE_OUTCOME: ${{ steps.prune.outcome }}
         run: |
           set -euo pipefail
+
+          if [[ "${PRUNE_OUTCOME}" == "success" ]]; then
+            PRUNE_LINE="- Stale image digests pruned"
+          else
+            PRUNE_LINE="- ⚠️ Image digest pruning failed or was skipped (check logs)"
+          fi
 
           gh pr comment "$PR_NUMBER" --repo ${{ github.repository }} --body "## 🧹 PR Preview Resources Released
 
           **Server \`$SERVER\` (\`$SERVICE_NAME\`) has been released back to the pool.**
 
-          ### ✅ What happened:
+          ### What happened:
           - Server label removed
           - Server is now available for new PRs
           - Service remains running for fast redeployment
+          - ${PRUNE_LINE}
 
           ### 🔄 To get a preview again:
           1. Reopen this PR
@@ -134,10 +157,12 @@ jobs:
         if: success()
         run: echo "success=true" >> $GITHUB_OUTPUT
 
-  fallback-github-hosted:
+  retry-self-hosted:
     needs: try-self-hosted
-    if: needs.try-self-hosted.outputs.success != 'true'
-    runs-on: ubuntu-latest
+    if: needs.try-self-hosted.outputs.success != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+    # same self-hosted pool: this is a job-level retry path, not runner-level failover.
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 10
     env:
       GCP_REGION: us-central1
       GCP_PROJECT: worldarchitecture-ai
@@ -146,6 +171,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
@@ -185,6 +213,40 @@ jobs:
 
           echo "✅ Found server assignment: $SERVER (service: $SERVICE_NAME)"
 
+      # Delete the Docker image to prevent Artifact Registry bloat
+      # PR previews push an image per commit; without cleanup, gcr.io grows unbounded
+      # Must run BEFORE removing labels to still have commit-sha accessible
+      - name: Delete PR preview Docker image
+        if: steps.release.outputs.service_name != 'null'
+        env:
+          SERVICE_NAME: ${{ steps.release.outputs.service_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          echo "🗑️ Deleting Docker image for PR #$PR_NUMBER..."
+
+          # Get the commit SHA from the service labels
+          COMMIT_SHA=$(gcloud run services describe "$SERVICE_NAME" \
+            --project="${GCP_PROJECT}" \
+            --region="${GCP_REGION}" \
+            --format="value(metadata.labels.commit-sha)" 2>/dev/null || echo "")
+
+          if [ -z "$COMMIT_SHA" ]; then
+            echo "⚠️ No commit-sha label found; skipping image delete"
+            exit 0
+          fi
+
+          IMAGE_TAG="gcr.io/${GCP_PROJECT}/${SERVICE_NAME}:${COMMIT_SHA}"
+          echo "Deleting: $IMAGE_TAG"
+
+          # Delete the image (also removes tags referencing it)
+          if gcloud artifacts docker images delete "$IMAGE_TAG" --quiet --force-delete-tags 2>/dev/null; then
+            echo "✅ Image deleted: $IMAGE_TAG"
+          else
+            echo "⚠️ Image may not exist or already deleted: $IMAGE_TAG"
+          fi
+
       - name: Remove PR label from service
         if: steps.release.outputs.service_name != 'null'
         env:
@@ -241,7 +303,7 @@ jobs:
           1. Reopen this PR
           2. The workflow will automatically assign an available server
 
-          ⚠️ *Fallback: Ran on GitHub-hosted runner (self-hosted unavailable)*
+          ⚠️ *Retry cleanup path ran on the shared self-hosted runner pool*
           🤖 *Rotating server pool auto-management*"
 
       - name: Post no-cleanup comment
@@ -255,5 +317,5 @@ jobs:
 
           This PR did not have an active preview deployment.
 
-          ⚠️ *Fallback: Ran on GitHub-hosted runner (self-hosted unavailable)*
+          ⚠️ *Retry cleanup path ran on the shared self-hosted runner pool*
           🤖 *Rotating server pool auto-management*"

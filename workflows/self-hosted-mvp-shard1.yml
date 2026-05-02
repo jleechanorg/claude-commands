@@ -26,6 +26,10 @@ permissions:
   pull-requests: read
   packages: read
 
+env:
+  # Opt into Node.js 24 for actions to avoid Node.js 20 deprecation failures on self-hosted runners
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   harness-autonomy-self-hosted:
     name: Harness autonomy checks (self hosted)
@@ -70,7 +74,7 @@ jobs:
       with:
         name: harness-autonomy-self-hosted
         path: harness_metrics_ci.json
-        retention-days: 30
+        retention-days: 7
         if-no-files-found: ignore
 
   mvp-shard-1:
@@ -123,7 +127,7 @@ jobs:
       with:
         name: mvp-shard1-test-results
         path: mvp_site/test-results/
-        retention-days: 30
+        retention-days: 7
         if-no-files-found: ignore
   mvp-shard-2:
     name: Directory tests (core-mvp-2(self hosted))
@@ -175,7 +179,7 @@ jobs:
       with:
         name: mvp-shard2-test-results
         path: mvp_site/test-results/
-        retention-days: 30
+        retention-days: 7
         if-no-files-found: ignore
 
   mvp-shard-3:
@@ -228,5 +232,5 @@ jobs:
       with:
         name: mvp-shard3-test-results
         path: mvp_site/test-results/
-        retention-days: 30
+        retention-days: 7
         if-no-files-found: ignore

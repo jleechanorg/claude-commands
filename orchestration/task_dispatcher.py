@@ -125,6 +125,7 @@ def apply_minimax_auth_env(env: dict[str, str]) -> dict[str, str]:
         env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
     return env
 
+
 # CLI validation constants imported from centralized validation library.
 CLI_PROFILES = {
     "claude": {
@@ -266,9 +267,7 @@ CLI_PROFILES = {
 }
 
 
-def build_preflight_execution_args(
-    cli_name: str, model: str | None = None
-) -> tuple[list[str], list[str], bool]:
+def build_preflight_execution_args(cli_name: str, model: str | None = None) -> tuple[list[str], list[str], bool]:
     """Return (help_args, execution_args, skip_help) for two-phase CLI preflight.
 
     Centralises per-CLI preflight logic so both TaskDispatcher and callers such as
@@ -294,9 +293,12 @@ def build_preflight_execution_args(
         return (
             [],
             [
-                "--model", test_model,
-                "-p", "@PROMPT_FILE",
-                "--output-format", "text",
+                "--model",
+                test_model,
+                "-p",
+                "@PROMPT_FILE",
+                "--output-format",
+                "text",
                 "--strict-mcp-config",
             ],
             True,
@@ -306,9 +308,13 @@ def build_preflight_execution_args(
         return (
             [],
             [
-                "-f", "-p", "@PROMPT_FILE",
-                "--model", test_model,
-                "--output-format", "text",
+                "-f",
+                "-p",
+                "@PROMPT_FILE",
+                "--model",
+                test_model,
+                "--output-format",
+                "text",
                 "--approve-mcps",
             ],
             True,
@@ -317,9 +323,12 @@ def build_preflight_execution_args(
         return (
             ["--help"],
             [
-                "--model", MINIMAX_MODEL,
-                "-p", "@PROMPT_FILE",
-                "--output-format", "text",
+                "--model",
+                MINIMAX_MODEL,
+                "-p",
+                "@PROMPT_FILE",
+                "--output-format",
+                "text",
                 "--dangerously-skip-permissions",
                 "--strict-mcp-config",
             ],
@@ -447,9 +456,7 @@ class TaskDispatcher:
         if log_dir:
             self.log_dir = os.path.abspath(os.path.expanduser(log_dir))
         else:
-            self.log_dir = os.path.abspath(
-                os.environ.get(ORCHESTRATION_LOG_DIR_ENV, "/tmp/orchestration_logs")
-            )
+            self.log_dir = os.path.abspath(os.environ.get(ORCHESTRATION_LOG_DIR_ENV, "/tmp/orchestration_logs"))
         os.makedirs(self.log_dir, exist_ok=True)
         self.preflight_cache_dir = os.path.join(self.log_dir, "preflight_cache")
         os.makedirs(self.preflight_cache_dir, exist_ok=True)
@@ -937,9 +944,7 @@ class TaskDispatcher:
                     candidate = self._truncate_agent_name(original_candidate, str(timestamp))
                     tried_timestamp_only = True
                 else:
-                    candidate = self._truncate_agent_name(
-                        original_candidate, f"{timestamp}-{counter}"
-                    )
+                    candidate = self._truncate_agent_name(original_candidate, f"{timestamp}-{counter}")
                     counter += 1
             else:
                 candidate = self._truncate_agent_name(original_candidate, str(counter))
@@ -1193,12 +1198,14 @@ class TaskDispatcher:
 
         return cli_path or None
 
-    def _validate_cli_availability(self, cli_name: str, cli_path: str, agent_name: str, model: str | None = None) -> bool:
+    def _validate_cli_availability(
+        self, cli_name: str, cli_path: str, agent_name: str, model: str | None = None
+    ) -> bool:
         """
         Pre-flight validation: Two-phase validation using centralized validation library.
         Phase 1: --help check (cheap sanity check)
         Phase 2: Execution test (arithmetic output file check)
-        
+
         Returns True if CLI is available and working, False if quota/rate limit detected or execution fails.
         Timeouts are treated as "unknown" and return True (will rely on runtime fallback).
         """
@@ -1217,12 +1224,16 @@ class TaskDispatcher:
             # OAuth CLIs (claude, cursor, minimax) require an executable binary check
             if cli_name in ("claude", "cursor", "minimax"):
                 if not os.access(cli_path, os.X_OK):
-                    print(f"   ⚠️ {CLI_PROFILES.get(cli_name, {}).get('display_name', cli_name)} CLI binary not executable: {cli_path} (agent {agent_name})")
+                    print(
+                        f"   ⚠️ {CLI_PROFILES.get(cli_name, {}).get('display_name', cli_name)} CLI binary not executable: {cli_path} (agent {agent_name})"
+                    )
                     return False
 
             if cli_name not in CLI_PROFILES:
                 # Unknown CLI type - assume available
-                print(f"   ⚠️ Unknown CLI type '{cli_name}' for {agent_name} - assuming available (runtime fallback will catch failures)")
+                print(
+                    f"   ⚠️ Unknown CLI type '{cli_name}' for {agent_name} - assuming available (runtime fallback will catch failures)"
+                )
                 return True
 
             help_args, execution_cmd, skip_help = build_preflight_execution_args(cli_name, model)
@@ -1692,10 +1703,7 @@ Complete the task, then use /pr to create a new pull request."""
         if not stderr:
             return False
         normalized = stderr.lower()
-        return (
-            "missing but already registered worktree" in normalized
-            and "already registered worktree" in normalized
-        )
+        return "missing but already registered worktree" in normalized and "already registered worktree" in normalized
 
     @staticmethod
     def _extract_missing_worktree_path(stderr: str) -> str | None:
@@ -2074,7 +2082,11 @@ Complete the task, then use /pr to create a new pull request."""
                 shell=False,
             )
 
-            if result.returncode != 0 and not used_tmp_fallback and self._is_missing_registered_worktree_error(result.stderr):
+            if (
+                result.returncode != 0
+                and not used_tmp_fallback
+                and self._is_missing_registered_worktree_error(result.stderr)
+            ):
                 missing_path = self._extract_missing_worktree_path(result.stderr)
                 logger.warning(
                     "worktree_missing_registered_recovery_attempt",
@@ -2305,9 +2317,7 @@ Complete the task, then use /pr to create a new pull request."""
                 elif agent_cli == "gemini":
                     print("   Install Gemini CLI and ensure the 'gemini' command is available on your PATH")
                 elif agent_cli == "cursor":
-                    print(
-                        "   Install Cursor Agent CLI and ensure the 'cursor-agent' command is available on your PATH"
-                    )
+                    print("   Install Cursor Agent CLI and ensure the 'cursor-agent' command is available on your PATH")
                 return False
 
             if agent_cli == "codex" and cli_args:
@@ -2379,7 +2389,9 @@ Complete the task, then use /pr to create a new pull request."""
                     )
                     if self._validate_cli_availability(candidate_cli, candidate_path, agent_name, model=model):
                         validated_clis.append((candidate_cli, candidate_path))
-                        print(f"   ✅ {CLI_PROFILES[candidate_cli]['display_name']} CLI validation passed for {agent_name}")
+                        print(
+                            f"   ✅ {CLI_PROFILES[candidate_cli]['display_name']} CLI validation passed for {agent_name}"
+                        )
                         # Use first validated CLI as primary, but keep others as fallbacks
                         if not validated_cli:
                             validated_cli = candidate_cli
@@ -2397,13 +2409,17 @@ Complete the task, then use /pr to create a new pull request."""
                     for cli_name, cli_path_item in validated_clis:
                         print(f"      ✅ {CLI_PROFILES[cli_name]['display_name']} ({cli_path_item})")
                     if len(validated_clis) > 1:
-                        print(f"   💡 Using {CLI_PROFILES[validated_cli]['display_name']} as primary, {len(validated_clis) - 1} fallback(s) available")
+                        print(
+                            f"   💡 Using {CLI_PROFILES[validated_cli]['display_name']} as primary, {len(validated_clis) - 1} fallback(s) available"
+                        )
             if not validated_cli or not validated_path:
                 print(f"❌ No available CLI passed pre-flight validation for {agent_name} - agent creation aborted")
                 return False
 
-            print(f"✅ Pre-flight check complete for {agent_name}: using {CLI_PROFILES[validated_cli]['display_name']} CLI")
-            
+            print(
+                f"✅ Pre-flight check complete for {agent_name}: using {CLI_PROFILES[validated_cli]['display_name']} CLI"
+            )
+
             # Update agent_cli to use validated CLI
             if validated_cli != agent_cli:
                 print(f"🔄 Switching to validated CLI: {CLI_PROFILES[validated_cli]['display_name']}")
@@ -2664,8 +2680,8 @@ Trust your understanding of the task context, not keyword patterns.
 
 {validation_instructions}
 
-5. Create completion report:
-   echo '{{"agent": "{agent_name}", "status": "completed", "mode": "no_worktree"}}' > {result_file}
+5. Create completion report (exit_code required for pair/live completion detection):
+   echo '{{"agent": "{agent_name}", "status": "completed", "mode": "no_worktree", "exit_code": 0}}' > {result_file}
 
 🛑 EXIT CRITERIA - AGENT MUST NOT TERMINATE UNTIL:
 1. ✓ Task completed and tested
@@ -2692,8 +2708,8 @@ Trust your understanding of the task context, not keyword patterns.
 {pr_creation_instructions}
 {validation_instructions}
 
-5. Create completion report:
-   echo '{{"agent": "{agent_name}", "status": "completed", "branch": "{branch_name}"}}' > {result_file}
+5. Create completion report (exit_code required for pair/live completion detection):
+   echo '{{"agent": "{agent_name}", "status": "completed", "branch": "{branch_name}", "exit_code": 0}}' > {result_file}
 
 🛑 EXIT CRITERIA - AGENT MUST NOT TERMINATE UNTIL:
 1. ✓ Task completed and tested
@@ -2752,7 +2768,9 @@ Agent Configuration:
                 if no_new_pr:
                     guardrails.append("Do NOT create a new PR. Only update an existing PR. No PR creation allowed.")
                 if no_new_branch:
-                    guardrails.append("Do NOT create a new branch. Only work on an existing branch. No branch creation allowed.")
+                    guardrails.append(
+                        "Do NOT create a new branch. Only work on an existing branch. No branch creation allowed."
+                    )
                 if guardrails:
                     full_prompt = "🚨 CRITICAL: " + "; ".join(guardrails) + "\n\n" + full_prompt
 
@@ -2865,10 +2883,12 @@ fi
                     runtime_model = model
 
                 # Build model_arg for CLIs that use --model flag (claude, codex)
-                model_arg = f" --model {shlex.quote(runtime_model)}" if runtime_model and attempt_cli in {"claude", "codex"} else ""
-                extra_args_fragment = (
-                    " " + " ".join(shlex.quote(arg) for arg in cli_args) if cli_args else ""
+                model_arg = (
+                    f" --model {shlex.quote(runtime_model)}"
+                    if runtime_model and attempt_cli in {"claude", "codex"}
+                    else ""
                 )
+                extra_args_fragment = " " + " ".join(shlex.quote(arg) for arg in cli_args) if cli_args else ""
 
                 attempt_cli_command = (
                     attempt_profile["command_template"]
@@ -2926,14 +2946,14 @@ fi
                     if runtime_minimax_key:
                         minimax_runtime_auth_token = runtime_minimax_key
                         # Unset CLAUDECODE to prevent "nested session" error
-                        attempt_env_set_commands += f"unset CLAUDECODE 2>/dev/null || true\n"
+                        attempt_env_set_commands += "unset CLAUDECODE 2>/dev/null || true\n"
                         attempt_env_set_commands += 'export ANTHROPIC_AUTH_TOKEN="${MINIMAX_AUTH_TOKEN}"\n'
                         attempt_env_set_commands += 'export ANTHROPIC_API_KEY="${MINIMAX_AUTH_TOKEN}"\n'
-                        attempt_env_set_commands += f"export ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic\n"
+                        attempt_env_set_commands += "export ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic\n"
                         attempt_env_set_commands += f"export ANTHROPIC_MODEL={shlex.quote(MINIMAX_MODEL)}\n"
                         attempt_env_set_commands += f"export ANTHROPIC_SMALL_FAST_MODEL={shlex.quote(MINIMAX_MODEL)}\n"
-                        attempt_env_set_commands += f"export API_TIMEOUT_MS=3000000\n"
-                        attempt_env_set_commands += f"export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1\n"
+                        attempt_env_set_commands += "export API_TIMEOUT_MS=3000000\n"
+                        attempt_env_set_commands += "export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1\n"
 
                 # Build cleanup commands to prevent env vars from leaking between CLI attempts.
                 # This runs before executing each attempt to clear values from prior attempts.
@@ -2964,9 +2984,7 @@ fi
                 # all three sites (Python validation, bash script generation, monitor)
                 # stay in sync automatically.
                 preflight_prompt = shlex.quote(CLI_VALIDATION_TEST_PROMPT)
-                preflight_cmd = build_runtime_preflight_bash_cmd(
-                    attempt_cli, attempt_path, model=runtime_model
-                )
+                preflight_cmd = build_runtime_preflight_bash_cmd(attempt_cli, attempt_path, model=runtime_model)
 
                 if skip_preflight:
                     # Simple execution block: no runtime pre-flight API call, just run the CLI directly.

@@ -1,0 +1,33 @@
+name: Generate Wiki HTML
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'wiki/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
+
+      - name: Generate HTML
+        run: python3 scripts/generate_wiki_html.py
+
+      - name: Create commit
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          branch: ${{ github.ref_name }}
+          commit_message: "docs: auto-regenerate wiki HTML [skip ci]"
+          commit_options: "--no-verify"
+          skip_dirty_check: false
+          file_pattern: 'docs/wiki/**/*.html'

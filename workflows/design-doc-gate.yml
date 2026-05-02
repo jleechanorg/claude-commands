@@ -1,0 +1,197 @@
+name: Design Doc Gate
+
+# Validates design-doc-backed enforcement on PRs touching production code.
+# Current ZFC level-up contract is anchored in:
+# - roadmap/zfc-level-up-model-computes-2026-04-19.md
+# - roadmap/nextsteps-2026-04-19-level-up-zfc.md
+# - roadmap/pr-6418-split-park-plan-2026-04-21.md
+# This workflow only enforces gates that are already true on the branch under test.
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_sha:
+        description: "PR head commit SHA"
+        required: true
+        type: string
+  pull_request:
+    types: [opened, synchronize, edited, reopened]
+    paths:
+      - "mvp_site/**/*.py"
+      - "mvp_site/**/*.js"
+      - "roadmap/**"
+      - ".claude/skills/design-doc-as-contract.md"
+      - ".github/workflows/design-doc-gate.yml"
+
+jobs:
+  design-doc-gate:
+    name: Design Doc Grep Gates
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.inputs.pr_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Run design doc grep gates
+        id: run_gates
+        env:
+          PR_NUM: ${{ github.event.pull_request.number || 'manual' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.inputs.pr_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          ERRORS=0
+          REPORT="## Design Doc Grep Gate Results\n\n"
+          REPORT+="PR: #$PR_NUM | SHA: \`${HEAD_SHA:0:8}\`\n\n"
+          REPORT+="| Gate | Command | Expected | Actual | Status |\n"
+          REPORT+="|------|---------|----------|--------|\n"
+
+          # Known design doc gates for the ZFC level-up roadmap.
+          # Keep this workflow limited to current-truth enforcement; later-stage
+          # cleanup gates belong in follow-up lanes after the M0 cleanup lands.
+
+          check_gate() {
+            local name="$1"
+            local expected="$2"
+            shift 2
+            local cmd="$*"
+            local actual
+            # grep -c exits 1 when count=0; use ||true to not trigger set -e
+            actual=$(eval "$cmd" 2>/dev/null || true)
+            local status="✅"
+            if [[ "$actual" != "$expected" ]]; then
+              status="❌ FAIL"
+              ERRORS=$((ERRORS + 1))
+            fi
+            # Escape pipe characters in cmd for markdown table
+            local escaped_cmd="${cmd//|/\\|}"
+            REPORT+="| $name | \`$escaped_cmd\` | $expected | $actual | $status |\n"
+          }
+
+          # Upper-bound check: actual must be <= expected. Used for line counts.
+          check_upper_bound() {
+            local name="$1"
+            local expected="$2"
+            shift 2
+            local cmd="$*"
+            local actual
+            actual=$(eval "$cmd" 2>/dev/null || true)
+            local status="✅"
+            if [[ "$actual" -gt "$expected" ]]; then
+              status="❌ FAIL"
+              ERRORS=$((ERRORS + 1))
+            fi
+            local escaped_cmd="${cmd//|/\\|}"
+            REPORT+="| $name | \`$escaped_cmd\` | ≤$expected | $actual | $status |\n"
+          }
+
+          echo "=== Level-Up v4 Design Doc Grep Gates ==="
+          echo ""
+
+          # Gate 1: world_logic.py should have 0 rewards_engine PUBLIC API imports (pure consumer)
+          # Internal helpers (_is_state_flag_true, _is_state_flag_false) ARE allowed.
+          # Check specifically for public API names: is_level_up_active, project_level_up_ui, resolve_level_up_signal
+          check_gate "world_logic 0 rewards_engine public API imports" "0" \
+            "grep 'from mvp_site.rewards_engine import' mvp_site/world_logic.py | grep -cE 'is_level_up_active|project_level_up_ui|resolve_level_up_signal' || true"
+
+          # Gate 1b: world_logic.py should have 0 resolve_level_up_signal calls (imported version)
+          # Excludes: comments (#), and local _resolve_level_up_signal function
+          check_gate "world_logic 0 resolve_level_up_signal calls" "0" \
+            "grep -v '#' mvp_site/world_logic.py | grep 'resolve_level_up_signal(' | grep -v '_resolve_level_up_signal' | wc -l"
+
+          # Gate 2: constants.py XP math functions should be 0 (deleted after migration)
+          # Note: xp_needed_for_level is used by world_logic.py so keep it
+          # Gate measures: get_xp_for_level + get_level_from_xp should be gone
+          check_gate "constants get_xp_for_level" "0" \
+            "grep -c 'def get_xp_for_level' mvp_site/constants.py"
+
+          check_gate "constants get_level_from_xp" "0" \
+            "grep -c 'def get_level_from_xp' mvp_site/constants.py"
+
+          # Gate 3: _is_state_flag_true must be in exactly 2 files
+          # - rewards_engine.py: canonical definition (consolidation target)
+          # - game_state.py: required for class-body scope usage
+          #   (Python class body __getattr__ doesn't intercept local name refs;
+          #    internal calls in GameState methods need the local definition)
+          count_is_state_flag_true() {
+            grep -rn 'def _is_state_flag_true' mvp_site/*.py 2>/dev/null | wc -l
+          }
+          check_gate "_is_state_flag_true 2 files" "2" \
+            "count_is_state_flag_true"
+
+          # Gate 4: world_logic.py should NOT call rewards_engine.project_level_up_ui in code
+          # (comments are OK — world_logic has its own internal _project_level_up_ui_from_game_state)
+          check_gate "world_logic 0 re.project_level_up_ui calls" "0" \
+            "grep -v '^\s*#' mvp_site/world_logic.py | grep -c 'rewards_engine.project_level_up_ui'"
+
+          # Gate 4b: direct level-up pair builders stay private to rewards_engine.
+          # Callers may use rewards_engine.project_level_up_ui() or
+          # rewards_engine.canonicalize_rewards(), but should not reconstruct the
+          # rewards_box/planning_block pair themselves.
+          count_level_up_pair_builders() {
+            python3 - <<'PY'
+          import ast
+          from pathlib import Path
+
+          count = 0
+          for path in Path("mvp_site").rglob("*.py"):
+              if path.name == "rewards_engine.py" or "tests" in path.parts:
+                  continue
+              tree = ast.parse(path.read_text(encoding="utf-8"))
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.Call):
+                      if isinstance(node.func, ast.Name) and node.func.id in {
+                          "ensure_rewards_box",
+                          "ensure_planning_block",
+                      }:
+                          count += 1
+                      elif isinstance(node.func, ast.Attribute) and node.func.attr in {
+                          "ensure_rewards_box",
+                          "ensure_planning_block",
+                      }:
+                          count += 1
+          print(count)
+          PY
+          }
+          check_gate "non-rewards 0 direct level-up pair builders" "0" \
+            "count_level_up_pair_builders"
+
+          # Gate 5: llm_parser.py should call canonicalize_rewards exactly once
+          check_gate "llm_parser canonicalize_rewards=1" "1" \
+            "grep -c 'canonicalize_rewards' mvp_site/llm_parser.py"
+
+          # Gate 6: world_logic.py line count upper bound (Layer 3 CLEAN tracking)
+          # Target is ~1500 lines (thin modal wrapper). Start at 9200 (slightly above
+          # current ~8896) to allow PR to pass, then tighten by ~1000-1500 per subsequent PR.
+          # Uses check_upper_bound: PASS if actual <= expected.
+          check_upper_bound "world_logic.py line count" "9200" \
+            "wc -l < mvp_site/world_logic.py"
+
+          echo ""
+          echo "$REPORT"
+
+          # Post comment to PR
+          if [[ "$PR_NUM" != "manual" ]]; then
+            gh pr comment "$PR_NUM" --body "$REPORT" 2>/dev/null || echo "Could not post comment"
+          fi
+
+          if [[ $ERRORS -gt 0 ]]; then
+            echo ""
+            echo "❌ $ERRORS gate(s) failed. See results above."
+            exit 1
+          fi
+          echo ""
+          echo "✅ All design doc gates passed."

@@ -8,6 +8,8 @@ permissions:
 
 # Smoke coverage:
 # - Mock API smoke tests on PR/push to main/dev, or after preview deploy completion (workflow_run)
+# - Runner env uses TEST_MODE=mock; testing_mcp sends X-Mock-Services on remote preview
+#   so Flask g.mock_services_mode is set and Gemini is not billed for default CI smoke.
 # - Real E2E preview smoke tests on /smoke comments or workflow_dispatch only
 # CI trigger noop: 2026-02-22T14:44:00Z
 on:
@@ -39,9 +41,14 @@ on:
       - '.github/workflows/mcp-smoke-tests.yml'
       - '.github/actions/run-mcp-smoke-tests/action.yml'
       - 'scripts/mcp_smoke_test.sh'
+      - 'scripts/mcp_smoke_comment.js'
+      - 'scripts/mcp_smoke_test_mode.mjs'
+      - 'scripts/test_mcp_smoke_mode_contract.mjs'
+      - 'scripts/lib/**'
       - 'testing_mcp/test_smoke.py'
       - 'testing_mcp/lib/**'
       - 'scripts/mcp-smoke-tests.mjs'
+      - 'tests/test_mcp_global_installation.py'
   push:
     branches: [ main, dev ]
     paths:
@@ -55,14 +62,115 @@ on:
       - '.github/workflows/mcp-smoke-tests.yml'
       - '.github/actions/run-mcp-smoke-tests/action.yml'
       - 'scripts/mcp_smoke_test.sh'
+      - 'scripts/mcp_smoke_comment.js'
+      - 'scripts/mcp_smoke_test_mode.mjs'
+      - 'scripts/test_mcp_smoke_mode_contract.mjs'
+      - 'scripts/lib/**'
       - 'testing_mcp/test_smoke.py'
       - 'testing_mcp/lib/**'
       - 'scripts/mcp-smoke-tests.mjs'
+      - 'tests/test_mcp_global_installation.py'
 
 jobs:
+  resolve-self-hosted-pr-context:
+    name: Resolve self-hosted PR context
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_run' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/smoke'))
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      allow_self_hosted: ${{ steps.resolve.outputs.allow_self_hosted }}
+    steps:
+      - name: Resolve PR trust context
+        id: resolve
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const repoFullName = `${context.repo.owner}/${context.repo.repo}`;
+
+            const setOutputs = ({ allow }) => {
+              core.setOutput('allow_self_hosted', allow ? 'true' : 'false');
+            };
+
+            if (context.eventName === 'push') {
+              setOutputs({ allow: true });
+              return;
+            }
+
+            if (context.eventName === 'pull_request') {
+              const pr = context.payload.pull_request;
+              const sameRepo = pr?.head?.repo?.full_name === repoFullName;
+              const allow = Boolean(sameRepo && pr?.head?.repo && pr.head.repo.fork === false);
+              setOutputs({ allow });
+              return;
+            }
+
+            let prNumber;
+
+            if (context.eventName === 'workflow_dispatch') {
+              const rawInput = context.payload?.inputs?.pr_number;
+              if (rawInput) {
+                prNumber = Number(rawInput);
+              }
+            } else if (context.eventName === 'issue_comment') {
+              if (!context.payload.issue?.pull_request) {
+                setOutputs({ allow: false });
+                return;
+              }
+              prNumber = Number(context.payload.issue.number);
+            } else if (context.eventName === 'workflow_run') {
+              const workflowRun = context.payload.workflow_run;
+              if (workflowRun?.pull_requests?.length) {
+                prNumber = Number(workflowRun.pull_requests[0].number);
+              } else if (workflowRun?.head_branch) {
+                const sameRepoCandidates = await github.paginate(
+                  github.rest.pulls.list,
+                  {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    state: 'open',
+                    head: `${context.repo.owner}:${workflowRun.head_branch}`,
+                    per_page: 100,
+                  }
+                );
+                if (sameRepoCandidates.length === 1) {
+                  prNumber = Number(sameRepoCandidates[0].number);
+                } else {
+                  const match = workflowRun.head_branch.match(/pr-(\d+)/);
+                  if (match) {
+                    prNumber = Number(match[1]);
+                  }
+                }
+              }
+            }
+
+            if (!prNumber || Number.isNaN(prNumber)) {
+              setOutputs({ allow: false });
+              return;
+            }
+
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            const sameRepo = pr.data.head.repo?.full_name === repoFullName;
+            const allow = Boolean(sameRepo && pr.data.head.repo && pr.data.head.repo.fork === false);
+            setOutputs({ allow });
+
   limit-pr-runs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     permissions:
       actions: write
       contents: read
@@ -70,6 +178,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
@@ -77,7 +188,8 @@ jobs:
 
   try-self-hosted:
     name: MCP Server Smoke Tests [Mock APIs]
-    if: github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    needs: resolve-self-hosted-pr-context
+    if: needs.resolve-self-hosted-pr-context.outputs.allow_self_hosted == 'true' && (github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'))
     runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 10
     env:
@@ -87,6 +199,8 @@ jobs:
       TESTING: true
       FLASK_ENV: testing
       TEST_MODE: mock
+      # Explicit opt-in for X-Mock-Services on preview (testing_mcp/lib/base_test.py).
+      MCP_PREVIEW_MOCK_SERVICES_HEADER: "true"
       MOCK_SERVICES_MODE: true
       STREAM_RESPONSE_SIGNING_SECRET: ${{ secrets.STREAM_RESPONSE_SIGNING_SECRET }}
       SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
@@ -136,9 +250,15 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
-        ref: ${{ github.event_name == 'workflow_run' && steps.pr_ref.outputs.result || '' }}
+        ref: ${{ github.event_name == 'workflow_run' && steps.pr_ref.outputs.result || github.event.pull_request.head.sha || github.sha }}
         submodules: recursive
+        persist-credentials: false
 
+
+    - name: Prepare runner tool cache for setup actions
+      run: |
+        chmod +x scripts/ci/setup-runner-tool-cache.sh
+        ./scripts/ci/setup-runner-tool-cache.sh
 
     - name: Set up Python
       if: runner.os == 'Linux'
@@ -363,8 +483,9 @@ jobs:
 
   preview-smoke-tests:
     name: MCP Smoke Tests [Preview E2E]
-    if: (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/smoke') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    needs: resolve-self-hosted-pr-context
+    if: needs.resolve-self-hosted-pr-context.outputs.allow_self_hosted == 'true' && ((github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/smoke') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) || github.event_name == 'workflow_dispatch')
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     env:
       GCP_REGION: us-central1
       GCP_PROJECT: worldarchitecture-ai
@@ -429,6 +550,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
           ref: ${{ steps.pr_ref.outputs.result }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0

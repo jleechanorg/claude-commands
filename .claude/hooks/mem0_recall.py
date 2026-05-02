@@ -12,8 +12,9 @@ import sys
 
 from mem0_config import MEM0_CONFIG, USER_ID  # type: ignore
 
-TOP_K = 6
-SCORE_THRESHOLD = 0.35
+# bd-992w mem0 recall tuning. Rollback: TOP_K=6, SCORE_THRESHOLD=0.35
+TOP_K = 3
+SCORE_THRESHOLD = 0.60
 
 
 def main() -> None:

@@ -1,0 +1,4 @@
+bd-2w17 archive candidates (consolidated under _archive/):
+1. loose-md (former _archived_loose_md) — top-level *.md skills
+2. loose/nextsteps.md — stray root markdown
+3–12. reserved: algorithmic-art, canvas-design, docx, pptx, pdf, xlsx, theme-factory, slack-gif-creator, internal-comms, doc-coauthoring — candidates for future rotation only; not moved in this pass

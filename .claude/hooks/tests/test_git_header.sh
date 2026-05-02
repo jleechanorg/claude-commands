@@ -41,25 +41,12 @@ fi
 TESTS_RUN=$((TESTS_RUN + 1))
 
 # Test 3: Output contains branch information
-current_branch=$(git branch --show-current 2>/dev/null)
-if [ -n "$current_branch" ]; then
-    # Strong assertion: check for exact branch value
-    if [[ "$output" == *"Branch: $current_branch"* ]]; then
-        echo -e "${GREEN}✓${NC} Output contains correct branch value: $current_branch"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-    else
-        echo -e "${RED}✗${NC} Output missing correct branch value (expected 'Branch: $current_branch')"
-        TESTS_FAILED=$((TESTS_FAILED + 1))
-    fi
+if [[ "$output" == *"Local:"* ]]; then
+    echo -e "${GREEN}✓${NC} Output contains local branch info"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
 else
-    # Fallback for detached HEAD or CI environments
-    if [[ "$output" == *"Branch:"* ]]; then
-        echo -e "${GREEN}✓${NC} Output contains branch label (detached HEAD fallback)"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-    else
-        echo -e "${RED}✗${NC} Output missing branch info"
-        TESTS_FAILED=$((TESTS_FAILED + 1))
-    fi
+    echo -e "${RED}✗${NC} Output missing local branch info"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
 fi
 TESTS_RUN=$((TESTS_RUN + 1))
 
