@@ -68,8 +68,11 @@ class CopilotCommandBase(ABC):
             except (subprocess.CalledProcessError, FileNotFoundError):
                 pass
             # Default fallback - prefer GITHUB_REPOSITORY (set in CI/Actions), then DEFAULT_REPO
-            return os.environ.get(
-                "GITHUB_REPOSITORY", os.environ.get("DEFAULT_REPO", "your-project.com")
+            repo = os.environ.get("GITHUB_REPOSITORY") or os.environ.get("DEFAULT_REPO")
+            if repo and re.fullmatch(r"[^/\s]+/[^/\s]+", repo):
+                return repo
+            raise ValueError(
+                "Repository could not be determined. Set GITHUB_REPOSITORY or DEFAULT_REPO as 'owner/repo'."
             )
 
     def _get_current_branch(self) -> str:
