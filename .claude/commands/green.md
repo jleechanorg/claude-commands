@@ -22,6 +22,13 @@ If no PR number given, detect from current branch:
 gh pr list --head "$(git branch --show-current)" --json number --jq '.[0].number'
 ```
 
+**Fallback strategy** (if `gh pr list` returns nothing):
+1. Pattern-match the branch name for PR patterns: `pr-123`, `ao-670`, `jc-123`, etc.
+2. Fall back to `gh api` lookup by head branch SHA
+3. Handle closed/merged PRs — a branch may have already been merged after the PR closed
+
+The compose-commands hook (`~/.claude/hooks/compose-commands.sh`) implements this fallback; see its PR resolution logic for reference.
+
 Resolve OWNER/REPO from the git remote.
 
 ### Step 2 — Determine green mode
