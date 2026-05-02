@@ -35,7 +35,7 @@ Use repo venv: `./venv/bin/python` or `LEVEL_UP_REPRO_PYTHON=...` for the suite.
 
 ```bash
 cd "$REPO_ROOT"
-./scripts/run_level_up_class_repro_suite.sh 2>&1 | tee /tmp/your-project.com/level_up_5_class_repro.log
+./scripts/run_level_up_class_repro_suite.sh 2>&1 | tee /tmp/worldarchitect.ai/level_up_5_class_repro.log
 ```
 
 The suite script can **clone Class 2 and Class 4 test subjects from baseline campaigns** on the dest user **once per run** (fresh id each time): set `LEVEL_UP_BASELINE_CLASS2_ID` / `LEVEL_UP_BASELINE_CLASS4_ID` to read-only baselines on `MCP_TEST_PARALLEL_USER_ID`, or rely on the script defaults. Use `LEVEL_UP_SKIP_BASELINE_CLONE=1` to keep the old in-test `--find-by-id` clone only.
@@ -44,7 +44,7 @@ By default `LEVEL_UP_SUITE_PARALLEL=1` runs all five test files **concurrently**
 
 If you see `Permission denied`, run `chmod +x scripts/run_level_up_class_repro_suite.sh` or invoke with `bash ./scripts/run_level_up_class_repro_suite.sh` (same behavior).
 
-Evidence bundles: `/tmp/your-project.com/<branch-scoped>/level_up_class_*` per harness.
+Evidence bundles: `/tmp/worldarchitect.ai/<branch-scoped>/level_up_class_*` per harness.
 
 ### Reading `SUMMARY: Passed / Failed` (not the same as “bug yes/no”)
 
@@ -64,7 +64,7 @@ The harness prints counts like `Passed: 1` / `Failed: 1` by counting scenarios w
 
 Firestore copies use `--dest-user-id` = **`ctx.user_id`** from `MCPTestBase`. The MCP client must use the **same** UID as the account that owns the cloned campaigns.
 
-To run the five-class suite so clones land under **`<your-email@gmail.com>`** (`0wf6sCREyLcgynidU5LjyZEfm7D2`):
+To run the five-class suite so clones land under **`jleechantest@gmail.com`** (`0wf6sCREyLcgynidU5LjyZEfm7D2`):
 
 ```bash
 export MCP_TEST_PARALLEL_USER_ID=0wf6sCREyLcgynidU5LjyZEfm7D2
@@ -108,7 +108,7 @@ export WORLDAI_GOOGLE_APPLICATION_CREDENTIALS="${WORLDAI_GOOGLE_APPLICATION_CRED
 ./venv/bin/python scripts/download_campaign.py \
   --uid 0wf6sCREyLcgynidU5LjyZEfm7D2 \
   --campaign-id <TEST_CAMPAIGN_ID> \
-  --output-dir /tmp/your-project.com/repro-exports/<slug> \
+  --output-dir /tmp/worldarchitect.ai/repro-exports/<slug> \
   --format txt
 ```
 

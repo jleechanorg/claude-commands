@@ -271,7 +271,7 @@ type: {memory_type}
 2. **Build mem0 text**: `"{learning_title}: {one_liner}. {body_summary_1_sentence}"`
 3. **Call mem0_save.py**:
    ```bash
-   echo '{"memory": "<text>", "user_id": "$USER"}' \
+   echo '{"memory": "<text>", "user_id": "jleechan"}' \
      | python3 ~/.openclaw/.claude/hooks/mem0_save.py
    ```
 4. **Confirm**: Report `✅ mem0 saved` or `⚠️ mem0 unavailable (skipped)`
@@ -316,7 +316,7 @@ type: {memory_type}
      "issue_type": "task", "labels": ["learning", "documentation"],
      "created_at": datetime.datetime.utcnow().isoformat() + "Z",
      "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
-     "created_by": "$USER", "source_repo": "."
+     "created_by": "jleechan", "source_repo": "."
    }
    with open('.beads/issues.jsonl', 'a') as f:
        f.write(json.dumps(bead) + '\n')

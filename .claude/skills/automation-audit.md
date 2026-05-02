@@ -31,7 +31,7 @@ COMMENT_VAL_LOG="/tmp/comment-validation.log"
 
 # Or from home directory
 PROJECT_NAME="${PROJECT_NAME:-worldarchitect}"
-REPO_NAME="${MCTRL_REPO:-${MISSION_CONTROL_REPO:-$GITHUB_REPOSITORY}}"
+REPO_NAME="${MCTRL_REPO:-${MISSION_CONTROL_REPO:-jleechanorg/worldarchitect.ai}}"
 HOME_LOGS="${AUTOMATION_LOG_DIR:-$HOME/Library/Logs/${PROJECT_NAME}-automation}"
 mkdir -p "$HOME_LOGS"
 ```

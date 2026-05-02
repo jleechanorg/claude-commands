@@ -93,7 +93,7 @@ After each check, report:
 | Signal | Example |
 |--------|---------|
 | Too fast | 25s between "do it" and "Done" for clone+install+startup |
-| No machine-specific output | Missing paths like `$HOME/...`, package counts, timing |
+| No machine-specific output | Missing paths like `/Users/jleechan/...`, package counts, timing |
 | Clean proof section | Bullet list of command names only |
 | Generic language | "dependency install completed", "reached ready state" |
 
@@ -101,7 +101,7 @@ Real terminal output looks like:
 ```
 added 262 packages, and audited 263 packages in 5s
 Successfully installed MarkupSafe-3.0.3 PyJWT-2.12.1 ...
-$HOME/.openclaw/workspace/hermes-agent
+/Users/jleechan/.openclaw/workspace/hermes-agent
 ```
 
 ## Key constants

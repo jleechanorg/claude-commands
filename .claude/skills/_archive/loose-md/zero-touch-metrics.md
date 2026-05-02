@@ -10,23 +10,23 @@ Measure autonomy metrics for the evolve loop. Run via `/eloop` or standalone.
 ## Metrics
 
 ### Zero-touch
-- First commit author != "$USER" (agent-proposed)
+- First commit author != "jleechan" (agent-proposed)
 - Merged by github-actions[bot]
 - No CR CHANGES_REQUESTED ever
 
 ### One-touch
-- First commit author == "$USER" (human-proposed via /claw)  
+- First commit author == "jleechan" (human-proposed via /claw)  
 - Merged by github-actions[bot]
 - No CR CHANGES_REQUESTED ever
 
 ### External
-- Not agent or $USER authored
+- Not agent or jleechan authored
 
 ## Command
 
 ```bash
 # Run in agent-orchestrator repo
-cd $HOME/project_agento/agent-orchestrator
+cd /Users/jleechan/project_agento/agent-orchestrator
 
 echo "=== Touch Rate (last N PRs) ==="
 for pr in $(gh api 'repos/jleechanorg/agent-orchestrator/pulls?state=closed&per_page=30' --jq '.[] | select(.merged_at != null) | .number' 2>/dev/null | head -25); do

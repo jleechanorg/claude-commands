@@ -53,7 +53,7 @@ type: reference
 
 ```bash
 # Get the current MiniMax API key from auth-profiles
-KEY=$(python3 -c "import json; d=json.load(open('$HOME/.openclaw/agents/main/agent/auth-profiles.json')); print(d['profiles']['minimax:default']['key'])")
+KEY=$(python3 -c "import json; d=json.load(open('/Users/jleechan/.openclaw/agents/main/agent/auth-profiles.json')); print(d['profiles']['minimax:default']['key'])")
 
 # Probe the candidate model — expect HTTP 200, not 500
 curl -s -o /dev/null -w "%{http_code}" \
@@ -74,7 +74,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 
 ```python
 import json
-path = "$HOME/.openclaw/openclaw.json"
+path = "/Users/jleechan/.openclaw/openclaw.json"
 with open(path) as f: d = json.load(f)
 d['agents']['defaults']['model']['primary'] = "minimax/MiniMax-M2.7"
 d['agents']['defaults']['model']['fallbacks'] = []

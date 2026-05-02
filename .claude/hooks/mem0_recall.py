@@ -73,3 +73,26 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+ip()
+            score = r.get("score", 0)
+            if mem:
+                lines.append(f"- [{score:.2f}] {mem}")
+
+        context = "\n".join(lines)
+
+        # Return as additionalContext (quiet injection, not shown as hook output)
+        print(json.dumps({
+            "hookSpecificOutput": {
+                "hookEventName": "UserPromptSubmit",
+                "additionalContext": context,
+            }
+        }))
+
+    except Exception:
+        pass  # Never block the prompt
+
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

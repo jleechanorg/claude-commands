@@ -53,7 +53,7 @@ A PR is zero-touch if the only GitHub actors (commits, reviews, comments, merges
 - `coderabbitai[bot]` (code review)
 - `cursor[bot]` (Bugbot)
 
-If `$USER` (Jeffrey's personal account) or any other human/terminal identity appears as a PR actor, it's **operator-assisted**.
+If `jleechan` (Jeffrey's personal account) or any other human/terminal identity appears as a PR actor, it's **operator-assisted**.
 
 ## KPI
 

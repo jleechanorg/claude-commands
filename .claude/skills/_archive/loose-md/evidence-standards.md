@@ -1,7 +1,7 @@
 # Evidence Standards for All Testing and Verification
 
 > **Superseded for maintenance:** Canonical copy with YAML frontmatter lives at  
-> `$HOME/.claude/skills/evidence-standards/SKILL.md`. Edit that file; this archived copy is kept for history.
+> `/Users/jleechan/.claude/skills/evidence-standards/SKILL.md`. Edit that file; this archived copy is kept for history.
 
 ## Core Principle
 

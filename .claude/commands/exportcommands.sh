@@ -75,10 +75,31 @@ apply_filters() {
   for skip in "${FILTER_SKIP[@]}"; do
     [[ "$base" == "$skip" ]] && return 0
   done
-  # Use perl -pi -e: supports \b word boundaries on macOS (BSD sed lacks \b)
-  for sub in "${SUBS[@]}"; do
-    perl -pi -e "$sub" "$file"
-  done
+
+  # .md files: skip jleechanorg/worldarchitect.ai→$GITHUB_REPOSITORY
+  # substitution INSIDE ```bash/```shell/``` blocks (would corrupt shell syntax).
+  # All other subs apply to all files as before.
+  if [[ "$file" == *.md ]]; then
+    perl -pi -e '
+      my $in_block = 0;
+      my @lines = <$fh // []>;
+      for my $i (0 .. $#lines) {
+        my $l = $lines[$i];
+        if ($l =~ /^\s*```/) { $in_block = !$in_block; next; }
+        if (!$in_block && $l =~ /jleechanorg\/worldarchitect\.ai/) {
+          $l =~ s{jleechanorg/worldarchitect\.ai}{worldarchitect.ai}g;
+        }
+        $lines[$i] = $l;
+      }
+      open my $ofh, ">", $ARGV[0] or die $!;
+      print $ofh @lines;
+      close $ofh;
+    ' "$file"
+  else
+    for sub in "${SUBS[@]}"; do
+      perl -pi -e "$sub" "$file"
+    done
+  fi
   # Apply mvp_site/ → $PROJECT_ROOT/ only for non-workflow files.
   # GitHub Actions does NOT expand $PROJECT_ROOT in `paths:` filters or hashFiles(),
   # so substituting it into workflows/*.yml would silently break CI triggers.

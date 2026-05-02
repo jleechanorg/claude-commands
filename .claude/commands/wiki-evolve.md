@@ -14,7 +14,7 @@ Self-improving loop that validates llm-wiki against Karpathy pattern, identifies
 
 ```bash
 # Check wiki structure
-WIKI_DIR="$HOME/llm_wiki/wiki"
+WIKI_DIR="/Users/jleechan/llm_wiki/wiki"
 echo "=== WIKI STRUCTURE CHECK ==="
 ls -la $WIKI_DIR/
 
@@ -25,16 +25,16 @@ echo "Concepts: $(ls $WIKI_DIR/concepts/*.md 2>/dev/null | wc -l)"
 
 # Check for root wiki files (should NOT exist)
 echo "=== ROOT DUPLICATES CHECK ==="
-ls $HOME/llm_wiki/*.md 2>/dev/null || echo "No root .md files (good)"
+ls /Users/jleechan/llm_wiki/*.md 2>/dev/null || echo "No root .md files (good)"
 ```
 
 ### Phase 2: MEASURE — Pattern Compliance
 
 ```bash
 # Entity/concept ratio
-SOURCES=$(ls $HOME/llm_wiki/wiki/sources/*.md 2>/dev/null | wc -l)
-ENTITIES=$(ls $HOME/llm_wiki/wiki/entities/*.md 2>/dev/null | wc -l)
-CONCEPTS=$(ls $HOME/llm_wiki/wiki/concepts/*.md 2>/dev/null | wc -l)
+SOURCES=$(ls /Users/jleechan/llm_wiki/wiki/sources/*.md 2>/dev/null | wc -l)
+ENTITIES=$(ls /Users/jleechan/llm_wiki/wiki/entities/*.md 2>/dev/null | wc -l)
+CONCEPTS=$(ls /Users/jleechan/llm_wiki/wiki/concepts/*.md 2>/dev/null | wc -l)
 
 echo "=== RATIO CHECK ==="
 echo "Sources: $SOURCES, Entities: $ENTITIES, Concepts: $CONCEPTS"
@@ -43,7 +43,7 @@ echo "Concept ratio: $(echo "scale=2; $CONCEPTS * 100 / $SOURCES" | bc)%"
 
 # Index quality check
 echo "=== INDEX QUALITY ==="
-head -30 $HOME/llm_wiki/wiki/index.md
+head -30 /Users/jleechan/llm_wiki/wiki/index.md
 ```
 
 ### Phase 3: DIAGNOSE — Identify Gaps
@@ -66,19 +66,19 @@ For each gap found:
 
 ```bash
 # Run /wiki-lint
-python3 $HOME/llm_wiki/lint.py
+python3 /Users/jleechan/llm_wiki/lint.py
 
 # Verify no broken wikilinks
-grep -r '\[\[' $HOME/llm_wiki/wiki/sources/*.md | head -20
+grep -r '\[\[' /Users/jleechan/llm_wiki/wiki/sources/*.md | head -20
 ```
 
 ### Phase 6: RECORD — Log Findings
 
 ```bash
 # Append to wiki evolution log
-echo "## $(date '+%Y-%m-%d %H:%M')" >> $HOME/llm_wiki/wiki/evolution-log.md
-echo "Sources: $SOURCES, Entities: $ENTITIES, Concepts: $CONCEPTS" >> $HOME/llm_wiki/wiki/evolution-log.md
-echo "Issues: [list]" >> $HOME/llm_wiki/wiki/evolution-log.md
+echo "## $(date '+%Y-%m-%d %H:%M')" >> /Users/jleechan/llm_wiki/wiki/evolution-log.md
+echo "Sources: $SOURCES, Entities: $ENTITIES, Concepts: $CONCEPTS" >> /Users/jleechan/llm_wiki/wiki/evolution-log.md
+echo "Issues: [list]" >> /Users/jleechan/llm_wiki/wiki/evolution-log.md
 ```
 
 ### Phase 7: RECAP — Cycle Summary

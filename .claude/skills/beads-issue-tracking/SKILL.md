@@ -1,4 +1,4 @@
-# Beads Issue Tracking - Your Project Reference
+# Beads Issue Tracking - WorldArchitect.AI Reference
 
 Beads CLI is **`br`** (`~/.local/bin/br`, beads-rs). The legacy **`bd`** binary is **not installed** on this system; use **`br`** everywhere. Optional shell convenience: `alias bd='br'` (see `~/.bashrc`).
 

@@ -1,4 +1,4 @@
-# Beads Issue Tracking - Your Project Reference
+# Beads Issue Tracking - WorldArchitect.AI Reference
 
 Beads (`bd`) is the project's git-native issue tracker. Issues live in `.beads/issues.jsonl` (version-controlled) with a SQLite cache (`beads.db`, gitignored).
 

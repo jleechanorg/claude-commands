@@ -28,7 +28,7 @@ For the core screenshot-decide-act loop, see the `claude-code-computer-use` skil
 - 2026-04-05: Manager conversation input at screen (860,-230) when Manager is at x=429,y=-1005,w=1437,h=849 — reliable across sessions as long as Manager hasn't been resized
 - 2026-04-05: Red stop square (active generation indicator) in editor Agent panel appears at retina x≈2312-2331, y≈1608-1627 (for win 902 1189x857) = logical x≈1156, y≈804 — bottom-right of Agent panel; filter right-side only (x > 80% of image width) to avoid false positives from left-side gutter
 - 2026-04-05: win313/319/334 FPs — light-blue code highlights [136,201,245] and blue UI elements in non-Manager editor windows persist after click; muted blue with G>130 is NOT a button; add all persistent coords to FP_SET after first click-persist confirmation; check G<165 threshold before counting as real Allow
-- 2026-04-05: win319 ($USER—list window at 186,-990) generates multiple stacked Allow dialogs — each click reveals next one; scan persists showing new coords; click each until CLEAN; FP after 2nd persistence
+- 2026-04-05: win319 (jleechan—list window at 186,-990) generates multiple stacked Allow dialogs — each click reveals next one; scan persists showing new coords; click each until CLEAN; FP after 2nd persistence
 - 2026-04-04: Tab bar FP — Antigravity's blue active-tab indicator spans the full window width at retina y=0-120 (logical y=0-60); skip rows < 120 retina to avoid detecting tab bar blue as Allow dialogs; bottom status bar also fires at retina y>1600 with muted blue [70,127,161] — skip if B<165 or if G>130 (muted blue is not Allow button)
 - 2026-04-04: PIL scan thresholds were too strict — B>150, R<150, B>R+50 missed Allow button with edge pixels having R up to 197; real Allow button had B~203, R~39 mean but gradients/edges up to R=197; CORRECT thresholds: B>130, R<180, B>R+30, G<B; also scan from row 0 (not h//2) since dialogs can appear anywhere; min pixel threshold raised to 200 to compensate for looser thresholds
 - 2026-04-04: MANDATORY — keep 3 conversations active at all times; check at every cycle end; if <3 active, click idle 24h conversations in reverse-cron order and send continuation tasks until 3 are generating (confirmed via red stop square, not just A11y spinner which lags)
@@ -158,7 +158,7 @@ FP = {
     '83,623', '83,586', '91,585',
     # win313 (x=-28,y=-998): light blue [136,201,245] code highlights — G=201 is muted/sky blue, not button blue
     '556,-742', '560,-764',
-    # win319 (x=186,y=-990): blue content in $USER—list workspace — persists after click
+    # win319 (x=186,y=-990): blue content in jleechan—list workspace — persists after click
     '547,-682', '579,-767',
     # win334 stack (x=264+,y=159+): blue UI element at 713,781 — persists; real Allow cleared at win334
     '713,781',
@@ -1336,7 +1336,7 @@ The "New conversation in > [workspace]" dropdown is **web-rendered and cannot be
 ```bash
 # The dropdown says "agent-orchestrator" but you want worldai_claw? Don't try to switch it.
 # Just include the workspace path explicitly in the prompt:
-peekaboo paste --app Antigravity --text "You are working in $HOME/project_worldaiclaw/worldai_claw on branch main. <your task here>"
+peekaboo paste --app Antigravity --text "You are working in /Users/jleechan/project_worldaiclaw/worldai_claw on branch main. <your task here>"
 ```
 
 This works because Antigravity agents resolve the workspace from the path in the prompt, regardless of which workspace the dropdown shows. The dropdown only sets the default context — explicit paths override it.

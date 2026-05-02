@@ -8,12 +8,13 @@ type: skill
 
 Use the canonical evolve-loop skill at:
 
-- `$HOME/.claude/skills/evolve-loop/SKILL.md`
+- `/Users/jleechan/.claude/skills/evolve-loop/SKILL.md`
 
 Execution rule:
 - Load that skill and follow it as the source of truth.
 - For non-Claude runtimes, prefer the skill file over this wrapper.
 - If repo-local automation needs a loop body, read the skill file directly rather than duplicating the command text.
+
 **The loop runs autonomously until one of these termination conditions:**
 1. User explicitly says "stop" or "pause"
 2. 12 hours elapsed since first cycle
@@ -86,7 +87,7 @@ for sess in $(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E '(ao
   case "$sess" in
     *-ao-*) repo="jleechanorg/agent-orchestrator" ;;
     *-jc-*) repo="jleechanorg/jleechanclaw" ;;
-    *-wa-*) repo="$GITHUB_REPOSITORY" ;;
+    *-wa-*) repo="jleechanorg/worldarchitect.ai" ;;
     *-wc-*) repo="jleechanorg/worldai_claw" ;;
     *) continue ;;
   esac

@@ -1,6 +1,6 @@
 # Repro Copy Workflow
 
-Use this skill when you need to copy a real campaign to `<your-email@gmail.com>`,
+Use this skill when you need to copy a real campaign to `jleechantest@gmail.com`,
 replay a reported issue against a real local server + real LLM, and capture
 evidence that can survive review.
 
@@ -37,7 +37,7 @@ Destructive variant mutation is opt-in:
 
 ## What it does
 
-1. Resolves the destination UID for `<your-email@gmail.com>`.
+1. Resolves the destination UID for `jleechantest@gmail.com`.
 2. Creates two copies of the source campaign:
    - canonical copy
    - variant copy

@@ -1,5 +1,5 @@
 ---
-description: Generate comprehensive product spec, engineering design, and TDD implementation plan documents for any feature or project. Generalized from your-project.com /design command.
+description: Generate comprehensive product spec, engineering design, and TDD implementation plan documents for any feature or project. Generalized from worldarchitect.ai /design command.
 ---
 
 # /design — Product & Engineering Design Documentation
@@ -412,5 +412,5 @@ The `/design` command succeeds when:
 
 ## Source
 
-Generalized from `your-project.com/.claude/commands/design.md` (1140 lines, 35KB).
+Generalized from `worldarchitect.ai/.claude/commands/design.md` (1140 lines, 35KB).
 Original repo-specific backup preserved at `~/.claude/skills/design-doc-backup-worldarchitect.md`.

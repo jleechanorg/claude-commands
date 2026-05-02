@@ -166,7 +166,7 @@ Do not skip sparse history just because roadmap docs exist; each cycle must samp
 Inspect:
 - official roadmap queue vs current open related PRs
 - whether every related open PR carries the `zfc_level` label
-- active AO sessions for `your-project.com`
+- active AO sessions for `worldarchitect.ai`
 - last 20-30 lines from each worker tmux pane
 - if a pane is ambiguous, capture 60-80 lines rather than trusting a short tail
 - current worker conversation state from sparse `~/.codex/sessions` / `~/.claude/projects` history where available

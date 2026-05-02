@@ -1,7 +1,7 @@
 # mem0 — OpenClaw Shared Memory
 
 Query and write to the shared mem0 qdrant store (`openclaw_mem0`, 127.0.0.1:6333).
-All agents (Claude, Codex, OpenClaw) share this store under `user_id=$USER`.
+All agents (Claude, Codex, OpenClaw) share this store under `user_id=jleechan`.
 
 ## Quick reference
 
