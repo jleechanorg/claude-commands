@@ -149,7 +149,7 @@ for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" 
 
   # Get last commit date
   last_commit=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/commits" --jq '.[-1].commit.committer.date' 2>/dev/null)
-  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || echo 0)
+  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || date -u -d "$last_commit" +%s 2>/dev/null || echo 0)
   gap_mins=$(( (current_epoch - commit_epoch) / 60 ))
 
   # Get review state
@@ -255,7 +255,7 @@ for sess in $(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E '(ao
   case "$sess" in
     ao-*) repo="jleechanorg/agent-orchestrator" ;;
     jc-*) repo="jleechanorg/jleechanclaw" ;;
-    wa-*) repo="${GITHUB_REPOSITORY:-$GITHUB_REPOSITORY}"  ;; # set GITHUB_REPOSITORY or hardcode your wa-* repo here
+    wa-*) repo="${GITHUB_REPOSITORY:-owner/worldarchitect.ai}" ;;  # set GITHUB_REPOSITORY or hardcode your repo
     wc-*) repo="jleechanorg/worldai_claw" ;;
     *) continue ;;
   esac
