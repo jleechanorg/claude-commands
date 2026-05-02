@@ -14,12 +14,6 @@ Execution rule:
 - Load that skill and follow it as the source of truth.
 - For non-Claude runtimes, prefer the skill file over this wrapper.
 - If repo-local automation needs a loop body, read the skill file directly rather than duplicating the command text.
-e 7 (Recap), IMMEDIATELY start Phase 1 of the next cycle. Do NOT:**
-- Ask "want me to continue?"
-- Ask "shall I proceed to the next cycle?"
-- Pause for user confirmation between cycles
-- Output "Cycle N done" and wait
-
 **The loop runs autonomously until one of these termination conditions:**
 1. User explicitly says "stop" or "pause"
 2. 12 hours elapsed since first cycle
