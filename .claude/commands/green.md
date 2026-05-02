@@ -36,7 +36,7 @@ Inspect changed files and choose one mode:
 Execute ALL of these in parallel where possible:
 
 1. **Get branch name**: `gh pr view N --json headRefName --jq '.headRefName'`
-2. **Get PR state**: `gh pr view N --json state,merged --jq '{state,merged}'`
+2. **Get PR state**: `gh pr view N --json state,mergedAt --jq '{state, merged: (.mergedAt != null)}'`
    - If merged or closed: report status and stop
 3. **Green Gate log**: `gh run list --workflow green-gate.yml --branch BRANCH -L 1` → read gate-by-gate PASS/FAIL lines
 4. **Skeptic Gate log**: `gh run list --workflow skeptic-gate.yml --branch BRANCH -L 1` → read VERDICT line
