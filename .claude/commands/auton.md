@@ -255,7 +255,7 @@ for sess in $(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E '(ao
   case "$sess" in
     ao-*) repo="jleechanorg/agent-orchestrator" ;;
     jc-*) repo="jleechanorg/jleechanclaw" ;;
-    wa-*) repo="${GITHUB_REPOSITORY:-$GITHUB_REPOSITORY}"  ;; # set GITHUB_REPOSITORY or hardcode your wa-* repo here
+    wa-*) repo="${GITHUB_REPOSITORY:-}"  ;; # set GITHUB_REPOSITORY or hardcode your wa-* repo here
     wc-*) repo="jleechanorg/worldai_claw" ;;
     *) continue ;;
   esac
