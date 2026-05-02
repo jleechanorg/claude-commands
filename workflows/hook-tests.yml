@@ -15,7 +15,7 @@ on:
 jobs:
   limit-pr-runs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     permissions:
       actions: write
       contents: read
@@ -23,6 +23,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
@@ -36,7 +39,15 @@ jobs:
 
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        persist-credentials: false
 
+
+    - name: Prepare runner tool cache for setup actions
+      run: |
+        chmod +x scripts/ci/setup-runner-tool-cache.sh
+        ./scripts/ci/setup-runner-tool-cache.sh
 
     - name: Set up Python 3.11
       if: runner.os == 'Linux'

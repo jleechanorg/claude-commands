@@ -29,13 +29,13 @@ execution_mode: immediate
 
 **Action Steps:**
 1. **Context Integration**: Merge base, PR-specific, and memory-based guidance
-2. **Anti-Pattern Awareness**: Prepare mistake prevention patterns
+2. **Anti-Pattern Awareness**: Prepare mistake prevention patterns (enhanced by memory patterns)
 3. **Quality Standards**: Set expectations for evidence-based development
 4. **Resource Optimization**: Apply efficient tool usage patterns
 5. **Memory Learning**: Capture guidelines consultation and application patterns
-   - **Command**: `memory_save` - Store guidelines effectiveness and application contexts
-   - **Command**: `memory_search` - Search for related guidelines and patterns
-   - Build persistent knowledge for continuous guidelines improvement
+   - **Command**: `mcp__memory-server__add_observations` - Store guidelines effectiveness and application contexts
+   - **Command**: `mcp__memory-server__create_relations` - Link guideline success to specific task types and outcomes
+   - Build persistent knowledge graph for continuous guidelines improvement
 
 ### Phase 4: Guidelines-Enhanced Execution
 
@@ -61,12 +61,15 @@ execution_mode: immediate
 
 ### Automatic Guidelines Consultation Protocol
 
-**1. Native Memory Integration** (MANDATORY):
-- **Enhanced Search**: Use native memory search for improved pattern discovery
-- **Universal Usage**: Use `memory_search` for querying related patterns
-- **Command**: `memory_search("relevant guidelines and patterns")` - Search for related guidelines
-- **Command**: `memory_save` - Store new guidelines and patterns
-- Extract learned patterns, successful strategies, and documented anti-patterns from memory
+**1. Memory MCP Integration with Query Optimization** (MANDATORY):
+- **Enhanced Search**: Use Memory MCP query optimization engine for improved search effectiveness
+- **Universal Composition**: Use `/memory search "[guidelines query]"` for optimized query processing
+- **Multi-Query Strategy**: Leverage `/memory` command's automatic compound query transformation
+- **Command**: `/memory search "relevant guidelines and patterns"` - Search with automatic optimization
+- **Command**: `/memory recall "historical guidelines applications"` - Retrieve specific guideline contexts
+- **Result Merging**: Automatic through `/memory` command's built-in deduplication and scoring
+- Extract learned patterns, successful strategies, and documented anti-patterns from enhanced knowledge retrieval
+- Identify context-specific guidelines and decision patterns from improved search results
 
 **2. CLAUDE.md Reading** (MANDATORY):
 - Always read CLAUDE.md first to understand current rules and constraints
@@ -85,16 +88,17 @@ execution_mode: immediate
 - **Fallback 2**: If no PR context, use branch-specific guidelines in `docs/branch-guidelines/{BRANCH_NAME}/guidelines.md`
 - **Fallback 3**: If outside any PR/branch context, proceed with base guidelines only
 - **Manual Override**: Accept explicit PR number via `/guidelines --pr 1286`
-- **Memory Context**: Search for PR-specific patterns and learnings in memory
+- **Memory Context**: Search for PR-specific patterns and learnings in memory graph
 
 **5. PR-Specific Guidelines Management**:
 - Check for existing `docs/pr-guidelines/{PR_NUMBER}/guidelines.md`
 - If missing, create basic PR-specific guidelines template
 - If exists, read and apply PR-specific patterns and learnings
-- **Native Memory**: Store PR guidelines and outcomes in native memory
-  - **Command**: `memory_save` - Store guidelines and patterns
-  - **Command**: `memory_search` - Search for related patterns
-- Auto-update with new patterns discovered during command execution
+- **Memory Integration**: Store PR guidelines and outcomes in persistent knowledge graph
+  - **Command**: `mcp__memory-server__create_entities` - Create PR guideline entities with metadata
+  - **Command**: `mcp__memory-server__create_relations` - Link PR patterns to project and guideline contexts
+  - **Command**: `mcp__memory-server__add_observations` - Store specific guideline applications and results
+- Auto-update with new patterns discovered during command execution and persist to memory
 
 ## Usage Patterns
 
@@ -235,14 +239,15 @@ execution_mode: immediate
 
 ## Advanced Features
 
-### Enhanced Pattern Learning with Native Memory
+### Enhanced Pattern Learning with Memory MCP
 
-- **Native Memory Integration**: Full persistent memory integration
-  - **Command**: `memory_save` - Store guideline patterns and learnings
-  - **Command**: `memory_search` - Query for related patterns during consultation
+- **Memory MCP Connection**: Full persistent knowledge graph integration
+  - **Command**: `mcp__memory-server__create_entities` - Store guideline patterns as structured entities
+  - **Command**: `mcp__memory-server__create_relations` - Link patterns to contexts, outcomes, and effectiveness
+  - **Command**: `/memory search "[relevant patterns]"` - Query with automatic optimization during consultation
 - **Evidence Collection**: Document specific incidents with PR references and structured metadata
 - **Continuous Improvement**: Update guidelines based on execution outcomes with persistent learning
-- **Cross-PR Learning**: Apply patterns learned in one PR to future work through memory analysis
+- **Cross-PR Learning**: Apply patterns learned in one PR to future work through memory graph analysis
 - **Pattern Recognition**: Identify recurring patterns and anti-patterns across multiple contexts
 - **Success Correlation**: Track guideline effectiveness and optimization opportunities
 

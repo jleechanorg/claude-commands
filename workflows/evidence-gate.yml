@@ -1,0 +1,106 @@
+name: Evidence Bundle Validation
+# Validates structural evidence bundle requirements on PRs touching testing_mcp/testing_ui.
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_sha:
+        description: "PR head commit SHA (for manual evidence gate on config-only PRs)"
+        required: false
+        type: string
+  pull_request:
+    paths:
+      - "testing_mcp/**"
+      - "testing_ui/**"
+      - "deploy.sh"
+      - ".github/workflows/evidence-gate.yml"
+
+jobs:
+  validate-evidence-bundles:
+    name: Validate Evidence Bundles
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Validate evidence bundle structure
+        run: |
+          set -euo pipefail
+          ERRORS=0
+
+          echo "=== Check 1: EVIDENCE_FORMAT_VERSION defined in evidence_utils.py ==="
+          if grep -q '^EVIDENCE_FORMAT_VERSION' testing_mcp/lib/evidence_utils.py; then
+            echo "PASS: EVIDENCE_FORMAT_VERSION is defined"
+          else
+            echo "FAIL: EVIDENCE_FORMAT_VERSION not found at module level in testing_mcp/lib/evidence_utils.py"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          echo ""
+          echo "=== Check 2: testing_mcp/conftest.py exists ==="
+          if [ -f testing_mcp/conftest.py ]; then
+            echo "PASS: testing_mcp/conftest.py exists"
+          else
+            echo "FAIL: testing_mcp/conftest.py not found"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          echo ""
+          echo "=== Check 3: EVIDENCE_TMP_ROOT_NAME is dynamically computed ==="
+          # It must be assigned via a function call, not a hardcoded string literal.
+          # Valid:   EVIDENCE_TMP_ROOT_NAME = _get_evidence_tmp_root_name()
+          # Invalid: EVIDENCE_TMP_ROOT_NAME = "your-project.com"
+          if grep -qE '^EVIDENCE_TMP_ROOT_NAME\s*=\s*["\x27]' testing_mcp/lib/evidence_utils.py; then
+            echo "FAIL: EVIDENCE_TMP_ROOT_NAME appears to be a hardcoded string literal"
+            echo "  It must be dynamically computed (e.g. via a function call)"
+            ERRORS=$((ERRORS + 1))
+          elif grep -qE '^EVIDENCE_TMP_ROOT_NAME\s*=' testing_mcp/lib/evidence_utils.py; then
+            echo "PASS: EVIDENCE_TMP_ROOT_NAME is defined and not a hardcoded string"
+          else
+            echo "FAIL: EVIDENCE_TMP_ROOT_NAME not found at module level"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          echo ""
+          echo "=== Check 4: Evidence standards stubs exist ==="
+          STUBS_OK=true
+          for stub in ".claude/skills/evidence-standards.md" ".codex/skills/evidence-standards/SKILL.md"; do
+            if [ -f "$stub" ]; then
+              echo "PASS: $stub exists"
+            else
+              echo "FAIL: $stub not found"
+              STUBS_OK=false
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+
+          echo ""
+          echo "=== Check 5: evidence_utils.py syntax (byte-compile, no venv) ==="
+          if python -m py_compile testing_mcp/lib/evidence_utils.py; then
+            echo "PASS: evidence_utils.py compiles"
+          else
+            echo "FAIL: evidence_utils.py py_compile failed"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          echo ""
+          echo "==============================="
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "FAILED: $ERRORS check(s) failed"
+            exit 1
+          else
+            echo "ALL CHECKS PASSED"
+          fi

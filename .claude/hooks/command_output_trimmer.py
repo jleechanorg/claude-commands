@@ -20,6 +20,7 @@ from typing import Any
 @dataclass
 class CompressionStats:
     """Statistics about output compression performance."""
+
     original_size: int = 0
     compressed_size: int = 0
     bytes_saved: int = 0
@@ -28,7 +29,7 @@ class CompressionStats:
     compressed_lines: int = 0
     lines_saved: int = 0
     processing_time_ms: float = 0.0
-    command_type: str = 'unknown'
+    command_type: str = "unknown"
 
     def __post_init__(self):
         """Calculate derived metrics."""
@@ -38,11 +39,16 @@ class CompressionStats:
             self.compression_ratio = min(1.0, self.bytes_saved / self.original_size)
 
     @classmethod
-    def from_compression(cls, original_output: str, compressed_output: str,
-                        processing_time_ms: float = 0.0, command_type: str = 'unknown') -> 'CompressionStats':
+    def from_compression(
+        cls,
+        original_output: str,
+        compressed_output: str,
+        processing_time_ms: float = 0.0,
+        command_type: str = "unknown",
+    ) -> "CompressionStats":
         """Create CompressionStats from original and compressed output."""
-        original_size = len(original_output.encode('utf-8'))
-        compressed_size = len(compressed_output.encode('utf-8'))
+        original_size = len(original_output.encode("utf-8"))
+        compressed_size = len(compressed_output.encode("utf-8"))
         original_lines = len(original_output.splitlines())
         compressed_lines = len(compressed_output.splitlines())
 
@@ -52,8 +58,9 @@ class CompressionStats:
             original_lines=original_lines,
             compressed_lines=compressed_lines,
             processing_time_ms=processing_time_ms,
-            command_type=command_type
+            command_type=command_type,
         )
+
 
 # Configuration constants to replace magic numbers
 class Config:
@@ -78,17 +85,34 @@ class Config:
     # Argument length limit to prevent DoS
     ARG_LENGTH_LIMIT = 1000
 
+
 class OptimizedCommandOutputTrimmer:
     # Pre-compiled regex patterns for performance
     COMMAND_PATTERNS: dict[str, re.Pattern] = {
-        'test': re.compile(r'(Running tests|PASSED|FAILED|test_\w+|pytest|unittest)', re.IGNORECASE),
-        'pushl': re.compile(r'(git push|PR #\d+|Labels applied|Pushing to|origin/)', re.IGNORECASE),
-        'copilot': re.compile(r'(Phase \d+|COPILOT|Comment coverage|⏱️ EXECUTION TIMING)', re.IGNORECASE),
-        'coverage': re.compile(r'(Coverage report|TOTAL.*\d+%|\.py\s+\d+\s+\d+\s+\d+%)', re.IGNORECASE),
-        'execute': re.compile(r'(TODO:|✅ COMPLETED|🔄 IN PROGRESS|TodoWrite tool)', re.IGNORECASE),
-        'cerebras': re.compile(r'(Cerebras|🚀 SPEED|Token generation)', re.IGNORECASE),
-        'orchestrate': re.compile(r'(orchestration|tmux|task-agent-|Redis coordination)', re.IGNORECASE)
+        "test": re.compile(
+            r"(Running tests|PASSED|FAILED|test_\w+|pytest|unittest)", re.IGNORECASE
+        ),
+        "pushl": re.compile(
+            r"(git push|PR #\d+|Labels applied|Pushing to|origin/)", re.IGNORECASE
+        ),
+        "copilot": re.compile(
+            r"(Phase \d+|COPILOT|Comment coverage|⏱️ EXECUTION TIMING)", re.IGNORECASE
+        ),
+        "coverage": re.compile(
+            r"(Coverage report|TOTAL.*\d+%|\.py\s+\d+\s+\d+\s+\d+%)", re.IGNORECASE
+        ),
+        "execute": re.compile(
+            r"(TODO:|✅ COMPLETED|🔄 IN PROGRESS|TodoWrite tool)", re.IGNORECASE
+        ),
+        "cerebras": re.compile(r"(Cerebras|🚀 SPEED|Token generation)", re.IGNORECASE),
+        "orchestrate": re.compile(
+            r"(orchestration|tmux|task-agent-|Redis coordination)", re.IGNORECASE
+        ),
     }
+    HOOK_TOOL_NAMES = {"Edit", "Write", "MultiEdit"}
+    HOOK_SUMMARY_MAX_STRING_CHARS = 240
+    HOOK_SUMMARY_MAX_ITEMS = 6
+    HOOK_SUMMARY_MAX_DEPTH = 2
 
     # Thread-safe singleton pattern
     _instance = None
@@ -115,62 +139,77 @@ class OptimizedCommandOutputTrimmer:
         self.config = self._load_config_once()
         # Use bounded collections to prevent memory leaks
         self.recent_stats = deque(maxlen=Config.MAX_STATS_ENTRIES)
-        self.stats_summary = {'total_saved': 0, 'count': 0, 'total_original': 0, 'total_trimmed': 0}
+        self.stats_summary = {
+            "total_saved": 0,
+            "count": 0,
+            "total_original": 0,
+            "total_trimmed": 0,
+        }
         self.perf_stats = deque(maxlen=Config.MAX_STATS_ENTRIES)
 
     def _load_config_once(self) -> dict:
         """Load configuration once and cache it"""
         if OptimizedCommandOutputTrimmer._config is None:
-            settings_path = os.path.expanduser('~/.claude/settings.json')
+            settings_path = os.path.expanduser("~/.claude/settings.json")
             default_config = {
-                'enabled': True,
-                'compression_threshold': 0.2,
-                'log_statistics': False,  # Disabled by default for performance
-                'preserve_errors': True,
-                'max_output_lines': 100,
-                'performance_mode': True,  # New flag for aggressive optimization
-                'passthrough_markers': [
-                    '[claude:show-full-output]',
-                    '[claude:full-output]',
-                    '[claude:no-trim]'
+                "enabled": True,
+                "compression_threshold": 0.2,
+                "log_statistics": False,  # Disabled by default for performance
+                "preserve_errors": True,
+                "max_output_lines": 100,
+                "performance_mode": True,  # New flag for aggressive optimization
+                "passthrough_markers": [
+                    "[claude:show-full-output]",
+                    "[claude:full-output]",
+                    "[claude:no-trim]",
                 ],
-                'passthrough_requests': [
-                    'show full output',
-                    'show the full output',
-                    'show output',
-                    'display full output',
-                    'need the full output',
-                    'full command output'
+                "passthrough_requests": [
+                    "show full output",
+                    "show the full output",
+                    "show output",
+                    "display full output",
+                    "need the full output",
+                    "full command output",
                 ],
-                'custom_rules': {
-                    'test': {'max_passed_tests': 3, 'preserve_failures': True},
-                    'pushl': {'max_git_lines': 5, 'preserve_pr_links': True},
-                    'copilot': {'max_timing_lines': 2, 'preserve_phases': True},
-                    'coverage': {'max_file_lines': 10, 'preserve_summary': True},
-                    'execute': {'max_explanation_lines': 5, 'preserve_todos': True}
-                }
+                "custom_rules": {
+                    "test": {"max_passed_tests": 3, "preserve_failures": True},
+                    "pushl": {"max_git_lines": 5, "preserve_pr_links": True},
+                    "copilot": {"max_timing_lines": 2, "preserve_phases": True},
+                    "coverage": {"max_file_lines": 10, "preserve_summary": True},
+                    "execute": {"max_explanation_lines": 5, "preserve_todos": True},
+                },
             }
 
             try:
                 if os.path.exists(settings_path):
                     with open(settings_path) as f:
                         settings = json.load(f)
-                        if 'output_trimmer' in settings:
-                            user_config = settings['output_trimmer']
+                        if "output_trimmer" in settings:
+                            user_config = settings["output_trimmer"]
                             # Validate config for solo dev debugging efficiency
-                            validated_config = self._validate_config(user_config, settings_path)
+                            validated_config = self._validate_config(
+                                user_config, settings_path
+                            )
                             default_config.update(validated_config)
             except FileNotFoundError:
                 # Settings file doesn't exist - use defaults (normal case)
                 pass
             except json.JSONDecodeError as e:
                 # Malformed JSON - help solo dev debug quickly
-                sys.stderr.write(f"⚠️ CONFIG ERROR: {settings_path} has invalid JSON at line {e.lineno}: {e.msg}\n")
-                sys.stderr.write("Using default configuration. Fix JSON syntax to customize output trimmer.\n")
+                sys.stderr.write(
+                    f"⚠️ CONFIG ERROR: {settings_path} has invalid JSON at line {e.lineno}: {e.msg}\n"
+                )
+                sys.stderr.write(
+                    "Using default configuration. Fix JSON syntax to customize output trimmer.\n"
+                )
             except Exception as e:
                 # Other errors - provide helpful context for debugging
-                sys.stderr.write(f"⚠️ CONFIG WARNING: Error loading {settings_path}: {e}\n")
-                sys.stderr.write("Using default configuration. Check file permissions and format.\n")
+                sys.stderr.write(
+                    f"⚠️ CONFIG WARNING: Error loading {settings_path}: {e}\n"
+                )
+                sys.stderr.write(
+                    "Using default configuration. Check file permissions and format.\n"
+                )
 
             OptimizedCommandOutputTrimmer._config = default_config
 
@@ -182,12 +221,12 @@ class OptimizedCommandOutputTrimmer:
 
         # Define expected types for key config values
         expected_types = {
-            'enabled': bool,
-            'compression_threshold': (int, float),
-            'log_statistics': bool,
-            'preserve_errors': bool,
-            'max_output_lines': int,
-            'performance_mode': bool
+            "enabled": bool,
+            "compression_threshold": (int, float),
+            "log_statistics": bool,
+            "preserve_errors": bool,
+            "max_output_lines": int,
+            "performance_mode": bool,
         }
 
         for key, value in user_config.items():
@@ -196,18 +235,26 @@ class OptimizedCommandOutputTrimmer:
                 # Handle both single type and tuple of types
                 if isinstance(expected_type, tuple):
                     if not isinstance(value, expected_type):
-                        sys.stderr.write(f"⚠️ CONFIG: {settings_path} - '{key}' should be {' or '.join(t.__name__ for t in expected_type)}, got {type(value).__name__}. Using default.\n")
+                        sys.stderr.write(
+                            f"⚠️ CONFIG: {settings_path} - '{key}' should be {' or '.join(t.__name__ for t in expected_type)}, got {type(value).__name__}. Using default.\n"
+                        )
                         continue
                 elif not isinstance(value, expected_type):
-                    sys.stderr.write(f"⚠️ CONFIG: {settings_path} - '{key}' should be {expected_type.__name__}, got {type(value).__name__}. Using default.\n")
+                    sys.stderr.write(
+                        f"⚠️ CONFIG: {settings_path} - '{key}' should be {expected_type.__name__}, got {type(value).__name__}. Using default.\n"
+                    )
                     continue
 
                 # Additional validation for specific keys
-                if key == 'compression_threshold' and not (0.0 <= value <= 1.0):
-                    sys.stderr.write(f"⚠️ CONFIG: {settings_path} - 'compression_threshold' should be between 0.0 and 1.0, got {value}. Using default.\n")
+                if key == "compression_threshold" and not (0.0 <= value <= 1.0):
+                    sys.stderr.write(
+                        f"⚠️ CONFIG: {settings_path} - 'compression_threshold' should be between 0.0 and 1.0, got {value}. Using default.\n"
+                    )
                     continue
-                if key == 'max_output_lines' and value < 1:
-                    sys.stderr.write(f"⚠️ CONFIG: {settings_path} - 'max_output_lines' should be positive, got {value}. Using default.\n")
+                if key == "max_output_lines" and value < 1:
+                    sys.stderr.write(
+                        f"⚠️ CONFIG: {settings_path} - 'max_output_lines' should be positive, got {value}. Using default.\n"
+                    )
                     continue
 
             # Accept the validated value
@@ -218,12 +265,16 @@ class OptimizedCommandOutputTrimmer:
     def detect_command_type(self, output: str) -> str:
         """Detect command type using pre-compiled patterns"""
         # Quick check on first N chars for performance
-        sample = output[:Config.DETECTION_SAMPLE_SIZE] if len(output) > Config.DETECTION_SAMPLE_SIZE else output
+        sample = (
+            output[: Config.DETECTION_SAMPLE_SIZE]
+            if len(output) > Config.DETECTION_SAMPLE_SIZE
+            else output
+        )
 
         for cmd_type, pattern in self.COMMAND_PATTERNS.items():
             if pattern.search(sample):
                 return cmd_type
-        return 'generic'
+        return "generic"
 
     def fast_trim(self, lines: list[str], max_lines: int = None) -> list[str]:
         """Ultra-fast generic trimming with intelligent middle summarization"""
@@ -234,16 +285,15 @@ class OptimizedCommandOutputTrimmer:
             return lines
 
         # Keep first N and last M lines based on config
-        trimmed = lines[:Config.FAST_TRIM_KEEP_FIRST]
+        trimmed = lines[: Config.FAST_TRIM_KEEP_FIRST]
 
         # Summarize the middle section instead of just excluding it
-        middle_lines = lines[Config.FAST_TRIM_KEEP_FIRST:-Config.FAST_TRIM_KEEP_LAST]
+        middle_lines = lines[Config.FAST_TRIM_KEEP_FIRST : -Config.FAST_TRIM_KEEP_LAST]
         summary = self._summarize_middle_content(middle_lines)
         trimmed.extend(summary)
 
-        trimmed.extend(lines[-Config.FAST_TRIM_KEEP_LAST:])
+        trimmed.extend(lines[-Config.FAST_TRIM_KEEP_LAST :])
         return trimmed
-
 
     def _collect_middle_summary_items(
         self,
@@ -267,9 +317,8 @@ class OptimizedCommandOutputTrimmer:
                 line_stripped = line_stripped[:max_line_chars] + "..."
 
             upper = line_stripped.upper()
-            if (
-                len(errors) < max_collected_items
-                and any(p in upper for p in ("ERROR", "FAILED", "EXCEPTION", "WARNING"))
+            if len(errors) < max_collected_items and any(
+                p in upper for p in ("ERROR", "FAILED", "EXCEPTION", "WARNING")
             ):
                 errors.append(line_stripped)
 
@@ -281,7 +330,8 @@ class OptimizedCommandOutputTrimmer:
                 urls.append(line_stripped)
 
             if len(status_updates) < max_collected_items and any(
-                p in line_stripped for p in ("✅", "❌", "🔄", "PASSED", "SUCCESS", "COMPLETED")
+                p in line_stripped
+                for p in ("✅", "❌", "🔄", "PASSED", "SUCCESS", "COMPLETED")
             ):
                 status_updates.append(line_stripped)
 
@@ -308,7 +358,9 @@ class OptimizedCommandOutputTrimmer:
             summary_lines.append(f"    ... and {len(items) - max_items} more")
 
     @staticmethod
-    def _append_basic_middle_stats(summary_lines: list[str], middle_lines: list[str]) -> None:
+    def _append_basic_middle_stats(
+        summary_lines: list[str], middle_lines: list[str]
+    ) -> None:
         unique_patterns: set[str] = set()
         for line in middle_lines[:20]:
             words = line.strip().split()[:3]
@@ -316,23 +368,31 @@ class OptimizedCommandOutputTrimmer:
                 continue
             unique_patterns.add(" ".join(words))
 
-        summary_lines.append(f"  Content types found: {len(unique_patterns)} different patterns")
+        summary_lines.append(
+            f"  Content types found: {len(unique_patterns)} different patterns"
+        )
         if unique_patterns:
             summary_lines.append("  Sample patterns:")
             for pattern in list(unique_patterns)[:3]:
                 summary_lines.append(f"    • {pattern}...")
 
-    def _summarize_middle_content(self, middle_lines: list[str], max_summary_lines: int = 25) -> list[str]:
+    def _summarize_middle_content(
+        self, middle_lines: list[str], max_summary_lines: int = 25
+    ) -> list[str]:
         """Create an intelligent summary of middle content with bounded memory usage."""
         if not middle_lines:
             return []
 
-        summary_lines: list[str] = [f"\n... [SUMMARY of {len(middle_lines)} middle lines] ..."]
+        summary_lines: list[str] = [
+            f"\n... [SUMMARY of {len(middle_lines)} middle lines] ..."
+        ]
 
-        errors, urls, status_updates, important_info = self._collect_middle_summary_items(
-            middle_lines,
-            max_collected_items=10,
-            max_line_chars=200,
+        errors, urls, status_updates, important_info = (
+            self._collect_middle_summary_items(
+                middle_lines,
+                max_collected_items=10,
+                max_line_chars=200,
+            )
         )
 
         if errors:
@@ -430,15 +490,232 @@ class OptimizedCommandOutputTrimmer:
             return True
         return self._contains_passthrough_requests(output)
 
+    @staticmethod
+    def _truncate_text(text: str, max_chars: int) -> str:
+        if max_chars <= 0:
+            return ""
+        if len(text) <= max_chars:
+            return text
+        if max_chars <= 3:
+            return text[:max_chars]
+        return text[: max_chars - 3] + "..."
+
+    @staticmethod
+    def _json_byte_length(value: Any) -> int:
+        try:
+            return len(
+                json.dumps(value, ensure_ascii=False, default=str).encode("utf-8")
+            )
+        except Exception:
+            return len(str(value).encode("utf-8"))
+
+    @staticmethod
+    def _json_preview(value: Any, max_chars: int) -> str:
+        try:
+            preview = json.dumps(
+                value, ensure_ascii=False, default=str, separators=(",", ":")
+            )
+        except Exception:
+            preview = str(value)
+        return OptimizedCommandOutputTrimmer._truncate_text(preview, max_chars)
+
+    def _summarize_hook_value(
+        self,
+        value: Any,
+        *,
+        max_depth: int,
+        max_items: int,
+        max_chars: int,
+    ) -> Any:
+        if value is None or isinstance(value, (bool, int, float)):
+            return value
+
+        if isinstance(value, str):
+            return {
+                "kind": "string",
+                "bytes": len(value.encode("utf-8")),
+                "preview": self._truncate_text(value, max_chars),
+                "truncated": len(value) > max_chars,
+            }
+
+        if max_depth <= 0:
+            return {
+                "kind": type(value).__name__,
+                "bytes": self._json_byte_length(value),
+                "preview": self._json_preview(value, max_chars),
+                "truncated": True,
+            }
+
+        if isinstance(value, list):
+            items = [
+                self._summarize_hook_value(
+                    item,
+                    max_depth=max_depth - 1,
+                    max_items=max_items,
+                    max_chars=max_chars,
+                )
+                for item in value[:max_items]
+            ]
+            return {
+                "kind": "list",
+                "bytes": self._json_byte_length(value),
+                "length": len(value),
+                "items": items,
+                "truncated": len(value) > max_items
+                or any(
+                    isinstance(item, dict) and item.get("truncated") for item in items
+                ),
+            }
+
+        if isinstance(value, dict):
+            keys = list(value.keys())
+            items = {
+                str(key): self._summarize_hook_value(
+                    value[key],
+                    max_depth=max_depth - 1,
+                    max_items=max_items,
+                    max_chars=max_chars,
+                )
+                for key in keys[:max_items]
+            }
+            return {
+                "kind": "dict",
+                "bytes": self._json_byte_length(value),
+                "length": len(value),
+                "items": items,
+                "truncated": len(value) > max_items
+                or any(
+                    isinstance(item, dict) and item.get("truncated")
+                    for item in items.values()
+                ),
+            }
+
+        return {
+            "kind": type(value).__name__,
+            "bytes": self._json_byte_length(value),
+            "preview": self._truncate_text(str(value), max_chars),
+        }
+
+    def _summarize_edit_tool_input(self, tool_input: Any) -> Any:
+        if not isinstance(tool_input, dict):
+            return self._summarize_hook_value(
+                tool_input,
+                max_depth=self.HOOK_SUMMARY_MAX_DEPTH,
+                max_items=self.HOOK_SUMMARY_MAX_ITEMS,
+                max_chars=self.HOOK_SUMMARY_MAX_STRING_CHARS,
+            )
+
+        summary: dict[str, Any] = {}
+        string_keys = {
+            "file_path",
+            "path",
+            "filename",
+            "title",
+            "branch",
+            "ref",
+            "content",
+            "body",
+            "description",
+            "message",
+            "note",
+            "new_string",
+            "old_string",
+        }
+
+        for key, value in tool_input.items():
+            if key in string_keys and isinstance(value, str):
+                summary[key] = {
+                    "kind": "string",
+                    "bytes": len(value.encode("utf-8")),
+                    "preview": self._truncate_text(
+                        value, self.HOOK_SUMMARY_MAX_STRING_CHARS
+                    ),
+                    "truncated": len(value) > self.HOOK_SUMMARY_MAX_STRING_CHARS,
+                }
+            elif key == "replace_all":
+                summary[key] = value
+            else:
+                summary[key] = self._summarize_hook_value(
+                    value,
+                    max_depth=1,
+                    max_items=self.HOOK_SUMMARY_MAX_ITEMS,
+                    max_chars=self.HOOK_SUMMARY_MAX_STRING_CHARS,
+                )
+
+        return summary
+
+    def _summarize_hook_payload(self, output: str) -> str | None:
+        try:
+            payload = json.loads(output)
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+        if not isinstance(payload, dict):
+            return None
+
+        hook_event_name = payload.get("hook_event_name")
+        tool_name = payload.get("tool_name")
+        if hook_event_name != "PostToolUse" or tool_name not in self.HOOK_TOOL_NAMES:
+            return None
+
+        summary: dict[str, Any] = {}
+        for key in (
+            "session_id",
+            "cwd",
+            "hook_event_name",
+            "permission_mode",
+            "tool_name",
+            "tool_use_id",
+            "transcript_path",
+            "parentUuid",
+            "logicalParentUuid",
+            "isSidechain",
+        ):
+            if key in payload:
+                summary[key] = payload[key]
+
+        if "tool_input" in payload:
+            summary["tool_input"] = self._summarize_edit_tool_input(
+                payload["tool_input"]
+            )
+            summary["tool_input_bytes"] = self._json_byte_length(payload["tool_input"])
+
+        if "tool_response" in payload:
+            summary["tool_response"] = self._summarize_hook_value(
+                payload["tool_response"],
+                max_depth=self.HOOK_SUMMARY_MAX_DEPTH,
+                max_items=self.HOOK_SUMMARY_MAX_ITEMS,
+                max_chars=self.HOOK_SUMMARY_MAX_STRING_CHARS,
+            )
+            summary["tool_response_bytes"] = self._json_byte_length(
+                payload["tool_response"]
+            )
+
+        summary["summary_version"] = 1
+        summary["truncated"] = True
+        return json.dumps(
+            summary, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+        )
+
+    @staticmethod
+    def _is_summary_more_compact(original: str, summary: str) -> bool:
+        return len(summary.encode("utf-8")) < len(original.encode("utf-8"))
+
     def process_output(self, output: str) -> str:
         """Main processing with performance tracking"""
         if self._should_bypass(output):
             return output
 
-        # Performance tracking
-        start_time = time.perf_counter() if self.config.get('performance_mode') else 0
+        hook_summary = self._summarize_hook_payload(output)
+        if hook_summary is not None and self._is_summary_more_compact(
+            output, hook_summary
+        ):
+            return hook_summary
 
-        lines = output.split('\n')
+        # Performance tracking
+        start_time = time.perf_counter() if self.config.get("performance_mode") else 0
+
+        lines = output.split("\n")
         original_count = len(lines)
 
         # Quick exit for small outputs
@@ -446,110 +723,119 @@ class OptimizedCommandOutputTrimmer:
             return output
 
         # Performance mode: aggressive trimming
-        if self.config.get('performance_mode') and original_count > Config.AGGRESSIVE_TRIM_THRESHOLD:
+        if (
+            self.config.get("performance_mode")
+            and original_count > Config.AGGRESSIVE_TRIM_THRESHOLD
+        ):
             trimmed_lines = self.fast_trim(lines, Config.FAST_TRIM_MAX_LINES)
         else:
             # Standard mode: smart trimming
             cmd_type = self.detect_command_type(output)
 
-            if cmd_type == 'test':
+            if cmd_type == "test":
                 trimmed_lines = self.trim_test_output(lines)
-            elif cmd_type == 'pushl':
+            elif cmd_type == "pushl":
                 trimmed_lines = self.trim_pushl_output(lines)
-            elif cmd_type == 'copilot':
+            elif cmd_type == "copilot":
                 trimmed_lines = self.trim_copilot_output(lines)
             else:
                 trimmed_lines = self.fast_trim(lines)
 
         # Calculate compression
         trimmed_count = len(trimmed_lines)
-        compression_ratio = 1 - (trimmed_count / original_count) if original_count > 0 else 0
+        compression_ratio = (
+            1 - (trimmed_count / original_count) if original_count > 0 else 0
+        )
 
         # Track performance with bounded collection
-        if self.config.get('performance_mode'):
+        if self.config.get("performance_mode"):
             elapsed = (time.perf_counter() - start_time) * 1000  # Convert to ms
             # Store in bounded deque to prevent memory leak
-            self.perf_stats.append({
-                'time': elapsed,
-                'lines': original_count,
-                'compression': compression_ratio
-            })
+            self.perf_stats.append(
+                {
+                    "time": elapsed,
+                    "lines": original_count,
+                    "compression": compression_ratio,
+                }
+            )
 
             # Add performance footer only if very slow
             if elapsed > Config.PERFORMANCE_WARNING_THRESHOLD:
                 trimmed_lines.append(f"[Trimmer: {elapsed:.1f}ms]")
 
-        if compression_ratio >= self.config['compression_threshold']:
+        if compression_ratio >= self.config["compression_threshold"]:
             # Update bounded statistics to prevent memory leak
             self._update_stats(original_count, trimmed_count)
 
             # Store recent stat for analysis
-            self.recent_stats.append({
-                'original': original_count,
-                'trimmed': trimmed_count,
-                'ratio': compression_ratio
-            })
+            self.recent_stats.append(
+                {
+                    "original": original_count,
+                    "trimmed": trimmed_count,
+                    "ratio": compression_ratio,
+                }
+            )
 
-            return '\n'.join(trimmed_lines)
+            return "\n".join(trimmed_lines)
         return output
 
     def _update_stats(self, original_count: int, trimmed_count: int):
         """Update statistics with automatic reset to prevent memory leaks"""
-        self.stats_summary['total_original'] += original_count
-        self.stats_summary['total_trimmed'] += trimmed_count
-        self.stats_summary['count'] += 1
+        self.stats_summary["total_original"] += original_count
+        self.stats_summary["total_trimmed"] += trimmed_count
+        self.stats_summary["count"] += 1
 
         # Calculate and update saved lines
         lines_saved = original_count - trimmed_count
         if lines_saved > 0:
-            self.stats_summary['total_saved'] += lines_saved
+            self.stats_summary["total_saved"] += lines_saved
 
         # Reset summary periodically to prevent unbounded growth
-        if self.stats_summary['count'] > Config.STATS_RESET_THRESHOLD:
+        if self.stats_summary["count"] > Config.STATS_RESET_THRESHOLD:
             self.stats_summary = {
-                'total_original': 0,
-                'total_trimmed': 0,
-                'count': 0,
-                'total_saved': 0
+                "total_original": 0,
+                "total_trimmed": 0,
+                "count": 0,
+                "total_saved": 0,
             }
 
     def trim_test_output(self, lines: list[str]) -> list[str]:
         """Optimized test output compression"""
-        config = self.config['custom_rules']['test']
+        config = self.config["custom_rules"]["test"]
         trimmed = []
         passed_count = 0
-        total_passed = sum(1 for line in lines if 'PASSED' in line.upper())
+        total_passed = sum(1 for line in lines if "PASSED" in line.upper())
 
         for line in lines:
             # Fast check for important lines
             line_upper = line.upper()
-            if 'FAILED' in line_upper or 'ERROR' in line_upper:
+            if "FAILED" in line_upper or "ERROR" in line_upper:
                 trimmed.append(line)
-            elif 'PASSED' in line_upper:
-                if passed_count < config['max_passed_tests']:
+            elif "PASSED" in line_upper:
+                if passed_count < config["max_passed_tests"]:
                     trimmed.append(line)
                     passed_count += 1
             elif len(trimmed) < 20:  # Keep early context
                 trimmed.append(line)
 
         # Add compression indicator if we limited passed tests
-        if total_passed > config['max_passed_tests']:
-            suppressed = total_passed - config['max_passed_tests']
+        if total_passed > config["max_passed_tests"]:
+            suppressed = total_passed - config["max_passed_tests"]
             trimmed.append(f"... [{suppressed} more passed tests compressed] ...")
 
         return trimmed
 
     def trim_pushl_output(self, lines: list[str]) -> list[str]:
         """Optimized pushl output compression"""
-        config = self.config['custom_rules']['pushl']
+        config = self.config["custom_rules"]["pushl"]
         trimmed = []
         git_lines = 0
 
         for line in lines:
             # Fast check for PR links
-            if 'PR #' in line or 'github.com' in line:
+            if "PR #" in line or "github.com" in line:
                 trimmed.append(line)
-            elif 'git' in line.lower() and git_lines < config['max_git_lines']:
+            elif "git" in line.lower() and git_lines < config["max_git_lines"]:
                 trimmed.append(line)
                 git_lines += 1
             elif len(trimmed) < 10:
@@ -563,7 +849,13 @@ class OptimizedCommandOutputTrimmer:
 
         for line in lines:
             # Keep only phase markers and status
-            if 'Phase' in line or '✅' in line or '❌' in line or 'WARNING' in line or len(trimmed) < 5:
+            if (
+                "Phase" in line
+                or "✅" in line
+                or "❌" in line
+                or "WARNING" in line
+                or len(trimmed) < 5
+            ):
                 trimmed.append(line)
 
         return trimmed
@@ -571,13 +863,13 @@ class OptimizedCommandOutputTrimmer:
     def get_performance_report(self):
         """Get performance statistics from bounded collection"""
         if len(self.perf_stats) > 0:
-            recent_times = [stat['time'] for stat in self.perf_stats if 'time' in stat]
+            recent_times = [stat["time"] for stat in self.perf_stats if "time" in stat]
             if recent_times:
                 avg_time = sum(recent_times) / len(recent_times)
                 return f"Avg: {avg_time:.2f}ms over last {len(recent_times)} calls"
         return "No performance data"
 
-    def compress_output(self, output: str) -> tuple[str, 'CompressionStats']:
+    def compress_output(self, output: str) -> tuple[str, "CompressionStats"]:
         """
         Compress the output and return both the compressed output and statistics.
 
@@ -590,12 +882,10 @@ class OptimizedCommandOutputTrimmer:
         compressed_output = self.process_output(output)
 
         stats = CompressionStats.from_compression(
-            original_output=output,
-            compressed_output=compressed_output
+            original_output=output, compressed_output=compressed_output
         )
 
         return compressed_output, stats
-
 
     def _trim_args_list(self, args_list: list[Any]) -> list[Any]:
         trimmed_list: list[Any] = []
@@ -628,7 +918,11 @@ class OptimizedCommandOutputTrimmer:
                 )
 
             key_str = str(key)
-            base_key = key_str[: Config.ARG_LENGTH_LIMIT] if len(key_str) > Config.ARG_LENGTH_LIMIT else key_str
+            base_key = (
+                key_str[: Config.ARG_LENGTH_LIMIT]
+                if len(key_str) > Config.ARG_LENGTH_LIMIT
+                else key_str
+            )
 
             if base_key in trimmed_dict:
                 collision_counter[base_key] = collision_counter.get(base_key, 0) + 1
@@ -655,7 +949,11 @@ class OptimizedCommandOutputTrimmer:
             return self._trim_args_dict(args)
 
         if isinstance(args, str):
-            return args[: Config.ARG_LENGTH_LIMIT] if len(args) > Config.ARG_LENGTH_LIMIT else args
+            return (
+                args[: Config.ARG_LENGTH_LIMIT]
+                if len(args) > Config.ARG_LENGTH_LIMIT
+                else args
+            )
 
         arg_str = str(args)
         if len(arg_str) > Config.ARG_LENGTH_LIMIT:
@@ -724,7 +1022,7 @@ class OptimizedCommandOutputTrimmer:
         # Coverage compression logic - preserve totals and percentages
         trimmed = []
         for line in lines:
-            if 'TOTAL' in line or '%' in line or len(trimmed) < 5:
+            if "TOTAL" in line or "%" in line or len(trimmed) < 5:
                 trimmed.append(line)
         return trimmed
 
@@ -741,7 +1039,14 @@ class OptimizedCommandOutputTrimmer:
         # Execute compression logic - preserve TODO states and checklists
         trimmed = []
         for line in lines:
-            if '✅' in line or '🔄' in line or '❌' in line or 'TODO:' in line or '- [' in line or len(trimmed) < 10:
+            if (
+                "✅" in line
+                or "🔄" in line
+                or "❌" in line
+                or "TODO:" in line
+                or "- [" in line
+                or len(trimmed) < 10
+            ):
                 trimmed.append(line)
         return trimmed
 
@@ -762,15 +1067,15 @@ class OptimizedCommandOutputTrimmer:
         trimmed = []
 
         # Keep first few lines
-        trimmed.extend(lines[:Config.FAST_TRIM_KEEP_FIRST])
+        trimmed.extend(lines[: Config.FAST_TRIM_KEEP_FIRST])
 
         # Summarize middle content instead of just excluding it
-        middle_lines = lines[Config.FAST_TRIM_KEEP_FIRST:-Config.FAST_TRIM_KEEP_LAST]
+        middle_lines = lines[Config.FAST_TRIM_KEEP_FIRST : -Config.FAST_TRIM_KEEP_LAST]
         summary = self._summarize_middle_content(middle_lines)
         trimmed.extend(summary)
 
         # Keep last few lines
-        trimmed.extend(lines[-Config.FAST_TRIM_KEEP_LAST:])
+        trimmed.extend(lines[-Config.FAST_TRIM_KEEP_LAST :])
 
         return trimmed
 
@@ -791,7 +1096,7 @@ def main():
             raw_input = stdin_buffer.read(Config.MAX_INPUT_SIZE + 1)
             truncated = len(raw_input) > Config.MAX_INPUT_SIZE
             if truncated:
-                raw_input = raw_input[:Config.MAX_INPUT_SIZE]
+                raw_input = raw_input[: Config.MAX_INPUT_SIZE]
         else:
             byte_buffer = bytearray()
             while True:
@@ -818,10 +1123,12 @@ def main():
                 if extra_char:
                     truncated = True
 
-            raw_input = bytes(byte_buffer[:Config.MAX_INPUT_SIZE])
+            raw_input = bytes(byte_buffer[: Config.MAX_INPUT_SIZE])
 
         if truncated:
-            sys.stderr.write(f"Warning: Input exceeds {Config.MAX_INPUT_SIZE} bytes, truncating\n")
+            sys.stderr.write(
+                f"Warning: Input exceeds {Config.MAX_INPUT_SIZE} bytes, truncating\n"
+            )
 
         input_data = raw_input.decode("utf-8", errors="replace")
 
@@ -841,5 +1148,6 @@ def main():
             sys.stdout.write(input_data)
         return 1
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sys.exit(main())

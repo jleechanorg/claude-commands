@@ -12,18 +12,7 @@
 
 set -uo pipefail
 # NOTE: Do NOT use `set -e` (errexit) in hooks: hooks must be non-blocking.
-echo "[UserPromptSubmit] hook fired at $(date +%H:%M:%S) CWD=$(pwd) HOME=${HOME:-unset}" >&2
 
-# ---------------------------------------------------------------------------
-# Suppression sentinel — global kill switch for this hook
-# ---------------------------------------------------------------------------
-if [ -f "$HOME/.tmp/HOOK_UserPromptSubmit_suppressed" ]; then
-  exit 0
-fi
-
-# ---------------------------------------------------------------------------
-# find_conversation_file — locate the current session's .jsonl transcript
-# ---------------------------------------------------------------------------
 find_conversation_file() {
   local repo_root
   repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
@@ -45,72 +34,11 @@ find_conversation_file() {
   return 1
 }
 
-# ---------------------------------------------------------------------------
-# PR merge-state guard: suppress hook fires for merged/closed PRs
-# Two layers:
-#   1. Sentinel file: ~/.tmp/HOOK_cr_done_<PR> — agent writes this after
-#      confirming CR APPROVED on a merged PR.
-#   2. Conversation marker: "PR #N MERGED/CLOSED" in recent transcript.
-#
-# CR's LLM-context compaction re-embeds stale CHANGES_REQUESTED instructions
-# every ~15 min. Sentinel + conversation markers prevent re-delivery by the
-# hook itself, but /clear is required to break the agent's internal loop.
-# ---------------------------------------------------------------------------
+# Find current conversation file (most recently modified .jsonl in THIS project)
+# Session files are named with UUIDs like "3ac775c6-6ff9-40a1-a192-6319e0f34d1c.jsonl"
+CONVERSATION_FILE="$(find_conversation_file 2>/dev/null || true)"
 
-# Short-circuit: if no git repo (no PR context), exit fast without any I/O
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  # No repo — session is not PR-bound, let other hooks run
-  :
-else
-  CONVERSATION_FILE="$(find_conversation_file 2>/dev/null || true)"
-fi
-
-# Layer 0 (unconditional): Suppress for specific PR sentinels where state=awaiting_merge_approval.
-# Also suppress any HOOK_cr_done_*.json in jleechanorg/claude-commands where merged=false and closed=false.
-# Independent of conversation content or git remote availability.
-for _sentinel in "$HOME/.tmp"/HOOK_cr_done_*.json "$HOME/.tmp"/HOOK_pr*_awaiting_merge_approval.json; do
-  [ -f "$_sentinel" ] || continue
-  _sentinel_pr="$(jq -r '.pr // empty' "$_sentinel" 2>/dev/null || true)"
-  _sentinel_repo="$(jq -r '.repo // empty' "$_sentinel" 2>/dev/null || true)"
-  _sentinel_merged="$(jq -r '.merged // false' "$_sentinel" 2>/dev/null || true)"
-  _sentinel_closed="$(jq -r '.closed // false' "$_sentinel" 2>/dev/null || true)"
-  _sentinel_state="$(jq -r '.state // empty' "$_sentinel" 2>/dev/null || true)"
-  # Suppress if: (1) state=awaiting_merge_approval OR (2) repo=jleechanorg/claude-commands + not merged/closed
-  if [ "$_sentinel_state" = "awaiting_merge_approval" ] || \
-     ([ "$_sentinel_repo" = "jleechanorg/claude-commands" ] && [ "$_sentinel_merged" != "true" ] && [ "$_sentinel_closed" != "true" ]); then
-    echo "[UserPromptSubmit] PR #${_sentinel_pr} — unconditional sentinel suppress (state=$_sentinel_state)" >&2
-    exit 0
-  fi
-done
-
-if [ -n "${CONVERSATION_FILE:-}" ] && [ -f "$CONVERSATION_FILE" ]; then
-
-  # Layer 1: Check sentinel files for any PR mentioned in full conversation.
-  # Use while/read to avoid word-splitting "PR #N" into "PR" + "#N".
-  # grep -oh outputs each match on its own line; sort -u deduplicates.
-  while IFS= read -r pr_ref; do
-    pr_num="${pr_ref#PR #}"
-    # Sentinel files have .json suffix: HOOK_cr_done_<pr>.json
-    if [ -n "$pr_num" ] && [ -f "$HOME/.tmp/HOOK_cr_done_${pr_num}.json" ]; then
-      echo "[UserPromptSubmit] PR #${pr_num} — hook suppressed by sentinel (merged/closed)" >&2
-      exit 0
-    fi
-  done <<< "$(grep -ohE 'PR #[0-9]+' "$CONVERSATION_FILE" 2>/dev/null | sort -u || true)"
-
-  # Layer 2: Conversation marker — suppress if "PR #N MERGED/CLOSED" found
-  LAST20="$(tail -n 20 "$CONVERSATION_FILE" 2>/dev/null || true)"
-  if echo "$LAST20" | grep -qiE 'PR #[0-9]+ (MERGED|CLOSED)'; then
-    PR_STATE="$(echo "$LAST20" | grep -oiE 'PR #[0-9]+ (MERGED|CLOSED)' | tail -1 || true)"
-    echo "[UserPromptSubmit] $PR_STATE — hook suppressed by conversation marker" >&2
-    exit 0
-  fi
-fi
-
-# ---------------------------------------------------------------------------
-# Session health: count messages and warn on large sessions
-# ---------------------------------------------------------------------------
-
-# Count non-empty lines in conversation file
+# Count messages (non-empty lines)
 if [ -n "${CONVERSATION_FILE:-}" ] && [ -f "$CONVERSATION_FILE" ]; then
   MSG_COUNT="$(grep -c . "$CONVERSATION_FILE" 2>/dev/null || echo "0")"
 else

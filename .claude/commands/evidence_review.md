@@ -23,6 +23,7 @@ When this command is invoked with `$ARGUMENTS`:
 Determine what to review from `$ARGUMENTS`:
 - If a file/directory path: read those artifacts
 - If a description: extract relevant claims and artifacts from the recent conversation
+- If empty: review the most recent work described in the conversation (e.g., last fix, test run, deployment)
 
 ### Step 2: Try Codex Dispatch via Orchestration Library
 
@@ -30,7 +31,11 @@ Run this Bash command to attempt codex dispatch:
 
 ```bash
 # _dispatch_via_subprocess is a TaskPoller method — call ai_orch directly
-PROMPT="Review evidence for: $ARGUMENTS. Map claims to artifacts, rate quality (STRONG/WEAK/MISSING), output PASS/PARTIAL/FAIL/INCONCLUSIVE verdict."
+if [ -z "$ARGUMENTS" ]; then
+  PROMPT="Review evidence for the most recent work described in this conversation (e.g., last fix, test run, deployment). Map claims to artifacts, rate quality (STRONG/WEAK/MISSING), output PASS/PARTIAL/FAIL/INCONCLUSIVE verdict."
+else
+  PROMPT="Review evidence for: $ARGUMENTS. Map claims to artifacts, rate quality (STRONG/WEAK/MISSING), output PASS/PARTIAL/FAIL/INCONCLUSIVE verdict."
+fi
 ai_orch run --agent-cli codex "$PROMPT"
 CODEX_EXIT=$?
 echo "Codex dispatch exit: $CODEX_EXIT"
@@ -46,7 +51,7 @@ If codex dispatch failed or produced no log, use the Agent tool to launch the ev
 ```
 Use the Agent tool with:
   subagent_type: "evidence-reviewer"
-  prompt: "Review evidence for: $ARGUMENTS
+  prompt: "Review evidence for: ${ARGUMENTS:-the most recent work described in this conversation}
 
   Apply the full evidence-reviewer methodology:
   1. Inventory all artifacts mentioned in this conversation or at the provided path

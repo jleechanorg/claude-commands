@@ -168,10 +168,10 @@ EOF
 run_macos_install_test() {
     local env_root="$TEST_ROOT/macos"
     local launchd_dir="$env_root/home/Library/LaunchAgents"
-    local log_dir="$env_root/home/Library/Logs/worldarchitect-automation"
+    local log_dir="$env_root/home/Library/Logs/${PROJECT_NAME:-your-project}-automation"
     local legacy_pr_monitor_plist="$launchd_dir/ai.worldarchitect.pr-automation.pr-monitor.plist"
     local runtime_tmp="$env_root/runtime-tmp"
-    local expected_runtime_root="$runtime_tmp/worldarchitect-automation/uid-$(id -u)/mctrl/pr-monitor"
+    local expected_runtime_root="$runtime_tmp/${PROJECT_NAME:-your-project}-automation/uid-$(id -u)/mctrl/pr-monitor"
 
     setup_fake_environment "$env_root"
     setup_fake_launchctl "$env_root"
@@ -246,9 +246,9 @@ run_linux_install_test() {
     local env_root="$TEST_ROOT/linux"
     local systemd_dir="$env_root/home/.config/systemd/user"
     local xdg_state_home="$env_root/home/.local/state"
-    local expected_log_dir="$xdg_state_home/worldarchitect-automation"
+    local expected_log_dir="$xdg_state_home/${PROJECT_NAME:-your-project}-automation"
     local runtime_tmp="$env_root/runtime-tmp"
-    local expected_runtime_root="$runtime_tmp/worldarchitect-automation/uid-$(id -u)/mctrl/codex-api"
+    local expected_runtime_root="$runtime_tmp/${PROJECT_NAME:-your-project}-automation/uid-$(id -u)/mctrl/codex-api"
 
     setup_fake_environment "$env_root"
     setup_fake_systemctl "$env_root"
@@ -286,7 +286,7 @@ run_linux_install_test() {
         exit 1
     fi
 
-    if [[ -d "$env_root/home/Library/Logs/worldarchitect-automation" ]]; then
+    if [[ -d "$env_root/home/Library/Logs/${PROJECT_NAME:-your-project}-automation" ]]; then
         echo "FAIL: Linux install should not create macOS-style ~/Library/Logs directory" >&2
         exit 1
     fi

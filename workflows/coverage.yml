@@ -33,6 +33,11 @@ jobs:
         with:
           persist-credentials: true
 
+      - name: Prepare runner tool cache for setup actions
+        run: |
+          chmod +x scripts/ci/setup-runner-tool-cache.sh
+          ./scripts/ci/setup-runner-tool-cache.sh
+
       - name: Set up Python
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
         with:
@@ -173,7 +178,7 @@ jobs:
             coverage.json
             .coverage
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 7
 
       - name: Post coverage summary
         if: always()

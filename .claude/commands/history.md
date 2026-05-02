@@ -10,6 +10,28 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
+### Phase 0: Claude Auto-Memory Read
+
+**Action Steps:**
+1. **Discover memory files**: Use Python to find all project memory files:
+   ```python
+   import glob, os, subprocess
+   try:
+       git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
+       project_key = git_root.replace('/', '-')  # preserve leading dash: /Users/... → -Users-...
+       pattern = os.path.expanduser(f'~/.claude/projects/{project_key}/memory/*.md')
+       index_pattern = os.path.expanduser(f'~/.claude/projects/{project_key}/memory/MEMORY.md')
+       memory_files = [f for f in glob.glob(pattern) if not f.endswith('MEMORY.md')]
+       memory_index = glob.glob(index_pattern)[:1]
+   except Exception:
+       memory_files = []  # skip if not in a git repo — no cross-project fallback
+       memory_index = []
+   ```
+2. **If search query provided**: Filter memory files by keyword match against file content; surface matching memories
+3. **If no query (browse mode)**: Read MEMORY.md index and show last 3-5 entries
+4. **Output**: Print a "📍 From Claude Memories" section BEFORE conversation history results, showing name, type, and content summary for each match
+5. **Continue**: Proceed to existing Phase 1 regardless of memory results
+
 ### Phase 1: Permission Error Recovery Workflow
 
 **Action Steps:**

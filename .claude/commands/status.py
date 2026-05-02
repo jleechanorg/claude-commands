@@ -371,14 +371,14 @@ def main():
     """Main status command execution"""
     print("🔍 **Fetching comprehensive PR status...**")
     print("")
-
+    
     # Get repository and PR information
     owner, repo = get_repo_info()
     if not owner or not repo:
         print("❌ **Error**: Could not determine repository information")
         print("Make sure you're in a git repository with GitHub remote")
         return 1
-
+    
     # Allow PR number as a CLI argument (e.g. status.py 461)
     if len(sys.argv) > 1 and sys.argv[1].isdigit():
         arg_pr = int(sys.argv[1])

@@ -88,6 +88,15 @@ The `command_output_trimmer.py` hook keeps chat transcripts concise, but you hav
 
 These options let you opt into full logs whenever you explicitly request them without disabling the savings for everyday commands.
 
+## Sparse Handoff Hygiene
+
+When a task produces long-running logs, transcript history, or evidence artifacts, keep the handoff sparse:
+
+- Summarize the current state in a few lines and point to the file path instead of pasting the full transcript.
+- Prefer `/tmp/...` or other file artifacts for large logs, and cite the exact path when they matter.
+- Do not replay earlier Claude/Codex conversations unless the missing detail is essential to the next step.
+- For test runs, share the outcome and the smallest relevant excerpt; keep raw logs out of chat unless they are being debugged.
+
 ## Testing
 
 Hook test files located in `.claude/hooks/tests/`:

@@ -10,6 +10,19 @@ Canonical files:
 - Skill root: `$HOME/.claude/skills/cmux-codex-autoapprove`
 - Worker script: `$HOME/.claude/skills/cmux-codex-autoapprove/scripts/cmux_codex_approve_launchd.py`
 - LaunchAgent: `$HOME/Library/LaunchAgents/com.$USER.cmux-codex-approve.plist`
+- Plist backup: `~/.claude/skills/cmux-codex-autoapprove/com.$USER.cmux-codex-approve.plist`
+
+## Install / Restore
+
+On a new machine, copy the plist and load it:
+
+```bash
+cp ~/.claude/skills/cmux-codex-autoapprove/com.$USER.cmux-codex-approve.plist \
+   ~/Library/LaunchAgents/com.$USER.cmux-codex-approve.plist
+launchctl load ~/Library/LaunchAgents/com.$USER.cmux-codex-approve.plist
+```
+
+**PATH requirement:** The plist must include `$HOME/bin` in PATH (where `cmux` lives). Current plist already has this.
 - Logs: `$HOME/.claude/supervisor/cmux-codex-launchd.log`
 - State: `$HOME/.claude/supervisor/cmux-codex-launchd-state.json`
 

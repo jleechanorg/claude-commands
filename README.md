@@ -1,3 +1,5 @@
+
+
 ---
 description: Claude Commands - Command Library Overview
 type: llm-orchestration
@@ -49,9 +51,19 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ⚠️ **PROTOTYPE WIP REPOSITORY** - This is an experimental command system exported from a working development environment. Use as reference but expect adaptation needed for your specific setup.
 
+## Changelog
+
+### v1.3.0 (2026-04-24)
+- New commands: ao.md, browserclaw.md, cmux-steer.md, es.md, green.md, loop_level_zfc.md, memory_search.md, ms.md, repro.md, repro_copy.md, wiki-evolve.md, wiki-search.md
+- New hooks: allow-claude-dir.sh, autoapprove.py, block-merge.sh, openclaw-config-guard.sh, pre-commit-detached-guard.sh
+- New skills: 4layer.md
+- Updated: execute.md, copilot.md, claw.md, exportcommands.sh, git-header.sh, command_output_trimmer.py, skeptic-cron.yml
+- Removed: ralph.md, localexportcommands.md, compose-commands.sh
+- ZFC compliance updates across multiple files
+
 ## 🎯 What's Included
 
-**211 Commands** including powerful workflow orchestrators and cognitive tools:
+**224 Commands** including powerful workflow orchestrators and cognitive tools:
 - **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step automation
 - **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
 - **Infrastructure**: `/scaffold` - Repository setup and development environment
@@ -61,7 +73,7 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 **22 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**192 Skills** providing shared knowledge references and capabilities
+**559 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 

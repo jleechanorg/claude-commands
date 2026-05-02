@@ -91,8 +91,8 @@ class TestCommentValidation(unittest.TestCase):
         self.assertIn("@greptileai", comment_body)
         self.assertIn("@bugbot", comment_body)
         self.assertIn("@copilot", comment_body)
-        # Should NOT include Codex
-        self.assertNotIn("@codex", comment_body.lower())
+        # Should include @codex review for code review quota
+        self.assertIn("@codex review", comment_body)
 
     def test_build_comment_validation_body_includes_review_instructions(self):
         """Comment validation body should include review instructions."""
@@ -204,14 +204,14 @@ class TestCommentValidation(unittest.TestCase):
         # Verify that post_comment_validation_request calls _post_pr_comment_common
         with patch.object(self.monitor, "_post_pr_comment_common") as mock_common:
             mock_common.return_value = "posted"
-            
+
             pr_data = {
                 "repositoryFullName": "org/repo",
                 "headRefName": "feature"
             }
-            
+
             result = self.monitor.post_comment_validation_request("org/repo", 123, pr_data)
-            
+
             # Verify _post_pr_comment_common was called with correct parameters
             mock_common.assert_called_once()
             call_kwargs = mock_common.call_args[1]

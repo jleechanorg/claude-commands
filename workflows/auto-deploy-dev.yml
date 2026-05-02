@@ -45,7 +45,7 @@ jobs:
     needs: deploy
     # Note: workflow_dispatch inputs are strings, not booleans - compare against 'true' string
     if: ${{ github.event_name == 'push' || github.event.inputs.skip_smoke_tests != 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 20
     env:
       GCP_REGION: us-central1

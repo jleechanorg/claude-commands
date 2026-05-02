@@ -10,20 +10,13 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 0: Native Memory Context
-
-**Action Steps:**
-1. **Read from Native Memory**: Use `memory_search` to search for relevant context about the task
-2. **Retrieve Prior Learnings**: Search for related patterns, past implementations, and user preferences
-
 ### Phase 1: Planning (/planexec)
 
 **Action Steps:**
 **Executes `/planexec` command**: Follows the complete planning protocol documented in [`planexec.md`](./planexec.md)
-1. **Memory Context Retrieval**: Search native memory for relevant context using `memory_search`
-2. **Guidelines Consultation**: `/planexec` calls `/guidelines` directly for comprehensive consultation
-3. **Comprehensive Context**: CLAUDE.md reading + base guidelines + PR/branch-specific guidelines via direct command composition
-4. Creates TodoWrite checklist with specific steps including guidelines validation
+1. **Guidelines Consultation**: `/planexec` calls `/guidelines` directly for comprehensive consultation
+2. **Comprehensive Context**: CLAUDE.md reading + base guidelines + PR/branch-specific guidelines via direct command composition
+3. Creates TodoWrite checklist with specific steps including guidelines validation
 4. Presents execution plan using the [Standard Plan Display Format](./planexec.md#📋-standard-plan-display-format)
 5. Shows complexity, execution method, tools, timeline, and parallelization strategy
 6. **Tool Selection**: Follows guidelines hierarchy (Serena MCP → Read tool → Bash commands)
@@ -43,11 +36,19 @@ execution_mode: immediate
 **Action Steps:**
 **Execution**: Implements the approved plan from Phase 1
 1. Updates TodoWrite status as tasks complete
-2. Uses systematic tool progression and the execution method determined in planning
-3. Executes tasks as planned (parallel Task tool agents or sequential based on plan decision)
-4. 🚨 **PARALLEL TASK EXECUTION**: Can use multiple Task tool calls in single message for up to 10 concurrent subagents
-5. Validates and commits when complete
-6. **Writes to Native Memory**: Use `memory_save` to persist key learnings, patterns, and outcomes from the execution
+2. **Updates Beads status** as work progresses (using MCP/CLI/direct file updates):
+   - Mark bead as `open` when it is created and not yet started
+   - Mark bead as `in_progress` when starting active work on it
+   - Mark bead as `closed` when work is completed
+   - If work is blocked by dependencies, keep the bead in `open` or `in_progress` and add a note/label indicating "blocked" and the specific dependency
+   - Use only `open`, `in_progress`, or `closed` for the `status` field
+   - Example: `br update <bead-id> --status in_progress`
+   - Direct-file fallback: append the corresponding JSONL update in `.beads/issues.jsonl` per `docs/beads_creation_manual.md`
+3. Uses systematic tool progression and the execution method determined in planning
+4. Executes tasks as planned (parallel Task tool agents or sequential based on plan decision)
+5. 🚨 **PARALLEL TASK EXECUTION**: Can use multiple Task tool calls in single message for up to 10 concurrent subagents
+6. Validates and commits when complete
+7. **Includes `.beads/` changes** in git commits per CLAUDE.md beads tracking rule
 
 ## 📋 REFERENCE DOCUMENTATION
 
@@ -80,16 +81,14 @@ Assistant:
 Phase 0 - Context Assessment:
 Context Status: 65% remaining → Low context pressure
 
-Phase 0.1 - Native Memory Context:
-✅ Searching memory for related patterns and prior learnings
-✅ Found X relevant memories for this task
-
 Phase 1 - Planning (/planexec):
 ✅ CLAUDE.md read: Current rules, constraints, and protocols understood
 ✅ Guidelines consultation: `/guidelines` command completed - mistake prevention patterns applied
 ✅ Anti-patterns avoided: Using Edit tool for existing files, no _v2 or _backup files
 Creating implementation plan with TodoWrite...
 [Creates checklist: Check styles, Update CSS, Test changes, Commit]
+Evaluating bead creation need...
+⏭️ Skipping beads - Simple task with sufficient context (65% remaining > 35% threshold)
 
 [Displays execution plan using standard format from planexec.md]
 Execution Plan:
@@ -97,7 +96,7 @@ Execution Plan:
 - **Execution method: Direct execution** - Simple file edits, no parallelization needed
 - Tool requirements: Read, Edit, Bash (guidelines-validated tool selection)
 - Implementation approach: Check current styling → Update CSS → Test → Commit
-- Memory Integration: Native Claude memory for context and learning
+- Beads Tracking: N/A (simple task, context available)
 - Expected timeline: ~10 minutes
 
 Phase 2 - Approval Chain:
@@ -106,7 +105,6 @@ Phase 2 - Approval Chain:
 
 Phase 3 - Implementation:
 [Follows plan: Read current styles, Edit CSS, Test, Commit]
-✅ Saved key learnings to native memory
 ```
 
 **Complex task**:
@@ -116,16 +114,18 @@ Assistant:
 Phase 0 - Context Assessment:
 Context Status: 32% remaining → High context pressure (< 35% threshold)
 
-Phase 0.1 - Native Memory Context:
-✅ Searching memory for related authentication patterns and prior learnings
-✅ Found X relevant memories for auth implementation
-
 Phase 1 - Planning (/planexec):
 ✅ CLAUDE.md read: Current rules, constraints, and security protocols understood
 ✅ Guidelines consultation: Applied security patterns from docs/pr-guidelines/{current}/guidelines.md + docs/pr-guidelines/base-guidelines.md
 ✅ Anti-patterns avoided: No subprocess shell=True, proper timeout enforcement, explicit error handling
 Creating comprehensive implementation plan...
 [Creates detailed TodoWrite with multiple subtasks]
+Evaluating bead creation need...
+✅ Creating beads - Large/complex task + limited context (32% remaining < 35%)
+✅ Created bead: auth-research-patterns (priority 1)
+✅ Created bead: auth-core-implementation (priority 2)
+✅ Created bead: auth-session-management (priority 3)
+✅ Created bead: auth-testing (priority 4)
 
 [Displays execution plan using standard format from planexec.md]
 Execution Plan:
@@ -134,13 +134,17 @@ Execution Plan:
 - Tool requirements: Read, Write, Edit, Bash, Task (guidelines-validated)
 - Implementation approach: Research patterns → Core auth → Session management → Testing
 - Guidelines applied: Subprocess safety, explicit error handling, 100% test coverage
-- Memory Integration: Native Claude memory for context and learning
+- Beads Tracking:
+  - [TASK] auth-research-patterns (status: open)
+  - [TASK] auth-core-implementation (status: open)
+  - [TASK] auth-session-management (status: open)
+  - [TASK] auth-testing (status: open)
 - Expected timeline: ~45 minutes
 
 Sequential Task Plan:
 - Main task: Implement core authentication system
-- Task 1: Research existing auth patterns in codebase (using Serena MCP first)
-- Task 2: Create security tests and documentation
+- Task 1: Research existing auth patterns in codebase (using Serena MCP first) [bead: auth-research-patterns]
+- Task 2: Create security tests and documentation [bead: auth-testing]
 - Integration: Apply patterns to implementation with test validation
 
 Phase 2 - Approval Chain:
@@ -148,16 +152,19 @@ Phase 2 - Approval Chain:
 /autoapprove - Proceeding with implementation
 
 Phase 3 - Implementation:
+[Updates bead auth-research-patterns to in_progress]
 [Research: Auth patterns across codebase using Serena MCP]
+[Updates bead auth-research-patterns to closed]
+[Updates bead auth-core-implementation to in_progress]
 [Implement: Core authentication system systematically]
-[Updates TodoWrite progress throughout]
+[Updates bead auth-core-implementation to closed]
+[Updates TodoWrite and beads progress throughout]
 [Integrates findings with implementation]
-✅ Saved key learnings and patterns to native memory
+[Includes .beads/ changes in final commit]
 ```
 
 ## Key Characteristics
 
-- ✅ **Native Memory Integration** - Reads from and writes to Claude's native memory
 - ✅ **Planned execution** - `/planexec` creates structured approach with detailed display
 - ✅ **Plan presentation** - Shows complexity, execution method, tools, timeline, and strategy
 - ✅ **Parallelization strategy** - Displays parallel vs sequential decision with reasoning

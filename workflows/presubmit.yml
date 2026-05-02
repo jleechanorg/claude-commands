@@ -32,7 +32,7 @@ on:
 jobs:
   limit-pr-runs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     permissions:
       actions: write
       contents: read
@@ -40,17 +40,24 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
   schema-coverage:
     name: Schema Coverage Guard
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Enforce game_state schema coverage
         run: |
@@ -88,11 +95,15 @@ jobs:
             --required-path player_character_data.cantrips
   python-lint:
     name: Python Linting (Ruff)
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Install Ruff
         run: |
@@ -118,7 +129,8 @@ jobs:
   # Python type checking with mypy
   python-typecheck:
     name: Python Type Checking (mypy)
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 10
     steps:
       - name: Repair workspace permissions for checkout
@@ -129,6 +141,9 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Install dependencies
         run: |
@@ -154,11 +169,15 @@ jobs:
   # JavaScript linting with ESLint
   javascript-lint:
     name: JavaScript Linting (ESLint)
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2

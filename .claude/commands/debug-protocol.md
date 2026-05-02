@@ -123,20 +123,27 @@ Systematic comparison results:
 36. **Systematic Deep Dive** (5-20 min): Complete component comparison and flow tracing
 37. **Escalation Criteria** (20+ min): If no clear gaps found, escalate complexity or broaden scope
 
-**📚 Native Memory Integration**: Capture walkthrough patterns with native memory:
+**📚 Memory MCP Integration with Query Optimization**: Capture walkthrough patterns with enhanced search effectiveness:
 
-**Native Memory Enhancement**: Uses native memory for improved debug pattern discovery:
-38. **Smart Search**: Use `memory_search` for debugging patterns
-39. **Enhanced Pattern Discovery**: Use native memory for better debugging insights
-40. **Result Integration**: Combine searches for comprehensive debug analysis
+**Query Optimization Enhancement**: Uses universal composition with `/memory search` for improved debug pattern discovery:
+38. **Smart Search Strategy**: Transform compound debug queries into optimized single-word searches
+39. **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better debugging insights
+40. **Result Merging**: Combine multiple optimized searches for comprehensive debug analysis
 
 **Enhanced Integration**: Capture walkthrough patterns for future reuse:
 ```
-memory_save({
-  "content": "Debug walkthrough for [system] at [timestamp]: Components Compared: [specific functions/modules analyzed], Execution Path: [traced flow], Gap Identified: [specific missing functionality], Resolution Time: [total time]",
-  "category": "debugging",
-  "tags": ["walkthrough", "system", "pattern"]
-})
+mcp__memory-server__create_entities([{
+  "name": "debug_walkthrough_[system]_[timestamp]",
+  "entityType": "debug_walkthrough_pattern",
+  "observations": [
+    "Context: [debugging situation requiring walkthrough]",
+    "Components Compared: [specific functions/modules analyzed]",
+    "Execution Path: [traced flow from user action to response]",
+    "Gap Identified: [specific missing or different functionality]",
+    "Evidence Reconciliation: [how user evidence guided analysis]",
+    "Resolution Time: [total time from walkthrough to fix]"
+  ]
+}])
 ```
 
 **Summary Checkpoint**: Document specific gaps, differences, or missing components found during walkthrough. These findings directly inform Phase 1 hypothesis formation.
@@ -319,7 +326,7 @@ Based on software engineering research showing:
 - `/debug-protocol /arch` - Apply forensic methodology to architectural debugging
 - `/debug-protocol /think` - Enhanced analytical depth with protocol structure
 - `/debug-protocol /research` - Comprehensive debugging with research-backed analysis
-- `/debug-protocol /learn` - Capture debugging insights with native memory integration
+- `/debug-protocol /learn` - Capture debugging insights with Memory MCP integration
 
 **Research-Enhanced Debugging** (`/debug-protocol /research`):
 Automatically integrates research methodology for complex debugging scenarios:
@@ -329,7 +336,7 @@ Automatically integrates research methodology for complex debugging scenarios:
 4. **Evidence Synthesis**: Combine research findings with local debugging evidence
 
 **Learning Integration** (`/debug-protocol /learn`):
-Automatically captures debugging insights using native memory:
+Automatically captures debugging insights using Memory MCP:
 - Debug session entities with complete resolution paths
 - Pattern recognition for similar future issues
 - Technical implementation details with file:line references
@@ -341,7 +348,7 @@ Automatically captures debugging insights using native memory:
 - Integrates with `/research` for research-backed debugging analysis
 - Works with `/learn` for persistent debugging knowledge capture
 
-**Enhanced Native Memory Integration:**
+**Enhanced Memory MCP Integration:**
 🔍 **Automatic Memory Search**: This command uses the full Memory Enhancement Protocol for:
 - Past debugging patterns and successful methodologies
 - Similar issue resolutions and root cause analysis
@@ -351,7 +358,7 @@ Automatically captures debugging insights using native memory:
 - Technical debugging implementations with file:line references
 - Root cause analysis journeys with measurable outcomes
 
-**Enhanced Native Memory Universal Composition Integration:**
+**Enhanced Memory MCP Universal Composition Integration:**
 
 1. **Optimized Memory Search for Debug Context**:
    Use `/memory search` with automatic query optimization for debug pattern discovery:
@@ -401,7 +408,7 @@ Automatically captures debugging insights using native memory:
 
 **Memory Query Terms**: debugging methodology, systematic debugging, evidence-based debugging, hypothesis validation, root cause analysis, debug session, technical debugging, error resolution patterns
 
-**Native Memory Entity Types**:
+**Enhanced Memory MCP Entity Types**:
 - `debug_session` - Complete debugging journeys with evidence and resolution
 - `technical_learning` - Specific debugging solutions with code/errors
 - `implementation_pattern` - Successful debugging patterns with reusable details
@@ -449,15 +456,10 @@ Use `/memory` command for all debugging pattern discovery and learning:
 
 **Error Handling Strategy**:
 - **Universal Composition Benefits**: `/memory` command handles all optimization and fallback automatically
-- **Graceful Degradation**: Continue debugging even if native memory unavailable
-- **User Notification**: Automatic user notification when memory unavailable but debugging proceeds
-- **Robust Operation**: Never let memory failures prevent debugging progress
-
-**Error Handling Strategy**:
-- **Graceful Degradation**: Continue debugging even if native memory fails
-- **User Notification**: Inform user when memory unavailable but debugging proceeds
-- **Fallback Mode**: Local-only debugging documentation when memory unavailable
-- **Robust Operation**: Never let memory failures prevent debugging progress
+- **Graceful Degradation**: Continue debugging even if Memory MCP unavailable
+- **User Notification**: Automatic user notification when Memory MCP unavailable but debugging proceeds
+- **Fallback Mode**: Local-only debugging documentation when Memory MCP unavailable
+- **Robust Operation**: Never let Memory MCP failures prevent debugging progress
 
 ## Examples
 
@@ -511,7 +513,7 @@ Use `/memory` command for all debugging pattern discovery and learning:
 **User Evidence Primacy** ensuring user observations are treated as ground truth
 **Validation requirements** before any code changes
 **Behavioral constraints** preventing premature success declarations
-**Native Memory integration** for capturing successful debugging patterns
+**Memory MCP integration** for capturing successful debugging patterns
 
 ## Research Foundation
 

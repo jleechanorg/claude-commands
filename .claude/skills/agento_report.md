@@ -160,3 +160,6 @@ mcp__slack__conversations_add_message(
 - If `ao status` is unavailable, use `tmux list-sessions | grep -E 'ao-[0-9]+'` as fallback.
 - Always display inline report FIRST, then post Slack.
 - The Slack post uses MCP, NOT curl.
+nversations_add_message`), NOT curl.
+- Target channel: `#ai-slack-test` (`C0AKALZ4CKW`). The bot is not in `#all-$USER-ai` (C09GRLXF9GR).
+- Evidence condition 6 is skipped if the PR clearly has no evidence bundle.

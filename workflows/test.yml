@@ -15,14 +15,14 @@ on:
   workflow_dispatch:
   pull_request:              # Run on all PRs regardless of target branch
     paths-ignore:
-      - '**/*.md'
+      # Do not ignore all *.md: world_reference/campaign_module_dragon_knight.md
+      # must trigger tests (sync with campaign wizard JS). docs/roadmap stay ignored.
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
   push:
     branches: [ main, dev ]  # Run on pushes to main/dev for post-merge validation
     paths-ignore:
-      - '**/*.md'
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
@@ -38,11 +38,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
   detect-changes:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     outputs:
       test-dirs: ${{ steps.changes.outputs.test-dirs }}
@@ -53,7 +57,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0  # Full history for accurate change detection
+          persist-credentials: false
 
       - name: Detect directory changes
         id: changes
@@ -85,13 +91,16 @@ jobs:
 
   # Import validation (always runs)
   import-validation:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0  # Full history needed for merge-base diff
+          persist-credentials: false
       - name: Run import validation
         run: |
           if [ -f "scripts/validate_imports_delta.sh" ]; then
@@ -113,7 +122,7 @@ jobs:
   # integration breakages that would only appear after merging.
   merge-commit-gate:
     name: Merge commit validation
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -133,6 +142,7 @@ jobs:
       with:
         # Deliberately NOT setting ref — uses default merge commit
         # to validate the PR integrates cleanly with the base branch.
+        persist-credentials: false
         submodules: recursive
         fetch-depth: 1
 
@@ -164,7 +174,7 @@ jobs:
         for mod in [
             'mvp_site.main', 'mvp_site.world_logic', 'mvp_site.llm_service',
             'mvp_site.game_state', 'mvp_site.firestore_service',
-            'mvp_site.structured_fields_utils', 'mvp_site.streaming_orchestrator',
+            'mvp_site.structured_fields_utils', 'mvp_site.llm_parser',
         ]:
             try:
                 importlib.import_module(mod)
@@ -195,8 +205,7 @@ jobs:
   test:
     name: Directory tests (${{ matrix.test-group }})
     needs: detect-changes
-    if: needs.detect-changes.outputs.has-changes == 'true'
-    # core-tests and scripts on GitHub-hosted to avoid self-hosted sudo issues; core-mvp-* stay on self-hosted
+    if: needs.detect-changes.outputs.has-changes == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
     runs-on: ${{ (matrix.test-group == 'core-tests' || matrix.test-group == 'scripts') && 'ubuntu-latest' || fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     # Core group runs with coverage enabled and sequential execution, which can exceed 15m.
     timeout-minutes: 30
@@ -218,6 +227,7 @@ jobs:
         # testmon fingerprints files using the working tree state; the merge commit
         # creates a different checkout that defeats testmon's change detection.
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        persist-credentials: false
         submodules: recursive
         fetch-depth: 0  # Full history needed for git diff in JS test step
         clean: true  # Remove untracked files from prior runs on self-hosted runners
@@ -495,11 +505,26 @@ jobs:
           CHANGED_FILES=$(git diff --name-only "HEAD~1..HEAD")
         fi
 
-        if echo "$CHANGED_FILES" | grep -q '^mvp_site/frontend_v1/'; then
-          node --test mvp_site/frontend_v1/tests/settings_listeners.test.js
+        if echo "$CHANGED_FILES" | grep -qE '^mvp_site/frontend_v1/|^world_reference/campaign_module_dragon_knight\.md'; then
+          node --test \
+            mvp_site/frontend_v1/tests/settings_listeners.test.js \
+            mvp_site/frontend_v1/tests/campaign_wizard_dragon_knight_submit.test.js \
+            mvp_site/frontend_v1/tests/campaign_wizard_dragon_knight_canonical.test.js
         else
-          echo "No frontend_v1 changes detected; skipping JS unit test."
+          echo "No frontend_v1 / Dragon Knight canonical changes detected; skipping JS unit tests."
         fi
+
+    # Unconditional sync guard: parses campaign-wizard.js DEFAULT_DRAGON_KNIGHT_DESCRIPTION
+    # and asserts the resulting prompt SHA matches the committed constant. Must
+    # run on every core-mvp-1 build so neither side (frontend JS, backend
+    # constants, or canonical description file) can silently drift without
+    # failing CI. Enforces .claude/skills/bypass-claims.md.
+    - name: Dragon Knight frontend/backend sync guard
+      if: matrix.test-group == 'core-mvp-1'
+      env:
+        PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/mvp_site:${{ github.workspace }}/testing_utils
+      run: |
+        python3 mvp_site/tests/test_dragon_knight_frontend_backend_sync.py
 
     - name: Create coverage config
       if: startsWith(matrix.test-group, 'core-')
@@ -754,7 +779,7 @@ jobs:
   coverage-report:
     name: PR Coverage Report
     needs: [test]
-    if: always() && github.event_name == 'pull_request' && needs.test.result != 'cancelled'
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false && needs.test.result != 'cancelled'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -765,7 +790,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0  # Full history needed for git diff (delta coverage)
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
@@ -852,13 +879,60 @@ jobs:
 
       - name: Coverage comment (PR)
         if: steps.coverage_check.outputs.has_coverage == 'true'
-        uses: py-cov-action/python-coverage-comment-action@fb02115d6115e7b3325dc3295fe1dcfb1919248a  # v3.32
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
-          GITHUB_TOKEN: ${{ github.token }}
-          MINIMUM_GREEN: 80
-          MINIMUM_ORANGE: 60
-          ANNOTATE_MISSING_LINES: true
-          MAX_FILES_IN_COMMENT: 50
+          script: |
+            const fs = require("fs");
+
+            const marker = "<!-- pr-coverage-report -->";
+            const maxBodyChars = 60000;
+            const reportPath = "coverage_report.md";
+            let report = "Coverage report could not be generated.";
+
+            if (fs.existsSync(reportPath)) {
+              report = fs.readFileSync(reportPath, "utf8").trim();
+            }
+
+            if (report.length > maxBodyChars) {
+              report = `${report.slice(0, maxBodyChars)}\n\n...truncated...`;
+            }
+
+            const body = [
+              marker,
+              "## Coverage Report",
+              "",
+              report,
+            ].join("\n");
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                per_page: 100,
+              }
+            );
+
+            const existing = comments.find((comment) =>
+              comment.body && comment.body.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
 
       - name: Report delta coverage (per-file, non-blocking)
         if: steps.coverage_check.outputs.has_coverage == 'true' && steps.changed_files.outputs.has_changed_py == 'true'
