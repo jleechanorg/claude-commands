@@ -67,10 +67,13 @@ class CopilotCommandBase(ABC):
                         return "/".join(url.split("/")[-2:])
             except (subprocess.CalledProcessError, FileNotFoundError):
                 pass
-            # Default fallback - prefer GITHUB_REPOSITORY (set in CI/Actions), then DEFAULT_REPO
-            repo = os.environ.get("GITHUB_REPOSITORY") or os.environ.get("DEFAULT_REPO")
-            if repo and re.fullmatch(r"[^/\s]+/[^/\s]+", repo):
-                return repo
+            # Prefer GITHUB_REPOSITORY (CI/Actions), fall back to DEFAULT_REPO
+            github_repo = os.environ.get("GITHUB_REPOSITORY")
+            if github_repo and re.fullmatch(r"[^/\s]+/[^/\s]+", github_repo):
+                return github_repo
+            default_repo = os.environ.get("DEFAULT_REPO")
+            if default_repo and re.fullmatch(r"[^/\s]+/[^/\s]+", default_repo):
+                return default_repo
             raise ValueError(
                 "Repository could not be determined. Set GITHUB_REPOSITORY or DEFAULT_REPO as 'owner/repo'."
             )
