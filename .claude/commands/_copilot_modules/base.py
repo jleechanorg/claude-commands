@@ -68,8 +68,9 @@ class CopilotCommandBase(ABC):
             except subprocess.CalledProcessError:
                 pass
             # Default fallback - use your-project.com as default repo
-            return os.environ.get(
-                "DEFAULT_REPO", "$GITHUB_REPOSITORY"
+            return (
+                os.environ.get("DEFAULT_REPO")
+                or os.environ.get("GITHUB_REPOSITORY", "")
             )
 
     def _get_current_branch(self) -> str:
