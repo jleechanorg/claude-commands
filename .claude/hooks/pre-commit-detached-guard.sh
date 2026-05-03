@@ -11,12 +11,12 @@ set -euo pipefail
 
 # Read tool input from stdin
 INPUT=$(cat)
-TOOL_NAME=$(echo "$INPUT" | jq -r '.name // ""' 2>/dev/null)
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // ""' 2>/dev/null)
 
 # Only intercept Bash tool
 [[ "$TOOL_NAME" != "Bash" ]] && { echo "$INPUT"; exit 0; }
 
-COMMAND=$(echo "$INPUT" | jq -r '.input.command // ""' 2>/dev/null)
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null)
 
 # Only act on git commit commands (not git commit --amend --no-edit in loops, etc.)
 # Match: git commit, git -C <path> commit

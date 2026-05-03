@@ -37,7 +37,7 @@ class CopilotCommandBase(ABC):
 
         # No caching - always fetch fresh data from GitHub API
 
-    def _get_repo_info(self) -> Optional[str]:
+    def _get_repo_info(self) -> str:
         """Get repository info from GitHub CLI or git remote."""
         try:
             result = subprocess.run(
@@ -48,7 +48,7 @@ class CopilotCommandBase(ABC):
             )
             data = json.loads(result.stdout)
             return data["nameWithOwner"]
-        except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError, KeyError):
             # Fallback to git remote parsing
             try:
                 result = subprocess.run(
@@ -65,19 +65,18 @@ class CopilotCommandBase(ABC):
                         return url.split(":")[-1]
                     else:
                         return "/".join(url.split("/")[-2:])
-            except subprocess.CalledProcessError:
+            except (subprocess.CalledProcessError, FileNotFoundError):
                 pass
-            # Default fallback — prefer GITHUB_REPOSITORY env var (set in CI/Actions)
-            repo = (
-                os.environ.get("GITHUB_REPOSITORY")
-                or os.environ.get("DEFAULT_REPO")
+            # Prefer GITHUB_REPOSITORY (CI/Actions), fall back to DEFAULT_REPO
+            github_repo = os.environ.get("GITHUB_REPOSITORY")
+            if github_repo and re.fullmatch(r"[^/\s]+/[^/\s]+", github_repo):
+                return github_repo
+            default_repo = os.environ.get("DEFAULT_REPO")
+            if default_repo and re.fullmatch(r"[^/\s]+/[^/\s]+", default_repo):
+                return default_repo
+            raise ValueError(
+                "Repository could not be determined. Set GITHUB_REPOSITORY or DEFAULT_REPO as 'owner/repo'."
             )
-            if not repo:
-                raise ValueError(
-                    "Repository could not be determined. "
-                    "Set GITHUB_REPOSITORY or DEFAULT_REPO env var, or run in a git repo with gh CLI."
-                )
-            return repo
 
     def _get_current_branch(self) -> str:
         """Get current git branch for branch-specific file naming."""

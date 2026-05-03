@@ -7,7 +7,7 @@
 As of **September 29, 2025**, Anthropic provides official JSON Schema validation for Claude Code settings.
 
 ### Official Schema URL
-```
+```text
 https://json.schemastore.org/claude-code-settings.json
 ```
 
@@ -565,23 +565,20 @@ class TestClaudeCodeConfig(unittest.TestCase):
                 # Check required fields
                 self.assertRegex(
                     frontmatter,
-                    r'^name:\s*.+$',
-                    f"{agent_file.name}: Missing name field",
-                    flags=re.MULTILINE
+                    r'(?m)^name:\s*.+$',
+                    f"{agent_file.name}: Missing name field"
                 )
                 self.assertRegex(
                     frontmatter,
-                    r'^description:\s*.+$',
-                    f"{agent_file.name}: Missing description field",
-                    flags=re.MULTILINE
+                    r'(?m)^description:\s*.+$',
+                    f"{agent_file.name}: Missing description field"
                 )
 
                 # Check values are unquoted
                 self.assertNotRegex(
                     frontmatter,
-                    r'^(name|description):\s*["\']',
-                    f"{agent_file.name}: Values should be unquoted",
-                    flags=re.MULTILINE
+                    r'(?m)^(name|description):\s*["\']',
+                    f"{agent_file.name}: Values should be unquoted"
                 )
 
 if __name__ == '__main__':
