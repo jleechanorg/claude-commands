@@ -255,10 +255,14 @@ for sess in $(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E '(ao
   case "$sess" in
     ao-*) repo="jleechanorg/agent-orchestrator" ;;
     jc-*) repo="jleechanorg/jleechanclaw" ;;
-    wa-*) repo="${GITHUB_REPOSITORY:-owner/worldarchitect.ai}" ;;  # set GITHUB_REPOSITORY or hardcode your repo
+    wa-*) repo="${GITHUB_REPOSITORY:-}" ;;
     wc-*) repo="jleechanorg/worldai_claw" ;;
     *) continue ;;
   esac
+  if [[ -z "$repo" ]]; then
+    echo "  SKIP: $sess — wa-* repo but GITHUB_REPOSITORY is not set; cannot query" >&2
+    continue
+  fi
   merged=$(gh api "repos/$repo/pulls/$pr_num" --jq '.merged' 2>/dev/null)
   if [ "$merged" = "true" ]; then
     echo "  ZOMBIE: $sess on PR #$pr_num ($repo) — PR is MERGED, kill this session"

@@ -22,6 +22,13 @@ If no PR number given, detect from current branch:
 gh pr list --head "$(git branch --show-current)" --json number --jq '.[0].number'
 ```
 
+**Fallback strategy** (if `gh pr list` returns nothing):
+1. Pattern-match the branch name for PR patterns: `pr-123`, `ao-670`, `jc-123`, etc.
+2. Fall back to `gh api` lookup by head branch SHA
+3. Handle closed/merged PRs — a branch may have already been merged after the PR closed
+
+The compose-commands hook (`~/.claude/hooks/compose-commands.sh`) implements this fallback; see its PR resolution logic for reference.
+
 Resolve OWNER/REPO from the git remote.
 
 ### Step 2 — Determine green mode
@@ -36,7 +43,7 @@ Inspect changed files and choose one mode:
 Execute ALL of these in parallel where possible:
 
 1. **Get branch name**: `gh pr view N --json headRefName --jq '.headRefName'`
-2. **Get PR state**: `gh pr view N --json state,merged --jq '{state,merged}'`
+2. **Get PR state**: `gh pr view N --json state,mergedAt --jq '{state, merged: (.mergedAt != null)}'`
    - If merged or closed: report status and stop
 3. **Green Gate log**: `gh run list --workflow green-gate.yml --branch BRANCH -L 1` → read gate-by-gate PASS/FAIL lines
 4. **Skeptic Gate log**: `gh run list --workflow skeptic-gate.yml --branch BRANCH -L 1` → read VERDICT line

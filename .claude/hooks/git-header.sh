@@ -107,6 +107,15 @@ get_repo_from_remote() {
         fi
 
         # Match SSH format (supports any domain, including enterprise): git@[domain]:owner/repo.git
+        if [[ "$parsed_url" =~ ssh://git@([^/]+)/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+            local domain="${BASH_REMATCH[1]}"
+            local owner="${BASH_REMATCH[2]}"
+            local repo="${BASH_REMATCH[3]}"
+            repo="${repo%.git}"
+            echo "${domain}/${owner}/${repo}"
+            return 0
+        fi
+
         if [[ "$parsed_url" =~ git@([^:]+):([^/]+)/([^/]+)(\.git)?/?$ ]]; then
             local domain="${BASH_REMATCH[1]}"
             local owner="${BASH_REMATCH[2]}"

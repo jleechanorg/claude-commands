@@ -14,7 +14,7 @@ Situational assessment and roadmap sync after a work block.
 When this command is invoked:
 
 ### Step 1 — Load skill
-Read `~/.claude/skills/nextsteps.md` for full execution protocol.
+Read `~/.claude/skills/nextsteps/SKILL.md` for full execution protocol.
 
 ### Step 2 — Gather context in parallel
 Run simultaneously:
