@@ -38,8 +38,13 @@ CONCEPTS=$(ls $HOME/llm_wiki/wiki/concepts/*.md 2>/dev/null | wc -l)
 
 echo "=== RATIO CHECK ==="
 echo "Sources: $SOURCES, Entities: $ENTITIES, Concepts: $CONCEPTS"
-echo "Entity ratio: $(echo "scale=2; $ENTITIES * 100 / $SOURCES" | bc)%"
-echo "Concept ratio: $(echo "scale=2; $CONCEPTS * 100 / $SOURCES" | bc)%"
+if [ "$SOURCES" -gt 0 ]; then
+  echo "Entity ratio: $(echo "scale=2; $ENTITIES * 100 / $SOURCES" | bc)%"
+  echo "Concept ratio: $(echo "scale=2; $CONCEPTS * 100 / $SOURCES" | bc)%"
+else
+  echo "Entity ratio: N/A (no sources)"
+  echo "Concept ratio: N/A (no sources)"
+fi
 
 # Index quality check
 echo "=== INDEX QUALITY ==="
