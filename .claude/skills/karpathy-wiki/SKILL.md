@@ -1,3 +1,8 @@
+---
+name: karpathy-wiki
+description: Enforce the Karpathy LLM wiki pattern for ingesting, querying, and organizing sources.
+---
+
 # karpathy-wiki Skill
 
 ## When to use

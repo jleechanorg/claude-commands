@@ -1,3 +1,8 @@
+---
+name: wiki-bfs
+description: Run breadth-first research on a topic and optionally ingest results into the local LLM wiki.
+---
+
 # /wiki-bfs — Breadth-First Research + Wiki Ingest
 
 ## Usage

@@ -154,6 +154,13 @@ Produce output in this format:
 **Overall**: PASS | PARTIAL | FAIL | INCONCLUSIVE
 **Confidence**: HIGH | MEDIUM | LOW
 
+### What This Evidence Proves vs. Does NOT Prove
+**Proves**:
+- <list of specific, verified claims supported by STRONG artifacts>
+
+**Does NOT Prove**:
+- <list of limitations, untested scenarios, or claims with WEAK/MISSING artifacts>
+
 ### Claim Map
 | # | Claim | Artifact | Quality | Notes |
 |---|-------|----------|---------|-------|

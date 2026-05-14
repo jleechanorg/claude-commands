@@ -12,10 +12,26 @@ SOCK=$(ls /tmp/cmux-debug-*.sock /tmp/cmux-debug.sock /tmp/cmux.sock 2>/dev/null
 echo "Using: $SOCK"
 ```
 
-Common paths:
+Common paths (verified 2026-05-05):
+- macOS appclick debug: `/private/tmp/cmux-debug-appclick.sock` AND `/tmp/cmux-debug-appclick.sock` — **BOTH may respond**; probe all variants
 - Tagged debug build: `/tmp/cmux-debug-<tag>.sock`
 - Untagged debug: `/tmp/cmux-debug.sock`
 - Release: `/tmp/cmux.sock`
+
+**Always ping-verify each discovered socket** — a socket file existing does NOT mean cmux is listening on it (leftover from crashed process):
+
+```bash
+for sock in /private/tmp/cmux-debug-appclick.sock /tmp/cmux-debug-appclick.sock ~/Library/Application\ Support/cmux/cmux.sock; do
+  result=$(printf '{"jsonrpc":"2.0","method":"system.ping","params":{},"id":"ping"}\n' | nc -w 1 -U "$sock" 2>&1)
+  if echo "$result" | grep -q '"pong"'; then
+    echo "ACTIVE: $sock"
+  else
+    echo "INACTIVE/EMPTY: $sock — $result"
+  fi
+done
+```
+
+**Both `/private/tmp/` and `/tmp/` debug sockets can be simultaneously active.** The production socket at `~/Library/Application Support/cmux/cmux.sock` may return `TabManager not available` while a debug socket has all workspace data. Use the debug socket that responds with full `system.tree` data.
 
 ---
 
@@ -82,6 +98,15 @@ printf "read_screen 1 --lines 60 --scrollback\n" | nc -U $SOCK
 # Fallback when cross-workspace: check git for coder progress
 git -C $HOME/projects_reference/cmux_ubuntu log --oneline -5
 ```
+
+**Critical: surface.read_text may return the SAME buffer for ALL surfaces in window:2** (discovered 2026-05-05)
+
+When multiple workspaces share the same window (window:2), ALL surface refs (surface:31 through surface:45, etc.) may return identical terminal content — the active workspace's buffer. This happens because surfaces in the same window/pane share terminal buffers. Symptoms:
+- `surface.read_text` for workspace:20 surfaces returns workspace:18's terminal content
+- All surface IDs in the window return the same text field
+- This is NOT a socket failure — the socket is fine (ping works)
+
+**To distinguish workspaces, use `workspace.list` and `workspace.current`** to identify the active workspace, then interpret surface content accordingly. Do not assume each surface has independent terminal state when they share a window.
 
 ---
 

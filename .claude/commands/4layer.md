@@ -8,6 +8,7 @@ execution_mode: immediate
 **This is NOT documentation - these are COMMANDS to execute right now.**
 
 **PRIMARY REFERENCE**: See `.claude/skills/pr-blocker-min-repro.md` for complete protocol details.
+**LAYER SELECTION**: See `.claude/skills/testing-layers/SKILL.md` for deciding which layer to test at and how to create new tests.
 
 ## 🚨 EXECUTION WORKFLOW
 

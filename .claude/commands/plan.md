@@ -14,7 +14,6 @@ execution_mode: immediate
 
 **Action Steps:**
 **🔍 Context Assessment**: Every planning session MUST begin with context assessment:
-```bash
 
 ### Phase 1: Strategic Analysis
 

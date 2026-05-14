@@ -98,7 +98,7 @@ git add roadmap/<updated-or-new-doc>.md
 git commit -m "docs(roadmap): capture session ideas — <brief summary>
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-git push
+git push  # Confirm push with user before executing
 ```
 
 Do NOT create a separate PR for roadmap-only doc changes — commit directly to the current branch.

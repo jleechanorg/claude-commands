@@ -20,7 +20,7 @@ on:
 
 jobs:
   validate-evidence-bundles:
-    name: Validate Evidence Bundles
+    name: Evidence Gate
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -61,7 +61,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
         }
 
         # Simulate previous processing
-        self.monitor._record_pr_processing("test-repo", "feature-branch", 1001, "abc123same")
+        self.monitor._record_pr_processing("org/test-repo", "feature-branch", 1001, "abc123same")
 
         # RED: This will fail - no is_pr_actionable method exists
         result = self.monitor.is_pr_actionable(pr_data)
@@ -81,7 +81,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
         }
 
         # Simulate processing of old commit
-        self.monitor._record_pr_processing("test-repo", "feature-branch", 1001, "abc123old")
+        self.monitor._record_pr_processing("org/test-repo", "feature-branch", 1001, "abc123old")
 
         # RED: This will fail - no is_pr_actionable method exists
         result = self.monitor.is_pr_actionable(pr_data)
@@ -220,7 +220,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
                 "headRefOid": f"abc123old{i:03d}"
             }
             # Pre-record as processed
-            self.monitor._record_pr_processing("test-repo", f"processed-branch-{i}", 2000 + i, f"abc123old{i:03d}")
+            self.monitor._record_pr_processing("org/test-repo", f"processed-branch-{i}", 2000 + i, f"abc123old{i:03d}")
             all_prs.append(pr)
 
         # RED: This will fail - no filter_and_process_prs method exists
@@ -258,7 +258,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
         ]
 
         # Mark one as already processed
-        self.monitor._record_pr_processing("repo3", "branch3", 1003, "old789")
+        self.monitor._record_pr_processing("org/repo3", "branch3", 1003, "old789")
 
         eligible_prs = self.monitor.filter_eligible_prs(mixed_prs)
 
@@ -295,6 +295,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
         """GREEN: Comment posting should return 'posted' when successful"""
         with patch.object(self.monitor, "_get_pr_comment_state") as mock_state, \
              patch.object(self.monitor, "_should_skip_pr") as mock_skip, \
+             patch.object(self.monitor, "get_authoritative_sha") as mock_auth_sha, \
              patch.object(self.monitor, "_has_codex_comment_for_commit") as mock_has_comment, \
              patch.object(self.monitor, "_build_codex_comment_body_simple") as mock_build_body, \
              patch.object(self.monitor, "_record_processed_pr") as mock_record, \
@@ -303,6 +304,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
             # Setup: PR not skipped, no existing comment, successful command
             mock_state.return_value = ("sha123", [])
             mock_skip.return_value = False
+            mock_auth_sha.return_value = "sha123"
             mock_has_comment.return_value = False
             mock_build_body.return_value = "Test comment body"
             mock_subprocess.return_value = Mock(returncode=0, stdout="success", stderr="")
@@ -319,10 +321,12 @@ class TestPRFilteringMatrix(unittest.TestCase):
     def test_comment_posting_returns_skipped_when_already_processed(self):
         """GREEN: Comment posting should return 'skipped' when PR already processed"""
         with patch.object(self.monitor, "_get_pr_comment_state") as mock_state, \
+             patch.object(self.monitor, "get_authoritative_sha") as mock_auth_sha, \
              patch.object(self.monitor, "_should_skip_pr") as mock_skip:
 
             # Setup: PR should be skipped
             mock_state.return_value = ("sha123", [])
+            mock_auth_sha.return_value = "sha123"
             mock_skip.return_value = True
 
             pr_data = {
@@ -336,11 +340,13 @@ class TestPRFilteringMatrix(unittest.TestCase):
     def test_comment_posting_returns_skipped_when_comment_exists(self):
         """GREEN: Comment posting should return 'skipped' when comment already exists for commit"""
         with patch.object(self.monitor, "_get_pr_comment_state") as mock_state, \
+             patch.object(self.monitor, "get_authoritative_sha") as mock_auth_sha, \
              patch.object(self.monitor, "_should_skip_pr") as mock_skip, \
              patch.object(self.monitor, "_has_codex_comment_for_commit") as mock_has_comment:
 
             # Setup: PR not skipped but has existing comment
             mock_state.return_value = ("sha123", [])
+            mock_auth_sha.return_value = "sha123"
             mock_skip.return_value = False
             mock_has_comment.return_value = True
 
@@ -355,6 +361,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
     def test_comment_posting_returns_failed_on_subprocess_error(self):
         """GREEN: Comment posting should return 'failed' when subprocess fails"""
         with patch.object(self.monitor, "_get_pr_comment_state") as mock_state, \
+             patch.object(self.monitor, "get_authoritative_sha") as mock_auth_sha, \
              patch.object(self.monitor, "_should_skip_pr") as mock_skip, \
              patch.object(self.monitor, "_has_codex_comment_for_commit") as mock_has_comment, \
              patch.object(self.monitor, "_build_codex_comment_body_simple") as mock_build_body, \
@@ -362,6 +369,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
 
             # Setup: PR not skipped, no existing comment, but command fails
             mock_state.return_value = ("sha123", [])
+            mock_auth_sha.return_value = "sha123"
             mock_skip.return_value = False
             mock_has_comment.return_value = False
             mock_build_body.return_value = "Test comment body"
@@ -384,6 +392,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
              patch.object(self.monitor, "_has_codex_comment_for_commit") as mock_has_comment, \
              patch.object(self.monitor, "_record_processed_pr") as mock_record_processed, \
              patch.object(self.monitor, "_build_codex_comment_body_simple") as mock_build_body, \
+             patch.object(self.monitor, "get_authoritative_sha", return_value="sha123"), \
              patch("jleechanorg_pr_automation.automation_utils.AutomationUtils.execute_subprocess_with_timeout") as mock_subprocess:
 
             mock_state.return_value = ("sha123", [])
@@ -403,7 +412,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
             mock_has_comment.assert_not_called()
             mock_build_body.assert_not_called()
             mock_subprocess.assert_not_called()
-            mock_record_processed.assert_called_once_with("repo", "feature", 456, "sha123")
+            mock_record_processed.assert_called_once_with("org/repo", "feature", 456, "sha123")
 
     def test_process_pr_comment_only_returns_true_for_posted(self):
         """GREEN: _process_pr_comment should only return True when comment actually posted"""

@@ -1,3 +1,8 @@
+---
+description: MCP Mail communication protocol reference for pair programming
+type: orchestration
+execution_mode: manual
+---
 # Pair Protocol - MCP Mail Communication Reference
 
 ## Overview
@@ -191,8 +196,6 @@ All MCP mail messages follow this JSON structure:
   "body": {
     "phase": "MERGED",
     "status": "SUCCESS",
-    "commit_sha": "a1b2c3d4e5f6g7h8i9j0",
-    "branch": "claude/pair-auth-feature",
     "message": "Pair session completed successfully. All tests passing. Implementation merged."
   }
 }
@@ -298,7 +301,7 @@ All MCP mail messages follow this JSON structure:
   "body": {
     "phase": "BUILD_COMPLETE",
     "status": "TIMEOUT",
-    "message": "No response received within 30 minute timeout period. Please respond within 10 minutes or session will abort.",
+    "message": "No response received within 60 minute timeout period. Please respond within 10 minutes or session will abort.",
     "warnings_sent": 1,
     "max_warnings": 2
   }
@@ -526,7 +529,7 @@ mcp__agentmail__delete_messages \
 **Check:**
 - Is agent registered? `mcp__agentmail__list_agents`
 - Is agent ID correct? Case-sensitive
-- Network/MCP server issues? `mcp__agentmail__status`
+- Network/MCP server issues? `mcp__mcp-agent-mail__health_check`
 
 ### Problem: Timeout during build phase
 

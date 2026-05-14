@@ -87,6 +87,19 @@ Task({
 - **Analysis**: Correctness, architecture, security, performance, PR goal alignment
 - **When to Use**: User explicitly requests Gemini opinion, technical decision validation
 
+### **9. `wafer-pair-coder.md` - Wafer Pair Programming Coder**
+- **Focus**: Delegates implementation to Claude CLI with Wafer API backend (GLM-5.1 via pass.wafer.ai)
+- **Pattern**: Mirrors minimax-pair-coder — same protocol, different backend
+- **CLI**: Uses `claudew()` env vars (CLAUDEW_MODE, WAFER_API_KEY, ANTHROPIC_BASE_URL=https://pass.wafer.ai)
+- **When to Use**: Pair programming with Wafer as the implementation engine
+
+### **10. `wafer-pair-verifier.md` - Wafer Pair Programming Verifier**
+- **Focus**: Delegates verification to Claude CLI with Wafer API backend (GLM-5.1 via pass.wafer.ai)
+- **Pattern**: Mirrors minimax-pair-verifier — same protocol, different backend
+- **CLI**: Uses `claudew()` env vars (CLAUDEW_MODE, WAFER_API_KEY, ANTHROPIC_BASE_URL=https://pass.wafer.ai)
+- **Fallback**: Falls back to native verification if Wafer CLI unavailable
+- **When to Use**: Independent verification with Wafer as the verification engine
+
 ## 🔄 Agent Coordination Patterns
 
 ### **Parallel Execution**

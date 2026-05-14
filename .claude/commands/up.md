@@ -1,3 +1,8 @@
+---
+description: Update all agent instruction files from source
+type: execution
+execution_mode: manual
+---
 # /up — Update All Agent Instruction Files
 
 Update `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md`, and `~/.cursor/rules/` with a new rule or preference stated in the argument.

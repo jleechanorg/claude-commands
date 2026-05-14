@@ -68,5 +68,6 @@ After each test run, capture:
 
 ## References
 
+- `.claude/skills/testing-layers/SKILL.md` for deciding which layer to write NEW tests in and evidence implications.
 - `.claude/skills/pr-blocker-min-repro.md` for BYOK-specific starter commands and bead note patterns.
 - `.claude/skills/integration-verification.md` for minimum evidence completeness.

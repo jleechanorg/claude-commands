@@ -1,3 +1,8 @@
+---
+name: pr-automation-workflows
+description: Reference the distinct PR automation cron workflows and their scopes.
+---
+
 # PR Automation Workflows
 
 **CRITICAL**: There are FOUR distinct workflows, each running on separate cron schedules. They are NOT conditional branches - they are separate execution modes.
@@ -110,4 +115,3 @@ When automation (Codex) or the `/copilot` tool fixes PR comments, require URL tr
 - If `responses.json` is missing URLs, backfill from `comments.json` by matching comment IDs in a type-safe way (`(.id|tostring) == $id`).
 
 This keeps both fix-comment/codex automation and manual `/copilot` workflows auditable and consistent with expectations.
-

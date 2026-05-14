@@ -1,15 +1,26 @@
+---
+name: auton
+description: Diagnose why the automation system is not autonomously driving PRs to green and merge.
+---
+
 # Autonomy Diagnostic Skill
 
 ## Purpose
 
-When invoked, diagnose WHY the jleechanclaw + AO system is NOT autonomously driving PRs to 6 green and merged. The system is supposed to do this without human intervention — if it isn't, something is broken.
+When invoked, diagnose WHY the jleechanclaw + AO system is NOT autonomously driving PRs to N-green and merged. The system is supposed to do this without human intervention — if it isn't, something is broken.
 
 ## Read first (mandatory before answering)
 
-1. `~/.openclaw/CLAUDE.md` — repo goals, PR green definition, autonomy target
-2. `~/.codex/AGENTS.md` — agent policies
-3. `~/.openclaw/agent-orchestrator.yaml` — AO project config (worktreeDir, backfillAllPRs, notifiers, reactions)
-4. `~/.openclaw/SOUL.md` — openclaw decision-making policy
+> **⚠️ DUAL-CONFIG WARNING (2026-04-15):** Two AO config directories exist with different purposes:
+> - `~/.openclaw/` — CLI/interactive use (used by `ao spawn`, `ao config`, etc.)
+> - `~/.openclaw_prod/` — worker use (used by lifecycle-workers via launchd plist `AO_CONFIG_PATH`)
+> **Always diagnose BOTH or verify which is active** — they can diverge and cause auth failures.
+
+1. `~/.hermes_prod/` — Hermes agent config (the agent since 2026-04-12; OpenClaw is dead)
+2. `~/.openclaw_prod/agent-orchestrator.yaml` — AO worker config (used by lifecycle-workers)
+3. `~/.openclaw/agent-orchestrator.yaml` — AO CLI config (used by interactive `ao` commands)
+4. `~/.codex/AGENTS.md` — agent policies
+5. `~/.openclaw/SOUL.md` — AO decision-making policy (legacy; Hermes uses its own)
 
 **NOTE: ao-pr-poller is DEPRECATED and removed. Do NOT check for it or report its absence as a problem.**
 
@@ -23,21 +34,39 @@ AO lifecycle-worker (every ~5 min via launchd)
   ↓ agento: posts @coderabbitai all good?
   ↓ agento: runs /er evidence review
   ↓ CI passes, CR APPROVED, Bugbot neutral, comments resolved
-  ↓ approved-and-green reaction fires → auto-merge (auto: true, action: auto-merge)
+  ↓ worker-signals-completion reaction fires → skeptic-review
+  ↓ skeptic-review runs `ao skeptic verify` and posts VERDICT comment
+  ↓ skeptic-cron.yml checks 7-green and merges when all applicable gates pass
 ```
 
-**Key config to verify**: `~/.openclaw/agent-orchestrator.yaml` must have:
+**Key config to verify** (from the ACTIVE config — run Step 0 first):
 ```yaml
-reactions:
-  approved-and-green:
-    auto: true
-    action: auto-merge
+worker-signals-completion:
+  auto: true
+  action: skeptic-review
+  skepticModel: codex
 ```
-If `auto: false` or missing — that is the merge executor gap.
+And the repo must have a healthy `skeptic-cron.yml` workflow. `approved-and-green` may still exist, but it is no longer the canonical merge executor.
+
+If `worker-signals-completion` is missing, `auto: false`, or not `action: skeptic-review`, that is the local skeptic trigger gap.
 
 **Full autonomy means: idea in → merged PR out, zero human clicks.**
 
 ## Diagnostic questions (answer each with evidence)
+
+### 0. Verify active config path (MUST DO FIRST — 2026-04-15 lesson)
+```bash
+# Find which config workers actually use
+ps aux | grep "lifecycle-worker" | grep -v grep | head -5
+
+# Check if both configs exist and are different
+diff ~/.openclaw/agent-orchestrator.yaml ~/.openclaw_prod/agent-orchestrator.yaml 2>/dev/null && echo "configs IDENTICAL" || echo "⚠️ configs DIVERGE"
+
+# If configs differ, the WORKER config is the source of truth for auth/model issues
+# Workers read AO_CONFIG_PATH from their process env — verify it:
+ps aux | grep "lifecycle-worker" | grep -v grep | grep -o "AO_CONFIG_PATH=[^ ]*"
+```
+**Why this matters:** `~/.openclaw/` (CLI) and `~/.openclaw_prod/` (workers) can diverge. The 2026-04-15 auth outage was caused by `~/.openclaw_prod/` having `model: gemini-3-flash-preview` while `~/.openclaw/` had `MiniMax-M2.7`. Always check the worker config first for auth issues.
 
 ### 1. Is AO lifecycle-worker and orchestrator running?
 ```bash
@@ -79,9 +108,20 @@ done
 gh pr list --repo jleechanorg/agent-orchestrator --state open \
   --json number,title,mergeable,mergeStateStatus,reviewDecision
 
-# Also verify auto-merge config (REQUIRED for autonomous merging):
-grep -A3 "approved-and-green" ~/.openclaw/agent-orchestrator.yaml | grep -E "auto:|action:"
-# Expected: auto: true, action: auto-merge
+# Verify skeptic-review trigger wiring (REQUIRED for autonomous reviewing):
+python3 - <<'PY'
+import yaml, os
+# Try worker config first, fall back to CLI config
+for path in [os.environ.get("AO_CONFIG_PATH", ""), "~/.openclaw_prod/agent-orchestrator.yaml", "~/.openclaw/agent-orchestrator.yaml"]:
+    if path and os.path.exists(os.path.expanduser(path)):
+        cfg = yaml.safe_load(open(os.path.expanduser(path)))
+        print(f"Config: {path}")
+        print(((cfg.get("reactions") or {}).get("worker-signals-completion") or {}))
+        break
+PY
+
+# Verify skeptic-cron is present and running:
+gh run list --repo jleechanorg/agent-orchestrator --workflow skeptic-cron.yml --limit 3
 ```
 
 ### 6. Is CR rate-limited?
@@ -90,9 +130,11 @@ gh api repos/jleechanorg/jleechanclaw/issues/comments?per_page=5 | \
   python3 -c "import json,sys; [print(c['user']['login'],c['body'][:100]) for c in json.load(sys.stdin) if 'rate limit' in c['body'].lower()]"
 ```
 
-### 7. Is the 6-green check working correctly?
+### 7. Is the 7-green review + merge chain working correctly?
 ```bash
-PYTHONPATH=~/.openclaw/src python3 -m orchestration.merge_gate jleechanorg jleechanclaw <PR_NUM> --json
+# Verify latest skeptic markers and VERDICT comment are bound to the head SHA
+gh api repos/jleechanorg/agent-orchestrator/issues/<PR_NUM>/comments --paginate | \
+  jq '[.[] | select(.body | test("skeptic-(gate|cron)-trigger|VERDICT:"; "i"))] | .[-5:]'
 ```
 
 ### 8. Is the stray-worktree bug blocking spawns?
@@ -105,13 +147,14 @@ git -C ~/.openclaw worktree list | grep -v "~/.openclaw\b\|~/.worktrees"
 
 | Symptom | Root cause | Fix |
 |---|---|---|
-| Sessions spawn but die immediately | `--claim-pr` fails (stray worktree) | `git worktree prune`, clear stale paths |
+| Sessions spawn but die immediately | `--claim-pr` fails (stray worktree) | clear stale paths / targeted unlock |
 | Sessions alive but no pushes | Agent hits rate limit or auth failure | Check agent logs, re-auth |
 | CR never APPROVED | Rate limited (too many PRs) | Wait for limit reset, or reduce simultaneous PRs |
-| 6-green check passes but no merge | auto-merge config missing or `auto: false` | Verify `approved-and-green: auto: true, action: auto-merge` in `~/.openclaw/agent-orchestrator.yaml` |
+| 7-green checks pass except skeptic | `worker-signals-completion` missing, marker mismatch, or skeptic-review failed | Verify skeptic-review hook and latest VERDICT comment markers |
+| `skeptic-cron` runs but merges 0 PRs | No PR is truly 7-green | Inspect gate-by-gate failures in workflow logs |
 | `/tmp/ao-pr-poller.log` missing | **NOT A BUG** — ao-pr-poller is deprecated/removed | Ignore; its absence is correct and expected |
 | PRs cycling CR changes_requested | Agent not reading CR comments correctly | Check agento's comment-reading skill |
-| Spawned sessions are idle shells | `is_agent_alive_in_session` returns false | Check openclaw gateway is running on port 18789 |
+| Spawned sessions are idle shells | `is_agent_alive_in_session` returns false | Check Hermes gateway is running (`hermes gateway status`) |
 
 ## Output format
 
@@ -121,7 +164,8 @@ git -C ~/.openclaw worktree list | grep -v "~/.openclaw\b\|~/.worktrees"
 ### System health
 - AO lifecycle-worker: RUNNING / STOPPED
 - Orchestrator session: FOUND (hash-prefixed name) / NOT FOUND
-- Auto-merge config: approved-and-green auto=true/false, action=X
+- Skeptic-review hook: worker-signals-completion auto=true/false, action=X
+- Skeptic-cron workflow: RUNNING / FAILING / NOT FOUND
 - Active sessions: N (M with live agents)
 - Open PRs: N total, N non-green
 

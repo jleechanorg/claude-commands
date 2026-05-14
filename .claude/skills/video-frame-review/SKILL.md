@@ -1,3 +1,8 @@
+---
+name: video-frame-review
+description: Review video evidence by extracting frames with ffmpeg and inspecting key UI states.
+---
+
 # Video Frame Review Skill
 
 ## How it works

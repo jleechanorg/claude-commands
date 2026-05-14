@@ -1,3 +1,8 @@
+---
+name: codex-symlinks
+description: Create Codex project symlinks for quick access to key repositories.
+---
+
 # Skill: codex-symlinks
 
 Create or update Codex project symlinks for quick access to key repos.

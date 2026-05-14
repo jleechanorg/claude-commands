@@ -8,4 +8,4 @@ execution_mode: immediate
 
 Read **`.claude/skills/repro-twin-clone-evidence/SKILL.md`** and execute it according to `$ARGUMENTS`.
 
-All routing, env, five-class suite, twin-clone steps, `repro_copy`, and exports live **only** in that skill — not in this file.
+All routing, env, twin-clone steps, `repro_copy`, and exports live **only** in that skill — not in this file.

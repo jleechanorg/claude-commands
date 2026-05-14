@@ -1,3 +1,8 @@
+---
+name: automation-audit
+description: Audit automation job runs, logs, PR processing metrics, and AI-authored remote commits.
+---
+
 # Automation Audit Skill
 
 **Usage**: `/automation-audit [hours]`
@@ -30,7 +35,7 @@ FIXCOMMENT_LOG="/tmp/fix-comment.log"
 COMMENT_VAL_LOG="/tmp/comment-validation.log"
 
 # Or from home directory
-HOME_LOGS="$HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation/"
+HOME_LOGS="$HOME/Library/Logs/worldarchitect-automation/"
 ```
 
 ### Step 2: Parse PR Metrics
@@ -121,7 +126,7 @@ gh api repos/$GITHUB_REPOSITORY/commits/{sha} \
 - `/tmp/fixpr.log` - fixpr job runs
 - `/tmp/fix-comment.log` - fix-comment job runs
 - `/tmp/comment-validation.log` - comment-validation job runs
-- `$HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation/` - persistent logs
+- `$HOME/Library/Logs/worldarchitect-automation/` - persistent logs
 
 ## Key Log Patterns
 

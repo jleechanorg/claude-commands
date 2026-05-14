@@ -1,3 +1,8 @@
+---
+name: mem0
+description: Search, write, and inspect the shared OpenClaw mem0 qdrant memory store.
+---
+
 # mem0 — OpenClaw Shared Memory
 
 Query and write to the shared mem0 qdrant store (`openclaw_mem0`, 127.0.0.1:6333).

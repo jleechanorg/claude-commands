@@ -1,3 +1,8 @@
+---
+name: cmux-steer
+description: Read and steer another cmux terminal tab through the Unix socket.
+---
+
 # cmux-steer — Control another cmux terminal tab via the Unix socket
 
 **Usage**: Read and follow this skill directly; no `/cmux-steer` slash command is defined.

@@ -1,0 +1,37 @@
+name: Codex Skill Sync Check
+
+on:
+  pull_request:
+    paths:
+      - ".claude/skills/**"
+      - ".codex/skills/**"
+      - "scripts/sync_codex_claude_skills.py"
+      - ".github/workflows/codex-skill-sync.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".claude/skills/**"
+      - ".codex/skills/**"
+      - "scripts/sync_codex_claude_skills.py"
+      - ".github/workflows/codex-skill-sync.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Codex skill symlink drift
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Verify Claude skills are exposed to Codex
+        run: |
+          python3 scripts/sync_codex_claude_skills.py --scope project
+          if [ -n "$(git status --porcelain -- .codex/skills)" ]; then
+            git status --short -- .codex/skills
+            echo "Codex skill mirror drift detected. Run scripts/sync_codex_claude_skills.py and commit the result."
+            exit 1
+          fi

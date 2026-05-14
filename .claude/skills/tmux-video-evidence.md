@@ -103,10 +103,11 @@ echo "╚═══════════════════════�
 chmod +x /tmp/<work_name>_evidence.sh
 
 # Record with asciinema
-asciinema rec /tmp/<work_name>.cast \
+timeout 120 asciinema rec /tmp/<work_name>.cast \
   --command "/tmp/<work_name>_evidence.sh" \
   --title "<descriptive title>" \
   --cols 120 --rows 50 \
+  --idle-time-limit 5 \
   --overwrite
 
 # Convert to GIF for embedding

@@ -16,13 +16,13 @@ pgrep -af "lifecycle-worker"
 If nothing: lifecycle-worker is not running. Check launchd state:
 
 ```bash
-launchctl print gui/$(id -u)/com.agentorchestrator.lifecycle-agent-orchestrator 2>&1 | grep "state ="
+launchctl print gui/$(id -u)/ai.agento.lifecycle-all 2>&1 | grep "state ="
 ```
 
 If state ≠ `running`, bootstrap it:
 
 ```bash
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.agentorchestrator.lifecycle-agent-orchestrator.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.agento.lifecycle-all.plist
 ```
 
 ## Step 2 — Find the lifecycle log
