@@ -39,7 +39,14 @@ def stash_changes():
     """Stash uncommitted changes (including untracked files)."""
     print("📝 Stashing uncommitted changes (including untracked files)...")
     stdout, stderr, returncode = run_command(
-        ["git", "stash", "push", "--include-untracked", "-m", "auto-stash-before-newbranch"],
+        [
+            "git",
+            "stash",
+            "push",
+            "--include-untracked",
+            "-m",
+            "auto-stash-before-newbranch",
+        ],
         check=False,
     )
 
@@ -91,35 +98,11 @@ def get_current_branch():
 
 def fetch_origin_main():
     print("🔄 Fetching latest main from origin...")
-    stdout, stderr, returncode = run_command(["git", "fetch", "origin", "main"], check=False)
+    stdout, stderr, returncode = run_command(
+        ["git", "fetch", "origin", "main"], check=False
+    )
     if returncode != 0:
         print("❌ ERROR: Failed to fetch origin/main")
-        if stdout:
-            print(stdout)
-        if stderr:
-            print(stderr)
-        return False
-    return True
-
-
-def checkout_main():
-    print("🏠 Checking out local main branch...")
-    stdout, stderr, returncode = run_command(["git", "checkout", "main"], check=False)
-    if returncode != 0:
-        print("❌ ERROR: Could not switch to main branch.")
-        if stdout:
-            print(stdout)
-        if stderr:
-            print(stderr)
-        return False
-    return True
-
-
-def pull_origin_main():
-    print("⬇️  Pulling latest changes into main...")
-    stdout, stderr, returncode = run_command(["git", "pull", "origin", "main"], check=False)
-    if returncode != 0:
-        print("❌ ERROR: Failed to pull latest main.")
         if stdout:
             print(stdout)
         if stderr:
@@ -209,8 +192,7 @@ def resolve_requested_commits(commit_tokens, local_commits):
 
     resolved = []
     lowered_map = {
-        commit_hash: subject.lower()
-        for commit_hash, subject in local_commits
+        commit_hash: subject.lower() for commit_hash, subject in local_commits
     }
 
     for token in commit_tokens:
@@ -261,20 +243,25 @@ def resolve_requested_commits(commit_tokens, local_commits):
         return unique
     return []
 
+
 def cherry_pick_commits(commits):
     if not commits:
         return True
 
     print("🍒 Cherry-picking requested commits onto the new branch...")
     for commit in commits:
-        stdout, stderr, returncode = run_command(["git", "cherry-pick", commit], check=False)
+        stdout, stderr, returncode = run_command(
+            ["git", "cherry-pick", commit], check=False
+        )
         if returncode != 0:
             print(f"❌ ERROR: Cherry-pick failed for commit {commit}.")
             if stdout:
                 print(stdout)
             if stderr:
                 print(stderr)
-            print("👉 Resolve the cherry-pick conflict, then run `git cherry-pick --continue`.")
+            print(
+                "👉 Resolve the cherry-pick conflict, then run `git cherry-pick --continue`."
+            )
             return False
     print("✅ Requested commits cherry-picked successfully.")
     return True
@@ -288,7 +275,9 @@ def main():
     else:
         timestamp = str(int(time.time()))
         branch_name = f"dev{timestamp}"
-        print("⚠️  Using timestamp-based branch name. Consider specifying a descriptive name.")
+        print(
+            "⚠️  Using timestamp-based branch name. Consider specifying a descriptive name."
+        )
 
     print(f"Creating new branch: {branch_name}")
 
@@ -319,21 +308,11 @@ def main():
             pop_stash()
         return 1
 
-    if not checkout_main():
-        if stashed:
-            print("🔁 Restoring stashed changes after checkout failure...")
-            pop_stash()
-        return 1
-
-    if not pull_origin_main():
-        if stashed:
-            print("🔁 Restoring stashed changes after pull failure...")
-            pop_stash()
-        return 1
-
-    print(f"🌿 Creating and switching to new branch from origin/main: {branch_name}")
+    print(
+        f"🌿 Creating and switching to new branch directly from origin/main: {branch_name}"
+    )
     stdout, stderr, returncode = run_command(
-        ["git", "checkout", "-b", branch_name, "origin/main"],
+        ["git", "checkout", "-b", branch_name, "origin/main", "--no-track"],
         check=False,
     )
     if returncode != 0:
@@ -373,11 +352,15 @@ def main():
     print(f"✅ Successfully created and switched to branch: {branch_name}")
     if include_commits:
         if commits_to_apply:
-            print("📋 Branch is based on latest main and includes requested commits plus uncommitted work.")
+            print(
+                "📋 Branch is based on latest main and includes requested commits plus uncommitted work."
+            )
         else:
             print("📋 Branch is based on latest main; no committed changes were added.")
     else:
-        print("📋 Branch is based on latest main and includes your uncommitted work (if any).")
+        print(
+            "📋 Branch is based on latest main and includes your uncommitted work (if any)."
+        )
 
     return 0
 

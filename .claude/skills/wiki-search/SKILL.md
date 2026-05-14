@@ -1,3 +1,8 @@
+---
+name: wiki-search
+description: Search the local LLM wiki for matching pages, titles, and content snippets.
+---
+
 # /wiki-search — Search the LLM Wiki
 
 ## Usage

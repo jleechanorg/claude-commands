@@ -5,7 +5,7 @@ name: Green Gate
 # lifecycle-manager runs ao skeptic verify via AO worker (Codex OAuth, no API keys) →
 # posts VERDICT comment → GHA polling step detects it and exits PASS/FAIL.
 #
-# Gate 1-5 pre-check exits early for non-6-green PRs (cheap, no CLI needed).
+# Gate 1-5 pre-check fails closed for non-6-green PRs.
 on:
   pull_request:
     types: [opened, synchronize, edited, reopened]
@@ -30,7 +30,7 @@ concurrency:
 jobs:
   skeptic_gate:
     name: Skeptic Gate
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     # Must exceed the poll step timeout so the job is not killed mid-loop.
     timeout-minutes: 60
     permissions:
@@ -88,14 +88,14 @@ jobs:
             echo "GATE-2 PASS: no conflicts"
           fi
 
-          # Gate 3: CR APPROVED. Prefer formal CodeRabbit review state, but
-          # fall back to CodeRabbit's current-head status plus its explicit
-          # "[approve]" bot comment because some repos receive comments/statuses
-          # without a PR review object even with auto_approve enabled.
+          # Gate 3: CR APPROVED. Prefer formal CodeRabbit review state. Only
+          # fall back to the current-head status plus explicit "[approve]" bot
+          # comment when there is no formal CodeRabbit review object yet, or
+          # when the latest formal review was explicitly dismissed as stale.
           set +e -o pipefail
           LATEST_CR_PIPELINE=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/reviews \
             --paginate 2>/dev/null \
-            | jq -rs --arg head "$HEAD_SHA" 'add | [.[] | select((.user.login == "coderabbitai[bot]" or .user.login == "coderabbitai") and .state != "COMMENTED" and .commit_id == $head)] | sort_by(.submitted_at) | last | .state // "none"' 2>&1)
+            | jq -rs --arg head "$HEAD_SHA" 'add | [.[] | select((.user.login == "coderabbitai[bot]" or .user.login == "coderabbitai") and .state != "COMMENTED" and .commit_id == $head)] | sort_by(.submitted_at) | if length > 0 then (last | .state // "none") else "none" end' 2>&1)
           LATEST_CR_EXIT=$?
           set -e +o pipefail
           if [ $LATEST_CR_EXIT -ne 0 ]; then
@@ -105,36 +105,8 @@ jobs:
             LATEST_CR="${LATEST_CR_PIPELINE%$'\n'}"
             if [ "$LATEST_CR" = "APPROVED" ]; then
               CR_SIGNAL="APPROVED"
-            elif [ "$LATEST_CR" = "DISMISSED" ]; then
-              # If the latest review was dismissed, still honor a fresh
-              # status+`[approve]` signal on the PR comment stream.
-              HEAD_COMMITTED_AT=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA" \
-                --jq '.commit.committer.date // ""' 2>/dev/null || echo "")
-              CR_STATUS=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/status \
-                --jq '.statuses | map(select(.context == "CodeRabbit")) | sort_by(.updated_at) | last | .state // "none"' \
-                2>/dev/null || echo "none")
-              CR_APPROVE_COMMENT="none"
-              if [ -n "$HEAD_COMMITTED_AT" ]; then
-                set +e -o pipefail
-                CR_APPROVE_PIPELINE=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
-                  --paginate 2>/dev/null \
-                  | jq -rs --arg since "$HEAD_COMMITTED_AT" 'add | [.[] | select((.user.login == "coderabbitai[bot]" or .user.login == "coderabbitai") and .created_at >= $since and (.body | test("\\[approve\\]"; "i")))] | sort_by(.created_at) | last | if . then "APPROVED" else "none" end' 2>&1)
-                CR_APPROVE_EXIT=$?
-                set -e +o pipefail
-                if [ "$CR_APPROVE_EXIT" -eq 0 ]; then
-                  CR_APPROVE_COMMENT="${CR_APPROVE_PIPELINE%$'\n'}"
-                else
-                  CR_APPROVE_COMMENT="none"
-                fi
-              else
-                echo "DEBUG: HEAD_COMMITTED_AT empty for dismissed fallback, skipping comment scan"
-              fi
-              if [ "$CR_STATUS" = "success" ] && [ "$CR_APPROVE_COMMENT" = "APPROVED" ]; then
-                CR_SIGNAL="APPROVED(status+comment)"
-              else
-                CR_SIGNAL="FAIL(DISMISSED status=$CR_STATUS comment=$CR_APPROVE_COMMENT)"
-              fi
             elif [ "$LATEST_CR" != "none" ]; then
+              # DISMISSED and all other non-APPROVED formal reviews require a new APPROVED review
               CR_SIGNAL="FAIL($LATEST_CR)"
             else
               HEAD_COMMITTED_AT=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA" \
@@ -160,6 +132,12 @@ jobs:
               fi
               if [ "$CR_STATUS" = "success" ] && [ "$CR_APPROVE_COMMENT" = "APPROVED" ]; then
                 CR_SIGNAL="APPROVED(status+comment)"
+              elif [ "$CR_STATUS" = "success" ]; then
+                # CR completed (status=success) but posted no [approve] comment.
+                # This happens when request_changes_workflow=true — CR uses review
+                # objects instead of comments for approval. Treat status=success as
+                # implicit APPROVED.
+                CR_SIGNAL="APPROVED(status-only)"
               else
                 CR_SIGNAL="FAIL(status=$CR_STATUS comment=$CR_APPROVE_COMMENT)"
               fi
@@ -173,18 +151,54 @@ jobs:
           fi
 
           # Gate 4: Bugbot clean — use CI check-run conclusion, not inline comment count.
+          # Bugbot is registered after other jobs and often stays in_progress when this
+          # workflow first queries; poll so we do not false-fail 6-green eligibility.
           # Inline comment count is unreliable: stale comments from old commits persist and
           # produce false positives. CI check-run conclusion is the authoritative signal.
           # Fail-closed: only pass on success/neutral/skipped. Treat timed_out/cancelled/none
           # the same as failure — Bugbot must have actually completed cleanly to pass.
-          BUGBOT_CONCLUSION=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/check-runs \
+          BUGBOT_POLL=0
+          BUGBOT_POLL_MAX=40
+          while [ "$BUGBOT_POLL" -lt "$BUGBOT_POLL_MAX" ]; do
+            BUGBOT_RUNS=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/check-runs \
+              --paginate 2>/dev/null \
+              | jq -rs '[.[] | .check_runs[]?] | map(select(.name | test("Cursor Bugbot"; "i")))' \
+              2>/dev/null || echo "[]")
+            BUGBOT_COUNT=$(echo "$BUGBOT_RUNS" | jq 'length')
+            BUGBOT_CONCLUSION=$(echo "$BUGBOT_RUNS" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .conclusion // "none") end')
+            BUGBOT_STATUS=$(echo "$BUGBOT_RUNS" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .status // "none") end')
+            NEED_WAIT=false
+            if [ "$BUGBOT_COUNT" -eq 0 ]; then
+              # Bugbot often registers after other jobs; a transient empty list must
+              # not skip Gate 4 before the check-run exists (Codex review).
+              if [ "$BUGBOT_POLL" -lt 6 ]; then
+                NEED_WAIT=true
+              else
+                # No Bugbot check-run after grace polls — treat as skipped
+                BUGBOT_CONCLUSION="skipped"; break
+              fi
+            elif [ "$BUGBOT_STATUS" = "in_progress" ] || [ "$BUGBOT_STATUS" = "queued" ] || [ "$BUGBOT_STATUS" = "pending" ]; then
+              NEED_WAIT=true
+            fi
+            if [ "$NEED_WAIT" != "true" ]; then
+              break
+            fi
+            BUGBOT_POLL=$((BUGBOT_POLL + 1))
+            echo "GATE-4 WAIT: Bugbot runs=$BUGBOT_COUNT status=$BUGBOT_STATUS conclusion=$BUGBOT_CONCLUSION (poll $BUGBOT_POLL/$BUGBOT_POLL_MAX)"
+            sleep 20
+          done
+          if [ "$BUGBOT_CONCLUSION" != "skipped" ]; then
+          BUGBOT_RUNS=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/check-runs \
             --paginate 2>/dev/null \
-            | jq -rs '[.[] | .check_runs[]?] | map(select(.name | test("Cursor Bugbot"; "i"))) | sort_by(.completed_at) | last | .conclusion // "none"' \
-            2>/dev/null || echo "error")
+            | jq -rs '[.[] | .check_runs[]?] | map(select(.name | test("Cursor Bugbot"; "i")))' \
+            2>/dev/null || echo "[]")
+          BUGBOT_CONCLUSION=$(echo "$BUGBOT_RUNS" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .conclusion // "none") end')
+          BUGBOT_STATUS=$(echo "$BUGBOT_RUNS" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .status // "none") end')
+          fi
           if [ "$BUGBOT_CONCLUSION" = "success" ] || [ "$BUGBOT_CONCLUSION" = "neutral" ] || [ "$BUGBOT_CONCLUSION" = "skipped" ]; then
             echo "GATE-4 PASS: Bugbot=$BUGBOT_CONCLUSION (clean)"
           else
-            echo "GATE-4 FAIL: Bugbot=$BUGBOT_CONCLUSION"
+            echo "GATE-4 FAIL: Bugbot=$BUGBOT_CONCLUSION status=$BUGBOT_STATUS"
             ELIGIBLE=false
           fi
 
@@ -253,7 +267,23 @@ jobs:
             fi
             PAGE_UNRESOLVED=$(echo "$GQL_RESULT" | jq -r \
               --arg author "$PR_AUTHOR" \
-              '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) | .comments.nodes[] | select(.author.login != null and (.author.login | ascii_downcase) != ($author | ascii_downcase) and (.body | test("^\\s*(nit:|nitpick)"; "i") | not))] | length')
+              --arg ignore_cursor "cursor" \
+              --arg ignore_cursor_bot "cursor[bot]" \
+              --arg ignore_codereview "coderabbitai" \
+              --arg ignore_codereview_bot "coderabbitai[bot]" \
+              --arg ignore_github_actions "github-actions[bot]" \
+              '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) |
+                 .comments.nodes[] |
+                 select(
+                   .author.login != null and
+                   (.author.login | ascii_downcase) != ($author | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_cursor | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_cursor_bot | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_codereview | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_codereview_bot | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_github_actions | ascii_downcase) and
+                   (.body | test("^\\s*(nit:|nitpick)"; "i") | not)
+                 )] | length')
             UNRESOLVED=$((UNRESOLVED + PAGE_UNRESOLVED))
             HAS_NEXT=$(echo "$GQL_RESULT" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
             if [ "$HAS_NEXT" != "true" ]; then
@@ -281,8 +311,8 @@ jobs:
           echo "eligible=$ELIGIBLE" >> "$GITHUB_OUTPUT"
 
           if [ "$ELIGIBLE" != "true" ]; then
-            echo "SKIP: PR #$PR_NUM does not meet 6-green eligibility — exiting (not a failure)"
-            exit 0
+            echo "FAIL: PR #$PR_NUM does not meet 6-green eligibility"
+            exit 1
           fi
 
       # ----------------------------------------------------------------
@@ -354,6 +384,7 @@ jobs:
             exit 0
           fi
 
+          set +e
           VERDICT_JSON=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
             --paginate 2>/dev/null \
             | jq -s --arg author "$SKEPTIC_BOT_AUTHOR" --arg ts "$HEAD_SHA" \
@@ -363,12 +394,20 @@ jobs:
                 and (.body | test("VERDICT:"; "i"))
                 and (.body | test("skeptic-(gate|cron)-trigger-" + $ts; "i"))
               ))
-            | last // empty' 2>/dev/null || echo "empty")
+            | last // empty' 2>/dev/null)
+          LOOKUP_RC=$?
+          set -e
 
-          if ! echo "$VERDICT_JSON" | jq -e 'if . == null or (.body == null) then empty else .body end | length > 0' > /dev/null 2>&1; then
-            echo "No VERDICT found for this SHA — failing fast (skepticism not yet evaluated)"
+          if [ "$LOOKUP_RC" -ne 0 ]; then
+            echo "ERROR: verdict lookup failed (gh api or jq error rc=$LOOKUP_RC) — failing closed"
             echo "verdict=FAIL" >> "$GITHUB_OUTPUT"
             exit 1
+          fi
+
+          if ! echo "$VERDICT_JSON" | jq -e 'if . == null or (.body == null) then empty else .body end | length > 0' > /dev/null 2>&1; then
+            echo "No VERDICT found for this SHA — skeptic is manual-only (/skeptic to trigger); skipping gate"
+            echo "verdict=SKIPPED" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           VERDICT_BODY=$(echo "$VERDICT_JSON" | jq -r '.body')

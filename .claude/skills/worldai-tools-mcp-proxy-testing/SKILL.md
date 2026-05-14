@@ -1,3 +1,8 @@
+---
+name: worldai-tools-mcp-proxy-testing
+description: Run and test the WorldAI Tools MCP HTTP proxy with real local harnesses.
+---
+
 # WorldAI Tools MCP Proxy - Testing & Local Usage
 
 ## Overview
@@ -25,6 +30,22 @@ TESTING_AUTH_BYPASS=true \
 
 Evidence output: `docs/worldai_tools_mcp_proxy_real_test_report.md`
 Raw logs: `docs/worldai_tools_mcp_proxy_logs/` (gitignored)
+
+## ⚠️ Tool Semantics — dry_run Stub Warning
+
+**CRITICAL**: `admin_copy_campaign_user_to_user`'s `dry_run=true` parameter is a **static stub** — it returns hardcoded fake data without querying Firestore:
+
+```python
+# Line 611-624 in worldai_tools_mcp_proxy.py — dry_run returns FAKE DATA
+if dry_run:
+    return {  # ← Never checks the database!
+        "copied_counts": {"campaign": 1, "story": 0, ...},  # Always returns 1!
+    }
+```
+
+**Never use `dry_run=true` to verify campaign existence.** It will tell you any campaign exists.
+
+**For existence checks, use `admin_download_campaign`** instead — it performs a real Firestore query and returns `"campaign not found"` if missing.
 
 ## Run the Proxy Standalone
 
@@ -114,6 +135,21 @@ curl -s -X POST http://127.0.0.1:18091/mcp \
 | `Address already in use` | Lingering processes | `kill -9 $(lsof -ti:18081,18091)` |
 | `*_admin role required` | Email not in allowlist | Set `WORLDTOOLS_*_ADMINS` env vars |
 | No venv in worktree | Worktrees share main venv | `ln -sf /path/to/main/venv ./venv` |
+
+## Firestore Project Routing
+
+All worldarchitect MCP tools (both `admin_*` and `ops_firestore_*`) connect to the **same Firestore project**: `worldarchitecture-ai`.
+
+| Tool | Backend | Project |
+|------|---------|---------|
+| `admin_copy_campaign_user_to_user` | Firestore via `_get_firestore_db()` | `worldarchitecture-ai` |
+| `admin_download_campaign` | Firestore via `_get_firestore_db()` | `worldarchitecture-ai` |
+| `ops_firestore_read_document` | Firestore via `_get_firestore_db()` | `worldarchitecture-ai` |
+| `ops_firestore_query_collection_group` | Firestore via `_get_firestore_db()` | `worldarchitecture-ai` |
+
+**The `ai-universe-b3551` project** is used only by the browser frontend (Vite app). It is NOT used by any MCP tool. Do not confuse these two projects.
+
+Credentials: `~/serviceAccountKey.json` (project_id: `worldarchitecture-ai`)
 
 ## Firestore Data Structure
 

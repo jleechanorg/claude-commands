@@ -20,29 +20,28 @@ description: Situational assessment, beads + roadmap sync after a work block; op
 
 3. **Execute**
    - Prefer parallel tasks (subagents) for: beads updates, new issues, roadmap edits.
-   - **User learnings log:** before appending to `$HOME/roadmap/learnings-<YYYY-MM>.md`, run `mkdir -p "$HOME/roadmap"` (directory may not exist on fresh machines).
-   - **Claude auto-memory:** before writing under `$HOME/.claude/projects/<project_key>/memory/`, run `mkdir -p` on that directory. Full step-by-step: `~/.claude/skills/nextsteps/SKILL.md`.
 
 4. **Report**
    - IDs, paths changed, recommended next actions.
 
-## Optional: parallel subagents
+## If `~/.claude/skills/nextsteps.md` is missing
 
+This file is the protocol; keep it in user scope so `/nextsteps` is reproducible across repos.
+reate (parallel subagents)
 For each identified update, dispatch in parallel:
 
 **Beads updates** (for each relevant open issue):
 ```bash
-bd update <id> --status <new_status>
-bd show <id>  # verify before updating
+br update <id> --status <new_status>
+br show <id>  # verify before updating
 ```
-(Use `br` if that is the project’s CLI.)
 
 **New beads issues** (for gaps not tracked):
 ```bash
-bd create "<title>" ...
+br create "<title>" --type <task|bug|feature|chore> --priority <0-4> --description "<details>"
 ```
 
-**Roadmap doc updates** (edit existing repo `roadmap/*.md`):
+**Roadmap doc updates** (edit existing `roadmap/*.md`):
 - Add new decisions, findings, or status to relevant docs
 - Keep updates concise — append, don't rewrite
 
@@ -50,10 +49,8 @@ bd create "<title>" ...
 - Create `roadmap/<TOPIC>.md` following existing doc style
 - Include: Background, Current Status, Next Steps, Open Questions
 
-### Report
-
+### Phase 3 — Report
 Summarize:
 - Issues updated/created (with IDs)
 - Docs updated/created (with paths)
-- `~/roadmap/learnings-*.md` and memory files touched
 - Recommended next actions

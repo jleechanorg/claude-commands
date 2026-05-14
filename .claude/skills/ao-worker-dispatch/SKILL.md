@@ -114,6 +114,34 @@ Send a nudge if the worker:
 - Has been "thinking" (Gitifying/Ebbing/Booping) for >10 minutes with no output
 - Declares "done" or "ready for merge" while CodeRabbit’s latest review is not `APPROVED` at current head
 
+## ao send broken pipe — retry pattern
+
+`ao send <session> --file <path>` can fail with "Error: Broken pipe" on first attempt even when the session is alive. The session socket isn't ready to accept input immediately. **Retry once after a 1s delay.** This is not an auth or session death issue — it resolves on retry.
+
+```bash
+# Retry pattern for ao send
+ao send wa-XXXX --file "$TASK_FILE" || {
+  sleep 1
+  ao send wa-XXXX --file "$TASK_FILE"
+}
+```
+
+## Bead workspace context — br is workspace-sensitive
+
+`br` (beads_rust) resolves the bead database from the **current working directory at invocation time**, not from the worktree the task targets. If you `cd` into a git worktree and run `br create`, the bead is written to the worktree's `.beads/` directory (a separate SQLite DB from `~/.beads/`). This means:
+- `br list` from home won't see worktree beads
+- `br list` from inside the worktree won't see home beads
+- A bead ID like `$USER-xxxx` created from the worktree context is invisible from home `br show`
+
+**Mitigation**: Always run `br` from the **same context** (home dir recommended) for consistency. If you suspect a bead went to the wrong DB, check both:
+```bash
+# Home beads DB
+sqlite3 ~/.beads/beads.db "SELECT id, title FROM beads LIMIT 5;"
+# Worktree beads DB (example path)
+ls ~/.config/superpowers/worktrees/<project>/<worktree>/.beads/
+sqlite3 ~/.config/superpowers/worktrees/<project>/<worktree>/.beads/beads.db "SELECT id, title FROM beads LIMIT 5;"
+```
+
 ## Evidence of this skill working
 - wa-57: 12 nudges required (no skill existed) → target: 0 nudges for python/commit issues
 - Tracked in bead: rev-ceo5

@@ -1,3 +1,8 @@
+---
+description: Control cmux terminal tabs headlessly via socket
+type: execution
+execution_mode: immediate
+---
 # /cmux-steer — Control cmux terminal tabs headlessly
 
 Sends commands or prompts to cmux terminal surfaces via the Unix socket JSON API. Works cross-workspace without switching focus.

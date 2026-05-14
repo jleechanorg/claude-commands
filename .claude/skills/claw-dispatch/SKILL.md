@@ -84,6 +84,21 @@ if ! grep -q 'Gateway is running' "$STATUS_LOG"; then
 fi
 
 TASK_WITH_RESOLVED="$TASK_DESCRIPTION"
+
+# PR URL augmentation: when the task contains a GitHub PR URL, inject an explicit
+# autonomy directive so Hermes acts without asking for confirmation.
+PR_URL=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
+import sys, re
+m = re.search(r'https://github\.com/[\w-]+/[\w-]+/pull/\d+', sys.stdin.read())
+if m:
+    print(m.group(0))
+" 2>/dev/null)
+if [ -n "$PR_URL" ]; then
+  TASK_WITH_RESOLVED="${TASK_DESCRIPTION}
+
+IMPORTANT: You are acting as an autonomous agent. If you find that CI checks are failing, review threads are unresolved, or the PR needs remediation, automatically route to AO for remediation (ao spawn --claim-pr N). Do NOT ask 'Would you like me to route to AO?' — just do it. The user invoked /claw to get autonomous action, not a status report."
+fi
+
 SLASH_CMD=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
 import sys, re
 text = sys.stdin.read().strip()

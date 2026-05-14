@@ -1,6 +1,6 @@
 ---
 name: repro-twin-clone-evidence
-description: Single source of truth for /repro — twin clones, jleechantest alignment, five-class level-up repro suite, repro_copy, exports, env. Slash commands only point here.
+description: Canonical /repro — default copy+targeted bug repro; optional level-up five-class suite, twin clones, repro_copy, exports, env. Slash commands only point here.
 ---
 
 # Repro evidence (canonical)
@@ -9,9 +9,18 @@ description: Single source of truth for /repro — twin clones, jleechantest ali
 
 ---
 
-## 1. Environment (required for any real Firestore / MCP repro)
+## 0. Routing: what to run (read first)
 
-Set (or rely on defaults in `scripts/run_level_up_class_repro_suite.sh`):
+| User intent | Run |
+|-------------|-----|
+| **`/repro`**, `/repro <campaign_id>`, or “copy and reproduce *this* bug” | **§2** only — **do not** run `testing_mcp/run_level_up_class_repro_suite.sh` unless the user (or args) explicitly opts in per §5. (`scripts/run_level_up_class_repro_suite.sh` is a legacy forwarder.) |
+| “Five-class”, “level-up suite”, “run all level_up_class”, `MCP` harness RED suite | **§5** (heavy opt-in) after §1 env. |
+| “repro_copy”, canonical+variant replay | **§6** and `wiki/concepts/ReproCopyCampaignProcedure.md`. |
+| First copy read-only, second copy gets all actions | **§4** (twin) within §2. |
+
+---
+
+## 1. Environment (required for any real Firestore / MCP repro)
 
 | Variable | Purpose |
 |----------|---------|
@@ -23,84 +32,92 @@ Set (or rely on defaults in `scripts/run_level_up_class_repro_suite.sh`):
 | `PYTHONPATH=$REPO_ROOT:$REPO_ROOT/mvp_site` | Imports. |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Service account (often `~/serviceAccountKey.json`). |
 
-Use repo venv: `./venv/bin/python` or `LEVEL_UP_REPRO_PYTHON=...` for the suite.
+Use repo venv: `./venv/bin/python` or `LEVEL_UP_REPRO_PYTHON=...` for the optional suite in §5.
 
 ---
 
-## 2. Five original bug reports (level-up Classes 1–5)
+## 2. Default: copy campaign + targeted bug repro (most `/repro` sessions)
 
-**Definition:** The five MCP scripts under `testing_mcp/test_level_up_class_{1..5}_*.py` (stale lockout, story projection strip, narrative XP desync, historical residue, signal-resolver cascade).
+**Goal:** Get a **safe** Firestore copy under the test user, then **reproduce one reported bug** (UI, API, or a **narrow** test), not the full five-class harness.
 
-**Run all five in order:**
+1. **Resolve source** — **ALWAYS** use `scripts/copy_campaign.py --find-by-id <CAMPAIGN_ID>` — this resolves the owner UID dynamically via Firestore collection group scan. **Never** pass a hardcoded or guessed `source_user_id` — the MCP `admin_copy_campaign_user_to_user` tool requires exact UIDs and fails with "Source campaign not found" when wrong. The Python script is the only reliable path.
+2. **Destination** — Default **jleechantest** uid: `0wf6sCREyLcgynidU5LjyZEfm7D2` (`--dest-user-id`).
+3. **Twin (recommended for destructive repro)** — Two independent runs with the same dest uid and different `--suffix` values, per §4.
+4. **Single copy (quick smoke)** — One `--find-by-id` + `--dest-user-id` + `--suffix` if the bug does not need a clean baseline.
+5. **Targeted repro** (pick what matches the report):
+   - **Level-up / time / planning** — e.g. `./run_tests.sh $PROJECT_ROOT/tests/test_freeze_time_choices.py` on the branch with the fix; or manual UI on preview with the **test-subject** campaign id; look for `TIME_FREEZE` / turn counter in logs.
+   - **Narrow MCP** — a **single** `testing_mcp/test_*.py` if it maps to the bug; **not** the whole `run_level_up_class_repro_suite` unless §5.
+   - **Replay** — `scripts/repro_copy_campaign.py` (§6) when the procedure needs dual-track replay.
+6. **Evidence** — `scenario_results_*.json`, server logs, or `download_campaign.py` (§7) as appropriate; follow `~/.claude/skills/evidence-standards/SKILL.md` for video/tmux if non-trivial.
 
-```bash
-cd "$REPO_ROOT"
-./scripts/run_level_up_class_repro_suite.sh 2>&1 | tee /tmp/your-project.com/level_up_5_class_repro.log
-```
+**Anti-pattern:** Always chaining `./testing_mcp/run_level_up_class_repro_suite.sh` for every `/repro` — that script clones extra baselines, runs **five** long LLM-heavy classes, and is for **level-up class RED** collection, not generic bugs.
 
-The suite script can **clone Class 2 and Class 4 test subjects from baseline campaigns** on the dest user **once per run** (fresh id each time): set `LEVEL_UP_BASELINE_CLASS2_ID` / `LEVEL_UP_BASELINE_CLASS4_ID` to read-only baselines on `MCP_TEST_PARALLEL_USER_ID`, or rely on the script defaults. Use `LEVEL_UP_SKIP_BASELINE_CLONE=1` to keep the old in-test `--find-by-id` clone only.
-
-By default `LEVEL_UP_SUITE_PARALLEL=1` runs all five test files **concurrently** (separate logs under `LEVEL_UP_SUITE_LOG_DIR` or a temp dir); set `LEVEL_UP_SUITE_PARALLEL=0` for sequential runs. When piping to `tee`, use `set -o pipefail` first so the pipeline exit status reflects the suite (otherwise `tee` may mask a non-zero exit).
-
-If you see `Permission denied`, run `chmod +x scripts/run_level_up_class_repro_suite.sh` or invoke with `bash ./scripts/run_level_up_class_repro_suite.sh` (same behavior).
-
-Evidence bundles: `/tmp/your-project.com/<branch-scoped>/level_up_class_*` per harness.
-
-### Reading `SUMMARY: Passed / Failed` (not the same as “bug yes/no”)
-
-The harness prints counts like `Passed: 1` / `Failed: 1` by counting scenarios whose result dict has **`"passed": true`** vs **`false`**. That label is **not** “product bug vs no bug.”
-
-- **`Failed` (harness)** usually means the scenario’s **`errors` list was non-empty**. For many Classes 1, 2, 4, and 5, a **successful reproduction** is recorded as an error string containing **`REPRODUCED`** (or similar). Those scenarios are **`passed: false`** on purpose — they are **RED evidence**, not a broken test run.
-- **`Passed` (harness)** means that scenario reported **no errors** — often “bad state not detected” for that step, or a **negative control** behaved as expected, or (Class 3) the narrative/XP check stayed consistent. It does **not** automatically mean “the original bug is fixed.”
-- **INCONCLUSIVE** strings (e.g. Class 3 when the LLM never announced `+XP` in narrative) also land in `errors` and count as harness **Failed**; that is flaky LLM coverage, not necessarily the same as RED repro.
-
-**What to do:** Open `scenario_results_checkpoint.json` (or the console block for each `=== SCENARIO ===`) and read the **`errors`** strings. Treat **`REPRODUCED`** as “bug observed this run.” Treat **`INCONCLUSIVE`** as “contract not exercised; rerun or adjust.”
-
-**Exit codes:** Each class script exits **1** if **any** scenario has `passed: false`. The five-class shell script then exits non-zero if any class did. That is **expected** when you are collecting RED repro evidence, not proof that the skill or harness crashed.
+**Anti-pattern:** Using MCP `admin_copy_campaign_user_to_user` with a guessed or hardcoded `source_user_id`. This tool does NOT resolve UIDs dynamically — if the UID is wrong, it fails silently. Always use `scripts/copy_campaign.py --find-by-id <CAMPAIGN_ID>` which performs a Firestore collection group scan.
 
 ---
 
-## 3. Align harness user with jleechantest (optional but required for “clone to jleechantest”)
+## 3. Align harness user with jleechantest (for MCP or §5)
 
-Firestore copies use `--dest-user-id` = **`ctx.user_id`** from `MCPTestBase`. The MCP client must use the **same** UID as the account that owns the cloned campaigns.
-
-To run the five-class suite so clones land under **`<your-email@gmail.com>`** (`0wf6sCREyLcgynidU5LjyZEfm7D2`):
+Firestore copies for MCP tests use `--dest-user-id` = harness user. For **`<your-email@gmail.com>`** (`0wf6sCREyLcgynidU5LjyZEfm7D2`):
 
 ```bash
 export MCP_TEST_PARALLEL_USER_ID=0wf6sCREyLcgynidU5LjyZEfm7D2
-./scripts/run_level_up_class_repro_suite.sh
 ```
 
-`MCP_TEST_PARALLEL_USER_ID` is read first in `testing_mcp/lib/base_test.py` `_resolve_user_id()` and sets `X-Test-User-ID` for the local server.
-
-If unset, the harness generates a synthetic id (`test-<TEST_NAME>-<run_id>`). That is fine for CI smoke; it is **not** the same as “copy to jleechantest” evidence.
+`MCP_TEST_PARALLEL_USER_ID` is read in `testing_mcp/lib/base_test.py` and sets `X-Test-User-ID` for the local server. If unset, the harness may use a synthetic id — not the same as “clone to jleechantest” evidence.
 
 ---
 
 ## 4. Twin baseline + test subject (no contamination)
 
-Use when the **first** copy must never receive `process_action`, GOD_MODE, or destructive edits.
+When the **first** copy must never receive `process_action`, GOD_MODE, or destructive edits:
 
-1. Two independent `scripts/copy_campaign.py --find-by-id <SOURCE>` runs with the **same** `--dest-user-id` (typically `0wf6sCRE…` when §3 is applied).
+1. Two independent `scripts/copy_campaign.py --find-by-id <SOURCE>` runs with the **same** `--dest-user-id` (typically `0wf6sCRE…` when §3 applies).
 2. Suffix examples: ` (repro-baseline read-only)` and ` (repro-test subject)`.
 3. **Baseline:** read-only; optional parity (story count) vs test clone.
 4. **Test clone:** all scans, replays, `process_action`, `repro_copy_campaign.py` replay.
 5. **Story alignment to bug instant:** `copy_campaign` does **not** truncate. Optional: manual delete of newer story docs on **test** only, or compare to an earlier `download_campaign` export. Document the gap if automation is missing.
 
-Helper: `testing_mcp/lib/campaign_clone_for_repro.py` (`run_copy_campaign_find_by_id`, `default_clone_env`).
+Helper (if present in tree): `testing_mcp/lib/campaign_clone_for_repro.py` (`run_copy_campaign_find_by_id`, `default_clone_env`).
 
 ---
 
-## 5. `scripts/repro_copy_campaign.py` (canonical + variant)
+## 5. Optional: level-up “five-class” harness (heavy, opt-in)
+
+**When:** User explicitly requests the full RED suite, or arguments mention: `five-class`, `level-up-suite`, `run_level_up_class_repro`, or all `test_level_up_class_*.py` together.
+
+**Definition:** The five MCP scripts under `testing_mcp/test_level_up_class_{1..5}_*.py` (stale lockout, story projection strip, narrative XP desync, historical residue, signal-resolver cascade).
+
+**Run:** Canonical path: **`testing_mcp/run_level_up_class_repro_suite.sh`** (orchestrates the five `test_level_up_class_*.py` files; twin baseline parsing uses a **`read` loop**, not `mapfile`, so macOS `/bin/bash` 3.2 works). A thin **`scripts/run_level_up_class_repro_suite.sh`** forwarder exists for older docs.
+
+```bash
+cd "$REPO_ROOT"
+set -o pipefail
+./testing_mcp/run_level_up_class_repro_suite.sh 2>&1 | tee /tmp/your-project.com/level_up_5_class_repro.log
+```
+
+The suite can **clone Class 2 and Class 4** test subjects from baseline campaigns once per run: set `LEVEL_UP_SOURCE_CLASS2_ID` / `LEVEL_UP_SOURCE_CLASS4_ID`, or rely on script defaults. `LEVEL_UP_SKIP_BASELINE_CLONE=1` keeps in-test `--find-by-id` clone only. `LEVEL_UP_SUITE_PARALLEL=1` (default) runs all five **concurrently**; `LEVEL_UP_SUITE_PARALLEL=0` for sequential. When piping to `tee`, `set -o pipefail` so exit status reflects the suite. If you see `Permission denied` on the canonical script, `chmod +x testing_mcp/run_level_up_class_repro_suite.sh` or run `bash ./testing_mcp/run_level_up_class_repro_suite.sh`.
+
+Evidence bundles: `/tmp/your-project.com/<branch-scoped>/level_up_class_*` per harness.
+
+### Reading `SUMMARY: Passed / Failed` (not the same as “bug yes/no”)
+
+- Harness **Failed** often means `errors` non-empty; many scenarios record **`REPRODUCED`** in errors on purpose (RED), with `passed: false`.
+- **`Passed`** is not “bug fixed” — it may mean the bad state was not hit.
+- Exit code **1** is common when collecting RED evidence.
+
+---
+
+## 6. `scripts/repro_copy_campaign.py` (canonical + variant)
 
 - Produces **canonical** and **variant** copies (variant may delete last scene with explicit flags).
 - Replays the **same** user input on **both** — different from §4 (baseline never replayed).
-- Invocation and evidence layout: `wiki/concepts/ReproCopyCampaignProcedure.md`.
+- Invocation: `wiki/concepts/ReproCopyCampaignProcedure.md`.
 - Evidence standards: `~/.claude/skills/evidence-standards/SKILL.md` (if present).
 
 ---
 
-## 6. Save state after repro (avoid drift)
+## 7. Save state after repro (avoid drift)
 
 ```bash
 export WORLDAI_DEV_MODE=true
@@ -114,14 +131,13 @@ export WORLDAI_GOOGLE_APPLICATION_CREDENTIALS="${WORLDAI_GOOGLE_APPLICATION_CRED
 
 ---
 
-## 7. Slash command behavior (`/repro`)
+## 8. Slash command behavior (`/repro` / `repro.md`)
 
-- **No conditional logic** in the command file — only: “Read **`repro-twin-clone-evidence`** (`/.claude/skills/repro-twin-clone-evidence/SKILL.md`) and execute the sections above as appropriate to `$ARGUMENTS`.”
-- **`/repro_copy`**: Still documented in `.claude/commands/repro_copy.md` as “read `repro-copy.md` skill”; detailed routing for copy+replay lives in **`repro-copy.md`** + §5 here.
+`repro.md` is a **pointer only** (no extra routing in the file). The command file only says: read **`repro-twin-clone-evidence/SKILL.md`** and execute per **`$ARGUMENTS`**, with **default = §2** (not §5). **`/repro_copy`**: see `.claude/commands/repro_copy.md` and **`repro-copy.md`**.
 
 ---
 
-## 8. Related wiki
+## 9. Related wiki
 
 - `wiki/concepts/ReproCopyCampaignProcedure.md`
 - `wiki/concepts/NormalizationAtomicity.md`
@@ -129,12 +145,12 @@ export WORLDAI_GOOGLE_APPLICATION_CREDENTIALS="${WORLDAI_GOOGLE_APPLICATION_CRED
 
 ---
 
-## 9. Honest checklist
+## 10. Checklist (honest)
 
 | Step | Done? |
 |------|--------|
-| §1 env set; import `testing_mcp` works | |
-| §2 five scripts run (or intentional subset) | |
-| §3 if claiming jleechantest: `MCP_TEST_PARALLEL_USER_ID` set | |
-| §4 twin procedure if baseline must stay clean | |
-| §6 export saved for test campaign | |
+| §1 env; imports work | |
+| **§2** copy(ies) created; test subject id recorded | |
+| **§2** targeted repro (not auto-five-class) | |
+| §5 only if user asked for full suite | |
+| §7 export if you need a frozen snapshot | |

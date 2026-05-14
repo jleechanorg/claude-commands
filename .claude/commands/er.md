@@ -20,3 +20,5 @@ Execute these steps in order:
    - If neither path exists, stop and report that the evidence-review skill is missing.
 2. Load the selected `SKILL.md` content into this command context as the active evidence-review rules.
 3. Invoke the evidence-review dispatcher against `$ARGUMENTS` using those loaded rules. Follow `.claude/commands/evidence_review.md` dispatch behavior: codex first, claude fallback.
+
+**Caveats**: After running the review, you MUST always reconfirm by explicitly stating what the evidence proves vs what it does NOT prove.

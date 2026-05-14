@@ -1,3 +1,8 @@
+---
+name: harness-engineering
+description: Diagnose recurring failures as harness gaps and produce durable guardrail fixes.
+---
+
 # Harness Engineering Skill
 
 ## Purpose
@@ -35,6 +40,7 @@ Classify what went wrong:
 - **Missing validation** — produced output without checking it meets requirements
 - **Repeated manual fix** — user had to manually correct the same type of issue more than once
 - **Silent degradation** — something broke but nothing flagged it (includes: harness layer present but broken)
+- **Launchd env-isolation** — a process moved from interactive shell to launchd without propagating required env vars; `.bashrc`-sourced secrets silently disappear; the process appears alive but all API calls fail
 - **Knowledge gap** — didn't know about a constraint, convention, or tool
 - **LLM path error** — the agent reasoned toward a wrong solution despite having sufficient context
 
@@ -72,6 +78,8 @@ Key questions to drive this:
 - Did the agent assume "present = working" when it should have verified?
 - Did the agent skip verification because the skill/instruction didn't mandate it?
 - Was there a confirmation bias: the agent found what looked like the expected pattern and stopped searching?
+- **Did I verify this pattern/regex/heuristic works at every call site, not just the obvious one?** (e.g., a regex added to `heuristic_decision()` but not `is_approval_candidate()` will silently fail — `is_approval_candidate()` is the gate that decides whether `heuristic_decision()` ever runs)
+- **Did I verify the shell command before encoding it in instructions?** Before writing any `gh api`, `jq`, or CLI command into CLAUDE.md / skills / memory, run it against a real target (e.g., a real PR) and confirm the output is non-empty and correct. Do NOT encode a command pattern until you have verified it returns the expected output for the actual API response shape. Failure mode: agent writes `.state == "FAILURE"` (wrong field for GitHub Actions) when it should be `.conclusion == "FAILURE"` — command returns 0 failures silently.
 
 ### Step 4: Find the harness gap
 
@@ -141,6 +149,53 @@ After user approval (or if invoked with `--fix`):
 - **Prefer the most durable layer**: Instructions > Skills > Memory > Tests > CI
 - **5 Whys are mandatory**: Never skip them. Short-circuit analysis produces shallow fixes.
 - **Agent path is mandatory**: Never analyze only the technical dimension. Always ask why the agent failed too.
+
+## Example failure pattern: CLI redacts secrets but scripts still export them
+
+**Observable:** Gateway returns `unauthorized` / embedded fallback; logs show token value `__OPENCLAW_REDACTED__` or similar.
+
+**Failure class:** **Silent degradation** (harness script looked correct: “get token, export, run”) plus **knowledge gap** (CLI intentionally does not echo real secrets).
+
+**Technical 5 Whys (compressed):** Export used `openclaw config get …` → CLI prints redacted sentinel → shell passed sentinel to gateway → auth failed → embedded fallback.
+
+**Agent 5 Whys (compressed):** Pattern “export token then call CLI” is common in docs → agent did not verify the *value* was non-redacted → no instruction forbidding export of `config get` for secrets → recurrence.
+
+**Harness fixes (typical):**
+1. **Instructions** — `~/.claude/CLAUDE.md`: never `export` gateway tokens from `config get` when output can be redacted; `unset` override env vars; read JSON or use provider-specific keys (`MINIMAX_API_KEY`) as documented.
+2. **Commands** — `~/.claude/commands/claw.md` (or repo overlay): validate token with a file read / non-redacted check; document the redaction trap explicitly.
+3. **Memory** — one-line feedback memory so project agents see it in `MEMORY.md`.
+
+**Verification:** Run the command path and confirm the exported string is not a known redaction sentinel and gateway returns `status: ok` without “falling back to embedded”.
+
+## Example failure pattern: Green Gate job success ≠ Gate 7 pass (silent CI success)
+
+**Observable:** PR shows Green Gate `completed/success` in `gh pr checks` but skeptic VERDICT was never posted. Agent reports PR as 7-green.
+
+**Failure class:** **Silent CI success** — a workflow can exit 0 at the job level while an inner step fails. The harness layer (Green Gate) is present and running, but it reports the wrong thing at the job level.
+
+**Technical 5 Whys:**
+1. Why did the PR show Green Gate `completed/success` even though Gate 7 was failing?
+2. Why does the workflow exit 0 at job level even when the VERDICT check step exits 1?
+3. Why is the VERDICT check inside a step rather than as a separate job with its own status?
+4. Why does the polling step swallow the step failure without propagating it to job status?
+5. Why is there no CI gate that independently verifies VERDICT existence as a separate job?
+→ Root cause: The Green Gate conflates “trigger posted” with “skeptic evaluated”; the job always exits 0 because the trigger step succeeds, and the VERDICT step failure is swallowed inside the job.
+
+**Agent 5 Whys:**
+1. Why did the agent trust `gh pr checks` output to determine Gate 7 status?
+2. Why didn't the agent read the workflow log to verify gate outcomes?
+3. Why was there no instruction telling the agent that `gh pr checks` is insufficient for Gate 7?
+4. Why did the existing 7-green definition not include a verification procedure for Gate 7?
+5. Why was the skill written as policy without a mandatory verification step?
+→ Agent root cause: The harness defined 7-green as policy without requiring independent VERDICT verification, so agents trusted the workflow's job-level status.
+
+**Harness fixes:**
+1. **Skill** — `pr-green-definition.md`: Add mandatory REST API VERDICT check procedure (not just policy statement)
+2. **Skill** — `pr-green-definition.md`: Add counter-example showing Green Gate `completed/success` while Gate 7 fails
+3. **Command** — `/green.md`: Already exists but relied on workflow logs only; updated to mandate REST check for Gate 7
+4. **Memory** — `feedback_2026_04_21_silent_ci_success.md`: Document the specific PRs where this was observed
+
+**Verification:** For any PR where Green Gate shows `completed/success`, independently run the REST API VERDICT check and confirm the VERDICT comment exists before reporting 7-green.
 
 ## Anti-patterns
 

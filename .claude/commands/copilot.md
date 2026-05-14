@@ -276,7 +276,7 @@ STEP7_SUMMARY_TS=$(date -u +%s)
 **Coverage:** X/Y comments addressed (Z fixed, W deferred, V acknowledged, U not done)
 **This run:** A new, B carried forward from prior runs
 **Files modified:** file1.py, file2.md (or "None" if no code changes)
-**CI status:** [Re-check with `gh pr checks <PR>` immediately before posting]
+**CI status:** [Re-check with `statusCheckRollup` immediately before posting — see self-check #3]
 
 ### CRITICAL/BLOCKING Fixes
 - **[file:line]** - Issue summary -> Fixed in commit abc123 / Deferred: reason
@@ -291,7 +291,7 @@ STEP7_SUMMARY_TS=$(date -u +%s)
 **Self-check before posting (MANDATORY - all 4 checks must pass):**
 1. **Coverage arithmetic**: Z + W + V + U MUST equal X (total addressed). Each response type (fixed/deferred/acknowledged/not_done) appears EXACTLY ONCE. If a category appears twice, you have a bug — fix it.
 2. **No test claims without evidence**: If you claim tests pass, you MUST link a CI run URL (`gh pr checks <PR> --web`) or evidence bundle path. Never assert "N tests pass" without a linked artifact.
-3. **Fresh CI status**: Run `gh pr checks <PR_NUMBER>` immediately before posting to get current CI state. Do NOT reuse stale CI data from Step 2.
+3. **Fresh CI status**: Run `gh pr view <PR_NUMBER> --json statusCheckRollup --jq '[.statusCheckRollup[] | select(.conclusion == "FAILURE" or .conclusion == "ERROR" or .conclusion == "TIMED_OUT" or .status == "IN_PROGRESS" or .status == "QUEUED")] | length'` immediately before posting. Zero = CI green and settled. Do NOT use `gh pr checks` (shows webhook pings, not authoritative conclusions). Do NOT reuse stale CI data from Step 2.
 4. **Total matches responses.json**: Count entries in responses.json and verify it matches X/Y.
 
 ### Step 7.5: Thread Resolution Guidance (MANDATORY for FIXED/DEFERRED)

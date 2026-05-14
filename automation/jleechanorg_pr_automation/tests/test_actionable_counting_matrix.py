@@ -53,8 +53,8 @@ class TestActionableCountingMatrix(unittest.TestCase):
         ]
 
         # Pre-record the "processed" PRs as already handled
-        self.monitor._record_pr_processing("repo4", "processed1", 2001, "old001")
-        self.monitor._record_pr_processing("repo5", "processed2", 2002, "old002")
+        self.monitor._record_pr_processing("org/repo4", "processed1", 2001, "old001")
+        self.monitor._record_pr_processing("org/repo5", "processed2", 2002, "old002")
 
         # Mock the PR discovery to return our test data
         with patch.object(self.monitor, "discover_open_prs", return_value=mock_prs):
@@ -93,7 +93,7 @@ class TestActionableCountingMatrix(unittest.TestCase):
         ]
 
         # Pre-record one as processed
-        self.monitor._record_pr_processing("repo4", "processed2", 2002, "old002")
+        self.monitor._record_pr_processing("org/repo4", "processed2", 2002, "old002")
 
         with patch.object(self.monitor, "discover_open_prs", return_value=mock_prs):
             with patch.object(self.monitor, "_process_pr_comment", return_value=True) as mock_process:
@@ -127,7 +127,7 @@ class TestActionableCountingMatrix(unittest.TestCase):
         ]
 
         # Mark the open one as already processed
-        self.monitor._record_pr_processing("repo3", "processed3", 2003, "old003")
+        self.monitor._record_pr_processing("org/repo3", "processed3", 2003, "old003")
 
         with patch.object(self.monitor, "discover_open_prs", return_value=mock_prs):
             with patch.object(self.monitor, "_process_pr_comment", return_value=True) as mock_process:

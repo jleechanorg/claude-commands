@@ -1,97 +1,132 @@
+# PR Green Definition — Skill
+
+Design integrity is the mandatory prerequisite. 7-green is the minimum bar. These are not equal — a PR that achieves 7-green while violating the design doc or architecture contract is a regression, not a success. **You must fail such a PR at the design gate, before checking 7-green.**
+
 ---
-name: pr-green-definition
-description: Canonical 7-green PR merge criteria, PR status check pattern, PR freeze discipline, and admin merge protocol
-type: policy
+
+## The Hierarchy (in force, highest to lowest)
+
+```
+1. Design Gate        ← prerequisite, must pass first
+2. Regression Gate    ← no new boundary violations
+3. 7-Green            ← minimum merge bar (CI + CR + Bugbot + comments + evidence + skeptic)
+```
+
+If Design Gate fails → **do not check 7-green, do not merge**.
+
 ---
 
-# PR "Green" Definition (7-Green)
+## Step 0: Design Decision Gate
 
-A PR is "green" (merge-ready) when **all 7 conditions** hold:
+**Applies when: PR has >50 non-test production delta lines.**
 
-| # | Condition | Verification |
-|---|---|---|
-| 1 | **CI passing** | All checks show SUCCESS |
-| 2 | **No merge conflicts** | mergeable: MERGEABLE |
-| 3 | **CodeRabbit APPROVED** | CR must post explicit APPROVED review state (configured via `.coderabbit.yaml` `approve=true`); COMMENTED alone does not pass |
-| 4 | **Bugbot clean** | Zero error-severity comments from cursor[bot] |
-| 5 | **All inline comments resolved** | Zero unresolved non-nit inline review comments |
-| 6 | **Evidence review passed** | evidence-review-bot APPROVED or evidence-gate CI passed |
-| 7 | **Skeptic PASS** | github-actions[bot] posted VERDICT: PASS on the PR (from skeptic-cron.yml workflow) |
+The PR description MUST contain a `## Design Decision` section with:
+1. **What this PR does** — one paragraph
+2. **Architectural boundaries affected** — which files/modules, how
+3. **Linked artifact** — a bead ID (`rev-xxxx`) OR a `.md` doc in `~/roadmap/` or `docs/design/`
+4. **What this PR does NOT do** — explicit out-of-scope (prevents creep)
 
-**Pre-merge verification is MANDATORY.** Before executing any merge command (`gh pr merge`, `gh api .../merge`), verify all 7 gates pass. If ANY gate fails, do NOT merge — fix the failing gate first. Merging a non-green PR is a commitment integrity violation.
+**If the linked artifact exists and describes invariants or boundaries:**
+- READ the artifact
+- Verify the diff respects stated boundaries
+- FAIL if the diff changes files the design doc said wouldn't be touched
+- FAIL if the diff violates an invariant the design doc said would be preserved
 
-## Verification Procedure (Mandatory)
-
-**WARNING: `gh pr checks` is NOT sufficient for 7-green verification.** The Green Gate workflow always exits 0 (success), so `gh pr checks` shows "Green Gate: pass" even when individual gates FAIL. The "CodeRabbit: pass" line means the webhook responded, NOT that CodeRabbit gave an APPROVED review.
-
-### Step-by-step verification
-
-Given a PR number `N` and its branch name `BRANCH`:
-
-```bash
-# 1. Get branch name
-BRANCH=$(gh pr view N --repo OWNER/REPO --json headRefName --jq '.headRefName')
-
-# 2. Get latest Green Gate run ID (use workflow file name to avoid ambiguity)
-RUN_ID=$(gh run list --workflow green-gate.yml --repo OWNER/REPO --branch "$BRANCH" -L 1 --json databaseId --jq '.[0].databaseId')
-
-# 3. Read gate-by-gate results (THE ONLY RELIABLE CHECK)
-gh run view "$RUN_ID" --repo OWNER/REPO --log 2>/dev/null | grep -E "GATE-[1-5] (PASS|FAIL)"
-
-# 4. Get latest Skeptic Gate run (use workflow file name)
-SKEPTIC_ID=$(gh run list --workflow skeptic-gate.yml --repo OWNER/REPO --branch "$BRANCH" -L 1 --json databaseId --jq '.[0].databaseId')
-
-# 5. Read skeptic verdict
-gh run view "$SKEPTIC_ID" --repo OWNER/REPO --log 2>/dev/null | grep -E "VERDICT"
-
-# 6. Cross-reference CR review state (do NOT trust gh pr checks)
-gh pr view N --repo OWNER/REPO --json reviews --jq '[.reviews[] | select(.state != "COMMENTED") | {author: .author.login, state: .state}] | last'
+**Failure message:**
+```
+Design gate FAIL:
+- PR exceeds 50 non-test production delta lines but lacks ## Design Decision section
+OR
+- Design doc [link] exists but diff violates its stated boundaries:
+  * [specific violation]
+Do not merge. Fix the design doc or the diff.
 ```
 
-### What each gate checks
+---
 
-| Gate | `gh pr checks` shows | Actually verifies |
-|------|---------------------|-------------------|
-| 1 | CI check statuses | `commits/{sha}/status` API = "success" |
-| 2 | (not shown) | `pulls/{N}` API `.mergeable` = true |
-| 3 | "CodeRabbit: pass" (MISLEADING) | Latest non-COMMENTED coderabbitai review = APPROVED |
-| 4 | "Cursor Bugbot: pass" (MISLEADING) | cursor[bot] check conclusion = success, no error comments |
-| 5 | (not shown) | GraphQL: zero unresolved review threads |
-| 6 | (not shown) | Evidence review bot APPROVED |
-| 7 | "Skeptic Gate: pass" (MISLEADING) | VERDICT: PASS posted by skeptic-cron |
+## Step 1: Regression Gate
 
-**Rule**: A PR is 7-green ONLY when all 7 gates show PASS in the workflow logs. Never report 7-green status based on `gh pr checks` output alone.
+After design gate passes, run these checks before touching 7-green.
 
-## PR status check — canonical pattern (mandatory)
+### 1a. Non-regression check
+Does this PR undo or weaken a previously merged architectural gate (e.g., `design-doc-gate.yml`)? Check `design-doc-gate.yml` for current grep gates and verify the diff does not violate them.
 
-**Every PR status check (loops, hooks, one-off) MUST check merge/close state FIRST:**
+### 1b. Evidence quality check
+If the PR has a `## Evidence` section in the description:
+- Reject fabricated/placeholder patterns (`simulated`, `example.com`, `<screenshot path>`, `TODO`, `TBD`)
+- Require real URLs, terminal output, or structured test output
+- If evidence section is empty or contains fabrication → FAIL
 
-```bash
-# STEP 0 — always first. If merged/closed, stop checking green conditions.
-gh api repos/OWNER/REPO/pulls/N --jq '{state, merged}'
-# If merged:true or state:"closed" → report and exit. Do NOT check mergeable_state, reviews, etc.
-```
+### 1c. Architectural drift check
+If the PR modifies `$PROJECT_ROOT/world_logic.py`, `$PROJECT_ROOT/agents.py`, or `$PROJECT_ROOT/rewards_engine.py`:
+- Verify changes respect the file-responsibility table in `zfc-leveling-roadmap/SKILL.md` (or the relevant domain skill)
+- Flag any change that adds logic to a "MUST NOT DO" column
+- Flag any change that creates a second canonicalization path
 
-Why: `mergeable_state` returns `unknown` for merged PRs (identical to its transient CI-running state). Checking only these fields causes loops to report "blocked" on already-merged PRs for hours.
+---
 
-## PR Freeze Discipline
+## Step 1.5: API Pre-flight (MANDATORY — run TWICE: before any gate check AND after Skeptic Gate)
 
-**Pre-push commit count check**: Before pushing a PR branch, run `git log origin/main..HEAD | wc -l`. If > 5 commits, warn: "N commits — squash before final review to avoid CR incremental stall and merge conflicts."
-
-**Squash before final merge**: When all 7-green conditions are met (or CR has verbally approved in comments), squash all commits into ONE before pushing:
+**RECURRING FAILURE (3x in 30 days):** False 7-green declarations on PRs with CONFLICTING merge state and no CR APPROVAL. This pre-flight prevents both.
 
 ```bash
-git reset --soft origin/main
-git commit -m "feat(scope): concise single-commit message"
-git push --force-with-lease
+gh pr view <PR> --json headRefOid,mergeable,reviewDecision | python3 -m json.tool
 ```
 
-Then let skeptic-cron merge (or `gh pr merge N --squash --admin`).
+| Field | Required value | If wrong → |
+|-------|---------------|-----------|
+| `mergeable` | `true` | STOP: branch needs rebase. Gate 2 FAIL. Do not proceed. |
+| `reviewDecision` | `APPROVED` | STOP: CR has not approved. Gate 3 FAIL. Do not proceed. |
 
-**Why**: 16-commit PR #412 took 5 review rounds. CR treats squashed commits as "already reviewed" and refuses re-review. 1-commit squash merged in one shot.
+Also: find the latest Skeptic VERDICT comment on the PR and confirm its SHA matches `headRefOid`.  
+If SHA differs → stale verdict → Gate 7 unverified. Do not cite it.
 
-**Never use `git commit --no-edit`** after a merge conflict — it steals origin/main's commit message. Always provide an explicit squash commit message.
+**⚠️ MUST RUN TWICE (3rd failure was here):**
+1. **Before starting gate checks** — initial pre-flight
+2. **AFTER Skeptic Gate completes, immediately before verbal report** — Skeptic Gate Gate-2 (mergeable check) runs at the START of its ~8-min eligibility run. A concurrent merge can make the PR CONFLICTING after Gate-2 passes. "Skeptic PASS" does NOT mean skip this check.
 
-**Admin merge** (when CR is in incremental stall): `gh pr merge N --squash --admin --subject "feat(scope): message"`. Verify `gh api repo --jq .permissions.admin` first.
+This check takes 3 seconds. Skip it and you will produce false 7-green claims.
 
-**Export PR admin merge**: For `jleechanorg/claude-commands` export PRs (title contains "Export"), when `cr-loop-guard.sh` returns `skip` AND CR state is `CHANGES_REQUESTED` on acknowledged design limitations (not code bugs), treat the PR as merge-ready.
+---
+
+## Step 2: 7-Green Checks
+
+Only run these AFTER Steps 0, 1, and 1.5 all pass.
+
+| # | Gate | Command / Check |
+|---|------|----------------|
+| 1 | CI green | All core check runs pass (`Staging Canary Gate`, `find-openclaw-json`, `Full canary (6/6)`) |
+| 2 | No conflicts | `mergeable=true`, `merge_state=CLEAN` (verified in Step 1.5) |
+| 3 | CR APPROVED | `reviewDecision=APPROVED` (verified in Step 1.5) |
+| 4 | Bugbot clean | `cursor[bot]` check-run conclusion is not `failure` |
+| 5 | Comments resolved | Zero unresolved non-nit inline review comments |
+| 6 | Evidence pass | Evidence review verdict is `PASS`, OR `evidence-gate.yml` CI passed |
+| 7 | Skeptic PASS | `github-actions[bot]` posted `VERDICT: PASS` on the PR — SHA must match `headRefOid` |
+
+For detailed command syntax for each gate, see `7green.md` in `~/.hermes/procedures/` or run `gh pr checks --repo <owner/repo> <pr>`.
+
+---
+
+## Stop Conditions
+
+**STOP and do not proceed to 7-green when:**
+- Design Decision section is missing or linked artifact does not exist
+- Diff violates stated design boundaries
+- Evidence section contains fabrication
+- A grep gate in `design-doc-gate.yml` would fail
+
+**STOP and escalate (do not keep iterating) when:**
+- You have made 3+ commits attempting to fix the same failing check
+- You are uncertain whether the fix creates a new architectural violation
+- The PR description's design doc says X but the code does Y and you cannot reconcile them
+
+Escalation is a success, not a failure. Report what you found, what you're uncertain about, and what decision is needed.
+
+---
+
+## Related
+
+- `.claude/skills/zfc-leveling-roadmap/SKILL.md` — file-responsibility table for level-up/XP work
+- `.claude/skills/field-ownership-contracts.md` — field writer registry for shared dicts
+- `design-doc-gate.yml` — automated grep gates for architectural boundaries
+- `skeptic-cron.yml` — LLM-based skeptic gate (condition 7)

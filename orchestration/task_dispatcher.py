@@ -54,12 +54,16 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 CURSOR_MODEL = os.environ.get("CURSOR_MODEL", "composer-1")
 # MiniMax model can be overridden via MINIMAX_MODEL; default to MiniMax-M2.5
 MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL", "MiniMax-M2.5")
+# Wafer model can be overridden via WAFER_MODEL; default to GLM-5.1
+WAFER_MODEL = os.environ.get("WAFER_MODEL", "GLM-5.1")
 # Codex model can be overridden via CODEX_MODEL; omit --model when unset to let codex choose its default.
 CODEX_MODEL = os.environ.get("CODEX_MODEL")  # None = omit --model flag
 # MiniMax key can be provided via MINIMAX_API_KEY and propagated to Anthropic SDK var
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 PREFLIGHT_CACHE_TTL_SECONDS = 3600
 MINIMAX_KEY_PATTERN = re.compile(r"^sk-(?!ant-)[A-Za-z0-9._-]{12,}$")
+# Wafer API keys follow the same sk-... pattern as MiniMax but exclude Anthropic's sk-ant- prefix.
+WAFER_KEY_PATTERN = re.compile(r"^sk-(?!ant-)[A-Za-z0-9._-]{12,}$")
 
 
 def _read_exported_shell_var(path: Path, var_name: str) -> str:
@@ -123,6 +127,48 @@ def apply_minimax_auth_env(env: dict[str, str]) -> dict[str, str]:
         env["ANTHROPIC_SMALL_FAST_MODEL"] = MINIMAX_MODEL
         env["API_TIMEOUT_MS"] = "3000000"
         env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
+    return env
+
+
+def resolve_wafer_api_key() -> str:
+    """Resolve Wafer API key with env-first and shell-file fallback.
+
+    Only considers sources that are explicitly Wafer keys. Anthropic API keys
+    (ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN) are intentionally excluded: the
+    WAFER_KEY_PATTERN would match Anthropic's sk-ant-... format, which would
+    cause Anthropic credentials to be sent to Wafer's API endpoint.
+    """
+    candidates = [
+        os.environ.get("WAFER_API_KEY", ""),
+        _read_exported_shell_var(Path.home() / ".bashrc", "WAFER_API_KEY"),
+        _read_exported_shell_var(Path.home() / ".automation_env", "WAFER_API_KEY"),
+    ]
+    normalized = [candidate.strip() for candidate in candidates if isinstance(candidate, str) and candidate.strip()]
+
+    for candidate in normalized:
+        if WAFER_KEY_PATTERN.match(candidate):
+            return candidate
+
+    return ""
+
+
+def apply_wafer_auth_env(env: dict[str, str]) -> dict[str, str]:
+    """Apply Wafer auth variables in the same shape used by `claudew`."""
+    wafer_key = resolve_wafer_api_key()
+    if wafer_key:
+        # Set both ANTHROPIC_AUTH_TOKEN and ANTHROPIC_API_KEY to match claudew() and MiniMax pattern.
+        env["ANTHROPIC_AUTH_TOKEN"] = wafer_key
+        env["ANTHROPIC_API_KEY"] = wafer_key
+        env["ANTHROPIC_BASE_URL"] = "https://pass.wafer.ai"
+        env["ANTHROPIC_MODEL"] = WAFER_MODEL
+        env["ANTHROPIC_SMALL_FAST_MODEL"] = WAFER_MODEL
+        env["ANTHROPIC_DEFAULT_MODEL"] = WAFER_MODEL
+        env["ANTHROPIC_DEFAULT_OPUS_MODEL"] = WAFER_MODEL
+        env["ANTHROPIC_DEFAULT_SONNET_MODEL"] = WAFER_MODEL
+        env["ANTHROPIC_DEFAULT_HAIKU_MODEL"] = WAFER_MODEL
+        env["API_TIMEOUT_MS"] = "600000"
+        env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
+        env["CLAUDEW_MODE"] = "1"
     return env
 
 
@@ -192,10 +238,9 @@ CLI_PROFILES = {
         "command_template": "{binary} -m {model} --yolo",
         "stdin_template": "{prompt_file}",
         "quote_prompt": False,
-        # Unset GEMINI_API_KEY to force OAuth authentication (higher quotas than API key)
-        # See: https://github.com/google-gemini/gemini-cli/blob/main/docs/get-started/authentication.md
-        "env_unset": ["GEMINI_API_KEY"],
-        # Empty env_set for consistency with other profiles
+        # Keep GEMINI_API_KEY set to use API-key auth (generativelanguage.googleapis.com)
+        # instead of OAuth (cloudcode-pa.googleapis.com which has higher 500 rates)
+        "env_unset": [],
         "env_set": {},
         "detection_keywords": [
             "gemini",
@@ -264,6 +309,41 @@ CLI_PROFILES = {
         },
         "detection_keywords": ["minimax", "mini max", "minimax-m2"],
     },
+    "wafer": {
+        "binary": "claude",
+        "display_name": "Wafer",
+        "generated_with": "🤖 Generated with [Claude Code](https://claude.ai/code) via Wafer API",
+        "co_author": "Claude <noreply@anthropic.com>",
+        "supports_continue": True,
+        "conversation_dir": "~/.claude/conversations",
+        "continue_flag": "--continue",
+        "restart_env": "WAFER_RESTART",
+        # Wafer uses Claude Code with Wafer API endpoint and model
+        # Sets ANTHROPIC_BASE_URL to Wafer proxy, auth via WAFER_API_KEY
+        "command_template": (
+            "{binary} --model {model} -p @{prompt_file} "
+            "--output-format stream-json --verbose{continue_flag} --dangerously-skip-permissions"
+        ),
+        "stdin_template": "/dev/null",
+        "quote_prompt": False,
+        # Unset default Anthropic API key and token to force Wafer auth.
+        # Unset CLAUDECODE to avoid nested-session auth conflicts.
+        "env_unset": ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDECODE"],
+        # Set Wafer-specific env vars (ANTHROPIC_API_KEY added at runtime if set)
+        "env_set": {
+            "ANTHROPIC_BASE_URL": "https://pass.wafer.ai",
+            "ANTHROPIC_MODEL": WAFER_MODEL,
+            "ANTHROPIC_SMALL_FAST_MODEL": WAFER_MODEL,
+            "ANTHROPIC_DEFAULT_MODEL": WAFER_MODEL,
+            "ANTHROPIC_DEFAULT_OPUS_MODEL": WAFER_MODEL,
+            "ANTHROPIC_DEFAULT_SONNET_MODEL": WAFER_MODEL,
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL": WAFER_MODEL,
+            "API_TIMEOUT_MS": "600000",
+            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+            "CLAUDEW_MODE": "1",
+        },
+        "detection_keywords": ["wafer", "wafer api", "glm-5"],
+    },
 }
 
 
@@ -325,6 +405,21 @@ def build_preflight_execution_args(cli_name: str, model: str | None = None) -> t
             [
                 "--model",
                 MINIMAX_MODEL,
+                "-p",
+                "@PROMPT_FILE",
+                "--output-format",
+                "text",
+                "--dangerously-skip-permissions",
+                "--strict-mcp-config",
+            ],
+            True,
+        )
+    if cli_name == "wafer":
+        return (
+            ["--help"],
+            [
+                "--model",
+                WAFER_MODEL,
                 "-p",
                 "@PROMPT_FILE",
                 "--output-format",
@@ -513,6 +608,8 @@ class TaskDispatcher:
             return model or "sonnet"
         if cli_name == "minimax":
             return MINIMAX_MODEL
+        if cli_name == "wafer":
+            return WAFER_MODEL
         return model or "<cli-default>"
 
     def _preflight_cache_path(self, cli_name: str, cli_path: str, model: str | None) -> str:
@@ -1212,17 +1309,20 @@ class TaskDispatcher:
         try:
             profile = CLI_PROFILES.get(cli_name, {})
             env = {k: v for k, v in os.environ.items() if k not in profile.get("env_unset", [])}
-            # Apply env_set overrides (e.g., for MiniMax)
+            # Apply env_set overrides (e.g., for MiniMax, Wafer)
             for key, value in profile.get("env_set", {}).items():
                 env[key] = value
             # Add MINIMAX_API_KEY at runtime if set (not captured at import time)
             if cli_name == "minimax":
                 env = apply_minimax_auth_env(env)
+            # Add WAFER_API_KEY at runtime if set (not captured at import time)
+            if cli_name == "wafer":
+                env = apply_wafer_auth_env(env)
 
             execution_timeout = CLI_VALIDATION_TIMEOUT_SECONDS
 
-            # OAuth CLIs (claude, cursor, minimax) require an executable binary check
-            if cli_name in ("claude", "cursor", "minimax"):
+            # OAuth CLIs (claude, cursor, minimax, wafer) require an executable binary check
+            if cli_name in ("claude", "cursor", "minimax", "wafer"):
                 if not os.access(cli_path, os.X_OK):
                     print(
                         f"   ⚠️ {CLI_PROFILES.get(cli_name, {}).get('display_name', cli_name)} CLI binary not executable: {cli_path} (agent {agent_name})"
@@ -2302,6 +2402,8 @@ Complete the task, then use /pr to create a new pull request."""
                 model = CURSOR_MODEL
             elif model == "sonnet" and agent_cli == "minimax":
                 model = MINIMAX_MODEL
+            elif model == "sonnet" and agent_cli == "wafer":
+                model = WAFER_MODEL
 
             # Persist chain for downstream script-generation
             agent_spec["cli"] = agent_cli
@@ -2435,6 +2537,8 @@ Complete the task, then use /pr to create a new pull request."""
                     model = CURSOR_MODEL
                 elif model == "sonnet" and agent_cli == "minimax":
                     model = MINIMAX_MODEL
+                elif model == "sonnet" and agent_cli == "wafer":
+                    model = WAFER_MODEL
                 elif model == GEMINI_MODEL and agent_cli != "gemini":
                     # If switching away from Gemini, reset to sonnet default
                     model = "sonnet"
@@ -2443,6 +2547,9 @@ Complete the task, then use /pr to create a new pull request."""
                     model = "sonnet"
                 elif model == MINIMAX_MODEL and agent_cli != "minimax":
                     # If switching away from MiniMax, reset to sonnet default
+                    model = "sonnet"
+                elif model == WAFER_MODEL and agent_cli != "wafer":
+                    # If switching away from Wafer, reset to sonnet default
                     model = "sonnet"
                 agent_spec["model"] = model
 
@@ -2838,6 +2945,7 @@ fi
             # and "invalid_request_error" that caused false positives. CLI validation now reports raw
             # output on failure instead of guessing error types.
             minimax_runtime_auth_token = ""
+            wafer_runtime_auth_token = ""
 
             attempt_blocks = ""
             for idx, attempt_cli in enumerate(cli_chain, start=1):
@@ -2871,6 +2979,8 @@ fi
                 # Resolve runtime model per CLI so optional model=None never renders as "None".
                 if attempt_cli == "minimax":
                     runtime_model = MINIMAX_MODEL
+                elif attempt_cli == "wafer":
+                    runtime_model = WAFER_MODEL
                 elif attempt_cli == "gemini":
                     runtime_model = model or GEMINI_MODEL
                 elif attempt_cli == "cursor":
@@ -2954,22 +3064,52 @@ fi
                         attempt_env_set_commands += f"export ANTHROPIC_SMALL_FAST_MODEL={shlex.quote(MINIMAX_MODEL)}\n"
                         attempt_env_set_commands += "export API_TIMEOUT_MS=3000000\n"
                         attempt_env_set_commands += "export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1\n"
+                # Add Wafer auth at runtime if set (not captured at import time).
+                if attempt_cli == "wafer":
+                    runtime_wafer_key = resolve_wafer_api_key()
+                    if runtime_wafer_key:
+                        wafer_runtime_auth_token = runtime_wafer_key
+                        # Unset CLAUDECODE to prevent "nested session" error
+                        attempt_env_set_commands += "unset CLAUDECODE 2>/dev/null || true\n"
+                        attempt_env_set_commands += 'export ANTHROPIC_AUTH_TOKEN="${WAFER_AUTH_TOKEN}"\n'
+                        attempt_env_set_commands += 'export ANTHROPIC_API_KEY="${WAFER_AUTH_TOKEN}"\n'
+                        attempt_env_set_commands += "export ANTHROPIC_BASE_URL=https://pass.wafer.ai\n"
+                        attempt_env_set_commands += f"export ANTHROPIC_MODEL={shlex.quote(WAFER_MODEL)}\n"
+                        attempt_env_set_commands += f"export ANTHROPIC_SMALL_FAST_MODEL={shlex.quote(WAFER_MODEL)}\n"
+                        attempt_env_set_commands += f"export ANTHROPIC_DEFAULT_MODEL={shlex.quote(WAFER_MODEL)}\n"
+                        attempt_env_set_commands += f"export ANTHROPIC_DEFAULT_OPUS_MODEL={shlex.quote(WAFER_MODEL)}\n"
+                        attempt_env_set_commands += f"export ANTHROPIC_DEFAULT_SONNET_MODEL={shlex.quote(WAFER_MODEL)}\n"
+                        attempt_env_set_commands += f"export ANTHROPIC_DEFAULT_HAIKU_MODEL={shlex.quote(WAFER_MODEL)}\n"
+                        attempt_env_set_commands += "export API_TIMEOUT_MS=600000\n"
+                        attempt_env_set_commands += "export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1\n"
+                        attempt_env_set_commands += "export CLAUDEW_MODE=1\n"
 
                 # Build cleanup commands to prevent env vars from leaking between CLI attempts.
                 # This runs before executing each attempt to clear values from prior attempts.
-                env_cleanup_vars = [
+                # ANTHROPIC_AUTH_TOKEN is placed first when a prior MiniMax or Wafer attempt
+                # could have set it to a provider-specific key — positioning it early ensures
+                # it appears within any fixed-length window tests may use to validate the block.
+                # For Claude-only chains, omit it entirely to preserve Claude's OAuth token.
+                prior_clis = cli_chain[: idx - 1]
+                # Auth-token and API-key cleanup come first so they appear within any
+                # fixed-length window (e.g. the 1200-char test slice from ATTEMPT_NUM=N).
+                # ANTHROPIC_AUTH_TOKEN is only cleared when a prior MiniMax or Wafer attempt
+                # could have set it to a provider-specific key; for Claude-only chains,
+                # clearing it would break OAuth authentication.
+                auth_token_cleanup = ["ANTHROPIC_AUTH_TOKEN"] if ("minimax" in prior_clis or "wafer" in prior_clis) else []
+                env_cleanup_vars = auth_token_cleanup + [
+                    "ANTHROPIC_API_KEY",
                     "ANTHROPIC_BASE_URL",
                     "ANTHROPIC_MODEL",
                     "ANTHROPIC_SMALL_FAST_MODEL",
+                    "ANTHROPIC_DEFAULT_MODEL",
+                    "ANTHROPIC_DEFAULT_OPUS_MODEL",
+                    "ANTHROPIC_DEFAULT_SONNET_MODEL",
+                    "ANTHROPIC_DEFAULT_HAIKU_MODEL",
                     "API_TIMEOUT_MS",
                     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
-                    "ANTHROPIC_API_KEY",
+                    "CLAUDEW_MODE",  # wafer-specific; must not leak to non-wafer attempts
                 ]
-                # ANTHROPIC_AUTH_TOKEN is only cleared if a prior MiniMax attempt could have
-                # set it to the MiniMax key. For Claude-only chains, unsetting it would break
-                # Claude's OAuth authentication.
-                if "minimax" in cli_chain[: idx - 1]:
-                    env_cleanup_vars.append("ANTHROPIC_AUTH_TOKEN")
                 attempt_env_cleanup_commands = ""
                 for var in env_cleanup_vars:
                     attempt_env_cleanup_commands += f"unset {var} 2>/dev/null || true\n"
@@ -3234,6 +3374,10 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                 if run_env is None:
                     run_env = os.environ.copy()
                 run_env["MINIMAX_AUTH_TOKEN"] = minimax_runtime_auth_token
+            if wafer_runtime_auth_token:
+                if run_env is None:
+                    run_env = os.environ.copy()
+                run_env["WAFER_AUTH_TOKEN"] = wafer_runtime_auth_token
 
             # REV-xi6: Choose launch strategy based on no_tmux flag.
             # Default: tmux (session persistence, human-attachable, send-keys orchestration).

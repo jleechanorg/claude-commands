@@ -1,19 +1,19 @@
 ---
-description: Evidence standards slash command — run /evidence_review on a file or directory
-aliases: [es]
-type: slash
+description: Evidence Standards — alias that reads the evidence-standards skill
+type: reference
 execution_mode: immediate
 ---
 
-# /es — Evidence Standards
+# /es — Evidence Standards Alias
 
-Run `/evidence_review` on a file, directory, or subject to verify claims have real evidence (not just assertions).
+Thin alias that reads both layers of the evidence-standards skill.
 
-**Usage**: `/es <path-or-description>`
+**Usage**: `/es`
 
-**Examples**:
-- `/es src/rewards/box.py` — review evidence standards compliance
-- `/es "the LLM sprite system works"` — verify claim about a feature
-- `/es .` — review current directory
+## Action
 
-**Why**: Before claiming a PR is "working" or "fixed," evidence must prove production behavior — not just test assertions or code presence. See `~/.claude/skills/evidence-standards.md` for the full standard.
+Read and display both layers (agents must consult both):
+1. `~/.claude/skills/evidence-standards/SKILL.md` — general cross-project standards
+2. `.claude/skills/evidence-standards.md` — WorldArchitect-specific standards
+
+**Caveats**: After reading, you MUST always reconfirm by explicitly stating what the evidence proves vs what it does NOT prove.

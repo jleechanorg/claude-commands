@@ -7,6 +7,8 @@ execution_mode: immediate
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
 When this command is invoked, execute the script below directly.
 
+> **NOTE**: Requires `pair_execute_v2.py` — install from https://github.com/jleechanorg/agent-orchestrator
+
 Install dev dependencies first (once per workspace):
 
 ```bash
@@ -14,7 +16,7 @@ Install dev dependencies first (once per workspace):
 ```
 
 ```bash
-python3 .claude/pair/pair_execute_v2.py \
+python3 "$(which pair_execute_v2.py 2>/dev/null || echo .claude/pair/pair_execute_v2.py)" \
   --left-contract path/to/left_contract.json \
   --right-contract path/to/right_contract.json \
   "$ARGUMENTS"
@@ -23,7 +25,7 @@ python3 .claude/pair/pair_execute_v2.py \
 Live mode (real coder/verifier agents) example:
 
 ```bash
-python3 .claude/pair/pair_execute_v2.py \
+python3 "$(which pair_execute_v2.py 2>/dev/null || echo .claude/pair/pair_execute_v2.py)" \
   --coder-cli claude \
   --verifier-cli codex \
   --left-contract path/to/left_contract.json \

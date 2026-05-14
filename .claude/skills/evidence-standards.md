@@ -1,8 +1,164 @@
 # Evidence Standards for All Testing and Verification
 
+> **Two-layer model — consult BOTH sources:**
+> - `~/.claude/skills/evidence-standards/SKILL.md` — **general** evidence standards (mock vs real, video requirements, evidence structure) applicable across all projects.
+> - This file — **WorldArchitect-specific** standards (harness bundle layout, testing_mcp patterns, streaming evidence, repo-specific anti-patterns).
+>
+> Agents must read both when evaluating or producing evidence. Neither is a "copy" of the other — they are complementary layers. **Harness-specific bundle layout** (extra JSONL files, `streaming_evidence.json`, `collection_log.txt`): see `docs/evidence-standards/bundle-anatomy.md` and `docs/evidence-standards/README.md`.
+
 ## Core Principle
 
 **Evidence must prove what you claim.** Mock data cannot prove production behavior.
+
+## mvp_site Evidence Policy (Mandatory)
+
+### Fail-Closed Trigger
+
+Any non-test change under `$PROJECT_ROOT/**` requires `/es` evidence.
+
+For this rule, "non-test" means any changed file under `$PROJECT_ROOT/` except files
+under `$PROJECT_ROOT/tests/**` or `$PROJECT_ROOT/test_integration/**`. Treat ambiguous
+paths as production/runtime until proven otherwise. Do not downgrade this to
+"targeted tests only" because the user did not explicitly type `/es`; the path
+trigger is enough.
+
+Minimum evidence tier:
+- Runtime/server-only files that cannot touch LLM behavior: real local server
+  request/response proof and server provenance.
+- LLM-interacting files (routes, agents, world logic, rewards, game state,
+  providers, prompt paths): real local server + real LLM capture + real
+  Firebase/state evidence.
+- User-visible behavior: the applicable tier above plus captioned browser/video
+  evidence showing the behavior.
+
+Unit tests, CI status, screenshots, PR prose, and agent summaries are never a
+replacement for this `/es` evidence on non-test `$PROJECT_ROOT/**` diffs.
+
+**Unit tests are NEVER valid `/es` evidence for changes under `$PROJECT_ROOT/`.**
+
+Unit tests with synthetic inputs (no running server, no real LLM calls) prove only
+that isolated logic works in a vacuum. They do not prove production behavior.
+
+### Fail-Closed Scope Rule
+
+For this repository, **every non-test change under `$PROJECT_ROOT/` requires `/es`
+evidence** before the PR can be considered complete.
+
+`Non-test change` means any `$PROJECT_ROOT/**` change except:
+- `$PROJECT_ROOT/tests/**`
+- `$PROJECT_ROOT/test_integration/**`
+- files whose sole purpose is test fixtures or test harness support
+
+When in doubt, treat the change as production-impacting and collect `/es`
+evidence. Unit tests, mocked tests, pasted terminal summaries, and mock-mode CI
+smoke tests may be listed as supporting checks, but they cannot replace the
+required `/es` bundle for non-test `$PROJECT_ROOT/` changes.
+
+### Prompt File Rule (Mandatory)
+
+Any change to files under `$PROJECT_ROOT/prompts/**` (or any file referenced by `prompt_tool_contracts.json`) **always requires Server + LLM evidence** — never N/A and never server-only.
+
+Prompt text is the primary control surface for LLM behavior. Even small wording changes (adding/removing a field name, clarifying an instruction, changing "do X" to "do not emit X") can alter LLM output. The only proof that a prompt change works is a real LLM call showing the model obeys the updated instruction.
+
+**Minimum evidence for prompt changes:**
+1. Real local server running with the updated prompt
+2. Real LLM API call(s) captured in `llm_request_responses.jsonl`
+3. The LLM response must demonstrate the changed instruction is followed (e.g., if you added "do not emit new_level", show a response where `level_up_signal` omits `new_level`)
+4. Contract version/hash bump in `prompt_tool_contracts.json` (if applicable)
+
+**Unit tests and E2E tests with fake/synthetic LLM responses do NOT satisfy this rule.** They prove the code handles the response correctly, not that the LLM produces it.
+
+### Two-Tier Evidence Requirement
+
+PRs changing files under `$PROJECT_ROOT/` must provide evidence at the appropriate tier:
+
+| Tier | When Required | What It Proves |
+|------|---------------|----------------|
+| **Server + LLM** (mandatory baseline) | Changes touching LLM-interacting code (routes, prompt templates, agent logic, rewards, game state, providers) — **includes ALL prompt file changes** | Real local server running, real LLM API calls, real Firebase, real responses |
+| **Server + LLM + UI/Browser video** | When the change affects anything a user would see or experience differently | Above + captioned video (GIF/MP4/cast) showing before/action/after |
+| **Server only** (no LLM required) | Changes to static assets, CSS, client-side JS, HTML templates, or config that never touches LLM paths | Real server running + HTTP request evidence showing the change works; LLM calls not required |
+| **N/A — documented justification** | Pure comments, docstrings, type hints, or import reordering with no behavioral change | Explicit `N/A` note in PR with one-line justification |
+
+**Prompt file changes can NEVER claim N/A.** Wording changes in prompts are behavioral changes by definition.
+
+### What "Real Server + Real LLM" Means
+
+Evidence must show ALL of these in the bundle:
+- `provenance.server.pid` — a real server process was running
+- `provenance.server.process_cmdline` — the actual server command (e.g., `gunicorn` or `./vpython -m mvp_site.main`)
+- `request_responses.jsonl` or equivalent — real HTTP requests to the local server
+- `llm_request_responses.jsonl` or equivalent — real LLM API calls with real responses (not mocked, not synthetic)
+- `metadata.json` with git SHA (matching PR HEAD preferred; if SHA differs, apply Evidence Staleness Tolerance — see below)
+
+### What Does NOT Qualify
+
+| Evidence Type | Why It Fails |
+|---------------|-------------|
+| `pytest` unit tests with no server | No server runtime proves nothing about production behavior |
+| Tests with synthetic/hardcoded inputs | Input was never produced by a real LLM or real client |
+| Tests using `unittest.mock`, `monkeypatch`, or fixture stubs for LLM/server | Mocked dependencies ≠ real behavior |
+| `pytest` output alone (even with git SHA) | Proves code syntax and logic flow, not production behavior |
+
+### Decision Rule for Reviewers
+
+When reviewing a PR's `/es` evidence for `$PROJECT_ROOT/` changes:
+
+1. **Did any prompt files change?** (`$PROJECT_ROOT/prompts/**` or files referenced by `prompt_tool_contracts.json`) If yes → require Server + LLM evidence with real LLM output proving the updated instruction is followed. This is never N/A. Skip to step 2.
+2. **Does the change touch LLM-interacting code?** (routes, agent logic, rewards, game state, providers) If yes → require Server + LLM evidence. If no → Server-only or N/A may suffice (see tiers above).
+3. **Is there a running server?** Check `provenance.server.pid`. If empty/null and the tier requires a server → FAIL.
+4. **Are there real LLM calls?** Check for `llm_request_responses.jsonl` or equivalent. If absent and the tier requires LLM → FAIL. Not required for static-asset or N/A tiers.
+5. **Does the change affect what a user sees?** If yes, check for video evidence. If absent → FAIL.
+6. **Does the git SHA match the PR HEAD?** If not → apply the Evidence Staleness Tolerance rule (see below). If all changes between the evidence SHA and HEAD are within the allowed non-behavioral categories (test/docs/CI/workflow/type-hints/comments), evidence remains valid — document the tolerance. If any behavioral change exists, fresh evidence is required.
+
+### Evidence Staleness Tolerance for Test/Docs-Only Changes
+
+**Evidence captured at a prior SHA remains valid at HEAD when only non-behavioral changes
+occurred between the evidence SHA and HEAD.** Specifically, no fresh rerun of evidence is
+required if every changed file between the evidence-generation SHA and HEAD falls into one
+of these categories:
+
+| Category | Examples | Why no rerun needed |
+|----------|----------|---------------------|
+| **Test-only** | `*_test.py`, `*_test.ts`, `tests/`, `testing_mcp/`, `__tests__/`, `$PROJECT_ROOT/tests/` | Tests exercise existing behavior; they don't change it |
+| **Docs-only** | `*.md`, `docs/`, `README` updates, `CLAUDE.md`, `AGENTS.md` | Documentation describes behavior; it doesn't alter it |
+| **CI/workflow** | `.github/workflows/*test*.yml`, `.github/workflows/*lint*.yml`, `.github/workflows/*check*.yml`, `Makefile`, lint configs — **excluding** deployment/preview workflows (e.g. `deploy*.yml`, `*preview*.yml`) | Test/lint-only CI infrastructure doesn't change production behavior; deployment and preview workflows are **excluded** from this allowance and always require fresh evidence |
+| **Type hints/comments** | `*.pyi`, type annotations, docstrings, comments | No runtime effect |
+
+**How to apply this rule:**
+
+1. **Determine the evidence SHA** — the commit at which evidence was captured (from `metadata.json.provenance.git_head` or the evidence bundle's README).
+2. **Compute the diff** — `git diff --name-only <evidence-sha> HEAD`.
+3. **Classify each changed file** — if every file matches one of the categories above, the existing evidence is still valid. **For any `.py` files classified as "type hints/comments," you must also run `git diff <evidence-sha> HEAD -- <file>` (full content diff) to confirm that only type annotations, docstrings, or comments changed — `--name-only` alone cannot distinguish a comment-only `.py` change from a behavioral one.**
+4. **Document the staleness tolerance** — in the PR's Evidence section or evidence.md, add:
+
+```markdown
+## Evidence Staleness Tolerance
+
+Evidence captured at SHA: `<evidence-sha>`
+Current HEAD: `<head-sha>`
+Diff SHA→HEAD: <N> file(s) changed — all non-behavioral (test/docs/CI/workflow/type-hints/comments)
+Verdict: Evidence remains valid (no behavioral changes since capture)
+```
+
+**When this rule does NOT apply (fresh evidence required):**
+
+- Any production code change under `$PROJECT_ROOT/` (excluding `$PROJECT_ROOT/tests/`)
+- Any change to API endpoints, game logic, agent routing, or LLM prompts (`$PROJECT_ROOT/prompts/**`)
+- Any change to configuration that affects runtime behavior (env vars, feature flags)
+- Any change to database schema, persistence, or data migration
+- Mixed diffs where some files are behavioral and some are not — in this case, fresh evidence is required
+
+**Rationale:** Requiring fresh evidence for every test tweak or docs typo creates
+significant friction without improving confidence. If the production behavior hasn't
+changed, the evidence proving that behavior remains equally valid regardless of how
+many test iterations were added on top. This is especially important in this repo where
+`$PROJECT_ROOT/` evidence requires real server + real LLM runs — rerunning those for a test
+file rename would burn hours of LLM time for zero additional confidence.
+
+**User-scope cross-reference:** The generic (cross-project) version of this rule lives
+in `~/.claude/skills/evidence-standards.md` § "Evidence Staleness Tolerance for
+Test/Docs-Only Changes". This repo-level section adds `$PROJECT_ROOT/`-specific context
+and takes precedence when the two conflict.
 
 ## Minimum Viable Evidence Checklist
 
@@ -68,8 +224,8 @@ Before running ANY test, answer:
 | Validating actual API responses? | MUST use real mode |
 | Checking data integrity (dice, state, persistence)? | MUST use real mode |
 | Proving a bug is fixed in production? | MUST use real mode |
-| Development workflow validation only? | Mock mode acceptable |
-| Unit testing isolated functions? | Mock mode acceptable |
+| Development workflow validation only? | Mock mode acceptable (NOT valid for `/es` evidence on `$PROJECT_ROOT/`) |
+| Unit testing isolated functions? | NOT valid `/es` evidence for `$PROJECT_ROOT/` — see mvp_site Evidence Policy above |
 
 ### Production Mode vs Real Mode
 
@@ -316,11 +472,16 @@ bug-fix claims, include a pre-fix reproduction and a post-fix run.
 - Where errors are recorded (even if empty: `"errors": []`)
 - Overall pass/fail count
 
-**What is NOT Proven (Exclusion List):** Explicitly state limitations:
+**What is Proven vs NOT Proven:** Explicitly state the exact capabilities verified and the limitations:
 
 ```markdown
-## What This Evidence Does NOT Prove
+## What This Evidence Proves vs. Does NOT Prove
 
+**Proves**:
+- <Specific behaviors verified by the bundle>
+- <Exact components tested>
+
+**Does NOT Prove**:
 - Production server behavior (tested on local server)
 - Performance under load (single-request tests)
 - Edge cases not covered by scenarios (e.g., contested checks)
@@ -1357,6 +1518,7 @@ ownership pointer.
 
 ## Related Standards
 
+- `~/.claude/skills/evidence-standards/SKILL.md` - **User-scope `/es`** (generic, cross-project). Always load alongside this file.
 - `CLAUDE.md` - Three Evidence Rule (lines 110-113)
 - `generatetest.toml` - Mock mode prohibition (lines 433-441)
 - `end2end-testing.md` - Test mode commands (/teste, /tester, /testerc)

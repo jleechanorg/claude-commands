@@ -1,26 +1,27 @@
+---
+name: beads-issue-tracking
+description: Reference Beads issue tracking commands and status conventions for Your Project.
+---
+
 # Beads Issue Tracking - Your Project Reference
 
-Beads CLI is **`br`** (`~/.local/bin/br`, beads-rs). The legacy **`bd`** binary is **not installed** on this system; use **`br`** everywhere. Optional shell convenience: `alias bd='br'` (see `~/.bashrc`).
-
-Issues live under `.beads/` (JSONL + SQLite `beads.db`, gitignored). **`br` runs in direct mode** (no `bd` daemon / no `.beads/bd.sock`).
+Beads (`bd`) is the project's git-native issue tracker. Issues live in `.beads/issues.jsonl` (version-controlled) with a SQLite cache (`beads.db`, gitignored).
 
 ## Essential Commands
 
 ```bash
-br list                              # List issues
-br list -s in_progress               # Filter by status
-br show REV-abc123                   # Show issue detail
-br create "Fix the login bug" -d "…" # Create issue
-br update REV-abc123 -s in_progress  # Progress
-br close REV-abc123                  # Close issue
-br search "keyword"                  # Full-text search
-br stats                             # Project stats / health-style summary
-br doctor                            # Diagnose / repair
+bd list                              # List open issues
+bd list --status in_progress         # Filter by status
+bd show REV-abc123                   # Show issue detail
+bd create "Fix the login bug"        # Create issue
+bd update REV-abc123 --status done   # Close issue
+bd search "keyword"                  # Full-text search
+bd status                            # DB health summary
 ```
 
 ## Status Values
 
-`open` | `in_progress` | `blocked` | `done` | `closed` (use `br update -s …` / `br close`)
+`open` | `in_progress` | `blocked` | `done` | `closed`
 
 ## Commit Convention
 
@@ -34,24 +35,30 @@ REV-abc123
 
 ## Database Recovery ("no beads database found")
 
-The SQLite DB (`beads.db`) is gitignored and can be recreated from JSONL.
+The SQLite DB (`beads.db`) is gitignored and ephemeral — created by the daemon, not committed. If the daemon is killed (e.g. by `integrate.sh`), the DB disappears and `bd` commands fail.
 
-**Fix:** run `br init` to rebuild from the committed JSONL:
+**Fix:** run `bd init` to rebuild from the committed JSONL:
 
 ```bash
-br init       # rebuilds beads.db from .beads/issues.jsonl
-br stats      # verify
+bd init       # rebuilds beads.db from .beads/issues.jsonl
+bd status     # verify
 ```
 
-Do **not** set `no-db: true` in `.beads/config.yaml` unless you want JSONL-only mode.
+Do **not** set `no-db: true` in `.beads/config.yaml` unless you want to permanently disable SQLite. The SQLite DB gives you search, filtering, and daemon-backed performance.
 
 ## Why the Pre-Commit Hook Sometimes Warns
 
-Hooks that flush beads may run `br sync --flush-only`. If the DB is missing or busy, you may see a warning. This is usually **non-blocking**. Run `br init` or `br doctor` afterward if needed.
+The `bd` pre-commit hook flushes pending changes to JSONL before every commit/stash. If the daemon is down and the DB is missing, it prints:
+
+```
+Warning: bd sync --flush-only failed (daemon may be down, run 'bd init' to restore DB)
+```
+
+This is a **warning only** — it does not block commits. Run `bd init` afterward to restore the DB.
 
 ## Integrate.sh and Beads
 
-`integrate.sh` may stop legacy bead daemons or remove sockets. Afterward, if beads commands fail, run `br init` and `br doctor`.
+`integrate.sh` can kill the beads daemon as part of its cleanup. After running `integrate.sh`, if `bd status` shows the error above, just run `bd init`.
 
 `integrate.sh --force` skips the expensive squash-merge detection for branches with >1000 commits (configurable via `FORCE_SQUASH_CHECK_MAX`).
 
@@ -63,15 +70,27 @@ Key settings (uncomment to activate):
 issue-prefix: "REV"      # prefix for all issue IDs
 sync-branch: "beads-sync" # git branch for beads commits
 # no-db: false           # keep false to use SQLite (recommended)
+# no-daemon: false       # keep false to use daemon for speed
 ```
+
+## Daemon Management
+
+```bash
+bd daemon start           # start beads daemon
+bd daemon stop            # graceful stop
+bd daemons stop <path>    # stop daemon for specific repo path
+bd doctor                 # diagnose issues
+```
+
+The daemon lives in the background and serves `bd` commands via a Unix socket (`.beads/bd.sock`). It is **not** needed for `bd` to work — just for performance.
 
 ## JSONL Sync
 
 `.beads/issues.jsonl` is the source of truth committed to git. Always include `.beads/` changes in commits and PRs (per CLAUDE.md).
 
 ```bash
-br sync --flush-only      # export DB → JSONL (common hook operation)
-br sync --import-only     # import JSONL → DB
+bd sync                   # sync JSONL ↔ DB
+bd sync --flush-only      # write DB → JSONL only (what pre-commit hook does)
 ```
 
 ## Worktree Warning
@@ -101,7 +120,11 @@ git config --unset merge.beads.driver
 
 ## Working in Worktrees — Main Dir Drift
 
-Each git worktree has its own `.beads/issues.jsonl`. Pre-commit automation may run `br sync --flush-only` and stage `.beads/issues.jsonl`.
+Each git worktree has its own `.beads/issues.jsonl`. The pre-commit hook (`/.git/hooks/pre-commit`) automatically:
+1. Runs `bd sync --flush-only` (flushes Dolt DB → JSONL)
+2. Runs `git add .beads/issues.jsonl` (auto-stages it)
+
+So beads ride along with every code commit automatically — **no separate bead-only PRs needed**.
 
 If you work primarily in worktrees and the main repo dir shows `modified: .beads/issues.jsonl`, you can safely discard it:
 

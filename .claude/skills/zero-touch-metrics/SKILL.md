@@ -1,3 +1,4 @@
+---
 name: zero-touch-metrics
 description: Measure zero-touch and one-touch rates from merged PRs — run in evolve loop cycles
 

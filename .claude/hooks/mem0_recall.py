@@ -10,11 +10,37 @@ import json
 import os
 import sys
 
-from mem0_config import MEM0_CONFIG, USER_ID  # type: ignore
+# Config — mirrors openclaw-mem0 plugin settings
+MEM0_CONFIG = {
+    "vector_store": {
+        "provider": "qdrant",
+        "config": {
+            "host": "127.0.0.1",
+            "port": 6333,
+            "collection_name": "openclaw_mem0",
+            "embedding_model_dims": 1536,
+        },
+    },
+    "embedder": {
+        "provider": "openai",
+        "config": {
+            "model": "text-embedding-3-small",
+            "api_key": os.environ.get("OPENAI_API_KEY", ""),
+        },
+    },
+    "llm": {
+        "provider": "openai",
+        "config": {
+            "model": "gpt-4o-mini",
+            "api_key": os.environ.get("OPENAI_API_KEY", ""),
+        },
+    },
+    "version": "v1.1",
+}
 
-# bd-992w mem0 recall tuning. Rollback: TOP_K=6, SCORE_THRESHOLD=0.35
-TOP_K = 3
-SCORE_THRESHOLD = 0.60
+TOP_K = 6
+SCORE_THRESHOLD = 0.35
+USER_ID = "$USER"
 
 
 def main() -> None:
@@ -28,8 +54,8 @@ def main() -> None:
     if not prompt or len(prompt) < 10:
         sys.exit(0)
 
-    # Skip if GROQ_API_KEY not set (used for LLM inference; embedder uses local Ollama)
-    if not os.environ.get("GROQ_API_KEY"):
+    # Skip if OPENAI_API_KEY not set
+    if not os.environ.get("OPENAI_API_KEY"):
         sys.exit(0)
 
     try:

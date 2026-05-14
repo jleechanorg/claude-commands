@@ -15,11 +15,12 @@ permissions:
 on:
   pull_request:
     paths-ignore:
-      - 'docs/**'
+      # Note: do not ignore all of docs/** — bot-committed PR design docs under
+      # docs/design/pr-designs/ must trigger presubmit or required checks never
+      # attach to the PR head (merge appears green while Bugbot/GHA are absent).
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
       - 'README.md'
-      - '*.md'
   push:
     branches: [ main, dev ]
     paths-ignore:

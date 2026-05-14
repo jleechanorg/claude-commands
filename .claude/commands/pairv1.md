@@ -8,14 +8,16 @@ execution_mode: manual
 
 > **LEGACY**: This command uses the original `pair_execute.py` Python orchestrator.
 > Prefer `/pair` (Teams-native) or `/pairv2` (LangGraph contract-gated) for new sessions.
+> **NOTE**: Requires `pair_execute.py` to be installed or available on PATH.
 
 ## Usage
 
 ```bash
-python3 .claude/pair/pair_execute.py "Task description"
-python3 .claude/pair/pair_execute.py --coder-cli claude --verifier-cli claude "Task"
-python3 .claude/pair/pair_execute.py --no-worktree "Task description"
-python3 .claude/pair/pair_execute.py --brainstorm "Task description"
+# Requires pair_execute.py — install from https://github.com/jleechanorg/agent-orchestrator
+python3 "$(which pair_execute.py 2>/dev/null || echo .claude/pair/pair_execute.py)" "Task description"
+python3 "$(which pair_execute.py 2>/dev/null || echo .claude/pair/pair_execute.py)" --coder-cli claude --verifier-cli claude "Task"
+python3 "$(which pair_execute.py 2>/dev/null || echo .claude/pair/pair_execute.py)" --no-worktree "Task description"
+python3 "$(which pair_execute.py 2>/dev/null || echo .claude/pair/pair_execute.py)" --brainstorm "Task description"
 ```
 
 ## CLI Options

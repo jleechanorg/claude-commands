@@ -1,3 +1,8 @@
+---
+name: autor-n15-loop
+description: Drive the autor phase-three n=15 per technique loop.
+---
+
 # autor-n15-loop — Phase 3 n=15 per technique loop
 
 **Loop interval**: 30m | **Max duration**: 12h (24 iterations)

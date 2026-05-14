@@ -2,80 +2,51 @@
 set -euo pipefail
 
 PKG="jleechanorg-orchestration"
-VERSION="${1:-0.1.40}"
-MODE="${2:-active}"  # active|all
+VERSION="${1:-}"
+UV_PYTHON="${UV_PYTHON:-/opt/homebrew/opt/python@3.13/bin/python3.13}"
+VENV_DIR="${VENV_DIR:-$HOME/.local/orch-venv}"
 
-unique_add() {
-  local value="$1"
-  local entry
-  for entry in "${PYTHON_TARGETS[@]:-}"; do
-    if [[ "${entry}" == "${value}" ]]; then
-      return 0
-    fi
-  done
-  PYTHON_TARGETS+=("${value}")
-}
+if [[ ! -d "$VENV_DIR" ]]; then
+  echo "==> Creating venv at $VENV_DIR with $UV_PYTHON"
+  mkdir -p "$(dirname "$VENV_DIR")"
+  command -v "$UV_PYTHON" >/dev/null 2>&1 || UV_PYTHON="python3.13"
+  "$UV_PYTHON" -m venv "$VENV_DIR"
+fi
 
-discover_python_targets() {
-  PYTHON_TARGETS=()
+UV_BIN="${UV_BIN:-$(command -v uv || true)}"
+if [[ -z "$UV_BIN" ]]; then
+  echo "uv not found, installing..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  UV_BIN="$HOME/.local/bin/uv"
+fi
 
-  if command -v pyenv >/dev/null 2>&1; then
-    local pyenv_root
-    pyenv_root="$(pyenv root 2>/dev/null || true)"
-    if [[ -n "${pyenv_root}" && -d "${pyenv_root}/versions" ]]; then
-      while IFS= read -r py; do
-        [[ -x "${py}" ]] && unique_add "${py}"
-      done < <(
-        find "${pyenv_root}/versions" -maxdepth 3 -type f \
-          \( -name "python" -o -name "python[0-9]*" \) \
-          ! -name "*config*" \
-          2>/dev/null | sort
-      )
-    fi
-  fi
-
-  if command -v python3 >/dev/null 2>&1; then
-    unique_add "$(command -v python3)"
-  elif command -v python >/dev/null 2>&1; then
-    unique_add "$(command -v python)"
-  fi
-}
-
-run_install() {
-  local py="$1"
-  echo "==> Installing ${PKG}==${VERSION} via ${py}"
-  "${py}" -m pip install --upgrade --no-cache-dir --index-url https://pypi.org/simple "${PKG}==${VERSION}"
-  "${py}" -m pip show "${PKG}" | sed -n '1,20p'
-}
-
-if [[ "${MODE}" == "all" ]]; then
-  discover_python_targets
-  for py in "${PYTHON_TARGETS[@]:-}"; do
-    run_install "${py}"
-  done
-else
-  if command -v pyenv >/dev/null 2>&1 && pyenv version-name >/dev/null 2>&1; then
-    ACTIVE_PY="$(pyenv which python)"
-    run_install "${ACTIVE_PY}"
-    pyenv rehash || true
-  elif command -v python3 >/dev/null 2>&1; then
-    run_install "$(command -v python3)"
-  elif command -v python >/dev/null 2>&1; then
-    run_install "$(command -v python)"
+install_orchestration() {
+  local ver="$1"
+  echo "==> Installing ${PKG}${ver:+=}${ver} via uv into $VENV_DIR"
+  if [[ -n "$ver" ]]; then
+    "$UV_BIN" pip install --python "$VENV_DIR/bin/python" "${PKG}==${ver}"
   else
-    echo "No python interpreter found on PATH." >&2
-    exit 1
+    "$UV_BIN" pip install --python "$VENV_DIR/bin/python" "${PKG}"
   fi
-fi
+}
 
-echo
+main() {
+  if [[ -n "$VERSION" ]]; then
+    install_orchestration "$VERSION"
+  else
+    install_orchestration ""
+  fi
 
-echo "==> ai_orch resolution"
-(type -a ai_orch || true)
-(which -a ai_orch || true)
+  echo
+  echo "==> ai_orch version"
+  "$VENV_DIR/bin/ai_orch" --version || true
 
-echo
-if command -v ai_orch >/dev/null 2>&1; then
-  echo "==> ai_orch --version"
-  ai_orch --version || true
-fi
+  echo
+  echo "==> To use ai_orch, add to your shell profile:"
+  echo "    export PATH=\"$VENV_DIR/bin:\$PATH\""
+  echo
+  echo "==> To upgrade later:"
+  echo "    uv pip install --python $VENV_DIR/bin/python --upgrade jleechanorg-orchestration"
+}
+
+main "$@"

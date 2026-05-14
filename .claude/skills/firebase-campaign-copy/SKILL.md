@@ -1,3 +1,8 @@
+---
+name: firebase-campaign-copy
+description: Copy production Firebase campaigns across users for testing with Admin SDK.
+---
+
 # Firebase Campaign Copy - Production Data for Testing
 
 ## Overview
