@@ -1,6 +1,6 @@
 ---
 name: evidence-standards
-description: Canonical testing + video/tmux/UI evidence standards (user scope). Repo stubs point here.
+description: General cross-project evidence standards (user scope). Repo-level files add project-specific rules — agents must consult both.
 ---
 
 # Evidence Standards for All Testing and Verification
@@ -114,6 +114,10 @@ environment. Evidence from `--start-local --evidence` is valid proof.
 - Integration correctness
 
 ## Evidence Collection Requirements
+
+### Bundle file reference (WorldArchitect MCP harness)
+
+For the **on-disk shape** of bundles produced by `testing_mcp/lib/evidence_utils.py` (`create_evidence_bundle`: `iteration_*`, JSONL captures, `streaming_evidence.json`, `artifacts/collection_log.txt`, etc.), see **`bundle-anatomy.md`** in this directory (same folder as this `SKILL.md`). Repo checkout mirror: `docs/evidence-standards/bundle-anatomy.md`.
 
 ### Canonical Evidence Bundle Files
 
@@ -258,6 +262,40 @@ derived from actual test inputs or `game_state_snapshot.json`. Hardcoded or
 handwritten lists are invalid.
 
 **Threshold capture:** If pass/fail depends on thresholds (e.g.,
+## Browser / UI / Video Evidence Addendum
+
+When the claim depends on visible browser or UI behavior, the evidence bundle must
+include browser-visible artifacts in addition to the canonical JSON and Markdown files.
+
+### Required browser-visible artifacts
+
+- A screenshot captured at or immediately after the assertion point
+- A raw browser recording (`.webm` or `.mp4`)
+- A caption sidecar (`.vtt` or `.srt`)
+
+### Optional derived artifact
+
+- A burned-in captioned video (`.mp4`) may be included when the local encoder supports
+  subtitle rendering. If it is omitted, keep the raw video plus caption sidecars and
+  state why the burned-in derivative is absent.
+
+### Metadata requirements for browser-visible claims
+
+`metadata.json` should also record:
+- `browser_origin`
+- `gateway_url` or tested base URL
+- `request_id` when the HTTP layer exposes one
+- `artifact_manifest` listing the media files emitted for the run
+
+### Evidence.md requirements for browser-visible claims
+
+`evidence.md` should explicitly state:
+- whether the assertion came from browser-visible state rather than server-only logs
+- which screenshot and video files correspond to the claimed success/failure point
+- whether captions were produced as sidecars only or also burned into a rendered video
+
+Keep these requirements generic. The standard should describe the evidence shape,
+not repo-specific file names or application-specific UI flows.
 `min_narrative_items`), those values must be recorded in `run.json` or the
 methodology so reviewers can verify the criteria.
 
@@ -1006,6 +1044,30 @@ Evidence JSON files must use **relative paths** for portability:
 2. If absolute paths exist, update them to be bundle-relative
 3. Or document the original source location separately
 
+## Machine-Specific Path Redaction (MANDATORY)
+
+Evidence and test output must not expose machine-specific paths such as:
+- `/Users/<name>/...`
+- `/private/var/folders/...`
+- Host-specific repo roots
+
+Use sanitized, portable paths in all published artifacts (PR text, gists, evidence docs):
+- `~/...`
+- `<repo>/...`
+- `./artifacts/...`
+
+Example sanitization pass:
+
+```bash
+sed -E \
+  -e "s#/Users/[^/]+/#/Users/REDACTED/#g" \
+  -e "s#/private/var/folders/[^[:space:]]+#/private/var/folders/REDACTED#g" \
+  raw_test_output.txt > sanitized_test_output.txt
+```
+
+If redaction would remove critical context, replace only the machine root and keep
+relative file components.
+
 ## Single Checksum Layer
 
 Evidence bundles must have **exactly one layer** of checksums:
@@ -1166,167 +1228,170 @@ done
 
 **Why per-file:** Easier to verify individual artifacts; no need to parse a combined file.
 
-## Self-Contained PR Evidence — The "Clean Computer" Rule
+## Video Evidence Publication (MANDATORY)
 
-**A PR is self-contained when a stranger on a brand-new computer, with no prior access to the repo, can:**
-1. Follow the linked gist URL from the PR description
-2. Read the gist README and clone the repo
-3. Install dependencies and run the exact commands shown
-4. Observe the same results as claimed — without asking you anything
+### Two Video Types + Captions
 
-**Gist MUST contain** (not just link to):
-- `git clone` URL + branch checkout command
-- All dependencies (pip install / npm install / service account requirements)
-- Exact test invocation commands copy-pasteable into a terminal
-- Expected output (pass counts, scenario names)
-- Links to the GIF and downloadable MP4 so reviewer can view without a GitHub account
+For non-trivial verification, include:
+1. **Tmux/terminal video** (execution provenance)
+2. **UI/browser video** (visual behavior)
 
-**PR description MUST contain:**
-- GIF embedded inline (renders without clicking) — must be on a **public** URL
-- Downloadable MP4 link — direct download, not a page requiring login
-- Caption naming: what test ran, pass/fail result, key behavior
-- Gist link for reproduction instructions
+**Both videos MUST include captions.** Acceptable forms:
+- Burned-in captions on the video (preferred)
+- Caption file (`.vtt` or `.srt`) linked beside the video and included in the gist bundle
 
-**What "self-contained" is NOT:**
-- "See evidence/ directory in the repo" (requires repo access)
-- "Run the test locally" with no further instructions
-- GIF hosted on a private repo (404 for anyone without repo access)
-- MP4 committed to git **as the only distribution path** (not directly downloadable from a public URL)
-  - Keeping a companion copy in `evidence/<bundle>/` is fine — but PR evidence MUST also include a public, directly downloadable URL for the same MP4.
+If work has no UI component, tmux video is still required.  
+If work includes a user-facing change, a UI video is mandatory.
 
----
+### User-Facing Change Rule (Hard Requirement)
 
-## Video Hosting — Always Use a Public Repo
+A **browser UI video is mandatory** whenever the change affects user-facing behavior, including:
+- Visual layout/styling updates
+- New/changed interactive flows
+- Navigation, form submission, modal, or state presentation changes
+- Any claim like "looks correct", "renders", "works in browser", or "no visual regression"
 
-**Rule: GIFs and MP4s MUST be hosted on a public GitHub repo release.**
+No exception for "small" UI changes.
 
-Private repo release assets are inaccessible to anonymous viewers and will not render as inline images in GitHub PR descriptions.
+### Hosted URL Rule (MANDATORY — No File Paths)
 
-### Correct Pattern
+**Every video/image/recording MUST be a hosted URL that is directly playable or downloadable from any machine.** That includes **public HTTPS to GitHub** (commit `blob` / `raw`, or `releases/download`) — the ban is on **unqualified** paths in prose, not on `https://` links that point at committed bytes.
+
+BANNED patterns in **PR text** (treat as non-evidence; replace with a hosted URL or commit link):
+- `evidence/path/to/file.gif` — unqualified relative path, not a URL
+- `/tmp/your-project.com/...` — machine-specific temp path
+- `~/projects/...` — home directory path
+- Markdown that uses **only** a bare filesystem path (starts with `.`, `/`, or `~`) with no `https://` scheme
+
+**ALLOWED and encouraged (durable, reviewable, automation-friendly):**
+- `https://raw.githubusercontent.com/{owner}/{repo}/{full_sha}/path/to/file.mp4` — direct bytes (good for `<video>`, `curl`, inline GIF/MP4 in many clients)
+- `https://github.com/{owner}/{repo}/blob/{full_sha}/path/to/file.mp4` — same commit pinned; GitHub media UI
+- `https://github.com/{owner}/{repo}/releases/download/{tag}/asset.ext` — release asset
+Use **one full 40-char commit SHA** for all links in a given evidence set so byte identity is unambiguous.
+
+**`user-attachments` vs everything else (read once):** Strict `/es` requires GitHub-hosted evidence links in the PR conversation or PR description, but they do not have to be native `user-attachments` URLs. The preferred zero-touch path is `gh release upload` plus `gh pr edit` or `gh pr comment`. Native `user-attachments` links are optional when browser-backed automation is available. Do not instruct manual drag-drop as the primary path.
+
+REQUIRED — strict `/es` uses zero-touch GitHub-hosted evidence links plus a durable gist manifest. GitHub release assets are the preferred publication path. Commit-pinned `blob` / `raw` links and native `user-attachments` remain useful supporting artifacts.
+
+1. **GitHub release assets via `gh` (default, required):**
+   ```bash
+   zip -j /tmp/evidence.mp4.zip /abs/path/to/evidence.mp4
+   gh release create evidence-pr-<PR_NUMBER> --draft --title "PR #<PR_NUMBER> Evidence" --notes "" 2>/dev/null || true
+   gh release upload evidence-pr-<PR_NUMBER> /tmp/evidence.mp4.zip /abs/path/to/evidence.gif /abs/path/to/evidence.srt --clobber
+   gh release view evidence-pr-<PR_NUMBER> --json assets,url
+   gh pr comment <PR_NUMBER_OR_URL> --body-file /tmp/evidence_comment.md
+   ```
+   Yields: GitHub-hosted release asset URLs in the PR conversation or description. Query the actual asset URLs with `gh release view --json assets,url`; do not guess the download path for draft releases. Publish both a previewable artifact (`.gif`) and a downloadable artifact (`.mp4.zip`).
+
+2. **Commit-pinned `blob` / `raw` (supporting provenance):** After `git add` + `git push`, link the **same** MP4/GIF/VTT bytes with `blob` and `raw` as above. Post them in the PR body or a PR comment for byte identity and offline retrieval. These complement release assets; they do not replace them for strict `/es`.
+
+3. **GitHub native attachments (optional):** Use `$HOME/.claude/scripts/github_pr_media_upload.py` when native `user-attachments` URLs are specifically desired and browser auth is available.
+   ```bash
+   gh release create evidence-pr-NNNN --draft --title "PR #NNNN Evidence" --notes "" 2>/dev/null
+   gh release upload evidence-pr-NNNN video.gif video.webm mcp_repro_full_bar_evidence.zip --clobber
+   # URL: https://github.com/{owner}/{repo}/releases/download/evidence-pr-NNNN/video.gif
+   ```
+
+4. **Asciinema.org** (for terminal recordings you want hosted off-repo):
+   ```bash
+   asciinema upload recording.cast
+   # Returns: https://asciinema.org/a/{id}
+   # Embed: [![asciicast](https://asciinema.org/a/{id}.svg)](https://asciinema.org/a/{id})
+   ```
+
+5. **GitHub Gist** (for text artifacts; gists do not host large binaries reliably):
+   ```bash
+   gh gist create --public --desc "PR #NNNN Evidence" readme.md test_output.txt recording.cast
+   ```
+
+6. **Terminal GIF in a PR comment (automation):** Build with `agg` (or your pipeline), then publish it through `gh release upload` and link the resulting GitHub release URL in the PR. Native attachments are optional.
+
+### Default process: terminal + captions (in-repo, agents)
+
+When you have (or can add) a script-driven bar (asciinema → `agg` → ffmpeg + WebVTT), follow this order so you do not get stuck on “no hosted URL”:
+
+1. **Record** a single session that includes the **six** provenance blocks your template requires (see `tmux-video-evidence.md`); save `.cast` under a machine-local run root (e.g. `/tmp/...`) if needed.
+2. **Render** `agg` → GIF; **transcode** GIF → H.264 MP4 with **even** width/height (ffmpeg and many hosts reject odd sizes); **generate** `.vtt` beside the MP4.
+3. **Copy** final MP4, GIF, VTT (and any `sanitized_snippets/`) into **`docs/evidence/...` on the PR branch** and add checksums or SHA256 in README as your bundle requires.
+4. **Commit and push**; note **`SHA=git rev-parse HEAD`** (or the commit that added the files).
+5. **Publish GitHub-hosted links:** Run `gh release upload` for the `.gif`, `.mp4.zip`, and caption sidecar, then use `gh pr edit` or `gh pr comment` to add those links to the PR.
+6. **Publish supporting links:** In the PR body and/or comment, include `raw` and `blob` links pinned to the same SHA for reviewers who want exact bytes and provenance.
+7. **Optional native attachments:** If browser-backed automation is available, add `user-attachments` URLs as supplemental links. They are not required for strict `/es`.
+
+### Programmatic Upload Workflow
+
+Use GitHub releases for zero-touch publication. Native PR attachments remain optional:
 
 ```bash
-# Upload to a public repo (e.g. agent-orchestrator)
-gh release create evidence-pr-<N>-v<M> \
-  terminal_demo.gif terminal_demo.mp4 \
-  browser_ui_demo.gif browser_ui_demo.mp4 \
-  --title "PR #N Evidence vM" \
-  --notes "Evidence for PR $GITHUB_REPOSITORY#N" \
-  -R jleechanorg/agent-orchestrator
+# 1. Record terminal evidence
+cd $REPO && timeout 120 asciinema rec --cols 120 --rows 50 --idle-time-limit 5 -c '<test_command>' /tmp/evidence.cast
+agg --cols 120 --rows 50 --font-size 12 /tmp/evidence.cast /tmp/terminal.gif
 
-# Verify accessibility (expect HTTP/2 302 → CDN redirect = accessible)
-curl -sI "https://github.com/jleechanorg/agent-orchestrator/releases/download/evidence-pr-<N>-v<M>/browser_ui_demo.gif" | head -2
+# 2. Record browser evidence (when Chrome extension available)
+# Use mcp__claude-in-chrome__gif_creator start_recording → stop_recording → export
+
+# 3. Upload to a GitHub release
+EVIDENCE_TAG="evidence-pr-${PR_NUMBER}"
+zip -j /tmp/browser.mp4.zip /tmp/browser.mp4
+gh release create "$EVIDENCE_TAG" --draft --title "PR #${PR_NUMBER} Evidence" --notes "" 2>/dev/null || true
+gh release upload "$EVIDENCE_TAG" /tmp/browser.mp4.zip /tmp/browser.gif /tmp/browser.srt --clobber
+gh release view "$EVIDENCE_TAG" --json assets,url
+
+# 4. Add the release links to the PR body or comment
+gh pr comment "$PR_NUMBER" --body-file /tmp/evidence_comment.md
+gh release upload "$EVIDENCE_TAG" /tmp/terminal.gif /tmp/browser.gif --clobber
+
+# 4. Get URLs
+TERMINAL_URL="https://github.com/${OWNER}/${REPO}/releases/download/${EVIDENCE_TAG}/terminal.gif"
+BROWSER_URL="https://github.com/${OWNER}/${REPO}/releases/download/${EVIDENCE_TAG}/browser.gif"
+
+# 5. Update PR description with inline playable images
+# ![Terminal Evidence](${TERMINAL_URL})
+# ![Browser Evidence](${BROWSER_URL})
 ```
 
-### URL Format
+### PR Description Video Section Template
+
+```markdown
+## Video Evidence
+
+### Terminal Console
+![Terminal tests](https://github.com/{owner}/{repo}/releases/download/evidence-pr-NNNN/terminal.gif)
+
+**Caption:** Unit test suite — N/N PASSED in X.XXs
+
+### Browser UI
+![Browser demo](https://github.com/{owner}/{repo}/releases/download/evidence-pr-NNNN/browser.gif)
+
+**Caption:** Real browser → app page → feature flow validated end-to-end
+
+### Evidence Gist
+https://gist.github.com/{user}/{gist_id} — test output, asciinema cast, metadata
 ```
-https://github.com/jleechanorg/agent-orchestrator/releases/download/<tag>/<filename>
-```
 
-### Verification (mandatory before adding to PR)
-```bash
-# Must return 302, not 404
-gh api repos/jleechanorg/agent-orchestrator/releases/tags/<tag> \
-  --jq '.assets[] | {name: .name, state: .state}'
-# All states must be "uploaded"
-```
+### PR Description + Gist Requirements
 
-### Anti-patterns (will cause broken GIFs)
-- `releases/download/...` from a **private** repo → 404 for viewers
-- GitHub native video attachment (`.mp4` attached to PR comment) → not downloadable via direct URL
-- Committed to git in `evidence/` → requires cloning the (private) repo
-- Gist attachments for binary files → Gist API doesn't support binary uploads
-
----
-
-## Video Evidence — ALWAYS REQUIRED (Both Types)
-
-**Every non-trivial verification requires TWO videos.** Neither alone is sufficient.
-
-| Type | Proves | Required when |
-|------|--------|---------------|
-| **Tmux/terminal video** | Code ran against a specific commit, tests passed, no tampering | Any code change, test run, deploy, agent session |
-| **UI/browser video** | Visual behavior and click flows occurred as claimed | Any claim touching rendered UI, user flows, or browser behavior |
-
-If your work has no UI component, tmux video alone is acceptable. If your work has both terminal and UI steps, both are required.
-
----
-
-### Tmux / Terminal Video — Quick Checklist
-
-Full template: `~/.claude/skills/evidence-standards/tmux-video-evidence.md`
-
-**Tool**: `asciinema` + `agg` (`.cast` → `.gif`)
-
-**Mandatory sections (in order):**
-
-| # | Section | Must show |
-|---|---------|-----------|
-| 1 | Git Provenance | `git rev-parse HEAD`, branch, merge-base |
-| 2 | Commit Log | `git log --oneline origin/main..HEAD` |
-| 3 | Code Diffs | `git diff origin/main...HEAD` (not just `--stat`) |
-| 4 | PR Status | `gh pr view <N>` |
-| 5 | Live Work | Real test/deploy/command output |
-| 6 | Post-run SHA | Same `git rev-parse HEAD` — must match section 1 |
-
-**Hard blocks** (evidence rejected if any apply):
-- Pre/post SHA mismatch
-- `echo "PASS"` instead of real test runner output
-- `--stat` only (no actual diff shown)
-- Section 1 missing
-
----
-
-### UI / Browser Video — Quick Checklist
-
-Full template: `~/.claude/skills/evidence-standards/ui-video-evidence.md`
-
-**Tool**: `mcp__claude-in-chrome__gif_creator` (agent sessions) or Kap (manual)
-
-**Mandatory frames (in order):**
-
-| # | Frame | Must show |
-|---|-------|-----------|
-| 1 | URL + Page Load | Full address bar with the route under test |
-| 2 | Before State | Initial state before the action |
-| 3 | Action | The click, input, or navigation |
-| 4 | After State | Result — success message, data change, navigation |
-| 5 | Git Linkage | Terminal split or console log showing `git rev-parse HEAD` |
-
-**Frame extraction (MUST)**: For every video evidence bundle, extract frames with ffmpeg and verify content matches claims:
-```bash
-ffmpeg -i <video.webm> -vf fps=1 /tmp/frames/frame_%03d.png
-```
-Verify at minimum:
-- Frame matches test flow claimed (URL, step, action seen)
-- Content actually demonstrates behavior, not just artifacts exist
-
-**Hard blocks** (evidence rejected if any apply):
-- URL bar cropped out
-- Only success state shown (no before/action)
-- No git SHA linkage
-- Static screenshot used instead of GIF for a flow claim
-
----
-
+Every evidence-bearing PR description must contain:
+1. **Test Summary** (pass/fail counts + key checks)
+2. **Video Evidence** section with **hosted, inline-playable URLs** (not file paths)
+3. **Self-Contained Gist URL** containing:
+   - sanitized test output
+   - caption files or transcript text
+   - asciinema `.cast` files (playable via `asciinema play`)
+   - run metadata / claim-to-artifact map
 
 ### Video Enforcement Gate
 
-**CI and review MUST reject evidence bundles that claim UI behavior without video proof.**
+Reject evidence as **INSUFFICIENT** when any of these are true:
+- Missing tmux video for non-trivial work
+- Missing UI video for user-facing change
+- Missing captions for either video
+- **Video/GIF/MP4 referenced only as a bare path** (e.g. `docs/evidence/x.mp4` or `/tmp/...`) **with no `https://` URL** — HARD REJECT. **Do not** hard-reject **commit-pinned** `https://raw.githubusercontent.com/...` or `https://github.com/.../blob/<sha>/...` links; those *are* hosted URLs.
+- Video linked from non-GitHub host without explicit exception
+- PR description omits test summary, **and** there is no committed narrative doc or artifact map in-repo (Gist is optional if the PR points to the same run with `https://` media links)
+- Published logs include machine-specific absolute paths
 
-| Claim Type | Required Video | Rejection if Missing |
-|------------|---------------|---------------------|
-| "Button click works" | UI GIF/recording | Auto-reject |
-| "Tests pass" | Tmux recording or CI log link | Warning |
-| "Page renders correctly" | UI GIF/recording | Auto-reject |
-| "No visual regression" | Before/after UI comparison | Auto-reject |
-| "Terminal output shows X" | Tmux recording or inline capture | Warning |
-
-**Enforcement levels:**
-- **Hard reject**: Claims about visual/UI behavior without video evidence
-- **Soft warning**: Claims about terminal behavior without recording (inline captures acceptable)
-- **Exempt**: Pure API/data claims with JSON evidence (no visual component)
-
----
+Hard reject UI claims without UI video. Hard reject terminal claims without tmux video.
 
 ## Related Standards
 

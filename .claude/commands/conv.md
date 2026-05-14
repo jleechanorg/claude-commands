@@ -1,4 +1,4 @@
 ---
 description: /conv - Convergence Alias Command
 ---
-Execute `/converge` with all provided arguments.
+Execute `/goalexec` with all provided arguments.

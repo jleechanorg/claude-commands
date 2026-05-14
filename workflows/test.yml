@@ -17,7 +17,7 @@ on:
     paths-ignore:
       # Do not ignore all *.md: world_reference/campaign_module_dragon_knight.md
       # must trigger tests (sync with campaign wizard JS). docs/roadmap stay ignored.
-      - 'docs/**'
+      # Do not ignore all docs/** — see presubmit.yml (design-doc bot commits).
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
   push:
@@ -26,6 +26,8 @@ on:
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
+      # Match presubmit push: skip pure-markdown pushes on main/dev (not PR paths — see above).
+      - '*.md'
 
 jobs:
   limit-pr-runs:
@@ -134,6 +136,8 @@ jobs:
       CEREBRAS_API_KEY: test-ci-key-only
       OPENROUTER_API_KEY: test-ci-key-only
       GOOGLE_APPLICATION_CREDENTIALS: /dev/null
+      WORLDAI_GOOGLE_APPLICATION_CREDENTIALS: /dev/null
+      WORLDAI_DEV_MODE: 'true'
       ENABLE_SEMANTIC_ROUTING: 'false'
       PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/testing_utils:${{ github.workspace }}/mvp_site:${{ github.workspace }}/automation
     steps:
@@ -218,6 +222,9 @@ jobs:
       run: |
         if [ -d "$GITHUB_WORKSPACE" ]; then
           chmod -R u+rwX "$GITHUB_WORKSPACE" || true
+        fi
+        if [ -d "$GITHUB_WORKSPACE/.git" ]; then
+          find "$GITHUB_WORKSPACE/.git" -name "*.lock" -delete || true
         fi
 
     - name: Checkout repository
@@ -566,6 +573,8 @@ jobs:
         export OPENROUTER_API_KEY="test-ci-key-only"
         export TEST_GEMINI_API_KEY="test-ci-key-only"
         export GOOGLE_APPLICATION_CREDENTIALS="/dev/null"
+        export WORLDAI_GOOGLE_APPLICATION_CREDENTIALS="/dev/null"
+        export WORLDAI_DEV_MODE=true
         export ENABLE_SEMANTIC_ROUTING=false
         export ENABLE_BROWSER_TESTS=0
         export ENABLE_BUILD_TESTS=0

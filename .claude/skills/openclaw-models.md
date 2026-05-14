@@ -6,10 +6,14 @@ type: reference
 
 # OpenClaw Model Reference
 
-**Live config**: `~/.openclaw/openclaw.json` → `agents.defaults.model`
+**Canonical full configs on this machine**:
+- staging source of truth for manual edits: `~/.openclaw/openclaw.json`
+- production source of truth: `~/.openclaw_prod/openclaw.json`
+
+**Important runtime detail**: the staging launchd job currently points `OPENCLAW_CONFIG_PATH` at `~/.openclaw/openclaw.staging.json`, which is only a small overlay file. Do not treat that overlay as the canonical full config when checking model/provider settings.
 **Auth profiles**: `~/.openclaw/agents/main/agent/auth-profiles.json`
 
-## Current config (as of 2026-03-30)
+## Current config on this machine (as of 2026-04-09)
 
 ```json
 "model": {
@@ -18,13 +22,21 @@ type: reference
 }
 ```
 
-**timeoutSeconds**: 900 (M2.7 regular can be slow; 600 was too low)
+**Provider block in live configs**: `models.providers.minimax`
+
+**Do not use `minimax-portal/MiniMax-M2.7` on this machine unless you have separately configured `minimax-portal` auth.**
+- The installed runtime looks up auth by provider id.
+- `auth-profiles.json` currently contains `minimax:default`, not `minimax-portal:*`.
+- Earlier `minimax-portal` guidance was stale for this environment and produced `No API key found for provider "minimax-portal"` in gateway logs.
+
+**timeoutSeconds**: live values are lower than the old 900 guidance in some configs; do not assume 900 unless you verify the specific file being used by the service.
 
 ## Provider status table
 
 | Model | Status | Auth type | Notes |
 |---|---|---|---|
-| `minimax/MiniMax-M2.7` | ✅ **WORKING — current primary** | `api_key` → `minimax:default` | Can be slow; timeout set to 900s |
+| `minimax/MiniMax-M2.7` | ✅ **CURRENT LIVE CONFIG** | `api_key` → `minimax:default` | Matches both `~/.openclaw/openclaw.json` and `~/.openclaw_prod/openclaw.json` on this machine |
+| `minimax-portal/MiniMax-M2.7` | ❌ **STALE FOR THIS MACHINE** | requires `minimax-portal` auth | Do not set as primary here unless you also configure `minimax-portal` credentials |
 | `minimax/MiniMax-M2.7-highspeed` | ❌ **PLAN NOT SUPPORTED** | `api_key` → `minimax:default` | HTTP 500 error 2061 — current API key plan does not include this model |
 | `openai-codex/gpt-5.3-codex` | ❌ **QUOTA-LIMITED** | OAuth → `openai-codex:default` | Weekly usage cap exhausts; DO NOT use as primary/fallback |
 | `openai-codex/gpt-5.3-codex-spark` | ⚠️ Same quota | OAuth → `openai-codex:default` | Same weekly pool as gpt-5.3-codex; used by consensus agent |
@@ -93,10 +105,16 @@ kill -9 $(lsof -ti :18789); sleep 12; lsof -i :18789 | grep LISTEN
 grep "agent model" /tmp/openclaw/openclaw-$(date +%F).log | tail -2
 ```
 
-## Timeout tuning
+## Config path warning
 
-`agents.defaults.timeoutSeconds: 900` — MiniMax M2.7 (regular) can be slow; 600s was insufficient.
-Do not lower below 900s while on M2.7 regular.
+If you are debugging staging via launchd, verify the plist first:
+
+```bash
+plutil -p ~/Library/LaunchAgents/ai.openclaw.staging.plist | rg OPENCLAW_CONFIG_PATH
+```
+
+On this machine the staging daemon points to `~/.openclaw/openclaw.staging.json`, not `~/.openclaw/openclaw.json`.
+If you edit the wrong file, the service will not pick up your model change.
 
 ## Known failure modes
 

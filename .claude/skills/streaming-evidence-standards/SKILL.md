@@ -1,3 +1,8 @@
+---
+name: streaming-evidence-standards
+description: Define evidence requirements for end-to-end streaming chunk delivery and timing.
+---
+
 # Streaming Evidence Standards
 
 **Purpose**: Prove end-to-end streaming chunk delivery from LLM output to HTTP SSE client with timestamped, sequence-level evidence.

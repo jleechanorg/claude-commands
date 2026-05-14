@@ -48,7 +48,7 @@ class CopilotCommandBase(ABC):
             )
             data = json.loads(result.stdout)
             return data["nameWithOwner"]
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError, KeyError):
+        except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
             # Fallback to git remote parsing
             try:
                 result = subprocess.run(
@@ -65,17 +65,11 @@ class CopilotCommandBase(ABC):
                         return url.split(":")[-1]
                     else:
                         return "/".join(url.split("/")[-2:])
-            except (subprocess.CalledProcessError, FileNotFoundError):
+            except subprocess.CalledProcessError:
                 pass
-            # Prefer GITHUB_REPOSITORY (CI/Actions), fall back to DEFAULT_REPO
-            github_repo = os.environ.get("GITHUB_REPOSITORY")
-            if github_repo and re.fullmatch(r"[^/\s]+/[^/\s]+", github_repo):
-                return github_repo
-            default_repo = os.environ.get("DEFAULT_REPO")
-            if default_repo and re.fullmatch(r"[^/\s]+/[^/\s]+", default_repo):
-                return default_repo
-            raise ValueError(
-                "Repository could not be determined. Set GITHUB_REPOSITORY or DEFAULT_REPO as 'owner/repo'."
+            # Default fallback - use your-project.com as default repo
+            return os.environ.get(
+                "DEFAULT_REPO", "$GITHUB_REPOSITORY"
             )
 
     def _get_current_branch(self) -> str:

@@ -14,6 +14,15 @@ Analyze a video by extracting frames at intervals, describe each segment visuall
 - "Add captions to this video"
 - "Describe visually what's happening in this video"
 - "Annotate this screen recording"
+- Evidence-standard runs where tmux/UI videos are required in PRs
+
+## Evidence Standards Mode (tmux/UI PR evidence)
+
+When the video is evidence for a PR:
+- Captions are mandatory (burned-in preferred)
+- Output should be an attachable GitHub-friendly video (`.mp4`, H.264)
+- Also export a caption sidecar (`.vtt` or `.srt`) for gist packaging
+- Keep caption text neutral and descriptive (no unverifiable claims)
 
 ## Workflow
 

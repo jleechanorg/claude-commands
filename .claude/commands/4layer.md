@@ -8,6 +8,7 @@ execution_mode: immediate
 **This is NOT documentation - these are COMMANDS to execute right now.**
 
 **PRIMARY REFERENCE**: See `.claude/skills/pr-blocker-min-repro.md` for complete protocol details.
+**LAYER SELECTION**: See `.claude/skills/testing-layers/SKILL.md` for deciding which layer to test at and how to create new tests.
 
 ## 🚨 EXECUTION WORKFLOW
 
@@ -20,9 +21,9 @@ Execute tests in this order, **stopping only when blocker is conclusively reprod
 ./vpython -m pytest $PROJECT_ROOT/tests/test_[relevant].py -q
 ```
 
-**2. End-to-End Tests** (`$PROJECT_ROOT/tests/test_end2end/`)
+**2. End-to-End Tests** (`$PROJECT_ROOT/$PROJECT_ROOT/tests/test_end2end/`)
 ```bash
-./vpython -m pytest $PROJECT_ROOT/tests/test_end2end/test_[feature]_end2end.py -q
+./vpython -m pytest $PROJECT_ROOT/$PROJECT_ROOT/tests/test_end2end/test_[feature]_end2end.py -q
 ```
 
 **3. MCP/HTTP API Tests** (real local server, `testing_mcp/`)
@@ -83,10 +84,10 @@ This command implements the minimal repro protocol from `.claude/skills/pr-block
 - **Example**: `./vpython -m pytest $PROJECT_ROOT/tests/test_settings_api.py -q`
 
 ### Layer 2: End-to-End Tests
-- **Location**: `$PROJECT_ROOT/tests/test_end2end/`
+- **Location**: `$PROJECT_ROOT/$PROJECT_ROOT/tests/test_end2end/`
 - **Purpose**: Full backend flow with mocked external services
 - **Speed**: Fast (seconds to minutes)
-- **Example**: `./vpython -m pytest $PROJECT_ROOT/tests/test_end2end/test_faction_settings_end2end.py -q`
+- **Example**: `./vpython -m pytest $PROJECT_ROOT/$PROJECT_ROOT/tests/test_end2end/test_faction_settings_end2end.py -q`
 
 ### Layer 3: MCP/HTTP API Tests (Real Local Server)
 - **Location**: `testing_mcp/`

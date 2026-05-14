@@ -1,7 +1,68 @@
+---
+name: firebase-prod-campaigns
+description: How to read production campaigns from Firestore — UID resolution, nested path, firestore_service shortcut, repro_copy flags
+when_to_use: Whenever fetching a campaign by ID, looking up a user in Firestore, or running repro_copy_campaign.py against a production campaign
+triggers:
+  - fetch campaign from firestore
+  - get campaign by id
+  - campaign not found firestore
+  - production campaign lookup
+  - source user id repro
+allowed-tools: Bash, Read
+---
+
 # Firebase Production Campaign Database Access
 
 ## Overview
 This skill documents how to query the **production Firestore database** for Your Project campaigns and user data.
+
+## CRITICAL: UID first, then campaign path
+
+**Never pass email to `get_campaign_by_id`. Resolve UID first.**
+
+```python
+# Preferred — uses firestore_service which handles story fetch + clock skew
+from mvp_site import firestore_service
+import firebase_admin
+from firebase_admin import auth, credentials
+import os
+
+cred = credentials.Certificate(os.path.expanduser('~/serviceAccountKey.json'))
+try:
+    firebase_admin.initialize_app(cred)
+except ValueError:
+    pass  # already initialized
+
+uid = auth.get_user_by_email('<your-email@example.com>').uid
+# → '<YOUR_UID>'
+
+campaign, story = firestore_service.get_campaign_by_id(uid, '<CAMPAIGN_ID>')
+initial_prompt = campaign.get('initial_prompt', '')  # up to 65KB
+```
+
+### repro_copy_campaign.py — always pass `--source-user-id`
+
+Without it the script falls back to scanning users for the campaign owner, which
+is slow, may hit permission limits on large projects, and ends in **ValueError**
+if the campaign cannot be resolved—pass the UID whenever you have it.
+
+```bash
+# Suboptimal — owner scan instead of a direct path:
+./vpython scripts/repro_copy_campaign.py <CAMPAIGN_ID> --issue "no initial spells"
+
+# CORRECT — resolve UID first, then pass it:
+UID=$(./vpython -c "
+import firebase_admin; from firebase_admin import auth, credentials; import os
+cred = credentials.Certificate(os.path.expanduser('~/serviceAccountKey.json'))
+try: firebase_admin.initialize_app(cred)
+except: pass
+print(auth.get_user_by_email('<your-email@example.com>').uid)
+")
+[ -n "$UID" ] || { echo "UID lookup failed" >&2; exit 1; }
+./vpython scripts/repro_copy_campaign.py <CAMPAIGN_ID> \
+  --source-user-id "$UID" \
+  --issue "no initial spells"
+```
 
 ## CRITICAL: Campaign Lookup
 
@@ -19,7 +80,7 @@ db.collection('users').document(uid).collection('campaigns').document('VqqJLpABu
 ```python
 # 1. Get user UID from email
 user_record = auth.get_user_by_email('$USER@gmail.com')
-uid = user_record.uid  # e.g., 'vnLp2G3m21PJL6kxcuAqmWSOtm73'
+uid = user_record.uid  # e.g., '<YOUR_UID>'
 
 # 2. Query nested path
 doc = db.collection('users').document(uid).collection('campaigns').document('CAMPAIGN_ID').get()
@@ -33,7 +94,7 @@ Firestore Database: worldarchitecture-ai
 │   └── {test_campaign_id}/
 │
 └── users/                        # ← CORRECT: Real user data here (146+ campaigns)
-    └── {Firebase_Auth_UID}/      # e.g., vnLp2G3m21PJL6kxcuAqmWSOtm73
+    └── {Firebase_Auth_UID}/      # e.g., <YOUR_UID>
         └── campaigns/
             └── {campaign_id}/    # e.g., VqqJLpABua9bvAG4ArTg
                 ├── title         # "Nocturne post bg3 zhent"
@@ -160,7 +221,7 @@ If the LLM writes to `dm_notes` instead of `directives`, the rule won't persist 
 
 ## User Identification
 - Users are identified by **Firebase Auth UID**, NOT email
-- Primary user: `$USER@gmail.com` → UID: `vnLp2G3m21PJL6kxcuAqmWSOtm73`
+- Primary user: `<your-email@example.com>` → UID: `<YOUR_UID>`
 - Test user: `<your-email@gmail.com>`
 - Use `auth.get_user_by_email()` to convert email → UID
 

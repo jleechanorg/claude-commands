@@ -886,7 +886,7 @@ class TestGeminiCliIntegration(unittest.TestCase):
             ],
         )
         self.assertEqual(CLI_PROFILES["codex"]["env_unset"], ["OPENAI_API_KEY"])
-        self.assertEqual(CLI_PROFILES["gemini"]["env_unset"], ["GEMINI_API_KEY"])
+        self.assertEqual(CLI_PROFILES["gemini"]["env_unset"], [])
         self.assertEqual(CLI_PROFILES["cursor"]["env_unset"], [])
 
     def test_claude_env_unset_preserves_auth_token(self):

@@ -212,7 +212,9 @@ class TestMultiPlayerComposition(unittest.TestCase):
         output = self.run_hook(env=env)
 
         self.assertIn("🔍 Detected slash commands:/debug", output)
-        self.assertIn("Use these approaches in combination:/debug", output)
+        self.assertIn("Use these approaches in combination:", output)
+        self.assertIn("/debug", output)
+        self.assertIn("Apply this to: investigate issue", output)
 
 if __name__ == '__main__':
     # Run tests

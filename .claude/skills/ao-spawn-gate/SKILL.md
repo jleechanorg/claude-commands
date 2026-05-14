@@ -1,3 +1,8 @@
+---
+name: ao-spawn-gate
+description: Pre-spawn checklist for Agent Orchestrator worker dispatch.
+---
+
 # ao-spawn-gate
 
 Pre-spawn checklist for AO worker dispatch. Run this before approving any new worker spawn.

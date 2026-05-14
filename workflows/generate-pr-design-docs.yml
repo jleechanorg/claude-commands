@@ -1,0 +1,246 @@
+name: Generate PR Design Docs
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+# Do not run concurrently on the same PR — design doc generation is idempotent
+concurrency:
+  group: design-doc-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  generate-design-doc:
+    name: Generate Design Doc
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # Skip for fork PRs — head branches live in the fork repo; GITHUB_TOKEN
+    # from a fork PR event only has read access, so we cannot push design docs.
+    # Skip runs triggered by our own bot commits (job-level actor guard).
+    # Opt out per PR with label `skip-pr-design-doc`.
+    # Skip Draft PRs to reduce noise and commit frequency during active WIP development.
+    # Also skip PRs #231, #234, and #252 until their design docs are regenerated on main;
+    # do not re-add the old level-up PR #6635 special case.
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'github-actions[bot]' && github.event.pull_request.draft == false && github.event.pull_request.number != 231 && github.event.pull_request.number != 234 && github.event.pull_request.number != 252 && !contains(github.event.pull_request.labels.*.name, 'skip-pr-design-doc')
+    permissions:
+      contents: write   # needed to commit design docs to the PR branch
+      pull-requests: write # needed to post PR comment
+    steps:
+      - id: skip-bot-doc-sync
+        name: Skip bot-only design doc synchronize events
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_ACTION: ${{ github.event.action }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          REPO: ${{ github.repository }}
+        run: |
+          SHOULD_SKIP=false
+
+          if [ "$EVENT_ACTION" != "synchronize" ]; then
+            echo "PROCEED: Event action '$EVENT_ACTION' is not synchronize."
+          else
+            COMMIT_JSON=$(mktemp)
+            if ! gh api "repos/$REPO/commits/$HEAD_SHA" > "$COMMIT_JSON"; then
+              echo "WARN: Could not inspect head commit $HEAD_SHA; proceeding."
+            else
+              # Use git-level author name (.commit.author.name) — always present even
+              # when the commit email is not linked to a GitHub account (.author may be null).
+              LAST_AUTHOR=$(jq -r '.commit.author.name // ""' "$COMMIT_JSON")
+              echo "Last commit author: '$LAST_AUTHOR'"
+              if [ "$LAST_AUTHOR" != "github-actions[bot]" ]; then
+                echo "PROCEED: Last commit is not from github-actions[bot]."
+              else
+                ONLY_DESIGN_DOCS=true
+                HAS_FILES=false
+                while IFS= read -r file; do
+                  [ -z "$file" ] && continue
+                  HAS_FILES=true
+                  if [[ "$file" != docs/design/pr-designs/* ]]; then
+                    ONLY_DESIGN_DOCS=false
+                    break
+                  fi
+                done < <(jq -r '.files[]?.filename // empty' "$COMMIT_JSON")
+
+                if [ "$HAS_FILES" = true ] && [ "$ONLY_DESIGN_DOCS" = true ]; then
+                  # Check the push batch diff (event.before → HEAD_SHA) to guard against
+                  # batched synchronize pushes that include real code changes in earlier
+                  # commits alongside the bot's design-doc head commit. Using the batch
+                  # diff rather than the full PR diff avoids false negatives on PRs that
+                  # always contain code changes (which would make the gate never fire).
+                  ZERO_SHA="0000000000000000000000000000000000000000"
+                  if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "$ZERO_SHA" ]; then
+                    echo "SKIP: bot design-doc-only head commit (no valid before SHA)."
+                    SHOULD_SKIP=true
+                  else
+                    BATCH_JSON=$(mktemp)
+                    if ! gh api "repos/$REPO/compare/${BEFORE_SHA}...${HEAD_SHA}" > "$BATCH_JSON"; then
+                      echo "WARN: Could not fetch push batch diff; proceeding."
+                      rm -f "$BATCH_JSON"
+                    else
+                      BATCH_ONLY_DESIGN_DOCS=true
+                      BATCH_HAS_ANY=false
+                      while IFS= read -r file; do
+                        [ -z "$file" ] && continue
+                        BATCH_HAS_ANY=true
+                        if [[ "$file" != docs/design/pr-designs/* ]]; then
+                          BATCH_ONLY_DESIGN_DOCS=false
+                          break
+                        fi
+                      done < <(jq -r '.files[]?.filename // empty' "$BATCH_JSON")
+                      rm -f "$BATCH_JSON"
+
+                      if [ "$BATCH_HAS_ANY" = true ] && [ "$BATCH_ONLY_DESIGN_DOCS" = true ]; then
+                        echo "SKIP: push batch is design-doc-only from bot."
+                        SHOULD_SKIP=true
+                      else
+                        echo "PROCEED: push batch contains non-design-doc changes or no files."
+                      fi
+                    fi
+                  fi
+                else
+                  echo "PROCEED: Bot commit includes non-design-doc files or no files were reported."
+                fi
+              fi
+            fi
+            rm -f "$COMMIT_JSON"
+          fi
+
+          echo "should_skip=$SHOULD_SKIP" >> "$GITHUB_OUTPUT"
+
+      - name: Repair workspace permissions for checkout
+        if: steps.skip-bot-doc-sync.outputs.should_skip != 'true'
+        run: |
+          if [ -d "$GITHUB_WORKSPACE" ]; then
+            chmod -R u+rwX "$GITHUB_WORKSPACE" || true
+          fi
+          if [ -d "$GITHUB_WORKSPACE/.git" ]; then
+            find "$GITHUB_WORKSPACE/.git" -name "*.lock" -delete || true
+          fi
+
+      - name: Checkout PR branch
+        if: steps.skip-bot-doc-sync.outputs.should_skip != 'true'
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Sync generator script from base branch
+        if: steps.skip-bot-doc-sync.outputs.should_skip != 'true'
+        # Always use the fixed script from the base branch (main) so that
+        # PRs with stale script copies in their branch get the latest fix
+        # without needing to rebase. This breaks the regenerate-loop cycle.
+        # Use git show (not checkout) to avoid staging the script into the
+        # design-doc commit index. Quote BASE_REF to prevent word-splitting
+        # on any unusual characters in the branch name.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # persist-credentials: false on checkout leaves no credentials; fetch needs the token.
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          # set -e is on in Actions bash; a transient network failure on fetch should fall back to
+          # the branch’s checked-out copy of the script, not fail the job (Bugbot #3144331199).
+          git fetch origin "${BASE_REF}" --depth=1 || true
+          if git show "FETCH_HEAD:scripts/generate-pr-design-docs.mjs" > scripts/generate-pr-design-docs.mjs.tmp 2>/dev/null; then
+            mv scripts/generate-pr-design-docs.mjs.tmp scripts/generate-pr-design-docs.mjs
+            echo "✅ Synced generator script from base branch"
+          else
+            echo "WARN: could not sync script from base branch (may not exist yet or deleted); using branch version."
+            rm -f scripts/generate-pr-design-docs.mjs.tmp
+          fi
+
+      - name: Set up Node.js
+        if: steps.skip-bot-doc-sync.outputs.should_skip != 'true'
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: "22"
+
+      - name: Generate design doc for this PR
+        if: steps.skip-bot-doc-sync.outputs.should_skip != 'true'
+        env:
+          # GITHUB_TOKEN is pre-authenticated in Actions and works for gh api/gh pr
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          echo "Generating design doc for PR #${PR_NUM} ..."
+
+          # Run the generator in single-PR mode
+          node scripts/generate-pr-design-docs.mjs \
+            --repo="$REPO" \
+            --single-pr="$PR_NUM" \
+            --force
+
+          MD_FILE="docs/design/pr-designs/pr-${PR_NUM}.md"
+          HTML_FILE="docs/design/pr-designs/pr-${PR_NUM}.html"
+
+          # Verify both output files were generated
+          if [ -f "$MD_FILE" ] && [ -f "$HTML_FILE" ]; then
+            echo "✅ Design docs generated: $MD_FILE and $HTML_FILE"
+          else
+            if [ ! -f "$MD_FILE" ]; then
+              echo "❌ Design doc Markdown not found: $MD_FILE"
+            fi
+            if [ ! -f "$HTML_FILE" ]; then
+              echo "❌ Design doc HTML not found: $HTML_FILE"
+            fi
+            exit 1
+          fi
+
+      - id: commit-docs
+        name: Commit design docs to PR branch
+        if: steps.skip-bot-doc-sync.outputs.should_skip != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pushes with the default GITHUB_TOKEN do not start new workflow runs, so the PR
+          # head can end up with no required checks. Use the same PAT as other automation
+          # (e.g. claude-processor) when set; otherwise fall back to GITHUB_TOKEN.
+          REPO_ACCESS_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          MD_FILE="docs/design/pr-designs/pr-${PR_NUM}.md"
+          HTML_FILE="docs/design/pr-designs/pr-${PR_NUM}.html"
+          GIT_PUSH_TOKEN="${REPO_ACCESS_TOKEN:-$GITHUB_TOKEN}"
+
+          # Check if there are changes to commit
+          # Use git status --porcelain to detect both tracked changes AND untracked files
+          if [ -n "$(git status --porcelain -- "$MD_FILE" "$HTML_FILE")" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git remote set-url origin "https://x-access-token:${GIT_PUSH_TOKEN}@github.com/${{ github.repository }}.git"
+            git add "$MD_FILE" "$HTML_FILE"
+            COMMIT_MSG="chore(docs): add PR design doc for #${PR_NUM}"
+            git commit -m "$COMMIT_MSG" -m "Generated by generate-pr-design-docs.yml workflow" -m "Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+            git push origin "HEAD:${PR_HEAD_REF}"
+            echo "✅ Design docs committed to PR branch"
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No design doc changes to commit — doc already up to date."
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post confirmation comment on PR
+        if: success() && steps.skip-bot-doc-sync.outputs.should_skip != 'true' && steps.commit-docs.outputs.committed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          BODY_FILE=$(mktemp)
+          printf '%s\n' \
+            "## Design Doc Generated" \
+            "" \
+            "Design documentation has been generated for this PR and committed to the branch." \
+            "" \
+            "You can view the design doc here:" \
+            "\`docs/design/pr-designs/pr-${PR_NUM}.md\`" \
+            "" \
+            "_The Skeptic agent will review this PR against the design doc as part of the skeptic gate._" \
+            > "$BODY_FILE"
+          gh pr comment "$PR_NUM" \
+            --repo "${{ github.repository }}" \
+            --body-file "$BODY_FILE" \
+            || echo "WARN: Could not post PR comment (may lack permissions)"
+          rm -f "$BODY_FILE"

@@ -1,3 +1,8 @@
+---
+name: openclaw-diagnostics
+description: Diagnose local OpenClaw gateway model routing, runtime status, and WorldArchitect integration.
+---
+
 # OpenClaw Diagnostics
 
 **Usage**: Diagnose what OpenClaw is actually doing locally — which model it uses, whether it's running, what the gateway is forwarding, and whether WorldArchitect is correctly routing through it.

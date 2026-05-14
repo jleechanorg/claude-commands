@@ -1,3 +1,8 @@
+---
+name: smoke-test-local
+description: Reproduce CI smoke test failures locally, especially MCP smoke and streaming contract failures.
+---
+
 # Running Smoke Tests Locally
 
 **Purpose**: Reproduce CI smoke test failures locally, especially for `mcp_smoke_test.sh` / SCENARIO 7 streaming contracts.

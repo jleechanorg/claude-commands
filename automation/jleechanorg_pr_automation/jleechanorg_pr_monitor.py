@@ -50,6 +50,7 @@ def _check_thread_safety_valve():
             logger.error("THREAD SAFETY VALVE: %d threads exceeding limit of 500, exiting", post_reap_count)
             sys.exit(1)
 
+
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -66,6 +67,7 @@ from orchestration.cli_validation import (
 from orchestration.task_dispatcher import (
     CLI_PROFILES,
     apply_minimax_auth_env,
+    apply_wafer_auth_env,
     build_preflight_execution_args,
     TaskDispatcher,
 )
@@ -313,8 +315,9 @@ class JleechanorgPRMonitor:
         self.wrapper_managed = os.environ.get("AUTOMATION_SAFETY_WRAPPER") == "1"
         self.no_act = bool(no_act)
 
+        project_name = os.environ.get("PROJECT_NAME", "your-project")
         # Processing history persisted to permanent location
-        self.history_base_dir = Path.home() / "Library" / "Logs" / "${PROJECT_NAME:-your-project}-automation" / "pr_history"
+        self.history_base_dir = Path.home() / "Library" / "Logs" / f"{project_name}-automation" / "pr_history"
         self.history_base_dir.mkdir(parents=True, exist_ok=True)
 
         # Organization settings
@@ -323,7 +326,7 @@ class JleechanorgPRMonitor:
 
         safety_data_dir = os.environ.get("AUTOMATION_SAFETY_DATA_DIR")
         if not safety_data_dir:
-            default_dir = Path.home() / "Library" / "Application Support" / "${PROJECT_NAME:-your-project}-automation"
+            default_dir = Path.home() / "Library" / "Application Support" / f"{project_name}-automation"
             default_dir.mkdir(parents=True, exist_ok=True)
             safety_data_dir = str(default_dir)
 
@@ -483,6 +486,37 @@ class JleechanorgPRMonitor:
 
         return f"{self.organization}/{repository}"
 
+    def get_authoritative_sha(self, repo_full_name: str, branch_name: str, fallback_sha: str) -> str:
+        """Get authoritative SHA via git ls-remote to avoid stale API data"""
+        if not branch_name:
+            return fallback_sha
+
+        try:
+            # We assume origin is the remote for authoritative checks
+            # In CI/automation environments, we typically have access to the repo or can ls-remote via https
+            cmd = ["git", "ls-remote", "--heads", f"https://github.com/{repo_full_name}.git", branch_name]
+            result = AutomationUtils.execute_subprocess_with_timeout(cmd, timeout=30, check=False)
+            if result.returncode == 0 and result.stdout:
+                # ls-remote output: <sha>\trefs/heads/<branch>
+                ls_remote_sha = result.stdout.split()[0]
+                if ls_remote_sha and len(ls_remote_sha) == 40:
+                    self.logger.debug("✅ Authoritative SHA for %s/%s: %s", repo_full_name, branch_name, ls_remote_sha)
+                    return ls_remote_sha
+
+            if result.returncode != 0:
+                self.logger.debug(
+                    "⚠️ git ls-remote failed for %s/%s (code %d): %s",
+                    repo_full_name,
+                    branch_name,
+                    result.returncode,
+                    result.stderr,
+                )
+        except Exception as e:
+            self.logger.debug("⚠️ Error fetching authoritative SHA for %s/%s: %s", repo_full_name, branch_name, e)
+
+        self.logger.debug("ℹ️ Using fallback SHA for %s/%s: %s", repo_full_name, branch_name, fallback_sha)
+        return fallback_sha
+
     def is_pr_actionable(self, pr_data: dict) -> bool:
         """Determine if a PR is actionable (should be processed)"""
         # Closed PRs are not actionable
@@ -498,12 +532,22 @@ class JleechanorgPRMonitor:
         if not head_ref_oid:
             return False
 
-        # Check if already processed with this commit
-        repo_name = pr_data.get("repository", "")
+        # Get authoritative SHA to avoid stale headRefOid from API
+        repo_name_raw = (
+            pr_data.get("repository", {}).get("name")
+            if isinstance(pr_data.get("repository"), dict)
+            else pr_data.get("repository", "")
+        )
+        repo_full_name = self._normalize_repository_name(pr_data.get("repositoryFullName") or repo_name_raw)
         branch_name = pr_data.get("headRefName", "")
+
+        # Resolve authoritative SHA
+        authoritative_sha = self.get_authoritative_sha(repo_full_name, branch_name, head_ref_oid)
+
+        # Check if already processed with this commit
         pr_number = pr_data.get("number", 0)
 
-        if self._should_skip_pr(repo_name, branch_name, pr_number, head_ref_oid):
+        if self._should_skip_pr(repo_full_name, branch_name, pr_number, authoritative_sha):
             # Option A: One comment per SHA max - don't re-ping on bot comments
             # If PR has Codex commit, it's not actionable (already processed)
             return False
@@ -569,7 +613,16 @@ class JleechanorgPRMonitor:
             if mergeable is None and merge_state_status is None:
                 try:
                     result = AutomationUtils.execute_subprocess_with_timeout(
-                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "mergeable,mergeStateStatus"],
+                        [
+                            "gh",
+                            "pr",
+                            "view",
+                            str(pr_number),
+                            "--repo",
+                            repo_full,
+                            "--json",
+                            "mergeable,mergeStateStatus",
+                        ],
                         timeout=30,
                         check=False,
                     )
@@ -586,7 +639,10 @@ class JleechanorgPRMonitor:
             # mergeStateStatus: "DIRTY"/"CONFLICTING" means conflicts, "CLEAN" means mergeable
             is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
             is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
-            is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+            is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in (
+                "dirty",
+                "conflicting",
+            )
             if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                 actionable.append({**pr, "repo_full": repo_full})
                 continue
@@ -615,17 +671,20 @@ class JleechanorgPRMonitor:
         skipped_count = 0
         processing_failures = 0
 
-        # Count ALL non-actionable PRs as skipped, not just those we encounter before target
+        # Precompute actionability in a single pass (avoids doubled git ls-remote calls)
+        pr_actionability = []
         for pr in all_prs:
-            if not self.is_pr_actionable(pr):
+            is_actionable = self.is_pr_actionable(pr)
+            pr_actionability.append((pr, is_actionable))
+            if not is_actionable:
                 skipped_count += 1
 
         # Process actionable PRs up to target
-        for pr in all_prs:
+        for pr, is_actionable in pr_actionability:
             if actionable_processed >= target_actionable_count:
                 break
 
-            if not self.is_pr_actionable(pr):
+            if not is_actionable:
                 continue  # Already counted in skipped above
 
             # Attempt to process the PR
@@ -991,28 +1050,43 @@ class JleechanorgPRMonitor:
             return "skipped"
 
         # Extract repo name and branch from PR data
-        repo_name = repo_full.split("/")[-1]
         branch_name = pr_data.get("headRefName", "unknown")
 
-        # Get current PR state including commit SHA
+        # Get current PR state for Bot comment checking
         head_sha, comments = self._get_pr_comment_state(repo_full, pr_number)
         # Handle API failures: treat None as empty list
         if comments is None:
             comments = []
+
+        # Resolve repository id and authoritative SHA before Codex skip checks so skip path records
+        # ls-remote-consistent state (avoids double-evaluating on stale API head).
+        repo_name_raw = (
+            pr_data.get("repository", {}).get("name")
+            if isinstance(pr_data.get("repository"), dict)
+            else pr_data.get("repository", "")
+        )
+        repo_full_name = self._normalize_repository_name(pr_data.get("repositoryFullName") or repo_name_raw)
+        head_ref_oid = pr_data.get("headRefOid", "")
+        authoritative_sha: str | None = None
+        if head_sha or head_ref_oid:
+            authoritative_sha = self.get_authoritative_sha(
+                repo_full_name, branch_name, head_ref_oid or (head_sha or "")
+            )
 
         # Run custom skip checks if provided (e.g., Codex-specific checks)
         if skip_checks_fn:
             should_skip, reason = skip_checks_fn(head_sha, comments, repo_full, pr_number, pr_data)
             if should_skip:
                 self.logger.info(reason)
-                if head_sha:
-                    self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+                if authoritative_sha:
+                    self._record_processed_pr(repo_full, branch_name, pr_number, authoritative_sha)
                 return "skipped"
 
         if not head_sha:
             self.logger.warning(
                 f"⚠️ Could not determine commit SHA for PR #{pr_number}; proceeding without marker gating"
             )
+            authoritative_sha = None
         else:
             # Always check if comment already exists for this commit (one comment per SHA max)
             # This prevents posting duplicate comments for the same SHA
@@ -1020,11 +1094,12 @@ class JleechanorgPRMonitor:
                 self.logger.info(
                     f"♻️ {log_prefix} already posted for commit {head_sha[:8]} on PR #{pr_number}, skipping"
                 )
-                self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+                if authoritative_sha:
+                    self._record_processed_pr(repo_full, branch_name, pr_number, authoritative_sha)
                 return "skipped"
 
-            # Check commit-based tracking
-            if self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+            # Check commit-based tracking using authoritative SHA (not API head_sha)
+            if authoritative_sha and self._should_skip_pr(repo_full, branch_name, pr_number, authoritative_sha):
                 self.logger.info(f"⏭️ Skipping PR #{pr_number} - already processed this commit")
                 return "skipped"
 
@@ -1052,8 +1127,9 @@ class JleechanorgPRMonitor:
             time.sleep(2.0)
 
             # Record that we've processed this PR with this commit when available
-            if head_sha:
-                self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+            # Use authoritative_sha for history consistency with _should_skip_pr
+            if authoritative_sha:
+                self._record_processed_pr(repo_full, branch_name, pr_number, authoritative_sha)
 
             return "posted"
 
@@ -1828,6 +1904,8 @@ Your response MUST follow this exact structure for clarity:
                 env[key] = str(value)
         if cli_name == "minimax":
             env = apply_minimax_auth_env(env)
+        if cli_name == "wafer":
+            env = apply_wafer_auth_env(env)
 
         # Delegate per-CLI arg construction to the centralised helper so that
         # this site stays in sync with TaskDispatcher._validate_cli_availability.
@@ -2070,11 +2148,25 @@ Your response MUST follow this exact structure for clarity:
         if head_sha and pr_data.get("headRefOid") != head_sha:
             pr_data = {**pr_data, "headRefOid": head_sha}
 
+        # Resolve authoritative SHA upfront for consistent skip/history decisions
+        repo_name_raw = (
+            pr_data.get("repository", {}).get("name")
+            if isinstance(pr_data.get("repository"), dict)
+            else pr_data.get("repository", "")
+        )
+        repo_full_name = self._normalize_repository_name(pr_data.get("repositoryFullName") or repo_name_raw)
+        head_ref_oid = pr_data.get("headRefOid", "")
+        authoritative_sha = self.get_authoritative_sha(repo_full_name, branch_name, head_ref_oid or (head_sha or ""))
+        # Use authoritative_sha for skip/history when available; fall back to head_sha for API consistency
+        sha_for_history = authoritative_sha or head_sha
+        log_sha = head_sha or sha_for_history or ""
+        short_sha = log_sha[:8] if log_sha else "unknown"
+
         if head_sha and self._is_fix_comment_inflight(repo_full, pr_number, head_sha):
             self.logger.info(
                 "⏭️ Skipping PR #%s - fix-comment already in-flight for commit %s",
                 pr_number,
-                head_sha[:8],
+                short_sha,
             )
             return "skipped"
 
@@ -2114,7 +2206,10 @@ Your response MUST follow this exact structure for clarity:
                 merge_state_status = data.get("mergeStateStatus", "")
                 is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
                 is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
-                is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+                is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in (
+                    "dirty",
+                    "conflicting",
+                )
                 if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                     is_conflicting = True
             else:
@@ -2154,7 +2249,7 @@ Your response MUST follow this exact structure for clarity:
             if not has_unaddressed and not (is_conflicting or is_failing) and not status_unknown:
                 self.logger.info(
                     "✅ Fix-comment automation completed for commit %s on PR #%s with no unaddressed comments and no conflicts/failing checks - skipping",
-                    head_sha[:8] if head_sha else "unknown",
+                    short_sha,
                     pr_number,
                 )
                 return "skipped"
@@ -2162,13 +2257,13 @@ Your response MUST follow this exact structure for clarity:
             if has_unaddressed:
                 self.logger.info(
                     "🔄 Fix-comment completed for commit %s on PR #%s, but unaddressed comments exist - reprocessing",
-                    head_sha[:8] if head_sha else "unknown",
+                    short_sha,
                     pr_number,
                 )
             elif is_conflicting or is_failing:
                 self.logger.info(
                     "🔄 Fix-comment completed for commit %s on PR #%s, but conflicts/failing checks appeared - reprocessing",
-                    head_sha[:8] if head_sha else "unknown",
+                    short_sha,
                     pr_number,
                 )
             # Continue to process unaddressed comments or conflicts/failing checks (skip history check since completion marker already decided)
@@ -2176,13 +2271,13 @@ Your response MUST follow this exact structure for clarity:
         # If no completion marker, check commit history as fallback
         # History might be stale (recorded after queuing but before completion)
         # If PR has conflicts or failing checks, reprocess even if commit was already processed
-        elif head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+        elif sha_for_history and self._should_skip_pr(repo_full, branch_name, pr_number, sha_for_history):
             # If issues are detected (conflicts/failing checks), allow reprocessing even if commit was already processed
             if is_conflicting or is_failing:
                 self.logger.info(
                     "🔁 Reprocessing PR #%s - commit %s already processed but conflicts/failing checks persist",
                     pr_number,
-                    head_sha[:8],
+                    short_sha,
                 )
                 # Continue to process despite history
             elif status_unknown:
@@ -2193,7 +2288,7 @@ Your response MUST follow this exact structure for clarity:
                     self.logger.info(
                         "🔄 PR #%s commit %s already processed but status unknown; processing due to unaddressed comments",
                         pr_number,
-                        head_sha[:8],
+                        short_sha,
                     )
                     # Continue to process unaddressed comments
                 else:
@@ -2202,7 +2297,7 @@ Your response MUST follow this exact structure for clarity:
                     self.logger.info(
                         "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
                         pr_number,
-                        head_sha[:8],
+                        short_sha,
                     )
                     return "skipped"
             elif not has_unaddressed and not (is_conflicting or is_failing):
@@ -2210,7 +2305,7 @@ Your response MUST follow this exact structure for clarity:
                 self.logger.info(
                     "⏭️ Skipping PR #%s - commit %s in history, no unaddressed comments, and no conflicts/failing checks",
                     pr_number,
-                    head_sha[:8],
+                    short_sha,
                 )
                 return "skipped"
             # Commit in history but no completion marker AND (unaddressed comments exist OR conflicts/failing checks)
@@ -2219,13 +2314,13 @@ Your response MUST follow this exact structure for clarity:
                 self.logger.info(
                     "🔄 PR #%s commit %s in history but no completion marker and unaddressed comments exist - reprocessing",
                     pr_number,
-                    head_sha[:8],
+                    short_sha,
                 )
             elif is_conflicting or is_failing:
                 self.logger.info(
                     "🔄 PR #%s commit %s in history but no completion marker and conflicts/failing checks exist - reprocessing",
                     pr_number,
-                    head_sha[:8],
+                    short_sha,
                 )
                 # Continue to process unaddressed comments or conflicts/failing checks
 
@@ -2261,7 +2356,7 @@ Your response MUST follow this exact structure for clarity:
                     self.logger.info(
                         "⏭️ Skipping PR #%s - fix-comment run already queued for commit %s (%.1f hours ago)",
                         pr_number,
-                        head_sha[:8],
+                        short_sha,
                         queued_age_hours,
                     )
                     return "skipped"
@@ -2384,6 +2479,11 @@ Your response MUST follow this exact structure for clarity:
         if head_sha and pr_data.get("headRefOid") != head_sha:
             pr_data = {**pr_data, "headRefOid": head_sha}
 
+        head_ref_for_history = pr_data.get("headRefOid") or head_sha or ""
+        sha_for_history = self.get_authoritative_sha(repo_full, branch_name, head_ref_for_history)
+        log_sha = head_sha or sha_for_history or ""
+        short_sha = log_sha[:8] if log_sha else "unknown"
+
         # CRITICAL: Draft PRs must be skipped BEFORE any other processing
         # This ensures drafts are never processed even if they have conflicts/failing checks
         if pr_data.get("isDraft"):
@@ -2426,7 +2526,10 @@ Your response MUST follow this exact structure for clarity:
                 merge_state_status = data.get("mergeStateStatus", "")
                 is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
                 is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
-                is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+                is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in (
+                    "dirty",
+                    "conflicting",
+                )
                 if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                     is_conflicting = True
             else:
@@ -2450,7 +2553,7 @@ Your response MUST follow this exact structure for clarity:
 
         # If issues are detected, allow reprocessing even if the commit was already processed.
         # If status is unknown (no issues detected), fall back to history gating to avoid duplicates.
-        if head_sha and self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
+        if sha_for_history and self._should_skip_pr(repo_full, branch_name, pr_number, sha_for_history):
             if is_conflicting or is_failing:
                 # Check if we've already tried this commit too many times
                 commit_attempts = self._count_commit_attempts(comments, "fixpr", head_sha)
@@ -2458,7 +2561,7 @@ Your response MUST follow this exact structure for clarity:
                     self.logger.info(
                         "🚫 Skipping PR #%s - commit %s already attempted %d times (max: %d); waiting for new commit",
                         pr_number,
-                        head_sha[:8],
+                        short_sha,
                         commit_attempts,
                         self.MAX_COMMIT_RETRIES,
                     )
@@ -2466,7 +2569,7 @@ Your response MUST follow this exact structure for clarity:
                 self.logger.info(
                     "🔁 Reprocessing PR #%s - commit %s already processed but issues persist (attempt %d/%d)",
                     pr_number,
-                    head_sha[:8],
+                    short_sha,
                     commit_attempts + 1,
                     self.MAX_COMMIT_RETRIES,
                 )
@@ -2474,7 +2577,7 @@ Your response MUST follow this exact structure for clarity:
                 self.logger.info(
                     "⏭️ Skipping PR #%s - already processed commit %s and status unknown; will retry on new commits or bot signals",
                     pr_number,
-                    head_sha[:8],
+                    short_sha,
                 )
                 return "skipped"
 
@@ -2532,8 +2635,8 @@ Your response MUST follow this exact structure for clarity:
                     agent_cli=effective_cli,
                 )
                 # Record processing so we don't loop
-                if head_sha:
-                    self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+                if sha_for_history:
+                    self._record_processed_pr(repo_full, branch_name, pr_number, sha_for_history)
 
                 if not queued_posted:
                     self.logger.warning(
@@ -3901,7 +4004,16 @@ Your response MUST follow this exact structure for clarity:
 
                 try:
                     result = AutomationUtils.execute_subprocess_with_timeout(
-                        ["gh", "pr", "view", str(pr_number), "--repo", repo_full_name, "--json", "mergeable,mergeStateStatus"],
+                        [
+                            "gh",
+                            "pr",
+                            "view",
+                            str(pr_number),
+                            "--repo",
+                            repo_full_name,
+                            "--json",
+                            "mergeable,mergeStateStatus",
+                        ],
                         timeout=30,
                         check=False,
                     )
@@ -3912,13 +4024,20 @@ Your response MUST follow this exact structure for clarity:
                         mergeable = data.get("mergeable")
                         merge_state_status = data.get("mergeStateStatus", "")
                         is_mergeable_false = isinstance(mergeable, bool) and mergeable is False
-                        is_mergeable_string_conflicting = isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
-                        is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in ("dirty", "conflicting")
+                        is_mergeable_string_conflicting = (
+                            isinstance(mergeable, str) and mergeable.upper() == "CONFLICTING"
+                        )
+                        is_state_dirty = isinstance(merge_state_status, str) and merge_state_status.lower() in (
+                            "dirty",
+                            "conflicting",
+                        )
                         if is_mergeable_false or is_mergeable_string_conflicting or is_state_dirty:
                             is_conflicting = True
                     else:
                         # Treat status as unknown; don't assume the PR is clean
-                        self.logger.warning(f"gh pr view failed for PR #{pr_number} with returncode {result.returncode}")
+                        self.logger.warning(
+                            f"gh pr view failed for PR #{pr_number} with returncode {result.returncode}"
+                        )
                         status_unknown = True
 
                     is_failing = has_failing_checks(repo_full_name, pr_number)
@@ -3937,9 +4056,7 @@ Your response MUST follow this exact structure for clarity:
                     # Skip is_pr_actionable check and proceed directly to processing
                 # If status is unknown due to API failure, don't skip - process conservatively
                 elif status_unknown:
-                    self.logger.info(
-                        f"ℹ️ PR #{pr_number} status unknown (API failure) - proceeding conservatively"
-                    )
+                    self.logger.info(f"ℹ️ PR #{pr_number} status unknown (API failure) - proceeding conservatively")
                 # Only check is_pr_actionable if no issues found and status is known
                 elif not self.is_pr_actionable(pr):
                     skipped_count += 1

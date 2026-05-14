@@ -10,28 +10,34 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 1: Execute Branch Creation
+### Phase 1: Context Analysis & Name Generation
+1. **Analyze Context**: If the user did NOT provide a branch name, look at:
+   - Recent conversation history
+   - Current uncommitted changes (`git status`, `git diff --stat`)
+   - Last 3 commit messages
+2. **Generate Name**: If no name provided, propose a descriptive slug (e.g., `fix-auth-bug`, `feat-navigation-refactor`).
+3. **Confirm with User**: (Optional/Implicit) Use the generated name when calling the script.
+
+### Phase 2: Execute Branch Creation
 
 **Action Steps:**
-1. Execute the newbranch.py Python script with user arguments
-2. Script handles: stashing changes, fetching main, creating branch, cherry-picking commits
-3. Verify branch creation success and report new branch name
-4. If cherry-picks requested, confirm commits were applied
-5. Confirm working tree changes were restored
+1. Execute the `newbranch.py` Python script.
+2. Pass the branch name (either user-provided or generated) as the first argument.
+3. Script handles: stashing changes, fetching origin/main, creating branch directly from `origin/main` (avoiding local `main` checkout), cherry-picking commits if requested.
+4. Verify branch creation success and report new branch name.
+5. Confirm working tree changes were restored.
 
 ## 📋 REFERENCE DOCUMENTATION
 
 # /newbranch or /nb - Create a new branch from fresh `origin/main`
 
-Creates a fresh branch from the latest `origin/main` while carrying forward your current working tree changes. When the command detects language such as "bring in changes" it will also cherry-pick the requested committed changes onto the new branch.
+Creates a fresh branch from the latest `origin/main` while carrying forward your current working tree changes. This command is worktree-safe and does not require the local `main` branch to be available.
 
 ## Usage
-- `/newbranch` - Creates a new branch with timestamp (dev{timestamp})
-- `/nb` - Alias for /newbranch
-- `/newbranch test1234` - Creates a branch named `test1234`
-- `/nb feature-xyz` - Creates a branch named `feature-xyz`
-- `/nb bring in changes abc123` - Creates a branch named `bring-in-changes` and cherry-picks commit `abc123` before restoring uncommitted edits
-- `/newbranch polish ui include changes 123abc 456def` - Creates a branch named `polish-ui` and cherry-picks commits `123abc` and `456def`
+- `/newbranch` - Creates a new branch with an auto-generated name based on context.
+- `/nb` - Alias for /newbranch.
+- `/nb feature-xyz` - Creates a branch named `feature-xyz`.
+- `/nb bring in changes abc123` - Creates a branch named `bring-in-changes` and cherry-picks commit `abc123`.
 
 ## Behavior
 1. Detects uncommitted changes and stashes them (including untracked files).

@@ -1,152 +1,124 @@
 ---
 name: ui-video-evidence
-description: How to record captioned browser/UI evidence GIFs that prove visual behavior and user flows ran correctly
+description: Record captioned browser/UI evidence videos, upload to GitHub PR attachments, and link sanitized artifacts in a self-contained gist
 ---
 
 # UI Video Evidence for Visual Verification
 
 ## Purpose
 
-Prove that UI behavior, visual state, and click flows occurred as claimed. A GIF with visible URL, timestamps, and action context is tamper-evident in a way screenshots alone are not.
+Prove user-visible behavior in a way reviewers and agents can verify quickly from the PR conversation.
 
-## When This Is Required
+## When UI Video Is Mandatory
 
-Use UI video evidence (in addition to tmux video) whenever your claim involves:
+UI/browser video is mandatory whenever work is user-facing, including:
+- Visual/UI layout or styling changes
+- Click flows, form submit flows, navigation, or modal behavior
+- New/changed browser interactions
+- Any claim of visual correctness or lack of visual regression
 
-- A rendered UI component or page
-- A click flow, form submission, or navigation
-- Visual state change (modal open, error shown, data loaded)
-- "Works in browser" or "UI looks correct" claims
-- Any test that drives a real browser
+If a PR touches user-facing behavior, missing UI video is an evidence failure.
 
-## Tool Options
+## Required Outputs
 
-### Option 1 — Claude-in-Chrome GIF (preferred for agent sessions)
+Each UI evidence run must provide:
+- UI video (`.mp4` preferred)
+- UI fallback media (`.gif` recommended when player embed is not required)
+- Captions (burned-in preferred; `.vtt`/`.srt` acceptable)
+- Git linkage (`git rev-parse HEAD` visible in recording context)
+- GitHub-hosted URL(s) published by automation
+- A browser-viewable artifact (`.gif`, commit-pinned raw asset, release asset, or native attachment)
+- A downloadable high-fidelity artifact (`.mp4`, `.mp4.zip`, or release asset)
+- Matching entry in a self-contained gist bundle
 
-```
-mcp__claude-in-chrome__gif_creator
-```
+## Mandatory Frames
 
-Built into the harness. Records Chrome tab interactions directly.
+| # | Frame | Must show |
+|---|-------|-----------|
+| 1 | URL + Page Load | Full browser URL bar with route under test |
+| 2 | Before State | Initial state before action |
+| 3 | Action | Click/input/navigation action |
+| 4 | After State | Resulting state after action |
+| 5 | Git Linkage | Terminal split, devtools log, or on-page SHA marker |
 
-**Usage pattern:**
-1. Start gif recording
-2. Navigate to the page under test (URL must be visible in frame)
-3. Perform the action being claimed
-4. Capture the resulting state
-5. Stop and save with a meaningful filename
+## Recording Options
 
-### Option 2 — Kap (preferred for native app / full-screen flows)
+### Option 1: Claude-in-Chrome GIF/Video workflow
+Use browser automation and record the full flow while keeping URL visible.
 
+### Option 2: Kap (manual desktop capture)
 ```bash
 brew install --cask kap
 ```
+Record browser window including address bar.
 
-Open Kap → select region → record → export as GIF.
-
-### Option 3 — ffmpeg (CI / headless environments)
-
+### Option 3: ffmpeg (headless/CI)
 ```bash
-# Record X11 display (Linux CI)
-ffmpeg -video_size 1280x720 -framerate 10 -f x11grab -i :99 \
-  -t 30 /tmp/<work_name>.mp4
-
-# Convert to GIF
-ffmpeg -i /tmp/<work_name>.mp4 -vf "fps=10,scale=1280:-1" \
-  /tmp/<work_name>.gif
+ffmpeg -video_size 1280x720 -framerate 10 -f x11grab -i :99 -t 30 /tmp/<work_name>.mp4
 ```
 
-## Mandatory Evidence Frames
+## Caption Requirements (MANDATORY)
 
-Every UI evidence GIF MUST show these frames in order:
+Both tmux and UI videos must always have captions.
 
-| # | Frame | What must be visible |
-|---|-------|---------------------|
-| 1 | **URL + Page Load** | Full browser URL bar showing the route being tested |
-| 2 | **Before State** | Initial state before the action (empty form, list count, etc.) |
-| 3 | **Action** | The click, input, or navigation being performed |
-| 4 | **After State** | Result of the action (success message, data change, navigation) |
-| 5 | **Git Commit Link** | Terminal pane or overlay showing `git rev-parse HEAD` |
+Accepted forms:
+1. Burned-in captions in the video (preferred)
+2. Sidecar caption file (`.vtt`/`.srt`) linked in PR and included in gist
 
-## Caption / Annotation Requirements
+Use `~/.claude/skills/video-caption/SKILL.md` for reliable burned-in captions.
 
-The GIF must be self-explanatory to a reviewer who has no context:
+## GitHub Hosting (Required, Zero-Touch)
 
-- **URL visible in frame** — don't crop out the address bar
-- **Route matches claim** — if claiming `/campaign/123` works, that URL must appear
-- **Timestamps** — use browser devtools Network tab or console timestamps when timing matters
-- **No pre-recorded state** — if the test creates data, show the creation step, not just the result
-
-## Git Linkage (MANDATORY)
-
-UI evidence must be tied to a commit, same as terminal evidence. Do one of:
-
-1. **Split screen**: show terminal with `git rev-parse HEAD` alongside the browser
-2. **Console log**: `console.log('SHA:', '<git-sha>')` visible in browser devtools
-3. **Page element**: render the commit SHA in the UI during test mode (e.g. footer `data-commit` attribute)
+Preferred path for strict `/es`:
 
 ```bash
-# Quick split-screen approach with tmux
-tmux split-window -h "watch -n1 git rev-parse HEAD"
-# Then record both panes with asciinema or screen capture
+zip -j /tmp/ui_flow.mp4.zip /abs/path/to/ui_flow.mp4
+gh release create evidence-pr-<PR_NUMBER> --draft --title "PR #<PR_NUMBER> Evidence" --notes "" 2>/dev/null || true
+gh release upload evidence-pr-<PR_NUMBER> /tmp/ui_flow.mp4.zip /abs/path/to/ui_flow.gif /abs/path/to/ui_flow.srt --clobber
+gh release view evidence-pr-<PR_NUMBER> --json assets,url
+gh pr edit <PR_NUMBER_OR_URL> --body-file /tmp/pr_body.md
 ```
 
-## Evidence Script Template
+Build `/tmp/pr_body.md` from the asset URLs returned by `gh release view --json assets,url`. Do not guess the final download URL for draft releases.
 
-```bash
-#!/bin/bash
-# UI Evidence Setup — <PR/Work Item>
-set -e
+Optional path:
+- `$HOME/.claude/scripts/github_pr_media_upload.py` may still be used when native `user-attachments` URLs are specifically desired and a valid GitHub web session cookie is available
 
-echo "=== UI EVIDENCE: Git Provenance ==="
-git rev-parse HEAD
-git branch --show-current
-git log --oneline origin/main..HEAD
-echo ""
+Behavior:
+- Keeps publication fully zero-touch via `gh`
+- Produces durable GitHub-hosted URLs that can be pasted into the PR description or comment
+- Avoids dependence on a browser session cookie
 
-echo "=== Starting UI evidence recording ==="
-echo "URL under test: <URL>"
-echo "Claim: <what behavior this proves>"
-echo "Commit: $(git rev-parse HEAD)"
-echo ""
-
-# Launch browser to the page
-# (agent: use mcp__claude-in-chrome__navigate + gif_creator)
-# (human: open browser manually, start Kap)
-
-echo "=== Post-recording SHA check ==="
-echo "SHA unchanged: $(git rev-parse HEAD)"
-```
-
-## Reviewer Checklist
-
-A reviewer of UI evidence should verify:
-
-1. **URL visible**: Address bar or route shown — matches the claimed page
-2. **Before/after states**: Both shown — not just the success state
-3. **Action visible**: The triggering interaction is in the recording
-4. **Git linkage**: SHA tied to the recording via split-screen or console
-5. **No jump cuts**: GIF plays continuously without suspicious edits
-6. **Data is real**: If form was submitted, network tab shows real API call
-
-## Anti-Patterns
-
-| Don't | Do instead |
-|-------|-----------|
-| Show only the success state | Show before → action → after |
-| Crop out the URL bar | Keep browser chrome visible |
-| Use a pre-seeded DB and claim it proves creation | Show the creation step in the recording |
-| Record without git SHA visible | Add terminal split or console log |
-| Use a screenshot instead of GIF for flows | GIF proves the flow happened; screenshot proves only a moment |
-
-## Embedding in PRs
+## PR Snippet Template
 
 ```markdown
 ## UI Evidence
 
-![<description>](/path/to/evidence.gif)
-
-**Commit**: `<git-sha>`
-**URL tested**: `<url>`
-**Claim**: <what this proves>
+- GIF: `<asset url from gh release view --json assets>`
+- MP4 ZIP: `<asset url from gh release view --json assets>`
+- Captions: burned-in (or gist: https://gist.github.com/<id>#file-ui-video-vtt)
+- Route: `/path/under/test`
+- Commit: `<sha>`
+- Claim: <what this proves>
 ```
+
+## Anti-Patterns
+
+Reject these:
+- URL bar cropped out
+- Success-only clip (no before/action)
+- No git SHA linkage
+- Missing captions
+- Screenshot-only evidence for flow claims
+- Manual drag-drop as the only publication path
+- Non-GitHub-hosted media when GitHub hosting is available
+
+## Reviewer Checklist
+
+1. Video is linked in the PR via GitHub-hosted URL
+2. Automation path uses `gh release upload` and PR edit/comment, or the optional native-attachment helper
+3. Captions are present
+4. Before/action/after flow is visible
+5. URL and route match claim
+6. Git SHA linkage is visible
+7. Gist contains matching metadata/caption artifacts

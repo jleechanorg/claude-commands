@@ -235,10 +235,38 @@ post_ai_bot_review_request() {
     # Check if comment already posted for current commit (similar to Codex check)
     local pr_state_json
     local head_sha=""
-    local should_skip=false
+    if ! pr_state_json=$(gh pr view "$pr_number" --repo "$GH_REPO" --json headRefOid,headRefName,comments); then
+        log "⚠️ Unable to fetch PR state; proceeding with comment (no idempotency check)"
+    else
+        local head_ref_name=$(echo "$pr_state_json" | jq -r '.headRefName // ""')
+        
+        # Use git ls-remote for authoritative SHA (avoiding stale headRefOid from API)
+        if [ -n "$head_ref_name" ]; then
+            log "🔍 Fetching authoritative SHA for refs/heads/$head_ref_name via ls-remote..."
+            local ls_remote_out=""
+            # stderr must not be mixed into captured output (could be mistaken for a "SHA")
+            if ls_remote_out=$(git ls-remote --heads origin "$head_ref_name" 2>/dev/null); then
+                local ls_remote_sha
+                ls_remote_sha=$(echo "$ls_remote_out" | awk 'NR==1 {print $1}')
+                if [[ "$ls_remote_sha" =~ ^[0-9a-f]{40}$ ]]; then
+                    head_sha="$ls_remote_sha"
+                    log "✅ Authoritative SHA: $head_sha"
+                else
+                    log "⚠️ Invalid/non-SHA output from ls-remote ('$ls_remote_sha'); falling back to headRefOid"
+                fi
+            else
+                log "⚠️ git ls-remote failed for refs/heads/$head_ref_name"
+                log "ℹ️ Falling back to headRefOid"
+            fi
+        fi
 
-    if pr_state_json=$(gh pr view "$pr_number" --repo "$GH_REPO" --json headRefOid,comments 2>/dev/null); then
-        head_sha=$(echo "$pr_state_json" | jq -r '.headRefOid // ""')
+        # Fallback to headRefOid if ls-remote failed or was skipped
+        if [ -z "$head_sha" ]; then
+            head_sha=$(echo "$pr_state_json" | jq -r '.headRefOid // ""')
+            if [ -n "$head_sha" ]; then
+                log "⚠️ Using headRefOid from API (authoritative check failed): $head_sha"
+            fi
+        fi
 
         if [ -z "$head_sha" ]; then
              log "⚠️ Unable to determine head SHA for PR #$pr_number; skipping to avoid marker-less comment"
@@ -253,10 +281,6 @@ post_ai_bot_review_request() {
             notify_validation_completion "$pr_number" "success" ""
             return 0
         fi
-    else
-        log "⚠️ Unable to fetch PR state; proceeding with comment (no idempotency check)"
-        # Proceed without marker - transient gh pr view failures shouldn't block posting
-        head_sha=""
     fi
 
     # Comment asking AI bots (not Codex) to review

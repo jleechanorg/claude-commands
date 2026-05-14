@@ -44,6 +44,13 @@ jobs:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 1
 
+    - name: Runner Preflight & Health Score check
+      id: preflight
+      run: |
+        bash scripts/ci/runner_preflight.sh
+        # Check runner health score; fail if quarantined
+        python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 check
+
     - name: Run harness autonomy checks (self-hosted)
       env:
         GH_TOKEN: ${{ github.token }}
@@ -77,6 +84,11 @@ jobs:
         retention-days: 7
         if-no-files-found: ignore
 
+    - name: Update health score on failure
+      if: failure() && steps.preflight.outcome == 'failure'
+      run: |
+        python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 update --delta 1 --reason "Infra failure in job: ${{ github.job }}"
+
   mvp-shard-1:
     name: Directory tests (core-mvp-1(self hosted))
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
@@ -89,6 +101,13 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 1
+
+    - name: Runner Preflight & Health Score check
+      id: preflight
+      run: |
+        bash scripts/ci/runner_preflight.sh
+        # Check runner health score; fail if quarantined
+        python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 check
 
     - name: Run core-mvp-1 tests (self-hosted)
       run: |
@@ -112,6 +131,7 @@ jobs:
         TEST_GEMINI_API_KEY: "test-ci-key-only"
         GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
         WORLDAI_GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+        WORLDAI_DEV_MODE: "true"
         ENABLE_SEMANTIC_ROUTING: "false"
         ENABLE_BROWSER_TESTS: "0"
         ENABLE_BUILD_TESTS: "0"
@@ -129,6 +149,11 @@ jobs:
         path: mvp_site/test-results/
         retention-days: 7
         if-no-files-found: ignore
+
+    - name: Update health score on failure
+      if: failure() && steps.preflight.outcome == 'failure'
+      run: |
+        python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 update --delta 1 --reason "Infra failure in job: ${{ github.job }}"
   mvp-shard-2:
     name: Directory tests (core-mvp-2(self hosted))
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
@@ -141,6 +166,13 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 1
+
+    - name: Runner Preflight & Health Score check
+      id: preflight
+      run: |
+        bash scripts/ci/runner_preflight.sh
+        # Check runner health score; fail if quarantined
+        python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 check
 
     - name: Run core-mvp-2 tests (self-hosted)
       run: |
@@ -164,6 +196,7 @@ jobs:
         TEST_GEMINI_API_KEY: "test-ci-key-only"
         GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
         WORLDAI_GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+        WORLDAI_DEV_MODE: "true"
         ENABLE_SEMANTIC_ROUTING: "false"
         ENABLE_BROWSER_TESTS: "0"
         ENABLE_BUILD_TESTS: "0"
@@ -182,6 +215,11 @@ jobs:
         retention-days: 7
         if-no-files-found: ignore
 
+    - name: Update health score on failure
+      if: failure() && steps.preflight.outcome == 'failure'
+      run: |
+        python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 update --delta 1 --reason "Infra failure in job: ${{ github.job }}"
+
   mvp-shard-3:
     name: Directory tests (core-mvp-3(self hosted))
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
@@ -194,6 +232,13 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 1
+
+    - name: Runner Preflight & Health Score check
+      id: preflight
+      run: |
+        bash scripts/ci/runner_preflight.sh
+        # Check runner health score; fail if quarantined
+        python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 check
 
     - name: Run core-mvp-3 tests (self-hosted)
       run: |
@@ -217,6 +262,7 @@ jobs:
         TEST_GEMINI_API_KEY: "test-ci-key-only"
         GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
         WORLDAI_GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+        WORLDAI_DEV_MODE: "true"
         ENABLE_SEMANTIC_ROUTING: "false"
         ENABLE_BROWSER_TESTS: "0"
         ENABLE_BUILD_TESTS: "0"
@@ -234,3 +280,8 @@ jobs:
         path: mvp_site/test-results/
         retention-days: 7
         if-no-files-found: ignore
+
+    - name: Update health score on failure
+      if: failure() && steps.preflight.outcome == 'failure'
+      run: |
+        python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 update --delta 1 --reason "Infra failure in job: ${{ github.job }}"

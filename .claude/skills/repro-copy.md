@@ -8,15 +8,37 @@ evidence that can survive review.
 
 If the user requires **two full copies** from production — **first copy never receives any turn** — and all replay on the **second** copy only (plus full `download_campaign` export to avoid drift), use **`.claude/skills/repro-twin-clone-evidence/SKILL.md`**. That is **not** the same as canonical+variant here (variant may delete the last scene).
 
-## Primary command
+## CRITICAL: Resolve Firebase UID first — always pass `--source-user-id`
+
+Without `--source-user-id`, the script uses `_find_campaign_owner` to scan users
+for the campaign, which is slow. If the owner cannot be resolved, you get a
+**ValueError** with an explicit message. Pass `--source-user-id` whenever you
+already know the owner UID to skip the scan.
 
 ```bash
+# Step 0: resolve UID (required for any production campaign)
+UID=$(./vpython -c "
+import firebase_admin; from firebase_admin import auth, credentials; import os
+cred = credentials.Certificate(os.path.expanduser('~/serviceAccountKey.json'))
+try:
+    firebase_admin.get_app()
+except ValueError:
+    firebase_admin.initialize_app(cred)
+print(auth.get_user_by_email('<your-email@example.com>').uid)
+")
+if [ -z "$UID" ]; then
+  echo "Failed to resolve Firebase UID" >&2
+  exit 1
+fi
+# → <YOUR_UID>
+
 ./vpython scripts/repro_copy_campaign.py <campaign_id> \
+  --source-user-id "$UID" \
   --issue "short issue description" \
   --start-local
 ```
 
-Optional:
+## Optional flags
 
 ```bash
 ./vpython scripts/repro_copy_campaign.py <campaign_id> \

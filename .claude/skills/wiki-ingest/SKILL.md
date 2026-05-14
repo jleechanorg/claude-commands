@@ -1,3 +1,8 @@
+---
+name: wiki-ingest
+description: Ingest a file into the local LLM wiki and update source/entity/concept pages.
+---
+
 # /wiki-ingest — Ingest a file into the LLM Wiki
 
 ## Usage

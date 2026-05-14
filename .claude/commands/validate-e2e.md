@@ -1,3 +1,8 @@
+---
+description: Audit test files for honest E2E classification
+type: testing
+execution_mode: manual
+---
 # /validate-e2e — Audit test files for honest E2E classification
 
 ## Instructions for Claude
