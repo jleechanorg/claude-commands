@@ -37,6 +37,9 @@ jobs:
           python-version: "3.11"
 
       - name: Validate evidence bundle structure
+        env:
+          PR_BODY: ${{ github.event.pull_request.body || '' }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           ERRORS=0
@@ -94,6 +97,20 @@ jobs:
           else
             echo "FAIL: evidence_utils.py py_compile failed"
             ERRORS=$((ERRORS + 1))
+          fi
+
+          echo ""
+          echo "=== Check 6: PR body references evidence bundle ==="
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "SKIP: Not a pull_request event (event=$GITHUB_EVENT_NAME)"
+          elif echo "$PR_BODY" | grep -qiE 'gist\.github\.com.*[0-9a-f]{7,}'; then
+            echo "PASS: PR body references a gist evidence bundle"
+          elif echo "$PR_BODY" | grep -qiE '(Evidence|/es|/er).*(N/A|not applicable|no runtime behavior)'; then
+            echo "PASS: PR body documents N/A evidence justification"
+          else
+            echo "WARN: PR body does not reference a gist evidence bundle or N/A justification"
+            echo "  Production PRs touching testing_mcp/mvp_site should publish /es evidence"
+            echo "  or document why no runtime evidence is needed (e.g. docs-only change)"
           fi
 
           echo ""

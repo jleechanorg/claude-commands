@@ -1,0 +1,181 @@
+---
+description: Multi-source conversation history search across Claude Code, Codex, and Hermes — runs all three in parallel.
+type: search
+scope: user
+---
+
+# /history Search Skill
+
+Searches Claude Code JSONL, Codex SQLite threads, and Hermes messages (FTS5) in parallel.
+
+## Sources
+
+| Source | Data | Path |
+|--------|------|------|
+| Claude Code | JSONL per session | `~/.claude/projects/*/*.jsonl` |
+| Codex | SQLite threads + first message | `~/.codex/state_5.sqlite` |
+| Hermes | Messages with FTS5 | `~/.hermes_prod/state.db` |
+
+## Execution
+
+When `/history <query>` is invoked, run these three searches **in parallel** as subagents (or parallel Bash blocks), then merge and display results.
+
+### Parallel block A — Claude Code JSONL search
+
+```python
+import json, glob, os, sys, datetime
+
+query = "<QUERY>"  # inject search terms
+limit = 20
+results = []
+
+files = sorted(
+    glob.glob(os.path.expanduser("~/.claude/projects/*/*.jsonl")),
+    key=os.path.getmtime, reverse=True
+)
+
+for path in files:
+    try:
+        with open(path, encoding="utf-8", errors="ignore") as f:
+            for i, line in enumerate(f):
+                if query.lower() in line.lower():
+                    try:
+                        obj = json.loads(line)
+                    except Exception:
+                        continue
+                    role = obj.get("type") or obj.get("message", {}).get("role", "?")
+                    content = ""
+                    msg = obj.get("message", {})
+                    if isinstance(msg.get("content"), str):
+                        content = msg["content"]
+                    elif isinstance(msg.get("content"), list):
+                        for c in msg["content"]:
+                            if isinstance(c, dict) and c.get("type") == "text":
+                                content = c.get("text", ""); break
+                    ts = obj.get("timestamp", "")
+                    project = os.path.basename(os.path.dirname(path))
+                    results.append({
+                        "source": "claude",
+                        "project": project,
+                        "ts": ts,
+                        "role": role,
+                        "snippet": content[:200].replace("\n", " "),
+                        "file": os.path.basename(path),
+                    })
+                    if len(results) >= limit:
+                        break
+    except Exception:
+        pass
+    if len(results) >= limit:
+        break
+
+for r in results:
+    print(f"[Claude] {r['ts'][:10]} | {r['project'][:40]} | {r['role']} | {r['snippet']}")
+```
+
+### Parallel block B — Codex thread search
+
+```python
+import sqlite3, os, datetime
+
+query = "<QUERY>"
+db = os.path.expanduser("~/.codex/state_5.sqlite")
+if not os.path.exists(db):
+    print("[Codex] DB not found"); exit()
+
+con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+cur = con.cursor()
+
+like = f"%{query}%"
+rows = cur.execute("""
+    SELECT title, first_user_message, cwd, git_branch,
+           datetime(created_at/1000,'unixepoch','localtime') as created
+    FROM threads
+    WHERE (title LIKE ? OR first_user_message LIKE ?)
+      AND archived = 0
+    ORDER BY created_at DESC
+    LIMIT 20
+""", (like, like)).fetchall()
+
+for title, first_msg, cwd, branch, created in rows:
+    snippet = (first_msg or "")[:200].replace("\n", " ")
+    proj = os.path.basename(cwd) if cwd else "?"
+    print(f"[Codex] {created[:10]} | {proj} | {branch or 'main'} | {title[:50]} | {snippet}")
+
+con.close()
+```
+
+Note: Codex `state_5.sqlite` stores `created_at` in milliseconds (Unix ms). Use `created_at/1000` in epoch conversion.
+
+### Parallel block C — Hermes FTS5 search
+
+```python
+import sqlite3, os
+
+query = "<QUERY>"
+db = os.path.expanduser("~/.hermes_prod/state.db")
+if not os.path.exists(db):
+    print("[Hermes] DB not found"); exit()
+
+con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+cur = con.cursor()
+
+rows = cur.execute("""
+    SELECT s.title, s.source, datetime(m.timestamp,'unixepoch','localtime') as ts,
+           m.role, substr(m.content, 1, 200)
+    FROM messages m
+    JOIN sessions s ON m.session_id = s.id
+    WHERE m.id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)
+    ORDER BY m.timestamp DESC
+    LIMIT 20
+""", (query,)).fetchall()
+
+for title, source, ts, role, snippet in rows:
+    clean = (snippet or "").replace("\n", " ")
+    print(f"[Hermes] {ts[:10]} | {source} | {title or '?'[:50]} | {role} | {clean}")
+
+con.close()
+```
+
+## Output format
+
+After collecting results from all three parallel blocks, display as:
+
+```
+=== History Search: "<query>" ===
+
+📁 Claude Code  (N matches)
+  2026-05-14 | -Users-$USER-worldarchitect | user | "text snippet..."
+  ...
+
+🤖 Codex  (N matches)
+  2026-05-10 | worldarchitect | main | "thread title" | "first message..."
+  ...
+
+⚡ Hermes  (N matches)
+  2026-05-16 | slack | "session title" | user | "message snippet..."
+  ...
+```
+
+## Memory read (Phase 0)
+
+Before running search, check Claude project memory for relevant context:
+
+```bash
+project_key=$(git rev-parse --show-toplevel 2>/dev/null | sed 's|/|-|g')
+grep -i "<QUERY>" ~/.claude/projects/${project_key}/memory/*.md 2>/dev/null | head -5
+```
+
+## Filter flags
+
+- `--recent N` — restrict to last N days: add `AND ts > unixepoch('now','-N days')` to SQL
+- `--source claude|codex|hermes` — skip the other two blocks
+- `--limit N` — cap each source at N (default 20)
+- `--date YYYY-MM` — filter by month: `LIKE '2026-05%'` on timestamps
+
+## Notes
+
+- Codex `first_user_message` can be very large (entire system prompts). Truncate display to 200 chars.
+- Claude JSONL files are ordered newest-first by mtime. Stop after `limit` matches total, not per file.
+- Hermes FTS5 uses standard SQLite FTS5 syntax: `"exact phrase"`, `word1 AND word2`, `word*` prefix.
+- Hermes `messages_fts` indexes `content + tool_name + tool_calls` — tool results also searchable.

@@ -33,7 +33,7 @@ execution_mode: immediate
    ```
 
 2. **Deploy Convergence Agent**
-   - Agent script: Execute `/goalexec <goal>` repeatedly
+   - Agent script: Execute `/converge <goal>` repeatedly
    - Monitor convergence state and progress
    - Handle failures and retry logic
    - Log all convergence attempts and results
@@ -41,8 +41,8 @@ execution_mode: immediate
 3. **Agent Monitoring Loop**
    ```bash
    while [[ $attempts -lt $max_attempts && $elapsed_hours -lt $max_hours ]]; do
-     # Execute /goalexec with goal
-     claude /goalexec "$goal"
+     # Execute /converge with goal
+     claude /converge "$goal"
      
      # Check convergence status
      if [[ $? -eq 0 && $(check_success_criteria) == "true" ]]; then
@@ -77,7 +77,7 @@ execution_mode: immediate
 
 3. **Failure Recovery**
    - Tmux session crashes: Restart agent automatically
-   - /goalexec failures: Log and retry with exponential backoff
+   - /converge failures: Log and retry with exponential backoff
    - Resource exhaustion: Implement graceful degradation
    - External blocks: Continue attempts with intelligent retry
 
@@ -124,7 +124,7 @@ execution_mode: immediate
 
 # /orchconverge - Autonomous Convergence via Orchestration
 
-**Autonomous convergence using existing `/orch` orchestration system to run /goalexec continuously until completion, time limits, or max attempts reached, followed by comprehensive review and finalization workflow.**
+**Autonomous convergence using existing `/orch` orchestration system to run /converge continuously until completion, time limits, or max attempts reached, followed by comprehensive review and finalization workflow.**
 
 ## Usage
 
@@ -141,7 +141,7 @@ execution_mode: immediate
 
 ```
 ┌─ Orchestration Setup ─┐    ┌─ Convergence Agent ─┐    ┌─ Final Workflow ─┐
-│ • TaskDispatcher      │ → │ • /goalexec Loop      │ → │ • /pushl          │
+│ • TaskDispatcher      │ → │ • /converge Loop      │ → │ • /pushl          │
 │ • Current Dir Agent   │   │ • Progress Tracking   │   │ • /reviewdeep     │
 │ • A2A Coordination    │   │ • Safety Boundaries   │   │ • /copilot        │
 └───────────────────────┘   └───────────────────────┘   └───────────────────┘
@@ -177,7 +177,7 @@ config = ConvergenceConfig(
     max_iterations=user_max_attempts,
     worktree_dir=os.getcwd(),
     cron_interval_minutes=user_interval,
-    convergence_command="/goalexec",
+    convergence_command="/converge",
     goal_statement=user_goal
 )
 
@@ -241,7 +241,7 @@ tmux.create_session(session_name, agent_script)
 
 ### Primary Commands Used
 
-- **`/goalexec`**: Core convergence execution within tmux agents
+- **`/converge`**: Core convergence execution within tmux agents
 - **`/orch`**: Tmux agent creation and management
 - **`/pushl`**: Git operations and PR creation/updates
 - **`/reviewdeep`**: Comprehensive code and architectural review
@@ -257,7 +257,7 @@ tmux.create_session(session_name, agent_script)
 │  └─ Install monitoring systems
 ├─ Phase 2: Tmux Orchestration  
 │  ├─ /orch Create persistent convergence agent
-│  ├─ Deploy /goalexec execution loop
+│  ├─ Deploy /converge execution loop
 │  └─ Monitor progress continuously
 ├─ Phase 3: Convergence Monitoring
 │  ├─ Track attempts and time limits
@@ -282,7 +282,7 @@ tmux.create_session(session_name, agent_script)
 ### Progress Measurement
 
 - **Quantitative**: Percentage of success criteria met
-- **Qualitative**: Progress toward goal through /goalexec iterations
+- **Qualitative**: Progress toward goal through /converge iterations
 - **Temporal**: Rate of improvement over time
 - **Blocking**: Identification of external dependencies preventing progress
 
@@ -366,12 +366,12 @@ Next Attempt: 2m 37s
 
 ### Logging Integration
 
-- **Convergence Logs**: All /goalexec attempts and results
+- **Convergence Logs**: All /converge attempts and results
 - **Agent Logs**: Tmux session output and status
 - **System Logs**: Daemon operation and state changes
 - **Performance Logs**: Resource usage and timing metrics
 
-## Benefits Over Standard /goalexec
+## Benefits Over Standard /converge
 
 ### True Autonomy
 
@@ -396,7 +396,7 @@ Next Attempt: 2m 37s
 ```
 
 **Expected Flow**:
-1. Creates tmux agent that runs `/goalexec` every 5 minutes
+1. Creates tmux agent that runs `/converge` every 5 minutes
 2. Each convergence iteration works toward authentication implementation
 3. Monitors progress through success criteria (OAuth working, tests passing, docs complete)
 4. After 4 hours or convergence, runs `/pushl` → `/reviewdeep` → `/copilot`
@@ -409,7 +409,7 @@ Next Attempt: 2m 37s
 ```
 
 **Expected Flow**:
-1. Agent attempts `/goalexec` every 3 minutes
+1. Agent attempts `/converge` every 3 minutes
 2. Each iteration identifies and fixes failing tests
 3. Tracks progress toward 100% pass rate
 4. Terminates when all tests pass or 8 attempts reached
@@ -433,7 +433,7 @@ Next Attempt: 2m 37s
 ### Autonomous Convergence System
 
 - **Reuses** existing `autonomous_convergence/` package
-- **Extends** ConvergenceDaemon for /goalexec execution
+- **Extends** ConvergenceDaemon for /converge execution
 - **Integrates** with TmuxIntegration for agent management
 - **Leverages** StateManager for persistence across attempts
 
@@ -481,7 +481,7 @@ Next Attempt: 2m 37s
 **`/orchconverge`** combines the autonomous convergence system with tmux orchestration to create a truly autonomous convergence experience:
 
 1. **Autonomous Setup**: Initializes convergence daemon and monitoring
-2. **Tmux Orchestration**: Creates persistent agents running `/goalexec` continuously  
+2. **Tmux Orchestration**: Creates persistent agents running `/converge` continuously  
 3. **Progress Monitoring**: Tracks attempts, time, and success criteria
 4. **Final Workflow**: Executes `/pushl` → `/reviewdeep` → `/copilot` upon completion
 5. **Comprehensive Reporting**: Documents entire convergence journey

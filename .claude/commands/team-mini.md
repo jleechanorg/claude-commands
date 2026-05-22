@@ -31,6 +31,16 @@ This command creates a Claude team that uses ONLY:
 
 **NOT allowed:** sonnet, opus, or default Claude models (sonnet/opus will cost more)
 
+### Pre-spawn verification for AO workers (CRITICAL)
+
+If the task involves `ao spawn` for a PR-targeted worker, you MUST verify clone-before-spawn:
+
+1. **Check if PR clone exists**: If spawning for a specific PR number, verify an isolated clone branch exists via `git fetch origin refs/pull/<PR>/head:<clone-branch>` before spawning
+2. **Verify current branch**: Before `ao spawn`, confirm `git branch --show-current` is the CLONE branch, not the original PR branch
+3. **Spawn AFTER clone**: `ao spawn` must come AFTER `git fetch` + `git checkout <clone>`, not before
+
+**Why**: `ao spawn` does NOT create isolated PR clones — it lands on the current worktree branch. Without cloning first, workers push commits directly to live PRs.
+
 ### Execution Steps:
 
 1. **Create team:**
@@ -47,7 +57,7 @@ This command creates a Claude team that uses ONLY:
    - Use `minimax-pair-verifier` for verification (MiniMax-M2.5 via claudem)
    - For simple quick tasks, use `model: "haiku"` in Task calls
 
-3. **Execute the user's prompt** using the team
+3. **Execute the user's prompt** using the team — apply clone-before-spawn verification for any AO worker tasks
 
 4. **Shutdown team** when complete
 

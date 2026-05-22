@@ -8,7 +8,7 @@ type: git
 
 ## EXECUTION INSTRUCTIONS FOR CLAUDE
 
-Load and execute the skill at `~/.claude/skills/evolve-loop/SKILL.md`.
+Load and execute the skill at `~/.claude/skills/evolve_loop.md`.
 
 **Key behavior**: This is an ADAPTIVE loop. Not every phase runs every cycle:
 - If all workers are alive and PRs are progressing → just report status and wait

@@ -6,7 +6,7 @@ scope: user
 ---
 # /harness — Fix the harness, not just the symptom
 
-**Scope:** **Project-level override.** This file is the repo-local copy at `.claude/commands/harness.md`. The user-level canonical copy lives at `~/.claude/commands/harness.md` and applies to **any** repository. **Collision rule:** when both exist, this repo-local file takes precedence and may add project-specific harness rules (for example OpenClaw gateway). **Canonical copy in git:** [jleechanclaw `docs/harness/user-command-harness.md`](https://github.com/jleechanorg/jleechanclaw/blob/main/docs/harness/user-command-harness.md) (sync with `scripts/sync-harness-user-scope.sh` in that repo).
+**Scope:** **User-level (general).** This file lives at `~/.claude/commands/harness.md` and applies to **any** repository unless a project overrides it. **Collision rule:** if a workspace contains **`.claude/commands/harness.md`**, read repo-local content **after** this file — it adds project-specific harness rules (for example OpenClaw gateway). **Canonical copy in git:** [jleechanclaw `docs/harness/user-command-harness.md`](https://github.com/jleechanorg/jleechanclaw/blob/main/docs/harness/user-command-harness.md) (sync with `scripts/sync-harness-user-scope.sh` in that repo).
 
 ## Instructions for Claude
 

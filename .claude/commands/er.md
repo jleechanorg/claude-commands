@@ -1,24 +1,18 @@
 ---
-description: Evidence Review — alias that invokes the evidence-review skill (with codex/claude fallback)
+description: Alias for /evidence_review (which now includes /es evidence-standards check)
+aliases: []
 type: orchestration
 execution_mode: immediate
 ---
 
-# /er — Evidence Review Alias
+# /er — Alias for /evidence_review
 
-Thin alias. The canonical enforcement rules live in the `evidence-review` skill.
+Runs `/evidence_review`, which now includes the `/es` evidence-standards check as Step 4 (after evidence review completes).
 
 **Usage**: `/er [subject or path]`
 
 ## Action
 
-Execute these steps in order:
+Invoke `/evidence_review` with the same `$ARGUMENTS`.
 
-1. Resolve the skill path:
-   - Use `~/.claude/skills/evidence-review/SKILL.md` when it exists.
-   - Otherwise use `.claude/skills/evidence-review.md`.
-   - If neither path exists, stop and report that the evidence-review skill is missing.
-2. Load the selected `SKILL.md` content into this command context as the active evidence-review rules.
-3. Invoke the evidence-review dispatcher against `$ARGUMENTS` using those loaded rules. Follow `.claude/commands/evidence_review.md` dispatch behavior: codex first, claude fallback.
-
-**Caveats**: After running the review, you MUST always reconfirm by explicitly stating what the evidence proves vs what it does NOT prove.
+This is a thin alias — all logic (evidence review + evidence standards + synthesis) lives in `.claude/commands/evidence_review.md`.

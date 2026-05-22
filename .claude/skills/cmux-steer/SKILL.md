@@ -15,11 +15,17 @@ from within cmux, without disrupting the user's active workspace navigation.
 ## Socket path
 
 ```bash
-ls /tmp/cmux*.sock
-# Tagged debug build: /tmp/cmux-debug-<tag>.sock
-# Untagged debug:     /tmp/cmux-debug.sock
-# Release:            /tmp/cmux.sock
-SOCK="/tmp/cmux-debug-appclick.sock"  # update to match your build tag
+# Release build
+SOCK="$HOME/Library/Application Support/cmux/cmux.sock"
+
+# Dev builds — find via saved path files or lsof:
+cat ~/Library/Application\ Support/cmux/dev-may-18-last-socket-path
+# → /tmp/cmux-debug-may-18.sock
+
+lsof -p $(pgrep -f "cmux DEV may-18") | grep -E "\.sock"
+
+# Use CMUX_SOCKET_PATH to target a specific build with the CLI:
+CMUX_SOCKET_PATH=/tmp/cmux-debug-may-18.sock cmux list-workspaces
 ```
 
 ## Rule 1: Always find workspace by NAME, not index

@@ -67,8 +67,10 @@ class CopilotCommandBase(ABC):
                         return "/".join(url.split("/")[-2:])
             except subprocess.CalledProcessError:
                 pass
-            # Default fallback - use DEFAULT_REPO or GITHUB_REPOSITORY env var
-            return os.environ.get("DEFAULT_REPO") or os.environ.get("GITHUB_REPOSITORY", "")
+            # Default fallback - use your-project.com as default repo
+            return os.environ.get(
+                "DEFAULT_REPO", "$GITHUB_REPOSITORY"
+            )
 
     def _get_current_branch(self) -> str:
         """Get current git branch for branch-specific file naming."""

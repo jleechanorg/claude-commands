@@ -42,8 +42,7 @@ execution_mode: immediate
    - Mark bead as `closed` when work is completed
    - If work is blocked by dependencies, keep the bead in `open` or `in_progress` and add a note/label indicating "blocked" and the specific dependency
    - Use only `open`, `in_progress`, or `closed` for the `status` field
-   - Example: `br update <bead-id> --status in_progress`
-   - Direct-file fallback: append the corresponding JSONL update in `.beads/issues.jsonl` per `docs/beads_creation_manual.md`
+   - Example: `printf '{"id":"bead-id","status":"in_progress"}' | mcp-cli call beads/update -`
 3. Uses systematic tool progression and the execution method determined in planning
 4. Executes tasks as planned (parallel Task tool agents or sequential based on plan decision)
 5. 🚨 **PARALLEL TASK EXECUTION**: Can use multiple Task tool calls in single message for up to 10 concurrent subagents

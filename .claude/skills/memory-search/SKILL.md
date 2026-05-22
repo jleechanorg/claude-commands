@@ -37,13 +37,13 @@ Run all searches in parallel via `/e` subagents:
 ```
 /e Search ~/roadmap for "$QUERY". List files with matching snippets.
 
-/e Search beads for "$QUERY". Check ~/.claude/projects/*/memory/*.md and .beads/issues.jsonl. Show matching bead IDs and titles.
+/e Search beads for "$QUERY" using: br search "$QUERY" --json 2>/dev/null | head -40. NEVER read .beads/issues.jsonl directly — it is 1MB+ and forbidden. Also check ~/.claude/projects/*/memory/*.md for matching bead IDs and titles.
 
 /e Search ~/.claude/projects/*/memory/ for "$QUERY". Search MEMORY.md indexes and individual .md files. Show snippets.
 
 /e Search ~/.hermes/memory.db: sqlite3 ~/.hermes/memory.db "SELECT timestamp, source, content FROM memories WHERE content LIKE '%$QUERY%' LIMIT 20;"
 
-/e Search ~/.hermes/memory/briefing-*.md and ~/.hermes/memory/mcp-mail-ack-log.md for "$QUERY". Show file:line matches with snippets.
+/e Search ~/.hermes/memory/briefing-*.md and ~/.hermes/memory/mcp-mail-ack-log.md for "$QUERY" using: grep -m 5 -n "$QUERY" ~/.hermes/memory/briefing-*.md ~/.hermes/memory/mcp-mail-ack-log.md 2>/dev/null | head -20. The -m 5 per-file limit prevents reading full large files.
 
 /e Search ~/.hermes/MEMORY.md for "$QUERY". Show matching entries.
 
@@ -51,7 +51,7 @@ Run all searches in parallel via `/e` subagents:
 
 /wiki-search $QUERY
 
-/e Search ~/.claude/projects/*/*.jsonl for "$QUERY" using: grep -l "$QUERY" ~/.claude/projects/*/*.jsonl 2>/dev/null | head -5 && grep -H "$QUERY" ~/.claude/projects/*/*.jsonl 2>/dev/null | head -20
+/e Search ~/.claude/projects/*/*.jsonl for "$QUERY" using two-phase partial read: (1) grep -rl "$QUERY" ~/.claude/projects/*/*.jsonl 2>/dev/null | head -5 to get matching filenames without reading content; (2) for each file: grep -m 2 "$QUERY" <file> 2>/dev/null | cut -c1-200 to get up to 2 matching lines, truncated to 200 chars each. Full command: grep -rl "$QUERY" ~/.claude/projects/*/*.jsonl 2>/dev/null | head -5 | xargs -I{} grep -m 2 "$QUERY" {} 2>/dev/null | cut -c1-200 | head -20. The -m 2 flag stops grep after 2 matches per file so it never reads to EOF. DO NOT use grep -H without -m (reads full file).
 ```
 
 ## Aggregation

@@ -15,7 +15,7 @@ execution_mode: immediate
 **Action Steps:**
 **LOOP UNTIL CONVERGED OR MAX ITERATIONS REACHED (Default: 10 iterations)**:
 
-### Phase 2 (Step 2): Strategic Planning and Tool Analysis
+### Phase 2: Step 2: Strategic Planning and Tool Analysis
 
 **Action Steps:**
 **Command**: `/planexec` - Create comprehensive strategy with command index optimization
@@ -68,14 +68,14 @@ execution_mode: immediate
 ### Phase 6: Step 6: Validation Against Goals
 
 **Action Steps:**
-**Command**: `/goalexec --validate` against the goals - Objective success measurement
+**Command**: `/converge --validate` against the goals - Objective success measurement
 1. Check each success criterion systematically using structured validation
 2. Measure progress quantitatively with evidence collection
 3. Identify gaps between actual and expected outcomes
 4. Document validation results with concrete evidence for learning phase
 5. Generate completion percentage and remaining work analysis
 
-### Phase 7 (Step 7): Enhanced Status Report Generation
+### Phase 7: Step 8: Enhanced Status Report Generation
 
 **Action Steps:**
 **Command**: `/status` - Generate comprehensive convergence status report with confidence data
@@ -88,7 +88,7 @@ execution_mode: immediate
 7. **Convergence Trajectory**: Progress velocity, estimated completion, next iteration strategy
 8. **Decision Context**: Evidence for convergence/continuation decision with objective rationale
 
-### Phase 8 (Step 8): Convergence Decision
+### Phase 8: Step 9: Convergence Decision
 
 **Action Steps:**
 **LOOP CONTROL**: Start again with Step 1 (Goal Definition) and loop N times or stop when it's done
@@ -128,7 +128,7 @@ execution_mode: immediate
 
 **PR CONTEXT AWARENESS**: When goal involves PR work:
 26. Primary success = PR is MERGEABLE on current branch
-27. ❌ NEVER create additional PRs as "solutions" for the same goal — work within the existing PR
+27. ❌ NEVER create additional PRs as "solutions"
 28. ✅ ALWAYS work within existing PR constraints
 29. ✅ STAY ON CURRENT BRANCH throughout convergence
 
@@ -171,7 +171,7 @@ Achieve complex goals through autonomous plan-execute-validate-learn cycles unti
 
 - `/converge <goal>` - Start converging toward a specific goal
 - `/converge --max-iterations N` - Set custom iteration limit (default: 10)
-- `/converge --goal-integration` - Use /goalexec command for structured goal definition
+- `/converge --goal-integration` - Use /converge command for structured goal definition
 - `/converge` - Resume previous convergence if interrupted
 
 ## Core Pattern
@@ -189,7 +189,7 @@ Until: Success criteria fully met
 
 **MANDATORY**: All /converge operations must use structured goal integration
 
-**Command**: `/goalexec` - Define goal with structured success criteria and validation framework
+**Command**: `/converge` - Define goal with structured success criteria and validation framework
 - Automatic success criteria generation based on goal patterns
 - Integrated validation system with evidence collection
 - Guidelines consultation for goal quality and compliance
@@ -514,9 +514,9 @@ Goal Type → Command Selection:
 
 /converge "goal statement" --max-iterations 15
 
-# Per-goal configuration via /goalexec integration
+# Per-goal configuration via /converge integration
 
-/goalexec "complex implementation task" --max-iterations 20
+/converge "complex implementation task" --max-iterations 20
 /converge --goal-integration
 
 # Emergency termination conditions

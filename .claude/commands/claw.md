@@ -7,6 +7,8 @@ execution_mode: immediate
 
 **Usage**: `/claw <task description>`
 
+**PR shorthand**: `/claw <PR-number>` (e.g. `/claw 6976`, `/claw PR 6976`, `/claw #6976`) expands to "bring that PR to 7-green" with repo auto-detection from the current git remote.
+
 `/claw` is a thin wrapper. The operational behavior lives in:
 
 - `~/.claude/skills/claw-dispatch/SKILL.md`
