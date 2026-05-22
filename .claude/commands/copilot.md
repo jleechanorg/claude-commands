@@ -300,13 +300,10 @@ After posting the consolidated reply, resolve the conversation threads for comme
 **Procedure:**
 1. Read `/tmp/<repo>/<branch>/copilot/responses.json`
 2. For each comment where `response` is `FIXED`, `ALREADY_IMPLEMENTED`, or `DEFERRED`:
-   - Resolve the conversation thread using GitHub CLI:
+   - Resolve the conversation thread using GitHub GraphQL API:
    ```bash
    # For inline review comments (pull_request_review_comment):
-   gh api repos/{owner}/{repo}/pulls/{pull_number}/reviews/comments/{comment_id}/threads -X PATCH -f "resolved=true"
-   
-   # Or use the wrapper if available:
-   gh pr review comment resolve <comment_id>
+   gh api graphql -f query='mutation($threadId:ID!){resolveReviewThread(input:{threadId:$threadId}){thread{id isResolved}}}' -f threadId="<thread_id>"
    ```
 3. Log the count: `Resolved N conversation threads (X fixed, Y deferred)`
 
