@@ -1,11 +1,13 @@
 name: Green Gate
 
 # Trigger-only + polling workflow. No LLM evaluation runs in GHA.
-# Flow: pre-check 6-green eligibility → post trigger comment →
-# lifecycle-manager runs ao skeptic verify via AO worker (Codex OAuth, no API keys) →
+# Flow: pre-check 7-green eligibility (gates 1-6) → check smoke gate (gate 8) →
+# post trigger comment → lifecycle-manager runs ao skeptic verify via AO worker →
 # posts VERDICT comment → GHA polling step detects it and exits PASS/FAIL.
 #
-# Gate 1-5 pre-check fails closed for non-6-green PRs.
+# Gate 1-6 pre-check fails closed for non-7-green PRs.
+# Gate 8 (Smoke Gate) checks mcp-smoke-tests passing for the PR head SHA;
+# required when mvp_site/prompts/ or mvp_site/*.py changed, auto-passes otherwise.
 on:
   pull_request:
     types: [opened, synchronize, edited, reopened]
@@ -28,8 +30,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  skeptic_gate:
-    name: Skeptic Gate
+  green_gate:
+    name: Green Gate
     runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     # Must exceed the poll step timeout so the job is not killed mid-loop.
     timeout-minutes: 60
@@ -46,10 +48,10 @@ jobs:
       head_sha: ${{ steps.check_6green.outputs.head_sha }}
     steps:
       # ----------------------------------------------------------------
-      # Pre-check: 6-green eligibility (gates 1-5).
+      # Pre-check: 7-green eligibility (gates 1-6).
       # Exits fast for non-eligible PRs — avoids expensive CLI setup.
       # ----------------------------------------------------------------
-      - name: Check 6-green eligibility (gates 1-5)
+      - name: Check 7-green eligibility (gates 1-6)
         id: check_6green
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -152,7 +154,7 @@ jobs:
 
           # Gate 4: Bugbot clean — use CI check-run conclusion, not inline comment count.
           # Bugbot is registered after other jobs and often stays in_progress when this
-          # workflow first queries; poll so we do not false-fail 6-green eligibility.
+          # workflow first queries; poll so we do not false-fail 7-green eligibility.
           # Inline comment count is unreliable: stale comments from old commits persist and
           # produce false positives. CI check-run conclusion is the authoritative signal.
           # Fail-closed: only pass on success/neutral/skipped. Treat timed_out/cancelled/none
@@ -272,6 +274,8 @@ jobs:
               --arg ignore_codereview "coderabbitai" \
               --arg ignore_codereview_bot "coderabbitai[bot]" \
               --arg ignore_github_actions "github-actions[bot]" \
+              --arg ignore_codex_connector "chatgpt-codex-connector" \
+              --arg ignore_codex_connector_bot "chatgpt-codex-connector[bot]" \
               '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) |
                  .comments.nodes[] |
                  select(
@@ -282,6 +286,8 @@ jobs:
                    (.author.login | ascii_downcase) != ($ignore_codereview | ascii_downcase) and
                    (.author.login | ascii_downcase) != ($ignore_codereview_bot | ascii_downcase) and
                    (.author.login | ascii_downcase) != ($ignore_github_actions | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_codex_connector | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_codex_connector_bot | ascii_downcase) and
                    (.body | test("^\\s*(nit:|nitpick)"; "i") | not)
                  )] | length')
             UNRESOLVED=$((UNRESOLVED + PAGE_UNRESOLVED))
@@ -305,22 +311,184 @@ jobs:
           else
             echo "GATE-5 PASS: all comments resolved"
           fi
-            fi # end: PR_AUTHOR guard else-block
+          fi # end: PR_AUTHOR guard else-block
 
-          echo "6-green eligibility: $ELIGIBLE"
+          # Gate 6: Evidence — check for evidence links in PR body or comments.
+          PR_BODY=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.body // ""' 2>/dev/null || echo "")
+          PR_COMMENTS_BODY=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
+            --paginate 2>/dev/null | jq -r '.[].body' 2>/dev/null || echo "")
+          EVID_SCRATCH=$(mktemp)
+          printf '%s\n%s\n' "$PR_BODY" "$PR_COMMENTS_BODY" > "$EVID_SCRATCH"
+          HAS_EVIDENCE=false
+          if grep -Ei 'https?://[^ ]*\.(mp4|gif|cast)|gist\.github\.com/|asciinema\.org/a/|loom\.com/share/|user-attachments\.githubusercontent\.com/' "$EVID_SCRATCH" > /dev/null; then
+            HAS_EVIDENCE=true
+          fi
+          rm -f "$EVID_SCRATCH"
+          CHANGED_FILES=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/files \
+            --paginate 2>/dev/null | jq -r '.[].filename' 2>/dev/null || echo "")
+          EVIDENCE_REQUIRED=false
+          if echo "$CHANGED_FILES" | grep -qE '^(testing_(mcp|ui)/|mvp_site/|deploy\.sh$|\.github/workflows/evidence-gate\.yml$)'; then
+            EVIDENCE_REQUIRED=true
+          fi
+          if [ "$EVIDENCE_REQUIRED" = "true" ] && [ "$HAS_EVIDENCE" = "true" ]; then
+            echo "GATE-6 PASS: evidence present"
+          elif [ "$EVIDENCE_REQUIRED" = "true" ] && [ "$HAS_EVIDENCE" = "false" ]; then
+            echo "GATE-6 FAIL: evidence required but no evidence link found"
+            ELIGIBLE=false
+          else
+            echo "GATE-6 PASS: evidence not required for this change set"
+          fi
+
+          echo "7-green eligibility: $ELIGIBLE"
           echo "eligible=$ELIGIBLE" >> "$GITHUB_OUTPUT"
 
           if [ "$ELIGIBLE" != "true" ]; then
-            echo "FAIL: PR #$PR_NUM does not meet 6-green eligibility"
+            echo "FAIL: PR #$PR_NUM does not meet 7-green eligibility"
             exit 1
           fi
 
       # ----------------------------------------------------------------
-      # Step 1: Post trigger comment and capture GitHub server timestamp.
+      # Gate 8: Smoke Gate — mcp-smoke-tests must have passed for this SHA.
+      # Required when mvp_site/prompts/ or mvp_site/*.py files changed.
+      # Auto-passes (SKIPPED) when no relevant files changed.
+      # ----------------------------------------------------------------
+      - name: Check smoke gate (gate 8)
+        id: check_smoke
+        if: steps.check_6green.outputs.eligible == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+          HEAD_SHA: ${{ steps.check_6green.outputs.head_sha }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref || github.head_ref || github.ref_name }}
+        run: |
+          PR_NUM=$PR_NUM
+          EVENT_NAME="${GITHUB_EVENT_NAME:-pull_request}"
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            # On workflow_dispatch the env-provided HEAD_BRANCH may be stale.
+            HEAD_BRANCH=""
+          fi
+          if [ -z "$HEAD_BRANCH" ]; then
+            PR_HEAD_BRANCH=""
+            if [ -n "$PR_NUM" ]; then
+              PR_HEAD_BRANCH=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" \
+                --jq '.head.ref' 2>/dev/null || echo "")
+            fi
+            if [ -n "$PR_HEAD_BRANCH" ]; then
+              HEAD_BRANCH="$PR_HEAD_BRANCH"
+            fi
+          fi
+
+          if [ -z "$HEAD_BRANCH" ]; then
+            echo "WARN: could not resolve PR head branch; fallback smoke filtering to comments and exact-SHA run matches"
+          fi
+
+          # Determine if smoke is required based on changed files
+          set +e
+          CHANGED=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/files \
+            --paginate 2>/dev/null | jq -r '.[].filename' 2>/dev/null)
+          GH_EXIT=$?
+          set -e
+          if [ $GH_EXIT -ne 0 ] || [ -z "$CHANGED" ]; then
+            echo "GATE-8 FAIL: could not fetch PR files (exit=$GH_EXIT) — failing closed"
+            echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          SMOKE_REQUIRED=false
+          if echo "$CHANGED" | grep -qE '^mvp_site/prompts/|^mvp_site/.+\.py$'; then
+            SMOKE_REQUIRED=true
+          fi
+
+          if [ "$SMOKE_REQUIRED" = "false" ]; then
+            echo "GATE-8 PASS: no mvp_site/prompts/ or mvp_site/*.py changes — smoke skipped"
+            echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "GATE-8: mvp_site changes detected — checking mcp-smoke-tests status"
+
+          # issue_comment-triggered /smoke workflows record the default-branch SHA
+          # in workflow run metadata even though they checkout and test the PR head.
+          # Prefer an exact run headSha match, but also accept the smoke report
+          # comment whose generated body records the tested PR commit SHA.
+          HEAD_PUSHED_AT=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA" \
+            --jq '.commit.committer.date // .commit.author.date' 2>/dev/null || echo "")
+          SMOKE_POLL=0
+          SMOKE_POLL_MAX=45
+          while [ "$SMOKE_POLL" -lt "$SMOKE_POLL_MAX" ]; do
+            ALL_SMOKE=$(gh run list --workflow mcp-smoke-tests.yml \
+              --repo ${{ github.repository }} \
+              -L 100 --json databaseId,headSha,status,conclusion,createdAt,event,headBranch,url \
+              2>/dev/null || echo "[]")
+            SMOKE_RUNS=$(echo "$ALL_SMOKE" | jq --arg sha "$HEAD_SHA" --arg since "$HEAD_PUSHED_AT" --arg branch "$HEAD_BRANCH" '
+              . as $all |
+              if ($all | map(select(.headSha == $sha)) | length) > 0
+              then $all | map(select(.headSha == $sha))
+              else if $since != "" then $all | map(select((.createdAt // "") >= $since and .headBranch == $branch)) else [] end
+              end
+            ' 2>/dev/null || echo "[]")
+            EXACT_SHA_MATCH=$(echo "$ALL_SMOKE" | jq --arg sha "$HEAD_SHA" 'any(.[]?; .headSha == $sha)' 2>/dev/null || echo "false")
+            SMOKE_COMMENT_BODY=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
+              --paginate 2>/dev/null \
+              | jq -sr --arg sha "$HEAD_SHA" '
+                add
+                | map(select(
+                    (.body | test("MCP Smoke Tests"; "i"))
+                    and (.body | test("\\*\\*Commit SHA\\*\\*:[[:space:]]*`" + $sha + "`"; "i"))
+                  ))
+                | (map(select(.body | test("MCP Smoke Tests Passed"; "i"))) | first.body) // (sort_by(.updated_at // .created_at // "") | last.body // "")
+              ' 2>/dev/null || echo "")
+
+            if echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed"; then
+              echo "GATE-8 PASS: /smoke comment reports success for SHA ${HEAD_SHA:0:7}"
+              echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
+              exit 0
+            elif [ "$EXACT_SHA_MATCH" = "true" ] && echo "$SMOKE_RUNS" | jq -e 'any(.[]; .conclusion == "success")' > /dev/null; then
+              SMOKE_RUN_ID=$(echo "$SMOKE_RUNS" | jq -r '[.[] | select(.conclusion == "success")] | sort_by(.databaseId) | last | .databaseId')
+              echo "GATE-8 PASS: mcp-smoke-tests succeeded (run $SMOKE_RUN_ID)"
+              echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
+              exit 0
+            elif echo "$SMOKE_RUNS" | jq -e 'any(.[]; .status == "in_progress" or .status == "queued")' > /dev/null; then
+              # Detect active retries BEFORE checking the Failed comment so an
+              # older failure comment cannot short-circuit a fresh smoke run.
+              SMOKE_RUN_ID=$(echo "$SMOKE_RUNS" | jq -r '[.[] | select(.status == "in_progress" or .status == "queued")] | sort_by(.databaseId) | last | .databaseId')
+              SMOKE_POLL=$((SMOKE_POLL + 1))
+              echo "GATE-8 WAIT: mcp-smoke-tests still running (run $SMOKE_RUN_ID; poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
+              sleep 20
+            elif echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Failed"; then
+              echo "GATE-8 FAIL: /smoke comment reports failure for SHA ${HEAD_SHA:0:7}"
+              echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
+              exit 1
+            elif [ "$(echo "$SMOKE_RUNS" | jq 'length')" -eq 0 ]; then
+              SMOKE_POLL=$((SMOKE_POLL + 1))
+              echo "GATE-8 WAIT: no mcp-smoke-tests run or /smoke result found for SHA ${HEAD_SHA:0:7} yet (poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
+              sleep 20
+            elif [ "$EXACT_SHA_MATCH" = "true" ]; then
+              SMOKE_RUN_ID=$(echo "$SMOKE_RUNS" | jq -r 'sort_by(.databaseId) | last | .databaseId')
+              SMOKE_CONCLUSION=$(echo "$SMOKE_RUNS" | jq -r 'sort_by(.databaseId) | last | .conclusion // "none"')
+              echo "GATE-8 FAIL: mcp-smoke-tests conclusion=$SMOKE_CONCLUSION (run $SMOKE_RUN_ID)"
+              echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
+              exit 1
+            else
+              # Branch/createdAt fallback match only — conclusions are not
+              # authoritative for the current HEAD SHA, keep polling for an
+              # exact-SHA run or a smoke comment tied to HEAD_SHA.
+              SMOKE_POLL=$((SMOKE_POLL + 1))
+              echo "GATE-8 WAIT: no exact-SHA smoke match for ${HEAD_SHA:0:7} yet (fallback match present; poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
+              sleep 20
+            fi
+          done
+
+          echo "GATE-8 FAIL: timed out waiting for mcp-smoke-tests for SHA ${HEAD_SHA:0:7}"
+          echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
+          exit 1
+
+      # ----------------------------------------------------------------
+      # Step 2: Post trigger comment and capture GitHub server timestamp.
       # Lifecycle-manager picks up this comment and dispatches AO worker
       # to run ao skeptic verify (Codex OAuth, no GHA API keys needed).
       # ----------------------------------------------------------------
-      - name: Post skeptic trigger comment
+      - name: Post gate trigger comment
         id: post_trigger
         if: steps.check_6green.outputs.eligible == 'true'
         env:
@@ -360,12 +528,12 @@ jobs:
           echo "trigger_sha=$TRIGGER_SHA" >> "$GITHUB_OUTPUT"
 
       # ----------------------------------------------------------------
-      # Step 2 (fail-fast): Check for existing skeptic VERDICT.
-      # skeptic-cron runs every 30 min and posts VERDICT comments.
-      # If no VERDICT exists for this SHA → fail immediately (do NOT poll/sleep).
-      # If VERDICT: PASS → pass. If VERDICT: FAIL → fail.
+      # Step 3: Poll for the asynchronous VERDICT.
+      # The trigger comment above is consumed out-of-band; keep the check pending
+      # while the bot posts its VERDICT instead of permanently failing first run.
+      # If VERDICT: PASS → pass. If VERDICT: FAIL/WAIT → fail closed.
       # ----------------------------------------------------------------
-      - name: Check for skeptic VERDICT (fail-fast)
+      - name: Poll for VERDICT
         if: steps.check_6green.outputs.eligible == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -375,7 +543,7 @@ jobs:
         run: |
           PR_NUM=$PR_NUM
 
-          echo "Checking for existing skeptic VERDICT on PR #$PR_NUM (commit ${HEAD_SHA:0:7})"
+          echo "Checking for existing VERDICT on PR #$PR_NUM (commit ${HEAD_SHA:0:7})"
 
           PR_STATE=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.state' 2>/dev/null || echo "error")
           if [ "$PR_STATE" = "closed" ]; then
@@ -384,30 +552,46 @@ jobs:
             exit 0
           fi
 
-          set +e
-          VERDICT_JSON=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
-            --paginate 2>/dev/null \
-            | jq -s --arg author "$SKEPTIC_BOT_AUTHOR" --arg ts "$HEAD_SHA" \
-            'add
-            | map(select(
-                ((.user.login == $author) or (.user.login == "github-actions[bot]"))
-                and (.body | test("VERDICT:"; "i"))
-                and (.body | test("skeptic-(gate|cron)-trigger-" + $ts; "i"))
-              ))
-            | last // empty' 2>/dev/null)
-          LOOKUP_RC=$?
-          set -e
+          VERDICT_JSON=""
+          VERDICT_POLL=0
+          VERDICT_POLL_MAX=30
+          while [ "$VERDICT_POLL" -lt "$VERDICT_POLL_MAX" ]; do
+            set +e
+            VERDICT_JSON=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
+              --paginate 2>/dev/null \
+              | jq -s --arg author "$SKEPTIC_BOT_AUTHOR" --arg ts "$HEAD_SHA" \
+              'add
+              | map(select(
+                  ((.user.login == $author) or (.user.login == "github-actions[bot]"))
+                  and (.body | test("VERDICT:"; "i"))
+                  and (.body | test("skeptic-(gate|cron)-trigger-" + $ts; "i"))
+                ))
+              | last // empty' 2>/dev/null)
+            LOOKUP_RC=$?
+            set -e
 
-          if [ "$LOOKUP_RC" -ne 0 ]; then
-            echo "ERROR: verdict lookup failed (gh api or jq error rc=$LOOKUP_RC) — failing closed"
-            echo "verdict=FAIL" >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
+            if [ "$LOOKUP_RC" -ne 0 ]; then
+              echo "ERROR: verdict lookup failed (gh api or jq error rc=$LOOKUP_RC) — failing closed"
+              echo "verdict=FAIL" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+
+            if echo "$VERDICT_JSON" | jq -e 'if . == null or (.body == null) then empty else .body end | length > 0' > /dev/null 2>&1; then
+              break
+            fi
+
+            VERDICT_POLL=$((VERDICT_POLL + 1))
+            if [ "$VERDICT_POLL" -ge "$VERDICT_POLL_MAX" ]; then
+              break
+            fi
+            echo "No VERDICT found for this SHA yet — waiting for async Gate 7 verdict (poll $VERDICT_POLL/$VERDICT_POLL_MAX)"
+            sleep 60
+          done
 
           if ! echo "$VERDICT_JSON" | jq -e 'if . == null or (.body == null) then empty else .body end | length > 0' > /dev/null 2>&1; then
-            echo "No VERDICT found for this SHA — skeptic is manual-only (/skeptic to trigger); skipping gate"
-            echo "verdict=SKIPPED" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "No VERDICT found for this SHA after polling — failing closed until Gate 7 posts a verdict"
+            echo "verdict=FAIL" >> "$GITHUB_OUTPUT"
+            exit 1
           fi
 
           VERDICT_BODY=$(echo "$VERDICT_JSON" | jq -r '.body')
@@ -418,18 +602,22 @@ jobs:
 
           if echo "$VERDICT_BODY" | grep -qi "VERDICT: PASS"; then
             echo "verdict=PASS" >> "$GITHUB_OUTPUT"
-            echo "=== SKEPTIC GATE: PASS ==="
+            echo "=== GREEN GATE: PASS ==="
             exit 0
           elif echo "$VERDICT_BODY" | grep -qi "VERDICT: FAIL"; then
             echo "verdict=FAIL" >> "$GITHUB_OUTPUT"
-            echo "=== SKEPTIC GATE: FAIL ==="
+            echo "=== GREEN GATE: FAIL ==="
             exit 1
           elif echo "$VERDICT_BODY" | grep -qi "VERDICT: SKIPPED"; then
             echo "verdict=SKIPPED" >> "$GITHUB_OUTPUT"
-            echo "=== SKEPTIC GATE: SKIPPED ==="
+            echo "=== GREEN GATE: SKIPPED ==="
             exit 0
+          elif echo "$VERDICT_BODY" | grep -qi "VERDICT: WAIT"; then
+            echo "verdict=WAIT" >> "$GITHUB_OUTPUT"
+            echo "=== GREEN GATE: WAIT (smoke in progress) ==="
+            exit 1
           else
-            echo "WARNING: VERDICT body contains 'VERDICT:' but none of PASS/FAIL/SKIPPED"
+            echo "WARNING: VERDICT body contains 'VERDICT:' but none of PASS/FAIL/SKIPPED/WAIT"
             echo "verdict=FAIL" >> "$GITHUB_OUTPUT"
             exit 1
           fi

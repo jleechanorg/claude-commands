@@ -49,6 +49,30 @@ If backend enforcement is still needed:
 - Document why prompt/schema correction was insufficient.
 - Prefer correction-only invariants over broad fallback behavior.
 
+## Proof taxonomy for backend logic
+
+When reviewing or proposing non-prompt logic, classify every backend behavior
+with one of these proof states:
+
+- **Server-owned invariant**: the backend owns the operation by design, such as
+  routing before the model call, persistence after the model call, locks,
+  request/session IDs, tool execution metadata, or schema normalization.
+- **Prompt/schema-insufficient, proven**: raw request/response evidence shows
+  the intended agent received the intended prompt/schema and still produced the
+  bad payload on the real path after an upstream fix attempt.
+- **Backend-transformation bug**: the model produced an acceptable payload, but
+  backend parsing, fallback, persistence, or UI projection changed or discarded
+  it incorrectly.
+- **Unproven fallback**: tests show the fallback works, but there is no raw
+  evidence that the model/prompt/schema path cannot handle the behavior.
+- **ZFC violation candidate**: backend logic performs semantic judgment,
+  classification, routing, or choice generation that belongs to the model.
+
+Do not call backend logic "needed" unless it is either a server-owned invariant
+or has prompt/schema-insufficient proof from the real path. Synthetic tests are
+supporting evidence only; they do not prove the model cannot handle a semantic
+decision.
+
 ## Anti-patterns
 
 - Adding a sanitizer before checking whether the prompt omitted the rule.
@@ -67,3 +91,5 @@ When reporting the fix, include:
 - Evidence that the selected agent/routing path is the intended one.
 - Whether backend protection was added, and why.
 - Test/evidence path or exact command.
+- A component table for each backend guard/fallback/scrubber with columns:
+  component, non-prompt behavior, proof state, evidence, verdict.

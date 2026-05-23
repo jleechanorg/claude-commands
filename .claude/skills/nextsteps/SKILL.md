@@ -111,15 +111,16 @@ The independent `.md` file is the **handoff artifact**: a reader must be able to
 
 ### Phase 1a — Memory Search Context (parallel subagent)
 
-**Action Steps:**
+**Run as a parallel subagent** (Agent tool, subagent_type=Explore) so Phase 1b can start simultaneously:
 
-1. **Run memory search in background** using `/e` to gather context from all memory sources. Extract key terms from any user-provided context after `/nextsteps`:
-   ```
-   /e /memory_search "<key terms from user context>"
-   ```
-2. Continue to Phase 1b while memory search runs in parallel.
+1. Search memory files for key terms from the user-provided context after `/nextsteps`
+2. Check `~/roadmap/nextsteps-*.md` for most recent session doc (target for append vs new file)
+3. Check `~/roadmap/learnings-YYYY-MM.md` tail for existing entries
+4. Report: existing bead IDs, open items from prior sessions, path of most recent nextsteps doc
 
-### Phase 1b — Gather context (parallel)
+### Phase 1b — Gather context (parallel subagent)
+
+**Run as a parallel subagent** (Agent tool, subagent_type=Explore) concurrently with Phase 1a:
 
 - `git log --oneline -10`
 - `br list --status open --limit 0`
@@ -221,6 +222,34 @@ For each gap/finding that warrants tracking:
    br create "<title>" --type task --priority 2
    ```
 3. Report: `✅ bead <bd-id> created/referenced`
+
+### Phase 7b — Create or update GitHub Issues (parallel with Phase 7)
+
+For each bead created in Phase 7, attempt to create a linked GitHub Issue. Run all issue creates in parallel.
+
+```bash
+# Resolve repo from git remote (default jleechanorg/agent-orchestrator)
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo "jleechanorg/agent-orchestrator")
+
+gh issue create --repo "$REPO" \
+  --title "[resilience] <bead title>" \
+  --body "## Summary
+<one-paragraph description>
+
+## Acceptance criteria
+- [ ] <criterion 1>
+- [ ] <criterion 2>
+
+**Bead:** <bd-id>" \
+  --label "task" 2>&1
+```
+
+**Graceful handling:**
+- If `gh issue create` returns "repository has disabled issues" — log `⚠️ GH Issues disabled on <repo> — bead only` and continue
+- If it succeeds, capture the issue URL and add it to the bead index in the nextsteps doc
+- Issues disabled is not an error; beads are the primary tracker
+
+Report: `✅ GH Issue #N created` or `⚠️ GH Issues disabled — bead bd-xxx only`
 
 ### Phase 8 — Report
 

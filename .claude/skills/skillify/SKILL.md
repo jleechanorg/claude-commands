@@ -26,6 +26,49 @@ A feature is "properly skilled" when all 10 items are present:
 9. **E2E test** — exercises the full pipeline from user turn to side effect
 10. **Brain filing** — if the feature writes to memory/brain, the brain RESOLVER has an entry so pages aren't orphaned
 
+## Routing — Where Does the Skill Live?
+
+Before creating any artifact, determine the target directory:
+
+```bash
+HERMES_HOME="${HERMES_HOME:-$HOME/.hermes_prod}"
+CLAUDE_SKILLS="$HOME/.claude/skills"
+HERMES_SKILLS="$HERMES_HOME/skills"
+
+# Explicit flags override everything
+if [[ "$*" == *--hermes* ]]; then
+  TARGET="$HERMES_SKILLS"; RUNTIME="hermes"
+elif [[ "$*" == *--claude* ]]; then
+  TARGET="$CLAUDE_SKILLS"; RUNTIME="claude"
+else
+  # Default: Claude (this is ~/.claude/skills/skillify)
+  TARGET="$CLAUDE_SKILLS"; RUNTIME="claude"
+fi
+
+# Cap gate — only applies to Claude skills
+if [ "$RUNTIME" = "claude" ]; then
+  current=$(ls "$CLAUDE_SKILLS" | grep -v '^_' | wc -l)
+  if [ "$current" -gt 300 ]; then
+    echo "Claude skill cap ($current/300). Move one to Hermes first:"
+    echo "  mv ~/.claude/skills/<name> ~/.hermes_prod/skills/"
+    exit 1
+  fi
+fi
+
+# Near-duplicate check in target dir
+keyword=$(echo "$SKILL_NAME" | tr '-' ' ' | awk '{print $1}')
+similar=$(ls "$TARGET" | grep -i "$keyword" 2>/dev/null)
+if [ -n "$similar" ]; then
+  echo "⚠️  Similar skills already in $TARGET: $similar"
+  echo "Consider extending one instead."
+fi
+```
+
+**Routing rules:**
+- Hermes-internal workflows → use `--hermes` (or invoke from Hermes, which uses `~/.hermes_prod/skills/skillify/`)
+- Shared cross-tool skills → default (Claude canonical)
+- `--claude` flag available from Hermes context to explicitly target Claude
+
 ## Phases
 
 ### Phase 1: Audit

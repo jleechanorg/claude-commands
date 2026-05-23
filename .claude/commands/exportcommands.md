@@ -10,218 +10,86 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 1: Multi-Command Workflows Made Simple
+### Phase 0: LLM Pre-flight Analysis (run before any shell script)
+
+**Dry-run detection**: If `--dry-run` argument present, pass it through to `exportcommands.sh` and stop after analysis — do not commit or push.
+
+**Purpose**: Catch content leakage, scope drift, and skip-worthy files before pushing to the public `jleechanorg/claude-commands` repo.
 
 **Action Steps:**
-**Before**: Manual step-by-step development
-```
-1. Analyze the issue manually
-2. Write code manually
-3. Test manually
-4. Create PR manually
-5. Handle review comments manually
-```
 
-**After**: Single command workflows
-```bash
-/pr "fix authentication bug"     # → analyze → implement → test → create PR
-/copilot                        # → comprehensive PR analysis → apply all fixes
-/execute "add user dashboard"   # → plan → implement → test → document
-```
+1. **Scope sanity — count what would be exported:**
+   ```bash
+   echo "~/.claude/commands/: $(ls ~/.claude/commands/*.md 2>/dev/null | wc -l) .md files"
+   echo "~/.claude/skills/:   $(ls ~/.claude/skills/ 2>/dev/null | wc -l) skill dirs"
+   echo "~/.claude/hooks/:    $(ls ~/.claude/hooks/*.sh 2>/dev/null | wc -l) hooks"
+   echo "~/.claude/agents/:   $(ls ~/.claude/agents/*.md 2>/dev/null | wc -l) agents"
+   ```
 
-### Phase 2: `/pr` - Complete PR Workflow Orchestrator
+2. **Content filter audit — scan for strings the export filters may miss:**
+   ```bash
+   # Grep for project-specific strings in ~/.claude/commands/ that should be stripped
+   grep -rl "worldarchitect\|jleechanorg\|jleechan2015\|serviceAccountKey\|GOOGLE_APPLICATION\|mvp_site\|worldai" \
+     ~/.claude/commands/ ~/.claude/skills/ 2>/dev/null | head -20
+   ```
+   The shell script has 8 `perl -pi -e` substitutions covering: `$GITHUB_REPOSITORY`, `your-project.com`, `$HOME`, `\bjleechan\b`, email, `Your Project`, `TESTING=true python`, and `$PROJECT_ROOT/`. Flag any match NOT covered by those 8 patterns as a blocker; the rest are expected and filtered automatically.
 
-**Action Steps:**
-**What It Does**: End-to-end PR creation from analysis to submission, handling the entire development lifecycle.
+3. **Skills cap check — skills export should not exceed 300 entries:**
+   ```bash
+   ls ~/.claude/skills/ | grep -v '^_' | wc -l
+   ```
+   If > 300: warn "Skills over cap — review before exporting to public repo."
 
-**The Magic**: Single command that handles analysis, implementation, testing, and PR creation autonomously.
+4. **Reference commands check** — verify `.claude_reference/commands/` exists and report count:
+   ```bash
+   ls .claude_reference/commands/ 2>/dev/null | wc -l
+   ```
+   These are archived commands moved from `.claude/commands/` — they export to `repo/.claude_reference/commands/`. Confirm count looks right (should be ~204 files).
 
-**Composition Architecture**:
-```bash
-/pr "fix authentication validation bug"
-```
+5. **Target repo diff preview (optional, costs a gh clone):**
+   If the user wants to see exactly what would change vs current `jleechanorg/claude-commands`, note: `--dry-run` on the shell script does this without pushing.
 
-**Internal Workflow Chain**:
-1. **Analysis Phase**:
-   - Issue analysis and root cause identification
-   - Codebase understanding and impact assessment
-   - Solution design and approach selection
+6. **Report summary** — list any blockers (content leakage, cap breach) and clearances. If blockers found, STOP and ask user to resolve. If clear, proceed to Phase 1.
 
-2. **Implementation Phase**:
-   - Code changes with proper error handling
-   - Integration testing and validation
-   - Documentation updates
+6. **Dry-run shortcut**: If `--dry-run` present, skip Phase 1 and run:
+   ```bash
+   bash ~/.claude/commands/exportcommands.sh --dry-run
+   ```
+   Report output and stop.
 
-3. **Quality Assurance Phase**:
-   - Test execution and verification
-   - Code review and quality checks
-   - Performance impact assessment
+7. **Produce dry-run summary** — always show before executing:
+   ```
+   === DRY RUN: /exportcommands ===
+   Commands: N .md files from ~/.claude/commands/
+   Skills: N skill dirs from ~/.claude/skills/
+   Hooks: N hooks
+   Agents: N agents
+   Reference commands: N files from .claude_reference/commands/ → repo/.claude_reference/commands/
+   Content filter matches: N (all covered by existing 8 filters / N UNCOVERED — BLOCKER)
+   === END DRY RUN ===
+   ```
 
-4. **Git Workflow Phase**:
-   - Branch creation and management
-   - Commit message generation
-   - PR creation with detailed description
+8. **MANDATORY CONFIRMATION GATE — always stop here.**
+   Print: `"Proceed with export to jleechanorg/claude-commands? (yes/no)"` and **wait for explicit user confirmation**.
+   - If user says yes/y/proceed → continue to Phase 1
+   - Any other response → **STOP**. Do not run any shell scripts.
+   - Blockers from steps 1-3 also force STOP regardless of confirmation.
 
-**Real Workflow Example**:
-```
-/pr "fix login timeout issue"
-↓
-Analyze login flow → Identify timeout problem → Implement fix →
-Run tests → Create branch → Commit changes → Push → Create PR
-```
+---
 
-### Phase 1: Preparation & Validation
-
-**Action Steps:**
-**Repository Access Verification**:
-1. Validate GitHub token and permissions for target repository
-2. Check if target repository exists and is accessible
-3. Create local staging directory: `/tmp/claude_commands_export_$(date +%s)/`
-4. Verify Git configuration for commit operations
-
-**Content Filtering Setup**:
-5. Initialize comprehensive export filter system with multiple filter types
-6. Exclude project-specific directories and files ($PROJECT_ROOT/, run_tests.sh, testi.sh)
-7. Filter out personal/project references ($USER, your-project.com, Firebase specifics)
-8. Transform project-specific paths to generic placeholders
-9. Set up warning header templates for exported files
-
-### Phase 2: Repository Cleanup & Content Export
+### Phase 1: Execute Export (only after confirmation)
 
 **Action Steps:**
-**🚨 MANDATORY CLEANUP PHASE**: Remove obsolete files that no longer exist in source repository
-```bash
-
-### Phase 5: Step 1: Analyze Current Command System State
-
-**Action Steps:**
-First, let me analyze the current state of the command system to provide intelligent README generation:
-
-```python
-
-### Phase 6: Step 2: Execute Python Implementation
-
-**Action Steps:**
-```python
-
-### Phase 7: Step 3: LLM-Enhanced README Generation (PRESERVED CAPABILITY)
-
-**Action Steps:**
-While the Python implementation generates a comprehensive README, this LLM can provide additional intelligent analysis:
-
-**Command Pattern Analysis**: Analyze which commands are compositional powerhouses
-```python
-
-### Phase 8: EXECUTION
-
-**Action Steps:**
-**🚀 PRIMARY EXECUTION PATH**: Use the shell script (replaces Python implementation)
-```bash
-bash ~/.claude/commands/exportcommands.sh
-```
-
-Options:
-- `--dry-run` — clone, rsync, filter, but skip push and PR creation
-
-The shell script:
-1. Clones `jleechanorg/claude-commands`
-2. `rsync -a` each directory (source overwrites target; target-only files preserved by default)
-3. Applies 8 content filter substitutions via `perl -pi -e` (supports `\b` word boundaries on macOS)
-4. Regenerates `README.md` via `claude -p "..."` (Claude CLI)
-5. Commits, pushes, opens PR via `gh pr create`
-
-**[DEPRECATED]**: `exportcommands.py` (2347 lines) — kept as fallback only
-```bash
-python3 ~/.claude/commands/exportcommands.py
-```
-
-> [!WARNING]
-> The shell script above is the only actionable execution path. The sections below are legacy reference only and should not be run.
-
-### Phase 10: Legacy Reference — Historical Notes (Do Not Run)
-
-**Action Steps:**
-```python
-
-### Phase 11: Legacy Reference — LLM README Notes (Do Not Run)
-
-**Action Steps:**
-🚨 **VERSION GENERATION BY LLM**: The LLM now intelligently generates version numbers and change summaries rather than mechanical Python incrementing.
-
-**LLM Version Analysis Process**:
-1. **Examine Previous Version**: Check target repo's current README for last version
-2. **Analyze Git History**: Review recent commits since last export
-3. **Determine Version Bump**:
-   - **Patch (x.x.1)**: Bug fixes, minor updates, documentation
-   - **Minor (x.1.0)**: New features, significant enhancements
-   - **Major (1.0.0)**: Breaking changes, major architecture shifts
-4. **Generate Change Summary**: Create meaningful bullet points based on actual changes
-5. **Update README_EXPORT_TEMPLATE.md**: Fill LLM_VERSION placeholders with intelligent content
-
-🚨 **CRITICAL ENHANCEMENT**: The export README must showcase the revolutionary command combination capabilities, not just be a basic file listing.
-
-**Enhanced README Requirements**:
-6. **⚡ COMMAND COMBINATION SUPERPOWERS** section prominently featured
-7. Multi-command workflow examples (`/archreview /thinkultra /fake`)
-8. Complete PR lifecycle automation documentation (`/pr fix the settings button`)
-9. AI-powered fake code detection capabilities
-10. Quick start examples and advanced workflow patterns
-11. Professional setup guide with practical value proposition
-
-While the Python implementation generates a comprehensive README, this LLM can provide additional intelligent analysis:
-
-**Command Pattern Analysis**: Analyze which commands are compositional powerhouses
-```python
-
-### Phase 12: Legacy Reference — README Update Notes (Do Not Run)
-
-**Action Steps:**
-🚨 **MANDATORY STEP**: Update the main README.md (not create variants) with command combination superpowers:
-
-```bash
-
-### Phase 13: Legacy Reference — Multi-Command Examples (Do Not Run)
-
-**Action Steps:**
-**Break the One-Command Limit**: Normally, Claude can only handle one command per sentence. This system lets you chain multiple commands in a single prompt, creating sophisticated multi-step workflows.
-
-**Examples**:
-1. **Comprehensive PR Review**: `/archreview /thinkultra /fake`
-  2. `/archreview` - Architectural analysis of the codebase
-  3. `/thinkultra` - Deep strategic thinking about changes
-  4. `/fake` - AI-powered detection of placeholder code
-
-5. **Complete PR Lifecycle**: `/pr fix the settings button`
-  6. Automatically runs: `/think` → `/execute` → `/push` → `/copilot` → `/review`
-  7. Full end-to-end automation with zero manual intervention
-
-### Phase 14: Legacy Reference — Workflow Notes (Do Not Run)
-
-**Action Steps:**
-**The `/copilot` Advantage**: Responds to GitHub comments and makes fixes automatically, handling the entire feedback loop without manual intervention.
-
-### Phase 15: Legacy Reference — Python Path (Do Not Run)
-
-**Action Steps:**
-**[DEPRECATED]** Python implementation reference only
-```bash
-python3 .claude/commands/exportcommands.py
-```
-
-**🧠 LLM ENHANCEMENT CAPABILITIES**:
-1. Generate contextual README sections based on current command inventory
-2. Analyze command composition patterns for documentation
-3. Provide intelligent adaptation guidance for different project types
-4. Generate usage examples tailored to the exported command set
-
-### Phase 16: Legacy Reference — Implementation Example (Do Not Run)
-
-**Action Steps:**
-Legacy example: the export implementation would have looked like this:
-
-```python
-import os
-import subprocess
+1. User confirmed in Phase 0 step 8. Proceed.
+2. Run the shell script (primary path):
+   ```bash
+   bash ~/.claude/commands/exportcommands.sh
+   ```
+3. Report the PR URL printed by the script as the final output.
+4. If the shell script fails, fallback to Python:
+   ```bash
+   python3 .claude/commands/exportcommands.py
+   ```
 
 ## 📋 REFERENCE DOCUMENTATION
 

@@ -7,7 +7,6 @@ execution_mode: immediate
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
 **This is NOT documentation - these are COMMANDS to execute right now.**
 **Use TodoWrite to track progress through multi-phase workflows.**
-**LAYER SELECTION**: Before writing tests, consult `.claude/skills/testing-layers/SKILL.md` to decide which layer (unit / End-to-End (E2E) / MCP / HTTP / browser) is appropriate for the behavior under test. Note that Layer 2 (E2E) is the default for non-self-contained integration seams.
 
 ## 🚨 EXECUTION WORKFLOW
 

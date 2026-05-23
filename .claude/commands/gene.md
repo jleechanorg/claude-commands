@@ -388,7 +388,7 @@ The command leverages enhanced genesis/genesis.py features:
 
 | Feature | /pgen | /gene |
 |---------|-------|--------|
-| Goal Setup | Interactive `/goalexec` command | Fast /cereb generation |
+| Goal Setup | Interactive `/converge` command | Fast /cereb generation |
 | Execution | Manual copy-paste | Python orchestration command generation |
 | Directory | Pre-created structure | Auto-generated with content |
 | Context | Basic goal files | Enhanced 2000 token summaries |

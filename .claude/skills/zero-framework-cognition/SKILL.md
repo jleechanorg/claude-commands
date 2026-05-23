@@ -146,6 +146,12 @@ prompt/schema layer. The first fix attempt should be upstream: selected agent,
 prompt wording, schema shape, or tool-result feedback. Backend guards are the
 last resort, not the primary design.
 
+Use `.claude/skills/root-cause-first/SKILL.md` for the required proof standard.
+For every backend guard, fallback, clamp, sanitizer, scrubber, suppression, or
+server-injected choice, classify whether it is a server-owned invariant,
+prompt/schema-insufficient with raw proof, a backend-transformation bug, an
+unproven fallback, or a ZFC violation candidate.
+
 Allowed guards:
 
 - Suppress stale or contradictory explicit payloads.
@@ -161,6 +167,28 @@ Disallowed guards:
 - Patch over prompt ambiguity without documenting why prompt/schema correction
   was insufficient.
 - Correct a field that should have been removed from the model contract.
+
+## Proven vs Not Proven Report
+
+Every ZFC review that touches non-prompt logic must include a table with these
+columns:
+
+| Component | Non-prompt behavior | Proof state | Evidence | Verdict |
+|---|---|---|---|---|
+
+Use these verdicts:
+
+- **Keep** for server-owned invariants and narrow correction-only guards with
+  raw prompt/schema-insufficient proof.
+- **Narrow** when a concrete leak is proven but the implemented guard is broader
+  than the evidence.
+- **Move upstream** when the behavior belongs in prompt, schema, or selected
+  agent instructions.
+- **Delete or prove** when tests show a fallback works but do not prove the
+  model cannot handle the behavior.
+
+Call out explicitly when the available evidence proves only that backend
+fallback behavior works, not that model-owned behavior failed.
 
 ## Relationship To Domain Skills
 

@@ -1,8 +1,3 @@
----
-description: Diagnose why the autonomy system is not driving PRs to 6-green
-type: quality
-execution_mode: manual
----
 # /auton — Autonomy Diagnostic
 
 ## Purpose
@@ -82,11 +77,10 @@ done
 echo "--- AO session store state (agent-orchestrator project) ---"
 ao session ls --project agent-orchestrator 2>/dev/null || echo "ao session ls failed"
 echo "--- Zombie check: AO-marked-killed sessions still in tmux ---"
-AO_DATA=$(ls $HOME/.agent-orchestrator/*/sessions/ 2>/dev/null)
+AO_DATA=$(ls ~/.agent-orchestrator/bb5e6b7f8db3-agent-orchestrator/sessions/ 2>/dev/null)
 for s in $AO_DATA; do
-  # Use find to properly expand glob paths for session file lookup
-  sfile=$(find "$HOME/.agent-orchestrator" -path "*/sessions/$s" -type f 2>/dev/null | head -1)
-  [ -n "$sfile" ] && [ -f "$sfile" ] || continue
+  sfile=~/.agent-orchestrator/bb5e6b7f8db3-agent-orchestrator/sessions/$s
+  [ -f "$sfile" ] || continue
   status=$(grep "^status=" "$sfile" 2>/dev/null | cut -d= -f2)
   tmux_name=$(grep "^tmuxName=" "$sfile" 2>/dev/null | cut -d= -f2)
   [ "$status" = "killed" ] || continue
@@ -126,7 +120,7 @@ tail -100 /tmp/ao-pr-poller.log 2>/dev/null | grep -E "not green|SKIP|WARNING|ER
 tail -50 /tmp/ao-pr-poller.log 2>/dev/null | grep -E "Spawning|SUCCESS" | tail -10
 
 # B5. PR worker coverage check (deterministic — exits non-zero if uncovered PRs)
-${OPENCLAW_HOME:-$HOME/.openclaw}/scripts/check-pr-worker-coverage.sh 2>/dev/null || echo "Coverage script not found or returned non-zero (uncovered PRs exist)"
+$HOME/.openclaw/scripts/check-pr-worker-coverage.sh 2>/dev/null || echo "Coverage script not found or returned non-zero (uncovered PRs exist)"
 ```
 
 ### Step 3: Cross-reference — CHANGES_REQUESTED gap detection
@@ -155,7 +149,7 @@ for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" 
 
   # Get last commit date
   last_commit=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$number/commits" --jq '.[-1].commit.committer.date' 2>/dev/null)
-  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || date -d "$last_commit" +%s 2>/dev/null || echo 0)
+  commit_epoch=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$last_commit" +%s 2>/dev/null || echo 0)
   gap_mins=$(( (current_epoch - commit_epoch) / 60 ))
 
   # Get review state
@@ -170,8 +164,7 @@ for pr_json in $(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" 
       [ "$s_branch" = "$branch" ] && has_worker="$s" && break
     done
     gap_hrs=$((gap_mins / 60))
-    gap_rem=$((gap_mins % 60))
-    echo "STALLED #$number | ${gap_hrs}h${gap_rem}m | review=$review_state | mergeable=$mergeable | worker=$has_worker | $title"
+    echo "STALLED #$number | ${gap_hrs}h${gap_mins}m | review=$review_state | mergeable=$mergeable | worker=$has_worker | $title"
   fi
 done
 ```
@@ -215,7 +208,7 @@ Pick one APPROVED PR (if any exist) and verify skeptic-cron's gate checks agree 
 echo "=== SKEPTIC-CRON CORRECTNESS SPOT-CHECK ==="
 # Find an APPROVED PR
 APPROVED_PR=$(gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open" \
-  --jq '[.[] | select(.draft == false and .review_decision == "APPROVED")] | .[0].number' 2>/dev/null)
+  --jq '[.[] | select(.draft == false)] | .[0].number' 2>/dev/null)
 if [ -n "$APPROVED_PR" ]; then
   echo "Spot-checking PR #$APPROVED_PR"
 

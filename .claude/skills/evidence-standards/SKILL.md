@@ -279,6 +279,29 @@ include browser-visible artifacts in addition to the canonical JSON and Markdown
   subtitle rendering. If it is omitted, keep the raw video plus caption sidecars and
   state why the burned-in derivative is absent.
 
+### Video source provenance — pipeline output only
+
+UI evidence video (`.mp4`, `.gif`, `.cast`) MUST be produced as output of the project's
+automated testing pipeline, not captured manually outside it.
+
+**Mandatory check before citing any video as UI evidence:**
+
+| Check | Required answer |
+|-------|----------------|
+| Was the video produced as output of the test pipeline? | YES |
+| Does an evidence bundle exist with `metadata.json` + `streaming_evidence.json`? | YES |
+| Is the video URL a `github.com/*/releases/download/untagged-*` link? | NO (red flag) |
+| Was the video manually recorded outside the test pipeline? | NO |
+
+**Red flags — evidence is INVALID if any apply:**
+- Video URL at `github.com/*/releases/download/untagged-*` (ad-hoc upload, not pipeline)
+- Video hosted on Dropbox, YouTube, or any external host with no pipeline bundle
+- `metadata.json` is missing `server.pid` (was not created by the test run)
+- Video exists but no evidence bundle exists at the standard bundle path
+
+A manually uploaded video with no pipeline bundle is the same fabrication class as a
+standalone HTML mock page. Neither carries pipeline provenance.
+
 ### Metadata requirements for browser-visible claims
 
 `metadata.json` should also record:

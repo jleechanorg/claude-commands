@@ -168,10 +168,10 @@ Claude analyzes the user's request for:
 **If Superpowers Chrome:**
 ```bash
 # Start Chrome
-./skills/superpowers-chrome-worldarchitect/worldarchitect-chrome.sh start
+./worldarchitect-chrome.sh start
 
 # Execute task
-./skills/superpowers-chrome-worldarchitect/worldarchitect-chrome.sh <task> [args...]
+./worldarchitect-chrome.sh <task> [args...]
 
 # Report results
 ```
@@ -240,7 +240,7 @@ Analysis:
 - Tool: Superpowers Chrome
 
 Execution:
-1. ./skills/superpowers-chrome-worldarchitect/worldarchitect-chrome.sh smoke http://localhost:5000
+1. ./worldarchitect-chrome.sh smoke http://localhost:5000
 
 Result:
 ✅ All smoke tests passed (18s)
@@ -363,7 +363,7 @@ npm install github:obra/superpowers-chrome
 ```bash
 # Restart Chrome
 pkill chrome
-./skills/superpowers-chrome-worldarchitect/worldarchitect-chrome.sh start
+./worldarchitect-chrome.sh start
 ```
 
 ### Error: "Playwright browser not found"
@@ -464,10 +464,10 @@ User: /browser (auto-detects MCP, uses superpowers-chrome)
 
 ## Resources
 
-- [Playwright Skill Documentation](../../skills/playwright-worldarchitect/SKILL.md)
-- [Superpowers Chrome Documentation](../../skills/superpowers-chrome-worldarchitect/README.md)
+- [Playwright Skill Documentation](../skills/playwright-worldarchitect/SKILL.md)
+- [Superpowers Chrome Documentation](../skills/superpowers-chrome-worldarchitect/README.md)
 - [Comparison Guide](../docs/BROWSER_AUTOMATION_COMPARISON.md)
-- [Example Workflows](../../skills/playwright-worldarchitect/examples/)
+- [Example Workflows](../skills/playwright-worldarchitect/examples/)
 
 ---
 

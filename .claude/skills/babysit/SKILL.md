@@ -175,7 +175,7 @@ m=re.search(r'skeptic-head-sha-([a-f0-9]+)',b[-1]['body']) if b else None
 print(m.group(1)[:8] if m else 'none')")
   # Also check: don't re-dispatch if CI is still pending/failing (Skeptic will fail at Gate 1)
   ci_failures=$(gh pr view $pr --repo $GITHUB_REPOSITORY --json statusCheckRollup \
-    --jq '[.statusCheckRollup[] | select((.conclusion == "FAILURE" or .conclusion == "ERROR" or .conclusion == "TIMED_OUT") and .name != "Skeptic Gate")] | length')
+    --jq '[.statusCheckRollup[] | select((.conclusion == "FAILURE" or .conclusion == "ERROR" or .conclusion == "TIMED_OUT") and .name != "Green Gate")] | length')
   ci_pending=$(gh pr view $pr --repo $GITHUB_REPOSITORY --json statusCheckRollup \
     --jq '[.statusCheckRollup[] | select(.status == "IN_PROGRESS" or .status == "QUEUED")] | length')
   if [[ "$verdict" != "$head" && "$ci_failures" == "0" && "$ci_pending" == "0" ]]; then

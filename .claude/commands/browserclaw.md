@@ -1,9 +1,3 @@
----
-description: Reverse-engineer browser APIs from an interactive browsing session
-type: ai
-execution_mode: manual
----
-
 # /browserclaw
 
 Reverse-engineer browser APIs from an interactive browsing session.
@@ -31,6 +25,6 @@ Reverse-engineer browser APIs from an interactive browsing session.
 
 ```bash
 browserclaw reverse --url https://www.linkedin.com/feed/ --output-dir generated/linkedin --manual
-browserclaw reverse --url https://app.example.com --output-dir generated/example --goal "Open invoices and capture list/detail APIs" --provider anthropic --model claude-sonnet-4-6-20250514
+browserclaw reverse --url https://app.example.com --output-dir generated/example --goal "Open invoices and capture list/detail APIs" --provider anthropic --model claude-sonnet-4-20250514
 ```
 
