@@ -1125,16 +1125,21 @@ For each major design decision, identify and compare:
 - [ ] Solo developer maintainability confirmed
 - [ ] MVP speed priorities addressed
 
-### Integration with Memory Search and Persisted Learnings
+### Integration with Memory MCP (Enhanced with Query Optimization)
 
-**Memory Search Strategy**: Use `/memory search` for improved design pattern discovery:
+**Memory MCP Query Optimization**: Uses universal composition with `/memory search` for improved design pattern discovery:
 - **Smart Search Strategy**: Transform compound design queries into optimized single-word searches
 - **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better design pattern retrieval
 - **Result Merging**: Combine multiple optimized searches for comprehensive design analysis
 
 **Capture Architectural Learnings**:
-- Record the approved design summary through the existing `/learn` flow so the decision is persisted in repo-backed learning artifacts.
-- Use the learnings log or bead tracking for any implementation follow-up created by the design decision.
-- Treat memory search as discovery only; persistence happens through implemented file-backed workflows, not an unimplemented MCP write path.
+```
+mcp__memory-server__create_entities:
+- Architecture decisions and rationales
+- Design patterns that work/fail for solo MVP
+- Standard tool evaluations and outcomes
+- Performance vs complexity trade-offs
+- Solo developer workflow optimizations
+```
 
 **Purpose**: Prevent repeated architectural mistakes and build institutional knowledge for future design decisions.

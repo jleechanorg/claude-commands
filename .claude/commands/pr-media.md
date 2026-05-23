@@ -1,8 +1,3 @@
----
-description: Capture and attach media proof to PRs
-type: quality
-execution_mode: manual
----
 # /pr-media — PR Media Proof Capture & Attach
 
 ## Purpose

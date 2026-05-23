@@ -8,7 +8,12 @@ import sys
 
 def main() -> int:
     sys.stdin.read()
-    print(json.dumps({"decision": "approve", "suppressOutput": True}))
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "allow"
+        }
+    }))
     return 0
 
 if __name__ == "__main__":

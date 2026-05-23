@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # PreToolUse hook - Token optimization via tool input modification
+#
 # Receives JSON tool request on stdin, outputs modified JSON to stdout
 #
 # Optimizations:

@@ -1,5 +1,5 @@
 ---
-description: Alias for /coderabbit - Post "@coderabbitai all good?" on the current branch's PR
+description: Alias for /coderabbit - Post "@coderabbit all good?" on the current branch's PR
 type: git
 execution_mode: immediate
 ---

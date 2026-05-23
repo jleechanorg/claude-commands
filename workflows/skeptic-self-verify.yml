@@ -24,6 +24,7 @@ jobs:
       issues: write
       statuses: read
       checks: read
+      actions: write
     steps:
       - name: Run gate checks and post VERDICT
         env:
@@ -65,7 +66,7 @@ jobs:
               [.reviews[] | select((.author.login == "coderabbitai" or .author.login == "coderabbitai[bot]") and .state != "COMMENTED" and .commitId == $head)] | sort_by(.submittedAt) | last | .state // "none"
             ')
             CR_APPROVE_COMMENT=$(echo "$GH_PR_VIEW" | jq -r '
-              [.comments[] | select((.author.login == "coderabbitai" or .author.login == "coderabbitai[bot]") and (.body | test("\\[approve\\]"; "i")))] | last | if . then "APPROVED" else "none" end
+              [.comments[] | select((.author.login == "coderabbitai" or .author.login == "coderabbitai[bot]") and ((.body // "") | test("\\[approve\\]"; "i")))] | last | if . then "APPROVED" else "none" end
             ')
             CR_STATUS=$(echo "$GH_PR_VIEW" | jq -r '
               [.statusCheckRollup[] | select(.context == "CodeRabbit" or .name == "CodeRabbit")] | last | .state // "none"
@@ -73,12 +74,16 @@ jobs:
             
             # Gate 4: Cursor Bugbot (Action CheckRun)
             BUGBOT=$(echo "$GH_PR_VIEW" | jq -r '
-              [.statusCheckRollup[] | select(.name | test("Cursor Bugbot"; "i"))] | last | .conclusion // "none"
+              [.statusCheckRollup[] | select((.name // "") | test("Cursor Bugbot"; "i"))] | last | .conclusion // "none"
             ')
             
-            # Gate 6: Evidence
+            # Gate 6: Evidence. The PR body is the canonical design/evidence
+            # source for skeptic review; generated PR design-doc artifacts are
+            # intentionally not required.
             PR_BODY=$(echo "$GH_PR_VIEW" | jq -r '.body // ""')
-            PR_COMMENTS=$(echo "$GH_PR_VIEW" | jq -r '[.comments[].body] | join("\n")' 2>/dev/null || echo "")
+            # GitHub GraphQL .comments[] is limited to ~30; use REST --paginate to fetch all
+            PR_COMMENTS_REST=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUM/comments" --paginate 2>/dev/null | jq -r '.[].body' 2>/dev/null || echo "")
+            PR_COMMENTS="${PR_COMMENTS_REST:-$(echo "$GH_PR_VIEW" | jq -r '[.comments[].body] | join("\n")' 2>/dev/null)}"
             CHANGED=$(echo "$GH_PR_VIEW" | jq -r '[.files[].path] | join("\n")' 2>/dev/null || echo "")
             
           else
@@ -161,45 +166,62 @@ jobs:
               break
             fi
             
-            # Use GraphQL for review threads, with REST fallback if GraphQL totally fails
-            GQL_FAILED=0
+            # Use GraphQL for review threads — capture output first, validate JSON (matches green-gate.yml)
+            GQL_ERROR=0
             if [ -z "$RT_CURSOR" ]; then
-              if ! RT_RESP=$(gh api graphql \
-                -f query='query($owner:String!,$name:String!,$pr:Int!){repository(owner:$owner,name:$name){pullRequest(number:$pr){reviewThreads(first:100){pageInfo{hasNextPage endCursor}nodes{isResolved}}}}}' \
+              RT_RESP=$(gh api graphql \
+                -f query='query($owner:String!,$name:String!,$pr:Int!){repository(owner:$owner,name:$name){pullRequest(number:$pr){reviewThreads(first:100){pageInfo{hasNextPage endCursor}nodes{isResolved comments(first:50){pageInfo{hasNextPage}nodes{author{login}body}}}}}}}' \
                 -f owner="$GITHUB_REPOSITORY_OWNER" \
                 -f name="$REPO_NAME" \
                 -F pr="$PR_NUM" \
-                2>/dev/null); then
-                GQL_FAILED=1
-              fi
+                2>/dev/null || echo "")
             else
-              if ! RT_RESP=$(gh api graphql \
-                -f query='query($owner:String!,$name:String!,$pr:Int!,$cursor:String!){repository(owner:$owner,name:$name){pullRequest(number:$pr){reviewThreads(first:100,after:$cursor){pageInfo{hasNextPage endCursor}nodes{isResolved}}}}}' \
+              RT_RESP=$(gh api graphql \
+                -f query='query($owner:String!,$name:String!,$pr:Int!,$cursor:String!){repository(owner:$owner,name:$name){pullRequest(number:$pr){reviewThreads(first:100,after:$cursor){pageInfo{hasNextPage endCursor}nodes{isResolved comments(first:50){pageInfo{hasNextPage}nodes{author{login}body}}}}}}}' \
                 -f owner="$GITHUB_REPOSITORY_OWNER" \
                 -f name="$REPO_NAME" \
                 -F pr="$PR_NUM" \
                 -f cursor="$RT_CURSOR" \
-                2>/dev/null); then
-                GQL_FAILED=1
-              fi
+                2>/dev/null || echo "")
             fi
-            
-            if [ "$GQL_FAILED" -eq 1 ]; then
-              echo "ReviewThreads GraphQL query failed. Falling back to REST..."
-              # REST API fallback: pull all comments, check if we can infer resolution.
-              # REST API doesn't easily expose review thread resolution status. 
-              # For resilience, if we reach this point and we have to fallback to REST, 
-              # it's usually because the GraphQL API is rate limited. 
-              # Let's check REST API review comments:
-              REST_COMMENTS=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUM/comments" --paginate 2>/dev/null || echo "[]")
-              # A naive fallback: we cannot perfectly get thread resolution from REST API alone without querying events.
-              # Instead of failing, we just mark FAIL with API error (as before) to be safe,
-              # but since this is a fallback, we could attempt to evaluate. 
-              G5="FAIL(reviewThreads-api-error-and-rest-unsupported)"
+            if [ -z "$RT_RESP" ] || ! echo "$RT_RESP" | jq -e '
+              (.errors | not) and
+              (.data.repository.pullRequest.reviewThreads.pageInfo != null)
+            ' >/dev/null; then
+              GQL_ERROR=1
+              echo "ReviewThreads GraphQL query returned empty or errored. Response: $(echo "$RT_RESP" | head -c 500)"
               break
             fi
             
-            PAGE_UNRESOLVED=$(echo "$RT_RESP" | jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo 0)
+            # Count unresolved threads from non-bot, non-author commenters (matches green-gate.yml)
+            # Guard: if any thread has >50 comments (hasNextPage on comments), fail closed
+            if [ "$(echo "$RT_RESP" | jq -r '[.data.repository.pullRequest.reviewThreads.nodes[].comments.pageInfo.hasNextPage | select(. == true)] | length')" -gt 0 ]; then
+              G5="FAIL(reviewThreads-comment-pagination-exceeded)"
+              break
+            fi
+            PAGE_UNRESOLVED=$(echo "$RT_RESP" | jq -r \
+              --arg author "$PR_AUTHOR" \
+              --arg ignore_cursor "cursor" \
+              --arg ignore_cursor_bot "cursor[bot]" \
+              --arg ignore_codereview "coderabbitai" \
+              --arg ignore_codereview_bot "coderabbitai[bot]" \
+              --arg ignore_github_actions "github-actions[bot]" \
+              --arg ignore_codex_connector "chatgpt-codex-connector" \
+              --arg ignore_codex_connector_bot "chatgpt-codex-connector[bot]" \
+              '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) |
+                 .comments.nodes[] |
+                 select(
+                   .author.login != null and
+                   (.author.login | ascii_downcase) != ($author | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_cursor | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_cursor_bot | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_codereview | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_codereview_bot | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_github_actions | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_codex_connector | ascii_downcase) and
+                   (.author.login | ascii_downcase) != ($ignore_codex_connector_bot | ascii_downcase) and
+                   (.body | test("^\\s*(nit:|nitpick)"; "i") | not)
+                 )] | length' 2>/dev/null || echo 0)
             UNRESOLVED=$((UNRESOLVED + PAGE_UNRESOLVED))
             HAS_NEXT=$(echo "$RT_RESP" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' 2>/dev/null || echo "false")
             [ "$HAS_NEXT" = "true" ] || break
@@ -210,7 +232,9 @@ jobs:
             fi
             RT_CURSOR="$NEW_CURSOR"
           done
-          if [ -z "$G5" ]; then
+          if [ "$GQL_ERROR" -eq 1 ] && [ -z "$G5" ]; then
+            G5="FAIL(reviewThreads-gql-error)"
+          elif [ -z "$G5" ]; then
             if [ "$UNRESOLVED" = "0" ]; then G5="PASS"; else G5="FAIL($UNRESOLVED unresolved)"; fi
           fi
           echo "  [5] Comments:      $G5"
@@ -225,10 +249,8 @@ jobs:
           fi
           rm -f "$EVID_SCRATCH"
           EVIDENCE_REQUIRED=$(echo "$CHANGED" | grep -E '^(testing_(mcp|ui)/|mvp_site/|deploy\.sh$|\.github/workflows/evidence-gate\.yml$)' > /dev/null && echo "true" || echo "false")
-          if [ "$EVIDENCE_REQUIRED" = "false" ] && [ "$HAS_EVIDENCE" = "true" ]; then
-            G6="PASS"
-          elif [ "$EVIDENCE_REQUIRED" = "false" ] && [ "$HAS_EVIDENCE" = "false" ]; then
-            G6="FAIL(no-evidence-link)"
+          if [ "$EVIDENCE_REQUIRED" = "false" ]; then
+            G6="PASS(evidence-not-required)"
           else
             if [ "$HAS_EVIDENCE" = "true" ]; then G6="PASS"; else G6="FAIL(no-evidence)"; fi
           fi
@@ -236,16 +258,76 @@ jobs:
 
           # Gates 7 and 8: this workflow IS the skeptic evaluation
           G7="PASS"
-          G8="PASS"
           echo "  [7] Self-verify:   $G7"
-          echo "  [8] Meta:          $G8"
+
+          # Gate 8: Smoke Gate — mcp-smoke-tests must pass when mvp_site/ changed
+          SMOKE_REQUIRED=false
+          if echo "$CHANGED" | grep -qE '^mvp_site/prompts/|^mvp_site/.+\.py$'; then
+            SMOKE_REQUIRED=true
+          fi
+
+          if [ "$SMOKE_REQUIRED" = "false" ]; then
+            G8="PASS(skipped-no-mvp-site-changes)"
+          else
+            # issue_comment-triggered workflows record the default-branch SHA as headSha,
+            # not the PR head SHA. Fetch recent workflow runs and smoke result comments:
+            #   1. Prefer runs whose headSha matches (workflow_dispatch / pull_request triggers)
+            #   2. Accept /smoke report comments that record this PR head SHA
+            #   3. Fall back to recent run status for WAIT/FAIL observability
+            HEAD_PUSHED_AT=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA" \
+              --jq '.commit.committer.date // .commit.author.date' 2>/dev/null || echo "")
+            ALL_SMOKE=$(gh run list --workflow mcp-smoke-tests.yml \
+              --repo "$GITHUB_REPOSITORY" \
+              -L 100 --json databaseId,headSha,status,conclusion,createdAt,event,headBranch,url \
+              2>/dev/null || echo "[]")
+            SMOKE_RUNS=$(echo "$ALL_SMOKE" | jq --arg sha "$HEAD_SHA" --arg since "$HEAD_PUSHED_AT" --arg branch "$GITHUB_REF_NAME" '
+              . as $all |
+              if ($all | map(select(.headSha == $sha)) | length) > 0
+              then $all | map(select(.headSha == $sha))
+              else if $since != "" then $all | map(select((.createdAt // "") >= $since and .headBranch == $branch)) else [] end
+              end
+            ' 2>/dev/null || echo "[]")
+            SMOKE_COMMENT_BODY=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUM/comments" \
+              --paginate 2>/dev/null \
+              | jq -sr --arg sha "$HEAD_SHA" '
+                add
+                | map(select(
+                    (.body | test("MCP Smoke Tests"; "i"))
+                    and (.body | test("\\*\\*Commit SHA\\*\\*:[[:space:]]*`" + $sha + "`"; "i"))
+                  ))
+                | sort_by(.updated_at // .created_at // "")
+                | last.body // ""
+              ' 2>/dev/null || echo "")
+            if echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed"; then
+              G8="PASS"
+            elif echo "$SMOKE_RUNS" | jq -e 'any(.[]; .conclusion == "success")' > /dev/null; then
+              G8="PASS"
+            elif echo "$SMOKE_RUNS" | jq -e 'any(.[]; .status == "in_progress" or .status == "queued")' > /dev/null; then
+              G8="WAIT(smoke-still-running)"
+            elif echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Failed"; then
+              G8="FAIL(smoke-comment-failed-for-SHA)"
+            elif [ "$(echo "$SMOKE_RUNS" | jq 'length')" -eq 0 ]; then
+              G8="FAIL(no-smoke-run-for-SHA)"
+            else
+              G8="FAIL(smoke-no-success-for-SHA)"
+            fi
+          fi
+          echo "  [8] Smoke:         $G8"
 
           # Determine overall verdict
           ALL_PASS=true
-          for G in "$G1" "$G2" "$G3" "$G4" "$G5" "$G6"; do
+          HAS_WAIT=false
+          for G in "$G1" "$G2" "$G3" "$G4" "$G5" "$G6" "$G8"; do
             echo "$G" | grep -q "^FAIL" && ALL_PASS=false && break
+            echo "$G" | grep -q "^WAIT" && HAS_WAIT=true
           done
-          [ "$ALL_PASS" = "true" ] && VERDICT="PASS" || VERDICT="FAIL"
+          if [ "$ALL_PASS" = "true" ] && [ "$HAS_WAIT" = "false" ]; then
+            VERDICT="PASS"
+          elif [ "$ALL_PASS" = "true" ] && [ "$HAS_WAIT" = "true" ]; then
+            VERDICT="WAIT"
+          else
+            VERDICT="FAIL"
+          fi
           echo ""
           echo "VERDICT: $VERDICT"
 
@@ -277,6 +359,9 @@ jobs:
           M4=$(echo "$G4" | grep -q "^FAIL" && echo "FAIL" || echo "PASS")
           M5=$(echo "$G5" | grep -q "^FAIL" && echo "FAIL" || echo "PASS")
           M6=$(echo "$G6" | grep -q "^FAIL" && echo "FAIL" || echo "PASS")
+          if echo "$G8" | grep -q "^FAIL"; then M8="FAIL"
+          elif echo "$G8" | grep -q "^WAIT"; then M8="WAIT"
+          else M8="PASS"; fi
 
           # Build VERDICT comment body (use a temp file for multiline safety)
           BODY_FILE=$(mktemp)
@@ -293,6 +378,8 @@ jobs:
           | 4 | Cursor Bugbot | ${G4} |
           | 5 | Inline comments resolved | ${G5} |
           | 6 | Evidence | ${G6} |
+          | 7 | Self-verify | PASS |
+          | 8 | Smoke Gate | ${G8} |
 
           SKEPTIC_CRON_TRIGGER
 
@@ -307,7 +394,7 @@ jobs:
           <!-- skeptic-gate-5: ${M5} -->
           <!-- skeptic-gate-6: ${M6} -->
           <!-- skeptic-gate-7: PASS -->
-          <!-- skeptic-gate-8: PASS -->
+          <!-- skeptic-gate-8: ${M8} -->
           EOF
 
           if gh issue comment "$PR_NUM" \
@@ -317,4 +404,24 @@ jobs:
           else
             echo "ERROR: failed to post VERDICT comment" >&2
             exit 1
+          fi
+
+          # Dispatch Green Gate so the branch protection check reflects this VERDICT.
+          # On pull_request events, Green Gate exits 1 immediately (no VERDICT yet).
+          # After Skeptic posts VERDICT: PASS, dispatching Green Gate lets it re-check
+          # and satisfy the branch protection requirement without a manual rerun.
+          if [ "$VERDICT" = "PASS" ]; then
+            BRANCH=$(gh pr view "$PR_NUM" --repo "$GITHUB_REPOSITORY" --json headRefName --jq '.headRefName' 2>/dev/null || echo "")
+            if [ -n "$BRANCH" ]; then
+              echo "Dispatching Green Gate for $BRANCH (PR #$PR_NUM SHA ${HEAD_SHA:0:7})"
+              gh workflow run green-gate.yml \
+                --repo "$GITHUB_REPOSITORY" \
+                --ref "$BRANCH" \
+                --field pr_number="$PR_NUM" \
+                --field head_sha="$HEAD_SHA" \
+                && echo "Green Gate dispatch queued" \
+                || echo "WARNING: failed to dispatch green-gate.yml (non-fatal)" >&2
+            else
+              echo "WARNING: could not resolve branch for PR #$PR_NUM — skipping Green Gate dispatch" >&2
+            fi
           fi

@@ -25,6 +25,8 @@ instructions first, and treat backend correction as a last resort.
 
 > **Correction Exception Boundary**: Correction guards that prevent degraded UX (stale-flag time-freeze, SSE soft-lock, already-applied level-up residue) are permitted **only** within `rewards_engine.py`. These guards must be correction-only: compare explicit model/state fields for contradictions, suppress or normalize invalid payloads, and avoid creating a competing backend level-up decision. Scattered heuristics across multiple files are strictly forbidden.
 
+> **Opaque Choice Boundary**: Planning choice IDs are opaque handles, not semantic signals. `level_up_now`, `finish_level_up_return_to_game`, and `custom_action` are migration/compatibility handles only. Level-up choice meaning must come from explicit model/schema fields on the resolved choice object, not from ID text, prefixes, labels, or backend allowlists.
+
 ---
 
 ## File Responsibility Table (Mandatory)
@@ -84,6 +86,7 @@ These are the most frequently observed agent drift patterns. If you catch yourse
 | Use `build_level_up_rewards_box()` | anywhere | **Deleted.** Use `rewards_engine.ensure_rewards_box()` (internal) or `project_level_up_ui()` |
 | Change `canonicalize_rewards()` return type | anywhere | **Don't.** Use `out_meta` dict instead |
 | Add signal normalization aliases | `structured_fields_utils.py` | Add in `rewards_engine.canonicalize_level_up_signal()` |
+| Classify or scrub choices by ID text/prefix, label, enum name, or CSS class | any backend file | Resolve the submitted handle against persisted `planning_block.choices`, then read explicit structured fields; keep `level_up_now`, `finish_level_up_return_to_game`, and `custom_action` exact checks migration-only |
 | Add a new feature to a level-up PR | the same PR | Open a separate PR — scope creep is the #1 cause of spin |
 | Access `rewards_engine._is_state_flag_true()` from outside | `agents.py`, `world_logic.py` | Use the public helpers or import from `game_state.py` |
 
@@ -102,6 +105,7 @@ For each file you plan to modify, check the table above:
 - [ ] Am I changing the return signature of `canonicalize_rewards()`? → **Don't.** Use `out_meta`.
 - [ ] Am I calling `rewards_engine.*` from `world_logic.py` outside the authorized API surface table? → Check boundary table.
 - [ ] Am I directly reading `level_up_pending` / `level_up_in_progress` flags instead of calling `is_level_up_active()`? → Use the centralized function.
+- [ ] Am I adding or expanding a choice-ID allowlist, prefix check, or text/label check for level-up behavior? → **STOP.** First prove the selected choice is resolved from persisted structured state and that the model/schema exposes the needed semantic field. Exact legacy handles (`level_up_now`, `finish_level_up_return_to_game`, `custom_action`) require a migration note and must not become the pattern for new behavior.
 
 ### 3. Deleted function check
 - [ ] Am I calling any of these **deleted** functions? → **They no longer exist:**

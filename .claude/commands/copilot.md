@@ -264,7 +264,6 @@ REPLY_FILE=$(mktemp)
 # Write the consolidated comment markdown to $REPLY_FILE
 gh pr comment <PR_NUMBER> --body-file "$REPLY_FILE"
 rm -f "$REPLY_FILE"
-STEP7_SUMMARY_TS=$(date -u +%s)
 ```
 
 **Template (all values from responses.json tallies):**
@@ -276,7 +275,7 @@ STEP7_SUMMARY_TS=$(date -u +%s)
 **Coverage:** X/Y comments addressed (Z fixed, W deferred, V acknowledged, U not done)
 **This run:** A new, B carried forward from prior runs
 **Files modified:** file1.py, file2.md (or "None" if no code changes)
-**CI status:** [Re-check with `statusCheckRollup` immediately before posting — see self-check #3]
+**CI status:** [Re-check with `gh pr checks <PR>` immediately before posting]
 
 ### CRITICAL/BLOCKING Fixes
 - **[file:line]** - Issue summary -> Fixed in commit abc123 / Deferred: reason
@@ -291,26 +290,24 @@ STEP7_SUMMARY_TS=$(date -u +%s)
 **Self-check before posting (MANDATORY - all 4 checks must pass):**
 1. **Coverage arithmetic**: Z + W + V + U MUST equal X (total addressed). Each response type (fixed/deferred/acknowledged/not_done) appears EXACTLY ONCE. If a category appears twice, you have a bug — fix it.
 2. **No test claims without evidence**: If you claim tests pass, you MUST link a CI run URL (`gh pr checks <PR> --web`) or evidence bundle path. Never assert "N tests pass" without a linked artifact.
-3. **Fresh CI status**: Run `gh pr view <PR_NUMBER> --json statusCheckRollup --jq '[.statusCheckRollup[] | select(.conclusion == "FAILURE" or .conclusion == "ERROR" or .conclusion == "TIMED_OUT" or .status == "IN_PROGRESS" or .status == "QUEUED")] | length'` immediately before posting. Zero = CI green and settled. Do NOT use `gh pr checks` (shows webhook pings, not authoritative conclusions). Do NOT reuse stale CI data from Step 2.
+3. **Fresh CI status**: Run `gh pr checks <PR_NUMBER>` immediately before posting to get current CI state. Do NOT reuse stale CI data from Step 2.
 4. **Total matches responses.json**: Count entries in responses.json and verify it matches X/Y.
 
-### Step 7.5: Thread Resolution Guidance (MANDATORY for FIXED/DEFERRED)
+### Step 7.5: Resolve Conversation Threads (MANDATORY for FIXED/DEFERRED)
 
-After posting the consolidated reply, do **not** call undocumented GitHub REST endpoints or invented `gh` subcommands to mutate review-thread state. `/copilot` keeps `responses.json` comment-centric; if a separate follow-up workflow needs to resolve GitHub review threads, it must derive thread IDs from the recorded `comment_id` values and use the real GraphQL mutation.
+After posting the consolidated reply, resolve the conversation threads for comments that were fixed or deferred. This keeps the PR clean and shows progress.
 
 **Procedure:**
 1. Read `/tmp/<repo>/<branch>/copilot/responses.json`
-2. Build the list of `comment_id` values where `response` is `FIXED` or `ALREADY_IMPLEMENTED`.
-3. In the separate follow-up action, query GitHub review threads and map each `comment_id` to its `thread.id`. `responses.json` does **not** store thread IDs; the follow-up action records the `comment_id -> thread_id` mapping in its run notes or follow-up output.
-4. If you are explicitly resolving threads as a separate GitHub write action, use GraphQL only:
+2. For each comment where `response` is `FIXED`, `ALREADY_IMPLEMENTED`, or `DEFERRED`:
+   - Resolve the conversation thread using GitHub GraphQL API:
    ```bash
-   gh api graphql \
-     -f query='mutation($threadId:ID!){resolveReviewThread(input:{threadId:$threadId}){thread{isResolved}}}' \
-     -f threadId='<THREAD_ID>'
+   # For inline review comments (pull_request_review_comment):
+   gh api graphql -f query='mutation($threadId:ID!){resolveReviewThread(input:{threadId:$threadId}){thread{id isResolved}}}' -f threadId="<thread_id>"
    ```
-5. Log the count you tracked or resolved: `Tracked N conversation threads for follow-up (X fixed, Y already-implemented)`
+3. Log the count: `Resolved N conversation threads (X fixed, Y deferred)`
 
-**Why this matters:** GitHub thread resolution is only exposed through GraphQL. Keeping `/copilot` aligned with the real API avoids dead commands in a mandatory step while preserving an auditable trail for follow-up resolution workflows.
+**Why this matters:** Resolved threads give reviewers a clear signal that feedback was addressed, reducing follow-up questions and improving PR throughput.
 
 ### Step 8: Verify Coverage (REV-g9fbp fix - severity-based)
 
@@ -332,10 +329,7 @@ Immediately after Step 8, fetch comments again and compare against the comment I
 Hard requirements:
 - If new actionable comments arrived after the Step 7 summary timestamp, the run is **not complete**.
 - Re-enter processing for the new comments (back to Step 4), regenerate `responses.json`, and post a refreshed consolidated summary.
-- Maintain `DELTA_RECHECK_COUNT` with a `DELTA_RECHECK_LIMIT` of 3. If the limit is reached, log `DELTA_RECHECK_LIMIT` and proceed to Step 9 with a note in the tracking table.
-- Reuse the Step 4 actionable-comment filter so "new actionable comments" excludes `[AI responder]` replies, empty bodies, and meta-comments.
-- Compare newly fetched comment timestamps against `STEP7_SUMMARY_TS`, and refetch after a short backoff before re-entering processing.
-- Only proceed to Step 9 when there are **zero new actionable comments** since the most recent summary or the recheck limit has been reached.
+- Only proceed to Step 9 when there are **zero new actionable comments** since the most recent summary.
 
 This check prevents stale "all addressed" summaries when reviewers/bots post new findings during the run.
 
@@ -418,7 +412,6 @@ rm -f "$TMPFILE"
 5. **Single consolidated comment** - Post ONE summary comment, not individual replies
 6. **Idempotent re-runs** - Skip previously Fixed/Acknowledged comments, re-evaluate Deferred/Unresolved/Ignored
 7. **Single source of truth** - Both the consolidated reply and tracking table derive from `responses.json`. Mismatch = stop and reconcile.
-8. **Thread resolution is follow-up scoped** - Do not auto-resolve GitHub review threads during the main `/copilot` pass. Only an explicit follow-up action may call `resolveReviewThread`, and only for comments already recorded as `FIXED` or `ALREADY_IMPLEMENTED` with the tracked thread IDs logged in the run output.
 
 ## Effectiveness KPIs (REV-962a7 — closure over volume)
 

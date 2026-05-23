@@ -10,9 +10,12 @@ Use AO with parameter fidelity. User-specified AO constraints are mandatory.
 
 ## Read first
 
-- `~/.claude/skills/agent-orchestrator/SKILL.md`
-- `~/.claude/skills/ao-worker-dispatch/SKILL.md`
-- `~/.claude/skills/ao-operator-discipline/SKILL.md`
+- `~/.claude/skills/agent-orchestrator/SKILL.md` — default workflow (start / spawn / status / send / cleanup)
+- `~/.claude/skills/ao-worker-dispatch/SKILL.md` — pre-dispatch checklist (venv, commit discipline, branch drift, CodeRabbit verify)
+- `~/.claude/skills/ao-operator-discipline/SKILL.md` — strict parameter fidelity + post-spawn verification
+- `~/.claude/skills/ao-spawn-gate/SKILL.md` — pre-spawn safety gate
+- `~/.claude/skills/ao-session-monitor/SKILL.md` — proper tmux inspection for live workers
+- `~/.claude/skills/ao-model-override/SKILL.md` — override the worker's model (e.g. claude-sonnet-4-6, claude-opus-4-7) WITHOUT editing `~/.hermes/agent-orchestrator.yaml`. Use whenever the user names a specific model and the project default isn't it (e.g. "use claude sonnet with AO"). `ao spawn` has NO `--model` flag; the only inline override is `AO_CONFIG_PATH` pointing at a temp copy of the config — the skill ships `spawn-with-model.sh` for this.
 
 ## Rules
 

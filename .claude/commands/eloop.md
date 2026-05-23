@@ -1,15 +1,14 @@
 ---
-name: eloop
-description: Alias for /evolve_loop — autonomous AO ecosystem evolution loop
-type: git
-execution_mode: immediate
+name: evolve_loop
+description: Run the evolve-loop skill. Canonical instructions live in ~/.claude/skills/evolve-loop/SKILL.md.
+type: skill
 ---
 
 # /eloop
 
-Alias for `/evolve_loop`. Use the canonical evolve-loop skill at:
+Use the canonical evolve-loop skill at:
 
-- `~/.claude/skills/evolve-loop/SKILL.md`
+- `$HOME/.claude/skills/evolve-loop/SKILL.md`
 
 Execution rule:
 - Load that skill and follow it as the source of truth.

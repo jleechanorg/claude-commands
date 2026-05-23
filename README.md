@@ -1,5 +1,3 @@
-
-
 ---
 description: Claude Commands - Command Library Overview
 type: llm-orchestration
@@ -53,6 +51,14 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## Changelog
 
+### v1.4.0 (2026-05-22)
+- New commands: archreview.md, cmux-backup.md, cmux-restore.md, code-standards.md, cs.md, end2end-testing.md, factory.md, goal_harness.md, h.md, thermo.md, thermo-nuclear-code-quality-review.md
+- New agents: opencode-pair-coder.md, opencode-pair-verifier.md, openw-pair-coder.md, openw-pair-verifier.md, thermo-nuclear-code-quality-review.md
+- New scripts: cmux-backup.sh, cmux-restore.sh
+- New skills: ao-model-override/, cmux-backup/, code-standards/
+- Updated: exportcommands.md, localexportcommands.md, history.md, copilot.md, evidence_review.md, green-gate.yml, skeptic-self-verify.yml, and many more
+- Skills expansions: claw-dispatch, cmux-socket-control, evidence-standards, nextsteps, root-cause-first, skillify, zero-framework-cognition
+
 ### v1.3.0 (2026-04-24)
 - New commands: ao.md, browserclaw.md, cmux-steer.md, es.md, green.md, loop_level_zfc.md, memory_search.md, ms.md, repro.md, repro_copy.md, wiki-evolve.md, wiki-search.md
 - New hooks: allow-claude-dir.sh, autoapprove.py, block-merge.sh, openclaw-config-guard.sh, pre-commit-detached-guard.sh
@@ -63,17 +69,19 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## 🎯 What's Included
 
-**224 Commands** including powerful workflow orchestrators and cognitive tools:
+**246 Commands** including powerful workflow orchestrators and cognitive tools:
 - **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step automation
 - **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
 - **Infrastructure**: `/scaffold` - Repository setup and development environment
-- **Testing**: `/test`, `/tdd`, `/testuif` - Comprehensive testing workflows
+- **Testing**: `/test`, `/tdd`, `/testuif`, `/end2end-testing` - Comprehensive testing workflows
+- **Code Quality**: `/code-standards`, `/cs`, `/thermo`, `/archreview` - Standards enforcement and deep review
+- **Session Management**: `/cmux-backup`, `/cmux-restore`, `/factory`, `/goal_harness`, `/h` - Workflow tooling
 
 **60 Hooks** for Claude Code automation and workflow optimization
 
 **22 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**559 Skills** providing shared knowledge references and capabilities
+**588 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 
@@ -164,7 +172,7 @@ Commands integrate seamlessly through:
 
 LLM-Native test patterns that work across any web application using AI to create, execute, and validate complex test scenarios.
 
-**Commands**: `/test`, `/tdd`, `/testuif`, `/testhttp`
+**Commands**: `/test`, `/tdd`, `/testuif`, `/testhttp`, `/end2end-testing`
 
 **Capabilities**:
 - Multi-domain test patterns (e-commerce, authentication, content management)

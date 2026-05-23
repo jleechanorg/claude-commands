@@ -10,10 +10,75 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 1: Execute Documented Workflow
+### Phase 0: Argument Detection + Commands Collision Pre-flight (LLM gate)
+
+**Dry-run detection**: If the user invoked this command with `--dry-run`, set `DRY_RUN=true` and proceed in simulation mode — report everything that *would* happen but make no file system writes. Print `[DRY RUN]` before every action line.
+
+**Purpose**: Prevent clobbering user-scope commands with unique value. Run this BEFORE any rsync.
+
+**Architecture**: As of 2026-05-21, `.claude/commands/` holds only project-exclusive overrides (target ≤30 files). `~/.claude/commands/` is the canonical user-scope library (~268 commands). The export must never silently overwrite a user-scope command that has more value than the project version.
 
 **Action Steps:**
-1. Review the reference documentation below and execute the detailed steps sequentially.
+
+1. Detect dry-run flag and announce mode:
+   ```
+   If --dry-run argument present: echo "🔍 DRY RUN MODE — no files will be written"
+   ```
+
+2. Count project commands — warn if suspicious:
+   ```bash
+   count=$(ls .claude/commands/*.md 2>/dev/null | wc -l | tr -d ' ')
+   echo "Project commands count: $count"
+   ```
+   If `count > 30`: WARN — "Project commands directory has $count files — may include user-scope duplicates. Inspect before export."
+
+2. Find collisions — project files that share a name with a user-scope command:
+   ```bash
+   for f in .claude/commands/*.md; do
+     name=$(basename "$f")
+     if [ -f "$HOME/.claude/commands/$name" ]; then
+       echo "COLLISION: $name"
+     fi
+   done
+   ```
+
+3. **For each collision**: Read both versions (project and user-scope).
+   - If project version is a subset of or identical to user-scope → **SKIP** this file, log: "Skipped $name — user-scope version is canonical or superset"
+   - If project version adds workflow logic not present in user-scope → **INCLUDE** but state why: "Exporting $name — project version has unique value: <one-line reason>"
+
+5. Build `SKIP_COMMANDS` list from step 4. If empty (no collisions), proceed normally.
+
+6. Report collision summary.
+
+7. Check for `.claude_reference/commands/` and report: count files, note these will go to `~/.claude_reference/commands/` (reference-only, no collision risk).
+
+8. **Produce dry-run summary** — always show this before any writes:
+   ```
+   === DRY RUN: /localexportcommands ===
+   Project commands: N files (M would be skipped — collision-protected)
+   Reference commands: N files → ~/.claude_reference/commands/
+   Hooks: N files
+   Agents: N files
+   Scripts: N files
+   Skills: N files
+   Collisions (would skip): [list filenames or "none"]
+   === END DRY RUN ===
+   ```
+
+9. **MANDATORY CONFIRMATION GATE — always stop here.**
+   Print: `"Proceed with export? (yes/no)"` and **wait for explicit user confirmation**.
+   - If user says yes/y/proceed → continue to Phase 1
+   - Any other response or no response → **STOP**. Do not execute any writes.
+   - This gate applies even if `--dry-run` was NOT passed. LLM assessment + confirmation is always required.
+
+---
+
+### Phase 1: Execute Export (only after confirmation)
+
+**Action Steps:**
+1. User confirmed in Phase 0 step 9. Proceed.
+2. Review the reference documentation below and execute the detailed steps sequentially.
+3. When executing the commands export (`export_component "commands"`), exclude any files in `SKIP_COMMANDS` by passing them as `--exclude=<name>` flags to rsync (or skipping the individual `cp` calls).
 
 ## 📋 REFERENCE DOCUMENTATION
 
@@ -24,14 +89,16 @@ Copies the project's .claude folder structure to your local ~/.claude directory,
 ## Usage
 
 ```bash
-/localexportcommands
+/localexportcommands          # export for real
+/localexportcommands --dry-run  # simulate: show plan, collision report, no writes
 ```
 
 ## What Gets Exported
 
 This command copies standard Claude Code directories to ~/.claude:
 
-- **Commands** (.claude/commands/) → ~/.claude/commands/ - Slash commands
+- **Commands** (.claude/commands/) → ~/.claude/commands/ - Project-exclusive slash commands only (≤30 files as of 2026-05-21; user-scope `~/.claude/commands/` is the canonical 268-command library and is never deleted by this export)
+- **Reference Commands** (.claude_reference/commands/) → ~/.claude_reference/commands/ - Archived non-active commands preserved for reference (created by `git mv` from `.claude/commands/`)
 - **Hooks** (.claude/hooks/) → ~/.claude/hooks/ - Lifecycle hooks
 - **Agents** (.claude/agents/) → ~/.claude/agents/ - Subagents
 - **Scripts** (.claude/scripts/) → ~/.claude/scripts/ - Utility scripts (MCP scripts, secondo auth-cli.mjs, etc.)
@@ -39,7 +106,6 @@ This command copies standard Claude Code directories to ~/.claude:
 - **Settings** (.claude/settings.json) → ~/.claude/settings.json - Configuration
 - **Dependencies** (package.json, package-lock.json) → ~/.claude/ - Node.js dependencies for secondo command
 - **Codex Skills** (.codex/skills/) → ~/.codex/skills/ - Codex CLI skill documentation
-- **Codex Hooks** (.codex/hooks/) → ~/.codex/hooks/ - Codex CLI automation hooks
 - **Ralph Toolkit** (ralph/) → ~/ralph/ - Portable Ralph runtime and libraries
 **🚨 EXCLUDED**: Project-specific directories (schemas, templates, framework, guides, learnings, memory_templates, research) are NOT exported to maintain clean global ~/.claude structure.
 
@@ -214,12 +280,53 @@ echo ""
 echo "📦 Exporting components..."
 echo "================================="
 
+# Phase 0 invariant: commands directory should be project-exclusive only (≤30 files)
+# If a SKIP_COMMANDS list was built in Phase 0 (LLM pre-flight), honor it here.
+# SKIP_COMMANDS should be set as a space-separated list of filenames before this block
+# by the LLM orchestration layer (Phase 0 above).
+SKIP_COMMANDS="${SKIP_COMMANDS:-}"
+
 for component in "${components[@]}"; do
     total_components=$((total_components + 1))
-    if export_component "$component"; then
+    if [ "$component" = "commands" ] && [ -n "$SKIP_COMMANDS" ]; then
+        # Commands export with skip list from Phase 0 LLM pre-flight
+        echo "📋 Updating commands (with collision exclusions)..."
+        mkdir -p "$HOME/.claude/commands"
+        skip_count=0
+        copied_count=0
+        for f in .claude/commands/*.md; do
+            [ -f "$f" ] || continue
+            name=$(basename "$f")
+            if echo "$SKIP_COMMANDS" | grep -qw "$name"; then
+                echo "   ⏭️  Skipped $name (user-scope version is canonical)"
+                skip_count=$((skip_count + 1))
+            else
+                cp -a "$f" "$HOME/.claude/commands/$name"
+                copied_count=$((copied_count + 1))
+            fi
+        done
+        echo "   ✅ commands: $copied_count exported, $skip_count skipped (collision-protected)"
         exported_count=$((exported_count + 1))
+    else
+        if export_component "$component"; then
+            exported_count=$((exported_count + 1))
+        fi
     fi
 done
+
+# Export .claude_reference/commands/ → ~/.claude_reference/commands/ (archived non-active commands)
+if [ -d ".claude_reference/commands" ]; then
+    echo ""
+    echo "📦 Exporting reference commands (.claude_reference/commands/)..."
+    mkdir -p "$HOME/.claude_reference/commands"
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -a ".claude_reference/commands/" "$HOME/.claude_reference/commands/"
+    else
+        cp -a ".claude_reference/commands/." "$HOME/.claude_reference/commands/"
+    fi
+    ref_count=$(ls "$HOME/.claude_reference/commands/" 2>/dev/null | wc -l | tr -d ' ')
+    echo "   ✅ reference commands: $ref_count files exported to ~/.claude_reference/commands/"
+fi
 
 # Export Node.js dependencies for secondo command
 
@@ -321,60 +428,6 @@ else
     echo "   ⚠️  .codex/skills/ not found, skipping Codex skills export"
 fi
 
-# Export Codex hooks from .codex/hooks/ to ~/.codex/hooks/
-echo ""
-echo "📦 Exporting Codex hooks..."
-echo "================================="
-
-if [ -d ".codex/hooks" ]; then
-    mkdir -p "$HOME/.codex/hooks"
-
-    # Count hooks before copy
-    codex_hook_count=$(find .codex/hooks -mindepth 1 -maxdepth 1 -type f \( -name "*.sh" -o -name "*.py" \) | wc -l | tr -d ' ')
-
-    # Use rsync if available, otherwise cp -a
-    if command -v rsync >/dev/null 2>&1; then
-        rsync -a ".codex/hooks/" "$HOME/.codex/hooks/"
-    else
-        cp -a ".codex/hooks/." "$HOME/.codex/hooks/"
-    fi
-
-    # Set executable permissions on shell scripts
-    if [ -d "$HOME/.codex/hooks" ]; then
-        if ! find "$HOME/.codex/hooks" -name "*.sh" -exec chmod +x {} \; ; then
-            echo "   ⚠️  Failed to set executable permissions on one or more Codex hooks" >&2
-        fi
-    fi
-
-    echo "   ✅ Exported $codex_hook_count Codex hooks to ~/.codex/hooks/"
-else
-    echo "   ⚠️  .codex/hooks/ not found, skipping Codex hooks export"
-fi
-
-# Export Codex hooks engine config from .codex/hooks.json to ~/.codex/hooks.json
-echo ""
-echo "📦 Exporting Codex hooks config..."
-echo "================================="
-
-if [ -f ".codex/hooks.json" ]; then
-    mkdir -p "$HOME/.codex"
-    cp ".codex/hooks.json" "$HOME/.codex/hooks.json"
-    echo "   ✅ Exported Codex hooks config to ~/.codex/hooks.json"
-else
-    echo "   ⚠️  .codex/hooks.json not found, skipping Codex hooks config export"
-fi
-
-# Enable codex_hooks feature (required by Codex CLI hooks engine)
-if command -v codex >/dev/null 2>&1; then
-    if codex features enable codex_hooks >/dev/null 2>&1; then
-        echo "   ✅ Enabled Codex feature flag: codex_hooks"
-    else
-        echo "   ⚠️  Could not auto-enable codex_hooks feature. Run: codex features enable codex_hooks"
-    fi
-else
-    echo "   ⚠️  codex CLI not found; enable manually after install: codex features enable codex_hooks"
-fi
-
 # Export Ralph toolkit from root ralph/ to ~/ralph/
 echo ""
 echo "📦 Exporting Ralph toolkit..."
@@ -449,9 +502,7 @@ echo "6. Skills directory: $([ -d "$HOME/.claude/skills" ] && echo "✅ Present"
 echo "7. package.json: $([ -f "$HOME/.claude/package.json" ] && echo "✅ Present" || echo "⚠️  Missing (secondo may not work)")"
 echo "8. install_mcp_servers.sh: $([ -f "$HOME/.claude/scripts/install_mcp_servers.sh" ] && echo "✅ Present" || echo "⚠️  Missing")"
 echo "9. Codex skills directory: $([ -d "$HOME/.codex/skills" ] && echo "✅ Present ($(find "$HOME/.codex/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') skills)" || echo "⚠️  Missing")"
-echo "10. Codex hooks directory: $([ -d "$HOME/.codex/hooks" ] && echo "✅ Present ($(find "$HOME/.codex/hooks" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ') hooks)" || echo "⚠️  Missing")"
-echo "11. Codex hooks config: $([ -f "$HOME/.codex/hooks.json" ] && echo "✅ Present" || echo "⚠️  Missing")"
-echo "12. Ralph toolkit entrypoint: $([ -x "$HOME/ralph/ralph.sh" ] && echo "✅ Present" || echo "⚠️  Missing or not executable")"
+echo "10. Ralph toolkit entrypoint: $([ -x "$HOME/ralph/ralph.sh" ] && echo "✅ Present" || echo "⚠️  Missing or not executable")"
 
 echo ""
 echo "🎉 Local export completed successfully!"
@@ -498,6 +549,8 @@ echo "   ~/.claude/scripts/install_mcp_servers.sh --test-dir /tmp/mcp-test claud
 ## Safety Features
 
 - **🚨 CONVERSATION HISTORY PROTECTION**: Never touches ~/.claude/projects/ directory
+- **🚨 COMMANDS COLLISION PROTECTION**: Phase 0 LLM pre-flight compares each `.claude/commands/` file against its `~/.claude/commands/` counterpart; user-scope files with unique value are never overwritten
+- **🏗️ ARCHITECTURE INVARIANT**: `.claude/commands/` is project-exclusive (≤30 files target); `~/.claude/commands/` is canonical; count check warns if project directory has grown unexpectedly
 - Creates timestamped backup of only components being updated
 - Validates source directory before starting
 - Individual component copying (partial failures don't break everything)
