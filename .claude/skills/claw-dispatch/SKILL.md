@@ -5,20 +5,34 @@ description: Use when dispatching work through the Hermes gateway with /claw, es
 
 # Claw Dispatch
 
+## Default behavior — AO workers first
+
+**`/claw` defaults to spawning AO workers directly. Hermes gateway is the fallback, not the default.**
+
+| Input | Default action |
+|-------|---------------|
+| PR number (`#633`, `PR 633`, `633`) | `ao spawn --project <detected> --claim-pr N` |
+| General task description | `ao spawn "<task>"` |
+| `--bidi` prefix | Hermes interactive session (streaming) |
+| `--hermes` prefix | Force through Hermes gateway |
+| Slash command resolution (e.g. `/green`) | Resolve skill then AO spawn with it |
+
+**Project auto-detection for PR tasks:** resolve from current git remote (`git remote get-url origin`).
+
+**When to use Hermes instead of AO:** only when the user explicitly says `--hermes`, uses `--bidi` for interactive output, or the task is explicitly a Hermes-native operation (routing config, gateway status, etc.).
+
 ## Overview
 
-`/claw` routes work through the Hermes gateway. The command file should stay thin; this skill holds the operational behavior.
-
-If the `/claw` task will dispatch or supervise AO workers, also use:
+`/claw` routes work to AO workers by default. Use:
 - `~/.claude/commands/ao.md`
 - `~/.claude/skills/ao-operator-discipline/SKILL.md`
 
-User-specified AO parameters remain mandatory when `/claw` crosses into AO.
+User-specified AO parameters remain mandatory.
 
 ## Requirements
 
-- Hermes gateway must be healthy via `hermes gateway status`
-- `config.yaml` must exist and parse at `$HERMES_HOME/config.yaml`
+- For AO tasks: `ao session ls` must not show ≥20 active sessions (spawn cap)
+- For Hermes fallback: gateway must be healthy via `hermes gateway status`
 - Slash command resolution must search `.claude/commands` first, then `.claude/skills`
 
 ## Execution

@@ -76,9 +76,21 @@ PASTE_COMMAND_THRESHOLD=2
 # MULTI-PLAYER ENHANCEMENT: Parse command markdown files for nested commands
 function find_nested_commands() {
     local cmd="$1"
-    local cmd_file="$REPO_ROOT/.claude/commands/${cmd#/}.md"
+    local cmd_file=""
 
-    if [[ -f "$cmd_file" ]]; then
+    # Check possible command file locations in priority order:
+    # 1. Local repository commands directory
+    # 2. Reference commands directory (crucial for CI and fallback)
+    # 3. User's home directory commands directory (for local execution)
+    if [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/.claude/commands/${cmd#/}.md" ]]; then
+        cmd_file="$REPO_ROOT/.claude/commands/${cmd#/}.md"
+    elif [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/.claude_reference/commands/${cmd#/}.md" ]]; then
+        cmd_file="$REPO_ROOT/.claude_reference/commands/${cmd#/}.md"
+    elif [[ -f "$HOME/.claude/commands/${cmd#/}.md" ]]; then
+        cmd_file="$HOME/.claude/commands/${cmd#/}.md"
+    fi
+
+    if [[ -n "$cmd_file" && -f "$cmd_file" ]]; then
         # READABILITY IMPROVEMENT: Use simpler, more maintainable patterns
         # Look for "combines the functionality of" patterns
         combines_pattern=$(grep -E 'combines? the functionality of' "$cmd_file" 2>/dev/null | \
@@ -257,24 +269,35 @@ should_process_single_command() {
     local cmd_path=""
     local found_file=false
 
-    # Only check filesystem if we have a valid REPO_ROOT
+    # Check filesystem locations (local repository, reference, and user home)
+    local dirs=()
     if [[ -n "$REPO_ROOT" && -d "$REPO_ROOT/.claude/commands" ]]; then
+        dirs+=("$REPO_ROOT/.claude/commands")
+    fi
+    if [[ -n "$REPO_ROOT" && -d "$REPO_ROOT/.claude_reference/commands" ]]; then
+        dirs+=("$REPO_ROOT/.claude_reference/commands")
+    fi
+    if [[ -d "$HOME/.claude/commands" ]]; then
+        dirs+=("$HOME/.claude/commands")
+    fi
+
+    for base_dir in "${dirs[@]}"; do
         for ext in "${extensions[@]}"; do
-            cmd_path="$REPO_ROOT/.claude/commands/${cmd_file}.${ext}"
-            # Additional security: ensure resolved path stays within commands directory
+            cmd_path="${base_dir}/${cmd_file}.${ext}"
+            # Additional security: ensure resolved path stays within the base directory
             local resolved_path=""
             if dir="$(cd "$(dirname "$cmd_path")" 2>/dev/null && pwd)"; then
                 resolved_path="$dir/$(basename "$cmd_path")"
             fi
-            if [[ -n "$resolved_path" && "$resolved_path" == "$REPO_ROOT/.claude/commands/"* && -f "$cmd_path" ]]; then
+            if [[ -n "$resolved_path" && "$resolved_path" == "${base_dir}/"* && -f "$cmd_path" ]]; then
                 found_file=true
-                break
+                break 2
             fi
         done
+    done
 
-        if [[ "$found_file" == true ]]; then
-            return 0  # Should process - command file exists and is secure
-        fi
+    if [[ "$found_file" == true ]]; then
+        return 0  # Should process - command file exists and is secure
     fi
 
     # Process conceptual commands (slash followed by word pattern)

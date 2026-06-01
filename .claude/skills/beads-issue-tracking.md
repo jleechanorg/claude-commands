@@ -96,21 +96,27 @@ Avoid staging `.worktrees/pr-*/` directories — git treats them as embedded rep
 git rm --cached .worktrees/pr-5654
 ```
 
-## Merge Conflict Prevention (union driver)
+## Merge Conflict Prevention (union merge + dedupe policy)
 
-`.gitattributes` is configured with `merge=union` for `.beads/issues.jsonl`. This uses git's built-in union merge strategy which concatenates unique lines from both sides — no conflict markers ever, since each JSONL line is a self-contained record with a unique hash ID.
+`.gitattributes` is configured with `merge=beads` for `.beads/issues.jsonl` so merges use a dedicated merge driver. Configure the driver locally with `git config --local merge.beads.driver 'git merge-file --union %A %O %B'` (the fallback documented in `.gitattributes`). Because bead records are mutable by `id`, identical IDs from concurrent branches can still coexist after a union-style merge. This is why the repo enforces a deterministic dedupe step after merges:
 
-If you see merge conflicts in `.beads/issues.jsonl`, the union driver is not configured:
+- Pre-commit automatically runs `scripts/deduplicate_beads_jsonl.py` and rewrites `.beads/issues.jsonl` if duplicates exist.
+- Pre-push runs the same script in `--check` mode and blocks pushes if duplicate IDs remain.
+- Dedupe keeps the record with the newest `updated_at` timestamp, then higher status (`closed` > `done` > `blocked` > `in_progress` > `open`) if timestamps tie.
 
 ```bash
-# Check
-cat .gitattributes | grep beads
-# Should show: .beads/issues.jsonl merge=union
+# Reconcile conflicts locally
+scripts/deduplicate_beads_jsonl.py .beads/issues.jsonl
 
-# Fix if wrong
-# Edit .gitattributes: change merge=beads to merge=union
-# Remove the old custom driver:
-git config --unset merge.beads.driver
+# Check without rewriting
+scripts/deduplicate_beads_jsonl.py --check .beads/issues.jsonl
+```
+
+If you see merge conflicts in `.beads/issues.jsonl`, check merge attributes and rerun dedupe:
+
+```bash
+cat .gitattributes | grep beads
+# Expected: .beads/issues.jsonl merge=beads
 ```
 
 ## Working in Worktrees — Main Dir Drift

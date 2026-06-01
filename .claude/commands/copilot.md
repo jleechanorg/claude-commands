@@ -297,17 +297,49 @@ rm -f "$REPLY_FILE"
 
 After posting the consolidated reply, resolve the conversation threads for comments that were fixed or deferred. This keeps the PR clean and shows progress.
 
-**Procedure:**
-1. Read `/tmp/<repo>/<branch>/copilot/responses.json`
-2. For each comment where `response` is `FIXED`, `ALREADY_IMPLEMENTED`, or `DEFERRED`:
-   - Resolve the conversation thread using GitHub GraphQL API:
-   ```bash
-   # For inline review comments (pull_request_review_comment):
-   gh api graphql -f query='mutation($threadId:ID!){resolveReviewThread(input:{threadId:$threadId}){thread{id isResolved}}}' -f threadId="<thread_id>"
-   ```
-3. Log the count: `Resolved N conversation threads (X fixed, Y deferred)`
+Because GitHub's REST API does not support resolving PR review threads, you MUST use the GraphQL API to perform the resolution. However, `responses.json` tracks comments by their numeric database `comment_id`, whereas the `resolveReviewThread` mutation requires the global GraphQL node ID (`PullRequestReviewThread.id`).
 
-**Why this matters:** Resolved threads give reviewers a clear signal that feedback was addressed, reducing follow-up questions and improving PR throughput.
+**Procedure to map and resolve conversation threads:**
+
+1. Read the list of `comment_id` values from `/tmp/<repo>/<branch>/copilot/responses.json` where `response` is `FIXED` or `ALREADY_IMPLEMENTED`.
+2. For each numeric `comment_id`, retrieve the global GraphQL `PullRequestReviewThread.id` by querying `PullRequestReviewComment` with `fullDatabaseId` matching that numeric identifier.
+   Use the following mapping query:
+   ```bash
+   gh api graphql -f query='
+     query($owner: String!, $repo: String!, $pullNumber: Int!) {
+       repository(owner: $owner, name: $repo) {
+         pullRequest(number: $pullNumber) {
+           reviewComments(first: 100) {
+             nodes {
+               fullDatabaseId
+               pullRequestReviewThread {
+                 id
+                 isResolved
+               }
+             }
+           }
+         }
+       }
+     }
+   ' -f owner="{owner}" -f repo="{repo}" -F pullNumber={pull_number}
+   ```
+3. Match each `responses.json comment_id` to the `fullDatabaseId` in the query response, and extract its corresponding `PullRequestReviewThread.id`.
+4. Call the `resolveReviewThread` mutation with that resolved `thread.id`:
+   ```bash
+   gh api graphql -f query='
+     mutation($threadId: ID!) {
+       resolveReviewThread(input: { threadId: $threadId }) {
+         thread {
+           id
+           isResolved
+         }
+       }
+     }
+   ' -f threadId="<thread_id>"
+   ```
+5. Log the count: `Resolved N conversation threads (X fixed, Y deferred)`
+
+**Why this matters:** Correctly translating `PullRequestReviewComment.fullDatabaseId` to `PullRequestReviewThread.id` allows us to reliably target and resolve the exact conversation threads on GitHub without encountering non-existent REST endpoints or dead commands.
 
 ### Step 8: Verify Coverage (REV-g9fbp fix - severity-based)
 

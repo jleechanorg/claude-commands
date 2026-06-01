@@ -284,17 +284,18 @@ jobs:
 
     - name: Create venv and install dependencies
       run: |
-        python3 -m venv .venv
-        source .venv/bin/activate
+        PYTHON=$(command -v python3.12 || command -v python3.11 || command -v python3 || command -v python)
+        $PYTHON -m venv venv
+        source venv/bin/activate
         echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> "$GITHUB_ENV"
         echo "$VIRTUAL_ENV/bin" >> "$GITHUB_PATH"
-        python3 -m pip install --upgrade pip
-        python3 -m pip install -r mvp_site/requirements.txt
-        if [ -f mvp_site/requirements-test.txt ]; then python3 -m pip install -r mvp_site/requirements-test.txt; fi
+        venv/bin/python -m pip install --upgrade pip
+        venv/bin/python -m pip install -r mvp_site/requirements.txt
+        if [ -f mvp_site/requirements-test.txt ]; then venv/bin/python -m pip install -r mvp_site/requirements-test.txt; fi
 
     - name: Pre-warm fastembed model
       run: |
-        python3 -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5', cache_dir='$HOME/.cache/fastembed'); print('fastembed model ready')"
+        venv/bin/python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5', cache_dir='$HOME/.cache/fastembed'); print('fastembed model ready')"
 
     - name: Setup test environment
       run: |
@@ -382,9 +383,9 @@ jobs:
       id: smoke_tests
       run: |
         set -euo pipefail
-        python3 -m pip install --upgrade pip
-        python3 -m pip install -r mvp_site/requirements.txt
-        if [ -f mvp_site/requirements-test.txt ]; then python3 -m pip install -r mvp_site/requirements-test.txt; fi
+        venv/bin/python -m pip install --upgrade pip
+        venv/bin/python -m pip install -r mvp_site/requirements.txt
+        if [ -f mvp_site/requirements-test.txt ]; then venv/bin/python -m pip install -r mvp_site/requirements-test.txt; fi
         chmod +x scripts/mcp_smoke_test.sh
         if [ "${{ github.event_name }}" = "workflow_run" ]; then
           if [ "${{ steps.service_url.outputs.deployed }}" != "true" ]; then
@@ -553,14 +554,15 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
+        if: runner.os == 'Linux'
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
         with:
           python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
 
       - name: Install smoke test dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -r mvp_site/requirements.txt
+          python3 -m pip install --upgrade pip --break-system-packages 2>/dev/null || python3 -m pip install --upgrade pip || true
+          python3 -m pip install -r mvp_site/requirements.txt --break-system-packages 2>/dev/null || python3 -m pip install -r mvp_site/requirements.txt
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2

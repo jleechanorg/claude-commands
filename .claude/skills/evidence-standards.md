@@ -423,6 +423,25 @@ must include their own evidence artifacts, otherwise omit those claims.
 avoid before/after evidence, it must include a justification. Otherwise, for
 bug-fix claims, include a pre-fix reproduction and a post-fix run.
 
+**Bug repro phenotype match:** A bug reproduction bundle must prove the same
+observable phenotype as the user-reported bug, not merely a related internal
+failure. If the report is "old narrative repeated", the red evidence must show
+visible repeated narrative in the new/copied run and identify the earlier
+scene/doc IDs and matching text spans. Stale structured fields, stale location,
+wrong planning context, or fresh prose generated from stale context are related
+findings unless the user-visible reported symptom also appears. Label those as
+`RELATED` or `NON-REPRO`, never as the original bug reproduced.
+
+**Repro verdict table:** Every original-bug repro claim must include:
+
+| Original required symptom | New copied-run observation | Evidence file / doc ID | Verdict |
+|---------------------------|----------------------------|------------------------|---------|
+| | | | `REPRO` / `RELATED` / `NON-REPRO` |
+
+`REPRO` is allowed only when the copied/new run exhibits the same observable
+symptom. `RELATED` evidence can guide debugging but cannot satisfy a `/repro`
+request or support a "fixes original bug" claim.
+
 ### Evidence Bundle Structure Requirements
 
 **Claim → Artifact Map:** Every evidence.md MUST include a section mapping claims to files:
@@ -1500,6 +1519,32 @@ Full template: `~/.claude/skills/ui-video-evidence.md`
 - Only success state shown (no before/action)
 - No git SHA linkage
 - Static screenshot used instead of GIF for a flow claim
+
+**Pipeline provenance gate** — applies only when the cited video is claimed to be testing_ui pipeline output:
+
+| Check | Required answer |
+|-------|----------------|
+| Was the video produced as output of `python3 $PROJECT_ROOT/main.py testui`? | YES |
+| Does an evidence bundle exist at `/tmp/<repo>/<branch>/<test_name>/latest/`? | YES |
+| Does `metadata.json` contain `provenance.server.pid` and `provenance.git_head`? | YES |
+| Does `streaming_evidence.json` exist in the bundle? | YES |
+
+**Universal red flags** (apply to ALL UI evidence regardless of capture method):
+
+| Red flag | Why invalid |
+|----------|-------------|
+| Video URL is `github.com/*/releases/download/untagged-*` | Ad-hoc upload with no pipeline provenance |
+| Video is from a standalone HTML mock with hardcoded fake data | Fabrication — not a real server session |
+| No evidence bundle AND the PR claims testing_ui pipeline ran | Missing provenance proof |
+
+A video at `github.com/*/releases/download/untagged-*` with no evidence bundle = **INVALID** (same
+fabrication class as standalone HTML mock prohibition PR [#6161](https://github.com/$GITHUB_REPOSITORY/pull/6161)).
+Incident: PR [#6904](https://github.com/$GITHUB_REPOSITORY/pull/6904) had MP4/GIF/VTT
+in an untagged release with no `testing_ui` run or bundle.
+
+For non-testing_ui UI PRs (e.g., manual Kap/QuickTime recording of a live server flow),
+evidence is valid if it shows the real server (git SHA linkage), real state changes, and before/action/after
+— the pipeline provenance gate rows above do **not** apply (aligned with CLAUDE.md manual video exception).
 
 ---
 

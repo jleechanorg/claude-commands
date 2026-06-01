@@ -51,6 +51,14 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## Changelog
 
+### v1.5.0 (2026-06-01)
+- New commands: disk-audit.md, f.md, factory-spec.md, fs.md, gmail.md, history_resume.md, think-level-up-validation.md, wiki-assess.md, wiki-bfs.md, wiki-ingest.md, zfc-adjuster.md, team-claude.md
+- New agents: anti-gravity-pair-coder.md, anti-gravity-pair-verifier.md
+- New hooks: enforce-claudeaf-agentf.sh, enforce-gh-account-agentf.sh, enforce-gitidentity-agentf.sh
+- New skills: adjustment-proof/, disk-audit/, domain-lock-standards.md, factory-spec/
+- Updated: copilot.md, factory.md, wiki-evolve.md, wiki-search.md, zfclevel.md, ao.md, code-standards.md, 4layer.md, base.py, mem0_config.py, pre-commit-git-identity.sh, green-gate.yml, test.yml, daily-campaign-report.yml, and many more
+- Skills expansions: claw-dispatch, code-standards, dark-factory, evidence-standards, history-search, mem0, pr-green-definition, repro-twin-clone-evidence, wiki-assess, wiki-bfs, wiki-ingest, wiki-search, zero-framework-cognition
+
 ### v1.4.0 (2026-05-22)
 - New commands: archreview.md, cmux-backup.md, cmux-restore.md, code-standards.md, cs.md, end2end-testing.md, factory.md, goal_harness.md, h.md, thermo.md, thermo-nuclear-code-quality-review.md
 - New agents: opencode-pair-coder.md, opencode-pair-verifier.md, openw-pair-coder.md, openw-pair-verifier.md, thermo-nuclear-code-quality-review.md
@@ -69,19 +77,21 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## 🎯 What's Included
 
-**246 Commands** including powerful workflow orchestrators and cognitive tools:
+**257 Commands** including powerful workflow orchestrators and cognitive tools:
 - **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step automation
 - **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
 - **Infrastructure**: `/scaffold` - Repository setup and development environment
 - **Testing**: `/test`, `/tdd`, `/testuif`, `/end2end-testing` - Comprehensive testing workflows
 - **Code Quality**: `/code-standards`, `/cs`, `/thermo`, `/archreview` - Standards enforcement and deep review
 - **Session Management**: `/cmux-backup`, `/cmux-restore`, `/factory`, `/goal_harness`, `/h` - Workflow tooling
+- **Wiki Tools**: `/wiki-assess`, `/wiki-bfs`, `/wiki-ingest`, `/wiki-evolve`, `/wiki-search` - Knowledge base ingestion and assessment
+- **Utilities**: `/disk-audit`, `/gmail`, `/f`, `/fs`, `/factory-spec`, `/history_resume`, `/team-claude`, `/zfc-adjuster`, `/think-level-up-validation` - System, inbox, and misc workflow tools
 
 **60 Hooks** for Claude Code automation and workflow optimization
 
 **22 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**588 Skills** providing shared knowledge references and capabilities
+**595 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 

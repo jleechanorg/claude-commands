@@ -7,20 +7,27 @@ description: Search the local LLM wiki for matching pages, titles, and content s
 
 ## Usage
 ```
-/wiki-search <query>
+/wiki-search <query> [--wiki <wiki_dir>]
 ```
 
 Search the wiki for pages matching a query. Searches titles, content, and tags.
 
+`--wiki <wiki_dir>` overrides the default wiki location (`~/llm_wiki/wiki`).
+
 ## Execution
 
 ### Phase 1: Resolve wiki path
-Use `~/llm_wiki/wiki` as the default wiki.
+```bash
+# Parse args: query is first positional; --wiki <path> overrides default
+WIKI="$HOME/llm_wiki/wiki"
+QUERY="<first positional arg>"
+if args contain "--wiki <path>"; then
+  WIKI="<path>"
+fi
+```
 
 ### Phase 2: Grep search
 ```bash
-QUERY="<user query>"
-WIKI="$HOME/llm_wiki/wiki"
 
 # Search titles and content
 results=$(grep -rl "$QUERY" "$WIKI"/**/*.md 2>/dev/null | head -20)
