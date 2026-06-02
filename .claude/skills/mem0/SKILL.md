@@ -1,39 +1,39 @@
 ---
 name: mem0
-description: Search, write, and inspect the shared OpenClaw mem0 qdrant memory store.
+description: Search, write, and inspect the shared Hermes mem0 qdrant memory store.
 ---
 
-# mem0 — OpenClaw Shared Memory
+# mem0 — Hermes Shared Memory
 
-Query and write to the shared mem0 qdrant store (`openclaw_mem0`, 127.0.0.1:6333).
-All agents (Claude, Codex, OpenClaw) share this store under `user_id=$USER`.
+Query and write to the shared mem0 qdrant store (`hermes_mem0`, 127.0.0.1:6333).
+All agents (Claude, Codex, Hermes) share this store under `user_id=$USER`.
 
 ## Quick reference
 
 ```bash
 # Search
-python3 ~/.openclaw/scripts/mem0_shared_client.py search "<query>"
+python3 ~/.hermes/scripts/mem0_shared_client.py search "<query>"
 
 # Add a fact (with LLM extraction)
-python3 ~/.openclaw/scripts/mem0_shared_client.py add "<text>"
+python3 ~/.hermes/scripts/mem0_shared_client.py add "<text>"
 
 # Add verbatim (no LLM, guaranteed write)
-python3 ~/.openclaw/scripts/mem0_shared_client.py add "<text>" --no-infer
+python3 ~/.hermes/scripts/mem0_shared_client.py add "<text>" --no-infer
 
 # Stats
-python3 ~/.openclaw/scripts/mem0_shared_client.py stats
+python3 ~/.hermes/scripts/mem0_shared_client.py stats
 ```
 
-> Script path: `~/.openclaw/scripts/mem0_shared_client.py`
-> Requires `~/.openclaw/openclaw.json` — symlinked to `~/project_jleechanclaw/jleechanclaw/openclaw.json`
+> Script path: `~/.hermes/scripts/mem0_shared_client.py`
+> Requires `~/.hermes/hermes.json` with `plugins.entries.hermes-mem0.config.oss`
 > Also callable from any repo worktree: `python3 scripts/mem0_shared_client.py <cmd>`
 
 ## Store status
 
-- **Collection:** `openclaw_mem0`
-- **Host:** `127.0.0.1:6333` (qdrant docker, bind-mount at `~/.openclaw/qdrant_storage`)
-- **Embedder:** OpenAI `text-embedding-3-small` (1536 dims) — requires `$OPENAI_API_KEY`
-- **LLM for extraction:** `gpt-4o-mini`
+- **Collection:** `hermes_mem0`
+- **Host:** `127.0.0.1:6333` (qdrant docker, Hermes-managed storage)
+- **Embedder:** Read from `~/.hermes/hermes.json` (`hermes-mem0` plugin)
+- **LLM for extraction:** Read from `~/.hermes/hermes.json` (`hermes-mem0` plugin)
 
 ## Ingestion (backfill)
 
@@ -41,32 +41,30 @@ The extractor at `scripts/mem0_extract_facts.py` scans three sources:
 
 | Source | Path | Agent ID |
 |--------|------|----------|
-| OpenClaw | `~/.openclaw/agents/` | `claw-main` |
+| Hermes | `~/.hermes/` | `hermes` |
 | Claude Code | `~/.claude/projects/` | `claude` |
 | Codex | `~/.codex/sessions/` | `codex` |
 
 Run a backfill (last 1 year = 525960 minutes):
 ```bash
-cd ~/project_jleechanclaw/worktree_memory_followups3
+cd ~/.hermes
 python3 scripts/mem0_extract_facts.py --since 525960
 ```
 
 Run incremental (last 65 min, for cron):
 ```bash
+cd ~/.hermes
 python3 scripts/mem0_extract_facts.py --since 65
 ```
 
 Check state:
 ```bash
-cat ~/.openclaw/memory/extraction-state.json | python3 -m json.tool | head -20
+cat ~/.hermes/memory/extraction-state.json | python3 -m json.tool | head -20
 ```
 
-## Current ingestion status (as of 2026-03-14)
+## Current ingestion status
 
-- **Tracked sessions:** 442 / ~2795 total (openclaw: 207, claude: 211, codex: 24)
-- **Facts in store:** 166 points
-- **Last run:** 2026-03-14T09:47:17Z
-- **Status:** Partial — backfill of ~/.claude/projects (1502 dirs) and ~/.codex/sessions (1086) not complete
+Use `python3 ~/.hermes/scripts/mem0_shared_client.py stats` for live status.
 
 ## When to use this skill
 

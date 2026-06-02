@@ -28,7 +28,7 @@ jobs:
   styleguide-gate:
     name: Light/Fantasy Compliance Gate
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 40
     env:
       TESTING: "true"
@@ -47,7 +47,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Prepare runner tool cache for setup actions
+        run: |
+          chmod +x scripts/ci/setup-runner-tool-cache.sh
+          ./scripts/ci/setup-runner-tool-cache.sh
+
       - name: Set up Python 3.11
+        if: runner.os != 'macOS'
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: "3.11"
@@ -57,7 +63,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r mvp_site/requirements.txt
           pip install playwright pillow
-          python -m playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          python -m playwright install-deps chromium
+
+      - name: Install Playwright browsers
+        run: |
+          python -m playwright install chromium
 
       - name: Run light theme smoke
         run: |

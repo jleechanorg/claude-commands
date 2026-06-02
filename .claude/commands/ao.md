@@ -10,7 +10,8 @@ Use AO with parameter fidelity. User-specified AO constraints are mandatory.
 
 ## Read first
 
-- `~/.claude/skills/agent-orchestrator/SKILL.md` — default workflow (start / spawn / status / send / cleanup)
+- `~/.hermes/agent-orchestrator.yaml` — **ALWAYS read this first** to resolve `--agent` shorthands (e.g. `agy`=`antigravity`); `defaults.agent` is the default when none specified
+- `~/.claude/skills/agent-orchestrator/SKILL.md` — default workflow (start / spawn / status / send / cleanup) ⚠️ FILE MISSING — skill not yet created
 - `~/.claude/skills/ao-worker-dispatch/SKILL.md` — pre-dispatch checklist (venv, commit discipline, branch drift, CodeRabbit verify)
 - `~/.claude/skills/ao-operator-discipline/SKILL.md` — strict parameter fidelity + post-spawn verification
 - `~/.claude/skills/ao-spawn-gate/SKILL.md` — pre-spawn safety gate

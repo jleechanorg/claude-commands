@@ -21,6 +21,23 @@ Use this skill when:
 
 Do not use this skill for tiny read-only checks like a one-off `ao status`.
 
+## Agent Name Resolution — Read Config First
+
+**Before evaluating any `--agent` value**, read the active AO config:
+
+```bash
+head -20 ~/.hermes/agent-orchestrator.yaml   # check defaults.agent and installed plugins
+```
+
+`--agent` values are resolved against the config, not against AO package plugin directories. If `<X>` in `--agent <X>` is not a well-known CLI name (codex, claude, claude-code, gemini), look it up in the config before concluding it's unsupported.
+
+Known shorthands on this machine:
+- `agy` / `antigravity` → `~/.local/bin/agy` (Google Antigravity / Gemini CLI) — **this is the default agent**
+- `minimax` → claude CLI + MiniMax API redirect
+- `wafer` → claude CLI + Wafer API redirect
+
+**Never scan `packages/agent-*/` as a substitute for reading the config.**
+
 ## Required Rules
 
 1. Treat user-specified AO parameters as hard requirements:

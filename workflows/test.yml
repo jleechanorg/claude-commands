@@ -32,7 +32,7 @@ on:
 jobs:
   limit-pr-runs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     permissions:
       actions: write
       contents: read
@@ -49,7 +49,7 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
   detect-changes:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     outputs:
       test-dirs: ${{ steps.changes.outputs.test-dirs }}
       selected-groups: ${{ steps.changes.outputs.selected-groups }}
@@ -94,14 +94,14 @@ jobs:
   # Import validation (always runs)
   import-validation:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0  # Full history needed for merge-base diff
+          fetch-depth: 0
           persist-credentials: false
       - name: Run import validation
         run: |
@@ -117,6 +117,24 @@ jobs:
           name: import-validation-results
           path: scripts/validate_imports.log
 
+  beads-jsonl-validation:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+        with:
+          python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
+      - name: Validate Beads JSONL (python scripts/validate_beads_issues_jsonl.py --path .beads/issues.jsonl)
+        run: python scripts/validate_beads_issues_jsonl.py --path .beads/issues.jsonl
+
   # Merge-commit correctness gate (REV-q4cmy)
   # The testmon test jobs checkout PR head SHA for cache stability,
   # but that skips validation against the merge commit (base+head).
@@ -125,7 +143,7 @@ jobs:
   merge-commit-gate:
     name: Merge commit validation
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 10
     env:
       TESTING: 'true'
@@ -140,6 +158,12 @@ jobs:
       WORLDAI_DEV_MODE: 'true'
       ENABLE_SEMANTIC_ROUTING: 'false'
       PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/testing_utils:${{ github.workspace }}/mvp_site:${{ github.workspace }}/automation
+      # PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION='python' is set specifically here
+      # because the merge-commit validation job compiles a lightweight .ci-venv
+      # environment on-the-fly under Python 3.12 without pre-built cached wheels,
+      # which can trigger C-extension metaclass tp_new errors. Other pre-cached
+      # job shards manage protobuf/pydantic dependencies in pre-isolated environments.
+      PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: 'python'
     steps:
     - name: Checkout merge commit
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
@@ -150,17 +174,22 @@ jobs:
         submodules: recursive
         fetch-depth: 1
 
-    - name: Set up Python
-      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
-      with:
-        python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
-
     - name: Install dependencies
       run: |
+        if command -v python3.12 >/dev/null 2>&1; then
+          PYTHON_BIN=python3.12
+        elif command -v python3.11 >/dev/null 2>&1; then
+          PYTHON_BIN=python3.11
+        else
+          PYTHON_BIN=python3
+        fi
+        echo "Using Python for merge validation: $("$PYTHON_BIN" --version)"
+        "$PYTHON_BIN" -m venv .ci-venv
+        source .ci-venv/bin/activate
         python -m pip install --upgrade pip
-        pip install pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f mvp_site/requirements.txt ]; then pip install -r mvp_site/requirements.txt; fi
+        python -m pip install pytest
+        if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+        if [ -f mvp_site/requirements.txt ]; then python -m pip install -r mvp_site/requirements.txt; fi
 
     - name: Validate merge-commit imports
       run: |
@@ -171,7 +200,7 @@ jobs:
         # Verify all production modules can be imported on the merge commit.
         # This catches cases where PR head compiles fine in isolation but
         # conflicts with changes on main (e.g., removed imports, renamed modules).
-        python -c "
+        .ci-venv/bin/python -c "
         import importlib, sys, pathlib
         errors = []
         # Core production modules that must import cleanly
@@ -196,7 +225,7 @@ jobs:
       run: |
         # Run a focused subset of fast tests on the merge commit.
         # These are chosen to exercise cross-module integration points.
-        python -m pytest \
+        .ci-venv/bin/python -m pytest \
           mvp_site/tests/test_main_state_helper.py \
           mvp_site/tests/test_game_state.py \
           -x -q --timeout=60 --no-header \
@@ -210,7 +239,7 @@ jobs:
     name: Directory tests (${{ matrix.test-group }})
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
-    runs-on: ${{ (matrix.test-group == 'core-tests' || matrix.test-group == 'scripts') && 'ubuntu-latest' || fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     # Core group runs with coverage enabled and sequential execution, which can exceed 15m.
     timeout-minutes: 30
     strategy:
@@ -246,15 +275,19 @@ jobs:
         node-version: '20'
 
     - name: Prepare runner tool cache for setup actions
-      if: matrix.test-group != 'core-tests' && matrix.test-group != 'scripts'
       run: |
         chmod +x scripts/ci/setup-runner-tool-cache.sh
         ./scripts/ci/setup-runner-tool-cache.sh
 
     - name: Set up Python
+      id: setup_python
+      if: runner.os != 'macOS'
       uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
       with:
         python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
+        # Avoid setup-python's authenticated manifest path on self-hosted
+        # runners; a bad token there fails before local preflight can run.
+        token: ''
 
     - name: Resolve Python version for cache keys
       id: python-version
@@ -327,7 +360,7 @@ jobs:
           if [ -z "$PRECHECK_PYTHON" ]; then
             PRECHECK_CLASS="preflight_parse_failed"
           else
-            PRECHECK_CLASS=$("$PRECHECK_PYTHON" -c 'import json,os; path=os.environ.get("PRECHECK_JSON"); print((json.load(open(path, "r", encoding="utf-8")).get("infra_failure_class", "preflight_failed")) if path and os.path.exists(path) else "preflight_failed"') || PRECHECK_CLASS="preflight_parse_failed"
+            PRECHECK_CLASS=$("$PRECHECK_PYTHON" -c 'import json,os; path=os.environ.get("PRECHECK_JSON"); print(json.load(open(path, "r", encoding="utf-8")).get("infra_failure_class", "preflight_failed") if path and os.path.exists(path) else "preflight_failed")') || PRECHECK_CLASS="preflight_parse_failed"
           fi
         fi
         echo "preflight_json=$PRECHECK_JSON" >> "$GITHUB_OUTPUT"
@@ -415,6 +448,8 @@ jobs:
         fi
         echo "Using $PYTHON ($($PYTHON --version))"
 
+        INSTALL_REQUIREMENTS_TIMEOUT_SECONDS="${INSTALL_REQUIREMENTS_TIMEOUT_SECONDS:-900}"
+
         ATTEMPT=1
         MAX_ATTEMPTS=2
         INFRA_CLASS=""
@@ -444,7 +479,7 @@ jobs:
               # Upgrade pip and install resolver tools with timeout
               timeout 300 "$VENV_PY" -m pip install --upgrade pip setuptools wheel
               # Install core application requirements
-              timeout 600 "$VENV_PIP" install -r mvp_site/requirements.txt
+              timeout "$INSTALL_REQUIREMENTS_TIMEOUT_SECONDS" "$VENV_PIP" install -r mvp_site/requirements.txt
               # Install pytest tooling for batched worker execution
               timeout 300 "$VENV_PIP" install pytest pytest-xdist pytest-testmon pytest-cov
             fi
@@ -610,7 +645,7 @@ jobs:
         elif [[ "${{ matrix.test-group }}" == core-mvp-* ]] && [ "${{ github.event_name }}" = "pull_request" ]; then
           export TEST_SUITE_TIMEOUT=1080  # 18 min (vs default 15 min)
           export TEST_MAX_WORKERS=2
-          TEST_CMD="./run_tests.sh --test-dirs=\"${{ matrix.test-dirs }}\" --coverage --exclude-integration --exclude-mcp --testmon"
+          TEST_CMD="./run_tests.sh --test-dirs=\"${{ matrix.test-dirs }}\" --coverage --exclude-integration --exclude-mcp --include-end2end --testmon"
         elif [ "${{ github.event_name }}" = "push" ]; then
           export TEST_MAX_WORKERS=2
           TEST_CMD="./run_tests.sh --test-dirs=\"${{ matrix.test-dirs }}\" --parallel --exclude-integration --exclude-mcp --testmon"
@@ -659,9 +694,12 @@ jobs:
         DELTA=-1
         REASON="success"
 
-        if [ "${{ steps.preflight.outputs.preflight_exit_code }}" != "0" ]; then
+        if [ -n "${{ steps.preflight.outputs.preflight_exit_code }}" ] && [ "${{ steps.preflight.outputs.preflight_exit_code }}" != "0" ]; then
           DELTA=4
           REASON="preflight:${{ steps.preflight.outputs.infra_failure_class }}"
+        elif [ "${{ steps.setup_python.outcome }}" = "failure" ]; then
+          DELTA=3
+          REASON="setup-python"
         elif [ "${{ steps.runner-quarantine.outputs.quarantined }}" = "true" ]; then
           DELTA=0
           REASON="quarantine:skipped"

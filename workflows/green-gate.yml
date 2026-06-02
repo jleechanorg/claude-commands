@@ -7,7 +7,7 @@ name: Green Gate
 #
 # Gate 1-6 pre-check fails closed for non-7-green PRs.
 # Gate 8 (Smoke Gate) checks mcp-smoke-tests passing for the PR head SHA;
-# required when mvp_site/prompts/ or mvp_site/*.py changed, auto-passes otherwise.
+# required when mvp_site/prompts/ or mvp_site/**/*.py changed, auto-passes otherwise.
 on:
   pull_request:
     types: [opened, synchronize, edited, reopened]
@@ -60,14 +60,47 @@ jobs:
           PR_NUM=$PR_NUM
           ELIGIBLE=true
 
+          # Fetch PR details with retries
+          PR_JSON=""
+          for _attempt in 1 2 3 4 5; do
+            set +e
+            PR_JSON=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" 2>/dev/null)
+            _rc=$?
+            set -e
+            if [ "$_rc" -eq 0 ] && [ -n "$PR_JSON" ] && echo "$PR_JSON" | jq -e '.head.sha' >/dev/null 2>&1; then
+              break
+            fi
+            echo "::warning::Fetch PR details failed (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+            sleep 10
+          done
+
+          if [ -z "$PR_JSON" ]; then
+            echo "ERROR: could not fetch PR details after retries" >&2
+            exit 1
+          fi
+
           # Gate 1: CI green — only "success" passes
-          HEAD_SHA=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.head.sha' 2>/dev/null || echo "")
+          HEAD_SHA=$(echo "$PR_JSON" | jq -r '.head.sha // empty')
           if [ -z "$HEAD_SHA" ]; then
-            echo "ERROR: could not fetch PR head SHA" >&2
+            echo "ERROR: head.sha is empty in PR details" >&2
             ELIGIBLE=false
           else
-            CI_STATUS=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/status \
-              --jq '.state' 2>/dev/null || echo "error")
+            COMMIT_STATUS_JSON=""
+            for _attempt in 1 2 3 4 5; do
+              set +e
+              COMMIT_STATUS_JSON=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/status 2>/dev/null)
+              _rc=$?
+              set -e
+              if [ "$_rc" -eq 0 ] && [ -n "$COMMIT_STATUS_JSON" ] && echo "$COMMIT_STATUS_JSON" | jq -e '.state' >/dev/null 2>&1; then
+                break
+              fi
+              echo "::warning::Fetch commit status failed (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+              sleep 10
+            done
+            if [ -z "$COMMIT_STATUS_JSON" ]; then
+              COMMIT_STATUS_JSON='{}'
+            fi
+            CI_STATUS=$(echo "$COMMIT_STATUS_JSON" | jq -r '.state // "error"' 2>/dev/null || echo "error")
             if [ "$CI_STATUS" != "success" ]; then
               echo "GATE-1 FAIL: CI=$CI_STATUS"
               ELIGIBLE=false
@@ -80,9 +113,23 @@ jobs:
           fi
 
           # Gate 2: No merge conflicts
-          PR_META=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" \
-            --jq '{mergeable: .mergeable, merged: .merged}' 2>/dev/null)
-          MERGEABLE=$(echo "$PR_META" | jq -r '.mergeable // "unknown"')
+          MERGEABLE=$(echo "$PR_JSON" | jq -r '.mergeable // "unknown"')
+          if [ "$MERGEABLE" = "unknown" ]; then
+            for _attempt in 1 2 3 4 5 6; do
+              echo "GATE-2 WAIT: mergeability is still unknown (attempt ${_attempt}/6)"
+              sleep 10
+              set +e
+              PR_JSON=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" 2>/dev/null)
+              _rc=$?
+              set -e
+              if [ "$_rc" -eq 0 ] && [ -n "$PR_JSON" ]; then
+                MERGEABLE=$(echo "$PR_JSON" | jq -r '.mergeable // "unknown"')
+                if [ "$MERGEABLE" != "unknown" ]; then
+                  break
+                fi
+              fi
+            done
+          fi
           if [ "$MERGEABLE" != "true" ]; then
             echo "GATE-2 FAIL: mergeable=$MERGEABLE"
             ELIGIBLE=false
@@ -94,12 +141,22 @@ jobs:
           # fall back to the current-head status plus explicit "[approve]" bot
           # comment when there is no formal CodeRabbit review object yet, or
           # when the latest formal review was explicitly dismissed as stale.
-          set +e -o pipefail
-          LATEST_CR_PIPELINE=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/reviews \
-            --paginate 2>/dev/null \
-            | jq -rs --arg head "$HEAD_SHA" 'add | [.[] | select((.user.login == "coderabbitai[bot]" or .user.login == "coderabbitai") and .state != "COMMENTED" and .commit_id == $head)] | sort_by(.submitted_at) | if length > 0 then (last | .state // "none") else "none" end' 2>&1)
-          LATEST_CR_EXIT=$?
-          set -e +o pipefail
+          LATEST_CR_PIPELINE=""
+          LATEST_CR_EXIT=0
+          for _attempt in 1 2 3 4 5; do
+            set +e -o pipefail
+            LATEST_CR_PIPELINE=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/reviews \
+              --paginate 2>/dev/null \
+              | jq -rs --arg head "$HEAD_SHA" 'add | [.[] | select((.user.login == "coderabbitai[bot]" or .user.login == "coderabbitai") and .state != "COMMENTED" and .commit_id == $head)] | sort_by(.submitted_at) | if length > 0 then (last | .state // "none") else "none" end' 2>&1)
+            LATEST_CR_EXIT=$?
+            set -e +o pipefail
+            if [ "$LATEST_CR_EXIT" -eq 0 ] && [ -n "$LATEST_CR_PIPELINE" ]; then
+              break
+            fi
+            echo "::warning::Fetch CodeRabbit reviews failed (rc=${LATEST_CR_EXIT}), attempt ${_attempt}/5 — sleeping 10s"
+            sleep 10
+          done
+
           if [ $LATEST_CR_EXIT -ne 0 ]; then
             echo "GATE-3 ERROR: CR review lookup failed (jq exit=$LATEST_CR_EXIT)"
             ELIGIBLE=false
@@ -111,19 +168,37 @@ jobs:
               # DISMISSED and all other non-APPROVED formal reviews require a new APPROVED review
               CR_SIGNAL="FAIL($LATEST_CR)"
             else
-              HEAD_COMMITTED_AT=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA" \
-                --jq '.commit.committer.date // ""' 2>/dev/null || echo "")
-              CR_STATUS=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/status \
-                --jq '.statuses | map(select(.context == "CodeRabbit")) | sort_by(.updated_at) | last | .state // "none"' \
-                2>/dev/null || echo "none")
+              HEAD_COMMITTED_AT=""
+              for _attempt in 1 2 3 4 5; do
+                set +e
+                HEAD_COMMITTED_AT=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA" \
+                  --jq '.commit.committer.date // ""' 2>/dev/null)
+                _rc=$?
+                set -e
+                if [ "$_rc" -eq 0 ] && [ -n "$HEAD_COMMITTED_AT" ]; then
+                  break
+                fi
+                echo "::warning::Fetch commit date failed (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+                sleep 10
+              done
+              CR_STATUS=$(echo "$COMMIT_STATUS_JSON" | jq -r '(.statuses // []) | map(select(.context == "CodeRabbit")) | sort_by(.updated_at) | last | .state // "none"' 2>/dev/null || echo "none")
               CR_APPROVE_COMMENT="none"
               if [ -n "$HEAD_COMMITTED_AT" ]; then
-                set +e -o pipefail
-                CR_APPROVE_PIPELINE=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
-                  --paginate 2>/dev/null \
-                  | jq -rs --arg since "$HEAD_COMMITTED_AT" 'add | [.[] | select((.user.login == "coderabbitai[bot]" or .user.login == "coderabbitai") and .created_at >= $since and (.body | test("\\[approve\\]"; "i")))] | sort_by(.created_at) | last | if . then "APPROVED" else "none" end' 2>&1)
-                CR_APPROVE_EXIT=$?
-                set -e +o pipefail
+                CR_APPROVE_PIPELINE=""
+                CR_APPROVE_EXIT=0
+                for _attempt in 1 2 3 4 5; do
+                  set +e -o pipefail
+                  CR_APPROVE_PIPELINE=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
+                    --paginate 2>/dev/null \
+                    | jq -rs --arg since "$HEAD_COMMITTED_AT" 'add | [.[] | select((.user.login == "coderabbitai[bot]" or .user.login == "coderabbitai") and .created_at >= $since and (.body | test("\\[approve\\]"; "i")))] | sort_by(.created_at) | last | if . then "APPROVED" else "none" end' 2>&1)
+                  CR_APPROVE_EXIT=$?
+                  set -e +o pipefail
+                  if [ "$CR_APPROVE_EXIT" -eq 0 ] && [ -n "$CR_APPROVE_PIPELINE" ]; then
+                    break
+                  fi
+                  echo "::warning::Fetch CodeRabbit comments failed (rc=${CR_APPROVE_EXIT}), attempt ${_attempt}/5 — sleeping 10s"
+                  sleep 10
+                done
                 if [ "$CR_APPROVE_EXIT" -eq 0 ]; then
                   CR_APPROVE_COMMENT="${CR_APPROVE_PIPELINE%$'\n'}"
                 else
@@ -136,9 +211,7 @@ jobs:
                 CR_SIGNAL="APPROVED(status+comment)"
               elif [ "$CR_STATUS" = "success" ]; then
                 # CR completed (status=success) but posted no [approve] comment.
-                # This happens when request_changes_workflow=true — CR uses review
-                # objects instead of comments for approval. Treat status=success as
-                # implicit APPROVED.
+                # Treat status=success as implicit APPROVED.
                 CR_SIGNAL="APPROVED(status-only)"
               else
                 CR_SIGNAL="FAIL(status=$CR_STATUS comment=$CR_APPROVE_COMMENT)"
@@ -153,30 +226,33 @@ jobs:
           fi
 
           # Gate 4: Bugbot clean — use CI check-run conclusion, not inline comment count.
-          # Bugbot is registered after other jobs and often stays in_progress when this
-          # workflow first queries; poll so we do not false-fail 7-green eligibility.
-          # Inline comment count is unreliable: stale comments from old commits persist and
-          # produce false positives. CI check-run conclusion is the authoritative signal.
-          # Fail-closed: only pass on success/neutral/skipped. Treat timed_out/cancelled/none
-          # the same as failure — Bugbot must have actually completed cleanly to pass.
           BUGBOT_POLL=0
           BUGBOT_POLL_MAX=40
           while [ "$BUGBOT_POLL" -lt "$BUGBOT_POLL_MAX" ]; do
-            BUGBOT_RUNS=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/check-runs \
-              --paginate 2>/dev/null \
-              | jq -rs '[.[] | .check_runs[]?] | map(select(.name | test("Cursor Bugbot"; "i")))' \
-              2>/dev/null || echo "[]")
-            BUGBOT_COUNT=$(echo "$BUGBOT_RUNS" | jq 'length')
-            BUGBOT_CONCLUSION=$(echo "$BUGBOT_RUNS" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .conclusion // "none") end')
-            BUGBOT_STATUS=$(echo "$BUGBOT_RUNS" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .status // "none") end')
+            BUGBOT_RUNS=""
+            for _attempt in 1 2 3 4 5; do
+              set +e
+              BUGBOT_RUNS=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/check-runs --paginate 2>/dev/null)
+              _rc=$?
+              set -e
+              if [ "$_rc" -eq 0 ] && [ -n "$BUGBOT_RUNS" ] && echo "$BUGBOT_RUNS" | jq -e '.check_runs' >/dev/null 2>&1; then
+                break
+              fi
+              echo "::warning::Fetch Bugbot check-runs failed (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+              sleep 10
+            done
+            if [ -z "$BUGBOT_RUNS" ]; then
+              BUGBOT_RUNS='{"check_runs":[]}'
+            fi
+            BUGBOT_RUNS_FILTERED=$(echo "$BUGBOT_RUNS" | jq -s '[.[] | .check_runs[]?] | map(select(.name | test("Cursor Bugbot"; "i")))' 2>/dev/null || echo "[]")
+            BUGBOT_COUNT=$(echo "$BUGBOT_RUNS_FILTERED" | jq 'length')
+            BUGBOT_CONCLUSION=$(echo "$BUGBOT_RUNS_FILTERED" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .conclusion // "none") end')
+            BUGBOT_STATUS=$(echo "$BUGBOT_RUNS_FILTERED" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .status // "none") end')
             NEED_WAIT=false
             if [ "$BUGBOT_COUNT" -eq 0 ]; then
-              # Bugbot often registers after other jobs; a transient empty list must
-              # not skip Gate 4 before the check-run exists (Codex review).
               if [ "$BUGBOT_POLL" -lt 6 ]; then
                 NEED_WAIT=true
               else
-                # No Bugbot check-run after grace polls — treat as skipped
                 BUGBOT_CONCLUSION="skipped"; break
               fi
             elif [ "$BUGBOT_STATUS" = "in_progress" ] || [ "$BUGBOT_STATUS" = "queued" ] || [ "$BUGBOT_STATUS" = "pending" ]; then
@@ -190,12 +266,24 @@ jobs:
             sleep 20
           done
           if [ "$BUGBOT_CONCLUSION" != "skipped" ]; then
-          BUGBOT_RUNS=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/check-runs \
-            --paginate 2>/dev/null \
-            | jq -rs '[.[] | .check_runs[]?] | map(select(.name | test("Cursor Bugbot"; "i")))' \
-            2>/dev/null || echo "[]")
-          BUGBOT_CONCLUSION=$(echo "$BUGBOT_RUNS" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .conclusion // "none") end')
-          BUGBOT_STATUS=$(echo "$BUGBOT_RUNS" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .status // "none") end')
+            BUGBOT_RUNS=""
+            for _attempt in 1 2 3 4 5; do
+              set +e
+              BUGBOT_RUNS=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA"/check-runs --paginate 2>/dev/null)
+              _rc=$?
+              set -e
+              if [ "$_rc" -eq 0 ] && [ -n "$BUGBOT_RUNS" ] && echo "$BUGBOT_RUNS" | jq -e '.check_runs' >/dev/null 2>&1; then
+                break
+              fi
+              echo "::warning::Fetch Bugbot check-runs fallback failed (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+              sleep 10
+            done
+            if [ -z "$BUGBOT_RUNS" ]; then
+              BUGBOT_RUNS='{"check_runs":[]}'
+            fi
+            BUGBOT_RUNS_FILTERED=$(echo "$BUGBOT_RUNS" | jq -s '[.[] | .check_runs[]?] | map(select(.name | test("Cursor Bugbot"; "i")))' 2>/dev/null || echo "[]")
+            BUGBOT_CONCLUSION=$(echo "$BUGBOT_RUNS_FILTERED" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .conclusion // "none") end')
+            BUGBOT_STATUS=$(echo "$BUGBOT_RUNS_FILTERED" | jq -r 'if length == 0 then "none" else (sort_by(.completed_at // "") | last | .status // "none") end')
           fi
           if [ "$BUGBOT_CONCLUSION" = "success" ] || [ "$BUGBOT_CONCLUSION" = "neutral" ] || [ "$BUGBOT_CONCLUSION" = "skipped" ]; then
             echo "GATE-4 PASS: Bugbot=$BUGBOT_CONCLUSION (clean)"
@@ -205,118 +293,143 @@ jobs:
           fi
 
           # Gate 5: Inline comments resolved (GraphQL — REST lacks isResolved)
-          PR_AUTHOR=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.user.login // empty' 2>/dev/null || true)
+          PR_AUTHOR=$(echo "$PR_JSON" | jq -r '.user.login // empty')
           if [ -z "$PR_AUTHOR" ]; then
             echo "GATE-5 FAIL: PR author lookup failed"
             ELIGIBLE=false
           else
             REPO_NAME="${GITHUB_REPOSITORY#*/}"
-            # Fail closed on GraphQL errors; paginate to handle PRs with >100 review threads.
-            # MAX_PAGES=50 guards against stuck cursors (same endCursor with hasNextPage: true).
             UNRESOLVED=0; GQL_ERROR=0; CURSOR=""; MAX_PAGES=50; PAGE_COUNT=0
-          while true; do
-            PAGE_COUNT=$((PAGE_COUNT + 1))
-            if [ "$PAGE_COUNT" -gt "$MAX_PAGES" ]; then GQL_ERROR=1; break; fi
-            if [ -z "$CURSOR" ]; then
-              GQL_RESULT=$(gh api graphql -f query='
-                query($owner: String!, $name: String!, $number: Int!) {
-                  repository(owner: $owner, name: $name) {
-                    pullRequest(number: $number) {
-                      reviewThreads(first: 100) {
-                        pageInfo { hasNextPage endCursor }
-                        nodes {
-                          isResolved
-                          comments(first: 50) {
-                            pageInfo { hasNextPage }
-                            nodes { author { login } body }
+            while true; do
+              PAGE_COUNT=$((PAGE_COUNT + 1))
+              if [ "$PAGE_COUNT" -gt "$MAX_PAGES" ]; then GQL_ERROR=1; break; fi
+              GQL_RESULT=""
+              for _attempt in 1 2 3 4 5; do
+                set +e
+                if [ -z "$CURSOR" ]; then
+                  GQL_RESULT=$(gh api graphql -f query='
+                    query($owner: String!, $name: String!, $number: Int!) {
+                      repository(owner: $owner, name: $name) {
+                        pullRequest(number: $number) {
+                          reviewThreads(first: 100) {
+                            pageInfo { hasNextPage endCursor }
+                            nodes {
+                              isResolved
+                              comments(first: 50) {
+                               pageInfo { hasNextPage }
+                               nodes { author { login } body }
+                              }
+                            }
                           }
                         }
                       }
                     }
-                  }
-                }
-              ' -f owner='${{ github.repository_owner }}' -f name="$REPO_NAME" -F number="$PR_NUM" 2>/dev/null)
+                  ' -f owner='${{ github.repository_owner }}' -f name="$REPO_NAME" -F number="$PR_NUM" 2>/dev/null)
+                else
+                  GQL_RESULT=$(gh api graphql -f query='
+                    query($owner: String!, $name: String!, $number: Int!, $cursor: String!) {
+                      repository(owner: $owner, name: $name) {
+                        pullRequest(number: $number) {
+                          reviewThreads(first: 100, after: $cursor) {
+                            pageInfo { hasNextPage endCursor }
+                            nodes {
+                              isResolved
+                              comments(first: 50) {
+                               pageInfo { hasNextPage }
+                               nodes { author { login } body }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ' -f owner='${{ github.repository_owner }}' -f name="$REPO_NAME" -F number="$PR_NUM" -f cursor="$CURSOR" 2>/dev/null)
+                fi
+                _rc=$?
+                set -e
+                if [ "$_rc" -eq 0 ] && [ -n "$GQL_RESULT" ] && echo "$GQL_RESULT" | jq -e '(.errors | not) and (.data.repository.pullRequest != null)' >/dev/null 2>&1; then
+                  break
+                fi
+                echo "::warning::GraphQL query failed (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+                sleep 10
+              done
+              if [ -z "$GQL_RESULT" ] || ! echo "$GQL_RESULT" | jq -e '
+                (.errors | not) and
+                (.data.repository.pullRequest.reviewThreads.pageInfo != null)
+              ' >/dev/null; then
+                GQL_ERROR=1
+                break
+              fi
+              if [ "$(echo "$GQL_RESULT" | jq -r '[.data.repository.pullRequest.reviewThreads.nodes[].comments.pageInfo.hasNextPage | select(. == true)] | length')" -gt 0 ]; then
+                GQL_ERROR=1
+                break
+              fi
+              PAGE_UNRESOLVED=$(echo "$GQL_RESULT" | jq -r \
+                --arg author "$PR_AUTHOR" \
+                --arg ignore_cursor "cursor" \
+                --arg ignore_cursor_bot "cursor[bot]" \
+                --arg ignore_codereview "coderabbitai" \
+                --arg ignore_codereview_bot "coderabbitai[bot]" \
+                --arg ignore_github_actions "github-actions[bot]" \
+                --arg ignore_codex_connector "chatgpt-codex-connector" \
+                --arg ignore_codex_connector_bot "chatgpt-codex-connector[bot]" \
+                '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) |
+                   .comments.nodes[] |
+                   select(
+                     .author.login != null and
+                     (.author.login | ascii_downcase) != ($author | ascii_downcase) and
+                     (.author.login | ascii_downcase) != ($ignore_cursor | ascii_downcase) and
+                     (.author.login | ascii_downcase) != ($ignore_cursor_bot | ascii_downcase) and
+                     (.author.login | ascii_downcase) != ($ignore_codereview | ascii_downcase) and
+                     (.author.login | ascii_downcase) != ($ignore_codereview_bot | ascii_downcase) and
+                     (.author.login | ascii_downcase) != ($ignore_github_actions | ascii_downcase) and
+                     (.author.login | ascii_downcase) != ($ignore_codex_connector | ascii_downcase) and
+                     (.author.login | ascii_downcase) != ($ignore_codex_connector_bot | ascii_downcase) and
+                     (.body | test("^\\s*(nit:|nitpick)"; "i") | not)
+                   )] | length')
+              UNRESOLVED=$((UNRESOLVED + PAGE_UNRESOLVED))
+              HAS_NEXT=$(echo "$GQL_RESULT" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
+              if [ "$HAS_NEXT" != "true" ]; then
+                break
+              fi
+              NEXT_CURSOR=$(echo "$GQL_RESULT" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor')
+              if [ -z "$NEXT_CURSOR" ] || [ "$NEXT_CURSOR" = "null" ] || [ "$NEXT_CURSOR" = "$CURSOR" ]; then
+                GQL_ERROR=1
+                break
+              fi
+              CURSOR="$NEXT_CURSOR"
+            done
+            if [ "$GQL_ERROR" -eq 1 ]; then
+              echo "GATE-5 FAIL: GraphQL error or pagination truncated"
+              ELIGIBLE=false
+            elif [ "${UNRESOLVED:-0}" -gt 0 ]; then
+              echo "GATE-5 FAIL: $UNRESOLVED unresolved comments"
+              ELIGIBLE=false
             else
-              GQL_RESULT=$(gh api graphql -f query='
-                query($owner: String!, $name: String!, $number: Int!, $cursor: String!) {
-                  repository(owner: $owner, name: $name) {
-                    pullRequest(number: $number) {
-                      reviewThreads(first: 100, after: $cursor) {
-                        pageInfo { hasNextPage endCursor }
-                        nodes {
-                          isResolved
-                          comments(first: 50) {
-                            pageInfo { hasNextPage }
-                            nodes { author { login } body }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              ' -f owner='${{ github.repository_owner }}' -f name="$REPO_NAME" -F number="$PR_NUM" -f cursor="$CURSOR" 2>/dev/null)
+              echo "GATE-5 PASS: all comments resolved"
             fi
-            if [ -z "$GQL_RESULT" ] || ! echo "$GQL_RESULT" | jq -e '
-              (.errors | not) and
-              (.data.repository.pullRequest.reviewThreads.pageInfo != null)
-            ' >/dev/null; then
-              GQL_ERROR=1
-              break
-            fi
-            if [ "$(echo "$GQL_RESULT" | jq -r '[.data.repository.pullRequest.reviewThreads.nodes[].comments.pageInfo.hasNextPage | select(. == true)] | length')" -gt 0 ]; then
-              GQL_ERROR=1
-              break
-            fi
-            PAGE_UNRESOLVED=$(echo "$GQL_RESULT" | jq -r \
-              --arg author "$PR_AUTHOR" \
-              --arg ignore_cursor "cursor" \
-              --arg ignore_cursor_bot "cursor[bot]" \
-              --arg ignore_codereview "coderabbitai" \
-              --arg ignore_codereview_bot "coderabbitai[bot]" \
-              --arg ignore_github_actions "github-actions[bot]" \
-              --arg ignore_codex_connector "chatgpt-codex-connector" \
-              --arg ignore_codex_connector_bot "chatgpt-codex-connector[bot]" \
-              '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) |
-                 .comments.nodes[] |
-                 select(
-                   .author.login != null and
-                   (.author.login | ascii_downcase) != ($author | ascii_downcase) and
-                   (.author.login | ascii_downcase) != ($ignore_cursor | ascii_downcase) and
-                   (.author.login | ascii_downcase) != ($ignore_cursor_bot | ascii_downcase) and
-                   (.author.login | ascii_downcase) != ($ignore_codereview | ascii_downcase) and
-                   (.author.login | ascii_downcase) != ($ignore_codereview_bot | ascii_downcase) and
-                   (.author.login | ascii_downcase) != ($ignore_github_actions | ascii_downcase) and
-                   (.author.login | ascii_downcase) != ($ignore_codex_connector | ascii_downcase) and
-                   (.author.login | ascii_downcase) != ($ignore_codex_connector_bot | ascii_downcase) and
-                   (.body | test("^\\s*(nit:|nitpick)"; "i") | not)
-                 )] | length')
-            UNRESOLVED=$((UNRESOLVED + PAGE_UNRESOLVED))
-            HAS_NEXT=$(echo "$GQL_RESULT" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
-            if [ "$HAS_NEXT" != "true" ]; then
-              break
-            fi
-            NEXT_CURSOR=$(echo "$GQL_RESULT" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor')
-            if [ -z "$NEXT_CURSOR" ] || [ "$NEXT_CURSOR" = "null" ] || [ "$NEXT_CURSOR" = "$CURSOR" ]; then
-              GQL_ERROR=1
-              break
-            fi
-            CURSOR="$NEXT_CURSOR"
-          done
-          if [ "$GQL_ERROR" -eq 1 ]; then
-            echo "GATE-5 FAIL: GraphQL error or pagination truncated"
-            ELIGIBLE=false
-          elif [ "${UNRESOLVED:-0}" -gt 0 ]; then
-            echo "GATE-5 FAIL: $UNRESOLVED unresolved comments"
-            ELIGIBLE=false
-          else
-            echo "GATE-5 PASS: all comments resolved"
-          fi
+
           fi # end: PR_AUTHOR guard else-block
 
           # Gate 6: Evidence — check for evidence links in PR body or comments.
-          PR_BODY=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.body // ""' 2>/dev/null || echo "")
-          PR_COMMENTS_BODY=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
-            --paginate 2>/dev/null | jq -r '.[].body' 2>/dev/null || echo "")
+          PR_BODY=$(echo "$PR_JSON" | jq -r '.body // ""')
+          
+          PR_COMMENTS_BODY=""
+          for _attempt in 1 2 3 4 5; do
+            set +e -o pipefail
+            PR_COMMENTS_BODY=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments --paginate 2>/dev/null | jq -r '.[].body' 2>/dev/null)
+            _rc=$?
+            set -e +o pipefail
+            if [ "$_rc" -eq 0 ] && [ -n "$PR_COMMENTS_BODY" ]; then
+              break
+            fi
+            if [ "$_rc" -eq 0 ]; then
+              break
+            fi
+            echo "::warning::Fetch PR comments failed in evidence check (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+            sleep 10
+          done
+
           EVID_SCRATCH=$(mktemp)
           printf '%s\n%s\n' "$PR_BODY" "$PR_COMMENTS_BODY" > "$EVID_SCRATCH"
           HAS_EVIDENCE=false
@@ -324,8 +437,24 @@ jobs:
             HAS_EVIDENCE=true
           fi
           rm -f "$EVID_SCRATCH"
-          CHANGED_FILES=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/files \
-            --paginate 2>/dev/null | jq -r '.[].filename' 2>/dev/null || echo "")
+
+          # Fetch PR files list with retries and save to file
+          CHANGED_FILES=""
+          for _attempt in 1 2 3 4 5; do
+            set +e
+            CHANGED_FILES=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/files --paginate 2>/dev/null | jq -r '.[].filename' 2>/dev/null)
+            _rc=$?
+            set -e
+            if [ "$_rc" -eq 0 ] && [ -n "$CHANGED_FILES" ]; then
+              break
+            fi
+            echo "::warning::Fetch PR files list failed in evidence check (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+            sleep 10
+          done
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "$CHANGED_FILES" > "/tmp/pr_${PR_NUM}_changed_files.txt"
+          fi
+
           EVIDENCE_REQUIRED=false
           if echo "$CHANGED_FILES" | grep -qE '^(testing_(mcp|ui)/|mvp_site/|deploy\.sh$|\.github/workflows/evidence-gate\.yml$)'; then
             EVIDENCE_REQUIRED=true
@@ -349,7 +478,7 @@ jobs:
 
       # ----------------------------------------------------------------
       # Gate 8: Smoke Gate — mcp-smoke-tests must have passed for this SHA.
-      # Required when mvp_site/prompts/ or mvp_site/*.py files changed.
+      # Required when mvp_site/prompts/ or mvp_site/**/*.py files changed.
       # Auto-passes (SKIPPED) when no relevant files changed.
       # ----------------------------------------------------------------
       - name: Check smoke gate (gate 8)
@@ -365,116 +494,229 @@ jobs:
           EVENT_NAME="${GITHUB_EVENT_NAME:-pull_request}"
 
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            # On workflow_dispatch the env-provided HEAD_BRANCH may be stale.
             HEAD_BRANCH=""
           fi
           if [ -z "$HEAD_BRANCH" ]; then
             PR_HEAD_BRANCH=""
             if [ -n "$PR_NUM" ]; then
-              PR_HEAD_BRANCH=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" \
-                --jq '.head.ref' 2>/dev/null || echo "")
+              for _attempt in 1 2 3 4 5; do
+                set +e
+                PR_HEAD_BRANCH=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.head.ref' 2>/dev/null)
+                _rc=$?
+                set -e
+                if [ "$_rc" -eq 0 ] && [ -n "$PR_HEAD_BRANCH" ]; then
+                  break
+                fi
+                echo "::warning::Fetch PR head branch failed in smoke gate (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+                sleep 10
+              done
             fi
             if [ -n "$PR_HEAD_BRANCH" ]; then
               HEAD_BRANCH="$PR_HEAD_BRANCH"
             fi
           fi
 
-          if [ -z "$HEAD_BRANCH" ]; then
-            echo "WARN: could not resolve PR head branch; fallback smoke filtering to comments and exact-SHA run matches"
+          # Determine if smoke is required based on changed files
+          if [ -f "/tmp/pr_${PR_NUM}_changed_files.txt" ]; then
+            CHANGED=$(cat "/tmp/pr_${PR_NUM}_changed_files.txt")
+            GH_EXIT=0
+          else
+            CHANGED=""
+            for _attempt in 1 2 3 4 5; do
+              set +e
+              CHANGED=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/files \
+                --paginate 2>/dev/null | jq -r '.[].filename' 2>/dev/null)
+              GH_EXIT=$?
+              set -e
+              if [ "$GH_EXIT" -eq 0 ] && [ -n "$CHANGED" ]; then
+                break
+              fi
+              echo "::warning::Fetch PR files failed in smoke gate (rc=${GH_EXIT}), attempt ${_attempt}/5 — sleeping 10s"
+              sleep 10
+            done
           fi
 
-          # Determine if smoke is required based on changed files
-          set +e
-          CHANGED=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/files \
-            --paginate 2>/dev/null | jq -r '.[].filename' 2>/dev/null)
-          GH_EXIT=$?
-          set -e
-          if [ $GH_EXIT -ne 0 ] || [ -z "$CHANGED" ]; then
-            echo "GATE-8 FAIL: could not fetch PR files (exit=$GH_EXIT) — failing closed"
-            echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
           SMOKE_REQUIRED=false
-          if echo "$CHANGED" | grep -qE '^mvp_site/prompts/|^mvp_site/.+\.py$'; then
-            SMOKE_REQUIRED=true
+          if [ $GH_EXIT -ne 0 ] || [ -z "$CHANGED" ]; then
+            if [ -z "$HEAD_BRANCH" ]; then
+              # HEAD_BRANCH unresolved — cannot filter by branch but exact-SHA and
+              # /smoke comment paths still work. Skip smoke-required check and
+              # proceed to the poll loop (which uses SMOKE_RUNS_EXACT by SHA).
+              echo "GATE-8: could not fetch PR files or HEAD_BRANCH (exit=$GH_EXIT) — deferring to SHA/comment checks"
+              SMOKE_REQUIRED=true
+            else
+              echo "GATE-8 FAIL: could not fetch PR files (exit=$GH_EXIT) — failing closed"
+              echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+          else
+            SMOKE_REQUIRED=false
+            if echo "$CHANGED" | grep -qE '^mvp_site/prompts/|^mvp_site/.+\.py$'; then
+              SMOKE_REQUIRED=true
+            fi
           fi
+
 
           if [ "$SMOKE_REQUIRED" = "false" ]; then
-            echo "GATE-8 PASS: no mvp_site/prompts/ or mvp_site/*.py changes — smoke skipped"
+            echo "GATE-8 PASS: no mvp_site/prompts/ or mvp_site/**/*.py changes — smoke skipped"
             echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           echo "GATE-8: mvp_site changes detected — checking mcp-smoke-tests status"
 
-          # issue_comment-triggered /smoke workflows record the default-branch SHA
-          # in workflow run metadata even though they checkout and test the PR head.
-          # Prefer an exact run headSha match, but also accept the smoke report
-          # comment whose generated body records the tested PR commit SHA.
-          HEAD_PUSHED_AT=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA" \
-            --jq '.commit.committer.date // .commit.author.date' 2>/dev/null || echo "")
+          HEAD_PUSHED_AT=""
+          for _attempt in 1 2 3 4 5; do
+            set +e
+            HEAD_PUSHED_AT=$(gh api repos/${{ github.repository }}/commits/"$HEAD_SHA" \
+              --jq '.commit.committer.date // .commit.author.date' 2>/dev/null)
+            _rc=$?
+            set -e
+            if [ "$_rc" -eq 0 ] && [ -n "$HEAD_PUSHED_AT" ]; then
+              break
+            fi
+            echo "::warning::Fetch commit date failed in smoke gate (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+            sleep 10
+          done
+
           SMOKE_POLL=0
           SMOKE_POLL_MAX=45
           while [ "$SMOKE_POLL" -lt "$SMOKE_POLL_MAX" ]; do
-            ALL_SMOKE=$(gh run list --workflow mcp-smoke-tests.yml \
-              --repo ${{ github.repository }} \
-              -L 100 --json databaseId,headSha,status,conclusion,createdAt,event,headBranch,url \
-              2>/dev/null || echo "[]")
-            SMOKE_RUNS=$(echo "$ALL_SMOKE" | jq --arg sha "$HEAD_SHA" --arg since "$HEAD_PUSHED_AT" --arg branch "$HEAD_BRANCH" '
-              . as $all |
-              if ($all | map(select(.headSha == $sha)) | length) > 0
-              then $all | map(select(.headSha == $sha))
-              else if $since != "" then $all | map(select((.createdAt // "") >= $since and .headBranch == $branch)) else [] end
-              end
-            ' 2>/dev/null || echo "[]")
-            EXACT_SHA_MATCH=$(echo "$ALL_SMOKE" | jq --arg sha "$HEAD_SHA" 'any(.[]?; .headSha == $sha)' 2>/dev/null || echo "false")
-            SMOKE_COMMENT_BODY=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
-              --paginate 2>/dev/null \
-              | jq -sr --arg sha "$HEAD_SHA" '
-                add
-                | map(select(
-                    (.body | test("MCP Smoke Tests"; "i"))
-                    and (.body | test("\\*\\*Commit SHA\\*\\*:[[:space:]]*`" + $sha + "`"; "i"))
-                  ))
-                | (map(select(.body | test("MCP Smoke Tests Passed"; "i"))) | first.body) // (sort_by(.updated_at // .created_at // "") | last.body // "")
-              ' 2>/dev/null || echo "")
+            ALL_SMOKE=""
+            for _attempt in 1 2 3 4 5; do
+              set +e
+              ALL_SMOKE=$(gh run list --workflow mcp-smoke-tests.yml \
+                --repo ${{ github.repository }} \
+                -L 100 --json databaseId,headSha,status,conclusion,createdAt,updatedAt,event,headBranch,url \
+                2>/dev/null)
+              _rc=$?
+              set -e
+              if [ "$_rc" -eq 0 ] && [ -n "$ALL_SMOKE" ] && echo "$ALL_SMOKE" | jq -e '. == [] or (. | type == "array")' >/dev/null 2>&1; then
+                break
+              fi
+              echo "::warning::Fetch smoke tests runs failed (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+              sleep 10
+            done
+            if [ -z "$ALL_SMOKE" ]; then
+              ALL_SMOKE="[]"
+            fi
 
-            if echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed"; then
+            SMOKE_RUNS_EXACT=$(echo "$ALL_SMOKE" | jq --arg sha "$HEAD_SHA" '
+              map(select(.headSha == $sha)) | sort_by(.databaseId)
+            ' 2>/dev/null || echo "[]")
+            SMOKE_RUNS_TIME=$(echo "$ALL_SMOKE" | jq --arg since "$HEAD_PUSHED_AT" --arg branch "$HEAD_BRANCH" '
+              if $since != "" and $branch != "" then map(select((.createdAt // "") >= $since and .headBranch == $branch)) | sort_by(.databaseId) else [] end
+            ' 2>/dev/null || echo "[]")
+
+            SMOKE_COMMENT_JSON=""
+            for _attempt in 1 2 3 4 5; do
+              set +e
+              SMOKE_COMMENT_JSON=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
+                --paginate 2>/dev/null \
+                | jq -sr --arg sha "$HEAD_SHA" '
+                  add
+                  | map(select(
+                      (.body | test("MCP Smoke Tests"; "i"))
+                      and (.body | test("\\*\\*Commit SHA\\*\\*:[[:space:]]*`" + $sha + "`"; "i"))
+                    ))
+                  | sort_by(.updated_at // .created_at // "")
+                  | last
+                  | {body: (.body // ""), updated_at: (.updated_at // .created_at // "")}
+                ' 2>/dev/null)
+              _rc=$?
+              set -e
+              if [ "$_rc" -eq 0 ] && [ -n "$SMOKE_COMMENT_JSON" ] && echo "$SMOKE_COMMENT_JSON" | jq -e '.body != null' >/dev/null 2>&1; then
+                break
+              fi
+              echo "::warning::Fetch smoke comments failed (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+              sleep 10
+            done
+            if [ -z "$SMOKE_COMMENT_JSON" ]; then
+              SMOKE_COMMENT_JSON='{"body":"","updated_at":""}'
+            fi
+
+            SMOKE_COMMENT_BODY=$(echo "$SMOKE_COMMENT_JSON" | jq -r '.body')
+            SMOKE_COMMENT_UPDATED_AT=$(echo "$SMOKE_COMMENT_JSON" | jq -r '.updated_at')
+
+            LATEST_EXACT_CONCLUSION=$(echo "$SMOKE_RUNS_EXACT" | jq -r 'last | .conclusion // "none"')
+            LATEST_EXACT_STATUS=$(echo "$SMOKE_RUNS_EXACT" | jq -r 'last | .status // "none"')
+            LATEST_EXACT_ID=$(echo "$SMOKE_RUNS_EXACT" | jq -r 'last | .databaseId // "none"')
+            LATEST_EXACT_COMPLETED_AT=$(echo "$SMOKE_RUNS_EXACT" | jq -r 'last | .updatedAt // .createdAt // ""')
+
+            if [ "$LATEST_EXACT_ID" != "none" ]; then
+              # Exact-SHA run found — evaluate it FIRST (most authoritative signal).
+              if [ "$LATEST_EXACT_STATUS" = "in_progress" ] || [ "$LATEST_EXACT_STATUS" = "queued" ] || [ "$LATEST_EXACT_STATUS" = "pending" ] || [ "$LATEST_EXACT_STATUS" = "waiting" ] || [ "$LATEST_EXACT_STATUS" = "requested" ]; then
+                SMOKE_POLL=$((SMOKE_POLL + 1))
+                echo "GATE-8 WAIT: exact mcp-smoke-tests still running (run $LATEST_EXACT_ID; poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
+                sleep 20
+              elif [ "$LATEST_EXACT_CONCLUSION" = "success" ]; then
+                echo "GATE-8 PASS: latest exact mcp-smoke-tests succeeded (run $LATEST_EXACT_ID)"
+                echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
+                exit 0
+              else
+                # Exact-SHA run failed — only accept a /smoke pass comment as retry
+                # override if the comment was posted AFTER the exact run completed,
+                # proving it reflects a successful re-run, not a stale earlier pass.
+                if echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed" && \
+                   [ -n "$SMOKE_COMMENT_UPDATED_AT" ] && [ -n "$LATEST_EXACT_COMPLETED_AT" ] && \
+                   [[ "$SMOKE_COMMENT_UPDATED_AT" > "$LATEST_EXACT_COMPLETED_AT" ]]; then
+                  echo "GATE-8 PASS: /smoke comment (${SMOKE_COMMENT_UPDATED_AT}) posted after failed exact run completed (${LATEST_EXACT_COMPLETED_AT}, run $LATEST_EXACT_ID) — override accepted"
+                  echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+                # Exact-SHA failed but fallback retries may still be active
+                # (e.g. /smoke comment rerun with non-PR headSha). Wait for them
+                # before concluding failure — a retry can still salvage the gate.
+                if echo "$SMOKE_RUNS_TIME" | jq -e 'any(.[]; .status == "in_progress" or .status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")' > /dev/null; then
+                  SMOKE_RUN_ID=$(echo "$SMOKE_RUNS_TIME" | jq -r '[.[] | select(.status == "in_progress" or .status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")] | last | .databaseId')
+                  SMOKE_POLL=$((SMOKE_POLL + 1))
+                  echo "GATE-8 WAIT: exact run failed (run $LATEST_EXACT_ID) but fallback retry still active (run $SMOKE_RUN_ID; poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
+                  sleep 20
+                elif echo "$SMOKE_RUNS_TIME" | jq -e 'any(.[]; .conclusion == "success")' > /dev/null; then
+                  # Fallback succeeded — only wait if it completed after the failed
+                  # exact run. A stale fallback from before exact failure can't
+                  # salvage the gate.
+                  FALLBACK_SUCCESS_COMPLETED=$(echo "$SMOKE_RUNS_TIME" | jq -r '[.[] | select(.conclusion == "success")] | last | .updatedAt // .createdAt // ""')
+                  if [ -n "$FALLBACK_SUCCESS_COMPLETED" ] && [ -n "$LATEST_EXACT_COMPLETED_AT" ] && [[ "$FALLBACK_SUCCESS_COMPLETED" < "$LATEST_EXACT_COMPLETED_AT" ]]; then
+                    echo "GATE-8 FAIL: exact run failed (run $LATEST_EXACT_ID, conclusion=$LATEST_EXACT_CONCLUSION) and fallback success is stale (completed before exact run)"
+                    echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
+                    exit 1
+                  fi
+                  SMOKE_RUN_ID=$(echo "$SMOKE_RUNS_TIME" | jq -r '[.[] | select(.conclusion == "success")] | last | .databaseId')
+                  SMOKE_POLL=$((SMOKE_POLL + 1))
+                  echo "GATE-8 WAIT: exact run failed (run $LATEST_EXACT_ID) but fallback succeeded (run $SMOKE_RUN_ID) — waiting for pass comment (poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
+                  sleep 20
+                else
+                  echo "GATE-8 FAIL: latest exact mcp-smoke-tests failed (run $LATEST_EXACT_ID, conclusion=$LATEST_EXACT_CONCLUSION)"
+                  echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
+                  exit 1
+                fi
+              fi
+            elif echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed"; then
+              # /smoke pass comment (no exact run) — authoritative success signal.
               echo "GATE-8 PASS: /smoke comment reports success for SHA ${HEAD_SHA:0:7}"
               echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
               exit 0
-            elif [ "$EXACT_SHA_MATCH" = "true" ] && echo "$SMOKE_RUNS" | jq -e 'any(.[]; .conclusion == "success")' > /dev/null; then
-              SMOKE_RUN_ID=$(echo "$SMOKE_RUNS" | jq -r '[.[] | select(.conclusion == "success")] | sort_by(.databaseId) | last | .databaseId')
-              echo "GATE-8 PASS: mcp-smoke-tests succeeded (run $SMOKE_RUN_ID)"
-              echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
-              exit 0
-            elif echo "$SMOKE_RUNS" | jq -e 'any(.[]; .status == "in_progress" or .status == "queued")' > /dev/null; then
-              # Detect active retries BEFORE checking the Failed comment so an
-              # older failure comment cannot short-circuit a fresh smoke run.
-              SMOKE_RUN_ID=$(echo "$SMOKE_RUNS" | jq -r '[.[] | select(.status == "in_progress" or .status == "queued")] | sort_by(.databaseId) | last | .databaseId')
+            elif echo "$SMOKE_RUNS_TIME" | jq -e 'any(.[]; .status == "in_progress" or .status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")' > /dev/null; then
+              # Fallback branch/time runs still running — wait for them.
+              SMOKE_RUN_ID=$(echo "$SMOKE_RUNS_TIME" | jq -r '[.[] | select(.status == "in_progress" or .status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")] | last | .databaseId')
               SMOKE_POLL=$((SMOKE_POLL + 1))
-              echo "GATE-8 WAIT: mcp-smoke-tests still running (run $SMOKE_RUN_ID; poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
+              echo "GATE-8 WAIT: fallback mcp-smoke-tests still running (run $SMOKE_RUN_ID; poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
+              sleep 20
+            elif echo "$SMOKE_RUNS_TIME" | jq -e 'any(.[]; .conclusion == "success")' > /dev/null; then
+              # Fallback success but no pass comment yet — wait for comment.
+              SMOKE_RUN_ID=$(echo "$SMOKE_RUNS_TIME" | jq -r '[.[] | select(.conclusion == "success")] | last | .databaseId')
+              SMOKE_POLL=$((SMOKE_POLL + 1))
+              echo "GATE-8 WAIT: fallback mcp-smoke-tests succeeded (run $SMOKE_RUN_ID) but no pass comment yet (poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
               sleep 20
             elif echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Failed"; then
+              # /smoke fail comment — only after checking active retries above.
               echo "GATE-8 FAIL: /smoke comment reports failure for SHA ${HEAD_SHA:0:7}"
               echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
               exit 1
-            elif [ "$(echo "$SMOKE_RUNS" | jq 'length')" -eq 0 ]; then
+            else
               SMOKE_POLL=$((SMOKE_POLL + 1))
               echo "GATE-8 WAIT: no mcp-smoke-tests run or /smoke result found for SHA ${HEAD_SHA:0:7} yet (poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
-              sleep 20
-            elif [ "$EXACT_SHA_MATCH" = "true" ]; then
-              SMOKE_RUN_ID=$(echo "$SMOKE_RUNS" | jq -r 'sort_by(.databaseId) | last | .databaseId')
-              SMOKE_CONCLUSION=$(echo "$SMOKE_RUNS" | jq -r 'sort_by(.databaseId) | last | .conclusion // "none"')
-              echo "GATE-8 FAIL: mcp-smoke-tests conclusion=$SMOKE_CONCLUSION (run $SMOKE_RUN_ID)"
-              echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
-              exit 1
-            else
-              # Branch/createdAt fallback match only — conclusions are not
-              # authoritative for the current HEAD SHA, keep polling for an
-              # exact-SHA run or a smoke comment tied to HEAD_SHA.
-              SMOKE_POLL=$((SMOKE_POLL + 1))
-              echo "GATE-8 WAIT: no exact-SHA smoke match for ${HEAD_SHA:0:7} yet (fallback match present; poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
               sleep 20
             fi
           done
@@ -484,13 +726,63 @@ jobs:
           exit 1
 
       # ----------------------------------------------------------------
+      # Gate 7 scope: Skeptic is required only for production-impacting
+      # changes. Non-prod changes should not wait on async LLM review.
+      # ----------------------------------------------------------------
+      - name: Check skeptic requirement
+        id: check_skeptic_requirement
+        if: steps.check_6green.outputs.eligible == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+        run: |
+          if [ -f "/tmp/pr_${PR_NUM}_changed_files.txt" ]; then
+            CHANGED=$(cat "/tmp/pr_${PR_NUM}_changed_files.txt")
+            GH_EXIT=0
+          else
+            CHANGED=""
+            for _attempt in 1 2 3 4 5; do
+              set +e
+              CHANGED=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM"/files \
+                --paginate 2>/dev/null | jq -r '.[].filename' 2>/dev/null)
+              GH_EXIT=$?
+              set -e
+              if [ "$GH_EXIT" -eq 0 ] && [ -n "$CHANGED" ]; then
+                break
+              fi
+              echo "::warning::Fetch PR files failed in skeptic check (rc=${GH_EXIT}), attempt ${_attempt}/5 — sleeping 10s"
+              sleep 10
+            done
+          fi
+
+          if [ $GH_EXIT -ne 0 ] || [ -z "$CHANGED" ]; then
+            echo "GATE-7 SCOPE: changed-file lookup failed (exit=$GH_EXIT) — requiring skeptic"
+            echo "required=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if echo "$CHANGED" | grep -qE '^(mvp_site/|deploy\.sh$)'; then
+            echo "GATE-7 SCOPE: production-impacting files changed — skeptic required"
+            echo "required=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "GATE-7 SCOPE: non-prod files only — skeptic skipped"
+            echo "required=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip skeptic for non-prod changes
+        if: steps.check_6green.outputs.eligible == 'true' && steps.check_skeptic_requirement.outputs.required == 'false'
+        run: |
+          echo "GATE-7 SKIPPED: non-production change set"
+          echo "=== GREEN GATE: PASS ==="
+
+      # ----------------------------------------------------------------
       # Step 2: Post trigger comment and capture GitHub server timestamp.
       # Lifecycle-manager picks up this comment and dispatches AO worker
       # to run ao skeptic verify (Codex OAuth, no GHA API keys needed).
       # ----------------------------------------------------------------
       - name: Post gate trigger comment
         id: post_trigger
-        if: steps.check_6green.outputs.eligible == 'true'
+        if: steps.check_6green.outputs.eligible == 'true' && steps.check_skeptic_requirement.outputs.required == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUM: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
@@ -534,7 +826,7 @@ jobs:
       # If VERDICT: PASS → pass. If VERDICT: FAIL/WAIT → fail closed.
       # ----------------------------------------------------------------
       - name: Poll for VERDICT
-        if: steps.check_6green.outputs.eligible == 'true'
+        if: steps.check_6green.outputs.eligible == 'true' && steps.check_skeptic_requirement.outputs.required == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUM: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
@@ -545,7 +837,22 @@ jobs:
 
           echo "Checking for existing VERDICT on PR #$PR_NUM (commit ${HEAD_SHA:0:7})"
 
-          PR_STATE=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.state' 2>/dev/null || echo "error")
+          PR_STATE=""
+          for _attempt in 1 2 3 4 5; do
+            set +e
+            PR_STATE=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.state' 2>/dev/null)
+            _rc=$?
+            set -e
+            if [ "$_rc" -eq 0 ] && [ -n "$PR_STATE" ]; then
+              break
+            fi
+            echo "::warning::Fetch PR state failed in verdict poll (rc=${_rc}), attempt ${_attempt}/5 — sleeping 10s"
+            sleep 10
+          done
+          if [ -z "$PR_STATE" ]; then
+            PR_STATE="error"
+          fi
+
           if [ "$PR_STATE" = "closed" ]; then
             echo "PR is closed — skipping (will not block merge)"
             echo "verdict=SKIPPED" >> "$GITHUB_OUTPUT"
@@ -556,24 +863,40 @@ jobs:
           VERDICT_POLL=0
           VERDICT_POLL_MAX=30
           while [ "$VERDICT_POLL" -lt "$VERDICT_POLL_MAX" ]; do
-            set +e
-            VERDICT_JSON=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
-              --paginate 2>/dev/null \
-              | jq -s --arg author "$SKEPTIC_BOT_AUTHOR" --arg ts "$HEAD_SHA" \
-              'add
-              | map(select(
-                  ((.user.login == $author) or (.user.login == "github-actions[bot]"))
-                  and (.body | test("VERDICT:"; "i"))
-                  and (.body | test("skeptic-(gate|cron)-trigger-" + $ts; "i"))
-                ))
-              | last // empty' 2>/dev/null)
-            LOOKUP_RC=$?
-            set -e
+            VERDICT_JSON=""
+            LOOKUP_RC=0
+            for _attempt in 1 2 3 4 5; do
+              set +e -o pipefail
+              VERDICT_JSON=$(gh api repos/${{ github.repository }}/issues/"$PR_NUM"/comments \
+                --paginate 2>/dev/null \
+                | jq -s --arg author "$SKEPTIC_BOT_AUTHOR" --arg ts "$HEAD_SHA" \
+                '(add // [])
+                | map(select(
+                    ((.user.login == $author) or (.user.login == "github-actions[bot]"))
+                    and (.body | test("VERDICT:"; "i"))
+                    and (.body | test("skeptic-(gate|cron)-trigger-" + $ts; "i"))
+                  ))
+                | last // empty' 2>/dev/null)
+              LOOKUP_RC=$?
+              set -e +o pipefail
+              if [ "$LOOKUP_RC" -eq 0 ] && [ -n "$VERDICT_JSON" ]; then
+                break
+              fi
+              if [ "$LOOKUP_RC" -eq 0 ]; then
+                break
+              fi
+              echo "::warning::Verdict comments query failed (rc=${LOOKUP_RC}), attempt ${_attempt}/5 — sleeping 10s"
+              sleep 10
+            done
 
             if [ "$LOOKUP_RC" -ne 0 ]; then
-              echo "ERROR: verdict lookup failed (gh api or jq error rc=$LOOKUP_RC) — failing closed"
-              echo "verdict=FAIL" >> "$GITHUB_OUTPUT"
-              exit 1
+              echo "::warning::Verdict lookup API failed (rc=${LOOKUP_RC}) — continuing poll loop"
+              VERDICT_POLL=$((VERDICT_POLL + 1))
+              if [ "$VERDICT_POLL" -ge "$VERDICT_POLL_MAX" ]; then
+                break
+              fi
+              sleep 60
+              continue
             fi
 
             if echo "$VERDICT_JSON" | jq -e 'if . == null or (.body == null) then empty else .body end | length > 0' > /dev/null 2>&1; then

@@ -7,12 +7,14 @@ description: Run breadth-first research on a topic and optionally ingest results
 
 ## Usage
 ```
-/wiki-bfs <topic> [--layers N] [--ingest]
+/wiki-bfs <topic> [--layers N] [--ingest] [--wiki <wiki_dir>]
 ```
 
 Performs N-layer breadth-first search on a topic, discovers entities and concepts, creates wiki pages, and optionally triggers wiki-assess.
 
 **Default: 2 layers. Use `--layers N` for N layers.**
+
+`--wiki <wiki_dir>` overrides the default wiki location (`~/llm_wiki/wiki`). The `raw/` directory is derived as `$(dirname <wiki_dir>)/raw`.
 
 ## Execution
 
@@ -20,10 +22,22 @@ Performs N-layer breadth-first search on a topic, discovers entities and concept
 - `TOPIC` = first positional arg (required)
 - `N` = from `--layers N` flag, default 2
 - `INGEST` = present if `--ingest` flag set
+- `WIKI` = from `--wiki <path>` flag, default `$HOME/llm_wiki/wiki`
 
 ### Phase 2: Resolve wiki path
 ```bash
-WIKI="$HOME/llm_wiki/wiki"
+# Check for local wiki default (project-level override)
+if [ -f ".wiki-default" ]; then
+  WIKI=$(cat .wiki-default)
+elif [ -f "$HOME/.wiki-default" ]; then
+  WIKI=$(cat "$HOME/.wiki-default")
+else
+  WIKI="$HOME/llm_wiki/wiki"
+fi
+# --wiki flag always wins over .wiki-default
+if args contain "--wiki <path>"; then
+  WIKI="<path>"
+fi
 mkdir -p "$WIKI/entities" "$WIKI/concepts" "$WIKI/sources"
 ```
 
