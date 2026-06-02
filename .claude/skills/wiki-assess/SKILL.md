@@ -1,22 +1,42 @@
 ---
 name: wiki-assess
-description: Assess wiki against Karpathy pattern standards
+description: Assess wiki structure and ratios against Karpathy pattern standards
 ---
 
 # /wiki-assess — Wiki Quality Assessment
 
-## When invoked
+## Usage
+```
+/wiki-assess [<wiki_dir> | --wiki <wiki_dir>]
+```
 
-Assess any wiki directory against Karpathy gist pattern:
+Assess any wiki directory against Karpathy pattern:
 - Structure: sources/entities/concepts in wiki/ subdir
 - Ratios: Entity and Concept should be >5% of sources
 - Index: Curated summaries, not raw content
 - Frontmatter: YAML frontmatter with type field
 
+`--wiki <wiki_dir>` or a bare positional path both override the default (`~/llm_wiki/wiki`).
+
 ## Execution
 
-### Phase 1: Check wiki exists
-Accept path argument or default to $HOME/llm_wiki/wiki
+### Phase 1: Resolve wiki path
+```bash
+# Check for local wiki default (project-level override)
+if [ -f ".wiki-default" ]; then
+  WIKI=$(cat .wiki-default)
+elif [ -f "$HOME/.wiki-default" ]; then
+  WIKI=$(cat "$HOME/.wiki-default")
+else
+  WIKI="$HOME/llm_wiki/wiki"
+fi
+# Accept either positional arg or --wiki flag (both override .wiki-default)
+if first positional arg is a path (not a flag); then
+  WIKI="<first positional arg>"
+elif args contain "--wiki <path>"; then
+  WIKI="<path>"
+fi
+```
 
 ### Phase 2: Count pages
 ```bash
@@ -72,3 +92,4 @@ Target: outbound ≥15, inbound ≥10.
 ## Example usage
 - `/wiki-assess` — assess default llm_wiki
 - `/wiki-assess ~/memory/wiki` — assess memory wiki
+- `/wiki-assess --wiki $HOME/agent-f/jleechan_llm_wiki/wiki` — assess agent-f wiki

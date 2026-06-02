@@ -1,49 +1,61 @@
+---
+description: Self-improving wiki evolution loop — validates against Karpathy pattern, fixes gaps. Usage: /wiki-evolve [--wiki <wiki_dir>]
+---
+
 # /wiki-evolve — Wiki Pattern Evolution Loop
+
+## Usage
+```
+/wiki-evolve [--wiki <wiki_dir>]
+```
+
+`--wiki <wiki_dir>` overrides the default wiki location (`~/llm_wiki/wiki`).
 
 ## Purpose
 
-Self-improving loop that validates llm-wiki against Karpathy pattern, identifies gaps, fixes issues via re-ingest, and verifies compliance. Runs via `/loop 5m /wiki-evolve`.
+Self-improving loop that validates an llm-wiki against Karpathy pattern, identifies gaps, fixes issues via re-ingest, and verifies compliance. Runs via `/loop 5m /wiki-evolve`.
 
 ## Reference
 - Karpathy gist: https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
 - Skill: /karpathy-wiki
 
-## Loop Body (executed every 5 minutes)
+## Loop Body
+
+### Phase 0: Resolve wiki path
+```bash
+WIKI_DIR="$HOME/llm_wiki/wiki"
+if args contain "--wiki <path>"; then
+  WIKI_DIR="<path>"
+fi
+WIKI_ROOT=$(dirname "$WIKI_DIR")
+```
 
 ### Phase 1: OBSERVE — Wiki State Snapshot
 
 ```bash
-# Check wiki structure
-WIKI_DIR="$HOME/llm_wiki/wiki"
 echo "=== WIKI STRUCTURE CHECK ==="
-ls -la $WIKI_DIR/
+ls -la "$WIKI_DIR"/
 
-# Count pages
-echo "Sources: $(ls $WIKI_DIR/sources/*.md 2>/dev/null | wc -l)"
-echo "Entities: $(ls $WIKI_DIR/entities/*.md 2>/dev/null | wc -l)"
-echo "Concepts: $(ls $WIKI_DIR/concepts/*.md 2>/dev/null | wc -l)"
+echo "Sources: $(ls "$WIKI_DIR"/sources/*.md 2>/dev/null | wc -l)"
+echo "Entities: $(ls "$WIKI_DIR"/entities/*.md 2>/dev/null | wc -l)"
+echo "Concepts: $(ls "$WIKI_DIR"/concepts/*.md 2>/dev/null | wc -l)"
 
-# Check for root wiki files (should NOT exist)
 echo "=== ROOT DUPLICATES CHECK ==="
-ls $HOME/llm_wiki/*.md 2>/dev/null || echo "No root .md files (good)"
+ls "$WIKI_ROOT"/*.md 2>/dev/null || echo "No root .md files (good)"
 ```
 
 ### Phase 2: MEASURE — Pattern Compliance
 
 ```bash
-# Entity/concept ratio
-SOURCES=$(ls $HOME/llm_wiki/wiki/sources/*.md 2>/dev/null | wc -l)
-ENTITIES=$(ls $HOME/llm_wiki/wiki/entities/*.md 2>/dev/null | wc -l)
-CONCEPTS=$(ls $HOME/llm_wiki/wiki/concepts/*.md 2>/dev/null | wc -l)
+SOURCES=$(ls "$WIKI_DIR"/sources/*.md 2>/dev/null | wc -l)
+ENTITIES=$(ls "$WIKI_DIR"/entities/*.md 2>/dev/null | wc -l)
+CONCEPTS=$(ls "$WIKI_DIR"/concepts/*.md 2>/dev/null | wc -l)
 
-echo "=== RATIO CHECK ==="
 echo "Sources: $SOURCES, Entities: $ENTITIES, Concepts: $CONCEPTS"
 echo "Entity ratio: $(echo "scale=2; $ENTITIES * 100 / $SOURCES" | bc)%"
 echo "Concept ratio: $(echo "scale=2; $CONCEPTS * 100 / $SOURCES" | bc)%"
 
-# Index quality check
-echo "=== INDEX QUALITY ==="
-head -30 $HOME/llm_wiki/wiki/index.md
+head -30 "$WIKI_DIR"/index.md
 ```
 
 ### Phase 3: DIAGNOSE — Identify Gaps
@@ -65,26 +77,23 @@ For each gap found:
 ### Phase 5: VERIFY — Confirm Pattern Compliance
 
 ```bash
-# Run /wiki-lint
-python3 $HOME/llm_wiki/lint.py
-
 # Verify no broken wikilinks
-grep -r '\[\[' $HOME/llm_wiki/wiki/sources/*.md | head -20
+grep -r '\[\[' "$WIKI_DIR"/sources/*.md | head -20
 ```
 
 ### Phase 6: RECORD — Log Findings
 
 ```bash
-# Append to wiki evolution log
-echo "## $(date '+%Y-%m-%d %H:%M')" >> $HOME/llm_wiki/wiki/evolution-log.md
-echo "Sources: $SOURCES, Entities: $ENTITIES, Concepts: $CONCEPTS" >> $HOME/llm_wiki/wiki/evolution-log.md
-echo "Issues: [list]" >> $HOME/llm_wiki/wiki/evolution-log.md
+echo "## $(date '+%Y-%m-%d %H:%M')" >> "$WIKI_DIR"/evolution-log.md
+echo "Sources: $SOURCES, Entities: $ENTITIES, Concepts: $CONCEPTS" >> "$WIKI_DIR"/evolution-log.md
+echo "Issues: [list]" >> "$WIKI_DIR"/evolution-log.md
 ```
 
 ### Phase 7: RECAP — Cycle Summary
 
 ```
 ## Wiki Evolve Cycle — $(date '+%H:%M')
+- Wiki: $WIKI_DIR
 - Structure: ✅/❌
 - Entity ratio: X% (target: >5%)
 - Concept ratio: X% (target: >5%)
@@ -92,18 +101,8 @@ echo "Issues: [list]" >> $HOME/llm_wiki/wiki/evolution-log.md
 - Fixes: [list]
 ```
 
-## Invocation
-
-```bash
-# Start the loop
-/loop 5m /wiki-evolve
-
-# Or run one cycle manually
-/wiki-evolve
-```
-
 ## Termination Conditions
 
 1. User says "stop" or "pause"
 2. All pattern checks pass for 3 consecutive cycles
-3. 2 hours elapsed (wiki doesn't need constant monitoring)
+3. 2 hours elapsed

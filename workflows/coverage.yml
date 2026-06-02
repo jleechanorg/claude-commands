@@ -61,18 +61,19 @@ jobs:
           ./scripts/ci/setup-runner-tool-cache.sh
 
       - name: Set up Python
+        if: runner.os != 'macOS'
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
         with:
-          python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
+          python-version: ${{ vars.PYTHON_VERSION || '3.11' }}
 
       - name: Cache pip dependencies
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
         with:
           path: |
             ~/.cache/pip
-          key: ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-${{ hashFiles('mvp_site/requirements.txt') }}
+          key: ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.11' }}-${{ hashFiles('mvp_site/requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.12' }}-
+            ${{ runner.os }}-coverage-python-${{ vars.PYTHON_VERSION || '3.11' }}-
 
       - name: Install dependencies
         run: |
@@ -220,6 +221,11 @@ jobs:
         with:
           name: coverage-artifacts
           path: .
+
+      - name: Configure authenticated origin for coverage diff
+        if: github.event_name == 'pull_request'
+        run: |
+          git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
 
       - name: Generate Coverage Comment
         if: always()

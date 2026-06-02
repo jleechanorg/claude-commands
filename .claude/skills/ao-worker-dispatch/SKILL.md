@@ -57,6 +57,19 @@ ao send <session> "Fix PR #N (<branch>). Already on correct branch. Read: gh pr 
 
 **Exception**: `claim-pr` fails if the PR branch is checked out in the main worktree. In that case, send a task telling the worker to `git fetch origin && git checkout -b local-fix origin/<branch>`.
 
+## Overlap Detection (Pre-spawn)
+
+Before spawning multiple workers on different beads, check for file-path overlap:
+
+1. Run `br show <bead-id>` for each bead to get the description
+2. Extract likely file paths from each description (e.g., "fix session-manager.ts" → `session-manager.ts`)
+3. If two beads will modify the same file, **warn the operator**:
+   - "bd-X and bd-Y both touch `session-manager.ts` — consider spawning only one, or steering the second away via `ao send`"
+4. If overlap is confirmed, spawn the second worker with an explicit `ao send` after creation:
+   - `ao send <session-id> "Do NOT modify [filename] — worker [other-session] is already handling it. Focus on [non-overlapping scope]."`
+
+This prevents duplicate work where two workers independently fix the same pre-existing test failure or modify the same file.
+
 ## Pre-dispatch verification (orchestrator responsibility)
 Before calling `ao spawn`, verify:
 - [ ] Task prompt includes `./vpython` instruction
@@ -65,6 +78,7 @@ Before calling `ao spawn`, verify:
 - [ ] Task prompt specifies what belongs in THIS PR vs future PRs
 - [ ] **For existing PRs**: `ao session claim-pr <PR> <session>` is called immediately after spawn
 - [ ] If the user specified an AO agent/runtime, the spawn command passes it explicitly (for example `--agent codex`)
+- [ ] Check bead descriptions for overlapping file paths across workers
 
 ## Post-spawn verification (mandatory)
 

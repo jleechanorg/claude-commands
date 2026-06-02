@@ -9,10 +9,8 @@ import sys
 def main() -> int:
     sys.stdin.read()
     print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "allow"
-        }
+        "decision": "approve",
+        "reason": "auto-approved",
     }))
     return 0
 

@@ -7,24 +7,42 @@ description: Ingest a file into the local LLM wiki and update source/entity/conc
 
 ## Usage
 ```
-/wiki-ingest <file_or_path>
+/wiki-ingest <file_or_path> [--wiki <wiki_dir>]
 ```
 
 Ingest a source document into the wiki. Creates a source page, extracts entities and concepts, updates the index.
 
+`--wiki <wiki_dir>` overrides the default wiki location (`~/llm_wiki/wiki`). The `raw/` directory is derived as the sibling of the wiki dir: `$(dirname <wiki_dir>)/raw`.
+
 ## Execution
 
-### Phase 1: Resolve source file
+### Phase 1: Resolve wiki path and source file
 ```bash
-WIKI="$HOME/llm_wiki/wiki"
-SOURCE="$HOME/llm_wiki/raw/$(basename "<arg>")"
+# Parse args: file is first positional; --wiki <path> overrides default
+# Check for local wiki default (project-level override)
+if [ -f ".wiki-default" ]; then
+  WIKI=$(cat .wiki-default)
+elif [ -f "$HOME/.wiki-default" ]; then
+  WIKI=$(cat "$HOME/.wiki-default")
+else
+  WIKI="$HOME/llm_wiki/wiki"
+fi
+FILE_ARG="<first positional arg>"
+# --wiki flag always wins over .wiki-default
+if args contain "--wiki <path>"; then
+  WIKI="<path>"
+fi
+
+WIKI_ROOT=$(dirname "$WIKI")
+RAW_DIR="$WIKI_ROOT/raw"
+SOURCE="$RAW_DIR/$(basename "$FILE_ARG")"
 
 # Copy source to raw/ if not already there
-mkdir -p "$(dirname "$SOURCE")"
-cp "<arg>" "$SOURCE" 2>/dev/null || cp "$(pwd)/<arg>" "$SOURCE"
+mkdir -p "$RAW_DIR"
+cp "$FILE_ARG" "$SOURCE" 2>/dev/null || cp "$(pwd)/$FILE_ARG" "$SOURCE"
 
 # Determine slug from filename
-SLUG=$(basename "<arg>" | sed 's/\.md$//' | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
+SLUG=$(basename "$FILE_ARG" | sed 's/\.md$//' | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
 ```
 
 ### Phase 2: Read source document

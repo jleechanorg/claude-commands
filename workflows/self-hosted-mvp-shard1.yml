@@ -27,6 +27,7 @@ permissions:
   packages: read
 
 env:
+  # Keep end2end tests in PR CI coverage for all mvp shards.
   # Opt into Node.js 24 for actions to avoid Node.js 20 deprecation failures on self-hosted runners
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -72,6 +73,7 @@ jobs:
           --repo "${{ github.repository }}" \
           --limit 20 \
           --prompt-source claude_local_strict \
+          --allow-gh-fallback \
           --no-persist \
           --output-json "harness_metrics_ci.json"
 
@@ -119,7 +121,7 @@ jobs:
         SHARD_DISPLAY=$((0 + 1))
         echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-1)"
         chmod +x run_tests.sh
-        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp --include-end2end
       env:
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"
@@ -184,7 +186,7 @@ jobs:
         SHARD_DISPLAY=$((1 + 1))
         echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-2)"
         chmod +x run_tests.sh
-        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp --include-end2end
       env:
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"
@@ -250,7 +252,7 @@ jobs:
         SHARD_DISPLAY=$((2 + 1))
         echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-3)"
         chmod +x run_tests.sh
-        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp
+        ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp --include-end2end
       env:
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"

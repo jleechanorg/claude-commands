@@ -13,7 +13,7 @@ against the repo's core code standards. It must dispatch adversarial,
 independent review lanes for all three source standards:
 
 - `/zfc` via `.claude/skills/zero-framework-cognition/SKILL.md` (user-scope: `~/.claude/skills/`)
-- `/zfclevel` via `.claude/skills/zfc-leveling-roadmap/SKILL.md` (user-scope: `~/.claude/skills/`)
+- `/zfclevel` via repo command `.claude/commands/zfclevel.md`
 - `/root-cause-first` via `.claude/skills/root-cause-first/SKILL.md` (user-scope: `~/.claude/skills/`)
 
 Source skills live at `~/.claude/skills/` (user-scope, shared across all repos)

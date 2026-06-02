@@ -106,6 +106,30 @@ Usage: `/team-claude <prompt>`
 - **Idle management** — teammates wake up when messaged with new work
 - **Graceful shutdown** — proper cleanup when work is done
 
+### Batching & Parallelization Rules (MANDATORY — include in every teammate prompt)
+
+Teammates must **never** make a sequence of independent tool calls one-at-a-time when they can be batched or parallelized. Wall-clock cost is dominated by round-trip latency, not by the work.
+
+When briefing a teammate, **explicitly tell them to**:
+
+1. **Chain independent CLI calls in a SINGLE Bash invocation** with `&&`, `;`, or a `for` loop:
+   ```bash
+   br create --title "A" ... && \
+   br create --title "B" ... && \
+   br create --title "C" ...
+   ```
+   Twelve `br create`s chained = ~3-5 s. Twelve separate tool round-trips = 10-15 minutes.
+
+2. **Fan out to parallel sub-Agents** when work is naturally chunked and concurrent CLI use is safe. Dispatch them in **one message with multiple `Agent` calls**, each with `run_in_background=True`. Example: 12 beads → 3 sub-Agents × 4 beads each.
+
+3. **Batch file edits**: use `MultiEdit` for multiple changes to the same file, or send multiple `Edit` calls in one message for different files.
+
+4. **Default to batching.** A sequence of >3 independent tool calls is a red flag — stop and ask "can this be a single Bash call or a parallel sub-Agent fan-out?"
+
+5. **Anti-pattern:** "I'll do A, then B, then C, then D..." in separate messages. Replace with "I'll do A+B+C+D in parallel".
+
+If a teammate prompt has a "do NOT spawn child agents" constraint by default, **explicitly lift it** for batchable operations when steering: "I'm lifting the no-child-agent constraint for this batch operation."
+
 ### Example:
 ```
 /team-claude Implement bd-awq PR poller plugin with TDD — write failing tests first, then implement

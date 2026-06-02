@@ -100,6 +100,20 @@ Task({
 - **Fallback**: Falls back to native verification if Wafer CLI unavailable
 - **When to Use**: Independent verification with Wafer as the verification engine
 
+### **11. `anti-gravity-pair-coder.md` - Anti Gravity Pair Programming Coder**
+- **Focus**: Delegates implementation to Anti Gravity through `agy --dangerously-skip-permissions`
+- **Pattern**: Pair coder protocol with fail-closed CLI delegation
+- **CLI**: Uses `agy --dangerously-skip-permissions --print`
+- **Fallback**: No fallback engine; reports failure if agy is unavailable or errors
+- **When to Use**: Pair programming where Anti Gravity must perform the implementation work
+
+### **12. `anti-gravity-pair-verifier.md` - Anti Gravity Pair Programming Verifier**
+- **Focus**: Delegates verification to Anti Gravity through `agy --dangerously-skip-permissions`
+- **Pattern**: Pair verifier protocol with fail-closed CLI delegation
+- **CLI**: Uses `agy --dangerously-skip-permissions --print`
+- **Fallback**: No fallback engine; reports VERIFICATION_FAILED on agy failure
+- **When to Use**: Independent verification where Anti Gravity must perform the review/test judgment
+
 ## 🔄 Agent Coordination Patterns
 
 ### **Parallel Execution**

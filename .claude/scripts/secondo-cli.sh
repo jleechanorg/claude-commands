@@ -8,6 +8,15 @@
 MCP_URL="https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp"
 TIMEOUT=180
 
+# AI Universe Firebase env (required so auth-cli.mjs can SILENTLY refresh the
+# 1-hour idToken via the refresh token). Without these, `auth-cli.mjs status`
+# falsely reports "Not authenticated" once the idToken expires (~hourly), even
+# though the long-lived refresh token is still valid. API key is the public
+# AI Universe shared key (safe to expose per Firebase security model).
+export VITE_AI_UNIVERSE_FIREBASE_PROJECT_ID="${VITE_AI_UNIVERSE_FIREBASE_PROJECT_ID:-ai-universe-b3551}"
+export VITE_AI_UNIVERSE_FIREBASE_AUTH_DOMAIN="${VITE_AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:-ai-universe-b3551.firebaseapp.com}"
+export VITE_AI_UNIVERSE_FIREBASE_API_KEY="${VITE_AI_UNIVERSE_FIREBASE_API_KEY:-AIzaSyDWT4aEG2UoKEtTxozniGC6uPZi1fgjtG8}"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'

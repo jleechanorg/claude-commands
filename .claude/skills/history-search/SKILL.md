@@ -6,7 +6,7 @@ scope: user
 
 # /history Search Skill
 
-Searches Claude Code JSONL, Codex SQLite threads, and Hermes messages (FTS5) in parallel.
+Searches Claude Code JSONL, Codex SQLite threads, Hermes messages (FTS5), and Antigravity conversations in parallel.
 
 ## Sources
 
@@ -15,10 +15,13 @@ Searches Claude Code JSONL, Codex SQLite threads, and Hermes messages (FTS5) in 
 | Claude Code | JSONL per session | `~/.claude/projects/*/*.jsonl` |
 | Codex | SQLite threads + first message | `~/.codex/state_5.sqlite` |
 | Hermes | Messages with FTS5 | `~/.hermes_prod/state.db` |
+| Antigravity | Markdown exports | `~/Library/CloudStorage/Dropbox/conversation-backups/antigravity/` |
+| OpenCode | Session diff JSON | `~/.local/share/opencode/storage/session_diff/` |
+| Cursor | Prompt history + chats | `~/.cursor/prompt_history.json`, `~/.cursor/chats/` |
 
 ## Execution
 
-When `/history <query>` is invoked, run these three searches **in parallel** as subagents (or parallel Bash blocks), then merge and display results.
+When `/history <query>` is invoked, run these searches **in parallel** as subagents (or parallel Bash blocks), then merge and display results.
 
 ### Parallel block A — Claude Code JSONL search
 
@@ -137,9 +140,93 @@ for title, source, ts, role, snippet in rows:
 con.close()
 ```
 
+### Parallel block D — Antigravity Markdown search
+
+```python
+import os, glob, re
+
+query = "<QUERY>"
+antigrav_dir = os.path.expanduser("~/Library/CloudStorage/Dropbox/conversation-backups/antigravity/")
+if not os.path.exists(antigrav_dir):
+    print("[Antigravity] No exports found")
+else:
+    results = []
+    for path in sorted(glob.glob(f"{antigrav_dir}/*.md"), key=os.path.getmtime, reverse=True)[:50]:
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            if query.lower() in content.lower():
+                # Extract title and first match
+                title_match = re.search(r'^# (.+)$', content, re.MULTILINE)
+                title = title_match.group(1)[:60] if title_match else os.path.basename(path)[:60]
+                # Find snippet around match
+                idx = content.lower().find(query.lower())
+                start = max(0, idx - 50)
+                end = min(len(content), idx + 150)
+                snippet = content[start:end].replace("\n", " ").strip()
+                # Get date from file
+                ts = os.path.getmtime(path)
+                import datetime
+                date = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+                results.append((date, title, snippet))
+        except Exception:
+            pass
+    for date, title, snippet in results[:20]:
+        print(f"[Antigravity] {date} | {title[:60]} | {snippet[:150]}")
+
+### Parallel block E — OpenCode session diff search
+
+```python
+import os, glob, json
+
+query = "<QUERY>"
+session_dir = os.path.expanduser("~/.local/share/opencode/storage/session_diff/")
+if not os.path.exists(session_dir):
+    print("[OpenCode] No sessions found")
+else:
+    results = []
+    for path in sorted(glob.glob(f"{session_dir}/*.json"), key=os.path.getmtime, reverse=True)[:100]:
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            if query.lower() in content.lower():
+                title = os.path.basename(path).replace(".json", "")[:60]
+                idx = content.lower().find(query.lower())
+                start = max(0, idx - 50)
+                snippet = content[start:start+200].replace("\n", " ").strip()
+                ts = os.path.getmtime(path)
+                import datetime
+                date = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+                results.append((date, title, snippet))
+        except Exception:
+            pass
+    for date, title, snippet in results[:20]:
+        print(f"[OpenCode] {date} | {title[:60]} | {snippet[:150]}")
+
+### Parallel block F — Cursor prompt history search
+
+```python
+import os
+
+query = "<QUERY>"
+hist_path = os.path.expanduser("~/.cursor/prompt_history.json")
+if not os.path.exists(hist_path):
+    print("[Cursor] No prompt history found")
+else:
+    results = []
+    with open(hist_path, encoding="utf-8", errors="ignore") as f:
+        for i, line in enumerate(f):
+            if query.lower() in line.lower():
+                clean = line.strip()[:200]
+                results.append(clean)
+                if len(results) >= 20:
+                    break
+    for prompt in results:
+        print(f"[Cursor] | {prompt[:150]}")
+
 ## Output format
 
-After collecting results from all three parallel blocks, display as:
+After collecting results from all parallel blocks, display as:
 
 ```
 === History Search: "<query>" ===
@@ -154,6 +241,18 @@ After collecting results from all three parallel blocks, display as:
 
 ⚡ Hermes  (N matches)
   2026-05-16 | slack | "session title" | user | "message snippet..."
+  ...
+
+🚀 Antigravity  (N matches)
+  2026-05-23 | "conversation title" | snippet...
+  ...
+
+📦 OpenCode  (N matches)
+  2026-05-22 | session_diff_id | "snippet..."
+  ...
+
+🖥️ Cursor  (N matches)
+  "prompt from history..."
   ...
 ```
 

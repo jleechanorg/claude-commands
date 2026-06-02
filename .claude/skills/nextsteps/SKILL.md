@@ -182,12 +182,13 @@ For each learning/finding:
 
 ### Phase 5 — Save to mem0
 
-1. Check: skip if `~/.openclaw/.claude/hooks/mem0_save.py` absent or `GROQ_API_KEY` unset
+1. Check: skip if `~/.hermes/scripts/mem0_shared_client.py` is absent
 2. Build text: `"{title}: {one_liner}. {body_1_sentence}"`
 3. Run:
    ```bash
-   echo '{"memory": "<text>", "user_id": "$USER"}' \
-     | python3 ~/.openclaw/.claude/hooks/mem0_save.py
+   python3 ~/.hermes/scripts/mem0_shared_client.py add "<text>" \
+     --user-id $USER \
+     --no-infer
    ```
 4. Report: `✅ mem0 saved` or `⚠️ mem0 unavailable (skipped)`
 
