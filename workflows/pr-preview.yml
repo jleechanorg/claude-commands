@@ -181,11 +181,11 @@ jobs:
           fi
           echo "Docker image built: $IMAGE_TAG"
 
-          # Preview shard uses 1Gi (lower cost for ephemeral deployments)
-          # Production/staging default to 4Gi (set in shared_config.sh)
-          export WORLDARCH_MEMORY="1Gi"
-
-          # Source shared config for consistent resource allocation
+          # Preview mirrors dev/prod per-request sizing for fidelity: memory + CPU
+          # come straight from the shared defaults in shared_config.sh (8Gi /
+          # 4 vCPU, the validated 10-50 QPS streaming config) with no per-env pin,
+          # so a PR preview behaves like the environment it will ship to. Preview
+          # still scales to zero when idle (--min-instances=0 below).
           source scripts/shared_config.sh
 
           # Remove SMOKE_TOKEN secret reference if it was previously mounted via --set-secrets.
@@ -208,11 +208,14 @@ jobs:
             --project="${{ env.GCP_PROJECT }}" \
             --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview,PRODUCTION_MODE=true,SMOKE_TOKEN=$SMOKE_TOKEN,RATE_LIMIT_EXEMPT_EMAILS=smoke-test@example.com" \
+            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview,PRODUCTION_MODE=true,SMOKE_TOKEN=$SMOKE_TOKEN,RATE_LIMIT_EXEMPT_EMAILS=smoke-test@example.com,GUNICORN_THREADS=$WORLDARCH_GUNICORN_THREADS" \
             --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
             --memory="$WORLDARCH_MEMORY" \
             --cpu="$WORLDARCH_CPU" \
-            --max-instances=2 \
+            --cpu-boost \
+            --min-instances=0 \
+            --max-instances="$WORLDARCH_MAX_INSTANCES" \
+            --concurrency="$WORLDARCH_CONCURRENCY" \
             --timeout="$WORLDARCH_TIMEOUT_SECONDS" \
             --update-labels="pr-number=$PR_NUMBER,commit-sha=$PR_HEAD_SHA" \
             --quiet

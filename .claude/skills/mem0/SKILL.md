@@ -25,15 +25,19 @@ python3 ~/.hermes/scripts/mem0_shared_client.py stats
 ```
 
 > Script path: `~/.hermes/scripts/mem0_shared_client.py`
-> Requires `~/.hermes/hermes.json` with `plugins.entries.hermes-mem0.config.oss`
+> Config: reads `~/.hermes/config.yaml` (override with `HERMES_CONFIG_PATH`), looking for
+> `plugins.entries.hermes-mem0.config.oss`. That block is OPTIONAL — if absent, the script
+> falls back to working defaults (ollama `nomic-embed-text` embedder + `gemma2:2b` LLM,
+> qdrant `127.0.0.1:6333`, collection `hermes_mem0`). There is NO `~/.hermes/hermes.json`;
+> do not chase it as a missing file.
 > Also callable from any repo worktree: `python3 scripts/mem0_shared_client.py <cmd>`
 
 ## Store status
 
 - **Collection:** `hermes_mem0`
 - **Host:** `127.0.0.1:6333` (qdrant docker, Hermes-managed storage)
-- **Embedder:** Read from `~/.hermes/hermes.json` (`hermes-mem0` plugin)
-- **LLM for extraction:** Read from `~/.hermes/hermes.json` (`hermes-mem0` plugin)
+- **Embedder:** `~/.hermes/config.yaml` (`hermes-mem0` plugin `oss` block) or fallback default `nomic-embed-text`
+- **LLM for extraction:** `~/.hermes/config.yaml` (`hermes-mem0` plugin `oss` block) or fallback default `gemma2:2b`
 
 ## Ingestion (backfill)
 

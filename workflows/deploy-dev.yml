@@ -37,6 +37,15 @@ jobs:
       SERVICE_NAME: mvp-site-app-dev
       DEPLOY_REASON: ${{ inputs.reason || github.event.inputs.reason || 'auto-deploy (dev)' }}
       REF_NAME: ${{ inputs.ref_name || github.ref_name }}
+      # Memory/CPU/autoscaling come from the shared defaults in
+      # scripts/shared_config.sh + deploy.sh (8Gi, 4 vCPU, maxScale 40,
+      # containerConcurrency 40, GUNICORN_THREADS 16 — the validated 10-50 QPS
+      # streaming config). Dev and prod (mvp-site-app-stable) deploy through the
+      # same deploy.sh path with no per-env sizing override, so per-request
+      # capacity is identical. The one intentional difference: deploy.sh pins
+      # min-instances=1 only for stable (warm for real users) and scales dev to
+      # zero when idle. The dev daily level-up test's ~450K-char instruction
+      # build (which OOM-killed a 4Gi instance) is covered by the 8Gi default.
 
     steps:
       - name: Checkout code

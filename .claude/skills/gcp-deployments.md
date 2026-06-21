@@ -133,6 +133,8 @@ gcloud run deploy mvp-site-app-staging \
   --concurrency=10
 ```
 
+> **Illustrative only.** The real deployed values are the single source of truth in `scripts/shared_config.sh` (currently `--memory=16Gi --max-instances=40 --concurrency=40 --cpu=4`), wired via `deploy.sh`. The service runs as **multiple load-balanced instances with no session affinity** — see [distributed-caching.md](distributed-caching.md) before adding any in-process cache.
+
 ## Deployment Architecture
 
 ```

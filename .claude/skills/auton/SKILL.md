@@ -7,6 +7,15 @@ description: Diagnose why the automation system is not autonomously driving PRs 
 
 ## Purpose
 
+**Run /auton AFTER a work block ends** — retrospective review of what workers did, what failed, and why. It is the post-mortem tool.
+
+**Run /babysit WHILE work is happening** — live triage, parallel worker dispatch, DRIVER mode nudges. It is the concurrent monitoring tool.
+
+| Skill | When | Mode | Output |
+|-------|------|------|--------|
+| `/babysit` | During active workers | Live monitoring, dispatch | Per-PR status, DRIVER nudges |
+| `/auton` | After block completes | Retrospective | Outcome table, root causes, metrics |
+
 When invoked, diagnose WHY the jleechanclaw + AO system is NOT autonomously driving PRs to N-green and merged. The system is supposed to do this without human intervention — if it isn't, something is broken.
 
 ## Read first (mandatory before answering)
@@ -156,6 +165,73 @@ git -C ~/.openclaw worktree list | grep -v "~/.openclaw\b\|~/.worktrees"
 | PRs cycling CR changes_requested | Agent not reading CR comments correctly | Check agento's comment-reading skill |
 | Spawned sessions are idle shells | `is_agent_alive_in_session` returns false | Check Hermes gateway is running (`hermes gateway status`) |
 
+## Worker Session Review (48h fanout)
+
+When diagnosing autonomy health, **read every active worker session** from the last 48h and produce an outcome table. This is mandatory for any /auton run — system-level health checks alone miss per-worker failure classes.
+
+### Step 1 — Enumerate 48h sessions
+
+```bash
+# Sessions created in last 48h
+tmux list-sessions -F '#{session_name} #{session_created}' | awk -v cutoff=$(date -v-48H +%s 2>/dev/null || date -d '48 hours ago' +%s) '$2 > cutoff {print $1}'
+
+# AO status summary (shows branch, PR, CI, steer count)
+ao status 2>/dev/null
+```
+
+### Step 2 — Read each session (parallel)
+
+For each worker session:
+```bash
+tmux capture-pane -t <session> -p -S -5000 | tail -300
+```
+
+Extract per-session:
+- **Task**: what prose was in the initial spawn?
+- **PR produced**: branch + PR number (if any)
+- **Outcome**: MERGED / GREEN-AWAITING / OPEN-STALLED / IDLE / MIS-SPAWNED
+- **Steers**: count of `ao send` corrections or redirections visible in transcript
+- **Blocker**: one-line root cause if not merged
+
+### Step 3 — Cross-check PR states
+
+```bash
+gh pr view <N> --repo <owner>/<repo> --json state,merged,mergeable,reviewDecision
+```
+
+### Worker outcome table format
+
+```
+| Worker | Repo | PR | Outcome | Steers | Key Issue |
+|--------|------|----|---------|----|-----------|
+| ao-NNNN | repo | #N branch | MERGED ✅ / GREEN ✅ / OPEN ⚠️ / IDLE ❌ | N | one-line |
+```
+
+## Root Cause Taxonomy
+
+These are the observed failure classes across 48h windows. Assign each stalled worker exactly one root cause:
+
+| Class | Name | Symptom | Fix |
+|-------|------|---------|-----|
+| RC-1 | **Spawn context gap** | Worker asked "what task should I do?" — no task prose in spawn | Always include prose: `ao spawn --bead bd-xxx "Implement X: ..."` |
+| RC-2 | **Scope drift** | Worker documented the problem instead of solving it (PR title contains "docs" when impl was requested) | Send `ao send <session> "DRIVER: implement, not document. Fix <file>:<line>"` |
+| RC-3 | **Stall-without-escalate** | Worker went idle at a gate (CR, CI, skeptic) without sending `ao send` to orchestrator or posting `/skeptic` | Post `/skeptic` on PR; steer worker with DRIVER mode |
+| RC-4 | **Wrong-bead correction** | Worker pivoted to merged/non-existent bead after receiving correction | Always `br show <bead>` before sending any `ao send` correction |
+| RC-5 | **Hook noise** | `PostToolUse hook error: unbound variable` slowing worker but not blocking | Fix hook script (`pr_create_pattern` unbound var); non-critical if worker still progresses |
+| RC-6 | **Context exhaustion** | Worker context hit limit mid-task; state partially preserved in handoff | Check session for "context is N% remaining" lines; spawn fresh worker with recap |
+| RC-7 | **Auth / model failure** | Worker gets 401 or model-not-found after SCM failures | Check `AO_CONFIG_PATH` env; verify API key; restart worker |
+
+## Autonomy Metrics
+
+Report these at the end of every /auton run:
+
+| Metric | Definition | Target |
+|--------|-----------|--------|
+| **End-to-end success rate** | (MERGED + GREEN-AWAITING) / total workers in window | >60% |
+| **Avg steers/worker** | total human steers / workers | <0.5 |
+| **Spawn context gap rate** | mis-spawned workers / total | 0% |
+| **Stall rate** | OPEN-STALLED / total | <20% |
+
 ## Output format
 
 ```
@@ -169,14 +245,28 @@ git -C ~/.openclaw worktree list | grep -v "~/.openclaw\b\|~/.worktrees"
 - Active sessions: N (M with live agents)
 - Open PRs: N total, N non-green
 
+### Worker session review (48h)
+| Worker | Repo | PR | Outcome | Steers | Key Issue |
+|--------|------|----|---------|----|-----------|
+| ... | ... | ... | ... | ... | ... |
+
 ### Per-PR status
 | PR | Non-green reason | Session | Session state |
 |---|---|---|---|
 | #NNN | <reason from log> | jc-NNN | alive/zombie/none |
 
-### Root cause
-<Primary reason the system is not progressing PRs autonomously>
+### Root causes (by class)
+- RC-1 Spawn context gap: N workers (list sessions)
+- RC-2 Scope drift: N workers
+- RC-3 Stall-without-escalate: N workers
+- ...
 
-### Recommended fix
-<Concrete next step>
+### Metrics
+- End-to-end success rate: N% (target >60%)
+- Avg steers/worker: N (target <0.5)
+- Spawn context gap rate: N% (target 0%)
+- Stall rate: N% (target <20%)
+
+### Recommended fixes (ordered by impact)
+1. <most impactful fix first>
 ```

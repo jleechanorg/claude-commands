@@ -38,6 +38,20 @@ with the remaining targets. Do not silently skip wiki ingest.
   - `.beads/issues.jsonl`
   - `~/llm_wiki/wiki/index.md` and relevant `concepts/` pages
 
+### 1a. Fix vs. Document decision (apply BEFORE writing the memory entry)
+
+Workarounds-as-memory are NOT a complete resolution when a small fix is possible. Apply the fix-on-discovery rule from `~/.claude/CLAUDE.md`:
+
+| Bug class | Action |
+|---|---|
+| User-managed config (yaml/plist/dotfile) + fix < 10 lines + currently blocking | **FIX IT NOW**, then write memory entry that *references the fix* (commit SHA, diff, or `~/.hermes_prod/...:line`). Memory body must say "FIX: <what> at <where> on <date>" — not just "workaround: ..." |
+| User's published code in a separate PR scope (separate repo, separate concern) | Document workaround; open a dedicated fix PR; memory links the fix PR |
+| Third-party code (provider outage, npm package, OS-level) | Workaround only — no fix possible from here. Memory describes the trigger conditions and the recovery path |
+| Agent-orchestrator core code in same repo | Fix in same PR per project CLAUDE.md; memory captures the *pattern* (e.g. "configKey/name/path mismatch must be validated at write-time") so the fix is durable |
+| Documentation, test, tooling, scripts | Document; no fix required |
+
+If you find yourself writing "workaround: ..." without a corresponding fix, re-read the table. The most common mistake is treating a 1-line config fix as "out of scope" — that is exactly the class this rule targets.
+
 ### 2. Write Claude auto-memory
 
 Use the current git root to derive the project memory path:
@@ -71,8 +85,9 @@ references, and a reusable pattern.
 Save a concise text record only when a configured helper and required API key are
 available. Prefer the repo-local helper when present:
 
+- `~/.hermes/.claude/hooks/mem0_save.py` (Hermes state dir — used on this machine)
 - `$(git rev-parse --show-toplevel)/.claude/hooks/mem0_save.py` with
-  `OPENAI_API_KEY`
+  `OPENAI_API_KEY` (repo-local fallback)
 - otherwise any user-configured helper already documented in the active command
   or policy
 
@@ -101,32 +116,49 @@ If `.beads/issues.jsonl` exists:
 - Reuse a matching learning bead when one already exists.
 - Otherwise create a closed task bead with labels including `learning` and
   `documentation`.
-- Use the repository's normal bead id prefix when possible. In this repo, prefer
-  `br create ... --type task --priority 3` or the existing `rev-` prefix rather
-  than inventing a `bd-` id.
+- Use the repository's normal bead id prefix when possible. In your-project.com,
+  prefer `br create ... --type task --priority 3` or the existing `rev-` prefix
+  rather than inventing a `bd-` id.
 - Record the bead id in the Claude memory frontmatter and roadmap entry.
 
 If beads are unavailable, write `none` and report why.
 
-### 6. Always wiki-ingest
+### 6. Always wiki-ingest (call the skill, do not write files manually)
 
-Wiki ingest is mandatory for `/learn`.
+Wiki ingest is mandatory for `/learn`. Use the Claude memory file (preferred)
+or the roadmap entry as the source document. **Invoke the `wiki-ingest`
+skill via the Skill tool — do not write files into `~/llm_wiki/wiki/`
+directly.** The `wiki-ingest` skill handles raw copy, source page, index
+entry, log entry, and entity/concept extraction in one call.
 
-Use the Claude memory file or roadmap entry as the source document. Follow the
-`wiki-ingest` workflow:
+```
+Skill("wiki-ingest", args="<absolute path to memory file or roadmap entry>")
+```
 
-1. Copy the source to `~/llm_wiki/raw/<basename>`.
-2. Create `~/llm_wiki/wiki/sources/<slug>.md`.
-3. Add the source to `~/llm_wiki/wiki/index.md` under `## Sources`.
-4. Append `~/llm_wiki/wiki/log.md` with `## [YYYY-MM-DD] ingest | <title>`.
-5. Update existing concept/entity pages when a relevant page already exists.
-   Create a new concept/entity page only when the learning introduces a reusable
-   concept that is not already represented.
-6. State whether the learning affects `[[jeffrey-oracle]]`; most technical
-   workflow learnings do not.
+After invoking, verify all four side effects landed:
 
-Do not skip wiki ingest because the learning seems "not wiki-bearing"; the
-learning itself is the source.
+- `~/llm_wiki/raw/<basename>` exists
+- `~/llm_wiki/wiki/sources/<slug>.md` exists with the canonical frontmatter
+  (`title`, `type`, `tags`, `sources`, `last_updated`) and `[[wikilinks]]`
+- `~/llm_wiki/wiki/index.md` was updated under `## Sources`
+- `~/llm_wiki/wiki/log.md` was appended with `## [YYYY-MM-DD] ingest | <title>`
+
+**Do NOT fall back to direct `Write` / `Edit` / `cp` / `python3 <<EOF`**
+when the skill fails. The global wiki integrity rule forbids direct
+writes to `wiki/sources/`, `wiki/entities/`, and `wiki/concepts/`, and
+direct writes skip the entity/concept extraction that the skill performs.
+If the skill errors, surface the error to the user and stop — never
+silently substitute a partial manual write.
+
+**No exceptions for "the learning seems not wiki-bearing."** The learning
+itself is the source. The skill's classifier decides what is wiki-bearing.
+
+**Working-directory caveat**: if the current session cwd is not
+`~/llm_wiki` (e.g. an `/integrate` flow running in a feature worktree),
+`Skill("wiki-ingest", args="<abs path to memory file>")` still works
+because it accepts an absolute path and resolves `WIKI_ROOT` from
+`$HOME/llm_wiki` by default. Do not `cd ~/llm_wiki` first; pass the
+absolute path in `args`.
 
 ### 7. Validate and report
 

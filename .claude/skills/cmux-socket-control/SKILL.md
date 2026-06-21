@@ -5,6 +5,8 @@ description: Control cmux tabs, workspaces, and terminal panes via Unix socket. 
 
 # cmux Socket Control
 
+> **REQUIRED (2026-06-09):** For any `cmux send` calls in this skill, use the canonical `send_and_submit()` wrapper at `~/.hermes_prod/skills/cmux/scripts/cmux_client.py` — the bare two-command pattern below has no proof of submission and burned us 3 times in 30 minutes on the cost-workspace agent. This skill is fine for socket discovery, read operations, and tree/walk ops; steering must go through the wrapper. See `~/.hermes_prod/skills/cmux-send-submit/SKILL.md`.
+
 ## Find the socket
 
 ```bash

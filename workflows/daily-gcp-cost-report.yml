@@ -1,0 +1,133 @@
+name: Daily GCP Cost Report
+
+on:
+  schedule:
+    # 09:20 UTC daily — 10 minutes after the existing daily-gemini-cost-report
+    # so we don't race the BQ billing export refresh window.
+    - cron: '20 9 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'UTC date to report (YYYY-MM-DD). Blank = oldest pending or yesterday UTC.'
+        required: false
+        default: ''
+
+jobs:
+  report:
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    env:
+      REPORT_RECIPIENT: $USER@gmail.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
+
+      - name: Setup Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5
+        with:
+          python-version: '3.11'
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r mvp_site/requirements.txt
+
+      - name: Generate daily GCP cost report
+        id: report
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+          BILLING_PROJECT_ID: worldarchitecture-ai
+          BILLING_EXPORT_TABLE: worldarchitecture-ai.billing_export.gcp_billing_export_v1_011269_D08BDB_79D8F2
+          REPORT_RECIPIENT: $USER@gmail.com
+          REPORT_SMTP_USER: ${{ secrets.EMAIL_USER }}
+          REPORT_SMTP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
+          REPORT_SENDER_EMAIL: ${{ secrets.EMAIL_USER }}
+          EXPORT_STALE_DAYS: 2
+          REPORT_MAX_WAIT_DAYS: 2
+          FAIL_ON_STALE_EXPORT: false
+          FAIL_ON_UNKNOWN_EXPORT: false
+          ENFORCE_SCHEMA_VERSION: true
+          EXPECTED_REPORT_SCHEMA_VERSION: 2026-06-17.1
+        run: |
+          set -euo pipefail
+          if [[ "${REPORT_RECIPIENT}" != "$USER@gmail.com" ]]; then
+            echo "Recipient policy violation: REPORT_RECIPIENT must be $USER@gmail.com"
+            exit 1
+          fi
+          DATE_ARG=()
+          if [[ -n "${{ github.event.inputs.date }}" ]]; then
+            DATE_ARG=(--date "${{ github.event.inputs.date }}")
+          fi
+          python scripts/daily_gcp_cost_report.py "${DATE_ARG[@]}" \
+            --output /tmp/gcp_daily_report.txt \
+            --output-json /tmp/gcp_daily_report.json
+
+          python - <<'PY'
+          import json, os
+          payload = json.load(open('/tmp/gcp_daily_report.json', encoding='utf-8'))
+          schema_version = payload.get('report_schema_version', 'unknown')
+          spend_value = f"{float(payload['cost']['total_usd']):.6f}"
+          hit_rate_value = "N/A"
+          cost_obj = payload.get('cost', {})
+          def _safe(value):
+              text = str(value) if value is not None else 'n/a'
+              return text.replace('\n', ' ').replace('\r', ' ')
+          with open('/tmp/report_meta.txt', 'w', encoding='utf-8') as f:
+              f.write(f"date={_safe(payload['target_day_utc'])}\n")
+              f.write(f"schema_version={_safe(schema_version)}\n")
+              f.write(f"spend={_safe(spend_value)}\n")
+              f.write(f"target_day_complete={_safe(cost_obj.get('target_day_complete'))}\n")
+              f.write(f"export_coverage_state={_safe(cost_obj.get('export_coverage_state'))}\n")
+              f.write(f"export_age_days={_safe(cost_obj.get('export_age_days'))}\n")
+              f.write(f"send_mode={_safe(payload.get('send_mode'))}\n")
+
+          summary_lines = [
+              "## Daily GCP Cost Report",
+              "",
+              f"- Date (UTC): {payload['target_day_utc']}",
+              f"- Schema version: {schema_version}",
+              f"- Total non-Gemini spend (USD): ${float(payload['cost']['total_usd']):,.2f}",
+              f"- Target day complete: {cost_obj.get('target_day_complete')}",
+              f"- Export coverage state: {cost_obj.get('export_coverage_state')}",
+              f"- Export age (days): {cost_obj.get('export_age_days')}",
+              f"- Send mode: {payload.get('send_mode')}",
+              f"- Recipient: {payload.get('recipient', payload.get('cost', {}).get('project_id', 'unknown'))}",
+          ]
+          if payload.get('note'):
+              summary_lines.append(f"- Note: {payload['note']}")
+          with open('/tmp/report_summary.md', 'w', encoding='utf-8') as f:
+              f.write("\\n".join(summary_lines) + "\\n")
+          PY
+
+          cat /tmp/report_meta.txt >> "$GITHUB_OUTPUT"
+          cat /tmp/report_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+          CURRENT_SCHEMA_VERSION=$(awk -F= '/^schema_version=/{print $2}' /tmp/report_meta.txt)
+          if [[ "${ENFORCE_SCHEMA_VERSION}" == "true" && "${CURRENT_SCHEMA_VERSION}" != "${EXPECTED_REPORT_SCHEMA_VERSION}" ]]; then
+            echo "Failing run due to schema version mismatch: expected ${EXPECTED_REPORT_SCHEMA_VERSION}, got ${CURRENT_SCHEMA_VERSION}."
+            exit 1
+          fi
+
+          if [[ "${FAIL_ON_STALE_EXPORT}" == "true" && "${CURRENT_EXPORT_STATUS:-na}" == "STALE_EXPORT" ]]; then
+            echo "Failing run due to stale billing export (FAIL_ON_STALE_EXPORT=true)."
+            exit 1
+          fi
+
+      - name: Send report email
+        if: steps.report.outputs.send_mode != 'deferred'
+        uses: dawidd6/action-send-mail@6d98ae34d733f9a723a9e04e94f2f24ba05e1402  # v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_APP_PASSWORD }}
+          subject: ${{ steps.report.outputs.subject }}
+          to: ${{ env.REPORT_RECIPIENT }}
+          from: WorldArchitect Reports <${{ secrets.EMAIL_USER }}>
+          body: file:///tmp/gcp_daily_report.txt
+          attachments: /tmp/gcp_daily_report.txt,/tmp/gcp_daily_report.json

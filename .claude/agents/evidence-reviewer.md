@@ -43,7 +43,7 @@ Or the `latest/` path. The agent reads all files independently.
 
 ### 1.1 Required Files Presence
 
-Check all required files from evidence-standards.md §"Canonical Evidence Bundle Files":
+Check all required files from `docs/evidence-standards/bundle-anatomy.md` (canonical bundle file list):
 
 | File | Required | Check |
 |------|----------|-------|
@@ -196,6 +196,30 @@ Scan for any claim that implies Nx speedup by mixing cold and warm measurements:
 
 ---
 
+## Phase 3.5: UI Video Verification (frame-extract and LOOK)
+
+Applies whenever the claim is about **user-visible UI behavior**, or the bundle/PR
+includes a UI video (`.mp4`/`.gif`/`.webm`/`.cast`) or a `testing_ui/test_*.py`.
+A captioned, linked, passing-test video is **NOT** sufficient on its own — confirm
+the pixels show the element under test changing.
+
+1. Locate the video (`videos/` dir or PR-linked release/gist asset). If the only UI
+   evidence is screenshots, use those as the frames below.
+2. **Extract frames and read them yourself:** `ffmpeg -i <video> -vf fps=1 /tmp/er_frames/f_%02d.png`, then `Read` several frames spanning the clip.
+3. Confirm ALL of: the **specific control/element under test** is **visible in-frame**
+   (not below the fold); its **before→after change is visible in the pixels**; any
+   "persists after reload" claim shows the element with the new value **after** reload.
+4. **Caption/overlay text is harness-authored and is NOT proof.** Burned-in text
+   ("Saved X = Y", "Persisted after reload") asserts the state from the test's own DOM
+   reads; it does not demonstrate it. If the on-screen evidence is ONLY a caption and
+   the element is never framed → **INSUFFICIENT**.
+
+**FAIL / INSUFFICIENT** if no frames show the element under test, the change is not
+visible in the pixels, or the proof rests on caption overlays. State which frames you
+inspected and what each showed.
+
+---
+
 ## Phase 4: Verdict and Report
 
 ### Verdict Logic
@@ -265,7 +289,7 @@ Also write JSON report to `<bundle_path>/verification_report.json`:
 
 ## Standards Reference
 
-Always enforce these specific rules from `.claude/skills/evidence-standards.md`:
+Always enforce these specific evidence-bundle rules (generic policy: `~/.claude/skills/evidence-standards/SKILL.md`; worldai overlay: `.claude/skills/evidence-standards.md`; bundle structure: `docs/evidence-standards/bundle-anatomy.md`):
 
 1. **Raw artifact rule**: Measurements must be captured as separate artifact files — not reported inside evidence.md itself.
 2. **Claim → Artifact Map**: Must reference separate files, never `evidence.md` itself.

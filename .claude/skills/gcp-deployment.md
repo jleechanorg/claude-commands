@@ -237,13 +237,12 @@ fi
 
 ### Autoscaling
 
-**Current Settings** (all environments):
-- **Max Instances**: 6
-- **Min Instances**: 0 (scales to zero when not in use)
+**Source of truth: `scripts/shared_config.sh`** (read it for current values; do not trust hardcoded numbers here). As of this writing: `WORLDARCH_MAX_INSTANCES=40` (maxScale), `WORLDARCH_CONCURRENCY=40` (containerConcurrency), `WORLDARCH_MEMORY=16Gi`, `WORLDARCH_CPU=4`; `MIN_INSTANCES`=1 for stable/dev, 0 for preview/ephemeral (`deploy.sh`).
 
-**Why 6 instances**:
-- Sanity-check threshold to prevent runaway costs
-- Adequate for current traffic patterns
+> The service runs as **multiple load-balanced instances with no session affinity** — see [distributed-caching.md](distributed-caching.md) before adding any in-process cache.
+
+**Why multiple instances**:
+- maxScale sized via Little's law (QPS × mean_turn_seconds / concurrency); concurrency spreads the CPU-bound ~450K-char instruction build across instances
 - Can be adjusted in `deploy.sh` (MAX_INSTANCES variable)
 
 ### Environment Variables

@@ -36,6 +36,7 @@ execution_mode: immediate
 
 **Enhanced Implementation**:
 - **Auto-Learning**: Automatically trigger `/learn` to capture insights from completed work
+- **Factory Evolution**: Automatically trigger `/factory-evolve --taxonomy` to surface reviewer-node gaps from recent work (structural G1+G2 check only — fast, no history search)
 - Stop test server for current branch (if running)
 - Execute `./integrate.sh` script with optional branch name
 - Creates new branch from latest main

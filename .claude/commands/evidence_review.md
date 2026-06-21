@@ -107,6 +107,8 @@ Combine both results into a single verdict:
 4. For each claim, explicitly state what the evidence **proves** and what it **does NOT prove**.
 5. **Note**: When called from a harness (e.g., `/goal_harness`), verdict normalization is the harness's responsibility. This command returns the raw verdict for the harness to process according to its own convergence rules.
 
+**Hard rule — Unit-only evidence is NOT ALLOWED.** If the only proof for a claim is unit tests (Layer 1, mocked/isolated functions), the verdict must be INSUFFICIENT regardless of other factors; warn the user explicitly. Minimum acceptable proof: Layer 2 end-to-end integration tests (real callstack, mocks only at external API boundaries). Production-behavior claims involving LLMs or external services additionally require real-service evidence. **Exception:** unit-only proof IS acceptable for non-production changes (docs, tests, tooling/scripts) or for production changes under 100 delta lines of non-test code.
+
 **Caveats**: The "proves vs does NOT prove" reconfirmation is mandatory — do not skip it even if both steps individually pass.
 
 ### Verdict Synthesis Decision Table
