@@ -283,6 +283,9 @@ rm -f ".claude/settings.local.json"
 # exportcommands.py: deprecated 2347-line Python script, contains hardcoded paths
 # that cannot be filtered (it's in FILTER_SKIP to protect its regex patterns)
 rm -f ".claude/commands/exportcommands.py"
+# agentf-specific hooks: guard personal git identity + block push to jleechanorg.
+# These encode personal account details and have no value in a shared template.
+find ".claude/hooks" -name '*agentf*' -delete 2>/dev/null || true
 
 # ── Copy GitHub workflows (examples only) ───────────────────────────────────
 if [[ -d "$PROJECT_ROOT/.github/workflows" ]]; then
