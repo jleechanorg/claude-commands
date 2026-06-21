@@ -90,3 +90,37 @@ Create concept pages for key ideas, frameworks, methods.
 
 ### Phase 8: Log
 Append to `wiki/log.md`: `## [YYYY-MM-DD] ingest | <Title>`
+
+## GitHub-Readable Output — TOC + Standard Markdown Links (default for ported-source branch)
+
+When a ported-source page will be published to GitHub (gist, repo, or any non-Obsidian viewer), GitHub does **not** render `[[WikiLinks]]` as clickable — they show up as literal `[[brackets]]`. Default behavior for any ported-source ingest that touches a GitHub-rendered surface:
+
+1. **Add a Table of Contents** at the top of the document, after the metadata block, with anchor links to every major heading. Format:
+   ```
+   ---
+
+   ## Table of Contents
+
+   1. [Setup & Cast](#setup--cast)
+   2. [Beat 1 — The Rat Summoning](#beat-1--the-rat-summoning)
+   ...
+   ```
+
+2. **Convert all `[[WikiLinks]]` to standard `[label](url)` markdown links** pointing to the canonical GitHub raw URL for the target page. Slug → URL map should be built up front based on the page tree under `wiki/`. Example:
+   ```python
+   wiki_url = "https://github.com/jleechanorg/llm-wiki/blob/main"
+   wiki_link_map = {
+       "HestiaRegistrar":  f"{wiki_url}/wiki/entities/hestia-registrar.md",
+       "VerminCommander":  f"{wiki_url}/wiki/concepts/vermin-commander.md",
+       "VoyagePlatform":   f"{wiki_url}/wiki/concepts/voyage-platform.md",
+   }
+   new_text = re.sub(r"\[\[([^\]]+)\]\]",
+       lambda m: f"[{m.group(1).split('|')[-1]}]({wiki_link_map.get(m.group(1).split('|')[0], f'{wiki_url}/wiki/{m.group(1)}.md')})",
+       src)
+   ```
+
+3. **Preserve `[[WikiLinks]]` in the Obsidian-side copies** (the `~/llm_wiki/wiki/sources/...` page) so they still work in Obsidian/Logseq — only the gist/published GitHub version converts them.
+
+4. **Header metadata block** should include clickable links to the source transcript and the wiki source page when the document is going to a gist or remote repo.
+
+This rule was added 2026-06-13 after the Voyage first-dev-playthrough gist had `[[WikiLinks]]` that didn't render on github.com. Apply by default to any future ported-source ingest.

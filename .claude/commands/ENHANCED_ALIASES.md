@@ -29,6 +29,7 @@ Quick reference for enhanced command aliases with memory integration.
 | `/planexec` | `/plan-enhanced` | `/plan+`, `/pe` | Memory-informed planning with pattern consultation |
 | `/testui` | `/testui-enhanced` | `/testui+`, `/tue` | Pattern-aware UI testing with learned preferences |
 | `/learn` | `/learn-enhanced` | `/learn+`, `/le` | Enhanced learning with pattern analysis |
+| `/aar` | `/accept-adapt-reject` | `/accept-adapt-reject`, `/aar` | Structured feedback triage — accept/adapt/reject each item |
 
 ## Quick Start
 

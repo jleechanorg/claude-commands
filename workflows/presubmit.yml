@@ -67,15 +67,19 @@ jobs:
             exit 2
           fi
           $PYTHON scripts/check_schema_coverage.py \
-            --fail-under 0 \
+            --fail-under 100 \
+            --waived-paths-file mvp_site/schemas/game_state_schema_coverage_waivers.txt \
             --required-path combat_state.rewards_processed \
             --required-path encounter_state.encounter_completed \
             --required-path encounter_state.encounter_summary \
             --required-path encounter_state.rewards_processed \
             --required-path rewards_pending.processed \
-            --required-path rewards_pending.level_up_available \
-            --required-path custom_campaign_state.level_up_pending \
-            --required-path custom_campaign_state.level_up_in_progress \
+            --required-path level_up_session \
+            --required-path level_up_session.status \
+            --required-path level_up_session.current_level \
+            --required-path level_up_session.target_level \
+            --required-path level_up_session.source \
+            --required-path level_up_session.selections \
             --required-path custom_campaign_state.last_location \
             --required-path custom_campaign_state.last_story_mode_sequence_id \
             --required-path custom_campaign_state.budget_warnings_shown \
@@ -93,6 +97,29 @@ jobs:
             --required-path player_character_data.spells_known \
             --required-path player_character_data.spells_prepared \
             --required-path player_character_data.cantrips
+  prompt-contracts:
+    name: Prompt / Tool Contract Hash Validation
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      # Note: do not use actions/setup-python here — the contract validator
+      # is pure stdlib (hashlib + json), and a few self-hosted runners
+      # (notably macOS ARM64) cannot run setup-python without sudo. Use
+      # the runner's pre-installed python3 directly.
+      - name: Validate prompt/tool contract hashes
+        run: |
+          PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          if [ -z "$PYTHON" ]; then
+            echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+            exit 2
+          fi
+          $PYTHON scripts/validate_prompt_tool_contracts.py
   python-lint:
     name: Python Linting (Ruff)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false

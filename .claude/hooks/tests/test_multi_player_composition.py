@@ -6,6 +6,7 @@ Tests the enhanced compose-commands.sh hook with nested command detection
 
 import os
 import subprocess
+import tempfile
 import unittest
 
 
@@ -145,33 +146,39 @@ class TestMultiPlayerComposition(unittest.TestCase):
         # Test with debug enabled
         env = os.environ.copy()
         env['COMPOSE_DEBUG'] = '1'
-        env['COMPOSE_LOG_FILE'] = '/tmp/test_compose_debug.log'
-
+        
+        log_file = None
         try:
-            result = subprocess.run(
-                [self.hook_script],
-                check=False, input="/pr test debug logging",
-                capture_output=True,
-                text=True,
-                env=env,
-                timeout=10
-            )
+            # Use a unique log file to prevent flakiness and collisions in parallel test runners
+            with tempfile.NamedTemporaryFile(prefix="test_compose_debug_", suffix=".log", delete=False) as temp_log:
+                log_file = temp_log.name
+            
+            env['COMPOSE_LOG_FILE'] = log_file
+
+            try:
+                result = subprocess.run(
+                    [self.hook_script],
+                    check=False, input="/pr test debug logging",
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                    timeout=10
+                )
+            except subprocess.TimeoutExpired:
+                self.fail("Hook script with debug logging timed out")
 
             # Check that log file was created and contains debug info
-            log_file = '/tmp/test_compose_debug.log'
-            if os.path.exists(log_file):
+            if log_file and os.path.exists(log_file):
                 with open(log_file) as f:
                     log_content = f.read()
 
                 # Should log detected and nested commands separately
                 self.assertIn("DETECTED:", log_content)
                 self.assertIn("NESTED:", log_content)
-
-                # Clean up log file
+        finally:
+            # Clean up log file if it exists
+            if log_file and os.path.exists(log_file):
                 os.remove(log_file)
-
-        except subprocess.TimeoutExpired:
-            self.fail("Hook script with debug logging timed out")
 
     def test_command_deduplication(self):
         """Test that duplicate commands are properly deduplicated"""

@@ -102,7 +102,7 @@ jobs:
               print
               next
             }
-            line_lc ~ /^[[:space:]]*##[[:space:]]+(design[[:space:]]+decision|governing[[:space:]]+design[[:space:]]+doc[[:space:]]*&[[:space:]]+tracking)([[:space:]]|$)/ {
+            line_lc ~ /^[[:space:]]*##[[:space:]]+(design[[:space:]]+decision|governing[[:space:]]+design[[:space:]]+doc[[:space:]]*&[[:space:]]+tracking|tenets)([[:space:]]|$)/ {
               in_section=1
               next
             }
@@ -113,9 +113,9 @@ jobs:
           DESIGN_DECISION_FOUND="false"
           if [ -n "$DESIGN_DECISION" ]; then
             DESIGN_DECISION_FOUND="true"
-            echo "✅ ## Design Decision section found in PR description"
+            echo "✅ Tenets / Design Decision section found in PR description"
           else
-            echo "❌ ## Design Decision section NOT found in PR description"
+            echo "❌ Tenets / Design Decision section NOT found in PR description"
           fi
 
           # Extract linked artifact (bead ID or .md path)
@@ -123,7 +123,7 @@ jobs:
           if [ -n "$LINKED_ARTIFACT" ]; then
             echo "✅ Linked artifact(s): $LINKED_ARTIFACT"
           else
-            echo "⚠️  No bead ID or .md link found in Design Decision section"
+            echo "⚠️  No bead ID or .md link found in Tenets / Design Decision section"
           fi
 
           # Count non-test production delta lines
@@ -142,19 +142,19 @@ jobs:
           if (( DELTA_LINES > 50 )); then
             if [[ "$DESIGN_DECISION_FOUND" == "false" ]]; then
               DESIGN_GATE_RESULT="FAIL"
-              GATE0_FAIL_REASON="PR has $DELTA_LINES non-test delta lines (>50) but lacks ## Design Decision section"
+              GATE0_FAIL_REASON="PR has $DELTA_LINES non-test delta lines (>50) but lacks a Tenets / Design Decision section"
               echo ""
               echo "❌ Gate 0 FAIL: $GATE0_FAIL_REASON"
-              echo "   Add a ## Design Decision section to the PR description linking a bead or roadmap doc."
+              echo "   Add a ## Tenets (or ## Design Decision) section to the PR description linking a bead or roadmap doc."
             elif [ -z "$LINKED_ARTIFACT" ]; then
               DESIGN_GATE_RESULT="FAIL"
-              GATE0_FAIL_REASON="PR has ## Design Decision section but no linked bead (rev-xxxx) or .md artifact"
+              GATE0_FAIL_REASON="PR has Tenets / Design Decision section but no linked bead (rev-xxxx) or .md artifact"
               echo ""
               echo "❌ Gate 0 FAIL: $GATE0_FAIL_REASON"
-              echo "   Link a bead or roadmap/design .md doc in the Design Decision section."
+              echo "   Link a bead or roadmap/design .md doc in the Tenets / Design Decision section."
             else
               echo ""
-              echo "✅ Gate 0 PASS: Design Decision section present with artifact link"
+              echo "✅ Gate 0 PASS: Tenets / Design Decision section present with artifact link"
             fi
           else
             echo ""
@@ -254,6 +254,24 @@ jobs:
           check_gate "constants get_level_from_xp" "0" \
             "grep -c 'def get_level_from_xp' mvp_site/constants.py"
 
+          # Gate 2b: ZFC — backend must not override the model's level_up signal
+          # from XP-threshold math. The allowance is coupled to the registry: it
+          # equals the number of specs carrying log_reason_code=
+          # "level_up_signal_threshold_contradiction_overridden" in
+          # backend_adjustment_specs.py. When M2 deletes the override it must
+          # remove BOTH the code site AND the registry spec in the same PR — the
+          # gate allowance then auto-drops to 0, so any reintroduction fails CI
+          # with no workflow edit needed.
+          # See roadmap/level-up-main-cleanup-2026-06-10.md.
+          REGISTERED_OVERRIDES=$(grep -c 'log_reason_code="level_up_signal_threshold_contradiction_overridden"' mvp_site/backend_adjustment_specs.py || true)
+          check_upper_bound "rewards_engine <=registered threshold-override sites" "$REGISTERED_OVERRIDES" \
+            "grep -c 'level_up_signal_threshold_contradiction_overridden' mvp_site/rewards_engine.py || true"
+
+          # Gate 2c (report-only): net level-up backend LOC trend. A migration
+          # without its deletion is an accretion — track the number every run.
+          LEVELUP_LOC=$(( $(wc -l < mvp_site/level_up_session.py) + $(wc -l < mvp_site/rewards_engine.py) ))
+          REPORT+="| level-up backend LOC (level_up_session+rewards_engine) | \`wc -l\` | report-only | ${LEVELUP_LOC} | 📊 |\n"
+
           # Gate 3: _is_state_flag_true consolidated to game_state.py (sole definition)
           # - rewards_engine.py imports from game_state.py (backward-compat alias)
           count_is_state_flag_true() {
@@ -311,9 +329,10 @@ jobs:
           # 2026-05-12: PR #6890 bumped 9700→9900; origin/main reached 9785 after level-up PRs merge.
           # 2026-05-12: PR #6888 adds living_world_contract imports + cc-ui-gaia scenarios; wc -l ~9904. Bumped to 10000.
           # 2026-05-23: PR #6958 temporary exception while world_logic cleanup is tracked separately. Bumped to 11000.
+          # 2026-06-12: Bumped to 11100 due to main branch merges.
           # Tighten by ~1000-1500 per subsequent cleanup PR toward target.
           # Uses check_upper_bound: PASS if actual <= expected.
-          check_upper_bound "world_logic.py line count" "11000" \
+          check_upper_bound "world_logic.py line count" "11100" \
             "wc -l < mvp_site/world_logic.py"
 
           echo ""

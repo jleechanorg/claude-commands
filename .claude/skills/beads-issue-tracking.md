@@ -98,7 +98,7 @@ git rm --cached .worktrees/pr-5654
 
 ## Merge Conflict Prevention (union merge + dedupe policy)
 
-`.gitattributes` is configured with `merge=beads` for `.beads/issues.jsonl` so merges use a dedicated merge driver. Configure the driver locally with `git config --local merge.beads.driver 'git merge-file --union %A %O %B'` (the fallback documented in `.gitattributes`). Because bead records are mutable by `id`, identical IDs from concurrent branches can still coexist after a union-style merge. This is why the repo enforces a deterministic dedupe step after merges:
+`.gitattributes` is configured with `merge=union` for `.beads/issues.jsonl` so Git and GitHub use Git's built-in union merge driver to automatically resolve concurrent additions. Because bead records are mutable by `id`, identical IDs from concurrent branches can still coexist after a union-style merge. This is why the repo enforces a deterministic dedupe step after merges:
 
 - Pre-commit automatically runs `scripts/deduplicate_beads_jsonl.py` and rewrites `.beads/issues.jsonl` if duplicates exist.
 - Pre-push runs the same script in `--check` mode and blocks pushes if duplicate IDs remain.
@@ -116,7 +116,7 @@ If you see merge conflicts in `.beads/issues.jsonl`, check merge attributes and 
 
 ```bash
 cat .gitattributes | grep beads
-# Expected: .beads/issues.jsonl merge=beads
+# Expected: .beads/issues.jsonl merge=union
 ```
 
 ## Working in Worktrees — Main Dir Drift

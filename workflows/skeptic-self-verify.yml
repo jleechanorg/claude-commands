@@ -26,6 +26,15 @@ jobs:
       checks: read
       actions: write
     steps:
+      # Checkout required so Gate-6b can find .github/scripts/pr_description_gate.py.
+      # Self-hosted runners share persistent named volumes — without checkout each job
+      # sees whatever the previous job left in the workspace (stale ref).
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
       - name: Run gate checks and post VERDICT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -256,6 +265,40 @@ jobs:
           fi
           echo "  [6] Evidence:      $G6"
 
+          # Gate 6b: PR description gate (struct + content + canonical sections +
+          # evidence section anchors). Runs the new
+          # .github/scripts/pr_description_gate.py validator against the same
+          # PR body and changed-file list. Fail-closed: missing script or
+          # non-zero exit flips G6b to FAIL.
+          G6b="PASS(not-required)"
+          if echo "$CHANGED" | grep -qE '^(mvp_site/|testing_(mcp|ui)/|deploy\.sh$|\.github/(workflows|scripts)/)'; then
+            G6b="PASS"
+            if [ -f ".github/scripts/pr_description_gate.py" ]; then
+              DESC_BODY_FILE=$(mktemp)
+              DESC_FILES_FILE=$(mktemp)
+              printf '%s' "$PR_BODY" > "$DESC_BODY_FILE"
+              printf '%s\n' "$CHANGED" > "$DESC_FILES_FILE"
+              set +e
+              python3 .github/scripts/pr_description_gate.py \
+                --body-file "$DESC_BODY_FILE" \
+                --changed-files-file "$DESC_FILES_FILE" \
+                > /tmp/skeptic_desc_gate_out.json 2> /tmp/skeptic_desc_gate_out.json
+              DESC_RC=$?
+              set -e
+              rm -f "$DESC_BODY_FILE" "$DESC_FILES_FILE"
+              if [ "$DESC_RC" != "0" ]; then
+                G6b="FAIL"
+                echo "  [6b] PR desc gate:  FAIL (validator exit=$DESC_RC, head=$(head -c 600 /tmp/skeptic_desc_gate_out.json 2>/dev/null || echo none))"
+              else
+                echo "  [6b] PR desc gate:  PASS"
+              fi
+              rm -f /tmp/skeptic_desc_gate_out.json
+            else
+              G6b="FAIL(validator-missing)"
+              echo "  [6b] PR desc gate:  FAIL (validator not present in checkout)"
+            fi
+          fi
+
           # Gates 7 and 8: this workflow IS the skeptic evaluation
           G7="PASS"
           echo "  [7] Self-verify:   $G7"
@@ -265,9 +308,16 @@ jobs:
           if echo "$CHANGED" | grep -qE '^mvp_site/prompts/|^mvp_site/.+\.py$'; then
             SMOKE_REQUIRED=true
           fi
+          set +e
+          gh api "repos/$GITHUB_REPOSITORY/contents/.github/workflows/mcp-smoke-tests.yml" >/dev/null 2>&1
+          _smoke_workflow_exists=$?
+          set -e
+          if [ "$_smoke_workflow_exists" -ne 0 ]; then
+            SMOKE_REQUIRED=false
+          fi
 
           if [ "$SMOKE_REQUIRED" = "false" ]; then
-            G8="PASS(skipped-no-mvp-site-changes)"
+            G8="PASS(skipped-no-mcp-smoke-tests-workflow)"
           else
             # issue_comment-triggered workflows record the default-branch SHA as headSha,
             # not the PR head SHA. Fetch recent workflow runs and smoke result comments:
@@ -298,18 +348,21 @@ jobs:
                 | sort_by(.updated_at // .created_at // "")
                 | last.body // ""
               ' 2>/dev/null || echo "")
-            if echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed"; then
-              G8="PASS"
-            elif echo "$SMOKE_RUNS" | jq -e 'any(.[]; .conclusion == "success")' > /dev/null; then
+            # Gate 8 requires REAL-service coverage: the smoke comment encodes
+            # mode (mcp-smoke-mode: real|mock). A mock smoke (the default) must
+            # never satisfy the gate — only a real-mode pass for this SHA does.
+            if echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed" && echo "$SMOKE_COMMENT_BODY" | grep -q "mcp-smoke-mode: real"; then
               G8="PASS"
             elif echo "$SMOKE_RUNS" | jq -e 'any(.[]; .status == "in_progress" or .status == "queued")' > /dev/null; then
               G8="WAIT(smoke-still-running)"
+            elif echo "$SMOKE_COMMENT_BODY" | grep -q "mcp-smoke-mode: mock"; then
+              G8="FAIL(smoke-ran-mock-need-real-run-/smoke)"
             elif echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Failed"; then
               G8="FAIL(smoke-comment-failed-for-SHA)"
             elif [ "$(echo "$SMOKE_RUNS" | jq 'length')" -eq 0 ]; then
               G8="FAIL(no-smoke-run-for-SHA)"
             else
-              G8="FAIL(smoke-no-success-for-SHA)"
+              G8="FAIL(smoke-no-real-success-for-SHA)"
             fi
           fi
           echo "  [8] Smoke:         $G8"

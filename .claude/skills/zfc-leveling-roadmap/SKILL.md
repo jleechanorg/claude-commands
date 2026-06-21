@@ -44,6 +44,7 @@ Before modifying ANY file for level-up/rewards/XP work, verify against this tabl
 | `narrative_response_schema.py` | Preserve model output losslessly, contradiction detection on model output boundary (e.g., `level_up=true` but `current_turn_exp < total_exp_for_next_level`) | Class feature synthesis, state mutation, building UI payloads |
 | `llm_service.py` | LLM request/response pipeline, retry on `SchemaRejectionError` | Rewards formatting, level-up flag interpretation, modal state mutation |
 | `structured_fields_utils.py` | Extract non-empty structured fields | Semantic validation, alias normalization, UI formatting |
+| `prompts/level_up_instruction.md` | Class-AGNOSTIC contracts only — generic enumeration ("enumerate ALL subclass options as separate clickable choices"), generic announce-all-gains rules. The model owns the D&D 5e SRD. | Hardcode subclass names (oaths/circles/patrons/archetypes/domains), feature names (Divine Health, Channel Divinity, Second Wind…), spell names, or per-class numeric gains as named rules/HARD INVARIANTs. Class names allowed ONLY inside `e.g.`/`for example` illustrations. |
 
 ---
 

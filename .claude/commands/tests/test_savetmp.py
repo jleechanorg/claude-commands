@@ -1,5 +1,8 @@
+import contextlib
+import io
 import sys
 import tempfile
+import traceback
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -245,12 +248,22 @@ class TestSaveTmpValidation(unittest.TestCase):
 
 class TestSaveTmpMain(unittest.TestCase):
     def test_main_validate_creates_generic_run_json(self):
-        work_name = f"generic-evidence-{next(tempfile._get_candidate_names())}"
-        base_dir = Path("/tmp") / "repo" / "branch" / work_name
-        try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            work_name = "generic-evidence-test"
+            repo_path = Path(tmpdir) / "repo"
+            base_dir = repo_path / "branch" / work_name
             with patch.object(savetmp, "_resolve_repo_info") as mock_repo_info:
-                mock_repo_info.return_value = ("repo", "branch", None)
-                exit_code = savetmp.main([work_name, "--validate", "--skip-git"])
+                mock_repo_info.return_value = (str(repo_path), "branch", None)
+                f_stdout = io.StringIO()
+                f_stderr = io.StringIO()
+                with contextlib.redirect_stdout(f_stdout), contextlib.redirect_stderr(f_stderr):
+                    exit_code = savetmp.main([work_name, "--validate", "--skip-git"])
+                
+                if exit_code != 0:
+                    print("Test failed. stdout:")
+                    print(f_stdout.getvalue())
+                    print("stderr:")
+                    print(f_stderr.getvalue())
 
             self.assertEqual(exit_code, 0)
 
@@ -265,9 +278,8 @@ class TestSaveTmpMain(unittest.TestCase):
             self.assertEqual(run_json["work_name"], work_name)
             self.assertEqual(run_json["scenarios"], [])
             self.assertTrue((run_dir / "run.json.sha256").exists())
-        finally:
-            if base_dir.exists():
-                savetmp.shutil.rmtree(base_dir, ignore_errors=True)
+
+
 
 
 if __name__ == "__main__":

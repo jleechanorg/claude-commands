@@ -113,6 +113,7 @@ jobs:
       - name: Upload import validation results
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
         if: always()
+        continue-on-error: true
         with:
           name: import-validation-results
           path: scripts/validate_imports.log
@@ -171,25 +172,85 @@ jobs:
         # Deliberately NOT setting ref — uses default merge commit
         # to validate the PR integrates cleanly with the base branch.
         persist-credentials: false
-        submodules: recursive
         fetch-depth: 1
+
+    - name: Resolve Python version for cache keys
+      id: python-version
+      shell: bash
+      run: |
+        PYTHON=$(command -v python${{ vars.PYTHON_VERSION || '3.12' }} || command -v python3.11 || command -v python3 || command -v python || true)
+        if [ -z "$PYTHON" ]; then
+          echo "::error::No suitable Python interpreter found (tried: python${{ vars.PYTHON_VERSION || '3.12' }}, python3.11, python3, python)" >&2
+          exit 2
+        fi
+        PYTHON_VERSION=$($PYTHON -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+        echo "Resolved interpreter: $PYTHON"
+        echo "Resolved version: $PYTHON_VERSION"
+        echo "python=$PYTHON" >> "$GITHUB_OUTPUT"
+        echo "python_version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
+
+    - name: Cache merge-commit venv
+      id: cache-ci-venv
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
+      with:
+        path: .ci-venv
+        key: ${{ runner.os }}-${{ runner.arch }}-ci-venv-${{ steps.python-version.outputs.python_version }}-${{ hashFiles('requirements.txt', 'mvp_site/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-ci-venv-${{ steps.python-version.outputs.python_version }}-
 
     - name: Install dependencies
       run: |
-        if command -v python3.12 >/dev/null 2>&1; then
-          PYTHON_BIN=python3.12
-        elif command -v python3.11 >/dev/null 2>&1; then
-          PYTHON_BIN=python3.11
-        else
-          PYTHON_BIN=python3
+        PYTHON_BIN="${{ steps.python-version.outputs.python }}"
+        echo "Using Python for merge validation: $($PYTHON_BIN --version)"
+
+        VENV_OK=false
+        VERIFY_CACHED_VENV=false
+        # On exact cache hit, check if cached .ci-venv is healthy.
+        # On partial hit or cache miss, we recreate it cleanly to avoid stale dependencies.
+        if [ "${{ steps.cache-ci-venv.outputs.cache-hit }}" = "true" ]; then
+          if [ -d .ci-venv ] && [ -x .ci-venv/bin/python ] && [ -x .ci-venv/bin/pip ] \
+            && timeout 30 .ci-venv/bin/python --version >/dev/null 2>&1 \
+            && timeout 30 .ci-venv/bin/pip --version >/dev/null 2>&1; then
+            echo "Reusing healthy cached .ci-venv"
+            VENV_OK=true
+            VERIFY_CACHED_VENV=true
+          else
+            echo "Cached .ci-venv is unhealthy"
+          fi
         fi
-        echo "Using Python for merge validation: $("$PYTHON_BIN" --version)"
-        "$PYTHON_BIN" -m venv .ci-venv
+
+        if [ "$VENV_OK" != "true" ]; then
+          echo "Recreating clean .ci-venv"
+          rm -rf .ci-venv
+          "$PYTHON_BIN" -m venv .ci-venv
+        fi
+
         source .ci-venv/bin/activate
-        python -m pip install --upgrade pip
-        python -m pip install pytest
-        if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
-        if [ -f mvp_site/requirements.txt ]; then python -m pip install -r mvp_site/requirements.txt; fi
+
+        # Validate cached env isn't carrying stale/corrupted compiled extension wheels.
+        if [ "$VERIFY_CACHED_VENV" = "true" ]; then
+          echo "Verifying cached .ci-venv imports for extension-backed dependencies..."
+          if ! .ci-venv/bin/python -c "import importlib; import sys; \
+mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
+[importlib.import_module(m) for m in mods]"; then
+            echo "::warning::Cached .ci-venv failed critical import validation; rebuilding"
+            VENV_OK=false
+            rm -rf .ci-venv
+            "$PYTHON_BIN" -m venv .ci-venv
+            source .ci-venv/bin/activate
+          fi
+        fi
+
+        # Install dependencies only if we don't have a healthy exact cache hit.
+        # Run pip install with --no-cache-dir to minimize memory usage and avoid OOM (Exit Code 137).
+        if [ "${{ steps.cache-ci-venv.outputs.cache-hit }}" != "true" ] || [ "$VENV_OK" != "true" ]; then
+          python -m pip install --no-cache-dir --upgrade pip
+          python -m pip install --no-cache-dir pytest
+          if [ -f requirements.txt ]; then python -m pip install --no-cache-dir -r requirements.txt; fi
+          if [ -f mvp_site/requirements.txt ]; then python -m pip install --no-cache-dir -r mvp_site/requirements.txt; fi
+        else
+          echo "Exact cache hit and healthy venv - skipping dependency installation step."
+        fi
 
     - name: Validate merge-commit imports
       run: |
@@ -264,7 +325,6 @@ jobs:
         # creates a different checkout that defeats testmon's change detection.
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         persist-credentials: false
-        submodules: recursive
         fetch-depth: 0  # Full history needed for git diff in JS test step
         clean: true  # Remove untracked files from prior runs on self-hosted runners
 
@@ -551,7 +611,8 @@ jobs:
           node --test \
             mvp_site/frontend_v1/tests/settings_listeners.test.js \
             mvp_site/frontend_v1/tests/campaign_wizard_dragon_knight_submit.test.js \
-            mvp_site/frontend_v1/tests/campaign_wizard_dragon_knight_canonical.test.js
+            mvp_site/frontend_v1/tests/campaign_wizard_dragon_knight_canonical.test.js \
+            mvp_site/frontend_v1/tests/fetchapi_public_optin.test.js
         else
           echo "No frontend_v1 / Dragon Knight canonical changes detected; skipping JS unit tests."
         fi
@@ -743,6 +804,7 @@ jobs:
     - name: Upload runner health artifacts
       if: always()
       uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+      continue-on-error: true
       with:
         name: runner-health-${{ matrix.test-group }}
         path: |
@@ -781,6 +843,7 @@ jobs:
     - name: Upload test results
       uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()
+      continue-on-error: true
       with:
         name: test-results-${{ matrix.test-group }}
         path: |
@@ -817,6 +880,7 @@ jobs:
     - name: Upload coverage data
       if: always() && startsWith(matrix.test-group, 'core-mvp-') && github.event_name == 'pull_request'
       uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+      continue-on-error: true
       with:
         name: coverage-data-${{ matrix.test-group }}
         path: .coverage.${{ matrix.test-group }}

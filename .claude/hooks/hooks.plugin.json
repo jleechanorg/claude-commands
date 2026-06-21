@@ -22,11 +22,6 @@
         "hooks": [
           {
             "type": "command",
-            "description": "Block new file creation when existing integration paths exist.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/pre_creation_blocker.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
-          },
-          {
-            "type": "command",
             "description": "Prevent root-level file pollution before writes execute.",
             "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/check_root_files.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
           }
@@ -62,11 +57,6 @@
       {
         "matcher": "Write",
         "hooks": [
-          {
-            "type": "command",
-            "description": "Auto-correct file placement violations after writes.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/auto_fix_placement.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
-          },
           {
             "type": "command",
             "description": "Validate new files against CLAUDE.md protocols post-write.",

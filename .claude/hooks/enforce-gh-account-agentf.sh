@@ -20,12 +20,16 @@ except Exception: print(''); sys.exit(0)
 print(d.get('cwd','') if '$1'=='cwd' else d.get('tool_input',{}).get('command',''))" 2>/dev/null || true
 }
 cmd="$(read_field command)"; cwd="$(read_field cwd)"
+# If JSON didn't include cwd, fall back to shell PWD, then CLAUDE_CONFIG_DIR hint.
+[ -z "$cwd" ] && cwd="${PWD:-}"
 [ -z "$cmd" ] && exit 0
 # Must actually invoke the gh CLI at a command position.
 printf '%s' "$cmd" | grep -qE '(^|[;&|`]|[[:space:]]|env[[:space:]]+)gh([[:space:]]|$)' || exit 0
 
-case "$cwd $cmd" in
-  *"$HOME/agent-f"*|*[Aa]gnt-[Ff]*) target="$USER-af" ;;
+# CLAUDE_CONFIG_DIR=~/.claude-agent-f is set by claudeaf() — reliable agent-f indicator.
+agentf_config="${CLAUDE_CONFIG_DIR:-}"
+case "$agentf_config $cwd $cmd" in
+  *"claude-agent-f"*|*"$HOME/agent-f"*|*[Aa]gnt-[Ff]*) target="$USER-af" ;;
   *) target="jleechan2015" ;;
 esac
 

@@ -1,1426 +1,235 @@
 ---
 name: evidence-standards
-description: General cross-project evidence standards (user scope). Repo-level files add project-specific rules — agents must consult both.
+description: General cross-project evidence standards (user scope). Use for the /es skill. Repo-level .claude/skills/evidence-standards.md files add project-specific extensions — always consult both.
+when-to-use: Before /er, /green, gate fixes, or AO worker dispatch on a PR that touches production code paths. Also when claiming a behavior is "fixed" or "working" and you need to prove it.
 ---
 
-# Evidence Standards for All Testing and Verification
+# /es — Evidence Standards (user scope)
 
-## Core Principle
+## Summary
 
-**Evidence must prove what you claim.** Mock data cannot prove production behavior.
+Evidence must **prove what you claim**. The strongest evidence is a raw
+request/response capture from the real production code path; a unit test in
+isolation proves nothing about real behavior. Match proof to the claim, label
+every claim with its evidence layer, and never substitute a green test suite
+for proof of integration correctness. The companion files in this directory
+(`bundle-anatomy.md`, `tmux-video-evidence.md`, `ui-video-evidence.md`) cover
+the structural and recording details; this file is the policy.
 
-## Minimum Viable Evidence Checklist
+## Core principle: raw req/resp > unit tests > nothing
 
-**Every test MUST capture these at minimum (copy-paste into test setup):**
+Ordered by strength, for a production behavior claim:
 
-```python
-def capture_provenance():
-    """REQUIRED: Capture all evidence standards."""
-    provenance = {}
+1. **Raw request/response capture from the real code path** (HTTP, JSONL, logs, video) — Layer 2.
+2. **Real-service capture with mocks only at the network boundary** (`httpx.MockTransport`, `responses`, `respx` with a recorded body) — Layer 2 mock-at-network.
+3. **Unit test in isolation** (monkeypatched, no real callstack) — Layer 1, **insufficient for production claims**.
+4. **No evidence** — invalid for any non-trivial claim.
 
-    # === GIT PROVENANCE (MANDATORY) ===
-    subprocess.run(["git", "fetch", "origin", "main"], timeout=10, capture_output=True)
-    provenance["git_head"] = subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], text=True).strip()
-    provenance["git_branch"] = subprocess.check_output(
-        ["git", "branch", "--show-current"], text=True).strip()
-    provenance["merge_base"] = subprocess.check_output(
-        ["git", "merge-base", "HEAD", "origin/main"], text=True).strip()
-    provenance["commits_ahead_of_main"] = int(subprocess.check_output(
-        ["git", "rev-list", "--count", "origin/main..HEAD"], text=True).strip())
-    provenance["diff_stat_vs_main"] = subprocess.check_output(
-        ["git", "diff", "--stat", "origin/main...HEAD"], text=True).strip()
+Real beats fast. A 30-second test against the real local server beats a 200-test
+mock suite for proving "the server behaves like X."
 
-    # === SERVER RUNTIME (MANDATORY for server tests) ===
-    port = BASE_URL.split(":")[-1].rstrip("/")
-    pids = subprocess.check_output(
-        ["lsof", "-i", f":{port}", "-t"], text=True).strip().split("\n")
-    provenance["server"] = {
-        "pid": pids[0] if pids else None,
-        "port": port,
-        "process_cmdline": subprocess.check_output(
-            ["ps", "-p", pids[0], "-o", "command="], text=True).strip() if pids else None,
-        "env_vars": {var: os.environ.get(var) for var in
-            ["WORLDAI_DEV_MODE", "TESTING", "GOOGLE_APPLICATION_CREDENTIALS"]}
-    }
+## Evidence Envelope Declaration (breadth claims: "all / per / each / every / across N")
 
-    return provenance
+Before producing evidence for a claim that covers a **set** (all 14 agents, every mode, each class), FIRST declare the **envelope** and get acceptance:
+
+1. **Requested set** — enumerate from source of truth, not memory.
+2. **Reachable set** — the subset the *real production path* can physically emit, plus the **exact structural gate** that bounds it (state the code condition).
+3. **Cost to expand** — what it takes to reach more of the set.
+4. **Accept** the envelope before doing the work.
+
+Reachability is **computed, never a hardcoded list** (a frozen "X is unreachable" verdict is itself a ZFC violation). State it as the observed union of real routing + the named structural exclusion. **Never manufacture breadth via a non-production path** (direct-SDK, mock, reconstructed input) — fake-complete is INSUFFICIENT; honest-partial + envelope wins. Without this step, breadth asks collapse into honest-partial (which reads as *the model refusing*) or fabricated-complete (correctly rejected).
+
+**No silent partial — lead with the gap.** When delivering breadth evidence, the FIRST line MUST be **"DELIVERED X of N; DID NOT DELIVER N−X (reason)"** before any "✓". Leading with the win and burying the shortfall is a silent partial failure — worse than refusing, because it hides that the ask wasn't met. In that same line, separate **gate-excluded** (true impossibility — name the gate) from **not-yet-driven** (reachable, just no scenario built — fixable). Never report "undriven" as "impossible."
+
+**Generate the report from a per-item ledger, not free narration.** One row per requested element: `item | status (DELIVERED / GATE-EXCLUDED / NOT-YET-DRIVEN / UNDETERMINED) | reason | artifact`. Counts are computed from the ledger so no item is silently dropped and no cause is applied to a group without a per-row reason. **Before writing GATE-EXCLUDED, confirm the gate is intrinsic to the item, not to a turn/run type** — e.g. a gate on "turns emitting tool_requests" excludes turns, not agents, so a tool-capable agent is NOT-YET-DRIVEN/UNDETERMINED, never statically impossible. A static "impossible list" that is really a per-run property is a ZFC violation.
+
+## Evidence Staleness Tolerance — only PRODUCTION changes stale evidence
+
+**A moving HEAD does NOT invalidate evidence by itself.** Evidence captured at a prior SHA
+stays valid at HEAD as long as **no production-code change** landed between the evidence SHA
+and HEAD. Docs, tests, skills, CI-lint, type-hints, and comment-only commits stacked on top
+do **not** require a fresh evidence run. Flagging evidence "stale" because the head SHA moved
+— without checking *what* moved — is an over-correction; check the diff, not the SHA equality.
+
+**The check is a diff, not a SHA comparison:**
+
+1. Determine the evidence SHA (from `metadata.json.provenance.git_head` or the bundle README).
+2. `git diff --name-only <evidence-sha> HEAD` — classify every changed file.
+3. If **every** changed file is non-behavioral (test-only, docs-only `*.md`/`docs/`/`CLAUDE.md`/`AGENTS.md`,
+   `.claude/`/`.codex/`/`.cursor/` skills & agents, test/lint CI workflows **excluding** `deploy*`/`*preview*`,
+   type-hints/comments) → evidence remains valid; document the tolerance and move on.
+4. For any `.py` file you classify as "comment/type-hint only," run the full content diff
+   (`git diff <evidence-sha> HEAD -- <file>`) — `--name-only` can't tell a comment edit from a behavior edit.
+
+**Fresh evidence IS required only when a production change exists** between the SHAs:
+production code (in this repo: `$PROJECT_ROOT/` excluding `$PROJECT_ROOT/tests/`, **including** `$PROJECT_ROOT/prompts/**`),
+API/endpoints/game logic/agent routing, runtime config (env vars, feature flags), DB schema/migrations,
+or a deploy/preview workflow — or any **mixed** diff containing at least one such file.
+
+**Rationale:** rerunning real-server + real-LLM evidence for a docs typo or test rename burns
+hours of LLM time for zero added confidence. The evidence proves a *behavior*; if the behavior's
+code is byte-identical at HEAD, the proof is byte-valid at HEAD. Repo-level files may add
+path-specific context (e.g. `<repo>/.claude/skills/evidence-standards.md` §"Evidence Staleness
+Tolerance for Test/Docs-Only Changes") and take precedence on conflict.
+
+## Evidence class table
+
+| Class | Description | Layer | Acceptable for production claim? |
+|---|---|---|---|
+| **real-callstack + real-LLM** | Real `https://generativelanguage.googleapis.com/...` POST, real response streamed | Layer 2 | **Yes** (required for LLM-behavior claims) |
+| **real-callstack + mock-at-network** | Real callstack, HTTP boundary mocked with recorded body | Layer 2 | Yes, for non-LLM claims |
+| **real-callstack + real-BQ/HTTP** | Real BigQuery / Firestore / HTTP insert | Layer 2 | Yes |
+| **real-callstack + in-process SDK mock** | `gemini_provider.get_client = lambda: _FakeClient()` — SDK short-circuited | Layer 1 synthetic-LLM | **No** (named anti-pattern, see below) |
+| **unit test** | `mock.patch(...)`, no real callstack | Layer 1 | **No** for production claims (3 exceptions below) |
+| **none** | No artifact, just assertion | — | No |
+
+## Disallow unit tests as evidence (with 3 exceptions)
+
+**Unit-only proof is NOT sufficient.** A behavior verified only by unit tests
+(Layer 1, mocked/isolated) is not proven. `/es` and `/er` must treat unit-only
+evidence as **INSUFFICIENT** and explicitly warn the user when a claim rests
+on unit tests alone. The minimum acceptable proof is **Layer 2** end-to-end
+integration — real callstack exercised, mocks only at external API boundaries
+(network, third-party services). For production code paths that include an
+LLM or external service, real-service evidence is required (no mocked
+provider).
+
+**Exception 1:** non-production changes (docs, tests, tooling/scripts) — no
+evidence required.
+
+**Exception 2:** production changes under 100 delta lines of non-test code —
+unit-only IS acceptable.
+
+**Exception 3:** (none — these two are the only carve-outs from the
+"unit-only is insufficient" rule.)
+
+This applies regardless of how many unit tests pass or how high coverage is.
+"All unit tests green" does not constitute proof of integration correctness,
+server behavior, or LLM output.
+
+### SDK-mock named anti-pattern
+
+Mocks at the **in-process function boundary are not mocks at an external API
+boundary.** When the production code path includes a third-party SDK
+(`google.genai`, `openai`, `anthropic`, ...), mocking a wrapper inside the
+codebase substitutes the entire SDK with fabricated objects. The downstream
+call-graph runs end-to-end, but the data flowing through it is synthetic.
+
+**Detection signal:** the verify script imports the production module AND
+overrides any function in that module's call-graph that talks to the SDK. If
+the SDK constructor itself is reachable, the LLM is real. If the SDK is
+short-circuited, the LLM is synthetic regardless of what else is real.
+
+**Per-claim layer label is mandatory.** Every /er verdict claim must end with
+`[Layer N source]`:
+
+- `[Layer 1 unit]` — monkeypatched, no real callstack
+- `[Layer 1 synthetic-LLM]` — real callstack but in-process SDK mock
+- `[Layer 2 mock-at-network]` — real callstack, HTTP boundary mocked with recorded body
+- `[Layer 2 real-LLM]` — real callstack, real provider POST, real response streamed
+- `[Layer 2 real-BQ]` — real callstack, real BigQuery HTTP insert
+
+A claim that mixes Layer 2 (real BQ) with Layer 1 (synthetic LLM) is **not**
+Layer 2 proof for the LLM-behavior part. The /er verdict for that claim must
+be **PARTIAL** or **INSUFFICIENT**, not **PASS**. A claim that lacks the
+layer label is non-compliant and the verdict must be downgraded to PARTIAL.
+
+## Bundle anatomy (minimal)
+
+The canonical bundle shape is the iteration directory produced by the
+project's evidence harness. For the WorldArchitect MCP harness, see
+`bundle-anatomy.md` in this directory. At minimum, a bundle contains:
+
+- `metadata.json` — git provenance (`git_head`, `merge_base`, `commits_ahead_of_main`, `diff_stat_vs_main`), server runtime (PID, port, cmdline, env vars), `bundle_version`, `run_id`, `iteration`, `bundle_timestamp`
+- `run.json` — `scenarios[]` array (each with `name`, `errors`, `campaign_id` if any)
+- `evidence.md` — human summary + **Claim → Artifact Map** (required)
+- `methodology.md` — env, commands, pass criteria, threshold values used
+- `README.md` — package manifest (test name, run id, branch, commit)
+- `*.sha256` sibling files for every substantive file (use **local basename** so `sha256sum -c` works)
+- `artifacts/` — server.log, lsof/ps output, optional browser recordings
+- Trace JSONL captures when the harness emits them: `request_responses.jsonl` (MCP), `llm_request_responses.jsonl` (LLM), `http_request_responses.jsonl` (HTTP+SSE)
+
+`evidence.md` MUST include a **Claim → Artifact Map** (claim → file →
+key field) and a **"What This Evidence Does NOT Prove"** section.
+
+## Examples (3 short ones)
+
+### Example 1 — Raw HTTP request/response (the dominant case)
+
+```text
+# artifacts/scenario_03_capture.jsonl
+{"type":"request","method":"POST","path":"/interaction/stream","body":{"campaign_id":"abc123","action":"attack","target_ac":13}}
+{"type":"response","status":200,"stream_chunks":[
+  {"event":"tool_call","name":"roll_dice","args":{"formula":"1d20+5"}},
+  {"event":"tool_result","value":18,"die":"d20","modifier":5,"total":23},
+  {"event":"narration","text":"Your blade finds the gap in the ogre's guard."}
+]}
 ```
 
-**Quick validation:** If your metadata.json is missing ANY of these fields, the test is incomplete:
-- `provenance.merge_base`
-- `provenance.commits_ahead_of_main`
-- `provenance.diff_stat_vs_main`
-- `provenance.server.pid`
-- `provenance.server.port`
-- `provenance.server.process_cmdline`
+Proves: real callstack, real dice RNG, real LLM (or recorded response) reached
+the wire, in the right order. Strongest evidence for "the server behaves
+like X."
 
-## Three Evidence Rule (from CLAUDE.md)
+### Example 2 — Real LLM call with layer label
 
-**MANDATORY for ANY integration claim:**
-
-1. **Configuration Evidence**: Show actual config file entries enabling the behavior
-2. **Trigger Evidence**: Demonstrate automatic trigger mechanism (not manual execution)
-3. **Log Evidence**: Timestamped logs from automatic behavior (not manual testing)
-
-## Mock vs Real Mode Decision Tree
-
-Before running ANY test, answer:
-
-| Question | If YES → |
-|----------|----------|
-| Testing production/preview server behavior? | MUST use real mode |
-| Validating actual API responses? | MUST use real mode |
-| Checking data integrity (dice, state, persistence)? | MUST use real mode |
-| Proving a bug is fixed in production? | MUST use real mode |
-| Development workflow validation only? | Mock mode acceptable |
-| Unit testing isolated functions? | Mock mode acceptable |
-
-### Production Mode vs Real Mode
-
-**Production mode is NOT required for valid evidence.** Local testing with real services
-(real LLM APIs, real Firebase, real dice) is sufficient to prove behavior.
-If a run artifact records `production_mode`, `production_mode: false` is acceptable
-for evidence as long as the claim is not about production configuration or prod-only behavior.
-
-| Mode | When to Use | Evidence Value |
-|------|-------------|----------------|
-| `--production-mode` | Final deployment validation | Highest (actual prod config) |
-| `--evidence` (local server) | PR validation, feature proof | **Valid** (real APIs, real data) |
-| Mock mode | Unit tests, CI speed | Invalid for behavior claims |
-
-The key requirement is **real execution** (actual API calls, actual RNG), not production
-environment. Evidence from `--start-local --evidence` is valid proof.
-
-## Mock Mode Prohibition
-
-**MOCK MODE = INVALID EVIDENCE** for:
-- Production server validation
-- API integration claims
-- Data integrity verification (dice rolls, state changes)
-- Bug fix confirmation
-- Performance claims
-- Security validation
-
-**Mock mode tests ONLY prove:**
-- Code syntax is correct
-- Function signatures work
-- Basic logic flow (in isolation)
-
-**Mock mode tests NEVER prove:**
-- Production behavior
-- Real API responses
-- Actual data execution
-- Integration correctness
-
-## Evidence Collection Requirements
-
-### Bundle file reference (WorldArchitect MCP harness)
-
-For the **on-disk shape** of bundles produced by `testing_mcp/lib/evidence_utils.py` (`create_evidence_bundle`: `iteration_*`, JSONL captures, `streaming_evidence.json`, `artifacts/collection_log.txt`, etc.), see **`bundle-anatomy.md`** in this directory (same folder as this `SKILL.md`). Repo checkout mirror: `docs/evidence-standards/bundle-anatomy.md`.
-
-### Canonical Evidence Bundle Files
-
-**Required files in every evidence bundle:**
-
-| File | Purpose | Required Keys |
-|------|---------|---------------|
-| `run.json` | Test results | `scenarios[*].name`, `scenarios[*].campaign_id`, `scenarios[*].errors` |
-| `metadata.json` | Git/server provenance | `git_provenance`, `server`, `timestamp` |
-| `evidence.md` | Human-readable summary | Pass/fail counts matching run.json |
-| `methodology.md` | Test methodology | Environment, steps, validation |
-| `README.md` | Package manifest | Git commit, branch, collection time |
-| `request_responses.jsonl` | Raw MCP captures | Full request/response pairs |
-| `llm_request_responses.jsonl` | Raw LLM request/response payloads | `type` field (`request` or `response`) |
-
-**DEPRECATED:** `evidence.json` - use `run.json` + `metadata.json` instead.
-
-**Required for base-class local-server traces:**
-- `request_responses.jsonl` - MCP client ↔ local server (`/mcp`) request/response pairs
-- `llm_request_responses.jsonl` - raw LLM-layer request/response capture stream
-
-### Mandatory Scenarios Array
-
-**Every test MUST emit `results["scenarios"]`** even for single-scenario runs:
-
-```python
-# ❌ BAD - Missing scenarios array causes "Total Scenarios: 0"
-results = {"test_result": {...}}
-
-# ✅ GOOD - Always include scenarios array
-results = {
-    "scenarios": [
-        {
-            "name": "scenario_name",
-            "campaign_id": "abc123",  # Required for log traceability
-            "passed": True,
-            "errors": [],  # Always include, even if empty
-            "checks": {...}
-        }
-    ],
-    "test_result": {...}  # Optional summary
-}
+```text
+# Claim: "real Gemini response is logged verbatim with DC set before roll"
+- Claim Y: real Gemini response is logged verbatim → [Layer 2 real-LLM, Layer 2 real-BQ]
+- evidence: artifacts/llm_request_responses.jsonl contains a `type:response`
+  entry with `model: gemini-3-pro`, a real `https://generativelanguage.googleapis.com/...`
+  POST in the wire log, and a `dc_reasoning` field set before the `random.randint()` call.
 ```
 
-### Evidence Integrity (Checksums)
+The layer labels make it impossible to silently downgrade a real-LLM claim to
+a synthetic-LLM claim.
 
-**ALL evidence files MUST have separate checksum files:**
+### Example 3 — Video / cast evidence (UI behavior)
 
-```bash
-# Generate checksums AFTER finalizing content
-sha256sum run.json > run.json.sha256
-sha256sum metadata.json > metadata.json.sha256
-
-# Verify checksums
-sha256sum -c run.json.sha256
+```text
+# PR description includes:
+- Evidence bundle: /tmp/your-project.com/fix-attack-roll/iteration_001/
+- Video: https://<project-host>/releases/download/evidence-2026-06-16/attack-roll.mp4
+  (NOT github.com/.../releases/download/untagged-* — that is a red flag)
+- metadata.json contains browser_origin, gateway_url, server.pid, artifact_manifest
+- Video is pipeline output (asciinema .cast in bundle, converted to mp4
+  for hosting), not a manual screen recording
 ```
 
-**Anti-pattern:** Embedding checksums inside JSON files (self-invalidating).
-
-**Checksum usability requirement:** `.sha256` files must reference the **local basename**
-(e.g., `run.json`), not a nested path like `artifacts/run_.../run.json`.
-This ensures `sha256sum -c` works when run from the evidence directory.
-
-**ALL evidence files require checksums, including:**
-- Individual test result files (PASS_*.json, FAIL_*.json)
-- Aggregated files (request_responses.jsonl)
-- Server logs (artifacts/server.log)
-
-```python
-def _write_checksum_for_file(filepath: Path) -> None:
-    """Generate SHA256 checksum file for an existing file."""
-    content = filepath.read_bytes()
-    sha256_hash = hashlib.sha256(content).hexdigest()
-    checksum_file = Path(str(filepath) + ".sha256")
-    checksum_file.write_text(f"{sha256_hash}  {filepath.name}\n")
-```
-
-### Streaming Response Commitment (Signed Payload)
-
-For integrations relying on streamed server output, done payload evidence must include:
-
-- `streaming_response_signature.digest`
-- `streaming_response_signature.algorithm`
-- `streaming_response_signature.schema_version`
-- `streaming_execution_trace`
-- `request_id`
-
-The signature is the SHA-256 digest (or HMAC-SHA256 when
-`STREAM_RESPONSE_SIGNING_SECRET` is set) over canonical JSON for:
-
-- `request_id`
-- `response_text`
-- `execution_trace`
-
-Evidence reviewers (or replay scripts) must verify:
-
-1. `streaming_response_signature` is present in real-mode runs.
-2. `streaming_execution_trace` exists and records real provider path (`provider` / `mock_callable`) for phases.
-3. In real mode, `mock_services_mode` is false and no phase uses `mock_local_fallback`.
-4. `signature.verification` uses identical serialization (`sort_keys=True`, compact separators, UTF-8).
-
-### Evidence Package Consistency (NEW)
-
-**Single-run attribution:** If a bundle contains multiple runs, the docs **must**
-name the exact run directory used for claims (e.g., `run_YYYYMMDD...`). Claims
-must be traceable to one run only.
-
-**Multi-campaign isolation:** If tests create multiple campaigns (e.g., isolated tests
-for state-sensitive scenarios), evidence.md **must** include:
-1. **Isolation Note** explaining why multiple campaigns exist
-2. **Campaign ID** for each scenario result for traceability
-3. **Claim Scoping** clarifying which campaign(s) aggregate claims reference
-
-Example isolation note in evidence.md:
-```markdown
-## ⚠️ Multi-Campaign Isolation Note
-This bundle contains **11 campaigns**: 1 shared + 10 isolated.
-Each scenario includes its `campaign_id` for traceability.
-```
-
-**Per-scenario campaign ID in run.json:** When using fresh campaigns per scenario,
-the test output **must** include `campaign_id` for each scenario entry:
-
-```json
-{
-  "scenarios": [
-    {
-      "name": "Skill Check (Stealth)",
-      "campaign_id": "zuFsywkYErTZpGBGDhDC",  // ← Required for log traceability
-      "dice_audit_events": [...],
-      "tool_results": [...]
-    }
-  ]
-}
-```
-
-This enables matching server logs (which include `campaign_id=...`) to specific
-scenario results in the evidence bundle.
-
-**Doc ↔ data alignment:** Any item lists in methodology/evidence **must** be
-derived from actual test inputs or `game_state_snapshot.json`. Hardcoded or
-handwritten lists are invalid.
-
-**Threshold capture:** If pass/fail depends on thresholds (e.g.,
-## Browser / UI / Video Evidence Addendum
-
-When the claim depends on visible browser or UI behavior, the evidence bundle must
-include browser-visible artifacts in addition to the canonical JSON and Markdown files.
-
-### Required browser-visible artifacts
-
-- A screenshot captured at or immediately after the assertion point
-- A raw browser recording (`.webm` or `.mp4`)
-- A caption sidecar (`.vtt` or `.srt`)
-
-### Optional derived artifact
-
-- A burned-in captioned video (`.mp4`) may be included when the local encoder supports
-  subtitle rendering. If it is omitted, keep the raw video plus caption sidecars and
-  state why the burned-in derivative is absent.
-
-### Video source provenance — pipeline output only
-
-UI evidence video (`.mp4`, `.gif`, `.cast`) MUST be produced as output of the project's
-automated testing pipeline, not captured manually outside it.
-
-**Mandatory check before citing any video as UI evidence:**
-
-| Check | Required answer |
-|-------|----------------|
-| Was the video produced as output of the test pipeline? | YES |
-| Does an evidence bundle exist with `metadata.json` + `streaming_evidence.json`? | YES |
-| Is the video URL a `github.com/*/releases/download/untagged-*` link? | NO (red flag) |
-| Was the video manually recorded outside the test pipeline? | NO |
-
-**Red flags — evidence is INVALID if any apply:**
-- Video URL at `github.com/*/releases/download/untagged-*` (ad-hoc upload, not pipeline)
-- Video hosted on Dropbox, YouTube, or any external host with no pipeline bundle
-- `metadata.json` is missing `server.pid` (was not created by the test run)
-- Video exists but no evidence bundle exists at the standard bundle path
-
-A manually uploaded video with no pipeline bundle is the same fabrication class as a
-standalone HTML mock page. Neither carries pipeline provenance.
-
-### Metadata requirements for browser-visible claims
-
-`metadata.json` should also record:
-- `browser_origin`
-- `gateway_url` or tested base URL
-- `request_id` when the HTTP layer exposes one
-- `artifact_manifest` listing the media files emitted for the run
-
-### Evidence.md requirements for browser-visible claims
-
-`evidence.md` should explicitly state:
-- whether the assertion came from browser-visible state rather than server-only logs
-- which screenshot and video files correspond to the claimed success/failure point
-- whether captions were produced as sidecars only or also burned into a rendered video
-
-Keep these requirements generic. The standard should describe the evidence shape,
-not repo-specific file names or application-specific UI flows.
-`min_narrative_items`), those values must be recorded in `run.json` or the
-methodology so reviewers can verify the criteria.
-
-**Environment claims:** Only claim env vars that are read from the actual
-environment during the run (or omit them).
-
-**Unsupported claims:** CI status, Copilot analysis, or external validations
-must include their own evidence artifacts, otherwise omit those claims.
-
-**Bug-fix classification:** If a bundle labels a change as "new feature" to
-avoid before/after evidence, it must include a justification. Otherwise, for
-bug-fix claims, include a pre-fix reproduction and a post-fix run.
-
-### Evidence Bundle Structure Requirements
-
-**Claim → Artifact Map:** Every evidence.md MUST include a section mapping claims to files:
-
-```markdown
-## Claim → Artifact Map
-
-| Claim | File | Key Field(s) |
-|-------|------|--------------|
-| DC set before roll (Gemini) | run.json | scenarios[].dice_audit_events[].dc_reasoning |
-| DC set before roll (Qwen) | run.json | scenarios[].tool_results[].args.dc_reasoning |
-| Executed code proof | gemini3_executed_code.log | dc = X before random.randint() |
-```
-
-**Coverage Matrix:** For multi-model or multi-scenario tests, include a summary table:
-
-```markdown
-## Coverage Matrix
-
-| Scenario | Gemini 3 | Qwen | Key Params |
-|----------|----------|------|------------|
-| Attack Roll | Pass (dc=15) | Pass (ac=13) | AC-based |
-| Skill Check | Pass (dc=13) | Pass (dc=13) | dc_reasoning required |
-| Saving Throw | Pass (dc=15) | Pass (dc=17) | dc + dc_reasoning |
-```
-
-**Raw Response Retention:** Every scenario MUST have its raw LLM output saved:
-- File pattern: `raw_{model}_{scenario}.txt`
-- Contains unparsed LLM response for provenance
-
-**Executed Code Capture (code_execution strategy):** When LLM uses code_execution:
-- Log the exact Python code at INFO level
-- Include campaign_id for traceability
-- Show dc/dc_reasoning set BEFORE random.randint()
-
-**Tool Request/Response Pairing (two-phase strategy):** When LLM uses tool calling:
-- Capture full `args` (request) and `result` (response) together
-- Temporal separation proven by: args sent → server generates roll → result returned
-
-**Traceability Metadata:** Every evidence bundle MUST include:
-- Run ID (timestamp-based: YYYYMMDD_HHMMSS)
-- Per-scenario identifiers (campaign_id)
-- Explicit statement tying log entries to scenarios
-
-**Evidence Integrity Note:** Include a section documenting:
-- Any scenarios with warnings or errors
-- Where errors are recorded (even if empty: `"errors": []`)
-- Overall pass/fail count
-
-**What is NOT Proven (Exclusion List):** Explicitly state limitations:
-
-```markdown
-## What This Evidence Does NOT Prove
-
-- Production server behavior (tested on local server)
-- Performance under load (single-request tests)
-- Edge cases not covered by scenarios (e.g., contested checks)
-```
-
-### Git Provenance Requirements
-
-Every evidence bundle MUST capture:
-
-```bash
-git fetch origin main  # Ensure origin/main is current
-git rev-parse HEAD     # Exact commit being tested
-git rev-parse origin/main  # Base comparison point
-git branch --show-current  # Branch name
-git diff --name-only origin/main...HEAD  # Files changed
-```
-
-**Why:** Proves exactly what code was running during evidence capture.
-
-### Server Environment Capture
-
-For server-based evidence, capture:
-
-```bash
-# Process info
-ps -eo pid,user,etime,args | grep "mvp_site\|python.*main"
-
-# Listening ports
-lsof -i :PORT -P -n | grep LISTEN
-
-# Environment variables (sanitized)
-# PID from above
-lsof -p $PID 2>/dev/null | grep -E "^p|^fcwd|^n/"
-```
-
-**Required env vars to capture:**
-- `WORLDAI_DEV_MODE`
-- `PORT`
-- `FIREBASE_PROJECT_ID`
-
-### Evidence Directory Structure
-
-**Canonical format with versioning (v1.1.0+):**
-
-```
-/tmp/<repo>/<branch>/<test_name>/
-├── iteration_001/           # First test run
-│   ├── README.md            # Package manifest with run_id, iteration
-│   ├── README.md.sha256
-│   ├── methodology.md       # Testing methodology documentation
-│   ├── methodology.md.sha256
-│   ├── evidence.md          # Evidence summary with metrics
-│   ├── evidence.md.sha256
-│   ├── notes.md             # Additional context, TODOs, follow-ups
-│   ├── notes.md.sha256
-│   ├── metadata.json        # Machine-readable: run_id, iteration, bundle_version
-│   ├── metadata.json.sha256
-│   ├── run.json             # Test results
-│   ├── run.json.sha256
-│   └── artifacts/           # Server logs, lsof, ps output
-├── iteration_002/           # Second test run (auto-incremented)
-│   └── ...
-└── latest -> iteration_002  # Symlink to most recent
-```
-
-**Versioning Fields (REQUIRED in metadata.json):**
-
-| Field | Description | Example |
-|-------|-------------|---------|
-| `bundle_version` | Evidence format version | `"1.1.0"` |
-| `run_id` | Unique identifier for this run | `"llm_guardrails_exploits-003-20260101T221620"` |
-| `iteration` | Run number within this test | `3` |
-
-**Run ID Format:** `{test_name}-{iteration:03d}-{timestamp}`
-
-Example metadata.json with versioning:
-```json
-{
-  "test_name": "llm_guardrails_exploits",
-  "run_id": "llm_guardrails_exploits-003-20260101T221620",
-  "iteration": 3,
-  "bundle_version": "1.1.0",
-  "bundle_timestamp": "2026-01-01T22:16:20.000000+00:00",
-  "provenance": { ... },
-  "summary": { ... }
-}
-```
-
-**Legacy format (still supported for backward compatibility):**
-
-```
-/tmp/<repo>/<branch>/<work>/<timestamp>/
-├── README.md              # Package manifest with git provenance
-├── README.md.sha256
-├── methodology.md         # Testing methodology documentation
-├── methodology.md.sha256
-├── evidence.md            # Evidence summary with metrics
-├── evidence.md.sha256
-├── notes.md               # Additional context, TODOs, follow-ups
-├── notes.md.sha256
-├── metadata.json          # Machine-readable: git_provenance, timestamps
-├── metadata.json.sha256
-├── pr_diff.txt            # Optional (PR mode): full diff origin/main...HEAD
-├── pr_diff_summary.txt    # Optional (PR mode): diff summary
-└── artifacts/             # Copied evidence files (test outputs, logs, etc.)
-    └── <copied files with checksums>
-```
-
-**Which flow to use?**
-
-- **Automated (preferred):** When running `/generatetest` or automated test runners, rely on the built-in `save_evidence()` helper to produce metadata, README, and checksums in one pass.
-- **Manual (shell-based):** Use when working in bare environments or ad-hoc investigations without the Python helper. The structure and required files remain the same; ensure metadata/README are created manually.
-
-**Manual creation (shell-based):**
-```bash
-# Set up directory structure
-REPO=$(basename $(git rev-parse --show-toplevel))
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-WORK="your-work-name"
-TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
-EVIDENCE_DIR="/tmp/${REPO}/${BRANCH}/${WORK}/${TIMESTAMP}"
-mkdir -p "${EVIDENCE_DIR}/artifacts"
-
-# Capture git provenance
-git rev-parse HEAD > "${EVIDENCE_DIR}/git_head.txt"
-git log -1 --format="%H%n%an <%ae>%n%aI%n%s" > "${EVIDENCE_DIR}/git_commit_info.txt"
-git diff --name-only origin/main...HEAD > "${EVIDENCE_DIR}/changed_files.txt"
-
-# Create package manifest and metadata to mirror automated flow
-cat > "${EVIDENCE_DIR}/README.md" <<EOF
-# Evidence Package Manifest
-- Repository: ${REPO}
-- Branch: ${BRANCH}
-- Work Name: ${WORK}
-- Collected At (UTC): ${TIMESTAMP}
-EOF
-
-cat > "${EVIDENCE_DIR}/metadata.json" <<EOF
-{
-  "repository": "${REPO}",
-  "branch": "${BRANCH}",
-  "work_item": "${WORK}",
-  "timestamp": "${TIMESTAMP}",
-  "created_by": "manual_shell_example"
-}
-EOF
-
-# Create documentation files
-echo "# Methodology" > "${EVIDENCE_DIR}/methodology.md"
-echo "# Evidence Summary" > "${EVIDENCE_DIR}/evidence.md"
-echo "# Notes" > "${EVIDENCE_DIR}/notes.md"
-
-# Generate checksums
-cd "${EVIDENCE_DIR}" || { echo "Failed to enter evidence directory" >&2; exit 1; }
-shopt -s nullglob
-for f in *.md *.txt *.json; do
-  [ -f "$f" ] && sha256sum "$f" > "${f}.sha256"
-done
-shopt -u nullglob
-
-# After populating methodology.md, evidence.md, and notes.md with real content,
-# regenerate checksums to reflect the final state:
-# for f in *.md *.txt *.json; do
-#   [ -f "$f" ] && sha256sum "$f" > "${f}.sha256"
-# done
-```
-
-**Alternative format** (still valid for specialized tests):
-
-```
-/tmp/{feature}_api_tests_v{N}/
-├── full_evidence_transcript.txt   # Human-readable log
-├── api_completion_test.json       # Structured test results
-├── api_completion_test.json.sha256
-├── post_process_analysis.json     # Validation/regression checks
-├── post_process_analysis.json.sha256
-└── evidence_capture.sh            # Reproducible script
-```
-
-### For Production Claims
-
-Evidence MUST include:
-- Real server URL (not localhost for production claims)
-- Actual API responses with timestamps
-- Real data from database/logs
-- Specific values that prove execution (e.g., dice roll results)
-
-### For Prompt Enforcement Claims
-
-If you claim a specific system instruction or enforcement block was included in a live LLM call:
-- Capture runtime prompt filenames (`debug_info.system_instruction_files`). Record `system_instruction_char_count` when available.
-- Tie it to the same execution that produced the response (timestamp + request/response evidence)
-- Static code references alone are insufficient
-
-**Runtime Capture Mechanism (Your Project):**
-
-```bash
-# Start server (system instruction capture is always enabled)
-CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS=120000 \
-WORLDAI_DEV_MODE=true \
-PORT=8005 \
-python -m mvp_site.main serve
-```
-
-When enabled, full system instruction text appears in `debug_info.system_instruction_text` (optional).
-
-**Prompt Tracking (default):**
-
-Capture prompt filenames (and char count when available):
-- `debug_info.system_instruction_files`: List of prompt files loaded (e.g., `["prompts/master_directive.md", "prompts/game_state_instruction.md"]`)
-- `debug_info.system_instruction_char_count`: Total character count of combined prompts (optional)
-
-This proves which prompts were used without the ~100KB overhead per response. The file list provides provenance while keeping evidence bundles manageable.
-
-**Evidence Mode Documentation (MANDATORY when using lightweight tracking):**
-
-When using lightweight prompt tracking, evidence files MUST include explicit documentation:
-
-```json
-{
-  "evidence_mode": "lightweight_prompt_tracking",
-  "evidence_mode_notes": "System instruction captured as filenames + char_count (not full text). Full raw_response_text from LLM is captured. Server logs in artifacts/."
-}
-```
-
-This ensures reviewers know what capture approach was used and can assess evidence completeness accordingly.
-
-### For Integration Claims
-
-Evidence MUST show:
-- Configuration enabling the integration
-- Automatic triggering (not manual invocation)
-- Logs proving automatic execution with timestamps
-
-### For Bug Fix Claims
-
-Evidence MUST include:
-- Reproduction of original bug (before fix)
-- Same scenario with fix applied
-- Different outcome proving fix works
-
-### For New Feature Claims
-
-New features don't require "before" evidence since there's no prior behavior to compare.
-Instead, prove:
-- Feature works as specified (test results with pass/fail counts)
-- Correct prompts/code were used (`system_instruction_files` or code paths)
-- State changes correctly (game_state snapshots, database records)
-### For LLM/API Behavior Claims
-
-When proving LLM or API behavior, evidence MUST capture the full request/response cycle:
-
-**Required captures:**
-1. **Raw request payload** - The exact input sent to the API/LLM
-2. **Raw response payload** - The exact output returned, before any parsing or transformation
-3. **System instructions/prompts** - Prompt filenames; char count optional; full text only when explicitly requested
-4. **Timestamps** - When each request was made and response received
-
-**Mandatory 2-layer trace set for `testing_mcp/lib/base_test.py` runs:**
-1. `request_responses.jsonl` - MCP client ↔ local server (`/mcp`) request/response pairs
-2. `llm_request_responses.jsonl` (+ `artifacts/server.log`) - local server LLM handling traces
-
-For base-class runs, these artifact files must be full and untrimmed.
-When `REQUIRE_FULL_TRACE_LOGS=true`, missing/invalid trace artifacts are a hard failure.
-
-**Why raw capture matters:**
-- Parsed/transformed responses may hide LLM misbehavior
-- System instruction files may differ from what was actually sent at runtime
-- Summaries can mask edge cases or errors
-
-**Capture format:**
-```
-request_responses.jsonl   # One JSON object per line, each containing:
-{
-  "timestamp": "ISO8601",
-  "request": { ... full MCP request ... },
-  "response": { ... full MCP response ... },
-  "response.result.debug_info": {
-    // Lightweight tracking (default):
-    "system_instruction_files": ["prompts/master_directive.md", "..."],
-    "system_instruction_char_count": 93180,
-    // Full capture (when CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS > 0):
-    "system_instruction_text": "system prompt sent to LLM",
-    // Raw LLM capture (requires CAPTURE_RAW_LLM=true):
-    "raw_request_payload": "full LLMRequest JSON sent to LLM (user action, context)",
-    "raw_response_text": "LLM output before parsing"
-  }
-}
-```
-
-**Required debug_info fields for LLM claims:**
-- `system_instruction_text` - The system prompt (captured by default)
-- `raw_request_payload` - The user prompt/action sent to LLM (requires `CAPTURE_RAW_LLM=true`)
-- `raw_response_text` - Raw LLM output before parsing (requires `CAPTURE_RAW_LLM=true`)
-
-**Server configuration:**
-- Enable full request/response logging in your server
-- Set capture limits high enough to avoid truncation (e.g., 80K+ chars for LLM responses)
-- Capture prompt filenames at runtime; full prompt text only when explicitly requested
-
-**Default Evidence Capture:**
-
-Raw LLM capture is **enabled by default** in the server (`$PROJECT_ROOT/llm_service.py`):
-- `CAPTURE_RAW_LLM` defaults to `"true"` - no env var required
-- Server default limit: 20,000 chars (sufficient for most use cases)
-
-For tests needing higher limits, `server_utils.DEFAULT_EVIDENCE_ENV` provides overrides:
-
-```python
-DEFAULT_EVIDENCE_ENV = {
-    "CAPTURE_RAW_LLM": "true",  # Server default, included for explicitness
-    "CAPTURE_RAW_LLM_MAX_CHARS": "50000",  # Test override (server: 20000)
-    "CAPTURE_SYSTEM_INSTRUCTION_MAX_CHARS": "120000",
-}
-```
-
-This ensures raw request/response capture works automatically without manual configuration.
-
-### For Test Result Portability
-
-Test output files should be self-contained with embedded provenance:
-
-```json
-{
-  "test_name": "feature_validation",
-  "timestamp": "2025-12-27T05:00:00Z",
-  "provenance": {
-    "git_head": "abc123def456...",
-    "git_branch": "feature-branch",
-    "server_url": "http://localhost:8001"
-  },
-  "steps": [ ... ],
-  "summary": { ... }
-}
-```
-
-**Why embedded provenance:**
-- Evidence bundle can be shared/moved without losing context
-- Validates that test ran against claimed code version
-- External provenance files can get separated from results
-
-## Bulletproof Evidence Requirements (v3 Lessons)
-
-These requirements elevate evidence from "probably correct" to "provably correct."
-
-### Command Output with Exit Codes
-
-**Assertions are not evidence.** Capture raw command output AND exit codes:
-
-```bash
-# ❌ BAD - Assertion only
-echo "Fix commit is ancestor of test HEAD"
-
-# ✅ GOOD - Raw output with exit code
-echo "Command: git merge-base --is-ancestor $FIX_COMMIT $TEST_HEAD"
-git merge-base --is-ancestor $FIX_COMMIT $TEST_HEAD
-ANCESTRY_EXIT=$?
-echo "Exit code: $ANCESTRY_EXIT"
-echo "Interpretation: Exit 0 = TRUE (is ancestor), Exit 1 = FALSE (not ancestor), 128+ = error"
-```
-
-### Working Directory Anchor
-
-**Every git command needs context.** Capture `pwd` to prove which repo:
-
-```bash
-echo "Working directory: $(pwd)"
-echo "Git root: $(git rev-parse --show-toplevel)"
-git rev-parse HEAD
-```
-
-### CI Checks Tied to HEAD SHA
-
-**PR checks don't prove which commit was tested.** Link checks to specific SHA:
-
-```bash
-# Get the HEAD SHA being tested
-HEAD_SHA=$(git rev-parse HEAD)
-
-# Fetch check runs for that specific SHA
-# Note: :owner/:repo is auto-inferred from git remote when run in a cloned repo
-gh api repos/:owner/:repo/commits/$HEAD_SHA/check-runs \
-  --jq '.check_runs[] | {name, status, conclusion, html_url}'
-```
-
-**Filter out placeholder checks:**
-- Exclude checks with empty `html_url` or `completedAt = 0001-01-01T00:00:00Z`
-- Exclude external links (e.g., `cursor.com`) that aren't GH Action runs
-
-### Server-Process Git Linkage
-
-**Server health ≠ server code version.** Tie gunicorn PID to its git state:
-
-```bash
-# Get gunicorn process listening on port 8005
-PID=$(pgrep -f "gunicorn.*:8005" | head -1)
-
-# Get its working directory (cross-platform)
-if [ -L "/proc/$PID/cwd" ]; then
-  SERVER_CWD=$(readlink -f "/proc/$PID/cwd")  # Linux
-else
-  SERVER_CWD=$(lsof -a -p "$PID" -d cwd 2>/dev/null | tail -1 | awk '{print $NF}')  # macOS
-fi
-
-# Verify git HEAD in server's working directory
-git -C "$SERVER_CWD" rev-parse HEAD
-```
-
-### Timestamp Synchronization
-
-**Spread-out timestamps break provenance chains.** Collect all evidence in one pass:
-
-```bash
-#!/bin/bash
-# Single-pass evidence collection
-TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-EVIDENCE_DIR="/tmp/evidence_$(date +%s)"
-mkdir -p "$EVIDENCE_DIR"
-
-# Capture all state in rapid succession (< 60 seconds)
-echo "Collection started: $TIMESTAMP" > "$EVIDENCE_DIR/log.txt"
-curl -s http://localhost:8005/health >> "$EVIDENCE_DIR/server_state.txt"
-git rev-parse HEAD >> "$EVIDENCE_DIR/git_state.txt"
-# Run test
-python test.py >> "$EVIDENCE_DIR/test_output.txt"
-echo "Collection ended: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$EVIDENCE_DIR/log.txt"
-```
-
-### Summary vs Raw Data Consistency
-
-**Automated summaries must match raw data.** Always verify:
-
-```bash
-# If summary says "Copilot comments: 4"
-# Raw data MUST show 4 entries with user.login matching
-# Example: raw data shows .user.login == "Copilot" (not "github-copilot[bot]")
-
-# ❌ BAD - Exact match misses variations
-jq '[.[] | select(.user.login == "github-copilot[bot]")]'  # Misses "Copilot"
-
-# ✅ GOOD - Case-insensitive pattern matching
-jq '[.[] | select(.user.login | test("copilot"; "i"))]'
-```
-
-## Documentation-Data Alignment (Lessons from equipc Review)
-
-When generating evidence documentation (methodology, evidence summary, notes), these rules prevent common mismatches:
-
-### 1. Derive All Claims from Actual Data
-
-**Never hardcode documentation content.** Generate it from source data:
-
-```python
-# ❌ BAD - Hardcoded claim
-methodology = "WORLDAI_DEV_MODE=true"
-
-# ✅ GOOD - Read from actual environment
-dev_mode = os.environ.get("WORLDAI_DEV_MODE", "not set")
-methodology = f"WORLDAI_DEV_MODE: {dev_mode}"
-```
-
-### 2. Warn on Missing/Dropped Data
-
-**Silent drops hide real mismatches.** Track and report edge cases:
-
-```python
-# ❌ BAD - Silently skip missing items
-items = [registry[id] for id in seeds if id in registry]
-
-# ✅ GOOD - Track and warn
-missing_ids = []
-items = []
-for id in seeds:
-    if id in registry:
-        items.append(registry[id])
-    else:
-        missing_ids.append(id)
-if missing_ids:
-    notes += f"WARNING: Missing IDs: {missing_ids}"
-```
-
-### 3. Display Denominators Must Match Totals
-
-**"Found X/Y (need Z)" must use correct Y.** Common mistake: using min_required as denominator:
-
-```python
-# ❌ BAD - Misleading: "4/2 (need 2)" suggests 200% match
-stats_col = f"{found}/{min_required} (need {min_required})"
-
-# ✅ GOOD - Clear: "4/4 (need 2)" shows 4 of 4 found, 2 was minimum
-stats_col = f"{found}/{len(total_required)} (need {min_required})"
-```
-
-### 4. Avoid Unverifiable Scope Claims
-
-**Don't claim "bug fix" vs "new feature" unless explicit.** These are product decisions:
-
-```python
-# ❌ BAD - Makes unverifiable claim
-methodology += "## New Feature (Not Bug Fix)\nThis is a new feature..."
-
-# ✅ GOOD - Stick to verifiable facts
-methodology += "## Test Scope\nValidates equipment display functionality."
-```
-
-### 5. Always Check Subprocess Return Codes
-
-**Subprocess output alone doesn't prove success.** Check returncode:
-
-```python
-# ❌ BAD - Ignores failures
-result = subprocess.run(cmd, capture_output=True)
-print(result.stdout)
-
-# ✅ GOOD - Warns on failure
-result = subprocess.run(cmd, capture_output=True)
-print(result.stdout)
-if result.returncode != 0:
-    print(f"WARNING: Command exited with code {result.returncode}")
-```
-
-### 6. Single Run Attribution
-
-**Evidence bundles must reference exactly ONE test run.** Ambiguous artifact scope breaks traceability:
-
-```python
-# ❌ BAD - Copies entire directory with multiple runs
---artifact /path/to/all_runs/
-
-# ✅ GOOD - Copies specific run only
---artifact /path/to/all_runs/run_20251227T051227_953691
-```
-
-## Pass Quality Classification
-
-Not all passes are equal. Track evidence quality with explicit pass types:
-
-| Pass Type | Criteria | Evidence Value |
-|-----------|----------|----------------|
-| **STRONG** | All conditions met with robust proof | Highest - conclusive |
-| **WEAK** | Core requirement proven, secondary conditions not met | Valid but with caveats |
-| **FAIL** | Core requirement not proven | Invalid |
-
-**Example implementation:**
-```python
-# Track pass strength in evidence
-strong_pass = primary_condition and secondary_condition
-weak_pass = primary_condition and not secondary_condition
-passed = primary_condition  # Core requirement
-
-result = {
-    "status": "PASS" if passed else "FAIL",
-    "pass_type": "strong" if strong_pass else ("weak" if weak_pass else "fail"),
-    ...
-}
-```
-
-**Why this matters:**
-- Weak passes prove the feature works but with less conclusive evidence
-- Reviewers can assess confidence level from pass_type
-- Follow-up tests can target "weak" areas for stronger proof
-
-## Partial State Update Handling
-
-APIs often return only changed fields. Tests MUST handle missing fields correctly:
-
-```python
-# ❌ BAD - Treats missing field as False
-still_in_combat = response.get("combat_state", {}).get("in_combat") is True
-
-# ✅ GOOD - Check field presence, use fallback logic
-combat_state = response.get("combat_state", {})
-if "in_combat" in combat_state:
-    # Explicit value - use it
-    still_in_combat = combat_state["in_combat"] is True
-elif combat_state.get("current_round") is not None:
-    # Partial update with round info - combat ongoing
-    still_in_combat = True
-else:
-    # Fall back to previous state
-    still_in_combat = previous_combat_state
-```
-
-**Common partial update scenarios:**
-- Combat state updates: may include `current_round` but omit unchanged `in_combat`
-- Character updates: may include `hp_current` but omit unchanged `level`
-- Inventory updates: may include added item but not entire inventory
-
-## Model Settings Forcing
-
-**Always set explicit model settings** to avoid PROVIDER_SELECTION_NULL_SETTINGS fallback noise:
-
-```python
-from lib.model_utils import settings_for_model, update_user_settings
-
-# ❌ BAD - Relies on server defaults, causes fallback noise in logs
-result = process_action(client, user_id=user_id, campaign_id=campaign_id, ...)
-
-# ✅ GOOD - Explicit model pinning before any actions
-DEFAULT_MODEL = "gemini-3-flash-preview"
-
-# Pin model settings at test start
-update_user_settings(
-    client,
-    user_id=user_id,
-    settings=settings_for_model(DEFAULT_MODEL),
-)
-
-# Now process actions with deterministic model selection
-result = process_action(client, user_id=user_id, campaign_id=campaign_id, ...)
-```
-
-**Why this matters:**
-- Eliminates "PROVIDER_SELECTION_NULL_SETTINGS" log noise
-- Ensures reproducible behavior across test runs
-- Makes evidence claims specific to a known model
-
-## LLM Scenario Forcing
-
-LLMs may "shortcut" scenarios by resolving them too quickly. Force extended scenarios when needed:
-
-```python
-# ❌ BAD - LLM may end combat in 1-2 actions
-SCENARIO = "Fight three bandits"
-
-# ✅ GOOD - Forces multi-round combat
-SCENARIO = """You face an Ogre Warlord (CR 5, HP 120, AC 16) and two Ogre Guards (CR 2, HP 59 each).
-This is a BOSS FIGHT - it CANNOT be resolved in fewer than 3 combat rounds.
-DO NOT end combat prematurely. All enemies have full HP and fight to the death."""
-```
-
-**Forcing techniques:**
-- High HP enemies (100+ HP for bosses)
-- Explicit round count requirements
-- "Fight to the death" instructions
-- Multiple high-CR enemies
-
-## Anti-Patterns
-
-- **"Tests pass" without evidence type** - Mock tests passing ≠ production working
-- **Health endpoint only** - Proves server is up, not that features work
-- **Endpoint existence** - tools/list returning tools ≠ tools executing correctly
-- **Assuming mock = real** - Mock data is fabricated; production data is evidence
-- **Assertions without command output** - "Exit code 0" without showing the command
-- **Timestamp gaps** - Server captured at T, test run at T+1hr breaks provenance
-- **Summary/raw mismatch** - Automated counts that don't match raw data
-- **Hardcoded env claims** - Claiming WORLDAI_DEV_MODE=true without reading os.environ
-- **Silent data drops** - Skipping missing items without warning hides mismatches
-- **Wrong denominators** - Display showing "4/2" when there are 4 total items
-
-## When to Stop and Ask
-
-If you're about to:
-- Run mock mode for production validation → STOP, use real mode
-- Claim "tests pass" without specifying mode → STOP, clarify mode
-- Skip actual execution evidence → STOP, collect real evidence
-- Trust health checks as feature validation → STOP, test actual features
-
-## Self-Contained Evidence Files
-
-Evidence JSON files must use **relative paths** for portability:
-
-```json
-// ❌ BAD - Absolute paths break when bundle is moved
-{
-  "artifacts_dir": "/tmp/worktree_worker7/dev123/e2e_test",
-  "output_file": "/tmp/worktree_worker7/dev123/results.json"
-}
-
-// ✅ GOOD - Relative paths work anywhere
-{
-  "artifacts_dir": "./artifacts",
-  "output_file": "./results.json"
-}
-```
-
-**Post-processing requirement:** After copying test output into a bundle:
-1. Validate all embedded paths are relative
-2. If absolute paths exist, update them to be bundle-relative
-3. Or document the original source location separately
-
-## Machine-Specific Path Redaction (MANDATORY)
-
-Evidence and test output must not expose machine-specific paths such as:
-- `/Users/<name>/...`
-- `/private/var/folders/...`
-- Host-specific repo roots
-
-Use sanitized, portable paths in all published artifacts (PR text, gists, evidence docs):
-- `~/...`
-- `<repo>/...`
-- `./artifacts/...`
-
-Example sanitization pass:
-
-```bash
-sed -E \
-  -e "s#/Users/[^/]+/#/Users/REDACTED/#g" \
-  -e "s#/private/var/folders/[^[:space:]]+#/private/var/folders/REDACTED#g" \
-  raw_test_output.txt > sanitized_test_output.txt
-```
-
-If redaction would remove critical context, replace only the machine root and keep
-relative file components.
-
-## Single Checksum Layer
-
-Evidence bundles must have **exactly one layer** of checksums:
-
-| Strategy | When to Use |
-|----------|-------------|
-| Per-file `.sha256` | Simple bundles, few files |
-| Root `checksums.sha256` | Complex bundles, many files |
-| **NEVER both** | Causes `.sha256.sha256` pollution |
-
-**When packaging artifacts that already have checksums:**
-
-```bash
-# Clean existing checksums before copying
-find /path/to/source -name "*.sha256" -delete
-
-# Then copy artifacts to bundle
-cp -r /path/to/source "${EVIDENCE_DIR}/artifacts/"
-```
-
-**Manual cleanup alternative:**
-
-```bash
-# Remove all .sha256 files from artifact source before copying
-find /path/to/source -name "*.sha256" -delete
-
-# Then create fresh checksums at bundle level
-cd /bundle/root
-find . -type f ! -name "*.sha256" -exec sha256sum {} \; > checksums.sha256
-```
-
-## PR Mode for Full Diff Capture
-
-When creating evidence for a PR, always capture the full diff from `origin/main`:
-
-```bash
-# ❌ AVOID - Last commit only (may miss PR context after merge)
-git diff HEAD~1..HEAD
-
-# ✅ PREFER - Full PR diff from origin/main
-git diff origin/main...HEAD > "${EVIDENCE_DIR}/pr_diff.txt"
-git diff --stat origin/main...HEAD > "${EVIDENCE_DIR}/pr_diff_summary.txt"
-```
-
-**Why this matters:**
-- `HEAD~1..HEAD` captures only the last commit
-- After merging main, this shows merge changes, not PR changes
-- `origin/main...HEAD` always captures the full PR diff
-
-## Runtime Behavior Evidence (Lessons from Memory Budget Testing)
-
-### Inferential vs Direct Evidence
-
-**Inferential evidence is insufficient.** "Action succeeded therefore truncation worked" is not proof.
-
-```
-# ❌ INFERENTIAL - Proves nothing about internal behavior
-"budget_truncation_proof": "Action succeeded with memories exceeding budget = truncation worked"
-
-# ✅ DIRECT - Runtime logs FROM THE CODE showing selection/exclusion
-[MEMORY_BUDGET] Input: 605 memories, 43,816 tokens (budget: 40,000)
-[MEMORY_BUDGET] TRUNCATED: 554 selected, 51 excluded, 39,959 tokens used
-```
-
-### Code Instrumentation for Evidence
-
-When claiming internal behavior (truncation, filtering, deduplication), the code MUST produce logs that prove the behavior:
-
-```python
-# ❌ BAD - No evidence of truncation behavior
-def select_memories_by_budget(memories, max_tokens):
-    # ... selection logic ...
-    return selected_memories
-
-# ✅ GOOD - Runtime evidence captured in logs
-def select_memories_by_budget(memories, max_tokens):
-    logging_util.info(
-        f"[MEMORY_BUDGET] Input: {len(memories)} memories, "
-        f"{total_tokens:,} tokens (budget: {max_tokens:,})"
-    )
-    # ... selection logic ...
-    logging_util.info(
-        f"[MEMORY_BUDGET] TRUNCATED: {len(result)} selected, "
-        f"{excluded_count} excluded, {final_tokens:,} tokens used"
-    )
-    return result
-```
-
-**Key principle:** If you can't point to a log line proving the behavior, add logging to produce that evidence.
-
-### Server Logs During Test Execution
-
-For any test claiming internal behavior:
-
-1. Start server with logs captured to file
-2. Run test against that server
-3. Extract behavior proof from server logs
-4. Include extracted proof as separate evidence file
-
-```bash
-# Start server with log capture
-nohup python -m mvp_site.mcp_api --http-only --port 8003 > "$EVIDENCE_DIR/server_logs.txt" 2>&1 &
-
-# Run tests against that server
-python test.py --server-url http://127.0.0.1:8003
-
-# Extract proof
-grep "MEMORY_BUDGET" "$EVIDENCE_DIR/server_logs.txt" > "$EVIDENCE_DIR/memory_budget_proof.txt"
-```
-
-### Full Git Provenance Requirements
-
-Beyond basic provenance, include:
-
-```bash
-cat > "$EVIDENCE_DIR/git_provenance_full.txt" << EOF
-=== CURRENT STATE ===
-Branch: $(git rev-parse --abbrev-ref HEAD)
-Commit: $(git rev-parse HEAD)
-
-=== COMMIT DETAILS ===
-$(git log -1 --format="Author: %an <%ae>%nDate: %aI%nSubject: %s")
-
-=== RECENT COMMITS ON BRANCH ===
-$(git log --oneline -10)
-
-=== ORIGIN/MAIN REFERENCE ===
-origin/main: $(git rev-parse origin/main)
-
-=== DIFF FROM ORIGIN/MAIN ===
-$(git diff --stat origin/main...HEAD)
-
-=== COMMITS AHEAD/BEHIND ===
-Ahead: $(git rev-list --count origin/main..HEAD)
-Behind: $(git rev-list --count HEAD..origin/main)
-
-=== MODIFIED FILES ===
-$(git diff --name-only origin/main...HEAD)
-EOF
-```
-
-### Per-File Checksums (Preferred for Important Artifacts)
-
-For key evidence files, use per-file checksums alongside the artifact:
-
-```bash
-# Generate per-file checksums
-for file in server_logs.txt memory_budget_proof.txt server_env_capture.txt; do
-    shasum -a 256 "$file" > "${file}.sha256"
-done
-
-# Results in:
-# server_logs.txt
-# server_logs.txt.sha256
-# memory_budget_proof.txt
-# memory_budget_proof.txt.sha256
-```
-
-**Why per-file:** Easier to verify individual artifacts; no need to parse a combined file.
-
-## Video Evidence Publication (MANDATORY)
-
-### Two Video Types + Captions
-
-For non-trivial verification, include:
-1. **Tmux/terminal video** (execution provenance)
-2. **UI/browser video** (visual behavior)
-
-**Both videos MUST include captions.** Acceptable forms:
-- Burned-in captions on the video (preferred)
-- Caption file (`.vtt` or `.srt`) linked beside the video and included in the gist bundle
-
-If work has no UI component, tmux video is still required.  
-If work includes a user-facing change, a UI video is mandatory.
-
-### User-Facing Change Rule (Hard Requirement)
-
-A **browser UI video is mandatory** whenever the change affects user-facing behavior, including:
-- Visual layout/styling updates
-- New/changed interactive flows
-- Navigation, form submission, modal, or state presentation changes
-- Any claim like "looks correct", "renders", "works in browser", or "no visual regression"
-
-No exception for "small" UI changes.
-
-### Hosted URL Rule (MANDATORY — No File Paths)
-
-**Every video/image/recording MUST be a hosted URL that is directly playable or downloadable from any machine.** That includes **public HTTPS to GitHub** (commit `blob` / `raw`, or `releases/download`) — the ban is on **unqualified** paths in prose, not on `https://` links that point at committed bytes.
-
-BANNED patterns in **PR text** (treat as non-evidence; replace with a hosted URL or commit link):
-- `evidence/path/to/file.gif` — unqualified relative path, not a URL
-- `/tmp/your-project.com/...` — machine-specific temp path
-- `~/projects/...` — home directory path
-- Markdown that uses **only** a bare filesystem path (starts with `.`, `/`, or `~`) with no `https://` scheme
-
-**ALLOWED and encouraged (durable, reviewable, automation-friendly):**
-- `https://raw.githubusercontent.com/{owner}/{repo}/{full_sha}/path/to/file.mp4` — direct bytes (good for `<video>`, `curl`, inline GIF/MP4 in many clients)
-- `https://github.com/{owner}/{repo}/blob/{full_sha}/path/to/file.mp4` — same commit pinned; GitHub media UI
-- `https://github.com/{owner}/{repo}/releases/download/{tag}/asset.ext` — release asset
-Use **one full 40-char commit SHA** for all links in a given evidence set so byte identity is unambiguous.
-
-**`user-attachments` vs everything else (read once):** Strict `/es` requires GitHub-hosted evidence links in the PR conversation or PR description, but they do not have to be native `user-attachments` URLs. The preferred zero-touch path is `gh release upload` plus `gh pr edit` or `gh pr comment`. Native `user-attachments` links are optional when browser-backed automation is available. Do not instruct manual drag-drop as the primary path.
-
-REQUIRED — strict `/es` uses zero-touch GitHub-hosted evidence links plus a durable gist manifest. GitHub release assets are the preferred publication path. Commit-pinned `blob` / `raw` links and native `user-attachments` remain useful supporting artifacts.
-
-1. **GitHub release assets via `gh` (default, required):**
-   ```bash
-   zip -j /tmp/evidence.mp4.zip /abs/path/to/evidence.mp4
-   gh release create evidence-pr-<PR_NUMBER> --draft --title "PR #<PR_NUMBER> Evidence" --notes "" 2>/dev/null || true
-   gh release upload evidence-pr-<PR_NUMBER> /tmp/evidence.mp4.zip /abs/path/to/evidence.gif /abs/path/to/evidence.srt --clobber
-   gh release view evidence-pr-<PR_NUMBER> --json assets,url
-   gh pr comment <PR_NUMBER_OR_URL> --body-file /tmp/evidence_comment.md
-   ```
-   Yields: GitHub-hosted release asset URLs in the PR conversation or description. Query the actual asset URLs with `gh release view --json assets,url`; do not guess the download path for draft releases. Publish both a previewable artifact (`.gif`) and a downloadable artifact (`.mp4.zip`).
-
-2. **Commit-pinned `blob` / `raw` (supporting provenance):** After `git add` + `git push`, link the **same** MP4/GIF/VTT bytes with `blob` and `raw` as above. Post them in the PR body or a PR comment for byte identity and offline retrieval. These complement release assets; they do not replace them for strict `/es`.
-
-3. **GitHub native attachments (optional):** Use `$HOME/.claude/scripts/github_pr_media_upload.py` when native `user-attachments` URLs are specifically desired and browser auth is available.
-   ```bash
-   gh release create evidence-pr-NNNN --draft --title "PR #NNNN Evidence" --notes "" 2>/dev/null
-   gh release upload evidence-pr-NNNN video.gif video.webm mcp_repro_full_bar_evidence.zip --clobber
-   # URL: https://github.com/{owner}/{repo}/releases/download/evidence-pr-NNNN/video.gif
-   ```
-
-4. **Asciinema.org** (for terminal recordings you want hosted off-repo):
-   ```bash
-   asciinema upload recording.cast
-   # Returns: https://asciinema.org/a/{id}
-   # Embed: [![asciicast](https://asciinema.org/a/{id}.svg)](https://asciinema.org/a/{id})
-   ```
-
-5. **GitHub Gist** (for text artifacts; gists do not host large binaries reliably):
-   ```bash
-   gh gist create --public --desc "PR #NNNN Evidence" readme.md test_output.txt recording.cast
-   ```
-
-6. **Terminal GIF in a PR comment (automation):** Build with `agg` (or your pipeline), then publish it through `gh release upload` and link the resulting GitHub release URL in the PR. Native attachments are optional.
-
-### Default process: terminal + captions (in-repo, agents)
-
-When you have (or can add) a script-driven bar (asciinema → `agg` → ffmpeg + WebVTT), follow this order so you do not get stuck on “no hosted URL”:
-
-1. **Record** a single session that includes the **six** provenance blocks your template requires (see `tmux-video-evidence.md`); save `.cast` under a machine-local run root (e.g. `/tmp/...`) if needed.
-2. **Render** `agg` → GIF; **transcode** GIF → H.264 MP4 with **even** width/height (ffmpeg and many hosts reject odd sizes); **generate** `.vtt` beside the MP4.
-3. **Copy** final MP4, GIF, VTT (and any `sanitized_snippets/`) into **`docs/evidence/...` on the PR branch** and add checksums or SHA256 in README as your bundle requires.
-4. **Commit and push**; note **`SHA=git rev-parse HEAD`** (or the commit that added the files).
-5. **Publish GitHub-hosted links:** Run `gh release upload` for the `.gif`, `.mp4.zip`, and caption sidecar, then use `gh pr edit` or `gh pr comment` to add those links to the PR.
-6. **Publish supporting links:** In the PR body and/or comment, include `raw` and `blob` links pinned to the same SHA for reviewers who want exact bytes and provenance.
-7. **Optional native attachments:** If browser-backed automation is available, add `user-attachments` URLs as supplemental links. They are not required for strict `/es`.
-
-### Programmatic Upload Workflow
-
-Use GitHub releases for zero-touch publication. Native PR attachments remain optional:
-
-```bash
-# 1. Record terminal evidence
-cd $REPO && timeout 120 asciinema rec --cols 120 --rows 50 --idle-time-limit 5 -c '<test_command>' /tmp/evidence.cast
-agg --cols 120 --rows 50 --font-size 12 /tmp/evidence.cast /tmp/terminal.gif
-
-# 2. Record browser evidence (when Chrome extension available)
-# Use mcp__claude-in-chrome__gif_creator start_recording → stop_recording → export
-
-# 3. Upload to a GitHub release
-EVIDENCE_TAG="evidence-pr-${PR_NUMBER}"
-zip -j /tmp/browser.mp4.zip /tmp/browser.mp4
-gh release create "$EVIDENCE_TAG" --draft --title "PR #${PR_NUMBER} Evidence" --notes "" 2>/dev/null || true
-gh release upload "$EVIDENCE_TAG" /tmp/browser.mp4.zip /tmp/browser.gif /tmp/browser.srt --clobber
-gh release view "$EVIDENCE_TAG" --json assets,url
-
-# 4. Add the release links to the PR body or comment
-gh pr comment "$PR_NUMBER" --body-file /tmp/evidence_comment.md
-gh release upload "$EVIDENCE_TAG" /tmp/terminal.gif /tmp/browser.gif --clobber
-
-# 4. Get URLs
-TERMINAL_URL="https://github.com/${OWNER}/${REPO}/releases/download/${EVIDENCE_TAG}/terminal.gif"
-BROWSER_URL="https://github.com/${OWNER}/${REPO}/releases/download/${EVIDENCE_TAG}/browser.gif"
-
-# 5. Update PR description with inline playable images
-# ![Terminal Evidence](${TERMINAL_URL})
-# ![Browser Evidence](${BROWSER_URL})
-```
-
-### PR Description Video Section Template
-
-```markdown
-## Video Evidence
-
-### Terminal Console
-![Terminal tests](https://github.com/{owner}/{repo}/releases/download/evidence-pr-NNNN/terminal.gif)
-
-**Caption:** Unit test suite — N/N PASSED in X.XXs
-
-### Browser UI
-![Browser demo](https://github.com/{owner}/{repo}/releases/download/evidence-pr-NNNN/browser.gif)
-
-**Caption:** Real browser → app page → feature flow validated end-to-end
-
-### Evidence Gist
-https://gist.github.com/{user}/{gist_id} — test output, asciinema cast, metadata
-```
-
-### PR Description + Gist Requirements
-
-Every evidence-bearing PR description must contain:
-1. **Test Summary** (pass/fail counts + key checks)
-2. **Video Evidence** section with **hosted, inline-playable URLs** (not file paths)
-3. **Self-Contained Gist URL** containing:
-   - sanitized test output
-   - caption files or transcript text
-   - asciinema `.cast` files (playable via `asciinema play`)
-   - run metadata / claim-to-artifact map
-
-### Video Enforcement Gate
-
-Reject evidence as **INSUFFICIENT** when any of these are true:
-- Missing tmux video for non-trivial work
-- Missing UI video for user-facing change
-- Missing captions for either video
-- **Video/GIF/MP4 referenced only as a bare path** (e.g. `docs/evidence/x.mp4` or `/tmp/...`) **with no `https://` URL** — HARD REJECT. **Do not** hard-reject **commit-pinned** `https://raw.githubusercontent.com/...` or `https://github.com/.../blob/<sha>/...` links; those *are* hosted URLs.
-- Video linked from non-GitHub host without explicit exception
-- PR description omits test summary, **and** there is no committed narrative doc or artifact map in-repo (Gist is optional if the PR points to the same run with `https://` media links)
-- Published logs include machine-specific absolute paths
-
-Hard reject UI claims without UI video. Hard reject terminal claims without tmux video.
-
-## Related Standards
-
-- `CLAUDE.md` - Three Evidence Rule (lines 110-113)
-- `generatetest.toml` - Mock mode prohibition (lines 433-441)
-- `end2end-testing.md` - Test mode commands (/teste, /tester, /testerc)
-- `browser-testing-ocr-validation.md` - OCR evidence for visual claims
-- `tmux-video-evidence.md` - Full tmux/asciinema recording template
-- `ui-video-evidence.md` - Full UI/browser GIF recording template
+For UI claims, a captioned `.mp4`/`.gif`/`.cast` is required, produced by the
+test pipeline. See `ui-video-evidence.md` and `tmux-video-evidence.md` in this
+directory for the recording rules. Docs-only / test-only PRs use
+`N/A - no UI behavior changed`.
+
+**The video must visually show the element under test changing, in the pixels —
+not a caption.** A captioned clip that frames only the page chrome while the
+element under test is below the fold does NOT prove the change: the caption is
+text the test wrote from its own DOM reads (harness-authored), so it asserts the
+state rather than demonstrating it. The recording must `scrollIntoView` the
+specific control/field and settle so its before→after change is visible in the
+frames. When reviewing UI video (`/er`), **extract frames and look**
+(`ffmpeg -i <video> -vf fps=1 /tmp/frames/f_%02d.png`); if the element is never
+in-frame, or the only on-screen evidence is a caption overlay, the UI evidence is
+INSUFFICIENT even if the video exists, is captioned, and the test passed.
+
+## Cross-references
+
+This is the **user-scope (global)** `/es` policy. For complete evidence
+standards, always read both this skill and the relevant repo-level file:
+
+1. **Master policy** — `~/.claude/CLAUDE.md` § "Evidence — match proof to the claim" (the
+   `Evidence-first` rule, the `Unit-only proof is NOT sufficient` rule with its
+   three-exception wording, the UI-video requirement, and the PR-touching
+   trigger list: `$PROJECT_ROOT/*.py`, `world_logic.py`, `rewards_engine.py`).
+2. **Repo-level /es** — most repos mirror this skill at
+   `<repo>/.claude/skills/evidence-standards.md` with project-specific
+   extensions (e.g. `your-project.com` has dice-claim, campaign-isolation,
+   BigQuery, and Gemini specifics). **Always read both** — the global file
+   is the floor; the repo-level file is the ceiling.
+3. **Companion files in this directory** — `bundle-anatomy.md` (bundle
+   structure, JSONL shapes, integrity rules), `tmux-video-evidence.md`
+   (tmux/asciinema recording), `ui-video-evidence.md` (browser/UI video).
+
+Adjacent skills: `evidence-review` (`/er` — the per-claim audit), `tdd-evidence-workflow`
+(TDD-specific evidence patterns), `streaming-evidence-standards`
+(streaming-response signed-payload evidence), `ui-bug-proof` (RED-before-GREEN
+UI bug reproduction).

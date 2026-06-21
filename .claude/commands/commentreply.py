@@ -841,7 +841,7 @@ def build_tracking_section(
 
         # Skip our own comments
         author = _get_comment_author(comment)
-        if author == actor_login:
+        if author in ('$USER-af', 'jleechanao', actor_login):
             continue
 
         comment_type = comment.get("type") or detect_comment_type(comment)
@@ -1598,7 +1598,7 @@ def main():
             print(f'   Content: "{body_snippet}..."')
 
             # Skip our own comments
-            if author == actor_login:
+            if author in ('$USER-af', 'jleechanao', actor_login):
                 print("   ↪️ Skip: comment authored by current actor")
                 continue
             total_targets += 1
@@ -1612,9 +1612,9 @@ def main():
                 for c in all_comments
                 if (c.get("in_reply_to_id") == comment_id)
                 and (
-                    ((c.get("user") or {}).get("login") == actor_login)
+                    ((c.get("user") or {}).get("login") in ('$USER-af', 'jleechanao', actor_login))
                     if isinstance(c.get("user"), dict)
-                    else (c.get("author") == actor_login)
+                    else (c.get("author") in ('$USER-af', 'jleechanao', actor_login))
                 )
             ]
             if our_replies:
@@ -1631,9 +1631,9 @@ def main():
                     for c in all_replies_to_comment
                     if c.get("created_at", "") > our_last_reply_time
                     and (
-                        ((c.get("user") or {}).get("login") != actor_login)
+                        ((c.get("user") or {}).get("login") not in ('$USER-af', 'jleechanao', actor_login))
                         if isinstance(c.get("user"), dict)
-                        else (c.get("author") != actor_login)
+                        else (c.get("author") not in ('$USER-af', 'jleechanao', actor_login))
                     )
                 ]
                 if not replies_after_ours:
@@ -1653,7 +1653,7 @@ def main():
             review_ref_pattern = f"In response to [comment #{comment_id}]"
             consolidated_ref_pattern = f"Re: [Comment #{comment_id}]"
             already_has_review_reply = any(
-                ((c.get("user") or {}).get("login") == actor_login)
+                ((c.get("user") or {}).get("login") in ('$USER-af', 'jleechanao', actor_login))
                 and (
                     review_ref_pattern in (c.get("body") or "")
                     or consolidated_ref_pattern in (c.get("body") or "")
@@ -1688,7 +1688,7 @@ def main():
                 # Only skip if WE are the last commenter AND our comment has [AI responder]
                 if (
                     "[AI responder]" in last_reply_body
-                    and last_reply_author == actor_login
+                    and last_reply_author in ('$USER-af', 'jleechanao', actor_login)
                 ):
                     print(
                         "   ↪️ Skip: thread already completed with our [AI responder] comment"
