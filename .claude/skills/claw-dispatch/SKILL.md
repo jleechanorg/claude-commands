@@ -11,11 +11,12 @@ description: Use when dispatching work through the Hermes gateway with /claw, es
 
 | Input | Default action |
 |-------|---------------|
-| PR number (`#633`, `PR 633`, `633`) | `ao spawn --project <detected> --claim-pr N` |
-| General task description | `ao spawn "<task>"` |
+| PR number (`#633`, `PR 633`, `633`) | Expand to "bring to 7-green" + post to Slack → Hermes (5 attempt cap) |
+| General task description | Post to Slack → Hermes |
+| `--max-attempts N` | Override attempt cap (default 5 for PR tasks) |
 | `--bidi` prefix | Hermes interactive session (streaming) |
 | `--hermes` prefix | Force through Hermes gateway |
-| Slash command resolution (e.g. `/green`) | Resolve skill then AO spawn with it |
+| Slash command resolution (e.g. `/green`) | Resolve skill then pass to Hermes via Slack |
 
 **Project auto-detection for PR tasks:** resolve from current git remote (`git remote get-url origin`).
 
@@ -86,14 +87,18 @@ if ! python3 -c "import yaml; yaml.safe_load(open('$HERMES_CFG'))" 2>/dev/null; 
   exit 1
 fi
 
-if ! HERMES_HOME="$HERMES_HOME" hermes gateway status >"$STATUS_LOG" 2>&1; then
-  echo "Hermes gateway is not running."
-  sed -n '1,80p' "$STATUS_LOG"
+# Hermes gateway health check. The `hermes gateway status` CLI is unreliable —
+# it can report "not running" / "draining" with phantom PIDs while the actual
+# gateway is healthy on :8642. Trust the live health endpoint instead.
+HEALTH_LOG="$(mktemp "$LOGDIR/.claw-health-XXXXXXXX")"
+if ! curl -sS -m 3 http://127.0.0.1:8642/health >"$HEALTH_LOG" 2>&1; then
+  echo "Hermes gateway is not reachable on :8642."
+  sed -n '1,20p' "$HEALTH_LOG"
   exit 1
 fi
-if ! grep -q 'Gateway is running' "$STATUS_LOG"; then
-  echo "Hermes gateway is not healthy."
-  sed -n '1,80p' "$STATUS_LOG"
+if ! grep -q '"status": "ok"' "$HEALTH_LOG"; then
+  echo "Hermes gateway health check did not return ok."
+  sed -n '1,20p' "$HEALTH_LOG"
   exit 1
 fi
 
@@ -122,7 +127,7 @@ if m:
   else
     PR_URL="PR #${PR_NUMBER}"
   fi
-  TASK_WITH_RESOLVED="Bring ${PR_URL} to 7-green. Fix CI failures, resolve review comments, address CodeRabbit issues, resolve merge conflicts, and ensure all checks pass. Use /green ${PR_NUMBER} to verify. Act autonomously — do not ask for permission to fix things."
+  TASK_WITH_RESOLVED="Bring ${PR_URL} to 7-green. Fix CI failures, resolve review comments, address CodeRabbit issues, resolve merge conflicts, and ensure all checks pass. Use /green ${PR_NUMBER} to verify. Act autonomously — do not ask for permission to fix things. IMPORTANT: attempt at most ${CLAW_MAX_ATTEMPTS:-5} fix-push-CI cycles. After reaching the limit, post a status summary of remaining blockers and stop — do not continue iterating."
   TASK_DESCRIPTION="$TASK_WITH_RESOLVED"
 fi
 
@@ -184,6 +189,13 @@ $RESOLVED_CONTENT
   fi
 fi
 
+# Max-attempts override: --max-attempts N (default 5 for PR tasks; no cap for freeform tasks)
+if printf '%s' "$TASK_WITH_RESOLVED" | grep -q -- '--max-attempts'; then
+  CLAW_MAX_ATTEMPTS=$(printf '%s' "$TASK_WITH_RESOLVED" | grep -oE -- '--max-attempts[[:space:]]+[0-9]+' | awk '{print $2}' | head -1)
+  TASK_WITH_RESOLVED=$(printf '%s' "$TASK_WITH_RESOLVED" | sed "s/--max-attempts[[:space:]]*[0-9]*//" | sed 's/^[[:space:]]*//')
+  export CLAW_MAX_ATTEMPTS
+fi
+
 # Bidi mode: synchronous, streaming output
 BIDI_MODE=false
 CONTINUE_SESSION=""
@@ -195,6 +207,25 @@ fi
 
 if printf '%s' "$TASK_WITH_RESOLVED" | grep -q '^--continue'; then
   CONTINUE_SESSION=$(printf '%s' "$TASK_WITH_RESOLVED" | sed 's/^--continue[[:space:]]*//' | awk '{print $1}')
+fi
+
+# --hermes: force the task to run inline in the gateway (skip the AO directive).
+FORCE_HERMES=false
+if printf '%s' "$TASK_WITH_RESOLVED" | grep -q '^--hermes'; then
+  FORCE_HERMES=true
+  TASK_WITH_RESOLVED=$(printf '%s' "$TASK_WITH_RESOLVED" | sed 's/^--hermes[[:space:]]*//')
+fi
+
+# General AO-dispatch directive (the documented "AO workers first" default).
+# For freeform tasks — no PR URL (those already carry their own AO remediation
+# directive above), not --bidi (interactive), not --hermes (forced inline) — tell
+# the gateway to delegate to an AO worker unless the task is small enough to finish
+# inline. The trivial-vs-AO judgment is the gateway LLM's to make (ZFC: the model
+# decides, the skill only states the policy) — we never classify the task in code.
+if [ "$BIDI_MODE" != true ] && [ "$FORCE_HERMES" != true ] && [ -z "${PR_URL:-}" ]; then
+  TASK_WITH_RESOLVED="${TASK_WITH_RESOLVED}
+
+IMPORTANT — dispatch policy: unless this is a very small task you can fully complete inline in a few steps, dispatch it to an AO worker (e.g. \`ao spawn\` / \`ao spawn --claim-pr N\`) rather than doing the whole thing inline in this gateway session. Default to AO for multi-file changes, PR/CI/build/deploy work, or anything beyond a few minutes; handle only genuinely small asks inline. You decide which side of that line this task is on. Act autonomously — do not ask whether to dispatch to AO, just route it."
 fi
 
 if [ "$BIDI_MODE" = true ]; then
@@ -238,78 +269,144 @@ if printf '%s' "$TASK_WITH_RESOLVED" | grep -q '^--status'; then
   exit 0
 fi
 
-TASK_FILE="$(mktemp "$LOGDIR/.claw-task-XXXXXXXX")"
-chmod 600 "$TASK_FILE" 2>/dev/null || true
-printf '%s' "$TASK_WITH_RESOLVED" >"$TASK_FILE"
-if [ ! -s "$TASK_FILE" ]; then
-  echo "Failed to build Hermes task file"
+# === Slack dispatch path ===
+# /claw now posts to Slack instead of forking a hermes chat process. The
+# gateway is already connected to Slack via Socket Mode; we hand the task
+# to it through a channel message and watch the thread for the ack.
+#
+# Channel + bot ID are env-overridable; defaults match the live deployment.
+CLAW_CHANNEL="${CLAW_CHANNEL:-C0B9W8D609M}"   # #claw-dispatch
+CLAW_BOT_ID="${CLAW_BOT_ID:-U0AEZC7RX1Q}"     # @hermes bot user_id
+CLAW_TOKEN="${SLACK_MCP_XOXP_TOKEN:-${HERMES_SLACK_USER_TOKEN:-}}"
+if [ -z "$CLAW_TOKEN" ]; then
+  echo "❌ No Slack user token (SLACK_MCP_XOXP_TOKEN) available — cannot dispatch via Slack."
+  echo "   Set SLACK_MCP_XOXP_TOKEN (xoxp user token for $USER) in env or launchd plist."
   exit 1
 fi
 
-LOGFILE="$LOGDIR/claw-$(date +%s).log"
-nohup hermes chat \
-  -q "$(cat "$TASK_FILE")" \
-  --yolo \
-  --max-turns 90 \
-  -Q \
-  --source tool \
-  >"$LOGFILE" 2>&1 &
+# Build message: strip any pre-existing <@U...> mentions from the task, then
+# prepend [via /claw] provenance + @hermes. Caps at Slack's 39000 char safe limit.
+TASK_TEXT=$(printf '%s' "$TASK_WITH_RESOLVED" | sed -E 's|<@[UW][A-Z0-9]+>||g; s/^[[:space:]]+//; s|[[:space:]]+$||')
+MESSAGE="[via /claw] <@${CLAW_BOT_ID}> ${TASK_TEXT}"
+MESSAGE="${MESSAGE:0:39000}"
 
-CLAW_PID=$!
+# Post via chat.postMessage. Using --data-binary with python3 -c keeps the
+# JSON encoding safe (no shell escaping of the message text).
+POST_LOG="$LOGDIR/.claw-post-$(date +%s).json"
+curl -sS -m 15 -X POST \
+  -H "Authorization: Bearer $CLAW_TOKEN" \
+  -H "Content-Type: application/json; charset=utf-8" \
+  --data-binary "$(python3 -c "import json,sys; print(json.dumps({'channel': '$CLAW_CHANNEL', 'text': sys.argv[1]}))" "$MESSAGE")" \
+  "https://slack.com/api/chat.postMessage" >"$POST_LOG" 2>&1
 
-# Ack detection: wait up to 15s for Hermes to emit first output or fail fast
-ACK_STATUS="UNKNOWN"
-for i in $(seq 1 15); do
+# Parse response
+OK=$(python3 -c "import json; print(json.load(open('$POST_LOG')).get('ok', False))" 2>/dev/null)
+if [ "$OK" != "True" ]; then
+  ERR=$(python3 -c "import json; print(json.load(open('$POST_LOG')).get('error', 'unknown'))" 2>/dev/null)
+  echo "❌ Slack post failed: ${ERR}"
+  echo "   response: $POST_LOG"
+  exit 1
+fi
+
+# Extract ts + construct thread URL (Slack archives URL pattern drops the dot)
+THREAD_URL=$(python3 -c "
+import json
+d = json.load(open('$POST_LOG'))
+ts = d.get('ts', '').replace('.', '')
+ch = d.get('channel', '')
+print(f'https://jleechanai.slack.com/archives/{ch}/p{ts}')
+")
+MSG_TS=$(python3 -c "import json; print(json.load(open('$POST_LOG')).get('ts', ''))")
+
+echo "✅ Dispatched to Hermes via Slack"
+echo "   channel: #claw-dispatch"
+echo "   thread:  $THREAD_URL"
+echo "   message_ts: $MSG_TS"
+
+# Wait for Hermes ack (up to 30s) — reaction OR thread reply from Hermes.
+# This is the Slack analog of the old "wait for first log line" check.
+# 30s is generous because Hermes may be busy with other sessions; the message
+# is already in the channel and durable, so a longer wait is purely diagnostic.
+echo "⏳ Waiting for Hermes ack (up to 30s)..."
+ACKED=0
+for i in $(seq 1 30); do
   sleep 1
-  # Process died — capture why
-  if ! kill -0 "$CLAW_PID" 2>/dev/null; then
-    LOG_CONTENT=$(cat "$LOGFILE" 2>/dev/null)
-    if printf '%s' "$LOG_CONTENT" | grep -q '429\|rate.limit\|request limit'; then
-      ACK_STATUS="RATE_LIMITED"
-    elif [ -z "$LOG_CONTENT" ]; then
-      ACK_STATUS="FAILED (no output)"
-    else
-      ACK_STATUS="FAILED"
-    fi
-    echo "❌ Hermes claw $ACK_STATUS"
-    sed -n '1,10p' "$LOGFILE"
-    exit 1
+  # Reaction on the parent message (e.g. "On it…" emoji)
+  REACT=$(curl -sS -m 3 -H "Authorization: Bearer $CLAW_TOKEN" \
+    "https://slack.com/api/reactions.get?channel=${CLAW_CHANNEL}&timestamp=${MSG_TS}" 2>/dev/null)
+  REACT_HIT=$(printf '%s' "$REACT" | python3 -c "import json,sys
+try:
+  d=json.load(sys.stdin)
+  print(d.get('ok', False) and bool(d.get('message', {}).get('reactions')))
+except: print(False)" 2>/dev/null)
+  if [ "$REACT_HIT" = "True" ]; then
+    echo "✅ Hermes acked (reaction at ${i}s)"
+    ACKED=1
+    break
   fi
-  # Process alive — check if Hermes has started outputting real content
-  LOG_LINES=$(wc -l <"$LOGFILE" 2>/dev/null || echo 0)
-  if [ "$LOG_LINES" -gt 0 ]; then
-    FIRST_LINE=$(head -1 "$LOGFILE" 2>/dev/null)
-    if printf '%s' "$FIRST_LINE" | grep -q '429\|rate.limit\|request limit'; then
-      ACK_STATUS="RATE_LIMITED"
-      echo "❌ Hermes claw RATE_LIMITED — resets at $(grep -oE '[0-9]{2}:[0-9]{2}:[0-9]{2}' "$LOGFILE" | head -1)"
-      cat "$LOGFILE"
-      kill "$CLAW_PID" 2>/dev/null
-      exit 1
-    elif printf '%s' "$FIRST_LINE" | grep -qi 'error\|failed\|fatal'; then
-      ACK_STATUS="FAILED"
-      echo "❌ Hermes claw FAILED"
-      sed -n '1,10p' "$LOGFILE"
-      kill "$CLAW_PID" 2>/dev/null
-      exit 1
-    else
-      ACK_STATUS="ACK"
-      break
-    fi
+  # Reply in thread (Hermes often replies with "On it…" text rather than a reaction)
+  REPLIES=$(curl -sS -m 3 -H "Authorization: Bearer $CLAW_TOKEN" \
+    "https://slack.com/api/conversations.replies?channel=${CLAW_CHANNEL}&ts=${MSG_TS}&limit=5" 2>/dev/null)
+  REPLY_HIT=$(printf '%s' "$REPLIES" | python3 -c "import json,sys
+try:
+  d=json.load(sys.stdin)
+  print(d.get('ok', False) and len(d.get('messages', [])) > 1)
+except: print(False)" 2>/dev/null)
+  if [ "$REPLY_HIT" = "True" ]; then
+    echo "✅ Hermes acked (thread reply at ${i}s)"
+    ACKED=1
+    break
   fi
 done
-
-if [ "$ACK_STATUS" = "UNKNOWN" ]; then
-  echo "⚠️  Hermes claw TIMEOUT — no output in 15s (PID: $CLAW_PID still alive)"
-  echo "Log: $LOGFILE"
-  exit 1
+if [ "$ACKED" != "1" ]; then
+  echo "⚠️  No ack within 30s — Hermes may be rate-limited, stuck, or the channel is wrong."
+  echo "   Check: $THREAD_URL"
+  exit 0  # message is posted; user can monitor the thread
 fi
 
-echo "✅ Hermes claw ACK (PID: $CLAW_PID)"
-echo "Log: $LOGFILE"
-echo "Monitor: tail -f $LOGFILE"
-echo "Status: /claw --status $LOGFILE"
-echo "Kill: kill $CLAW_PID"
+echo ""
+echo "✅ Dispatched to Hermes via Slack"
+echo "   Channel:  #claw-dispatch"
+echo "   Thread:   $THREAD_URL"
+echo "   Hermes:   U0AEZC7RX1Q (@hermes)"
+echo "   Monitor:  open the thread URL above; Hermes acks within ~30s, then works the task in thread"
+echo "   Re-check: /claw --status <logfile>"
 ```
+
+## Post-dispatch output (MANDATORY)
+
+After **every** `/claw` dispatch — AO or Hermes — always print these lines in your reply:
+
+### AO spawn path
+```
+✅ AO worker spawned: <session-name>
+   Attach:    ao attach <session-name>
+   Status:    ao status <session-name>
+   tmux:      tmux attach-session -t <container-id>-<session-name>
+   Dashboard: http://localhost:3030
+```
+Get the session name from `ao session ls --project <project>` immediately after spawn. The dashboard URL is the live AO web UI (next.js on :3030 in prod, :3020 in dev).
+
+### Hermes chat path (fallback)
+```
+✅ Hermes worker dispatched (PID: <pid>)
+   Log:     <logfile>
+   Monitor: tail -f <logfile>
+   Kill:    kill <pid>
+```
+Always emit the exact logfile path so the user can monitor or kill.
+
+### Slack path
+```
+✅ Dispatched to Hermes via Slack
+   Channel:  #claw-dispatch
+   Thread:   <thread_url>
+   Hermes:   U0AEZC7RX1Q (@hermes)
+   Monitor:  open the thread URL above; Hermes acks within ~30s, then works the task in thread
+   Re-check: /claw --status <logfile>
+```
+
+**Never omit these lines.** The user must always know how to attach, monitor, or kill the worker without asking.
 
 ## Notes
 

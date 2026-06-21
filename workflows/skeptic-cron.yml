@@ -4,12 +4,7 @@ name: Skeptic Cron
 # Uses @main to auto-track fixes (jq $ anchor fix, evidence gate, etc.)
 
 on:
-  schedule:
-    - cron: "*/30 * * * *"
   workflow_dispatch:
-  push:
-    branches-ignore:
-      - "**"
 
 permissions:
   contents: write

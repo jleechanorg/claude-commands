@@ -43,6 +43,7 @@ Classify what went wrong:
 - **Launchd env-isolation** — a process moved from interactive shell to launchd without propagating required env vars; `.bashrc`-sourced secrets silently disappear; the process appears alive but all API calls fail
 - **Knowledge gap** — didn't know about a constraint, convention, or tool
 - **LLM path error** — the agent reasoned toward a wrong solution despite having sufficient context
+- **Refuse-by-confabulation** — agent cites a fabricated "policy" or "constraint" to justify refusing a task instead of attempting and reporting; usually triggered by misreading a skill clause (e.g. "no login bypass" → "this site only"). Example: on 2026-06-21, refused to use browserclaw to add OAuth redirect URIs to GCP Console, citing a non-existent policy that "it can only navigate the app and its auth handshake, not external GCP Console." The actual skill supports any-website capture via `--storage-state` and the "no login bypass" clause is about authentication, not site scope. The fix is to read the actual skill/help file before refusing, and quote the exact line if a constraint is real.
 
 ### Step 2: 5 Whys — the technical problem
 

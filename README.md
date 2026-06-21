@@ -51,6 +51,14 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## Changelog
 
+### v1.6.0 (2026-06-21)
+- New commands: aar.md, accept-adapt-reject.md, beads.md, bq.md, code-quality.md, cq.md, disk_magician.md, diskm.md, er-node.md, f-pr.md, fable.md, factory-evolve.md, hermes.md, keychain_kill.md, launchd.md, linux.md, llm-testing.md, slack-audit.md, spicy_remove.md
+- New hooks: auto-trust-workspace.sh
+- Updated: 4layer.md, code-standards.md, commentreply.py, er.md, es.md, evidence_review.md, green.md, integrate.md, testing-layers.md, zfc.md, enforce-gh-account-agentf.sh, evidence-reviewer.md, and many more
+- Skills expansions: auton, babysit, claw-dispatch, code-standards, disk-audit, evidence-standards, gcp-deployment, harness-engineering, learn, mem0, memory-search, testing-layers, wiki-ingest, zfc-leveling-roadmap
+- Workflow updates: coverage.yml, deploy-dev.yml, design-doc-gate.yml, green-gate.yml, mcp-smoke-tests.yml, pr-preview.yml, presubmit.yml, skeptic-self-verify.yml, styleguide-compliance-gate.yml, test.yml, and more
+- Major evidence-standards skill consolidation (large net reduction)
+
 ### v1.5.0 (2026-06-01)
 - New commands: disk-audit.md, f.md, factory-spec.md, fs.md, gmail.md, history_resume.md, think-level-up-validation.md, wiki-assess.md, wiki-bfs.md, wiki-ingest.md, zfc-adjuster.md, team-claude.md
 - New agents: anti-gravity-pair-coder.md, anti-gravity-pair-verifier.md
@@ -77,21 +85,23 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## 🎯 What's Included
 
-**257 Commands** including powerful workflow orchestrators and cognitive tools:
-- **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step automation
-- **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
-- **Infrastructure**: `/scaffold` - Repository setup and development environment
-- **Testing**: `/test`, `/tdd`, `/testuif`, `/end2end-testing` - Comprehensive testing workflows
-- **Code Quality**: `/code-standards`, `/cs`, `/thermo`, `/archreview` - Standards enforcement and deep review
+**276 Commands** including powerful workflow orchestrators and cognitive tools:
+- **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch`, `/f-pr`, `/factory-evolve`, `/hermes` - Complete multi-step automation
+- **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn`, `/aar`, `/accept-adapt-reject` - Analysis and planning
+- **Infrastructure**: `/scaffold`, `/launchd`, `/linux` - Repository setup and development environment
+- **Testing**: `/test`, `/tdd`, `/testuif`, `/end2end-testing`, `/llm-testing` - Comprehensive testing workflows
+- **Code Quality**: `/code-standards`, `/cs`, `/thermo`, `/archreview`, `/code-quality`, `/cq` - Standards enforcement and deep review
 - **Session Management**: `/cmux-backup`, `/cmux-restore`, `/factory`, `/goal_harness`, `/h` - Workflow tooling
+- **Evidence & Review**: `/es`, `/er`, `/er-node`, `/green` - Evidence standards and PR review
+- **Issue Tracking**: `/beads` - Bead-based issue tracking integration
 - **Wiki Tools**: `/wiki-assess`, `/wiki-bfs`, `/wiki-ingest`, `/wiki-evolve`, `/wiki-search` - Knowledge base ingestion and assessment
-- **Utilities**: `/disk-audit`, `/gmail`, `/f`, `/fs`, `/factory-spec`, `/history_resume`, `/team-claude`, `/zfc-adjuster`, `/think-level-up-validation` - System, inbox, and misc workflow tools
+- **Utilities**: `/disk-audit`, `/disk_magician`, `/diskm`, `/gmail`, `/slack-audit`, `/bq`, `/keychain_kill`, `/spicy_remove`, `/fable`, `/f`, `/fs`, `/factory-spec`, `/history_resume`, `/team-claude`, `/zfc-adjuster`, `/think-level-up-validation` - System, inbox, and misc workflow tools
 
 **60 Hooks** for Claude Code automation and workflow optimization
 
 **22 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**595 Skills** providing shared knowledge references and capabilities
+**1157 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 
@@ -182,7 +192,7 @@ Commands integrate seamlessly through:
 
 LLM-Native test patterns that work across any web application using AI to create, execute, and validate complex test scenarios.
 
-**Commands**: `/test`, `/tdd`, `/testuif`, `/testhttp`, `/end2end-testing`
+**Commands**: `/test`, `/tdd`, `/testuif`, `/testhttp`, `/end2end-testing`, `/llm-testing`
 
 **Capabilities**:
 - Multi-domain test patterns (e-commerce, authentication, content management)

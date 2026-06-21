@@ -101,6 +101,11 @@ This command implements the minimal repro protocol from `.claude/skills/pr-block
 - **Speed**: Slowest (minutes to tens of minutes)
 - **Example**: `./vpython testing_ui/streaming/test_streaming_byok_browser.py`
 
+> **Layers 3–4 are real-LLM, zero-mock — invoke via `/llm-testing`** (see
+> `.claude/skills/llm-testing.md`). It enforces the no-mock contract (a run with `TEST_MODE=mock`,
+> `MOCK_SERVICES_MODE`, `USE_MOCK_FIREBASE`, `USE_MOCK_GEMINI`, or `FORCE_TEST_MODEL=true` is void)
+> and emits the `/es` evidence bundle. Layer 2 stays `/end2end-testing` (faked externals).
+
 ## Key Principles
 
 1. **Stop climbing when blocker is reproduced** - Don't waste time on higher layers

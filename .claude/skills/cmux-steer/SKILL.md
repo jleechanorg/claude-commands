@@ -5,6 +5,8 @@ description: Read and steer another cmux terminal tab through the Unix socket.
 
 # cmux-steer — Control another cmux terminal tab via the Unix socket
 
+> **REQUIRED (2026-06-09):** This skill is **deprecated for runtime steering**. The bare `cmux send` + `cmux send-key enter` pattern documented here does NOT include proof of submission. Use the canonical wrapper instead: `python3 -c "from cmux_client import send_and_submit; print(send_and_submit('workspace:N', 'surface:M', 'text'))"` and include the returned `proof` + `proof_ts` in your reply. See `~/.hermes_prod/skills/cmux-send-submit/SKILL.md`. This skill is preserved for socket read operations (`workspace.list`, `surface.read_text`, `tree`, `system.ping`) only.
+
 **Usage**: Read and follow this skill directly; no `/cmux-steer` slash command is defined.
 
 **Purpose**: Read and steer another agent's terminal pane (e.g. a coding agent)

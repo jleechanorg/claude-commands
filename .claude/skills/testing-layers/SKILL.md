@@ -11,9 +11,9 @@ This skill defines the **concrete test directory structure** for Your Project, t
 | **1. Unit** | `$PROJECT_ROOT/tests/` | `./vpython -m pytest $PROJECT_ROOT/tests/test_*.py` | ~295 files | Mock (no `/es` credit) |
 | **1b. Unit (top-level)** | `tests/` | `./vpython -m pytest tests/test_*.py` | ~4 files | Mock (no `/es` credit) |
 | **2. End-to-End**| `$PROJECT_ROOT/tests/test_end2end/` | `./vpython -m pytest $PROJECT_ROOT/tests/test_end2end/` | ~30 files | Mock (no `/es` credit) — see `/end2end-testing` skill |
-| **3. MCP API** | `testing_mcp/` | `./vpython testing_mcp/test_*.py --server http://127.0.0.1:8001` | ~139 files | Server + LLM (full `/es`) |
+| **3. MCP API** | `testing_mcp/` | `./vpython testing_mcp/test_*.py --server http://127.0.0.1:8001` | ~139 files | Server + LLM (full `/es`) — see `/llm-testing` skill |
 | **4. HTTP API** | `testing_http/` | `./vpython testing_http/test_*.py` | ~25 files | Server (partial `/es`) |
-| **5. Browser** | `testing_ui/` | `./vpython testing_ui/test_*.py` | ~40 files | Server + LLM + Browser (full `/es` + video) |
+| **5. Browser** | `testing_ui/` | `./vpython testing_ui/test_*.py` | ~40 files | Server + LLM + Browser (full `/es` + video) — see `/llm-testing` skill |
 
 ### Shared Libraries
 
@@ -29,8 +29,8 @@ This skill defines the **concrete test directory structure** for Your Project, t
 ### Execution Environment
 
 - **Layer 1-2, 4 (Unit, E2E, HTTP)**: Default test environment is `TEST_MODE=mock` (via `run_tests.sh`).
-- **Layer 3 & 5 (MCP, Browser)**: Must use real services. Set `MCP_TEST_MODE=real`, `TEST_MODE=real`, `MOCK_SERVICES_MODE=false`, `TESTING_AUTH_BYPASS=true`
-- **Never use mock mode** for `testing_mcp/` or `testing_ui/` — this is a hard policy
+- **Layer 3 & 5 (MCP, Browser)**: Must use real services. Set `MCP_TEST_MODE=real`, `TEST_MODE=real`, `MOCK_SERVICES_MODE=false`, `TESTING_AUTH_BYPASS=true`. **Use `/llm-testing`** as the canonical entry point — it forces the zero-mock real-LLM run and is the only valid source of `/es` evidence.
+- **Never use mock mode** for `testing_mcp/` or `testing_ui/` — this is a hard policy (`/llm-testing` enforces it: a run with any mock flag set is void)
 
 ---
 

@@ -1,229 +1,263 @@
 ---
 name: babysit
-description: Drive all open PRs to 7-green by fixing CI failures, triggering bot reviews, resolving comments, and running skeptic/smoke gates. Use when the user wants to nurse PRs to merge-readiness.
+description: Watch one or more AO worker tmux sessions, classify their state (WORKING/IDLE/QUEUED/DEAD/COMPLETED), auto-remediate known failures (trust TUI, queued prompt), and push-notify on stuck sessions. Reuses ao-session-monitor state detection. Use /babysit to start a monitoring loop on a specific worker, all active workers, or workers matching a PR/branch.
+type: skill
 ---
 
-# /babysit — PR Green-Gate Babysitter
+# Babysit — AO Worker Supervisor
 
-## Purpose
+**Purpose:** Watch AO worker tmux sessions, classify state, auto-remediate known failures, and notify on stuck or dead shells. Sits *alongside* the launchd-managed `ao lifecycle-worker` (which runs the system-level reaction/poll loop) — `babysit` is the **Claude-side observer** for individual spawned sessions.
 
-Systematically drive all open PRs toward 7-green merge-readiness. For each PR:
-1. Audit all 7 gates
-2. Fix any blocking failures
-3. Trigger missing bot reviews or gates
-4. Once 6/7 green, run `/skeptic` and `/smoke`
+**Use when:**
+- You just spawned an AO worker (`ao spawn` / `ao spawn -p project "..."`) and want to keep an eye on it
+- An existing worker has been "Baked for Xm" too long and you want a programmatic check
+- You suspect the agy/antigravity trust TUI is blocking a worker (bd-jya0)
+- You want a per-worker "what is each one doing right now" snapshot
+- A worker is queued (lifecycle-worker sent it a message) but not acting
 
-## 7-Gate Criteria (from skeptic-cron.yml)
+**Do NOT use when:**
+- The system-level reaction loop is broken (use `/auton` — it diagnoses the jleechanclaw + AO autonomy chain end-to-end)
+- A specific worker has a known error (use `/ao-lifecycle-triage` for log-driven triage)
+- You want to spawn a worker (use `/ao-worker-dispatch`)
+- You want to detect the state of a single pane once (use `/ao-session-monitor` — babysit uses it internally for one-pane detection but is multi-worker / multi-cycle)
 
-| # | Gate | Check |
-|---|------|-------|
-| 1 | CI green | All GitHub Actions checks pass (no FAILURE conclusions) |
-| 2 | No conflicts | `mergeable == "MERGEABLE"` |
-| 3 | CR APPROVED | CodeRabbit latest review state == "APPROVED" |
-| 4 | Bugbot clean | cursor[bot] zero error-severity comments |
-| 5 | Comments resolved | Zero unresolved non-nit inline review comments |
-| 6 | Evidence pass | Evidence bundle exists or N/A justified |
-| 7 | Skeptic PASS | github-actions[bot] posted VERDICT: PASS |
+## Cross-references
 
-## Execution Protocol
+| Skill | When to use instead |
+|---|---|
+| `/ao-session-monitor` | Single pane, one-shot classification (babysit embeds the same one-liner) |
+| `/babysit-openclaw` | Slack-thread-based openclaw monitoring (different model — openclaw posts to Slack; AO workers use tmux) |
+| `/auton` | System-level: why is the autonomous chain not driving PRs to N-green? |
+| `/ao-lifecycle-triage` | One stuck worker, deep log dive |
+| `/ao-spawn-gate` | Pre-spawn resource check |
 
-### Phase 1: Discover All Open PRs
+## State classification (from `ao-session-monitor`)
+
+| Indicator | State | Babysit action |
+|---|---|---|
+| `✻✶✳✽✾` + duration, `Running…`, `Bash(`/`Read(` etc. in last 20 lines | **WORKING** | No action — log every 5 min |
+| `Baked for Xm` or `Sautéed for Xm` and X ≥ 30 | **STALLED-COMPLETED** | Push-notify: "Worker has been completed-but-untouched for Xm — review output" |
+| `❯` prompt with no activity indicators in 20 lines | **IDLE** | If lifecycle-worker should have sent a message, push-notify |
+| `Press up to edit queued messages` | **QUEUED** | If queued > 10 min, push-notify (worker may be stuck on input) |
+| Trust TUI: "Do you trust the contents of this project?" with no auto-`--add-dir` | **TUI-BLOCKED** | Auto-remediate: send Enter to select "Yes, I trust this folder" |
+| `+uncommitted` in status bar with no recent `Bash(git` in 25 lines | **HAS-WORK-NO-COMMIT** | Push-notify at 15 min: "Worker has uncommitted edits and is not committing" |
+| Pane dead (no `❯`, no activity indicators, no recent tool output) for > 5 min | **DEAD** | Push-notify: "Worker tmux pane is dead — manual respawn required" |
+
+## Auto-remediation policy (user-scope, opt-in)
+
+- **Trust TUI (`Do you trust...`)**: send Enter once. Only if the prompt is visible. Never send on a `❯` prompt without the trust question.
+- **Queued prompt with Enter required**: do not send — this is destructive. Push-notify only.
+- **Dead shell**: NEVER auto-respawn. Push-notify with the spawn command you would have used. User decides.
+- **Stalled completed**: NEVER auto-respawn or auto-commit. Push-notify.
+- **Idempotency**: each remediation is gated on a sentinel — do not send Enter twice in 60s, do not push-notify the same condition twice in 30 min.
+
+## Modes
+
+### Mode 1 — One-shot snapshot (no loop)
+
+```
+/babysit snapshot [session-name]
+/babysit snapshot              # all ao-* sessions
+/babysit snapshot ao-6312      # one session
+```
+
+Runs the ao-session-monitor one-liner, prints the table, exits.
+
+### Mode 2 — Watch a single worker
+
+```
+/babysit watch <session-name> [--max-min N]
+/babysit watch ao-6312 --max-min 60
+```
+
+Polls every 60s. Auto-remediates TUI/queue. Push-notifies on stalled/dead. Exits when:
+- Worker reaches COMPLETED and PR is merged/closed (then push-notify "Worker finished cleanly")
+- User says `stop` / `cancel`
+- `--max-min` reached (default 90)
+- Worker enters DEAD state
+
+### Mode 3 — Watch all active AO workers
+
+```
+/babysit watch-all [--max-min N]
+```
+
+Same as Mode 2, but applies to all `ao-*` tmux sessions. Per-worker status table printed every 5 min.
+
+### Mode 4 — Watch by PR/branch
+
+```
+/babysit pr <PR#|branch> [--max-min N]
+/babysit pr 661
+/babysit pr fix/bd-rgk0-skeptic-cron-trigger-age-filter
+```
+
+Resolves the PR/branch → tmux session via `ao list` and the worktree's git state, then watches.
+
+## Internals
+
+### Detection primitive (from ao-session-monitor)
 
 ```bash
-gh pr list --state open --json number,title,headRefName,headRefOid,mergeable \
-  --jq '.[] | "\(.number)|\(.title)|\(.headRefName)|\(.headRefOid[:12])|\(.mergeable)"'
-```
-
-### Phase 2: Audit Each PR (7-Gate Check)
-
-For each open PR, check all 7 gates:
-
-```bash
-# Gate 1: CI status
-gh pr view <NUM> --json statusCheckRollup \
-  --jq '[.statusCheckRollup[] | select(.conclusion == "FAILURE")] | length'
-
-# Gate 2: Mergeable
-gh pr view <NUM> --json mergeable --jq '.mergeable'
-
-# Gate 3: CodeRabbit review
-gh api repos/$GITHUB_REPOSITORY/pulls/<NUM>/reviews \
-  --jq '[.[] | select(.user.login=="coderabbitai[bot]")] | last | .state'
-
-# Gate 4: Bugbot errors
-gh api repos/$GITHUB_REPOSITORY/pulls/<NUM>/comments \
-  --jq '[.[] | select(.user.login=="cursor[bot]" and (.body | test("error";"i")))] | length'
-
-# Gate 5: Unresolved comments
-gh api graphql -f query='
-  query($owner:String!, $name:String!, $pr:Int!) {
-    repository(owner:$owner, name:$name) {
-      pullRequest(number:$pr) {
-        reviewThreads(first:100) {
-          nodes { isResolved }
-        }
-      }
-    }
-  }
-' -f owner=jleechanorg -f name=your-project.com -F pr=<NUM> \
-  --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false)] | length'
-
-# Gate 6: Evidence in PR body
-gh pr view <NUM> --json body --jq '.body' | grep -i -E "evidence|gist|video|mp4|N/A"
-
-# Gate 7: Skeptic verdict
-gh api repos/$GITHUB_REPOSITORY/issues/<NUM>/comments \
-  --jq '[.[] | select(.user.login=="github-actions[bot]" and (.body | test("VERDICT: PASS";"i")))] | length'
-```
-
-### Phase 3: Categorize PRs
-
-Group PRs into:
-- **RED** (3+ gates failing): needs code fixes
-- **YELLOW** (1-2 gates failing): needs bot triggers or comment resolution
-- **GREEN** (6/7 gates passing): run `/skeptic` and `/smoke`
-
-### Phase 4: Fix RED PRs
-
-For each RED PR, use subagents (Agent tool, subagent_type: copilot-fixpr) to:
-1. Read the Green Gate workflow log to identify the exact failing gate
-2. Fix the root cause:
-   - **CI test failures**: read test output, fix code, push
-   - **Design Doc Gate**: add design doc reference to PR body
-   - **Lint/type errors**: fix code, push
-3. Dispatch agents in parallel — one per PR or group of related PRs
-
-Common fixes:
-- Test assertion mismatch after rebase → rebase onto `origin/main`
-- Missing `@coderabbitai` trigger → comment on PR
-- Missing evidence → create evidence bundle or add N/A justification
-- Stale review threads → resolve via GitHub API
-
-### Phase 5: Fix YELLOW PRs
-
-For each YELLOW PR:
-1. **Gate 3 (CR not APPROVED)**: Comment `@coderabbitai all good?`
-2. **Gate 5 (unresolved comments)**: Resolve review threads
-3. **Gate 6 (no evidence)**: Add evidence or N/A to PR body
-4. Do NOT push during active bot review (PR Green Loop Protocol)
-
-### Phase 6: Run Skeptic + Smoke on GREEN PRs
-
-For PRs at 6/7 gates (only Skeptic missing):
-
-```bash
-# Trigger Green Gate workflow if no recent run
-gh workflow run green-gate.yml --ref <branch> -f pr_number=<NUM>
-
-# Trigger smoke tests via PR comment
-gh pr comment <NUM> --body "/smoke"
-```
-
-Skeptic-cron runs every 30 min automatically. Once it posts VERDICT: PASS, the PR is 7-green.
-
-### Phase 7: Report Final Status
-
-Print a summary table:
-
-```
-PR #<N> — age: <Xh Ym> — status: <red|yellow|green|7-green>
-  Gates: 1=✓ 2=✓ 3=✓ 4=✓ 5=✓ 6=✓ 7=✗ (Skeptic pending)
-  Action: /smoke triggered, waiting for Skeptic-cron
-```
-
-## PR Green Loop Protocol (MANDATORY)
-
-- **Never push during active bot review** — wait for Bugbot COMPLETED, CR posted, Copilot done
-- **Batch all fixes** into one commit, not one per finding
-- **Push once**, then freeze until all bots finish
-- **Never dismiss** CR CHANGES_REQUESTED reviews
-
-## Subagent Dispatch Strategy
-
-- **Independent PRs**: Dispatch one agent per PR in parallel
-- **Related PRs** (same feature area): Group under one agent
-- **GREEN PRs**: One agent to trigger skeptic/smoke on all
-
-Agent type: `copilot-fixpr` for fixing, `general-purpose` for auditing/triggering
-
-### Phase 8: Hold Loop — Stay Alive Until All PRs Merge
-
-After Phase 7, if any PRs are still open, **do not exit**. Schedule a wakeup to re-check:
-
-```python
-# In /loop mode (Claude Code interactive) — fires only when REPL is idle, never interrupts work
-ScheduleWakeup(
-    delaySeconds=180,   # 3 min — within 5-min cache window, catches Design Doc bot commits
-    prompt="<<autonomous-loop-dynamic>>",
-    reason="babysit hold: re-checking stale Skeptic verdicts after Design Doc bot commits"
-)
-```
-
-On each wakeup iteration, run a **lightweight stale-verdict sweep** (not a full audit):
-
-```bash
-# Check each open PR for stale Skeptic SHA
-for pr in $(gh pr list --repo $GITHUB_REPOSITORY --state open --json number --jq '.[].number'); do
-  head=$(gh pr view $pr --repo $GITHUB_REPOSITORY --json headRefOid --jq '.headRefOid[0:8]')
-  verdict=$(gh api --paginate repos/$GITHUB_REPOSITORY/issues/${pr}/comments | python3 -c "
-import sys,json,re
-# gh api --paginate emits one JSON array per page; merge all pages before parsing
-raw=sys.stdin.read().strip()
-c=json.loads('['+raw[1:-1].replace(']\n[',',')+']') if raw.startswith('[') else json.loads(raw)
-b=[x for x in c if x.get('user',{}).get('login')=='github-actions[bot]' and 'VERDICT: PASS' in x.get('body','')]
-m=re.search(r'skeptic-head-sha-([a-f0-9]+)',b[-1]['body']) if b else None
-print(m.group(1)[:8] if m else 'none')")
-  # Also check: don't re-dispatch if CI is still pending/failing (Skeptic will fail at Gate 1)
-  ci_failures=$(gh pr view $pr --repo $GITHUB_REPOSITORY --json statusCheckRollup \
-    --jq '[.statusCheckRollup[] | select((.conclusion == "FAILURE" or .conclusion == "ERROR" or .conclusion == "TIMED_OUT") and .name != "Green Gate")] | length')
-  ci_pending=$(gh pr view $pr --repo $GITHUB_REPOSITORY --json statusCheckRollup \
-    --jq '[.statusCheckRollup[] | select(.status == "IN_PROGRESS" or .status == "QUEUED")] | length')
-  if [[ "$verdict" != "$head" && "$ci_failures" == "0" && "$ci_pending" == "0" ]]; then
-    gh workflow run "Skeptic Self-Verify" --repo $GITHUB_REPOSITORY -f pr_number=$pr
-    echo "Re-dispatched Skeptic for #$pr (verdict=$verdict head=$head)"
-  elif [[ "$ci_failures" != "0" || "$ci_pending" != "0" ]]; then
-    echo "Skipping Skeptic dispatch for #$pr — CI not settled (failures=$ci_failures pending=$ci_pending)"
+for s in $(tmux list-sessions 2>/dev/null | grep "ao-[0-9]" | cut -d: -f1); do
+  name=${s##*-}
+  last=$(tmux capture-pane -t "$s" -p -S -20)
+  pr=$(echo "$last" | grep -oE "PR: #[0-9]+" | head -1)
+  uc=""; echo "$last" | grep -q "uncommitted" && uc="+uc"
+  activity=$(echo "$last" | grep -oE "[✻✶✳✽✾] [A-Za-z]+…[^)]*\)" | tail -1)
+  if [ -n "$activity" ]; then echo "  $name: WORKING $pr $uc ($activity)"
+  elif echo "$last" | grep -qE "Baked|Sautéed"; then echo "  $name: completed $pr"
+  elif echo "$last" | grep -q "queued"; then echo "  $name: QUEUED $pr"
+  else echo "  $name: idle $pr $uc"
   fi
 done
 ```
 
-**Exit condition**: Stop scheduling wakeups when `gh pr list --repo $GITHUB_REPOSITORY --state open --json number --jq 'length'` returns `0` (all merged).
+### TUI-block detection (bd-jya0)
 
-**CronCreate alternative** (non-interactive / cron-based sessions):
-```python
-# Guard: create at most ONE cron job per babysit session. Check CronList first.
-jobs = CronList()
-babysit_jobs = [j for j in jobs if "babysit" in j.get("prompt", "").lower()]
-if not babysit_jobs:
-    job_id = CronCreate(
-        cron="*/5 * * * *",  # every 5 minutes
-        # Sweep-only prompt — do NOT use "/babysit" here (that runs full 7-phase audit).
-        # This fires the Phase 8 stale-verdict sweep: compare HEAD SHA to last VERDICT: PASS
-        # SHA for each open PR; re-dispatch Skeptic Self-Verify only when stale and CI settled.
-        prompt="Run /babysit Phase 8 stale-verdict sweep only: for each open PR in $GITHUB_REPOSITORY, compare HEAD SHA to last VERDICT: PASS SHA; re-dispatch Skeptic Self-Verify if stale and CI settled. Skip full Phase 1-7 audit.",
-        recurring=True
-    )
+```bash
+tmux capture-pane -t "$s" -p -S -30 | grep -q "Do you trust the contents of this project" \
+  && tmux send-keys -t "$s" Enter
 ```
-Use CronCreate only when NOT in an interactive `/loop` session. Delete the job with CronDelete once all PRs merge. The guard above prevents duplicate cron jobs from accumulating across repeated babysit invocations.
 
-**Key rule: never sleep-poll inline.** The wakeup fires while the REPL is idle — it cannot interrupt a user conversation or an in-progress tool call. This is safe to leave running.
+Pre-check: only send Enter if no Enter has been sent in the last 60s (sentinel file `~/.cache/babysit/${s}.last_enter`).
 
-## Evidence Monitoring Protocol
+### Push notification (Claude native)
 
-When babysitting active testing or evidence generation:
+```python
+from claude_code import push_notification  # conceptual
+# Use the PushNotification tool with:
+#   message: "ao-6312 stalled-completed for 35m — review output"
+#   status: proactive
+```
 
-1. **Poll evidence traces**: Continuously verify that the testing framework writes traces to `/tmp/.../iteration_XXX`. Confirm `.jsonl` files are non-empty.
-2. **Copy to persistent path**: After iteration completes, copy to `docs/evidence/pr-<number>/` (e.g., `docs/evidence/pr-6851/`).
-3. **Testing Gap Close Integration**: If evidence bundles fail to generate (empty `.jsonl` files, missing checksums, server timeout errors, or `EvidenceSignatureGuard` rejections), immediately invoke the `/testing-gap-close` skill to harden the server lifecycle and resolve the failure.
-4. **Nudge stale processes**: If a background daemon hangs on testing or evidence compilation, use scoped shutdown: (1) SIGTERM to the test-managed PID file, (2) `lsof -ti :<port> | xargs kill` for the bound port, (3) `kill -- -$(ps -o pgid= -p <pid>)` for the process group. Only fall back to `pkill -9 -f gunicorn` as a last resort when all scoped methods fail.
+Cap: 1 push per session per 30 min. Sentinel: `~/.cache/babysit/${s}.last_notify`.
 
-## Anti-Patterns (BANNED)
+### Watch loop
 
-- Polling CI status in a sleep loop — wait for bots, then check once
-- Pushing while Bugbot/CR is still running
-- Resolving review threads to trigger auto-approve
-- Declaring "7-green" without Green Gate log verification
-- Reporting a PR as "looking good" after checking only mergeable + Skeptic SHA — always run statusCheckRollup check first
-- Running `gh pr merge` — only skeptic-cron merges
-- Calling `sleep` inline to wait for bots — use `ScheduleWakeup` instead
-- Exiting babysit after Phase 7 while PRs are still open — must hold until merged
+The bash one-liner runs every 60s. Each iteration:
+1. Refresh state for all watched sessions
+2. Apply remediation policy (TUI-block, idempotent)
+3. Diff against last seen state — only push-notify on transitions (WORKING→STALLED, IDLE→QUEUED+10m, etc.)
+4. Print table every 5 min (or on every transition, whichever is less noisy)
+
+### Sentinel layout
+
+```
+~/.cache/babysit/
+  ao-6312.last_enter          # epoch ms of last Enter sent
+  ao-6312.last_notify         # epoch ms of last push-notify
+  ao-6312.last_state          # WORKING|IDLE|QUEUED|DEAD|COMPLETED|TUI
+  ao-6312.started_at          # epoch ms of first observation
+```
+
+## Stop conditions
+
+- Watch loop exits on: user `stop`, `--max-min` reached, DEAD state, COMPLETED + PR merged
+- One-shot snapshot always exits after one pass
+- If the user is also running `/auton` or `/eloop`, babysit must not stack — exit cleanly and let those drive the system-level state
+
+## Output format (snapshot)
+
+```
+Session         State           PR      Uncommitted  Last activity
+ao-6312         WORKING         #661    no           ✻ Cascading… (3m 12s)
+ao-6309         TUI-BLOCKED     #?      no           (trust prompt)
+ao-6305         STALLED-CMP     #657    yes          Baked for 42m
+ao-6302         DEAD            —       —            (no output 8m)
+```
+
+## Examples
+
+### Watch the worker I just spawned
+
+```
+> /babysit watch ao-6312
+Watching ao-6312 (PR #661, branch fix/bd-rgk0-skeptic-cron-trigger-age-filter)
+Polling every 60s. Will push-notify on stalled/dead/TUI-block. Max run 90 min.
+[17:42:01] WORKING — ✻ Germinating… (0m 12s)
+[17:43:01] WORKING — ✻ Germinating… (1m 14s)
+[17:44:01] WORKING — ✻ Running tools… (2m 03s)
+[17:45:30] TUI-BLOCKED — "Do you trust..." → sent Enter
+[17:45:35] WORKING — ✻ Reading… (0m 04s)
+...
+```
+
+### Snapshot of all workers
+
+```
+> /babysit snapshot
+Session         State           PR      Uncommitted  Last activity
+ao-6312         WORKING         #661    no           ✻ Germinating… (0m 30s)
+ao-6309         IDLE            —       no           (no activity 4m)
+ao-6305         STALLED-CMP     #657    yes          Baked for 42m
+```
+
+### Watch by PR
+
+```
+> /babysit pr 661
+Resolved 661 → ao-6312 (worktree $HOME/.worktrees/agent-orchestrator/ao-6312, branch fix/bd-rgk0-...)
+Watching ao-6312. Same as /babysit watch ao-6312.
+```
+
+## DRIVER mode — when babysit must send specific fix instructions (bd-snx3)
+
+By default, babysit **observes and reports**: it posts status updates but does not steer workers. In DRIVER mode, babysit takes the next step when it detects a stuck-on-failure pattern: it extracts the specific failure and sends an `ao send` with an exact fix instruction.
+
+**Trigger rule (mandatory):** if the same CI gate failure (same check name, same error class) appears in **≥2 consecutive polls** for the same worker, babysit MUST switch to DRIVER mode for that worker.
+
+**What to extract (the minimum to act on):**
+- File path and line number from the failure log (e.g., `packages/cli/src/doctor.ts:142`)
+- The specific wrong value or behavior (e.g., `dist/index.js argv shape not recognized in non-canonical check`)
+- The exact change to make (e.g., `change regex to accept '/path/dist/index.js' as canonical binary`)
+
+**What to send (use the `SendMessage` / `ao send` channel, NOT just a push notification):**
+
+```bash
+ao send <session-id> "DRIVER (babysit): <check-name> failing 2+ ticks.
+Failure: <one-line description of the error>
+Fix: change <file>:<line> — <specific patch in plain English>
+Verify: <command to run before pushing> (e.g., pnpm -C packages/cli test)"
+```
+
+**Idempotency:** one DRIVER send per failure-class per 30 minutes (sentinel `~/.cache/babysit/${s}.last_driver_${checkname}`). After sending, babysit reverts to observer mode for the same check name until the failure either changes class or resolves.
+
+**Do NOT in DRIVER mode:**
+- Do not send a generic "keep working" or "fix CI" message — that is the failure pattern. If you cannot extract a specific file:line, push-notify the user instead of sending a vague driver message.
+- Do not send `ao send` with raw `gh run` output pasted in. Distill to one specific actionable instruction.
+- Do not auto-fix the worker's code (babysit does not have write access; it only steers).
+- Do not stack DRIVER sends with `/auton` or `/eloop` — those are system-level drivers; let them run or stop babysit.
+
+**Why this exists:** babysit's success metric was "status posted" not "failure fixed." Generic nudges do not move workers that have already tried and failed — they need exact file:line fix instructions. Observed in PR #7618 (rate-limit) over 4+ hours with 15+ babysit status updates and zero progress. Memory: [[babysit-not-a-driver]]. See also [[pr-driver-loop-contract]] in `~/.claude/CLAUDE.md`.
+
+## Anti-patterns
+
+- **Do not run `/babysit` and `/auton` simultaneously** — they overlap and produce duplicate push-notifications
+- **Do not auto-respawn dead workers** — the spawn parameters (PR, branch, claim, model override) are not recoverable from a dead tmux pane; user must re-spawn explicitly
+- **Do not send Enter on a `❯` prompt without verifying a question is being asked** — Enter on an empty prompt submits a blank, which is harmless but noise
+- **Do not babysit more than 8 workers at once** — the polling loop is bash, not parallel, and the user attention budget caps out fast
+- **Do not extend `--max-min` beyond 180 without explicit user approval** — long watches consume push-notification quota and can mask real alerts
+- **Do not send a generic `ao send` "fix CI" message** — that is the exact failure mode DRIVER mode was created to prevent. If you cannot extract a specific file:line + change, push-notify the user instead.
+
+## Known failure modes
+
+| Failure | Detection | Recovery |
+|---|---|---|
+| tmux server not running | `tmux has-session` returns 1 | Push-notify: "tmux server down — restart with `tmux start-server`" |
+| ao-* sessions exist but capture-pane returns empty | `last == ""` | Mark DEAD, push-notify |
+| Sentinel dir not writable | `mkdir -p` fails | Print to stderr, continue without idempotency (degraded) |
+| `ao list` not in PATH | `which ao` returns empty | Print to stderr, use tmux-only mode (no PR resolution) |
+| Push-notification tool unavailable | ImportError | Fall back to printing to stdout + writing a sentinel flag file `~/.cache/babysit/${s}.needs_human` |
+
+## Why not just use `Monitor` tool directly?
+
+`Monitor` watches a long-running script and emits a notification per stdout line — perfect for tailing logs. `babysit` is *stateful*: it diffs state across polls, applies idempotency via sentinel files, and remediates only on transitions. A `Monitor` invocation of `tmux capture-pane` would either flood notifications (every 60s) or miss transitions (if filtered too tightly). The stateful watch loop is the right primitive.
+
+## Related skills
+
+- `/ao-session-monitor` — single-pane one-shot detection (babysit embeds its one-liner)
+- `/babysit-openclaw` — Slack-thread-based, single-shot, different model
+- `/auton` — system-level autonomy diagnostic
+- `/ao-lifecycle-triage` — log-driven deep triage of a single stuck worker
+- `/evolve-loop` / `/eloop` — autonomous loop; babysit is intentionally NOT autonomous (always opt-in)

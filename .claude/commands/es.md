@@ -15,5 +15,8 @@ Thin alias that reads both layers of the evidence-standards skill.
 Read and display both layers (agents must consult both):
 1. `~/.claude/skills/evidence-standards/SKILL.md` — general cross-project standards
 2. `.claude/skills/evidence-standards.md` — WorldArchitect-specific standards
+3. If the evidence claim mentions BigQuery, `llm_forensics`, raw LLM payloads,
+   token counts, RAG shadow comparison, or BQ readback, also read
+   `.claude/skills/bq-evidence-reading.md` or run `/bq`.
 
 **Caveats**: After reading, you MUST always reconfirm by explicitly stating what the evidence proves vs what it does NOT prove.

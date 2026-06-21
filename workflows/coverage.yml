@@ -185,6 +185,7 @@ jobs:
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+        continue-on-error: true
         if: always()
         with:
           name: coverage-artifacts
@@ -205,6 +206,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     timeout-minutes: 10
 
     steps:
@@ -217,10 +219,22 @@ jobs:
           persist-credentials: true
 
       - name: Download coverage artifacts
+        id: download-coverage
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
+        continue-on-error: true
         with:
           name: coverage-artifacts
           path: .
+
+      - name: Check coverage artifact availability
+        id: coverage-available
+        run: |
+          if [ "${{ steps.download-coverage.outcome }}" != "success" ] || [ ! -f coverage.xml ]; then
+            echo "::warning::Coverage artifacts unavailable (likely artifact-storage quota hit). Skipping coverage report."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Configure authenticated origin for coverage diff
         if: github.event_name == 'pull_request'
@@ -228,7 +242,8 @@ jobs:
           git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
 
       - name: Generate Coverage Comment
-        if: always()
+        if: always() && steps.coverage-available.outputs.available == 'true'
+        continue-on-error: true
         uses: py-cov-action/python-coverage-comment-action@fb02115d6115e7b3325dc3295fe1dcfb1919248a  # v3.32
         with:
           GITHUB_TOKEN: ${{ github.token }}
@@ -236,7 +251,7 @@ jobs:
           MINIMUM_ORANGE: 60
 
       - name: Generate coverage badge
-        if: (success() || failure()) && github.ref == 'refs/heads/main'
+        if: (success() || failure()) && github.ref == 'refs/heads/main' && steps.coverage-available.outputs.available == 'true'
         run: |
           python3 -m pip install coverage
           COVERAGE=$(python3 -m coverage report 2>/dev/null | tail -1 | awk '{print $4}' | tr -d '%')
@@ -266,6 +281,7 @@ jobs:
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+        continue-on-error: true
         if: always()
         with:
           name: coverage-reports

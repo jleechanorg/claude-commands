@@ -32,7 +32,13 @@ concurrency:
 jobs:
   green_gate:
     name: Green Gate
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # Default to the single shared `self-hosted-mikey` label so any registered
+    # runner (X64, ARM64, mac Docker, host mac) can pick up the job. Earlier
+    # ARM64-only forcing left the 10 idle X64 Colima runners excluded while
+    # the 6 docker mac runners (org-runner-mac-*) were OOMKilled/zombies.
+    # SELF_HOSTED_RUNNER_LABELS may still override (e.g. for a temporary
+    # canary), but no longer defaults to ARM64.
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted-mikey"]') }}
     # Must exceed the poll step timeout so the job is not killed mid-loop.
     timeout-minutes: 60
     permissions:
@@ -47,6 +53,15 @@ jobs:
       eligible: ${{ steps.check_6green.outputs.eligible }}
       head_sha: ${{ steps.check_6green.outputs.head_sha }}
     steps:
+      # Checkout is required so Gate-6b can find .github/scripts/pr_description_gate.py.
+      # Self-hosted runners share a persistent named volume per runner; without checkout,
+      # each job sees whatever the previous job left in the workspace (stale ref).
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.inputs.head_sha || github.sha }}
+          persist-credentials: false
+
       # ----------------------------------------------------------------
       # Pre-check: 7-green eligibility (gates 1-6).
       # Exits fast for non-eligible PRs — avoids expensive CLI setup.
@@ -413,7 +428,7 @@ jobs:
 
           # Gate 6: Evidence — check for evidence links in PR body or comments.
           PR_BODY=$(echo "$PR_JSON" | jq -r '.body // ""')
-          
+
           PR_COMMENTS_BODY=""
           for _attempt in 1 2 3 4 5; do
             set +e -o pipefail
@@ -466,6 +481,60 @@ jobs:
             ELIGIBLE=false
           else
             echo "GATE-6 PASS: evidence not required for this change set"
+          fi
+
+          # ----------------------------------------------------------------
+          # Gate 6b: PR Description Gate (struct + content + section presence).
+          # Validates the PR body against the canonical CLAUDE.md PR
+          # Description Requirements plus the unit/non-unit/LLM evidence
+          # sections. Uses the new .github/scripts/pr_description_gate.py
+          # validator and runs over the same PR body that just passed the
+          # evidence-link heuristic above.
+          # ----------------------------------------------------------------
+          GATE_6B_SCRIPT=".github/scripts/pr_description_gate.py"
+          GATE_6B_REQUIRED=false
+          if echo "$CHANGED_FILES" | grep -qE '^(mvp_site/|testing_(mcp|ui)/|deploy\.sh$|\.github/(workflows|scripts)/)'; then
+            GATE_6B_REQUIRED=true
+          fi
+          if [ "$GATE_6B_REQUIRED" = "true" ]; then
+            # Fallback: fetch script via API if runner workspace is stale
+            if [ ! -f "$GATE_6B_SCRIPT" ]; then
+              echo "Script not in workspace — fetching from default branch via API..."
+              mkdir -p "$(dirname "$GATE_6B_SCRIPT")"
+              gh api "repos/${{ github.repository }}/contents/$GATE_6B_SCRIPT" \
+                -H "Accept: application/vnd.github.v3.raw" \
+                > "$GATE_6B_SCRIPT" 2>/dev/null || rm -f "$GATE_6B_SCRIPT"
+            fi
+            if [ -f "$GATE_6B_SCRIPT" ]; then
+              PR_BODY_FILE=$(mktemp)
+              CHANGED_FILES_FILE=$(mktemp)
+              printf '%s' "$PR_BODY" > "$PR_BODY_FILE"
+              printf '%s\n' "$CHANGED_FILES" > "$CHANGED_FILES_FILE"
+              set +e
+              python3 "$GATE_6B_SCRIPT" \
+                --body-file "$PR_BODY_FILE" \
+                --changed-files-file "$CHANGED_FILES_FILE" \
+                > /tmp/pr_description_gate_output.json 2> /tmp/pr_description_gate_output.json
+              GATE_6B_RC=$?
+              set -e
+              rm -f "$PR_BODY_FILE" "$CHANGED_FILES_FILE"
+              if [ "$GATE_6B_RC" = "0" ]; then
+                echo "GATE-6b PASS: PR description gate (canonical sections + evidence)"
+              else
+                echo "GATE-6b FAIL: PR description gate rejected PR body (validator output below)"
+                echo "---- validator output (truncated to 2000 bytes) ----"
+                head -c 2000 /tmp/pr_description_gate_output.json || true
+                echo ""
+                echo "---- end ----"
+                ELIGIBLE=false
+              fi
+              rm -f /tmp/pr_description_gate_output.json
+            else
+              echo "GATE-6b SKIP: $GATE_6B_SCRIPT not present in checkout (older ref?). Failing closed."
+              ELIGIBLE=false
+            fi
+          else
+            echo "GATE-6b SKIP: PR description gate not required for this change set"
           fi
 
           echo "7-green eligibility: $ELIGIBLE"
@@ -557,6 +626,12 @@ jobs:
           fi
 
 
+          if [ ! -f ".github/workflows/mcp-smoke-tests.yml" ]; then
+            echo "GATE-8 PASS: mcp-smoke-tests.yml does not exist — smoke skipped"
+            echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           if [ "$SMOKE_REQUIRED" = "false" ]; then
             echo "GATE-8 PASS: no mvp_site/prompts/ or mvp_site/**/*.py changes — smoke skipped"
             echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
@@ -587,7 +662,7 @@ jobs:
               set +e
               ALL_SMOKE=$(gh run list --workflow mcp-smoke-tests.yml \
                 --repo ${{ github.repository }} \
-                -L 100 --json databaseId,headSha,status,conclusion,createdAt,updatedAt,event,headBranch,url \
+                -L 500 --json databaseId,headSha,status,conclusion,createdAt,updatedAt,event,headBranch,url \
                 2>/dev/null)
               _rc=$?
               set -e
@@ -650,14 +725,29 @@ jobs:
                 echo "GATE-8 WAIT: exact mcp-smoke-tests still running (run $LATEST_EXACT_ID; poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
                 sleep 20
               elif [ "$LATEST_EXACT_CONCLUSION" = "success" ]; then
-                echo "GATE-8 PASS: latest exact mcp-smoke-tests succeeded (run $LATEST_EXACT_ID)"
-                echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
-                exit 0
+                # Run succeeded — but GATE-8 additionally requires REAL-service
+                # coverage. The smoke comment encodes mode (mcp-smoke-mode: real|mock);
+                # a mock smoke run must never green the gate. Only PASS on a
+                # real-mode pass comment for this exact SHA; otherwise keep polling
+                # (a real /smoke comment may still land) until the budget is
+                # exhausted, then fail closed at the timeout below.
+                if echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed" && \
+                   echo "$SMOKE_COMMENT_BODY" | grep -q "mcp-smoke-mode: real"; then
+                  echo "GATE-8 PASS: latest exact mcp-smoke-tests succeeded in REAL mode (run $LATEST_EXACT_ID)"
+                  echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
+                  exit 0
+                else
+                  SMOKE_POLL=$((SMOKE_POLL + 1))
+                  echo "GATE-8 WAIT: exact run succeeded (run $LATEST_EXACT_ID) but no REAL-mode pass comment for SHA ${HEAD_SHA:0:7} yet — a mock smoke does not satisfy the gate; run /smoke for real-service coverage (poll $SMOKE_POLL/$SMOKE_POLL_MAX)"
+                  sleep 20
+                fi
               else
                 # Exact-SHA run failed — only accept a /smoke pass comment as retry
-                # override if the comment was posted AFTER the exact run completed,
-                # proving it reflects a successful re-run, not a stale earlier pass.
+                # override if it is a REAL-mode pass posted AFTER the exact run
+                # completed, proving it reflects a successful real re-run, not a
+                # stale earlier pass or a mock run.
                 if echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed" && \
+                   echo "$SMOKE_COMMENT_BODY" | grep -q "mcp-smoke-mode: real" && \
                    [ -n "$SMOKE_COMMENT_UPDATED_AT" ] && [ -n "$LATEST_EXACT_COMPLETED_AT" ] && \
                    [[ "$SMOKE_COMMENT_UPDATED_AT" > "$LATEST_EXACT_COMPLETED_AT" ]]; then
                   echo "GATE-8 PASS: /smoke comment (${SMOKE_COMMENT_UPDATED_AT}) posted after failed exact run completed (${LATEST_EXACT_COMPLETED_AT}, run $LATEST_EXACT_ID) — override accepted"
@@ -692,9 +782,11 @@ jobs:
                   exit 1
                 fi
               fi
-            elif echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed"; then
-              # /smoke pass comment (no exact run) — authoritative success signal.
-              echo "GATE-8 PASS: /smoke comment reports success for SHA ${HEAD_SHA:0:7}"
+            elif echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed" && echo "$SMOKE_COMMENT_BODY" | grep -q "mcp-smoke-mode: real"; then
+              # /smoke pass comment (no exact run) — authoritative success signal,
+              # but only when it reports REAL-service mode. A mock pass comment
+              # must not satisfy the gate (falls through to WAIT/timeout below).
+              echo "GATE-8 PASS: /smoke comment reports REAL-mode success for SHA ${HEAD_SHA:0:7}"
               echo "smoke_gate=PASS" >> "$GITHUB_OUTPUT"
               exit 0
             elif echo "$SMOKE_RUNS_TIME" | jq -e 'any(.[]; .status == "in_progress" or .status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")' > /dev/null; then
@@ -721,7 +813,7 @@ jobs:
             fi
           done
 
-          echo "GATE-8 FAIL: timed out waiting for mcp-smoke-tests for SHA ${HEAD_SHA:0:7}"
+          echo "GATE-8 FAIL: timed out waiting for a REAL-mode mcp-smoke-tests pass for SHA ${HEAD_SHA:0:7} — the default smoke runs in MOCK mode and does not satisfy the gate; run /smoke on the PR for real-service coverage"
           echo "smoke_gate=FAIL" >> "$GITHUB_OUTPUT"
           exit 1
 

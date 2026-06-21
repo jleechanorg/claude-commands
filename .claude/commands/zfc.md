@@ -27,7 +27,7 @@ Backend guard proof standard: `.claude/skills/root-cause-first/SKILL.md`
    - Redundant model output fields (multiple fields expressing the same semantic decision)
    - Backend recomputation of decisions that belong to the model
    - Backend guards added before capturing raw model request/response
-4. **Check field ownership** — for each model output field: is it the minimal semantic decision, or a display derivative that should be derived deterministically?
+4. **Check field ownership** — for each model output field: is it the minimal semantic decision, or a display derivative that should be derived deterministically? For each control/state flag: does it have one canonical location, or is it duplicated to a second place and reconciled with read-time precedence/fallback? Single-home each flag and canonicalize once at the load/persist boundary.
 5. **Classify every non-prompt behavior** — for each backend guard, fallback, scrubber, sanitizer, clamp, suppression, server-injected choice, routing rule, persistence rule, or schema normalizer, identify whether it is:
    - Server-owned invariant
    - Prompt/schema-insufficient, proven by raw real-path request/response

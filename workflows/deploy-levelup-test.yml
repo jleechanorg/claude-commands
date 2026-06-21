@@ -1,0 +1,107 @@
+# Rebuild and redeploy the wa-daily-level-up-test Cloud Run Job when the code it
+# bakes into its image changes on main. Keeps the scheduled daily level-up job's
+# image in sync with code.
+#
+# Why this is needed: testing_mcp/infra/Dockerfile.test-runner COPYs mvp_site/ and
+# testing_mcp/ at build time, so the job runs a *frozen* snapshot of that code.
+# The `finish_intent_prompt_and_classifier` scenario asserts on the baked source
+# via inspect.getsource(LevelUpAgent.build_system_instructions), so a merged
+# code fix stays invisible to the scheduled job until its image is rebuilt.
+# A merge to main does not otherwise rebuild it (deploy_daily_test.sh is manual).
+#
+# Only rebuilds the image + updates the job — does NOT recreate IAM bindings,
+# scheduler, secrets, or the GCS bucket (those are set up once by
+# testing_mcp/infra/deploy_daily_test.sh).
+
+name: Deploy Level-Up Test Job
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'mvp_site/agents.py'
+      - 'mvp_site/prompts/level_up_instruction.md'
+      - 'mvp_site/prompts/level_up_conclude_instruction.md'
+      - 'testing_mcp/core/test_level_up_organic.py'
+      - 'testing_mcp/infra/Dockerfile.test-runner'
+      - 'testing_mcp/infra/entrypoint.sh'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual rebuild'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild-levelup-test-image:
+    name: Rebuild + redeploy level-up test job
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 20
+    env:
+      GCP_PROJECT: worldarchitecture-ai
+      REGION: us-central1
+      JOB_NAME: wa-daily-level-up-test
+      IMAGE_TAG: gcr.io/worldarchitecture-ai/wa-daily-level-up-test:latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200  # v2
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Build image via Cloud Build
+        run: |
+          cat <<'CLOUDBUILD' > /tmp/cloudbuild-levelup-test.yaml
+          steps:
+            - name: 'gcr.io/cloud-builders/docker'
+              args: ['build', '-f', 'testing_mcp/infra/Dockerfile.test-runner', '-t', '${_IMAGE_TAG}', '.']
+          images:
+            - '${_IMAGE_TAG}'
+          CLOUDBUILD
+
+          gcloud builds submit . \
+            --project="${GCP_PROJECT}" \
+            --config /tmp/cloudbuild-levelup-test.yaml \
+            --substitutions="_IMAGE_TAG=${IMAGE_TAG}"
+
+      - name: Update Cloud Run Job to new image
+        run: |
+          gcloud run jobs update "${JOB_NAME}" \
+            --image="${IMAGE_TAG}" \
+            --region="${REGION}" \
+            --project="${GCP_PROJECT}"
+          echo "✅ ${JOB_NAME} updated to freshly-built ${IMAGE_TAG}"
+
+      - name: Summary
+        if: success()
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          {
+            echo "## ✅ Level-Up Test Job Rebuilt"
+            echo ""
+            echo "**Job:** ${JOB_NAME}"
+            echo "**Image:** ${IMAGE_TAG}"
+            echo "**Commit:** ${COMMIT_SHA}"
+            echo "**Triggered by:** ${ACTOR}"
+            if [ -n "${REASON}" ]; then
+              echo "**Reason:** ${REASON}"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"

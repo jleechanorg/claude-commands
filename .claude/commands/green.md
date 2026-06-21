@@ -13,6 +13,18 @@ First classify the PR:
 - **lite-green** if the diff is docs-only or tests-only
 - **7-green** otherwise
 
+**"Docs-only" is by EFFECT, not file extension.** A `.md` file is NOT automatically docs.
+A change that alters production runtime behavior is **7-green**, even if every changed file
+ends in `.md`. In particular, these are **NEVER docs-only** (they require full 7-green +
+real-LLM before/after evidence per `## Real LLM Evidence`):
+
+- `$PROJECT_ROOT/prompts/**` — prompt files are production LLM behavior, not documentation
+- any system-instruction / prompt-template / agent-instruction file fed to the model at runtime
+- schema/config/workflow files that change CI, deploy, or merge-safety behavior
+
+Genuinely docs-only = `docs/`, `roadmap/`, `README*`, `AGENTS.md`, `CLAUDE.md`, `.claude/`,
+`.codex/`, `.cursor/` — files no running code reads. When in doubt, classify **7-green**.
+
 **Skill reference**: `~/.claude/skills/pr-green-definition.md` — "Verification Procedure (Mandatory)" section.
 
 ### Step 1 — Resolve PR number
@@ -28,7 +40,7 @@ Resolve OWNER/REPO from the git remote.
 
 Inspect changed files and choose one mode:
 
-- **Lite-green**: docs-only or tests-only PR
+- **Lite-green**: docs-only or tests-only PR — docs-only by EFFECT (no running code reads the file). `$PROJECT_ROOT/prompts/**` and any model-fed prompt/instruction file are **NOT** docs even though `.md` → classify 7-green.
 - **7-green**: any runtime / production / workflow-safety affecting PR
 
 ### Step 3 — Run gate-by-gate verification

@@ -1,5 +1,5 @@
 ---
-description: Code standards review - dispatch independent ZFC, ZFC leveling, and root-cause-first review lanes
+description: Code standards review - dispatch independent ZFC, ZFC leveling, root-cause-first, code-quality, and thermo review lanes
 type: quality
 execution_mode: immediate
 ---
@@ -10,11 +10,13 @@ Load and follow `.claude/skills/code-standards/SKILL.md`.
 
 Use this command when reviewing current work, a PR, a file, or a proposed fix
 against the repo's core code standards. It must dispatch adversarial,
-independent review lanes for all three source standards:
+independent review lanes for all source standards:
 
 - `/zfc` via `.claude/skills/zero-framework-cognition/SKILL.md` (user-scope: `~/.claude/skills/`)
 - `/zfclevel` via repo command `.claude/commands/zfclevel.md`
 - `/root-cause-first` via `.claude/skills/root-cause-first/SKILL.md` (user-scope: `~/.claude/skills/`)
+- `/code-quality` via `.claude/skills/code-quality/SKILL.md` (alias `/cq`) — metric-driven complexity / duplication / coupling review with file:line evidence
+- `/thermo` via `Agent` tool with `subagent_type: thermo-nuclear-code-quality-review` (Agent tool subagent type, NOT a bash command)
 
 Source skills live at `~/.claude/skills/` (user-scope, shared across all repos)
 and are mirrored under `.codex/skills/` as pointer files. The repo-local

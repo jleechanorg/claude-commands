@@ -1,0 +1,116 @@
+name: Daily GH Actions Cost Report (estimated)
+
+on:
+  schedule:
+    # 09:30 UTC daily — 10 minutes after the GCP report.
+    - cron: '30 9 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'UTC date to report (YYYY-MM-DD). Blank = oldest pending or yesterday UTC.'
+        required: false
+        default: ''
+
+jobs:
+  report:
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    env:
+      REPORT_RECIPIENT: $USER@gmail.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
+
+      - name: Setup Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r mvp_site/requirements.txt
+
+      - name: Generate daily GH Actions cost report
+        id: report
+        env:
+          REPORT_RECIPIENT: $USER@gmail.com
+          REPORT_SMTP_USER: ${{ secrets.EMAIL_USER }}
+          REPORT_SMTP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
+          REPORT_SENDER_EMAIL: ${{ secrets.EMAIL_USER }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPORT_MAX_WAIT_DAYS: 2
+          ENFORCE_SCHEMA_VERSION: true
+          EXPECTED_REPORT_SCHEMA_VERSION: 2026-06-17.1
+        run: |
+          set -euo pipefail
+          if [[ "${REPORT_RECIPIENT}" != "$USER@gmail.com" ]]; then
+            echo "Recipient policy violation: REPORT_RECIPIENT must be $USER@gmail.com"
+            exit 1
+          fi
+          DATE_ARG=()
+          if [[ -n "${{ github.event.inputs.date }}" ]]; then
+            DATE_ARG=(--date "${{ github.event.inputs.date }}")
+          fi
+          python scripts/daily_gh_cost_report.py "${DATE_ARG[@]}" \
+            --output /tmp/gh_daily_report.txt \
+            --output-json /tmp/gh_daily_report.json
+
+          python - <<'PY'
+          import json, os
+          payload = json.load(open('/tmp/gh_daily_report.json', encoding='utf-8'))
+          schema_version = payload.get('report_schema_version', 'unknown')
+          cost_obj = payload.get('cost', {})
+          def _safe(value):
+              text = str(value) if value is not None else 'n/a'
+              return text.replace('\n', ' ').replace('\r', ' ')
+          with open('/tmp/report_meta.txt', 'w', encoding='utf-8') as f:
+              f.write(f"date={_safe(payload['target_day_utc'])}\n")
+              f.write(f"schema_version={_safe(schema_version)}\n")
+              f.write(f"total_runs={_safe(cost_obj.get('total_runs'))}\n")
+              f.write(f"hosted_cost_usd={_safe(cost_obj.get('total_hosted_cost_usd'))}\n")
+              f.write(f"self_hosted_minutes={_safe(cost_obj.get('total_self_hosted_minutes'))}\n")
+              f.write(f"send_mode={_safe(payload.get('send_mode'))}\n")
+
+          summary_lines = [
+              "## Daily GitHub Actions Cost Report (estimated)",
+              "",
+              f"- Date (UTC): {payload['target_day_utc']}",
+              f"- Schema version: {schema_version}",
+              f"- Total runs: {cost_obj.get('total_runs')}",
+              f"- Hosted minutes: {cost_obj.get('total_hosted_minutes'):,.2f}",
+              f"- Self-hosted minutes: {cost_obj.get('total_self_hosted_minutes'):,.2f}",
+              f"- Estimated hosted cost (USD): ${float(cost_obj.get('total_hosted_cost_usd', 0)):,.2f}",
+              f"- Estimated self-hosted cost (USD): $0.00 (always $0 against GH)",
+              f"- Send mode: {payload.get('send_mode')}",
+              "",
+              "Estimate caveats:",
+              "- Per-run minutes = (updated_at - created_at) / 60.",
+              "- Self-hosted infra cost (MacBook, electricity) is NOT in this report.",
+              "- GH org billing API is 410'd; reconcile against the monthly PDF receipt.",
+          ]
+          with open('/tmp/report_summary.md', 'w', encoding='utf-8') as f:
+              f.write("\\n".join(summary_lines) + "\\n")
+          PY
+
+          cat /tmp/report_meta.txt >> "$GITHUB_OUTPUT"
+          cat /tmp/report_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+          CURRENT_SCHEMA_VERSION=$(awk -F= '/^schema_version=/{print $2}' /tmp/report_meta.txt)
+          if [[ "${ENFORCE_SCHEMA_VERSION}" == "true" && "${CURRENT_SCHEMA_VERSION}" != "${EXPECTED_REPORT_SCHEMA_VERSION}" ]]; then
+            echo "Failing run due to schema version mismatch: expected ${EXPECTED_REPORT_SCHEMA_VERSION}, got ${CURRENT_SCHEMA_VERSION}."
+            exit 1
+          fi
+
+      - name: Send report email
+        if: steps.report.outputs.send_mode != 'deferred'
+        uses: dawidd6/action-send-mail@6d98ae34d733f9a723a9e04e94f2f24ba05e1402  # v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_APP_PASSWORD }}
+          subject: ${{ steps.report.outputs.subject }}
+          to: ${{ env.REPORT_RECIPIENT }}
+          from: WorldArchitect Reports <${{ secrets.EMAIL_USER }}>
+          body: file:///tmp/gh_daily_report.txt
+          attachments: /tmp/gh_daily_report.txt,/tmp/gh_daily_report.json
