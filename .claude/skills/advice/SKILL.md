@@ -1,6 +1,6 @@
 ---
 name: advice
-description: Token-efficient second opinion slash command /advice. Extracts decision point + artifact (≤150 lines), then fans out in parallel: (1) Opus subagent reviewer with fallback chain codex→agy→cursor, (2) /research on the decision topic, (3) /secondo multi-model opinion. Use instead of advisor() which ships the full conversation uncached.
+description: "Token-efficient second opinion slash command /advice. Extracts decision point + artifact (≤150 lines), then fans out in parallel: (1) Opus subagent reviewer with fallback chain codex→agy→cursor, (2) /research on the decision topic, (3) /secondo multi-model opinion. Use instead of advisor() which ships the full conversation uncached."
 ---
 
 # /advice — Token-Efficient Second Opinion
