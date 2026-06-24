@@ -233,6 +233,52 @@ if [ "$ROOT_CHECK_FAILED" -eq 0 ]; then
         echo "  ❌ Found $UNREADABLE unreadable files"
         TEST_FAILURES=$((TEST_FAILURES + 1))
     fi
+
+    # Test 11: Validate YAML frontmatter in all SKILL.md files
+    echo ""
+    echo "✓ Test 11: Validating YAML frontmatter in SKILL.md files..."
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
+    INVALID_FRONTMATTER=0
+
+    if command -v python3 >/dev/null 2>&1; then
+        while IFS= read -r skill_file; do
+            if ! python3 -c "
+import sys, yaml
+try:
+    content = open('$skill_file').read()
+    parts = content.split('---')
+    if len(parts) < 3:
+        print('  ❌ $skill_file: Missing YAML frontmatter delimiters (---)')
+        sys.exit(1)
+    fm = yaml.safe_load(parts[1])
+    if not isinstance(fm, dict):
+        print('  ❌ $skill_file: Frontmatter is not a key-value mapping')
+        sys.exit(1)
+    if 'name' not in fm:
+        print('  ❌ $skill_file: Missing required field \"name\"')
+        sys.exit(1)
+    if 'description' not in fm:
+        print('  ❌ $skill_file: Missing required field \"description\"')
+        sys.exit(1)
+except Exception as e:
+    print(f'  ❌ $skill_file: Invalid YAML frontmatter: {e}')
+    sys.exit(1)
+" 2>/dev/null; then
+                INVALID_FRONTMATTER=$((INVALID_FRONTMATTER + 1))
+            else
+                echo "  ✅ $skill_file frontmatter is valid"
+            fi
+        done < <(find .claude/skills -name "SKILL.md" -type f)
+
+        if [ $INVALID_FRONTMATTER -eq 0 ]; then
+            echo "  ✅ All SKILL.md frontmatter files are valid"
+        else
+            echo "  ❌ Found $INVALID_FRONTMATTER invalid SKILL.md files"
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    else
+        echo "  ⚠️  Skipping SKILL.md frontmatter validation (python3 not available)"
+    fi
 fi
 
 # Summary
