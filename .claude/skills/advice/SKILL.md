@@ -55,13 +55,13 @@ agy --print --dangerously-skip-permissions "Senior engineer second opinion.\n\nD
 ```
 Note: agy is the Antigravity CLI (reads CLAUDE.md on startup like any CC session, but starts fresh — no current conversation history). Independent perspective, slightly slower than cursor.
 
-**A4 — claude -p (fallback if A3 errors, or when /advice is invoked outside Claude Code):**
+**A1.1 — `claude -p` (first-class choice when invoked outside Claude Code; fallback if A3 errors):**
 ```bash
 claude -p --dangerously-skip-permissions "Senior engineer second opinion.\n\nDECISION:\n[decision]\n\nARTIFACT:\n[artifact]\n\nReturn VERDICT, REASONING (3-4 sentences), RISK, CONFIDENCE."
 ```
 Note: Same Claude Code context inheritance as agy. For a cleaner isolated call: add `--cwd /tmp`.
 
-If all four fail, note "Reviewer A unavailable" in the synthesis table.
+If all options fail, note "Reviewer A unavailable" in the synthesis table.
 
 ---
 
@@ -108,8 +108,8 @@ Present:
 | Priority | CLI | When |
 |---|---|---|
 | A1 | Claude subagent (Opus) | Primary (inside Claude Code) |
+| A1.1 | `claude -p --dangerously-skip-permissions` | First-class choice when invoked outside Claude Code; fallback if A3/agy errors |
 | A2 | `cursor agent -p --force` | Opus unavailable |
 | A3 | `agy --print --dangerously-skip-permissions` | cursor errors |
-| A4 | `claude -p --dangerously-skip-permissions` | agy errors, or when invoked outside Claude Code |
 
 Note: codex removed — gpt-4.5 unsupported with ChatGPT account + quota exhausted as of 2026-06-24.
