@@ -9,15 +9,15 @@ execution_mode: immediate
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
 
 1. Parse the user's prompt from the command arguments
-2. Create a new team using `TeamCreate` with a descriptive name
-3. Create tasks using `TaskCreate` for each subtask
-4. Spawn teammates using `Agent` with `team_name` and `name` parameters
-5. Coordinate via `SendMessage` and `TaskUpdate`
-6. Shutdown teammates when complete
+2. Create tasks using `TaskCreate` for each subtask (one task per lane/worker)
+3. Spawn teammates using `Agent` with `name` parameter (set the `team_name` parameter too but expect it to be ignored — see Notes)
+4. Coordinate via `SendMessage` and `TaskUpdate`
+5. Shutdown teammates when complete
 
 ## HOW TEAM-CLAUDE WORKS
 
-This command creates a **real Claude team** using the official TeamCreate infrastructure:
+This command dispatches a **parallel subagent team** using the `Agent` tool with `run_in_background=true`. The current Claude Code session has a single implicit team; explicit `TeamCreate` calls are NOT supported in this environment (the tool is unavailable).
+
 - **Opus** (you, the orchestrator/team lead) — plans, creates tasks, coordinates, reviews
 - **Sonnet** teammates — `claude-pair-coder` and `claude-pair-verifier` for implementation and verification
 - **Haiku** — quick tasks like file searches, simple checks, formatting
@@ -30,21 +30,13 @@ Usage: `/team-claude <prompt>`
 
 ### Execution Steps:
 
-1. **Create team:**
-   ```python
-   TeamCreate(
-       team_name="claude-team-<short-description>",
-       description="<what the team is working on>"
-   )
-   ```
-
-2. **Create tasks** from the user's prompt:
+1. **Create tasks** from the user's prompt:
    ```python
    TaskCreate(subject="<task>", description="<details>")
    ```
    Set up `blockedBy` dependencies between tasks where needed.
 
-3. **Spawn sonnet teammates:**
+2. **Spawn sonnet teammates:**
    ```python
    Agent(
        subagent_type="claude-pair-coder",
@@ -92,6 +84,12 @@ Usage: `/team-claude <prompt>`
        message={"type": "shutdown_request", "reason": "All tasks complete"}
    )
    ```
+
+### Notes (added 2026-06-27)
+
+- The `TeamCreate` primitive described in earlier versions of this skill is **not callable** in the current Claude Code session. The `Agent` tool description explicitly notes `team_name (Deprecated; ignored. The session has a single implicit team.)`. Skip step 1 (team creation) and dispatch agents directly.
+- If `TaskCreate` is unavailable in your session, fall back to `Agent` dispatch only and track work via the inbox messages instead.
+- For minimax/M2.5 backend, use the sister command `/team-mini` (which uses `minimax-pair-coder` agent types that shell out to `claudem()` from `~/.bashrc`).
 
 ### Model Budget Rules:
 - **Opus**: Only for orchestration decisions, final review, complex reasoning
