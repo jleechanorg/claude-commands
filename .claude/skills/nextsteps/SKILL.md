@@ -15,7 +15,7 @@ A `/nextsteps` run is **incomplete** unless it leaves **all** of these artifacts
 2. Beads updated/created via `br`  
 3. Claude memory files written with `MEMORY.md` pointers  
 4. `~/roadmap/learnings-YYYY-MM.md` appended  
-5. **`roadmap/README.md` “Recent activity (rolling)”** updated (repo git root — create section if absent)
+5. **`roadmap/activity/YYYY-MM-DD.md`** appended with session bullet (repo git root — create file if absent). If that date is brand-new, prepend one date link to `roadmap/README.md`'s `## Recent activity (by day)` section.
 
 If the session has no repo checkout, skip item 5 only and note that in the Phase 8 report.
 
@@ -28,7 +28,7 @@ Before writing the independent summary or touching roadmap files:
    - Home: `~/roadmap/nextsteps-latest.md`, `~/roadmap/nextsteps-*.md`
 2. **Prefer:** append a new **dated section** to an existing rolling file (e.g. `nextsteps-latest.md` or the newest `nextsteps-YYYY-MM-DD.md` in the same month), or add a subsection under an existing “Work queue” / “Next steps” heading.
 3. **Create new file only when** no suitable file exists. Default **new** path: `~/roadmap/nextsteps-<YYYY-MM-DD>.md` (or `roadmap/nextsteps-<YYYY-MM-DD>.md` if the repo standard is to keep session docs in-repo — match sibling files if any).
-4. **README:** always update **`roadmap/README.md`** in the repo (rolling bullets); do not create a duplicate “status” README elsewhere unless the repo already uses one.
+4. **Activity log:** append the session bullet to **`roadmap/activity/YYYY-MM-DD.md`** (create file with `# Activity — YYYY-MM-DD` header if absent). If this is the first entry for that date, prepend a `- [YYYY-MM-DD](activity/YYYY-MM-DD.md)` line to the `## Recent activity (by day)` list in `roadmap/README.md`. Do not prepend to README for subsequent entries on the same date — only the per-day file changes. This keeps README conflict-free across concurrent PRs.
 
 ## Nextsteps document (mandatory)
 
@@ -50,7 +50,7 @@ The independent `.md` file is the **handoff artifact**: a reader must be able to
 | **Work queue** | Numbered tasks; each task **self-contained**: goal, acceptance criteria, files/areas, dependencies/blockers, suggested order; **reference beads** inline as linked `[bd-xxx](url)` where applicable |
 | **PR / merge state** | Same session truth as Phase 1b (`PR #n: OPEN \| MERGED \| CLOSED`) for any PR referenced; full PR URLs |
 | **Learnings pointer** | Path/link to the new `~/roadmap/learnings-YYYY-MM.md` entry for this date; one-line summary of what was logged |
-| **Roadmap pointer** | Confirm `roadmap/README.md` rolling section updated (repo-relative path) |
+| **Roadmap pointer** | Confirm `roadmap/activity/YYYY-MM-DD.md` appended (and README date link added if new date) |
 
 **Link rules**
 
@@ -104,7 +104,7 @@ The independent `.md` file is the **handoff artifact**: a reader must be able to
 
 ## Roadmap pointer
 
-- Updated `roadmap/README.md` — Recent activity (rolling)
+- Appended `roadmap/activity/YYYY-MM-DD.md` — Recent activity (per-day file)
 ```
 
 ## When invoked
@@ -137,7 +137,7 @@ The independent `.md` file is the **handoff artifact**: a reader must be able to
 
 - Match recent commits to open beads; close or update status.
 - Note gaps → new beads.
-- Update `roadmap/README.md` **Recent activity (rolling)** section with date + bullets (create section if absent).
+- Append session bullet to **`roadmap/activity/YYYY-MM-DD.md`** (create with header if new date). Only touch `roadmap/README.md` when the date file is brand-new (prepend one date link to `## Recent activity (by day)`).
 - Identify learnings from the session worth persisting.
 
 ### Phase 2b — Write or update the Nextsteps document
@@ -254,7 +254,7 @@ Report: `✅ GH Issue #N created` or `⚠️ GH Issues disabled — bead bd-xxx 
 
 ### Phase 8 — Report
 
-List all: **path to Nextsteps summary doc**, beads updated/created, `roadmap/README.md` touched, memory files written, mem0 status, recommended next actions.
+List all: **path to Nextsteps summary doc**, beads updated/created, `roadmap/activity/YYYY-MM-DD.md` touched (+ README if new date), memory files written, mem0 status, recommended next actions.
 
 Include an explicit artifact checklist:
 
@@ -262,6 +262,6 @@ Include an explicit artifact checklist:
 - `[x]` Beads (`br`) written
 - `[x]` Claude memory + `MEMORY.md` pointers written
 - `[x]` `~/roadmap/learnings-YYYY-MM.md` updated (includes nextsteps doc path)
-- `[x]` `roadmap/README.md` rolling activity updated
+- `[x]` `roadmap/activity/YYYY-MM-DD.md` appended (README date link added if new date)
 
 **Merge-order sanity:** If any recommended action was “merge **A** before **B**” (or “land A then rebase B”), re-assert **A** using the Phase 1 `gh pr view` results from **this** run. If **A** is **MERGED**, do **not** tell the reader to land A; say instead to **rebase B on `main`** (or the appropriate default branch). If **A** is still **OPEN**, keep the ordering advice. If **A** is **CLOSED** without merge, drop merge-order advice and flag that the stack needs re-triage.

@@ -57,10 +57,10 @@ Codex also tracks projects in `~/.codex/config.toml`. The key paths are:
 Add these project entries if not already present:
 
 ```toml
-[projects."$HOME/projects_other/ai_universe"]
+[projects."/Users/$USER/projects_other/ai_universe"]
 trust_level = "trusted"
 
-[projects."$HOME/projects_other/your-project.com"]
+[projects."/Users/$USER/projects_other/your-project.com"]
 trust_level = "trusted"
 ```
 

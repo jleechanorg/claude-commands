@@ -7,9 +7,9 @@ user-invocable: true
 # cmux Codex Autoapprove
 
 Canonical files:
-- Skill root: `$HOME/.claude/skills/cmux-codex-autoapprove`
-- Worker script: `$HOME/.claude/skills/cmux-codex-autoapprove/scripts/cmux_codex_approve_launchd.py`
-- LaunchAgent: `$HOME/Library/LaunchAgents/com.$USER.cmux-codex-approve.plist`
+- Skill root: `/Users/$USER/.claude/skills/cmux-codex-autoapprove`
+- Worker script: `/Users/$USER/.claude/skills/cmux-codex-autoapprove/scripts/cmux_codex_approve_launchd.py`
+- LaunchAgent: `/Users/$USER/Library/LaunchAgents/com.$USER.cmux-codex-approve.plist`
 - Plist backup: `~/.claude/skills/cmux-codex-autoapprove/com.$USER.cmux-codex-approve.plist`
 
 ## Install / Restore
@@ -22,13 +22,13 @@ cp ~/.claude/skills/cmux-codex-autoapprove/com.$USER.cmux-codex-approve.plist \
 launchctl load ~/Library/LaunchAgents/com.$USER.cmux-codex-approve.plist
 ```
 
-**PATH requirement:** The plist must include `$HOME/bin` in PATH (where `cmux` lives). Current plist already has this.
-- Logs: `$HOME/.claude/supervisor/cmux-codex-launchd.log`
-- State: `$HOME/.claude/supervisor/cmux-codex-launchd-state.json`
+**PATH requirement:** The plist must include `/Users/$USER/bin` in PATH (where `cmux` lives). Current plist already has this.
+- Logs: `/Users/$USER/.claude/supervisor/cmux-codex-launchd.log`
+- State: `/Users/$USER/.claude/supervisor/cmux-codex-launchd-state.json`
 
 Compatibility paths:
-- Wrapper path used by older flows: `$HOME/.claude/bin/cmux_codex_approve_launchd.py`
-- Codex skill symlink: `$HOME/.codex/skills/cmux-codex-autoapprove`
+- Wrapper path used by older flows: `/Users/$USER/.claude/bin/cmux_codex_approve_launchd.py`
+- Codex skill symlink: `/Users/$USER/.codex/skills/cmux-codex-autoapprove`
 
 ## Purpose
 
@@ -53,7 +53,7 @@ cmux read-screen --workspace <workspace> --surface <surface> --lines 24
 2. If you need a one-shot run, execute:
 
 ```bash
-/opt/homebrew/bin/python3 $HOME/.claude/skills/cmux-codex-autoapprove/scripts/cmux_codex_approve_launchd.py
+/opt/homebrew/bin/python3 /Users/$USER/.claude/skills/cmux-codex-autoapprove/scripts/cmux_codex_approve_launchd.py
 ```
 
 3. For the scheduled agent, use:
@@ -86,7 +86,7 @@ phrase, you MUST add test strings to **both** functions. The test file at
 functions — it will fail if a pattern is only wired into one.
 
 Check these first when debugging:
-- `$HOME/.claude/supervisor/cmux-codex-launchd.log`
-- `$HOME/.claude/supervisor/cmux-codex-launchd.stderr.log`
-- `$HOME/.claude/supervisor/cmux-codex-launchd-state.json`
+- `/Users/$USER/.claude/supervisor/cmux-codex-launchd.log`
+- `/Users/$USER/.claude/supervisor/cmux-codex-launchd.stderr.log`
+- `/Users/$USER/.claude/supervisor/cmux-codex-launchd-state.json`
 

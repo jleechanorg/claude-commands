@@ -92,4 +92,4 @@ Target: outbound ≥15, inbound ≥10.
 ## Example usage
 - `/wiki-assess` — assess default llm_wiki
 - `/wiki-assess ~/memory/wiki` — assess memory wiki
-- `/wiki-assess --wiki $HOME/agent-f/jleechan_llm_wiki/wiki` — assess agent-f wiki
+- `/wiki-assess --wiki /Users/$USER/agent-f/jleechan_llm_wiki/wiki` — assess agent-f wiki

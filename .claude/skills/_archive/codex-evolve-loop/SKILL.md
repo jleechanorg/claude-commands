@@ -9,15 +9,15 @@ Use this skill when you need a Codex-native version of the `evolve-loop` workflo
 
 ## Source of truth
 
-- Canonical loop policy: `$HOME/.claude/skills/evolve-loop/SKILL.md`
-- Local deterministic cycle executor: `$HOME/project_agento/agent-orchestrator/scripts/codex-evolve-cycle.sh`
-- Long-running bounded loop: `$HOME/project_agento/agent-orchestrator/scripts/codex-eloop.sh`
+- Canonical loop policy: `/Users/$USER/.claude/skills/evolve-loop/SKILL.md`
+- Local deterministic cycle executor: `/Users/$USER/project_agento/agent-orchestrator/scripts/codex-evolve-cycle.sh`
+- Long-running bounded loop: `/Users/$USER/project_agento/agent-orchestrator/scripts/codex-eloop.sh`
 
 ## Workflow
 
 1. Run the local cycle executor first:
    ```bash
-   cd $HOME/project_agento/agent-orchestrator
+   cd /Users/$USER/project_agento/agent-orchestrator
    REPORT_DIR=/tmp/codex-evolve-cycle-$(date +%Y%m%d-%H%M%S) \
      APPEND_ROADMAP=1 \
      bash ./scripts/codex-evolve-cycle.sh
@@ -29,6 +29,6 @@ Use this skill when you need a Codex-native version of the `evolve-loop` workflo
 
 ## Notes
 
-- The generic `auton` skill is repo-specific to `jleechanclaw`, so do not force it on `agent-orchestrator`.
+- The generic `auton` skill is repo-specific to `$ORG`, so do not force it on `agent-orchestrator`.
 - Prefer REST GitHub calls over GraphQL when quota is exhausted.
 - If tmux session count is above 20, stabilize and observe; do not increase worker load unless the issue is critical.

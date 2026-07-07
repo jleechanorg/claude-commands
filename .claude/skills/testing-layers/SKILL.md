@@ -2,15 +2,15 @@
 
 ## Purpose
 
-This skill defines the **concrete test directory structure** for Your Project, the **decision principles** for choosing the right testing layer, and the **evidence implications** of each layer. Use this when creating new tests, reviewing test coverage, or evaluating `/es` evidence completeness.
+This skill defines the **concrete test directory structure** for YourProject, the **decision principles** for choosing the right testing layer, and the **evidence implications** of each layer. Use this when creating new tests, reviewing test coverage, or evaluating `/es` evidence completeness.
 
 ## Directory Map
 
 | Layer | Directory | Runner | Count | Evidence Class |
 |---|---|---|---|---|
-| **1. Unit** | `$PROJECT_ROOT/tests/` | `./vpython -m pytest $PROJECT_ROOT/tests/test_*.py` | ~295 files | Mock (no `/es` credit) |
+| **1. Unit** | `your_app/tests/` | `./vpython -m pytest your_app/tests/test_*.py` | ~295 files | Mock (no `/es` credit) |
 | **1b. Unit (top-level)** | `tests/` | `./vpython -m pytest tests/test_*.py` | ~4 files | Mock (no `/es` credit) |
-| **2. End-to-End**| `$PROJECT_ROOT/tests/test_end2end/` | `./vpython -m pytest $PROJECT_ROOT/tests/test_end2end/` | ~30 files | Mock (no `/es` credit) — see `/end2end-testing` skill |
+| **2. End-to-End**| `your_app/tests/test_end2end/` | `./vpython -m pytest your_app/tests/test_end2end/` | ~30 files | Mock (no `/es` credit) — see `/end2end-testing` skill |
 | **3. MCP API** | `testing_mcp/` | `./vpython testing_mcp/test_*.py --server http://127.0.0.1:8001` | ~139 files | Server + LLM (full `/es`) — see `/llm-testing` skill |
 | **4. HTTP API** | `testing_http/` | `./vpython testing_http/test_*.py` | ~25 files | Server (partial `/es`) |
 | **5. Browser** | `testing_ui/` | `./vpython testing_ui/test_*.py` | ~40 files | Server + LLM + Browser (full `/es` + video) — see `/llm-testing` skill |
@@ -69,7 +69,7 @@ If the behavior spans multiple functions, files, or subsystems but does NOT requ
 - ✅ Layer 2 E2E: Routing a user input through the API, checking if the correct agent is selected, and verifying the mock LLM output updates the database correctly.
 - ❌ Not Layer 2: Verifying if Gemini actually hallucinates a specific value (use Layer 3/5).
 
-**Mandatory coverage rule**: When a PR creates or updates multiple non-test files under `$PROJECT_ROOT/**`, it must add or update a Layer 2 E2E test unless the PR explicitly justifies why the changed code is unreachable through an end-to-end application path. The E2E must exercise every newly introduced or modified production code path in that PR, including cross-file handoffs, and assertions must fail if any new path is skipped.
+**Mandatory coverage rule**: When a PR creates or updates multiple non-test files under `your_app/**`, it must add or update a Layer 2 E2E test unless the PR explicitly justifies why the changed code is unreachable through an end-to-end application path. The E2E must exercise every newly introduced or modified production code path in that PR, including cross-file handoffs, and assertions must fail if any new path is skipped.
 
 ### Principle 5: Is the cost proportional to the risk?
 
@@ -130,9 +130,9 @@ If a real-LLM test can pass **without the guard ever firing** (because the LLM d
 
 ### Multi-File `mvp_site` PR Coverage Checklist
 
-For PRs that add or modify more than one non-test file under `$PROJECT_ROOT/**`:
+For PRs that add or modify more than one non-test file under `your_app/**`:
 
-- Add or update at least one Layer 2 E2E test in `$PROJECT_ROOT/tests/test_end2end/`.
+- Add or update at least one Layer 2 E2E test in `your_app/tests/test_end2end/`.
 - The test must drive the application through the real in-process route/service flow that reaches all changed production files.
 - The assertions must prove each changed code path ran and produced the intended observable state, response, or persistence effect.
 - Do not count a unit test, import check, or mock-only direct function call as satisfying this requirement.

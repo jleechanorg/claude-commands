@@ -47,9 +47,9 @@ Or manually:
       "title": "worktree_level_choices",
       "index": 0,
       "selected": false,
-      "current_directory": "$HOME",
-      "cwd": "$HOME/projects/worktree_level_choices",
-      "focused_cwd": "$HOME/projects/worktree_level_choices",
+      "current_directory": "/Users/$USER",
+      "cwd": "/Users/$USER/projects/worktree_level_choices",
+      "focused_cwd": "/Users/$USER/projects/worktree_level_choices",
       "git_branch": "feat/level-choices",
       "pr": "123",
       "surfaces": [

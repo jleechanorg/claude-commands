@@ -90,8 +90,8 @@ For each finding, record:
 Acceptance criteria must be objective. Prefer checks like:
 
 ```bash
-rg "old_private_helper|forbidden_pattern" $PROJECT_ROOT/
+rg "old_private_helper|forbidden_pattern" your_app/
 ../vpython path/to/test.py
 ```
 
-For production changes under `$PROJECT_ROOT/**`, require `/es`-appropriate evidence. Unit tests can support the bead but cannot be the only runtime proof when the behavior touches production LLM, persistence, rewards, streaming, API, or UI paths.
+For production changes under `your_app/**`, require `/es`-appropriate evidence. Unit tests can support the bead but cannot be the only runtime proof when the behavior touches production LLM, persistence, rewards, streaming, API, or UI paths.

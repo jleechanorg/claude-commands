@@ -252,7 +252,7 @@ The backend code must **never** independently calculate these facts from thresho
 
 ### 1. The "Backend Just Fixes" Rule (Correction Exception Boundary)
 The backend is ONLY permitted to apply *correction guards* to prevent degraded UX (e.g., stale-flag time-freezes, SSE soft-locks, or already-applied level-up residues).
-*   **Where**: These guards are permitted **ONLY** within `$PROJECT_ROOT/rewards_engine.py`.
+*   **Where**: These guards are permitted **ONLY** within `your_app/rewards_engine.py`.
 *   **How**: Guards must be "correction-only." They may compare explicit model/state fields for contradictions and suppress or normalize invalid payloads.
 *   **Forbidden**: Guards must *never* synthesize a competing backend level-up decision or trigger a level-up prompt because backend XP math crossed a threshold. Scattered heuristics across multiple files are strictly forbidden.
 

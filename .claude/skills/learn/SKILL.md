@@ -82,17 +82,35 @@ references, and a reusable pattern.
 
 ### 3. Save to mem0 when available
 
-Save a concise text record only when a configured helper and required API key are
-available. Prefer the repo-local helper when present:
+Save a concise text record only when a configured helper and the **mem0 Python
+package** are present. **Do NOT probe `OPENAI_API_KEY` / `MEM0_API_KEY`** — those
+were the pre-Ollama-era gates; mem0 now uses local Ollama embedder + Groq LLM
+(configured in `~/.hermes/.claude/hooks/mem0_config.py`), neither of which
+require `OPENAI_API_KEY`. The real availability gates are:
 
-- `~/.hermes/.claude/hooks/mem0_save.py` (Hermes state dir — used on this machine)
-- `$(git rev-parse --show-toplevel)/.claude/hooks/mem0_save.py` with
-  `OPENAI_API_KEY` (repo-local fallback)
-- otherwise any user-configured helper already documented in the active command
-  or policy
+1. `python3 -c "from mem0 import Memory"` resolves (requires `mem0ai` PyPI pkg).
+2. The helper script exists:
+   - `~/.hermes/.claude/hooks/mem0_save.py` (Hermes state dir — used on this machine), OR
+   - `$(git rev-parse --show-toplevel)/.claude/hooks/mem0_save.py` (repo-local fallback)
+3. `~/.hermes/.claude/hooks/mem0_config.py:mem0_hooks_enabled()` returns `True`
+   (this is the helper's own gate — it inspects `OPENAI_API_KEY`, `GROQ_API_KEY`,
+   `OLLAMA_HOST`, etc., not what we hard-code here).
 
-If unavailable, report `mem0 unavailable` with the missing dependency. This is
-non-blocking.
+**Verification step (mandatory before reporting "mem0 unavailable"):** Run the
+helper with a tiny Stop-hook fixture and confirm a Qdrant-side delta or markdown
+append. Example:
+
+```bash
+PAYLOAD='{"stop_hook_active": false, "last_assistant_message": "mem0_save smoke test message that is at least one hundred characters long to pass the MIN_RESPONSE_LEN guard and exercise the persistence path end-to-end.", "transcript_path": "'$(echo ~/.claude/projects/-Users-$USER-projects-worldarchitect-ai/ | sed "s|/$||")'/sessions/mem0-smoke.jsonl"}'
+echo "$PAYLOAD" | ~/.hermes/.venv/bin/python3 ~/.hermes/.claude/hooks/mem0_save.py
+```
+
+Only if this fails (or the helper/import probe fails) report `mem0 unavailable:
+<exact blocker>`. Otherwise report `mem0 saved (<N> facts to Qdrant+markdown)`.
+
+Reference incident: 2026-06-24 — old SKILL.md probed `OPENAI_API_KEY` and
+falsely reported "mem0 unavailable" for ~2 months after the Ollama/Groq switch
+in PR #7178 / bead `rev-1cmaj` (2026-05-24).
 
 ### 4. Append `~/roadmap` learning log
 

@@ -8,6 +8,11 @@ Generate a design reference doc for the current feature or PR.
 
 ## Steps
 
+0. **Phase 0 — Exit criteria first** (runs BEFORE any spec/design content is written):
+   - **0a**: Invoke the superpowers brainstorming skill (Skill tool, skill name `superpowers:brainstorming`) to explore with the user/context: "How will we know this project is truly DONE and WORKING? What would an adversarial reviewer verify before sign-off?"
+   - **0b**: Write the resulting exit criteria as the FIRST section of the doc, before goals/requirements. Each criterion must be binary (pass/fail), executable (a stated command or observable check), and externally anchored (verified at the layer users experience — real system-of-record state, not implementer-authored logs/telemetry).
+   - Ground rules (per `~/projects/dark-factory/docs/cutover-exit-criteria.md`, R1–R6 + X1–X10 charter, hardened 2026-07-04 by a 3-reviewer adversarial pass): implementer-authored artifacts are corroborating, never sufficient; the verifier reproduces rather than inspects; satisfied-via-mock/dry-run = FAIL; default verdict is FAIL.
+
 1. **Understand the feature** — read relevant source files, PR description, roadmap/plan docs.
 
 2. **Check existing style** — look in `docs/design/` for `.html` files. Match CSS variables, card/grid layout, section patterns exactly.

@@ -94,6 +94,11 @@ Proof must be human-verifiable and durable:
 
 If backend adjustment remains necessary:
 
+- Register it in `your_app/backend_adjustment_specs.py` with `category=CORRECTION`,
+  populated `root_cause_status`, `evidence_refs`, `allowed_when`, and
+  `log_reason_code`. Any `server_generated=True` planning_block not covered by a
+  registered, active spec is a bug. Registry-listing does not waive the
+  long-term goal of removing the synthesis through prompt-first fixes.
 - Keep it correction-only and as narrow as possible.
 - Log every firing with request ID, selected agent, state scope, reason code,
   and before/after field names.

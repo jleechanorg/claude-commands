@@ -16,7 +16,7 @@ type: skill
 - A worker is queued (lifecycle-worker sent it a message) but not acting
 
 **Do NOT use when:**
-- The system-level reaction loop is broken (use `/auton` — it diagnoses the jleechanclaw + AO autonomy chain end-to-end)
+- The system-level reaction loop is broken (use `/auton` — it diagnoses the $ORG + AO autonomy chain end-to-end)
 - A specific worker has a known error (use `/ao-lifecycle-triage` for log-driven triage)
 - You want to spawn a worker (use `/ao-worker-dispatch`)
 - You want to detect the state of a single pane once (use `/ao-session-monitor` — babysit uses it internally for one-pane detection but is multi-worker / multi-cycle)
@@ -197,7 +197,7 @@ ao-6305         STALLED-CMP     #657    yes          Baked for 42m
 
 ```
 > /babysit pr 661
-Resolved 661 → ao-6312 (worktree $HOME/.worktrees/agent-orchestrator/ao-6312, branch fix/bd-rgk0-...)
+Resolved 661 → ao-6312 (worktree /Users/$USER/.worktrees/agent-orchestrator/ao-6312, branch fix/bd-rgk0-...)
 Watching ao-6312. Same as /babysit watch ao-6312.
 ```
 

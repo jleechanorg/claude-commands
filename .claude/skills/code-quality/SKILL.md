@@ -189,8 +189,8 @@ radon cc -a -s . --max-cc 8
 
 # Repo-specific Addenda (apply to BOTH variants)
 
-- **$PROJECT_ROOT/ production evidence gate**: For any non-test change under `$PROJECT_ROOT/`, this skill is **supporting evidence only** — `/es` (real server / real LLM / captioned video) is required per repo `AGENTS.md`. Flag the missing evidence class when applicable.
-- **Prompt placement gate**: Behavioral prompt prose belongs in `$PROJECT_ROOT/prompts/` markdown files, not Python string literals. If a PR introduces or expands inline prompt prose in Python, flag it.
+- **your_app/ production evidence gate**: For any non-test change under `your_app/`, this skill is **supporting evidence only** — `/es` (real server / real LLM / captioned video) is required per repo `AGENTS.md`. Flag the missing evidence class when applicable.
+- **Prompt placement gate**: Behavioral prompt prose belongs in `your_app/prompts/` markdown files, not Python string literals. If a PR introduces or expands inline prompt prose in Python, flag it.
 - **Hallucinated import detection**: For Python, check against `requirements*.txt` / `pyproject.toml` / `setup.py` / `Pipfile`. For TS/JS, check against `package.json`. For Go, `go.mod`.
 
 ## Anti-Rationalization Checks
@@ -249,4 +249,4 @@ If a model returns a Short variant that contains Long-variant headings (or vice 
 - `.claude/skills/code-standards/SKILL.md` — dispatches `code-quality` alongside `/zfc`, `/zfclevel`, `/root-cause-first`, and `/thermo`
 - `.claude/skills/solid/SKILL.md` — SOLID / TDD / clean-code companion
 - `.claude/skills/root-cause-first/SKILL.md` — for fixes, not for code-quality findings
-- `.claude/skills/evidence-standards.md` — required for `$PROJECT_ROOT/` production PRs (this skill is supporting evidence, not primary)
+- `.claude/skills/evidence-standards.md` — required for `your_app/` production PRs (this skill is supporting evidence, not primary)

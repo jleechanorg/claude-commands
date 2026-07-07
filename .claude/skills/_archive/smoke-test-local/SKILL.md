@@ -18,7 +18,7 @@ GitHub Actions runners are **ephemeral** — fresh VM, empty cache on every job.
 | Services | Real Gemini / Firebase OR manual mock | `MOCK_SERVICES_MODE=true` + local Flask server |
 | Secrets | From shell env or `~/.zshrc` | GitHub Secrets injected by workflow |
 
-The `$PROJECT_ROOT/Dockerfile` pre-downloads the fastembed model at build time (line 12) so Cloud Run containers always have it. The CI smoke runner starts plain gunicorn — no Docker, no pre-downloaded model.
+The `your_app/Dockerfile` pre-downloads the fastembed model at build time (line 12) so Cloud Run containers always have it. The CI smoke runner starts plain gunicorn — no Docker, no pre-downloaded model.
 
 ---
 
@@ -47,7 +47,7 @@ docker run --rm -it \
   -v $(pwd):/app -w /app \
   python:3.11-slim bash -c "
     apt-get update -q && apt-get install -y -q curl git &&
-    pip install -r $PROJECT_ROOT/requirements.txt -q &&
+    pip install -r your_app/requirements.txt -q &&
     python3 -c \"from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5', cache_dir='/root/.cache/fastembed'); print('fastembed ready')\" &&
     ./scripts/mcp_smoke_test.sh
   "
@@ -89,11 +89,11 @@ act issue_comment -e .github/test-events/smoke-comment.json --secret-file .env.s
 - `scripts/mcp_smoke_test.sh` — main orchestrator; starts local Flask server if no `MCP_SERVER_URL`
 - `.github/workflows/mcp-smoke-tests.yml` — CI workflow; mock + fallback jobs
 - `testing_mcp/test_smoke.py` — SCENARIO 7: streaming chunk timing contracts
-- `$PROJECT_ROOT/mocks/mock_llm_service.py` — mock LLM responses for `MOCK_SERVICES_MODE=true`
-- `$PROJECT_ROOT/intent_classifier.py` — FastEmbed classifier; `_FASTEMBED_CACHE_DIR` constant
-- `$PROJECT_ROOT/Dockerfile` — pre-downloads fastembed model at build time (line 12)
-- `$PROJECT_ROOT/llm_service.py:_build_mock_streaming_text` — mock response for streaming path in mock mode
-- `$PROJECT_ROOT/llm_service.py:continue_story_streaming` — streaming path; has `MOCK_SERVICES_MODE` check before provider selection
+- `your_app/mocks/mock_llm_service.py` — mock LLM responses for `MOCK_SERVICES_MODE=true`
+- `your_app/intent_classifier.py` — FastEmbed classifier; `_FASTEMBED_CACHE_DIR` constant
+- `your_app/Dockerfile` — pre-downloads fastembed model at build time (line 12)
+- `your_app/llm_service.py:_build_mock_streaming_text` — mock response for streaming path in mock mode
+- `your_app/llm_service.py:continue_story_streaming` — streaming path; has `MOCK_SERVICES_MODE` check before provider selection
 
 ## Architecture: mock mode and streaming endpoints
 

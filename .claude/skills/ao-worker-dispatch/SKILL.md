@@ -6,7 +6,7 @@ type: skill
 
 # AO Worker Dispatch Checklist
 
-**Canonical copy:** this file in the jleechanclaw harness repo (`skills/ao-worker-dispatch/SKILL.md`). Mirror to `~/.claude/skills/ao-worker-dispatch/SKILL.md` on machines that spawn AO workers (Cursor/Claude Code discover skills from `~/.claude/skills/`). See `docs/VERIFICATION_RULES_PLACEMENT.md` for why verification rules live here rather than only in global CLAUDE.md or per-repo CLAUDE.
+**Canonical copy:** this file in the $ORG harness repo (`skills/ao-worker-dispatch/SKILL.md`). Mirror to `~/.claude/skills/ao-worker-dispatch/SKILL.md` on machines that spawn AO workers (Cursor/Claude Code discover skills from `~/.claude/skills/`). See `docs/VERIFICATION_RULES_PLACEMENT.md` for why verification rules live here rather than only in global CLAUDE.md or per-repo CLAUDE.
 
 ## Mandatory prompt elements (add to EVERY ao spawn call)
 

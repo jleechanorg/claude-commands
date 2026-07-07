@@ -62,7 +62,7 @@ do **not** require a fresh evidence run. Flagging evidence "stale" because the h
    (`git diff <evidence-sha> HEAD -- <file>`) — `--name-only` can't tell a comment edit from a behavior edit.
 
 **Fresh evidence IS required only when a production change exists** between the SHAs:
-production code (in this repo: `$PROJECT_ROOT/` excluding `$PROJECT_ROOT/tests/`, **including** `$PROJECT_ROOT/prompts/**`),
+production code (in this repo: `your_app/` excluding `your_app/tests/`, **including** `your_app/prompts/**`),
 API/endpoints/game logic/agent routing, runtime config (env vars, feature flags), DB schema/migrations,
 or a deploy/preview workflow — or any **mixed** diff containing at least one such file.
 
@@ -133,6 +133,17 @@ A claim that mixes Layer 2 (real BQ) with Layer 1 (synthetic LLM) is **not**
 Layer 2 proof for the LLM-behavior part. The /er verdict for that claim must
 be **PARTIAL** or **INSUFFICIENT**, not **PASS**. A claim that lacks the
 layer label is non-compliant and the verdict must be downgraded to PARTIAL.
+
+
+## Publication (gist-first)
+
+When evidence is ready for a PR:
+
+1. **Publish to a secret/unlisted gist** with sanitized artifacts (README, metadata, pytest output, checksums).
+2. Put **only the gist URL** in the PR `## Evidence` section (and linked sections as required by the description gate).
+3. **Do not commit** evidence bundles under `docs/evidence/` on the PR branch unless a repo gate explicitly requires in-tree paths — local `/tmp/<repo>/<branch>/` is the working bundle; gist is the published copy.
+4. Gate-6 accepts `gist.github.com/` URLs; prefer that over `docs/evidence/` tree links in the PR body.
+
 
 ## Bundle anatomy (minimal)
 
@@ -219,7 +230,7 @@ standards, always read both this skill and the relevant repo-level file:
 1. **Master policy** — `~/.claude/CLAUDE.md` § "Evidence — match proof to the claim" (the
    `Evidence-first` rule, the `Unit-only proof is NOT sufficient` rule with its
    three-exception wording, the UI-video requirement, and the PR-touching
-   trigger list: `$PROJECT_ROOT/*.py`, `world_logic.py`, `rewards_engine.py`).
+   trigger list: `your_app/*.py`, `world_logic.py`, `rewards_engine.py`).
 2. **Repo-level /es** — most repos mirror this skill at
    `<repo>/.claude/skills/evidence-standards.md` with project-specific
    extensions (e.g. `your-project.com` has dice-claim, campaign-isolation,

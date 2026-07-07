@@ -82,7 +82,7 @@ gh pr edit <PR_NUMBER_OR_URL> --body-file /tmp/pr_body.md
 Build `/tmp/pr_body.md` from the asset URLs returned by `gh release view --json assets,url`. Do not guess the final download URL for draft releases.
 
 Optional path:
-- `$HOME/.claude/scripts/github_pr_media_upload.py` may still be used when native `user-attachments` URLs are specifically desired and a valid GitHub web session cookie is available
+- `/Users/$USER/.claude/scripts/github_pr_media_upload.py` may still be used when native `user-attachments` URLs are specifically desired and a valid GitHub web session cookie is available
 
 Behavior:
 - Keeps publication fully zero-touch via `gh`

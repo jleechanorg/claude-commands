@@ -1,9 +1,9 @@
 ---
 name: beads-issue-tracking
-description: Reference Beads issue tracking commands and status conventions for Your Project.
+description: Reference Beads issue tracking commands and status conventions for YourProject.
 ---
 
-# Beads Issue Tracking - Your Project Reference
+# Beads Issue Tracking - YourProject Reference
 
 Beads (`bd`) is the project's git-native issue tracker. Issues live in `.beads/issues.jsonl` (version-controlled) with a SQLite cache (`beads.db`, gitignored).
 

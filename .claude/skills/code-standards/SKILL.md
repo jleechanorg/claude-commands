@@ -115,7 +115,7 @@ For any PR touching production code (non-test files):
 
 ## Prompt Placement Gate
 
-Behavioral prompt prose belongs in `$PROJECT_ROOT/prompts/` markdown files, not in
+Behavioral prompt prose belongs in `your_app/prompts/` markdown files, not in
 Python string literals. Python may assemble deterministic structured context,
 load prompt files, and substitute explicit placeholders such as current time or
 location, but it must not embed new model instructions, behavioral rules, or

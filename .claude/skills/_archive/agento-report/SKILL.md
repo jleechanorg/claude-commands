@@ -153,7 +153,7 @@ mcp__slack__conversations_add_message(
 
 ## Notes
 
-- Scope: `jleechanorg/agent-orchestrator` (not jleechanclaw — that repo is deprecated for AO work).
+- Scope: `jleechanorg/agent-orchestrator` (not $ORG — that repo is deprecated for AO work).
 - Use REST API (`gh api`) not GraphQL (`gh pr view --json`) — GraphQL is frequently exhausted.
 - `mergeable_state` from REST: `clean`, `dirty`, `unstable`, `unknown`.
 - Zero-touch convention: `[agento]` prefix in PR title (from `~/.openclaw/SOUL.md`).

@@ -23,7 +23,7 @@ The `/game/` path segment is the Firestore campaign ID. Take the first non-empty
 |-------------|-----|
 | `/repro`, `/repro <campaign_id>`, or "copy and reproduce this bug" | Default copy + targeted repro in section 2 |
 | "first copy read-only, second copy gets actions" | Twin baseline + test subject in section 5 |
-| "repro_copy", canonical+variant replay | copy to <your-email@gmail.com> (`--dest-email <your-email@gmail.com>`); `scripts/repro_copy_campaign.py` only when that exact workflow is requested |
+| "repro_copy", canonical+variant replay | copy to jleechantest@gmail.com (`--dest-email jleechantest@gmail.com`); `scripts/repro_copy_campaign.py` only when that exact workflow is requested |
 | "five-class", "level-up suite", or all `test_level_up_class_*` | Heavy level-up suite only when explicitly requested |
 
 Do not silently substitute a broader or easier harness for the requested repro.
@@ -42,19 +42,39 @@ export GOOGLE_APPLICATION_CREDENTIALS="$HOME/serviceAccountKey.json"
 export WORLDAI_GOOGLE_APPLICATION_CREDENTIALS="$HOME/serviceAccountKey.json"
 ```
 
-For `<your-email@gmail.com>`, use `--dest-email <your-email@gmail.com>` — the UID is resolved automatically by `copy_campaign.py`.
+For `jleechantest@gmail.com`, use `--dest-email jleechantest@gmail.com` — the UID is resolved automatically by `copy_campaign.py`.
 
 ## 2. Default: copy campaign + targeted bug repro
 
 Goal: create a safe Firestore copy under the test user, then reproduce one reported bug with the narrowest faithful path.
 
 1. Resolve source with `scripts/copy_campaign.py --find-by-id <CAMPAIGN_ID>`. Do not guess source UID.
-2. Copy to the test user, usually `--dest-email <your-email@gmail.com>`.
+2. Copy to the test user, usually `--dest-email jleechantest@gmail.com`.
 3. For destructive replays, create two copies: read-only baseline and test subject.
 4. Align the test subject to the reported bug instant without mutating the baseline.
 5. Replay only the exact user action/input needed for the reported bug.
 6. Export the test subject after replay with `scripts/download_campaign.py`.
 7. Save raw request/response or streaming payloads and Firestore pre/post snapshots when the repro touches LLM/runtime state.
+
+### 2.1 First-touch state proof for stale persisted-state bugs
+
+When the bug is a stale persisted Firestore condition, orphaned session, legacy
+flag, migration, cleanup, or routing loop:
+
+1. Capture the copied campaign's pre-state with a direct Firestore document read
+   before any app API call that could clean, migrate, normalize, or project state.
+2. Do not call `get_campaign_state`, preview APIs, export endpoints, or UI loads
+   before the evidence-bearing action unless the claim explicitly includes those
+   first-touch paths.
+3. Run the exact production ingress being validated (for gameplay, prefer
+   `/api/campaigns/<id>/interaction/stream`) as the first app touch.
+4. Capture post-state with another direct Firestore read.
+5. Record selected agent/routing evidence when the claim is "not stuck on an
+   agent" or "routes back to gameplay".
+
+If a pre-action observer can mutate or seal the state, the evidence is only proof
+that cleanup exists somewhere; it is not proof that the reported gameplay path is
+fixed.
 
 ## 3. Red/green code provenance requirement
 
@@ -110,7 +130,7 @@ Note: The inline subcommand below uses `copy_campaign.py` with `--format json` t
 
 ```bash
 ./venv/bin/python scripts/download_campaign.py \
-  --uid "$(./venv/bin/python scripts/copy_campaign.py --dest-email <your-email@gmail.com> --format json 2>/dev/null | python3 -c "import sys, json; print(json.load(sys.stdin)['dest_uid'])")" \
+  --uid "$(./venv/bin/python scripts/copy_campaign.py --dest-email jleechantest@gmail.com --format json 2>/dev/null | python3 -c "import sys, json; print(json.load(sys.stdin)['dest_uid'])")" \
   --campaign-id <TEST_CAMPAIGN_ID> \
   --output-dir /tmp/your-project.com/repro-exports/<slug> \
   --format txt
@@ -127,6 +147,8 @@ Or, if you already know the resolved UID from the copy step output, pass it dire
 | Same-symptom criteria written before replay | |
 | Baseline/test clone separation preserved | |
 | Exact input/action replayed | |
+| First-touch direct Firestore pre-state captured for stale persisted-state bugs | |
+| Production ingress under test was the first app API touch | |
 | Full campaign export saved | |
 | Raw captures/snapshots saved | |
 | Verdict table filled with `REPRO`, `RELATED`, or `NON-REPRO` | |

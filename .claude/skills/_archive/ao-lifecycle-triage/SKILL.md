@@ -12,22 +12,22 @@ When `lifecycle.backfill.claim_failed` errors appear in the lifecycle-worker log
 ## Two distinct root causes (same error surface)
 
 ### Cause A: Main repo on wrong branch
-**Symptom**: `checked out at '$HOME/project_agento/agent-orchestrator'`
-**Diagnosis**: `git -C $HOME/project_agento/agent-orchestrator branch --show-current`
+**Symptom**: `checked out at '/Users/$USER/project_agento/agent-orchestrator'`
+**Diagnosis**: `git -C /Users/$USER/project_agento/agent-orchestrator branch --show-current`
 **Fix**:
 ```bash
-git -C $HOME/project_agento/agent-orchestrator checkout main
-git -C $HOME/project_agento/agent-orchestrator pull --ff-only
+git -C /Users/$USER/project_agento/agent-orchestrator checkout main
+git -C /Users/$USER/project_agento/agent-orchestrator pull --ff-only
 ```
 **Why it happens**: An AO agent (or manual work) checked out a feature branch in the main repo and was killed before resetting to main.
 
 ### Cause B: Ghost worktrees (dead AO worktrees with branches still checked out)
-**Symptom**: `checked out at '$HOME/.worktrees/agent-orchestrator/ao-NNN'`
+**Symptom**: `checked out at '/Users/$USER/.worktrees/agent-orchestrator/ao-NNN'`
 **Diagnosis**: `git worktree list | grep ao-NNN` — if present with no live tmux session, it's a ghost
 **Fix**:
 ```bash
 tmux has-session -t bb5e6b7f8db3-ao-NNN 2>/dev/null || echo "Dead"
-git worktree remove --force $HOME/.worktrees/agent-orchestrator/ao-NNN
+git worktree remove --force /Users/$USER/.worktrees/agent-orchestrator/ao-NNN
 ```
 **Why it happens**: AO session was killed without proper cleanup; worktree remained. The lifecycle-worker's `sweepOrphanWorktrees` auto-cleans after 6h TTL.
 

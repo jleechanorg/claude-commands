@@ -69,7 +69,7 @@ tmux has-session -t <session-name> 2>/dev/null && echo "ALIVE" || echo "DEAD"
 ```bash
 # Derive the git repo dir from the worktree path (parent of .git worktrees list entry)
 WORKTREE="/path/to/worktree"
-GIT_DIR="$(dirname "$WORKTREE")"  # e.g. ~/.worktrees/jleechanclaw
+GIT_DIR="$(dirname "$WORKTREE")"  # e.g. ~/.worktrees/$ORG
 
 # Remove the ghost worktree (operate from the parent repo, not inside the worktree)
 git -C "$GIT_DIR" worktree remove --force "$WORKTREE"
@@ -108,7 +108,7 @@ proj = cfg['projects']['<project-name>']
 print('worktreeDir:', proj.get('worktreeDir', '~/.worktrees/' + proj.get('name','').lower().replace(' ', '-')))
 print('repo:', proj.get('repo'))
 "
-WORKTREE_DIR="~/.worktrees/jleechanclaw-main"   # substitute from above
+WORKTREE_DIR="~/.worktrees/$ORG-main"   # substitute from above
 git -C "$WORKTREE_DIR" worktree list
 ```
 
@@ -147,7 +147,7 @@ If the same PR has failed 3+ times after cleanup, something systemic is wrong.
 
 **Send MCP mail alert:**
 Use the MCP mail tool (or `mcp__mcp-agent-mail__send_message`):
-- `project_key`: "jleechanclaw" (or relevant project)
+- `project_key`: "$ORG" (or relevant project)
 - `sender_name`: "claude"
 - `subject`: "lw-stall: <project> PR #<N>"
 - `body_md`: "3+ consecutive `claim_failed` for PR #<N> on <project> after cleanup attempts. Manual intervention required. Last error: `<error snippet>`"

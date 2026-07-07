@@ -113,7 +113,7 @@ Behavior:
 - Avoids dependence on a browser session cookie
 
 Optional path:
-- `$HOME/.claude/scripts/github_pr_media_upload.py` can still be used when native `user-attachments` URLs are explicitly desired and browser auth is available
+- `/Users/$USER/.claude/scripts/github_pr_media_upload.py` can still be used when native `user-attachments` URLs are explicitly desired and browser auth is available
 
 ## Compression Guidance
 

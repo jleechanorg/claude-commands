@@ -247,8 +247,8 @@ launchd-auto-cleanup complete
 
 ```
 [2026-05-22 04:05:01] === Section 1: ~/.gemini/tmp/ ===
-[2026-05-22 04:05:01] gemini tmp: before 3.0G ($HOME/.gemini/tmp)
-[2026-05-22 04:05:01] gemini tmp: [dry-run] would delete contents of $HOME/.gemini/tmp
+[2026-05-22 04:05:01] gemini tmp: before 3.0G (/Users/$USER/.gemini/tmp)
+[2026-05-22 04:05:01] gemini tmp: [dry-run] would delete contents of /Users/$USER/.gemini/tmp
 ...
 [2026-05-22 04:05:02] === DRY-RUN complete — no files deleted ===
 ```

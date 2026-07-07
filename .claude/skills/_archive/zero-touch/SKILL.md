@@ -48,7 +48,7 @@ A docs-only change passing conditions 1-5 is still zero-touch if AO handled it a
 ## Measurement — GitHub actor audit
 
 A PR is zero-touch if the only GitHub actors (commits, reviews, comments, merges) are:
-- `jleechan2015` (AO agent GitHub identity)
+- `$USER_NAME` (AO agent GitHub identity)
 - `github-actions[bot]` (CI, skeptic-cron)
 - `coderabbitai[bot]` (code review)
 - `cursor[bot]` (Bugbot)

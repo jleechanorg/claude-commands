@@ -13,7 +13,7 @@ Reference for the rotating preview server pool used to deploy PR branches.
 - **Service prefix**: `mvp-site-app`
 - **GCP project**: `worldarchitecture-ai`
 - **Region**: `us-central1`
-- **Trigger**: Any PR push to `$PROJECT_ROOT/**`, `Dockerfile`, `requirements.txt`, etc.
+- **Trigger**: Any PR push to `your_app/**`, `Dockerfile`, `requirements.txt`, etc.
 - **Workflow**: `.github/workflows/pr-preview.yml`
 - **Pool assignment script**: `.github/scripts/pr-server-pool.sh`
 

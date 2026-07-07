@@ -16,7 +16,7 @@ description: Diagnose why the automation system is not autonomously driving PRs 
 | `/babysit` | During active workers | Live monitoring, dispatch | Per-PR status, DRIVER nudges |
 | `/auton` | After block completes | Retrospective | Outcome table, root causes, metrics |
 
-When invoked, diagnose WHY the jleechanclaw + AO system is NOT autonomously driving PRs to N-green and merged. The system is supposed to do this without human intervention — if it isn't, something is broken.
+When invoked, diagnose WHY the $ORG + AO system is NOT autonomously driving PRs to N-green and merged. The system is supposed to do this without human intervention — if it isn't, something is broken.
 
 ## Read first (mandatory before answering)
 
@@ -25,7 +25,7 @@ When invoked, diagnose WHY the jleechanclaw + AO system is NOT autonomously driv
 > - `~/.openclaw_prod/` — worker use (used by lifecycle-workers via launchd plist `AO_CONFIG_PATH`)
 > **Always diagnose BOTH or verify which is active** — they can diverge and cause auth failures.
 
-1. `~/.hermes_prod/` — Hermes agent config (the agent since 2026-04-12; OpenClaw is dead)
+1. `~/.hermes/` — Hermes agent config (the agent since 2026-04-12; OpenClaw is dead)
 2. `~/.openclaw_prod/agent-orchestrator.yaml` — AO worker config (used by lifecycle-workers)
 3. `~/.openclaw/agent-orchestrator.yaml` — AO CLI config (used by interactive `ao` commands)
 4. `~/.codex/AGENTS.md` — agent policies
@@ -80,7 +80,7 @@ ps aux | grep "lifecycle-worker" | grep -v grep | grep -o "AO_CONFIG_PATH=[^ ]*"
 ### 1. Is AO lifecycle-worker and orchestrator running?
 ```bash
 # Lifecycle-worker
-launchctl list com.agentorchestrator.lifecycle-jleechanclaw
+launchctl list com.agentorchestrator.lifecycle-$ORG
 
 # Orchestrator — sessions are hash-prefixed, NEVER use hard-coded "ao-orchestrator"
 # Correct pattern:
@@ -93,8 +93,8 @@ else
 fi
 ```
 ```bash
-launchctl list com.agentorchestrator.lifecycle-jleechanclaw
-tail -20 /tmp/ao-lifecycle-jleechanclaw.log
+launchctl list com.agentorchestrator.lifecycle-$ORG
+tail -20 /tmp/ao-lifecycle-$ORG.log
 ```
 
 ### 3. Are sessions being spawned?
@@ -135,7 +135,7 @@ gh run list --repo jleechanorg/agent-orchestrator --workflow skeptic-cron.yml --
 
 ### 6. Is CR rate-limited?
 ```bash
-gh api repos/jleechanorg/jleechanclaw/issues/comments?per_page=5 | \
+gh api repos/jleechanorg/$ORG/issues/comments?per_page=5 | \
   python3 -c "import json,sys; [print(c['user']['login'],c['body'][:100]) for c in json.load(sys.stdin) if 'rate limit' in c['body'].lower()]"
 ```
 
