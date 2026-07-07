@@ -813,9 +813,12 @@ BACKUP_ITEMS=(
   "copy|$HOME/.claude.json|claude.json|claude_conversations/claude.json||sync"
   "copy|$HOME/.claude/.claude.json|claude/claude-dotdir.json|claude_conversations/claude-dotdir.json||sync"
   # ~/.claude-wa — WorldArchitect Claude Code profile (claudewa / claude2).
-  # Auth/oauth state only; shared tooling is symlinked from ~/.claude and backed up there.
-  "copy|$HOME/.claude-wa/.claude.json|claude/claude-wa.json|claude_conversations/claude-wa.json||sync"
-  "copy|$HOME/.claude-wa/.wa-shared-from-claude.txt|claude/claude-wa-symlink-manifest.txt|claude_conversations/claude-wa-symlink-manifest.txt||sync"
+  # Shared tooling + conversations: symlinked to ~/.claude (backed up via claude/* and
+  # claude_conversations/projects above). This row captures WA-local state only:
+  # .claude.json / .credentials.json, sessions/, history.jsonl, file-history/, backups/.
+  # rsync -a stores symlinks as links (no duplicate copy of shared tree).
+  # Installer: scripts/install-claude-wa-profile.sh (git-tracked in this repo).
+  "copy|$HOME/.claude-wa/|claude/claude-wa/|claude_conversations/claude-wa/|cache,chrome,session-env,telemetry,debug,shell-snapshots,tasks,teams,plans,statsig,todos,__pycache__|sync"
   "copy|$HOME/.claude/mcp-strict.json|claude/mcp-strict.json|claude_conversations/mcp-strict.json||sync"
   "copy|$HOME/.config/git/hooks/|config/git/hooks/|config/git/hooks/||sync"
   "copy|$HOME/.cursor/mcp.json|cursor/mcp.json|cursor_conversations/mcp.json||sync"
