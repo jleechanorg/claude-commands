@@ -1,0 +1,39 @@
+---
+title: Architecture
+purpose: Module boundaries, dependencies, and structural invariants
+owner: 
+last_reviewed: __DATE__
+source_of_truth: 
+---
+
+# Architecture
+
+## System overview
+
+<!-- Describe the top-level system structure. What are the major components? How do they interact? -->
+
+## Module boundaries
+
+<!-- List the key modules/packages and their responsibilities. -->
+
+| Module | Responsibility | Key invariant |
+|---|---|---|
+| | | |
+
+## Dependencies
+
+<!-- Note critical dependency directions. What must not be imported into what? -->
+
+## Key invariants
+
+These must remain true across all changes:
+
+1. <!-- invariant -->
+2. <!-- invariant -->
+3. <!-- invariant -->
+
+## Read this when
+
+- You need to understand how a subsystem works before changing it
+- You are drawing a new dependency and need to verify it's safe
+- A refactor involves moving code across module boundaries

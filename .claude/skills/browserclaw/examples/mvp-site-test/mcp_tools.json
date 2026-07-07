@@ -1,0 +1,20 @@
+{
+  "schema_version": "2025-03-26",
+  "site": "mvp-site-app-dev",
+  "tools": [
+    {
+      "name": "get_api_time",
+      "description": "Inferred from 1 captured requests.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "method": "GET",
+        "urlTemplate": "https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/time"
+      }
+    }
+  ]
+}

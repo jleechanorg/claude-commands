@@ -1,0 +1,47 @@
+---
+title: Garbage Collection
+purpose: Cleanup policy, review cadence, and what gets removed
+owner: 
+last_reviewed: __DATE__
+source_of_truth: 
+---
+
+# Garbage Collection
+
+## What gets collected
+
+This report surfaces candidates for cleanup:
+
+- Stale docs (not reviewed in >90 days)
+- Oversized files (>500KB with no good reason)
+- Suspicious filenames (`final-final`, `v2`, `copy of`, etc.)
+- `TODO` / `FIXME` clusters that never got addressed
+- Docs not linked from `docs/agent/index.md`
+
+## Cadence
+
+<!-- How often is the GC report run? Who reviews it? -->
+
+## Policy
+
+- GC report surfaces candidates — human reviews before any patch is merged
+- Do not auto-delete; surface only
+- Keep the report lightweight and actionable
+
+## Running the report
+
+```bash
+python3 scripts/agent_gc_report.py
+```
+
+## Recent cleanup passes
+
+| Date | What was cleaned |
+|---|---|
+| | |
+
+## Read this when
+
+- You want to run a cleanup pass
+- You need to understand the repo's maintenance state
+- You notice a file that should be flagged for cleanup

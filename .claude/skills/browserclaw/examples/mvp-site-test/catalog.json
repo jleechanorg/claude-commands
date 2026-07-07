@@ -1,0 +1,118 @@
+{
+  "site": "mvp-site-app-dev",
+  "base_url": "https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app",
+  "notes": [
+    "Complete API catalog from JS bundle analysis + authenticated HTTP capture.",
+    "Auth: Firebase Bearer token (JWT from firebase.auth().currentUser.getIdToken())",
+    "Token expires ~24h. Session: <your-test-user>@example.com (uid: <your-firebase-uid>)",
+    "Firebase project: <your-firebase-project-id> (Google Cloud Firestore + Identity Toolkit)"
+  ],
+  "firebase_config": {
+    "apiKey": "<your-firebase-api-key>",
+    "authDomain": "<your-project>.firebaseapp.com",
+    "projectId": "<your-firebase-project-id>"
+  },
+  "endpoints": [
+    {
+      "name": "server_time",
+      "method": "GET",
+      "path": "/api/time",
+      "auth": false,
+      "description": "Server timestamp (no auth required)",
+      "response_fields": ["server_time_utc", "server_timestamp", "server_timestamp_ms"],
+      "curl": "curl -s -X GET 'https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/time'"
+    },
+    {
+      "name": "settings",
+      "method": "GET",
+      "path": "/api/settings",
+      "auth": true,
+      "description": "LLM provider config, model names, custom key flags",
+      "response_fields": ["cerebras_model", "gemini_model", "llm_provider", "openrouter_model", "openclaw_gateway_url", "debug_mode", "has_custom_cerebras_key", "has_custom_gemini_key", "has_custom_openclaw_key", "has_custom_openrouter_key"],
+      "curl": "curl -s -X GET 'https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/settings' \\\n  -H 'Authorization: Bearer <TOKEN>'"
+    },
+    {
+      "name": "list_campaigns",
+      "method": "GET",
+      "path": "/api/campaigns",
+      "auth": true,
+      "description": "List all campaigns for logged-in user",
+      "response_fields": ["id", "title", "updated_at", "created_at", "character_name", "character_level"],
+      "curl": "curl -s -X GET 'https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/campaigns' \\\n  -H 'Authorization: Bearer <TOKEN>'"
+    },
+    {
+      "name": "get_campaign",
+      "method": "GET",
+      "path": "/api/campaigns/{campaign_id}",
+      "auth": true,
+      "description": "Full campaign detail — includes game_state, story, rewards_box, planning_block",
+      "path_params": ["campaign_id"],
+      "query_params": ["story_limit (int, default=300)"],
+      "response_fields": ["campaign", "game_state", "story", "story_pagination", "rewards_box", "planning_block"],
+      "curl": "curl -s -X GET 'https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/campaigns/<your-campaign-id>?story_limit=300' \\\n  -H 'Authorization: Bearer <TOKEN>'"
+    },
+    {
+      "name": "get_story",
+      "method": "GET",
+      "path": "/api/campaigns/{campaign_id}/story",
+      "auth": true,
+      "description": "Paginated story entries only (no game state)",
+      "path_params": ["campaign_id"],
+      "query_params": ["story_limit (int, default=100)"],
+      "response_fields": ["story[actor,text,mode,sequence_id,id]", "pagination[total_count,fetched_count,has_older,oldest_id]"],
+      "curl": "curl -s -X GET 'https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/campaigns/<your-campaign-id>/story?story_limit=100' \\\n  -H 'Authorization: Bearer <TOKEN>'"
+    },
+    {
+      "name": "export_campaign",
+      "method": "GET",
+      "path": "/api/campaigns/{campaign_id}/export",
+      "auth": true,
+      "description": "Full campaign export as formatted God Mode text",
+      "path_params": ["campaign_id"],
+      "response": "Plain text narrative",
+      "curl": "curl -s -X GET 'https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/campaigns/<your-campaign-id>/export' \\\n  -H 'Authorization: Bearer <TOKEN>'"
+    },
+    {
+      "name": "send_interaction",
+      "method": "POST",
+      "path": "/api/campaigns/{campaign_id}/interaction",
+      "auth": true,
+      "description": "Send player action (non-streaming, returns full result)",
+      "path_params": ["campaign_id"],
+      "request_body": {
+        "user_input": "string (required) — the player's action/decision",
+        "mode": "string (required) — god|char|think",
+        "stream": "boolean (default: false)"
+      },
+      "response_fields": ["story", "game_state", "rewards_box", "error"],
+      "curl": "curl -s -X POST 'https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/campaigns/<your-campaign-id>/interaction' \\\n  -H 'Authorization: Bearer <TOKEN>' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"user_input\":\"I attack the goblin with my sword\",\"mode\":\"god\",\"stream\":false}'"
+    },
+    {
+      "name": "stream_interaction",
+      "method": "POST",
+      "path": "/api/campaigns/{campaign_id}/interaction?stream=true",
+      "auth": true,
+      "description": "Send player action with SSE streaming response",
+      "path_params": ["campaign_id"],
+      "request_body": {
+        "user_input": "string (required)",
+        "mode": "string (required) — god|char|think"
+      },
+      "response": "SSE stream of delta story entries",
+      "curl": "curl -s -N -X POST 'https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/campaigns/<your-campaign-id>/interaction?stream=true' \\\n  -H 'Authorization: Bearer <TOKEN>' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"user_input\":\"I attack the goblin\",\"mode\":\"god\"}'"
+    }
+  ],
+  "known_campaign_ids": [
+    "<your-campaign-id-1>",
+    "<your-campaign-id-2>",
+    "<your-campaign-id-3>",
+    "<your-campaign-id-4>",
+    "<your-campaign-id-5>"
+  ],
+  "notes_on_firebase": [
+    "Game state also flows over Firebase Firestore WebSocket (real-time, not HTTP).",
+    "Firestore traffic is NOT captured by HTTP interceptors.",
+    "To capture Firestore: eval in browser -> firebase.firestore().collection('campaigns').doc(id)",
+    "WorldAI Firebase collections: campaigns, users"
+  ]
+}

@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""
+agent_repo_check.py
+
+Validates structural rules for agent harness engineering.
+Run before committing: python3 scripts/agent_repo_check.py
+"""
+from __future__ import annotations
+
+import pathlib
+import sys
+from typing import Iterator
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+DOC_ROOT = ROOT / "docs" / "agent"
+AGENTS_PATH = ROOT / "AGENTS.md"
+DOC_INDEX = DOC_ROOT / "index.md"
+START_MARKER = "<!-- agent-harness:start -->"
+END_MARKER = "<!-- agent-harness:end -->"
+
+REQUIRED_DOCS = [
+    "architecture.md",
+    "specs.md",
+    "plans.md",
+    "quality.md",
+    "reliability.md",
+    "security.md",
+]
+
+REQUIRED_FRONTMATTER = ["title", "purpose", "owner", "last_reviewed", "source_of_truth"]
+
+
+def read_text(path: pathlib.Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def check_agents_file() -> list[str]:
+    errors = []
+    if not AGENTS_PATH.exists():
+        errors.append(f"AGENTS.md does not exist at {AGENTS_PATH}")
+        return errors
+
+    content = read_text(AGENTS_PATH)
+    if START_MARKER not in content or END_MARKER not in content:
+        errors.append("AGENTS.md is missing agent-harness start/end markers")
+
+    if DOC_INDEX.exists():
+        doc_root_link = str(DOC_ROOT)
+        # Verify AGENTS.md references the doc index
+        if DOC_ROOT.name not in content and "agent" not in content.lower():
+            errors.append("AGENTS.md does not reference the docs/agent index")
+
+    return errors
+
+
+def check_docs_exist() -> list[str]:
+    errors = []
+    if not DOC_ROOT.exists():
+        errors.append(f"docs/agent/ does not exist at {DOC_ROOT}")
+        return errors
+
+    for doc in REQUIRED_DOCS:
+        path = DOC_ROOT / doc
+        if not path.exists():
+            errors.append(f"Required doc missing: {path}")
+
+    return errors
+
+
+def check_index_references_all_docs() -> list[str]:
+    errors = []
+    if not DOC_INDEX.exists():
+        return errors
+
+    content = read_text(DOC_INDEX)
+    for doc in REQUIRED_DOCS:
+        if doc not in content:
+            errors.append(f"index.md does not reference {doc}")
+
+    return errors
+
+
+def check_frontmatter(doc_path: pathlib.Path) -> Iterator[tuple[str, str]]:
+    """Yield (doc_name, error) for each frontmatter violation."""
+    if not doc_path.exists():
+        return
+
+    content = read_text(doc_path)
+    if not content.startswith("---"):
+        yield (doc_path.name, "Missing frontmatter header (---)")
+        return
+
+    end = content.index("---", 3)
+    frontmatter = content[3:end]
+    for field in REQUIRED_FRONTMATTER:
+        if f"{field}:" not in frontmatter:
+            yield (doc_path.name, f"Missing frontmatter field: {field}")
+
+    # Check last_reviewed is a valid ISO date
+    for line in frontmatter.splitlines():
+        if line.strip().startswith("last_reviewed:"):
+            date_val = line.split(":", 1)[1].strip()
+            try:
+                from datetime import datetime
+                datetime.strptime(date_val, "%Y-%m-%d")
+            except ValueError:
+                yield (doc_path.name, f"Invalid last_reviewed date format: {date_val} (expected YYYY-MM-DD)")
+
+
+def check_all_frontmatter() -> list[str]:
+    errors = []
+    for doc in REQUIRED_DOCS:
+        path = DOC_ROOT / doc
+        if path.exists():
+            for doc_name, error in check_frontmatter(path):
+                errors.append(f"{doc_name}: {error}")
+    return errors
+
+
+def main() -> int:
+    all_errors: list[str] = []
+
+    all_errors.extend(check_agents_file())
+    all_errors.extend(check_docs_exist())
+    all_errors.extend(check_index_references_all_docs())
+    all_errors.extend(check_all_frontmatter())
+
+    if all_errors:
+        print("VALIDATION FAILED:")
+        for err in all_errors:
+            print(f"  - {err}")
+        return 1
+
+    print("OK — all structural checks passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

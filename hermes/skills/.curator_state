@@ -1,0 +1,9 @@
+{
+  "last_report_path": "/Users/jleechan/.hermes/logs/curator/20260705-181317",
+  "last_run_at": "2026-07-05T18:13:17.959581+00:00",
+  "last_run_duration_seconds": 0.993754,
+  "last_run_summary": "auto: no changes; llm: skipped (consolidation off)",
+  "last_run_summary_shown_at": null,
+  "paused": false,
+  "run_count": 3
+}

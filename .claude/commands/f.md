@@ -255,7 +255,7 @@ the factory run is unproven and must be reported as such:
 ```bash
 # CLI backend: <detected-or-override> (source: <BASH_FUNC_X%%|explicit --backend|default>)
 # Literal command run:
-cd /Users/jleechan/projects/<target-repo>
+cd $HOME/projects/<target-repo>
 DARK_FACTORY_HOME=~/projects/dark-factory \
 DARK_FACTORY_HOLDOUTS=~/projects/dark-factory-holdouts \
 PATH="$HOME/.local/bin:$PATH" \
@@ -324,5 +324,5 @@ to it.
 - `/factory` — alias for `/f` with identical behavior.
 - `/fs` — spec-generation entry point; default binary run of
   `pipelines/slim/spec_gen.dot` or a binary-owned dynamic spec graph.
-- `~/.claude/projects/-Users-jleechan-projects-dark-factory/memory/feedback_2026-06-22_user_pivot_default_nodes_over_custom.md`
+- `~/.claude/projects/-Users-$USER-projects-dark-factory/memory/feedback_2026-06-22_user_pivot_default_nodes_over_custom.md`
   — the architectural pivot that motivated this change.

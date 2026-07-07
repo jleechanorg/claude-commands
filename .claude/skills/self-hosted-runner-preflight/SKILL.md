@@ -1,6 +1,6 @@
 ---
 name: self-hosted-runner-preflight
-description: Pre-flight checklist for self-hosted runner failures. Use when investigating low disk, missing runner, or stuck Green Gate on the jleechanorg/worldarchitect.ai fleet. Always verifies host-level container state, not just GitHub API.
+description: Pre-flight checklist for self-hosted runner failures. Use when investigating low disk, missing runner, or stuck Green Gate on the $GITHUB_REPOSITORY fleet. Always verifies host-level container state, not just GitHub API.
 ---
 
 # Self-Hosted Runner Pre-Flight
@@ -18,7 +18,7 @@ For each failure class, answer BEFORE proposing a fix:
    `gh api orgs/jleechanorg/actions/runners?per_page=100 --jq '.runners[] | {name,status,busy}'`
 2. **What does the host actually have?**
    - mac: `docker ps --format "{{.Names}}\t{{.Status}}" | grep org-runner-mac-`
-   - jeff-ubuntu: `ssh jeff-ubuntu "DOCKER_HOST=unix:///home/jleechan/.lima/colima/sock/docker.sock docker ps --format '{{.Names}}\t{{.Status}}' | grep org-runner-"`
+   - jeff-ubuntu: `ssh jeff-ubuntu "DOCKER_HOST=unix:///home/$USER/.lima/colima/sock/docker.sock docker ps --format '{{.Names}}\t{{.Status}}' | grep org-runner-"`
 3. **What does the disk look like inside the container?**
    `docker exec <name> df -Pk /` — needs >=1GB free for preflight to pass.
 4. **Is the runner in restart loop?**
@@ -47,7 +47,7 @@ For each failure class, answer BEFORE proposing a fix:
 ### Class B: missing runner (compose defines N but only N-1 containers exist)
 - mac (ARM64): `RUNNER_COUNT=<N> bash ~/.local/share/worldarchitect-runners/start-runner.sh start`
 - jeff-ubuntu (X64):
-  `ssh jeff-ubuntu "cd ~/projects/worktree_runner/self-hosted-colima && DOCKER_HOST=unix:///home/jleechan/.lima/colima/sock/docker.sock docker compose up -d runner-<N>"`
+  `ssh jeff-ubuntu "cd ~/projects/worktree_runner/self-hosted-colima && DOCKER_HOST=unix:///home/$USER/.lima/colima/sock/docker.sock docker compose up -d runner-<N>"`
 - Then verify: `docker ps | grep runner-<N>` and `gh api orgs/jleechanorg/actions/runners --jq '.runners[].name' | grep runner-<N>`
 
 ### Class C: Green Gate stuck on gate 8 (smoke)

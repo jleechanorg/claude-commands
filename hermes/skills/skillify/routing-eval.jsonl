@@ -1,0 +1,6 @@
+{"intent": "skillify this workflow", "expected_skill": "skillify"}
+{"intent": "is this a skill?", "expected_skill": "skillify"}
+{"intent": "make this proper", "expected_skill": "skillify"}
+{"intent": "add tests and evals for this", "expected_skill": "skillify"}
+{"intent": "check skill completeness", "expected_skill": "skillify"}
+{"intent": "audit this skill", "expected_skill": "skillify", "ambiguous_with": ["sk"]}

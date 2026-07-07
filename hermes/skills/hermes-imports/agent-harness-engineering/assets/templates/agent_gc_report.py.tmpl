@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+"""
+agent_gc_report.py
+
+Reports garbage-collection candidates for this repository.
+Run: python3 scripts/agent_gc_report.py
+
+This script SURFACES candidates only — it does not delete anything.
+Human review is required before any cleanup patch is merged.
+"""
+from __future__ import annotations
+
+import pathlib
+import re
+import sys
+from datetime import date, timedelta
+from typing import Iterator
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+DOC_ROOT = ROOT / "docs" / "agent"
+DOC_INDEX = DOC_ROOT / "index.md"
+
+STALE_DOCS_MAX_AGE_DAYS = 90
+SUSPICIOUS_FILENAMES = [
+    re.compile(r"final[_-]?final", re.IGNORECASE),
+    re.compile(r"(^|[_-])v2([_-]|\.)", re.IGNORECASE),
+    re.compile(r"copy[_-]?of", re.IGNORECASE),
+    re.compile(r"^tmp_", re.IGNORECASE),
+    re.compile(r"^backup", re.IGNORECASE),
+]
+MAX_FILE_SIZE_KB = 500
+
+
+def read_text(path: pathlib.Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def check_stale_docs() -> Iterator[str]:
+    """Docs not reviewed in STALE_DOCS_MAX_AGE_DAYS days."""
+    if not DOC_ROOT.exists():
+        return
+
+    from datetime import datetime
+
+    for doc_path in DOC_ROOT.glob("*.md"):
+        content = read_text(doc_path)
+        if not content.startswith("---"):
+            continue
+        try:
+            end = content.index("---", 3)
+        except ValueError:
+            continue
+        frontmatter = content[3:end]
+        for line in frontmatter.splitlines():
+            if line.strip().startswith("last_reviewed:"):
+                date_val = line.split(":", 1)[1].strip()
+                try:
+                    reviewed = datetime.strptime(date_val, "%Y-%m-%d").date()
+                    age = (date.today() - reviewed).days
+                    if age > STALE_DOCS_MAX_AGE_DAYS:
+                        yield f"Stale doc ({age} days old): {doc_path.name}"
+                except ValueError:
+                    yield f"Invalid date in {doc_path.name}: {date_val}"
+                break
+
+
+def check_suspicious_filenames() -> Iterator[str]:
+    """Files with suspicious names."""
+    for path in ROOT.rglob("*"):
+        if path.is_file():
+            name = path.name
+            for pattern in SUSPICIOUS_FILENAMES:
+                if pattern.search(name):
+                    yield f"Suspicious filename: {path.relative_to(ROOT)}"
+                    break
+
+
+def check_oversized_files() -> Iterator[str]:
+    """Files larger than MAX_FILE_SIZE_KB."""
+    for path in ROOT.rglob("*"):
+        if path.is_file():
+            size_kb = path.stat().st_size / 1024
+            if size_kb > MAX_FILE_SIZE_KB:
+                # Skip common large-but-legitimate files
+                if path.suffix in (".png", ".jpg", ".jpeg", ".mp4", ".pdf", ".whl", ".egg"):
+                    continue
+                yield f"Oversized ({size_kb:.0f}KB): {path.relative_to(ROOT)}"
+
+
+def check_todo_clusters() -> Iterator[str]:
+    """Files with 3+ TODO/FIXME comments."""
+    for path in ROOT.rglob("*.py"):
+        if "/.venv/" in str(path) or "/node_modules/" in str(path):
+            continue
+        try:
+            content = read_text(path)
+        except Exception:
+            continue
+        matches = re.findall(r"(TODO|FIXME|HACK|XXX)", content, re.IGNORECASE)
+        if len(matches) >= 3:
+            yield f"TODO/FIXME cluster ({len(matches)} in {path.relative_to(ROOT)})"
+
+
+def check_unlinked_docs() -> Iterator[str]:
+    """Docs in docs/agent/ not linked from index."""
+    if not DOC_INDEX.exists() or not DOC_ROOT.exists():
+        return
+
+    index_content = read_text(DOC_INDEX)
+    for doc_path in DOC_ROOT.glob("*.md"):
+        # Skip self
+        if doc_path.name == "index.md":
+            continue
+        if doc_path.name not in index_content:
+            yield f"Unlinked doc (not in index): {doc_path.name}"
+
+
+def main() -> int:
+    all_issues: list[str] = []
+
+    sections = {
+        "Stale docs": check_stale_docs,
+        "Suspicious filenames": check_suspicious_filenames,
+        "Oversized files": check_oversized_files,
+        "TODO/FIXME clusters": check_todo_clusters,
+        "Unlinked docs": check_unlinked_docs,
+    }
+
+    total = 0
+    for section, checker in sections.items():
+        issues = list(checker())
+        if issues:
+            total += len(issues)
+            print(f"\n## {section}")
+            for issue in issues:
+                print(f"  - {issue}")
+            all_issues.extend(issues)
+
+    if all_issues:
+        print(f"\n\n{len(all_issues)} issue(s) found. Human review required before cleanup.")
+        return 1
+
+    print("OK — no garbage collection candidates found.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,21 @@
+{
+  "items": [
+    {"n": 1, "name": "SKILL.md", "weight": 1, "criterion": "YAML frontmatter + Contract + Phases + Output Format"},
+    {"n": 2, "name": "deterministic_code", "weight": 1, "criterion": "scripts/*.py runs as CLI without LLM call"},
+    {"n": 3, "name": "cross_modal_eval", "weight": 2, "criterion": "DEFERRED in Hermes — substitute /advice adversarial review (cited in references/)"},
+    {"n": 4, "name": "unit_tests", "weight": 1, "criterion": "tests/test_*.py present, every branch covered"},
+    {"n": 5, "name": "integration_tests", "weight": 2, "criterion": "tests invoke shipped script on live skill tree"},
+    {"n": 6, "name": "llm_evals", "weight": 1, "criterion": "Conditional — required only when feature calls an LLM"},
+    {"n": 7, "name": "resolver_trigger_entry", "weight": 1, "criterion": "RESOLVER.md has ## <skill> heading with triggers on the SAME line"},
+    {"n": 8, "name": "resolver_trigger_eval", "weight": 2, "criterion": "routing-eval.jsonl {intent,expected_skill,ambiguous_with?} + test_trigger_eval.py"},
+    {"n": 9, "name": "check_resolvable", "weight": 1, "criterion": "scripts/check_resolvable.py with argparse CLI reading LIVE resolver + skills dir"},
+    {"n": 10, "name": "e2e_test", "weight": 1, "criterion": "tests/test_e2e.py exercising ≥2 of {skillify_check, check_resolvable, trigger_eval}"},
+    {"n": 11, "name": "brain_filing", "weight": 1, "criterion": "Conditional — required only when skill writes to brain pages"}
+  ],
+  "scoring": "0..2 per item, total /22",
+  "tier": {
+    "always_required": [1, 2, 4, 5, 7, 8, 9, 10],
+    "deferrable": [3],
+    "conditional": [6, 11]
+  }
+}

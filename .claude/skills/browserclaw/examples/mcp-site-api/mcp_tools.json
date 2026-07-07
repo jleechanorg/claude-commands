@@ -1,0 +1,62 @@
+{
+  "schema_version": "2025-03-26",
+  "site": "mvp-site-app-dev-i6xf2p72ka-uc.a.run.app",
+  "tools": [
+    {
+      "name": "get_api_time",
+      "description": "Public endpoint - returns server timestamp. No auth needed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "method": "GET",
+        "urlTemplate": "https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/time"
+      }
+    },
+    {
+      "name": "get_api_settings",
+      "description": "Returns user settings. Requires Firebase ID token: Authorization: Bearer <firebase_id_token>",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "method": "GET",
+        "urlTemplate": "https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/settings"
+      }
+    },
+    {
+      "name": "get_api_campaigns",
+      "description": "Returns user's D&D campaigns. Requires Firebase ID token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "method": "GET",
+        "urlTemplate": "https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/campaigns"
+      }
+    },
+    {
+      "name": "get_api_constants_models",
+      "description": "Returns LLM model constants/availability. Requires Firebase ID token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "method": "GET",
+        "urlTemplate": "https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app/api/constants/models"
+      }
+    }
+  ]
+}

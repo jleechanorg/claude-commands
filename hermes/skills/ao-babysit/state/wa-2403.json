@@ -1,0 +1,19 @@
+{
+  "session_id": "wa-2403",
+  "first_seen": "2026-07-04T06:55:56+00:00",
+  "last_seen": "2026-07-05T19:41:36+00:00",
+  "last_output_hash": null,
+  "poll_count": 24,
+  "last_progress_post": null,
+  "status": "dead",
+  "notes": [],
+  "terminal_pr": {
+    "ref": {
+      "owner": "jleechanorg",
+      "repo": "worldarchitect.ai",
+      "number": 7711,
+      "via": "url"
+    },
+    "state": "MERGED"
+  }
+}
