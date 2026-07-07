@@ -58,7 +58,9 @@ SYMLINK_NAMES=(
 
 LOCAL_ONLY=(
   .claude.json
+  .credentials.json
   sessions
+  history.jsonl
   session-env
   cache
   chrome

@@ -38,9 +38,69 @@ CLAUDE_DIRS=(commands skills hooks agents scripts)
 # Dirs from project root → repo root in target repo
 ROOT_DIRS=(orchestration automation ralph)
 
+# Hermes-managed surfaces — included as a SEPARATE top-level dir in the target repo
+# (./hermes/skills and ./hermes/commands) so the superset covers ~/.claude/ + ~/.hermes/
+# + project .claude/. The hermes-deploy-pipeline skill is the SOURCE OF TRUTH for
+# hermes skills; this export ships a downstream mirror that downstream consumers
+# (e.g. other machines' ~/.claude/skills) can copy from.
+HERMES_DIRS=(skills commands)
+HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
+
 # Files to exclude from content filtering (contain literal regex patterns or are test files
 # that assert on the source strings and must not have them silently replaced)
 FILTER_SKIP=(exportcommands.py exportcommands.sh loc_simple.sh test_exportcommands.py)
+
+# Shared rsync excludes — binaries, media, build artifacts, repo hygiene.
+# Anything that should NEVER be in the published template regardless of source surface.
+# The HERMES-specific extras (mcp config, plugin.json, package-lock.json) only apply to
+# the ~/.hermes/ rsync pass; root-dir and union passes don't generate those files.
+COMMON_RSYNC_EXCLUDES=(
+  '*.pyc'
+  '__pycache__/'
+  '.DS_Store'
+  '*.ttf' '*.otf' '*.woff' '*.woff2' '*.eot'
+  '*.png' '*.jpg' '*.jpeg' '*.gif' '*.ico' '*.svg' '*.webp'
+  '*.mp4' '*.mp3' '*.wav' '*.pdf' '*.zip' '*.tar' '*.gz'
+  '*.xsd' '*.xml'
+  '*.testmondata'
+  '*.db' '*.sqlite' '*.sqlite3'
+)
+HERMES_RSYNC_EXTRAS=(
+  '.mcp_config*'
+  'plugin.json'
+  'package-lock.json'
+)
+
+# Emit rsync --exclude flags from an array of patterns. Used by the root-dir and
+# hermes rsync passes to keep the exclude lists DRY.
+# Patterns are emitted unquoted — rsync needs raw glob characters (`*`, `[`, `?`)
+# in the exclude value, not shell-escaped forms. Callers must pass strings
+# without spaces, which is true for every entry in COMMON_RSYNC_EXCLUDES /
+# HERMES_RSYNC_EXTRAS.
+rsync_excludes() {
+  local _pattern
+  for _pattern in "$@"; do
+    printf -- '--exclude=%s ' "$_pattern"
+  done
+}
+
+# Compute Hermes-side file counts for the README prompt. Kept as a single
+# helper so the incremental-update and first-export README paths agree on the
+# same glob (`-name 'SKILL.md'` is canonical — `find -type f` double-counts
+# the `references/` etc. files inside each skill directory).
+compute_hermes_counts() {
+  if [[ -d "hermes/commands" ]]; then
+    HERMES_COMMANDS_COUNT=$(find hermes/commands -type f 2>/dev/null | wc -l | tr -d ' ')
+  else
+    HERMES_COMMANDS_COUNT=0
+  fi
+  if [[ -d "hermes/skills" ]]; then
+    HERMES_SKILLS_COUNT=$(find hermes/skills -name 'SKILL.md' 2>/dev/null | wc -l | tr -d ' ')
+  else
+    HERMES_SKILLS_COUNT=0
+  fi
+  export HERMES_COMMANDS_COUNT HERMES_SKILLS_COUNT
+}
 
 # Content filter substitutions (applied to all .md .py .sh .yml files)
 # NOTE: Uses perl -pi -e for cross-platform \b word-boundary support (macOS sed lacks it)
@@ -128,6 +188,9 @@ union_dir() {
     \( -not -name '*.pyo' \) \
     \( -not -name '.DS_Store' \) \
     \( -not -path '*/__pycache__/*' \) \
+    \( -not -path '*/node_modules/*' \) \
+    \( -not -path '*/_archive/*' \) \
+    \( -not -path '*/_removed/*' \) \
     \( -not -path '*/.ruff_cache/*' \) \
     \( -not -path '*/canvas-fonts/*' \) \
     \( -not -name '*.ttf' \) \
@@ -167,6 +230,9 @@ union_dir() {
     \( -not -name '*.pyc' \) \
     \( -not -name '.DS_Store' \) \
     \( -not -path '*/__pycache__/*' \) \
+    \( -not -path '*/node_modules/*' \) \
+    \( -not -path '*/_archive/*' \) \
+    \( -not -path '*/_removed/*' \) \
     \( -not -path '*/.ruff_cache/*' \) \
     \( -not -path '*/canvas-fonts/*' \) \
     -not -name 'exportcommands.py' \
@@ -234,6 +300,7 @@ done
 
 # ── Rsync root-level directories ─────────────────────────────────────────────
 echo "▶ Syncing root directories..."
+# shellcheck disable=SC2046
 for dir in "${ROOT_DIRS[@]}"; do
   src="$PROJECT_ROOT/$dir/"
   dst="./$dir/"
@@ -242,37 +309,30 @@ for dir in "${ROOT_DIRS[@]}"; do
     continue
   fi
   mkdir -p "$dst"
-  rsync -a \
-    --exclude='*.pyc' \
-    --exclude='__pycache__/' \
-    --exclude='.DS_Store' \
-    --exclude='*.ttf' \
-    --exclude='*.otf' \
-    --exclude='*.woff' \
-    --exclude='*.woff2' \
-    --exclude='*.eot' \
-    --exclude='*.png' \
-    --exclude='*.jpg' \
-    --exclude='*.jpeg' \
-    --exclude='*.gif' \
-    --exclude='*.ico' \
-    --exclude='*.svg' \
-    --exclude='*.webp' \
-    --exclude='*.mp4' \
-    --exclude='*.mp3' \
-    --exclude='*.wav' \
-    --exclude='*.pdf' \
-    --exclude='*.zip' \
-    --exclude='*.tar' \
-    --exclude='*.gz' \
-    --exclude='*.xsd' \
-    --exclude='*.xml' \
-    --exclude='*.testmondata' \
-    --exclude='*.db' \
-    --exclude='*.sqlite' \
-    --exclude='*.sqlite3' \
+  rsync -a $(rsync_excludes "${COMMON_RSYNC_EXCLUDES[@]}") \
     "$src" "$dst"
   ok "$dir"
+done
+
+# ── Rsync ~/.hermes/<dir> → hermes/<dir> at target repo root ─────────────────
+# Source of truth: ~/projects/hermes-agent (per hermes-deploy-pipeline skill).
+# These are downstream mirrors — content filters rewrite $HOME / $USER to keep
+# the export portable. Missing dir = soft skip (Hermes may not be installed on
+# every machine), not a hard failure.
+echo "▶ Syncing ~/.hermes/ surfaces..."
+# shellcheck disable=SC2046
+for dir in "${HERMES_DIRS[@]}"; do
+  src="$HERMES_HOME/$dir/"
+  dst="./hermes/$dir/"
+  if [[ ! -d "$src" ]]; then
+    warn "hermes/$dir not found at $src — skipping (Hermes not installed?)"
+    continue
+  fi
+  mkdir -p "$dst"
+  rsync -a \
+    $(rsync_excludes "${COMMON_RSYNC_EXCLUDES[@]}" "${HERMES_RSYNC_EXTRAS[@]}") \
+    "$src" "$dst"
+  ok "hermes/$dir"
 done
 
 
@@ -300,7 +360,7 @@ fi
 echo "▶ Applying content filters..."
 while IFS= read -r -d '' file; do
   apply_filters "$file"
-done < <(find .claude orchestration automation ralph workflows \
+done < <(find .claude orchestration automation ralph workflows hermes \
   -type f \( -name '*.md' -o -name '*.py' -o -name '*.sh' -o -name '*.yml' -o -name '*.yaml' \) \
   -print0 2>/dev/null)
 ok "Filters applied"
@@ -310,7 +370,7 @@ echo "▶ Scanning for leaked paths..."
 LEAKED=$(grep -rl \
   --include='*.md' --include='*.py' --include='*.sh' --include='*.yml' --include='*.yaml' \
   -e '/Users/jleechan' -e 'jleechantest@gmail' \
-  .claude orchestration automation ralph workflows 2>/dev/null \
+  .claude orchestration automation ralph workflows hermes 2>/dev/null \
   | grep -v exportcommands || true)
 if [[ -n "$LEAKED" ]]; then
   warn "Hardcoded paths found — check filter list:"
@@ -328,6 +388,7 @@ if command -v claude >/dev/null 2>&1 && [[ -f "README.md" ]]; then
   EXISTING_README=$(cat README.md)
   COMMANDS_COUNT=$(find .claude/commands -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
   SKILLS_COUNT=$(find .claude/skills -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+  compute_hermes_counts
   README_LINE_COUNT=$(wc -l < README.md | tr -d ' ')
 
   # Validate README looks like real markdown (not a corrupt script-output file).
@@ -356,7 +417,7 @@ ${DIFF_STAT:-No file changes detected}
 New files added this export:
 ${NEW_FILES:-None}
 
-Current counts: ${COMMANDS_COUNT} commands, ${SKILLS_COUNT} skill files.
+Current counts: ${COMMANDS_COUNT} commands, ${SKILLS_COUNT} skill files, ${HERMES_COMMANDS_COUNT} hermes commands, ${HERMES_SKILLS_COUNT} hermes skills.
 
 TASK — make MINIMAL updates only:
 1. Add or update a ## Changelog section near the top with today's date ($(date +%Y-%m-%d)) listing new/changed files briefly
@@ -394,13 +455,14 @@ elif command -v claude >/dev/null 2>&1 && [[ ! -f "README.md" ]]; then
   # No existing README — generate fresh one (first-time export)
   COMMANDS_COUNT=$(find .claude/commands -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
   SKILLS_COUNT=$(find .claude/skills -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+  compute_hermes_counts
   HOOKS_COUNT=$(find .claude/hooks \( -name '*.sh' -o -name '*.py' \) 2>/dev/null | wc -l | tr -d ' ')
 
   README_PROMPT="Generate a concise README.md for the jleechanorg/claude-commands GitHub repository.
 - 1-sentence description: reference export of a Claude Code CLI configuration
-- Contains: ${COMMANDS_COUNT} slash commands, ${SKILLS_COUNT} skill files, ${HOOKS_COUNT} hooks
+- Contains: ${COMMANDS_COUNT} slash commands, ${SKILLS_COUNT} skill files, ${HOOKS_COUNT} hooks, ${HERMES_COMMANDS_COUNT} hermes commands, ${HERMES_SKILLS_COUNT} hermes skills
 - Quick Start: copy .claude/ dirs or run bash ~/.claude/commands/exportcommands.sh
-- Directory overview: .claude/commands/, .claude/skills/, .claude/hooks/, .claude/agents/, .claude/scripts/
+- Directory overview: .claude/commands/, .claude/skills/, .claude/hooks/, .claude/agents/, .claude/scripts/, hermes/skills/, hermes/commands/
 - List 6-8 useful commands: /pr, /copilot, /tdd, /harness, /exportcommands, /fixpr, /orch, /converge
 - Include ## Changelog section with entry for $(date +%Y-%m-%d): initial export
 - Under 120 lines, GitHub-flavored markdown
