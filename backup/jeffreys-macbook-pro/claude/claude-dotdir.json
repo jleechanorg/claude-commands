@@ -1763,14 +1763,6 @@
       "type": "http",
       "url": "http://127.0.0.1:8013/mcp"
     },
-    "context7": {
-      "type": "http",
-      "url": "http://127.0.0.1:8001/mcp"
-    },
-    "filesystem-mcp": {
-      "type": "http",
-      "url": "http://127.0.0.1:8009/mcp"
-    },
     "ios-simulator-mcp": {
       "args": [
         "-y",
@@ -1779,27 +1771,6 @@
       "command": "npx",
       "env": {},
       "type": "stdio"
-    },
-    "mcp-agent-mail": {
-      "core": true,
-      "headers": {},
-      "type": "http",
-      "url": "http://127.0.0.1:8765/mcp/"
-    },
-    "memory-mcp": {
-      "type": "http",
-      "url": "http://127.0.0.1:8007/mcp"
-    },
-    "playwright-mcp": {
-      "args": [
-        "@playwright/mcp",
-        "--headless"
-      ],
-      "command": "npx"
-    },
-    "sequential-thinking": {
-      "type": "http",
-      "url": "http://127.0.0.1:8005/mcp"
     },
     "slack": {
       "type": "http",
