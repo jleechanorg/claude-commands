@@ -1,0 +1,6 @@
+{"case_id": "skillify_mature", "skill_path": "skills/skillify", "expected_score": 9, "notes": "skillify itself after the v2.0.0 backport — expect 9 pass (1,2,4,5,7,8,9,10), 1 defer (3), 1 na (11)"}
+{"case_id": "skillify_v1_baseline", "skill_path": "skills/skillify", "expected_score": 3, "notes": "v1.x baseline — only items 1+7+9 were documented"}
+{"case_id": "sk_pointer", "skill_path": "skills/sk", "expected_score": 4, "notes": "thin pointer alias — items 1, 7 + a couple N/A"}
+{"case_id": "advice_skill", "skill_path": "skills/advice", "expected_score": 6, "notes": "advice skill — has scripts/ missing, no fixtures"}
+{"case_id": "finish-the-job_skill", "skill_path": "skills/finish-the-job", "expected_score": 5, "notes": "workflow skill — narrative SKILL.md, no scripts/tests"}
+{"case_id": "img_skill", "skill_path": "skills/multi-repo-mechanical-cleanup", "expected_score": 4, "notes": "ops skill with a real CLI but no test_"}

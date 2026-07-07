@@ -1,0 +1,11 @@
+{
+  "name": "uinaf/verify",
+  "version": "1.0.1",
+  "private": false,
+  "summary": "Verify your own completed code changes using the repo's existing infrastructure and an independent evaluator context. Use after implementing a change when you need to run unit or integration tests, check build or lint gates, prove the real surface works with evidence, and challenge the changed code for clarity, deduplication, and maintainability. Do not use when the repo is not verifiable yet or when reviewing someone else's code.",
+  "skills": {
+    "verify": {
+      "path": "SKILL.md"
+    }
+  }
+}

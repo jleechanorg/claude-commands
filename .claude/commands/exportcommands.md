@@ -85,8 +85,8 @@ Same five subdirs as Source Surface 1. Where a file exists in both surfaces, con
 compared (not blindly overwritten by age); mismatches are flagged. Project wins
 on age tiebreak with the newer-file-by-age heuristic as a fallback only.
 
-For the worldarchitect.ai repo specifically, this surface includes
-`worldarchitect.ai`'s `.claude/commands/*.md` (e.g. `pr.md`, `green.md`, `er.md`,
+For the your-project.com repo specifically, this surface includes
+`your-project.com`'s `.claude/commands/*.md` (e.g. `pr.md`, `green.md`, `er.md`,
 `babysit.md`) and `.claude/skills/` (e.g. `baby-skill-onboard`, `evidence-review`,
 `gcp-deployments`, `worldarchitect-ai-evidence`).
 
@@ -99,7 +99,7 @@ at the repo root of the target.
 
 | Surface | Reason excluded |
 | --- | --- |
-| `mvp_site/` source files | These are project runtime code, not commands. The script's content filter rewrites `mvp_site/` references in commands to `$PROJECT_ROOT/` so the exported commands stay project-agnostic. |
+| `$PROJECT_ROOT/` source files | These are project runtime code, not commands. The script's content filter rewrites `$PROJECT_ROOT/` references in commands to `$PROJECT_ROOT/` so the exported commands stay project-agnostic. |
 | `.git/`, `.venv/`, `__pycache__/` | Repo hygiene; never exported. |
 | `.mcp_config*`, `plugin.json`, `package-lock.json` under `~/.hermes/` | Hermes runtime config / plugin state — not portable. Excluded from the hermes rsync. |
 | Anything under `~/.hermes/profiles/<name>/skills` or `commands` | Profile-scoped skills are not part of the cross-machine default; they live where Hermes expects them on the host that owns the profile. |
@@ -109,7 +109,7 @@ at the repo root of the target.
 ### Standard run (from the project root)
 
 ```bash
-cd ~/worldarchitect.ai
+cd ~/your-project.com
 bash ~/.claude/commands/exportcommands.sh      # auto-pushes branch + opens PR
 ```
 

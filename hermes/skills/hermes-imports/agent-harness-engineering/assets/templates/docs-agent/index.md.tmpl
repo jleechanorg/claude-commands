@@ -1,0 +1,36 @@
+---
+title: Agent Context Index
+purpose: Entry point for agents working in this repository
+owner: 
+last_reviewed: __DATE__
+source_of_truth: 
+---
+
+# Agent Context Index
+
+Read this page first. It routes to the specific docs you need.
+
+## What's here
+
+- **[Architecture](architecture.md)** — module boundaries, dependencies, invariants
+- **[Specs](specs.md)** — product and system behaviors that must remain true
+- **[Plans](plans.md)** — active initiatives and known next steps
+- **[Quality](quality.md)** — tests, checks, linting, and merge gates
+- **[Reliability](reliability.md)** — runtime expectations, SLOs, debugging entry points
+- **[Security](security.md)** — trust boundaries, secrets, auth, threat assumptions
+- **[Garbage Collection](garbage-collection.md)** — cleanup policy and review cadence (if enabled)
+
+## Reading order
+
+1. Start here (this page) for navigation
+2. Read [architecture](architecture.md) for structural context
+3. Read the relevant leaf doc for the subsystem you're working in
+4. Run `python3 scripts/agent_repo_check.py` before committing
+
+## Quick commands
+
+| Check | Command |
+|---|---|
+| Structural validation | `python3 scripts/agent_repo_check.py` |
+| Run tests | _(repo-specific — see quality.md)_ |
+| Garbage collection report | `python3 scripts/agent_gc_report.py` |

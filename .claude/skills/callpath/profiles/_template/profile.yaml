@@ -1,0 +1,10 @@
+name: my-system
+description: One-line description of the request/work path you trace
+domain: optional-tag
+runner: run.sh
+env:
+  MY_SERVICE_URL: "${MY_SERVICE_URL:-http://127.0.0.1:8080}"
+args:
+  - name: id
+    flag: --id
+    help: Correlation id (request id, session id, PR #, etc.)

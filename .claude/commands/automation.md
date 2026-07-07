@@ -48,7 +48,7 @@ execution_mode: immediate
 
    data_dir = os.environ.get('AUTOMATION_SAFETY_DATA_DIR')
    if not data_dir:
-       default_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
+       default_dir = Path.home() / "Library" / "Application Support" / "${PROJECT_NAME:-your-project}-automation"
        default_dir.mkdir(parents=True, exist_ok=True)
        data_dir = str(default_dir)
 
@@ -94,7 +94,7 @@ execution_mode: immediate
 
    data_dir = os.environ.get('AUTOMATION_SAFETY_DATA_DIR')
    if not data_dir:
-       default_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
+       default_dir = Path.home() / "Library" / "Application Support" / "${PROJECT_NAME:-your-project}-automation"
        default_dir.mkdir(parents=True, exist_ok=True)
        data_dir = str(default_dir)
 

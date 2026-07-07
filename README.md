@@ -51,6 +51,14 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## Changelog
 
+### v1.7.0 (2026-07-07)
+- New commands: bashrc.md, callpath.md, crash.md, mac.md, meta.md, repro_developer.md, soak.md, social.md
+- New hooks: warn-default-branch-bypass.sh
+- New scripts: check_autonomy_time_box.sh
+- New skills: agent-orchestrator/, aside-browser-default/, auto-factory/, bashrc.md, browserclaw/, callpath/, codex-evolve-loop/, crash.md, fetch-x-tweet.md
+- Updated: automation-publish.md, automation.md, browser.md, exportcommands.md, f.md, playwright.md, automation-audit skill, self-hosted-runner-preflight skill, test-tui-claude-feature-via-cmux skill, test_install_native_scheduler.sh
+- Removed: exportcommands.py (2361 lines, legacy export script superseded by exportcommands.md/.sh)
+
 ### v1.6.0 (2026-06-21)
 - New commands: aar.md, accept-adapt-reject.md, beads.md, bq.md, code-quality.md, cq.md, disk_magician.md, diskm.md, er-node.md, f-pr.md, fable.md, factory-evolve.md, hermes.md, keychain_kill.md, launchd.md, linux.md, llm-testing.md, slack-audit.md, spicy_remove.md
 - New hooks: auto-trust-workspace.sh
@@ -85,7 +93,7 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## 🎯 What's Included
 
-**276 Commands** including powerful workflow orchestrators and cognitive tools:
+**290 Commands** including powerful workflow orchestrators and cognitive tools:
 - **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch`, `/f-pr`, `/factory-evolve`, `/hermes` - Complete multi-step automation
 - **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn`, `/aar`, `/accept-adapt-reject` - Analysis and planning
 - **Infrastructure**: `/scaffold`, `/launchd`, `/linux` - Repository setup and development environment
@@ -95,13 +103,13 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 - **Evidence & Review**: `/es`, `/er`, `/er-node`, `/green` - Evidence standards and PR review
 - **Issue Tracking**: `/beads` - Bead-based issue tracking integration
 - **Wiki Tools**: `/wiki-assess`, `/wiki-bfs`, `/wiki-ingest`, `/wiki-evolve`, `/wiki-search` - Knowledge base ingestion and assessment
-- **Utilities**: `/disk-audit`, `/disk_magician`, `/diskm`, `/gmail`, `/slack-audit`, `/bq`, `/keychain_kill`, `/spicy_remove`, `/fable`, `/f`, `/fs`, `/factory-spec`, `/history_resume`, `/team-claude`, `/zfc-adjuster`, `/think-level-up-validation` - System, inbox, and misc workflow tools
+- **Utilities**: `/disk-audit`, `/disk_magician`, `/diskm`, `/gmail`, `/slack-audit`, `/bq`, `/keychain_kill`, `/spicy_remove`, `/fable`, `/f`, `/fs`, `/factory-spec`, `/history_resume`, `/team-claude`, `/zfc-adjuster`, `/think-level-up-validation`, `/bashrc`, `/callpath`, `/crash`, `/mac`, `/meta`, `/repro_developer`, `/soak`, `/social` - System, inbox, and misc workflow tools
 
 **60 Hooks** for Claude Code automation and workflow optimization
 
 **22 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**1157 Skills** providing shared knowledge references and capabilities
+**915 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 

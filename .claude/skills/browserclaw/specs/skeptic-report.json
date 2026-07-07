@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-04-13T09:54:37.242Z",
+  "sessionId": "skeptic-cron-pr-1",
+  "prNumber": 1,
+  "repo": "jleechanorg/browserclaw",
+  "verdict": "FAIL",
+  "details": "\n┌─ Claim Verification ──────────────────────────────────────────────\n│ Run-level:     [FAIL    ] VERDICT: FAIL — VERDICT: FAIL — infra: Codex failed: Command failed: /opt/homebrew/bin/codex exec --model gpt-5.4 -. Claude: Command failed: /Users/jleechan/.local/bin/claude --dangerously-skip-permissions --print --model claude-sonnet-4-6.\n│ Comment-level: [FAIL    ] VERDICT: FAIL in PR comment\n├──────────────────────────────────────────────────────────────────\n│ Outcome:       [FAIL    ] FAIL verd",
+  "modelUsed": "codex",
+  "fallbacksAttempted": 0
+}

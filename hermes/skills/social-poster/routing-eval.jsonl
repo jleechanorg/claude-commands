@@ -1,0 +1,13 @@
+{"intent": "draft a social post about jleechanclaw", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "draft a post for linkedin", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "draft a hacker news post", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "show hn jleechanclaw", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "draft a tweet thread", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "draft a reddit post for r/LocalLLaMA", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "post to social media", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "/social announce jleechanclaw release", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "draft instagram caption", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "draft threads post", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "share jleechanclaw on linkedin", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "write a post for twitter", "expected_skill": "social-poster", "ambiguous_with": []}
+{"intent": "draft facebook post", "expected_skill": "social-poster", "ambiguous_with": []}
