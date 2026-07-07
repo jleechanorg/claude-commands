@@ -175,6 +175,28 @@ install_scripts() {
 # Copy skills to ~/.claude/skills/
 install_skills() {
     install_component "$SRC_SKILLS_DIR" "$CLAUDE_SKILLS_DIR" "*.md" "skills" "false"
+
+    # Also copy nested <skill>/SKILL.md bodies (one directory per skill)
+    # Without this, subdir skills like swarm/SKILL.md and sidekick/SKILL.md
+    # never reach $CLAUDE_SKILLS_DIR.
+    log_info "Installing nested skill SKILL.md files..."
+    local nested_count=0
+    if [ -d "$SRC_SKILLS_DIR" ]; then
+        while IFS= read -r -d '' skill_md; do
+            # skill_md is e.g. $SRC_SKILLS_DIR/swarm/SKILL.md
+            local rel_dir
+            rel_dir="$(basename "$(dirname "$skill_md")")"
+            # Skip hidden / underscore dirs (_archive, _copilot_modules, etc.)
+            case "$rel_dir" in
+                _*|.*) continue ;;
+            esac
+            mkdir -p "$CLAUDE_SKILLS_DIR/$rel_dir"
+            cp -f "$skill_md" "$CLAUDE_SKILLS_DIR/$rel_dir/SKILL.md"
+            log_info "  Installed skill body: $rel_dir/SKILL.md"
+            nested_count=$((nested_count + 1))
+        done < <(find "$SRC_SKILLS_DIR" -mindepth 2 -maxdepth 2 -type f -name SKILL.md -print0)
+    fi
+    log_success "Installed $nested_count nested skill bodies"
 }
 
 # Infrastructure installation (root-level scripts, not copied to ~/.claude)
