@@ -1,0 +1,43 @@
+{
+  "mcpServers": {
+    "mcp-agent-mail": {
+      "type": "http",
+      "url": "http://127.0.0.1:8765/mcp/",
+      "core": true,
+      "headers": {}
+    },
+    "context7": {
+      "type": "http",
+      "url": "http://127.0.0.1:8001/mcp"
+    },
+    "sequential-thinking": {
+      "type": "http",
+      "url": "http://127.0.0.1:8005/mcp"
+    },
+    "slack": {
+      "type": "http",
+      "url": "http://127.0.0.1:8006/mcp"
+    },
+    "worldarchitect": {
+      "type": "http",
+      "url": "http://127.0.0.1:8010/mcp",
+      "headers": {}
+    },
+    "memory-mcp": {
+      "type": "http",
+      "url": "http://127.0.0.1:8007/mcp"
+    },
+    "ddg-search": {
+      "type": "http",
+      "url": "http://127.0.0.1:8008/mcp"
+    },
+    "filesystem-mcp": {
+      "type": "http",
+      "url": "http://127.0.0.1:8009/mcp"
+    },
+    "aside-mcp": {
+      "type": "http",
+      "url": "http://127.0.0.1:8013/mcp"
+    }
+  }
+}
