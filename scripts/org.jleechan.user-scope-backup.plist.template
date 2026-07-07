@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>org.jleechan.user-scope-backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/bash</string>
+    <string>@HOME@/projects_other/user_scope/scripts/backup-home.sh</string>
+  </array>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StartInterval</key>
+  <integer>7200</integer>
+  <key>StandardOutPath</key>
+  <string>@HOME@/Library/Logs/user-scope-backup.launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>@HOME@/Library/Logs/user-scope-backup.launchd.err.log</string>
+</dict>
+</plist>

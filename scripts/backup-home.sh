@@ -2,8 +2,8 @@
 set -euo pipefail
 umask 077
 
-# Prefer GNU rsync over macOS openrsync (which lacks --itemize-changes)
-if [[ -x /opt/homebrew/bin/rsync ]]; then
+# Ensure /opt/homebrew/bin is in PATH if it exists (for Homebrew GNU rsync, flock, etc.)
+if [[ -d /opt/homebrew/bin ]]; then
   export PATH="/opt/homebrew/bin:$PATH"
 fi
 
@@ -73,6 +73,45 @@ while [[ $# -gt 0 ]]; do
 done
 
 log() { echo "[$(date +%F' '%T)] $*"; }
+
+# Lock configuration to prevent concurrent overlapping runs
+LOCK_FILE="/var/tmp/backup-home.lock"
+# Ensure the lock file exists
+touch "$LOCK_FILE"
+exec 9>>"$LOCK_FILE"
+
+if ! flock -n 9; then
+  log "Backup already in progress (locked via $LOCK_FILE)."
+  if [[ -f "$LOCK_FILE" ]]; then
+    other_pid=$(cat "$LOCK_FILE" 2>/dev/null || true)
+    if [[ -n "$other_pid" ]] && kill -0 "$other_pid" 2>/dev/null; then
+      log "Active backup instance PID: $other_pid"
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        elapsed=$(ps -p "$other_pid" -o etime= 2>/dev/null | tr -d '[:space:]' || true)
+        if [[ -n "$elapsed" ]]; then
+          log "Active backup elapsed time: $elapsed"
+          if [[ "$elapsed" == *-* ]]; then
+            log "WARNING: Active backup has been running for days ($elapsed). This is likely a stale/stuck run."
+          elif [[ "$elapsed" =~ ^([0-9]{2,}): ]]; then
+            hours="${BASH_REMATCH[1]}"
+            if [[ "$hours" -ge 12 ]]; then
+              log "WARNING: Active backup has been running for $hours hours ($elapsed). This is likely a stale/stuck run."
+            fi
+          fi
+        fi
+      fi
+    else
+      log "Lock file contains inactive PID or is empty. flock is active but process is not found."
+    fi
+  fi
+  exit 0
+fi
+
+# We have the lock. Write our PID to the lock file.
+if [[ "$DRY_RUN" -eq 0 ]]; then
+  true > "$LOCK_FILE"
+  echo "$$" >&9
+fi
 
 append_backup_report() {
   local line="$1"
