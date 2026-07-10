@@ -10,13 +10,29 @@ supervises and relays milestones. If the conversation crashes, a fresh session
 respawns the sidekick and it resumes from a disk state file with zero
 conversation context.
 
+**Pattern origin:** [Devin Fusion](https://cognition.com/blog/devin-fusion) —
+Cognition's hybrid-model harness that keeps frontier-level coding intelligence
+while cutting costs with sidekick agents and dynamic routing. This skill is the
+Claude Code adaptation: a cheap durable Sonnet sidekick does the long-running
+work while the premium main session only supervises.
+
 **Real primitive:** sidekick is a real Claude Code process launched in a real
 `tmux new-session`:
 
 ```bash
 tmux new-session -d -s "$SESSION" \
-  "cd '$PWD' && claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions -p \"\$(cat '$PROMPT_FILE')\"; exec bash"
+  "cd '$PWD' && CLAUDE_CONFIG_DIR='${CLAUDE_CONFIG_DIR:-$HOME/.claude}' claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions -p \"\$(cat '$PROMPT_FILE')\"; exec bash"
 ```
+
+**Auth env propagation is MANDATORY in the launch command.** The tmux server
+snapshots its environment when IT started (possibly days ago) and can even mark
+variables like `CLAUDE_CODE_CONFIG_DIR`/`CLAUDE_CONFIG_DIR` for removal — a
+sidekick launched without inline env silently runs on a DIFFERENT account than
+the parent session. Real incident (2026-07-10): every sidekick spawn died with
+"You've hit your session limit" on the default `~/.claude` account while the
+parent session's `CLAUDE_CONFIG_DIR=~/.claude-wa` account had quota. Always
+inline `CLAUDE_CONFIG_DIR` (and any deliberate `ANTHROPIC_*` routing overrides)
+into the tmux command string; never trust the tmux server to pass them.
 
 `--teammate-mode tmux` is a real, documented flag (Agent Teams split-pane
 display, verified via web search 2026-07-10; see upstream GitHub issue
@@ -167,7 +183,7 @@ never touch the rest.
    SESSION="sidekick-${MISSION_SLUG}"
    tmux kill-session -t "$SESSION" 2>/dev/null || true
    tmux new-session -d -s "$SESSION" -x 160 -y 48 \
-     "cd '$PWD' && claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions -p \"\$(cat '$STATE_DIR/sidekick.prompt.md')\"; rc=\$?; printf '\n[sidekick done exit=%s]\n' \"\$rc\"; exec bash"
+     "cd '$PWD' && CLAUDE_CONFIG_DIR='${CLAUDE_CONFIG_DIR:-$HOME/.claude}' claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions -p \"\$(cat '$STATE_DIR/sidekick.prompt.md')\"; rc=\$?; printf '\n[sidekick done exit=%s]\n' \"\$rc\"; exec bash"
    ```
 
 4. Verify the sidekick actually started before reporting success:
@@ -177,8 +193,15 @@ never touch the rest.
    tmux list-panes -a -F '#{session_name} #{pane_pid} #{pane_current_command}' \
      | grep "^${SESSION} "
    tmux capture-pane -t "$SESSION" -p -S -80 | tail -80
-   ps -ef | grep "claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions" | grep -v grep
+   pgrep -fl -- "--teammate-mode tmux"   # ps may show the full binary path, so
+                                         # match on the flag, not "claude --model"
    ```
+
+   Note: in `-p` (print) mode the pane stays BLANK until the run finishes — an
+   empty capture is not failure. Liveness proof is the `pgrep` hit (a `claude`
+   process with the flag) plus, later, STATE.md's Progress Log advancing. A
+   pane showing "You've hit your session limit" means the sidekick launched on
+   a quota-exhausted account — check the auth env propagation above.
 
    If these checks do not show a real tmux session and a real Claude Code command,
    the sidekick did **not** start. Fix the tmux/Claude launch before doing any
@@ -190,7 +213,9 @@ never touch the rest.
 2. Do not rewrite it.
 3. Reuse the existing `sidekick.prompt.md` if present; otherwise generate it from
    STATE.md using the template above.
-4. Launch `tmux new-session` with the same Sonnet Claude Code command.
+4. Launch `tmux new-session` with the same Sonnet Claude Code command (including
+   the inline `CLAUDE_CONFIG_DIR` propagation — respawns from a fresh session
+   are exactly when the tmux server's stale env bites).
 5. Capture pane output to verify it read STATE.md and resumed from Next Actions.
 
 ## Milestone reporting

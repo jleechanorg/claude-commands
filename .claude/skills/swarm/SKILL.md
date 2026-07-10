@@ -19,7 +19,7 @@ Run a goal as a **swarm**: a deterministic Workflow-tool fan-out (ultracode) or 
 
 "Ultracode" = the Workflow tool, never /team-claude teammates (user corrected this twice).
 
-## Sidekick durability layer (Devin-sidekick pattern)
+## Sidekick durability layer ([Devin Fusion](https://cognition.com/blog/devin-fusion) sidekick pattern)
 
 **ALL /swarm work runs inside the sidekick — always, no exceptions** (user directive, 2026-07; reaffirmed 2026-07-10). The main session does NOT own the fan-outs — it spawns a **sidekick** (see `~/.claude/skills/sidekick/SKILL.md`, command `/sidekick`) and the sidekick runs the swarm:
 

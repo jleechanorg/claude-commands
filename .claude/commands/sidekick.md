@@ -1,5 +1,8 @@
 # /sidekick — spawn or respawn a real Sonnet Claude Code sidekick in tmux
 
+Pattern origin: [Devin Fusion](https://cognition.com/blog/devin-fusion)
+(hybrid-model harness — cost-cutting sidekick agents + dynamic routing).
+
 Load and follow the `sidekick` skill at `~/.claude/skills/sidekick/SKILL.md`
 (Skill tool: `sidekick`). Works for ANY long-running mission — PR/CI fleets,
 research sweeps, migrations, monitoring, ops runbooks, non-repo work — not just
