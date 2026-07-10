@@ -1,6 +1,6 @@
 ---
 name: sidekick
-description: Spawn or respawn a persistent, crash-recoverable Sonnet Claude Code teammate in tmux for ANY long-running mission — PR/CI fleets, research sweeps, migrations, monitoring, ops runbooks, data pipelines, multi-day projects in any repo or no repo at all — with disk-checkpointed state and commit-often discipline. Main-session control channel is STATE.md + tmux (the sidekick is its own session — NOT SendMessage-addressable); when Agent Teams is allowed, the sidekick runs its own lanes as a real Claude team and main-session supervision teammates are team-managed. Use when the user says /sidekick, "respawn the sidekick", or wants long work to survive conversation crashes.
+description: Spawn or respawn a persistent, crash-recoverable sidekick in tmux (claude Sonnet by default, codex engine supported) for ANY long-running mission — PR/CI fleets, research sweeps, migrations, monitoring, ops runbooks, data pipelines, multi-day projects in any repo or no repo at all — with disk-checkpointed state and commit-often discipline. Main-session control channel is STATE.md + tmux (the sidekick is its own session — NOT SendMessage-addressable); when Agent Teams is allowed, the sidekick runs its own lanes as a real Claude team and main-session supervision teammates are team-managed. Use when the user says /sidekick, "respawn the sidekick", or wants long work to survive conversation crashes.
 ---
 
 # Sidekick — persistent restartable Sonnet Claude Code teammate
@@ -71,14 +71,19 @@ Required channel per relationship:
    fallback).** Durable directives go into STATE.md (Standing rules / Next
    Actions); interactive nudges via `tmux send-keys`; reading/proof via
    `tmux capture-pane`.
-2. **Inside the sidekick: run lanes as a real Claude agent team when allowed
-   (DEFAULT).** When the sidekick's own harness exposes Agent Teams, its
+2. **Inside the sidekick: attempt team-based lanes by default — and verify a
+   team actually formed before reporting lanes as team-based.** When the
+   sidekick's own harness exposes Agent Teams, its
    fan-out lanes run as named teammates (task claims + SendMessage between
    sidekick and lanes) rather than fire-and-forget subagents — this is where
    `--teammate-mode tmux` earns its keep, rendering the sidekick's own
-   teammates as split panes inside the sidekick's tmux session. Caveat: teams
-   under `-p` (print mode) are undocumented; if a team fails to form, fall
-   back to Agent-tool subagents and note that in STATE.md.
+   teammates as split panes inside the sidekick's tmux session. **Empirical
+   reality (claude 2.1.197, verified 2026-07-10): a `-p` print-mode sidekick
+   gets NO team primitives even with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
+   — no TeamCreate, no named-teammate tools — so the Agent-tool subagent
+   fallback is the DEFAULT outcome today, not an edge case.** Attempt the
+   team, verify whether it formed, record the answer in STATE.md, and never
+   report lanes as "team-based" without that proof.
 3. **In the main session: supervision teammates ARE team-managed.** Any
    companion lanes the main session spawns via its own Agent tool (verifiers,
    watchers) are named, SendMessage-addressable teammates — but they die with
@@ -94,12 +99,66 @@ are the durable state; every control channel is disposable.
 
 ## Invocation
 
-`/sidekick [sonnet] [mission...]`
+`/sidekick [sonnet|codex] [mission...]`
 
-- `model`: always `sonnet` unless the user explicitly asks for a different model
-  in the current message. This skill's default and documented path are
-  **Sonnet-only**.
+- `engine/model`: default is **claude with Sonnet**. `codex` selects the Codex
+  CLI engine (below). Any other model only if the user explicitly asks in the
+  current message.
 - `mission`: freeform priorities. If omitted, resume whatever the state file says.
+
+## Engines: claude (default) | codex — both verified 2026-07-10
+
+The protocol (STATE.md, tmux, commit-often, respawn) is engine-agnostic. Only
+the launch command and the between-run steering command differ.
+
+**codex launch** (auth comes from `~/.codex` — no `CLAUDE_CONFIG_DIR` needed):
+
+```bash
+tmux new-session -d -s "$SESSION" -x 160 -y 48 \
+  "cd '$PWD' && codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \"\$(cat '$STATE_DIR/sidekick.prompt.md')\"; rc=\$?; printf '\n[sidekick done exit=%s]\n' \"\$rc\"; exec bash"
+```
+
+Verify with `pgrep -fl "codex exec"`; unlike claude `-p`, codex exec streams
+progress into the pane while working.
+
+**Bidirectional communication contract (both engines, empirically verified):**
+
+- **While a run is in flight** — inbound: edit STATE.md (Standing rules / Next
+  Actions); the sidekick re-reads it at every checkpoint. Outbound: STATE.md
+  Progress Log + `tmux capture-pane`.
+- **Between runs** — resume the sidekick's own session with a new directive
+  (full conversation context is retained). Precondition: the prior process
+  must have EXITED (pane shows `[sidekick done exit=...]` / no `pgrep` hit) —
+  never fire `--resume`/`resume` at a still-running session; the in-flight
+  channel is STATE.md, and resume-while-running risks a duplicate concurrent
+  process on the same mission:
+  - claude: `claude --model sonnet --dangerously-skip-permissions -p --resume <session-id> "<directive>"`
+    — session id = newest `*.jsonl` under
+    `$CLAUDE_CONFIG_DIR/projects/<cwd-slug>/`, where `<cwd-slug>` is the
+    sidekick's working dir with every `/` replaced by `-`. macOS trap: `/tmp`
+    resolves to `/private/tmp`, so the slug starts `-private-tmp-...`, not
+    `-tmp-...` — looking up the naive slug finds nothing.
+  - codex: `codex exec resume <session-id> "<directive>"` — `--last` also
+    works but is GLOBAL across all codex sessions on the machine; never use
+    `--last` when more than one codex mission may be live. Session-id
+    discovery: codex prints `session id: <uuid>` in its startup banner —
+    capture it from the pane right after spawn and record it in STATE.md.
+    Fallback: `~/.codex/sessions/<YYYY>/<MM>/<DD>/rollout-<ts>-<id>.jsonl`,
+    BUT multi-agent child lanes write their own rollout files there seconds
+    apart — resume the PARENT (the rollout with no `parent_thread_id` in its
+    session_meta), never just the newest file (that may be a child lane).
+  - Record the session id in STATE.md's Ground truth once known, so any future
+    operator can steer without re-discovering it.
+- **Lanes/teams inside the sidekick** — claude: Agent Teams when allowed (see
+  Management section; empirically NOT available to `-p` sidekicks today —
+  Agent-tool subagents are the working default). codex: native `multi_agent`
+  support (stable; confirm on the host with
+  `codex features list | grep multi_agent`); if unavailable, sequential
+  sub-tasks with the fallback noted in STATE.md. Verifying a codex
+  multi-agent claim: the pane rendering collapses tool calls and narrated
+  paths can be embellished — cross-check `~/.codex/sessions` for child
+  rollout files whose `parent_thread_id` equals the sidekick's session id;
+  that filesystem evidence, not pane prose, is the proof.
 
 ## Core mechanics
 
@@ -107,7 +166,26 @@ are the durable state; every control channel is disposable.
 `/tmp/<project-slug>/sidekick/<branch-or-mission>/STATE.md` — `<project-slug>` is
 the repo name for repo missions, or any stable slug for non-repo missions (e.g.
 `/tmp/homelab-ops/sidekick/dashboard-watch/STATE.md`); `/` in branch names is
-sanitized to `-`. Scoping is MANDATORY — two sidekicks with different missions
+sanitized to `-`. Minimal skeleton (invent nothing else — deliverables go in a
+subdir like `docs/`, since root-file-pollution guards on some machines block
+writes next to STATE.md):
+
+```markdown
+# Sidekick STATE — <mission-slug>
+## Mission
+project-slug: <value>            (non-repo missions only)
+<mission text>
+## Ground truth
+engine: claude|codex · session-id: <record after spawn> · key facts
+## Standing rules
+<mission-specific constraints>
+## Progress Log
+- (spawn) initial state written by main session
+## Next Actions
+1. <first step>
+```
+
+Scoping is MANDATORY — two sidekicks with different missions
 sharing one STATE.md clobber each other's Mission/Next Actions. For fleet-wide /
 cross-branch missions, use a mission slug instead of a branch name (e.g.
 `/tmp/<repo>/sidekick/fleet-ci-health/STATE.md`). Sections: Mission, Ground
@@ -121,10 +199,26 @@ never touch the rest.
 
 ## Spawn procedure (main session)
 
-1. Compute a project slug and mission slug. Create the state dir. If STATE.md
-   exists, this is a RESPAWN: do not overwrite it; the new sidekick resumes from
-   it. If missing, write initial STATE.md from current context (mission, ground
-   truth, standing rules, next actions).
+1. Compute the slugs deterministically, then create the state dir:
+   - **Project slug** = repo name for repo missions. For non-repo missions,
+     pick a short 1–2 word topic identifier and write it verbatim as a
+     `project-slug: <value>` line at the top of STATE.md's Mission section so
+     a respawn can grep it back out instead of re-deriving it from memory.
+   - **Mission slug** = the git branch name (`/`→`-`) when the mission is
+     branch-scoped; otherwise the first 4–6 significant words of the mission
+     text, lowercased, non-alphanumeric replaced with `-`, collapsed/trimmed,
+     capped at ~40 chars. Must be reproducible from STATE.md on respawn.
+
+   ```bash
+   PROJECT_SLUG="<derived per above>"
+   MISSION_SLUG="<derived per above>"
+   STATE_DIR="/tmp/${PROJECT_SLUG}/sidekick/${MISSION_SLUG}"
+   mkdir -p "$STATE_DIR"
+   ```
+
+   If `$STATE_DIR/STATE.md` exists, this is a RESPAWN: do not overwrite it; the
+   new sidekick resumes from it. If missing, write initial STATE.md from current
+   context (mission, ground truth, standing rules, next actions).
 
 2. Write the startup prompt to a file next to STATE.md:
 
@@ -133,21 +227,30 @@ never touch the rest.
    You are sidekick — the persistent, restartable Sonnet Claude Code teammate for
    this mission. The main session may crash; YOU are the durable worker.
 
-   Model contract: you are running under `claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions`.
-   Do not switch to another model unless the user explicitly approved it in the
-   current mission.
+   Model contract: you are running under `claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions`
+   (or `codex exec --dangerously-bypass-approvals-and-sandbox` for the codex
+   engine). Do not switch to another model unless the user explicitly approved
+   it in the current mission.
 
    Startup protocol:
    1. Read STATE.md.
    2. Resume from Next Actions. Never redo logged steps.
    3. After every completed step, append Progress Log and rewrite Next Actions.
+   4. Before exiting a completed mission, rewrite Next Actions to
+      "(mission complete)" — never leave stale steps listed as if pending.
 
-   Lane management: when your harness allows Agent Teams, run your fan-out
-   lanes as a real Claude agent team (named teammates + task claims); if a
-   team fails to form (teams under -p are undocumented), fall back to
-   Agent-tool subagents and note it in STATE.md. Your operator steers you via
-   STATE.md and tmux, not SendMessage — check STATE.md's Standing rules /
-   Next Actions for new directives at every checkpoint.
+   Lane management (use ONLY the branch for your engine — the spawner must
+   keep the matching branch and delete the other when writing this prompt):
+   - claude engine: when your harness allows Agent Teams, run your fan-out
+     lanes as a real Claude agent team (named teammates + task claims); if a
+     team fails to form (teams under -p are undocumented), fall back to
+     Agent-tool subagents and note it in STATE.md.
+   - codex engine: use your native multi-agent capability to run lanes as
+     parallel subagents; if unavailable, work sequentially and note it in
+     STATE.md.
+   Your operator steers you via STATE.md and tmux, not SendMessage — check
+   STATE.md's Standing rules / Next Actions for new directives at every
+   checkpoint.
 
    Recovery discipline, verbatim and non-negotiable:
    COMMIT OFTEN: commit + push after EVERY green unit of work. Never hold more
@@ -159,8 +262,9 @@ never touch the rest.
      publishing, sending messages to humans) are human-only unless explicitly
      pre-authorized.
    - Sign-off on any deliverable requires adversarial verification. Use another
-     real Sonnet tmux Claude Code verifier, or a documented external CLI reviewer
-     only if the user explicitly approved non-Sonnet reviewers.
+     real sidekick-grade verifier on your own engine (claude: a Sonnet tmux
+     Claude Code session; codex: a separate codex exec session), or a
+     documented external CLI reviewer only if the user explicitly approved it.
    - Re-check file overlap before every ready/green claim, not just at spawn.
      A lane that was clean at spawn can become conflicting after a sibling lane
      merges and origin/main advances.
@@ -177,14 +281,33 @@ never touch the rest.
    PROMPT
    ```
 
-3. Launch a real tmux session:
+3. Launch a real tmux session. The `cd` target is the mission's repo root for
+   repo missions; for non-repo missions `cd "$STATE_DIR"` (that's where the
+   mission's files live). Preconditions, in order:
+   - **Directory check**: verify `$PWD` is the intended mission directory
+     (`git rev-parse --show-toplevel` matches expectation, or the non-repo
+     directory was explicitly chosen) — `--dangerously-skip-permissions`
+     gives the sidekick unattended full-permission execution there for the
+     mission's duration.
+   - **Liveness gate before any kill**: never kill blind —
+     ```bash
+     SESSION="sidekick-${MISSION_SLUG}"
+     if tmux has-session -t "$SESSION" 2>/dev/null; then
+       tmux capture-pane -t "$SESSION" -p -S -20 | tail -20
+       # If that output looks live/mid-task: STOP — steer the existing
+       # sidekick (STATE.md / send-keys) or confirm with the user before
+       # killing. Only kill a session whose pane shows it exited.
+     fi
+     ```
 
    ```bash
-   SESSION="sidekick-${MISSION_SLUG}"
-   tmux kill-session -t "$SESSION" 2>/dev/null || true
    tmux new-session -d -s "$SESSION" -x 160 -y 48 \
      "cd '$PWD' && CLAUDE_CONFIG_DIR='${CLAUDE_CONFIG_DIR:-$HOME/.claude}' claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions -p \"\$(cat '$STATE_DIR/sidekick.prompt.md')\"; rc=\$?; printf '\n[sidekick done exit=%s]\n' \"\$rc\"; exec bash"
    ```
+
+   (Claude launch shown. For the **codex engine**, substitute the codex launch
+   command from the Engines section — `CLAUDE_CONFIG_DIR` does not apply to
+   codex; its auth comes from `~/.codex`.)
 
 4. Verify the sidekick actually started before reporting success:
 
@@ -193,15 +316,28 @@ never touch the rest.
    tmux list-panes -a -F '#{session_name} #{pane_pid} #{pane_current_command}' \
      | grep "^${SESSION} "
    tmux capture-pane -t "$SESSION" -p -S -80 | tail -80
-   pgrep -fl -- "--teammate-mode tmux"   # ps may show the full binary path, so
-                                         # match on the flag, not "claude --model"
+   pgrep -fl -- "--teammate-mode tmux"   # claude engine. ps may show the full
+                                         # binary path, so match on the flag.
+   pgrep -fl "codex exec"                # codex engine equivalent
    ```
 
-   Note: in `-p` (print) mode the pane stays BLANK until the run finishes — an
-   empty capture is not failure. Liveness proof is the `pgrep` hit (a `claude`
-   process with the flag) plus, later, STATE.md's Progress Log advancing. A
-   pane showing "You've hit your session limit" means the sidekick launched on
-   a quota-exhausted account — check the auth env propagation above.
+   Multiple sidekicks routinely run on one machine — both pgrep patterns match
+   ALL of them. Disambiguate YOURS by piping through
+   `grep "$MISSION_SLUG"` (the slug appears in the launch command's cd path).
+
+   Socket gotcha: `tmux` commands target the socket in `$TMUX` — a supervisor
+   or verifier agent running inside a DIFFERENT tmux server (e.g. a swarm
+   worker pane) will see zero sidekick sessions with plain `tmux ls`. Use
+   `tmux -L default ls` (and `-L default` on capture-pane etc.) when checking
+   from another tmux context; sidekicks live on the default socket.
+
+   Note: in claude `-p` (print) mode the pane stays BLANK until the run
+   finishes — an empty capture is not failure; liveness proof is the `pgrep`
+   hit plus, later, STATE.md's Progress Log advancing. **Codex is the
+   opposite**: `codex exec` streams progress into the pane while working, so
+   a persistently blank pane on the codex engine IS a bad sign. A pane showing
+   "You've hit your session limit" means a claude sidekick launched on a
+   quota-exhausted account — check the auth env propagation above.
 
    If these checks do not show a real tmux session and a real Claude Code command,
    the sidekick did **not** start. Fix the tmux/Claude launch before doing any
@@ -212,10 +348,15 @@ never touch the rest.
 1. Locate the branch/mission-scoped STATE.md.
 2. Do not rewrite it.
 3. Reuse the existing `sidekick.prompt.md` if present; otherwise generate it from
-   STATE.md using the template above.
-4. Launch `tmux new-session` with the same Sonnet Claude Code command (including
-   the inline `CLAUDE_CONFIG_DIR` propagation — respawns from a fresh session
-   are exactly when the tmux server's stale env bites).
+   STATE.md using the template above — populate `<mission text>` with the
+   verbatim contents of STATE.md's `## Mission` section, never from
+   conversation memory (respawn implies no conversation context survived).
+4. Launch `tmux new-session` with the same launch command the mission used
+   originally — claude: the Sonnet command including the inline
+   `CLAUDE_CONFIG_DIR` propagation (respawns from a fresh session are exactly
+   when the tmux server's stale env bites); codex: the Engines-section codex
+   command (no `CLAUDE_CONFIG_DIR`). STATE.md's Ground truth should record
+   which engine the mission runs on.
 5. Capture pane output to verify it read STATE.md and resumed from Next Actions.
 
 ## Milestone reporting

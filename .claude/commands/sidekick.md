@@ -9,7 +9,12 @@ research sweeps, migrations, monitoring, ops runbooks, non-repo work — not jus
 this repo or PRs. Repo-specific rules go in the mission adapter, never the core
 protocol.
 
-Usage: `/sidekick [sonnet] [mission...]`
+Usage: `/sidekick [sonnet|codex] [mission...]`
+
+Engines (both verified 2026-07-10): claude Sonnet (default) or codex
+(`codex exec --dangerously-bypass-approvals-and-sandbox`, native `multi_agent`
+for lanes). Between-run steering: `claude -p --resume <session-id>` /
+`codex exec resume <session-id>`; in-flight steering via STATE.md for both.
 
 - `/sidekick` — respawn from the current project+branch's
   `/tmp/<project>/sidekick/<branch-or-mission>/STATE.md` (crash recovery;
