@@ -13,7 +13,7 @@ Read `~/.claude/skills/swarm/SKILL.md` and execute the full playbook with the pr
 ## Defaults
 
 - Engine: Workflow tool (ultracode). Agent teams only for interactive lanes needing mid-flight steering.
-- Durability: ALL swarm work runs INSIDE a sidekick — ALWAYS, no inline exception (`--sidekick [fable|sonnet]` only overrides the model; see `~/.claude/skills/sidekick/SKILL.md`): a real tmux Claude Code process, managed as a named Claude team teammate when the session allows Agent Teams; state at `/tmp/<repo>/sidekick/<branch>/STATE.md`, commit-often propagated to all sub-agents, restart via `/sidekick` in any session. The main loop supervises and relays only.
+- Durability: ALL swarm work runs INSIDE a sidekick — ALWAYS, no inline exception (`--sidekick [fable|sonnet]` only overrides the model; see `~/.claude/skills/sidekick/SKILL.md`): a real tmux Claude Code process, steered via STATE.md + tmux (its own session — not SendMessage-addressable), running its own lanes as a Claude agent team when allowed; state at `/tmp/<repo>/sidekick/<branch>/STATE.md`, commit-often propagated to all sub-agents, restart via `/sidekick` in any session. The main loop supervises and relays only.
 - Verification: 3-lens refute-by-default, ≥2/3 to survive; audit dead-verifier false kills.
 - Models: haiku (mechanical), sonnet (miners/verifiers/docs); never let fan-outs inherit the session model.
 - Output: disjoint OUTDIR per lane under repo `docs/` (or `~/roadmap/`), commit+push per completed package.

@@ -1,6 +1,6 @@
 ---
 name: sidekick
-description: Spawn or respawn a persistent, crash-recoverable Sonnet Claude Code teammate in tmux for ANY long-running mission — PR/CI fleets, research sweeps, migrations, monitoring, ops runbooks, data pipelines, multi-day projects in any repo or no repo at all — with disk-checkpointed state and commit-often discipline. When the session allows Agent Teams, the sidekick MUST be managed as a named Claude team teammate (team messaging is the control channel); raw tmux poll/send-keys is the fallback only. Use when the user says /sidekick, "respawn the sidekick", or wants long work to survive conversation crashes.
+description: Spawn or respawn a persistent, crash-recoverable Sonnet Claude Code teammate in tmux for ANY long-running mission — PR/CI fleets, research sweeps, migrations, monitoring, ops runbooks, data pipelines, multi-day projects in any repo or no repo at all — with disk-checkpointed state and commit-often discipline. Main-session control channel is STATE.md + tmux (the sidekick is its own session — NOT SendMessage-addressable); when Agent Teams is allowed, the sidekick runs its own lanes as a real Claude team and main-session supervision teammates are team-managed. Use when the user says /sidekick, "respawn the sidekick", or wants long work to survive conversation crashes.
 ---
 
 # Sidekick — persistent restartable Sonnet Claude Code teammate
@@ -33,36 +33,48 @@ if the orchestrating conversation crashes.
 
 Do not describe sidekick as an in-memory Agent lane or task-list pseudo team.
 
-## Management: Claude team FIRST when allowed (MANDATORY)
+## Management: use Claude teams where they actually exist (MANDATORY)
 
-The tmux process is the durability substrate; **how you manage it is a separate
-decision with a required priority order**:
+The tmux process is the durability substrate. Know what Agent Teams can and
+cannot do here before picking a control channel (verified against the official
+Agent Teams docs, 2026-07-10):
 
-1. **Claude team management (DEFAULT — use whenever the session allows Agent
-   Teams).** If the current session exposes teammate primitives (Agent tool with
-   named teammates + SendMessage), the sidekick is a **named member of the
-   session's Claude team**, not an anonymous pane you scrape:
-   - Name it `sidekick-<mission-slug>` consistently everywhere (tmux session
-     name, teammate name, STATE.md header) so it is addressable.
-   - `--teammate-mode tmux` on the launch command is what ties the sidekick's
-     process into Agent Teams' tmux split-pane display — that flag is the
-     team-integration mechanism, keep it.
-   - Steering and milestone requests go through team messaging (SendMessage to
-     the named teammate) when the harness makes the sidekick addressable;
-     `tmux capture-pane` remains the liveness/proof mechanism, but it is NOT
-     the primary control channel in team mode.
-   - Wait for a teammate's shutdown to be confirmed before reusing its name —
-     same-name respawn while a prior instance is still winding down spawns
-     duplicate concurrent workers on the same mission.
-2. **Raw tmux management (FALLBACK ONLY).** Use `tmux capture-pane` for reading
-   and `tmux send-keys` for steering **only when** Agent Teams is not allowed in
-   the session (no teammate tools exposed, policy disables teams, headless/cron
-   context). If you find yourself steering via send-keys, first check whether
-   team primitives were actually unavailable — falling back silently when teams
-   were allowed is a management-protocol violation.
+**Hard fact — the tmux sidekick is NOT SendMessage-addressable from the main
+session.** An externally launched `tmux new-session ... claude -p` process is
+its own Claude Code session with its own team; Agent Teams is one-team-per-
+session with no cross-session join, and `--teammate-mode tmux` is a display-
+mode flag (it renders teammates *that a session itself spawns* as tmux split
+panes — it does not register the process into anyone else's team). Do not
+attempt SendMessage to the sidekick and do not "debug" its silence — the
+route does not exist (see anthropics/claude-code#24771 for messaging-routing
+failures even for lead-spawned tmux teammates).
 
-Either way the crash-recovery story is unchanged: STATE.md on disk + git pushes
-are the durable state; the management channel is disposable.
+Required channel per relationship:
+
+1. **Main session → sidekick: STATE.md + tmux (this IS the channel, not a
+   fallback).** Durable directives go into STATE.md (Standing rules / Next
+   Actions); interactive nudges via `tmux send-keys`; reading/proof via
+   `tmux capture-pane`.
+2. **Inside the sidekick: run lanes as a real Claude agent team when allowed
+   (DEFAULT).** When the sidekick's own harness exposes Agent Teams, its
+   fan-out lanes run as named teammates (task claims + SendMessage between
+   sidekick and lanes) rather than fire-and-forget subagents — this is where
+   `--teammate-mode tmux` earns its keep, rendering the sidekick's own
+   teammates as split panes inside the sidekick's tmux session. Caveat: teams
+   under `-p` (print mode) are undocumented; if a team fails to form, fall
+   back to Agent-tool subagents and note that in STATE.md.
+3. **In the main session: supervision teammates ARE team-managed.** Any
+   companion lanes the main session spawns via its own Agent tool (verifiers,
+   watchers) are named, SendMessage-addressable teammates — but they die with
+   the parent CLI, so they must never be the durable worker. Wait for a
+   teammate's shutdown to be confirmed before reusing its name — same-name
+   respawn while a prior instance winds down spawns duplicate concurrent
+   workers on the same mission.
+
+Name everything `sidekick-<mission-slug>` consistently (tmux session, STATE.md
+header, any related teammate names) so humans and agents can correlate the
+pieces. Crash-recovery is unchanged either way: STATE.md on disk + git pushes
+are the durable state; every control channel is disposable.
 
 ## Invocation
 
@@ -113,6 +125,13 @@ never touch the rest.
    1. Read STATE.md.
    2. Resume from Next Actions. Never redo logged steps.
    3. After every completed step, append Progress Log and rewrite Next Actions.
+
+   Lane management: when your harness allows Agent Teams, run your fan-out
+   lanes as a real Claude agent team (named teammates + task claims); if a
+   team fails to form (teams under -p are undocumented), fall back to
+   Agent-tool subagents and note it in STATE.md. Your operator steers you via
+   STATE.md and tmux, not SendMessage — check STATE.md's Standing rules /
+   Next Actions for new directives at every checkpoint.
 
    Recovery discipline, verbatim and non-negotiable:
    COMMIT OFTEN: commit + push after EVERY green unit of work. Never hold more
@@ -176,9 +195,9 @@ never touch the rest.
 
 ## Milestone reporting
 
-In Claude-team mode, milestones flow through team messaging first; the tmux pane
-capture is attached as proof. In raw-tmux fallback mode only, the main session
-polls the tmux pane directly. Either way the
+The main session polls the tmux pane (`capture-pane`) and STATE.md and relays
+dense milestone updates — the sidekick cannot SendMessage the main session
+(separate sessions, separate teams). The
 sidekick itself writes durable state to STATE.md and git. A report is not valid
 unless it includes proof: tmux capture, git status/log, PR/commit URL, or test
 output.

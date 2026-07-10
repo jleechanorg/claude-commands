@@ -19,12 +19,15 @@ Usage: `/sidekick [sonnet] [mission...]`
   non-repo research mission using the same Sonnet tmux sidekick.
 
 Behavior contract (details in the skill):
-0. **Claude team management first when allowed** — if the session exposes Agent
-   Teams primitives (named teammates + SendMessage), the sidekick is managed as
-   a named Claude team teammate (`sidekick-<mission-slug>`); team messaging is
-   the control channel and `--teammate-mode tmux` ties the process into the
-   team's split-pane display. Raw tmux capture-pane/send-keys management is the
-   FALLBACK only, for sessions where teams are not allowed.
+0. **Claude teams where they actually exist** — the tmux sidekick is its OWN
+   session and is NOT SendMessage-addressable from the main session (Agent
+   Teams is one-team-per-session, no cross-session join; `--teammate-mode
+   tmux` is display-only for teammates a session itself spawns). Main-session
+   control channel is STATE.md + `tmux send-keys`/`capture-pane`. When Agent
+   Teams is allowed: the sidekick runs its OWN fan-out lanes as a named Claude
+   team (split panes inside its tmux session), and any main-session
+   supervision lanes are team-managed Agent-tool teammates (addressable, but
+   they die with the CLI — never the durable worker).
 1. State file first — respawns never overwrite an existing STATE.md.
 2. One named background teammate: a real `tmux new-session -d` running
    `claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions -p "<mission prompt>"`.
