@@ -1,6 +1,6 @@
 ---
 name: sidekick
-description: Spawn or respawn a persistent, crash-recoverable sidekick in tmux (claude Sonnet by default, codex engine supported) for ANY long-running mission — PR/CI fleets, research sweeps, migrations, monitoring, ops runbooks, data pipelines, multi-day projects in any repo or no repo at all — with disk-checkpointed state and commit-often discipline. Main-session control channel is STATE.md + tmux (the sidekick is its own session — NOT SendMessage-addressable); when Agent Teams is allowed, the sidekick runs its own lanes as a real Claude team and main-session supervision teammates are team-managed. Use when the user says /sidekick, "respawn the sidekick", or wants long work to survive conversation crashes.
+description: Spawn or respawn a persistent, crash-recoverable sidekick in tmux (claude Sonnet by default, codex engine supported) for ANY long-running mission — PR/CI fleets, research sweeps, migrations, monitoring, ops runbooks, data pipelines, multi-day projects in any repo or no repo at all — with disk-checkpointed state and commit-often discipline. Main-session control channel is STATE.md + tmux (the sidekick is its own session — NOT SendMessage-addressable); INTERACTIVE (TUI) sidekicks run their lanes as a real Claude team, while -p sidekicks always fall back to Agent-tool subagents; main-session supervision teammates are team-managed. Use when the user says /sidekick, "respawn the sidekick", or wants long work to survive conversation crashes.
 ---
 
 # Sidekick — persistent restartable Sonnet Claude Code teammate
@@ -80,10 +80,12 @@ Required channel per relationship:
    teammates as split panes inside the sidekick's tmux session. **Empirical
    reality (claude 2.1.197, verified 2026-07-10): a `-p` print-mode sidekick
    gets NO team primitives even with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
-   — no TeamCreate, no named-teammate tools — so the Agent-tool subagent
-   fallback is the DEFAULT outcome today, not an edge case.** Attempt the
-   team, verify whether it formed, record the answer in STATE.md, and never
-   report lanes as "team-based" without that proof.
+   — Agent-tool subagent fallback is the guaranteed outcome in `-p`. An
+   INTERACTIVE (TUI) sidekick DOES form a real team — named teammates,
+   two-way SendMessage with its lanes, split panes (verified; see the mode
+   choice in the Engines section).** Attempt the team, verify whether it
+   formed, record the answer in STATE.md, and never report lanes as
+   "team-based" without that proof.
 3. **In the main session: supervision teammates ARE team-managed.** Any
    companion lanes the main session spawns via its own Agent tool (verifiers,
    watchers) are named, SendMessage-addressable teammates — but they die with
@@ -120,6 +122,54 @@ tmux new-session -d -s "$SESSION" -x 160 -y 48 \
 
 Verify with `pgrep -fl "codex exec"`; unlike claude `-p`, codex exec streams
 progress into the pane while working.
+
+**Mode choice: `-p` (headless) vs interactive TUI — verified 2026-07-10.**
+`-p` is the default for unattended batch missions (clean `[sidekick done
+exit=]` marker, `-o`-style scripting), but it gets NO team primitives. For
+missions that benefit from a REAL in-sidekick Claude team or live steering,
+launch the interactive TUI in tmux instead:
+
+```bash
+tmux new-session -d -s "$SESSION" -x 200 -y 50 \
+  "cd '$PWD' && CLAUDE_CONFIG_DIR='${CLAUDE_CONFIG_DIR:-$HOME/.claude}' CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions; exec bash"
+```
+
+- `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is REQUIRED for team formation —
+  without it there are no teammate primitives to find.
+- First run in a new directory shows a **trust dialog** — capture-pane, then
+  `tmux send-keys -t "$SESSION" Enter` to accept before sending the mission.
+- Deliver the mission as a pointer to STATE.md (single source of truth), with
+  text and the submitting Enter as **separate** send-keys calls — an Enter
+  bundled with the text gets swallowed by paste handling:
+  ```bash
+  tmux send-keys -t "$SESSION" "Read STATE.md in this directory and execute its Next Actions exactly."
+  sleep 2 && tmux send-keys -t "$SESSION" Enter
+  ```
+- **Completion detection** (no exit marker in TUI mode): have the mission
+  print a unique DONE token AND rewrite STATE.md's Next Actions to
+  "(mission complete)". Gate on the STATE.md condition, not the pane alone —
+  the mission text echoed in scrollback contains the same token and produces
+  false-positive greps (hit live 2026-07-10).
+- **Collecting lane results**: teammates go `idle_notification` WITHOUT
+  auto-delivering their findings — plain teammate output is not forwarded.
+  The sidekick (team lead) must SendMessage-nudge each idle lane to get its
+  report (verified live 2026-07-10).
+- **Teardown** (the TUI never exits on its own):
+  `tmux kill-session -t "$SESSION"` after verifying STATE.md shows
+  "(mission complete)" and deliverables are on disk.
+- **Verified capabilities in interactive mode (claude 2.1.197):** REAL named
+  teammates form (Agent tool with `name`), SendMessage flows BOTH ways
+  between the sidekick and its lanes, each teammate gets a tmux split pane
+  (`--teammate-mode tmux` display), and the TUI shows a live team roster.
+- **In-flight bidi:** `tmux send-keys` delivers live operator directives to a
+  working TUI session (verified on both engines' TUIs) — richer than the
+  `-p` STATE.md-checkpoint channel.
+- Tradeoffs: no exit marker (see Completion detection + Teardown above), and
+  an idle TUI session keeps holding its context.
+- Codex interactive equivalent: `codex --dangerously-bypass-approvals-and-sandbox`
+  (trust dialog too; note `--skip-git-repo-check` is exec-only and REJECTED by
+  the TUI). Real `spawn_agent` multi-agent lanes verified in TUI mode via
+  child rollouts carrying `parent_thread_id`.
 
 **Bidirectional communication contract (both engines, empirically verified):**
 

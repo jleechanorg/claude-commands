@@ -32,10 +32,12 @@ Behavior contract (details in the skill):
    Teams is one-team-per-session, no cross-session join; `--teammate-mode
    tmux` is display-only for teammates a session itself spawns). Main-session
    control channel is STATE.md + `tmux send-keys`/`capture-pane`. When Agent
-   Teams is allowed: the sidekick runs its OWN fan-out lanes as a named Claude
-   team (split panes inside its tmux session), and any main-session
-   supervision lanes are team-managed Agent-tool teammates (addressable, but
-   they die with the CLI — never the durable worker).
+   Teams is allowed: an INTERACTIVE (TUI) sidekick runs its OWN fan-out lanes
+   as a named Claude team (two-way SendMessage with lanes, split panes inside
+   its tmux session); a `-p` sidekick has NO team primitives and always falls
+   back to Agent-tool subagents. Main-session supervision lanes are
+   team-managed Agent-tool teammates (addressable, but they die with the CLI
+   — never the durable worker).
 1. State file first — respawns never overwrite an existing STATE.md.
 2. One named background teammate: a real `tmux new-session -d` running
    `claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions -p "<mission prompt>"`.
