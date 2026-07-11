@@ -1836,8 +1836,8 @@
   "penguinModeOrgEnabled": false,
   "pluginUsage": {
     "superpowers@claude-plugins-official": {
-      "usageCount": 4518,
-      "lastUsedAt": 1783408878970,
+      "usageCount": 4519,
+      "lastUsedAt": 1783726715637,
       "lastUsedNumStartups": 3968
     },
     "pyright-lsp@claude-plugins-official": {
@@ -5467,7 +5467,7 @@
       "hasClaudeMdExternalIncludesWarningShown": false,
       "hasCompletedProjectOnboarding": true,
       "hasTrustDialogAccepted": true,
-      "hasUnseenTeamArtifacts": true,
+      "hasUnseenTeamArtifacts": false,
       "lastAPIDuration": 0,
       "lastAPIDurationWithoutRetries": 0,
       "lastCost": 0,
