@@ -1,5 +1,5 @@
 {
-  "numStartups": 3968,
+  "numStartups": 3969,
   "hasSeenTasksHint": true,
   "customApiKeyResponses": {
     "approved": [
@@ -10,7 +10,7 @@
   "tipsHistory": {
     "agent-flag": 3968,
     "agents-view-multiclauding": 34,
-    "c4e-desktop": 3641,
+    "c4e-desktop": 3969,
     "c4e-remote-sessions": 3653,
     "c4e-ultrareview": 3678,
     "color-when-multi-clauding": 3957,
@@ -805,7 +805,7 @@
       }
     }
   },
-  "closedIssuesLastChecked": 1783358979367,
+  "closedIssuesLastChecked": 1783730268971,
   "deepLinkTerminal": "Ghostty",
   "feedbackSurveyState": {
     "lastShownTime": 1783192591185
@@ -1836,9 +1836,9 @@
   "penguinModeOrgEnabled": false,
   "pluginUsage": {
     "superpowers@claude-plugins-official": {
-      "usageCount": 4519,
-      "lastUsedAt": 1783726715637,
-      "lastUsedNumStartups": 3968
+      "usageCount": 4520,
+      "lastUsedAt": 1783730272737,
+      "lastUsedNumStartups": 3969
     },
     "pyright-lsp@claude-plugins-official": {
       "usageCount": 0,
@@ -4672,7 +4672,7 @@
         "team_runner.py",
         "test_code_execution_evidence.py"
       ],
-      "exampleFilesGeneratedAt": 1782676590763,
+      "exampleFilesGeneratedAt": 1783730285478,
       "hasClaudeMdExternalIncludesApproved": false,
       "hasClaudeMdExternalIncludesWarningShown": false,
       "hasCompletedProjectOnboarding": true,
@@ -4680,29 +4680,29 @@
       "lastAPIDuration": 0,
       "lastAPIDurationWithoutRetries": 0,
       "lastCost": 0,
-      "lastDuration": 232759259,
-      "lastFpsAverage": 0.04,
-      "lastFpsLow1Pct": 2.77,
+      "lastDuration": 53263,
+      "lastFpsAverage": 0.68,
+      "lastFpsLow1Pct": 7.11,
       "lastGracefulShutdown": true,
       "lastLinesAdded": 0,
       "lastLinesRemoved": 0,
       "lastModelUsage": {},
-      "lastSessionId": "1116fcec-acd7-4e6f-8b48-8341d9c4e08b",
+      "lastSessionId": "253a42d4-7b80-4d01-861b-541e037084f4",
       "lastSessionMetrics": {
-        "frame_duration_ms_avg": 17.427759761903005,
-        "frame_duration_ms_count": 21,
-        "frame_duration_ms_max": 361.567500000001,
-        "frame_duration_ms_min": 0.062167000000044936,
-        "frame_duration_ms_p50": 0.2010840000002645,
-        "frame_duration_ms_p95": 0.7313749999957508,
-        "frame_duration_ms_p99": 289.40027500000025,
-        "hook_duration_ms_avg": 1282,
-        "hook_duration_ms_count": 1,
-        "hook_duration_ms_max": 1282,
-        "hook_duration_ms_min": 1282,
-        "hook_duration_ms_p50": 1282,
-        "hook_duration_ms_p95": 1282,
-        "hook_duration_ms_p99": 1282
+        "frame_duration_ms_count": 28,
+        "frame_duration_ms_min": 0.07533300000068266,
+        "frame_duration_ms_max": 140.69958400000178,
+        "frame_duration_ms_avg": 10.275442071429097,
+        "frame_duration_ms_p50": 0.6489999999994325,
+        "frame_duration_ms_p95": 48.652233999999154,
+        "frame_duration_ms_p99": 120.65032900000097,
+        "hook_duration_ms_count": 2,
+        "hook_duration_ms_min": 2239,
+        "hook_duration_ms_max": 4016,
+        "hook_duration_ms_avg": 3127.5,
+        "hook_duration_ms_p50": 3127.5,
+        "hook_duration_ms_p95": 3927.1499999999996,
+        "hook_duration_ms_p99": 3998.23
       },
       "lastToolDuration": 0,
       "lastTotalCacheCreationInputTokens": 0,
@@ -4713,7 +4713,8 @@
       "lastVersionBase": "2.1.197",
       "mcpContextUris": [],
       "mcpServers": {},
-      "projectOnboardingSeenCount": 0
+      "projectOnboardingSeenCount": 0,
+      "hasUnseenTeamArtifacts": false
     },
     "/Users/jleechan/llm_wiki/wiki": {
       "hasTrustDialogAccepted": true
@@ -6767,7 +6768,7 @@
   "tipLifetimeShownCounts": {
     "agent-flag": 141,
     "agents-view-multiclauding": 5,
-    "c4e-desktop": 52,
+    "c4e-desktop": 53,
     "c4e-remote-sessions": 52,
     "c4e-ultrareview": 52,
     "color-when-multi-clauding": 172,
