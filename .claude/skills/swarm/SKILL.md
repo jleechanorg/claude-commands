@@ -33,6 +33,14 @@ this: 3 lane-hours frozen, 2026-07-11.
 
 ## Sidekick durability layer ([Devin Fusion](https://cognition.com/blog/devin-fusion) sidekick pattern)
 
+**DEFAULT (user directive 2026-07-11): the sidekick and its lanes run as named
+in-process teammates of the INVOKING session's Agent Team — visible in the
+user's panel, SendMessage-addressable ("I want it in this session"). External
+tmux sidekick sessions are the FALLBACK only (must-survive-session-exit
+missions / Agent Teams unavailable); durability in the default mode comes from
+STATE.md + a P1 resumption bead + commit-often, not process persistence. See
+sidekick SKILL.md § "DEFAULT MODE: in-session teammate".**
+
 **ALL /swarm work runs inside the sidekick — always, no exceptions** (user directive, 2026-07; reaffirmed 2026-07-10). The main session does NOT own the fan-outs — it spawns a **sidekick** (see `~/.claude/skills/sidekick/SKILL.md`, command `/sidekick`) and the sidekick runs the swarm:
 
 - Main session: writes/updates `STATE.md`, creates TaskList lanes, spawns the sidekick, relays milestone messages. Nothing load-bearing stays only in conversation context.

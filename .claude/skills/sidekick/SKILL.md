@@ -10,6 +10,35 @@ supervises and relays milestones. If the conversation crashes, a fresh session
 respawns the sidekick and it resumes from a disk state file with zero
 conversation context.
 
+## DEFAULT MODE: in-session teammate (user directive 2026-07-11 — "I want it in this session")
+
+**Spawn the sidekick (and its lanes) as named in-process teammates of the
+INVOKING session's Agent Team** — `Agent({name: "sidekick", model: "sonnet",
+run_in_background: true})` plus one named teammate per lane. This is what the
+user means by "real /team-claude": the roster is **visible in the user's own
+panel**, every member is SendMessage-addressable both ways, and the user can
+watch/steer without attaching to anything.
+
+- Durability in this mode = **STATE.md checkpoints + a P1 resumption bead
+  (`br`) + commit-often**, NOT process persistence — teammates die with the
+  conversation; that is an accepted trade for visibility. On crash: a fresh
+  session re-reads STATE.md / `br show <runbook-bead>` and respawns the same
+  named teammates (one spawn, zero context re-derivation).
+- **External `tmux new-session` sidekicks are the FALLBACK ONLY** — for
+  missions that must survive the conversation process itself (multi-day
+  unattended runs) or when Agent Teams is unavailable. Even then, disclose the
+  panel-invisibility + attach command up front. Real incident (2026-07-11):
+  externally launched tmux sidekicks read as "the team never started" to the
+  user because nothing appeared in their panel; missions were migrated to
+  in-session teammates on explicit request.
+- Migration recipe (tmux → in-session): direct the tmux sidekick to checkpoint
+  STATE.md + shut down its lanes, kill its session, then spawn the same-named
+  teammates in-session pointed at the same STATE.md.
+
+**Everything below (tmux launch commands, engines, stall watchdog) applies to
+the FALLBACK external-tmux mode.** The STATE.md / beads / commit-often /
+milestone-reporting protocol applies to BOTH modes.
+
 **Pattern origin:** [Devin Fusion](https://cognition.com/blog/devin-fusion) —
 Cognition's hybrid-model harness that keeps frontier-level coding intelligence
 while cutting costs with sidekick agents and dynamic routing. This skill is the
@@ -498,3 +527,28 @@ sidekick externalizes ALL state to disk + git (frequent pushes), so recovery cos
 is one tmux Sonnet Claude Code respawn. Parallel verifier lanes can still happen,
 but they must be real Sonnet tmux Claude Code sessions unless the user explicitly
 approves another model/tool for that mission.
+
+## Drive-loop invariants (from PR #8292 retro, 2026-07-11)
+
+1. **Endgame single-writer freeze.** When a PR enters its final green drive
+   (all code review findings addressed, chasing CI/review convergence), ONE
+   agent owns pushes. Before starting the endgame, check for co-writers
+   (`git log` author cadence, FixPR automation comments, other sessions'
+   uncommitted worktree state) and either take the lock (log it in STATE.md)
+   or wait. A push landing mid-cycle costs the full serialized CI pyramid
+   (~40 min) AND any live bot approval — PR #8292 lost a CodeRabbit APPROVED
+   granted at 23:42Z to a 23:56Z sibling push and spent 4+ hours failing to
+   re-obtain it.
+2. **External-bot requests are once-per-head.** Before posting any bot
+   re-request (`@coderabbitai full review`, Bugbot trigger), list existing
+   request comments; if one already exists for the current head, DO NOT post
+   another — duplicates escalate the bot's rate-limit window (observed:
+   01:04Z + 01:19Z requests pushed CodeRabbit's window to 02:17Z, then
+   silence). Re-request only after a genuinely new head or >2h of silence.
+3. **Background waits need a deadman.** Any "poller/watcher will wake me"
+   plan must include a second, independent check (main-session monitor, or
+   an in-turn blocking until-loop instead of a background task). Two
+   background pollers died silently on PR #8292, each costing ~1h of
+   undetected idle. Prefer in-turn blocking polls for waits under ~1h;
+   if using a background task, the spawner must record the expected
+   wake-by time in STATE.md so anyone reading it can detect the miss.

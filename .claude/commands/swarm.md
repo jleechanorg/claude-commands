@@ -6,6 +6,10 @@ execution_mode: immediate
 
 # /swarm <goal> [--engine workflow|team] [--shape retro|review|solutions|innov|triage] [--sidekick [model]]
 
+**Sidekick default mode (user directive 2026-07-11): in-session named teammates
+visible in the user's panel — NOT external tmux sessions (those are fallback
+only). See sidekick SKILL.md § "DEFAULT MODE: in-session teammate".**
+
 The sidekick wrap is mandatory regardless of `--engine` — `--engine` picks the
 fan-out mechanism the sidekick uses (Workflow tool vs agent-team lanes); it is
 never a way to skip the sidekick. `--sidekick [model]` only overrides the model.

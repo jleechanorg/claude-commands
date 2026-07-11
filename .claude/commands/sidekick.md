@@ -1,4 +1,9 @@
-# /sidekick — spawn or respawn a real Sonnet Claude Code sidekick in tmux
+# /sidekick — spawn or respawn a Sonnet sidekick (DEFAULT: in-session teammate)
+
+**DEFAULT (user directive 2026-07-11): the sidekick is a named in-process
+teammate of THIS session's Agent Team — visible in the user's panel,
+SendMessage-addressable ("I want it in this session"). tmux external sessions
+are the FALLBACK only (must-survive-session-exit / no Agent Teams).**
 
 Pattern origin: [Devin Fusion](https://cognition.com/blog/devin-fusion)
 (hybrid-model harness — cost-cutting sidekick agents + dynamic routing).
