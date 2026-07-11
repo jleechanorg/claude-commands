@@ -88,3 +88,32 @@ stronger reviewer plausibly mattered.
 4. **Exceptions are logged, never narrated away**: a deliberate deviation
    (private hosting) is written into the bundle as an accepted PARTIAL
    exception at decision time — not discovered by a reviewer later.
+
+## Severity assessment (added 2026-07-11, after bead triage)
+
+Was anything the fresh reviewer found actually SERIOUS? Honest ranking:
+
+- **Serious — one finding.** The private-hosting + "all published" overclaim
+  (bead rev-xwc0i, P1). Serious for two reasons: it is a REPEAT of a known
+  failure class (PR #6161, 2026-04-11 — the evidence-review skill documents it
+  as a historical lesson, and it happened again anyway), and it converts a
+  deliberate, defensible engineering decision (keep identity-exposing footage
+  private) into a false claim simply by omitting the disclosure. The artifacts
+  were fine; the sentence about them wasn't. Status: mitigated (exception
+  logged in-bundle, PR bodies disclose "collaborators only"); full fix (redact
+  banners → public rehost) tracked in rev-xwc0i.
+- **Moderate hygiene — three findings, all fixed same-day.** Missing PR-body
+  evidence links (rev-jamxs), missing checksum manifest (rev-wcs6q), and the
+  circular "supervisor verified it" provenance (rev-kbmn9). None indicated
+  wrong results — the transcript re-run reproduced every PASS — but each made
+  a true claim unverifiable, which per /es is the same as unproven.
+- **Zero findings against the technical substance.** Team formation, split
+  panes, two-way SendMessage, codex spawn_agent lanes, bidi steering, SHA
+  provenance — the reviewer rated the core mechanics STRONG and explicitly
+  concluded "this isn't fabricated." Nothing in the skill content, the demo
+  results, or the recorded behavior was refuted.
+
+Net: the fresh window found no correctness defects, one serious process
+defect (a recurring overclaim class), and three verifiability gaps. That
+distribution is itself the lesson — after enough same-context review layers,
+the remaining defects live in the REPORTING, not the work.
