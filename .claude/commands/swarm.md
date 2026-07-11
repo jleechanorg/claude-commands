@@ -12,6 +12,17 @@ never a way to skip the sidekick. `--sidekick [model]` only overrides the model.
 
 Run the goal as a multi-agent swarm with adversarial verification, cost-routed subagents, and artifacts committed to a PR.
 
+**Instant start (mandatory UX).** The FIRST tool calls of any `/swarm <goal>`
+invocation — before any analysis, recall, or lane scoping — are:
+1. Write the branch/mission-scoped STATE.md (30 seconds, from the goal text).
+2. Spawn the sidekick as an **interactive tmux TUI** (claude Sonnet,
+   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, `--teammate-mode tmux`) so its
+   lanes run as a REAL Claude team — split panes, named teammates.
+3. Spawn a named main-session supervision teammate
+   (`sidekick-supervisor-<mission-slug>`) via the Agent tool.
+The user must see a live Claude team + sidekick within the first minute;
+context recall and lane design happen after the team exists, not before.
+
 Read `~/.claude/skills/swarm/SKILL.md` and execute the full playbook with the provided goal.
 
 ## Defaults

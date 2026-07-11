@@ -11,6 +11,11 @@ protocol.
 
 Usage: `/sidekick [sonnet|codex] [mission...]`
 
+**Instant start:** spawning the tmux session is the FIRST action on any
+`/sidekick` invocation — write STATE.md and launch; no preflight questions.
+Use interactive TUI mode whenever the mission benefits from real team lanes
+or live steering; `-p` for unattended batch missions.
+
 Engines (both verified 2026-07-10): claude Sonnet (default) or codex
 (`codex exec --dangerously-bypass-approvals-and-sandbox`, native `multi_agent`
 for lanes). Between-run steering: `claude -p --resume <session-id>` /

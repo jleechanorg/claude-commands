@@ -149,7 +149,11 @@ tmux new-session -d -s "$SESSION" -x 200 -y 50 \
   print a unique DONE token AND rewrite STATE.md's Next Actions to
   "(mission complete)". Gate on the STATE.md condition, not the pane alone —
   the mission text echoed in scrollback contains the same token and produces
-  false-positive greps (hit live 2026-07-10).
+  false-positive greps (hit live 2026-07-10). The STATE.md grep has the SAME
+  trap: the mission description usually contains the literal string too, so
+  use a full-line exact match (`grep -qx "(mission complete)"`) plus a
+  deliverable-file existence check — never a plain substring grep (a
+  supervisor false-positived on this live, 2026-07-10).
 - **Collecting lane results**: teammates go `idle_notification` WITHOUT
   auto-delivering their findings — plain teammate output is not forwarded.
   The sidekick (team lead) must SendMessage-nudge each idle lane to get its
