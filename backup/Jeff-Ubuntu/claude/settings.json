@@ -1,24 +1,15 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "skillListingBudgetFraction": 0.04,
+  "skillListingBudgetFraction": 0.05,
   "env": {
-    "AO_ALLOW_GH_PR_MERGE": "1",
-    "BASH_DEFAULT_TIMEOUT_MS": "60000",
     "BASH_MAX_OUTPUT_LENGTH": "5000",
-    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "800000",
-    "CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN": "1",
-    "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
-    "CLAUDE_CODE_DISABLE_MOUSE": "1",
+    "BASH_DEFAULT_TIMEOUT_MS": "60000",
     "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1",
-    "CLAUDE_CODE_ENABLE_TASKS": "true",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "950000",
-    "DISABLE_AUTOUPDATER": "1",
-    "ENABLE_TOOL_SEARCH": "true"
+    "ENABLE_TOOL_SEARCH": "true",
+    "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1"
   },
   "permissions": {
     "allow": [
-      "Bash",
       "Bash(git:*)",
       "Bash(gh:*)",
       "Bash(python:*)",
@@ -26,6 +17,7 @@
       "Bash(vpython:*)",
       "Bash(TESTING=true python:*)",
       "Bash(TESTING=true python3:*)",
+      "Bash(TESTING=true python:*)",
       "Bash(./run_tests.sh)",
       "Bash(../run_tests.sh)",
       "Bash(find:*)",
@@ -180,76 +172,19 @@
     "deny": [],
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus",
+  "model": "claude-fable-5[1m]",
   "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/disable-bughunter.sh",
-            "timeout": 5000
-          },
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/auto-trust-workspace.sh",
-            "timeout": 5000
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": []
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/hooks/always_approve.sh",
-            "timeout": 5000
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/autoapprove.py\" ] && python3 \"$ROOT/.claude/hooks/autoapprove.py\"; fi; exit 0'"
           },
           {
             "type": "command",
-            "command": "bash ~/.claude/hooks/PreToolUse.sh",
-            "timeout": 5000
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/pre-commit-detached-guard.sh",
-            "timeout": 5000
-          },
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/rtk-hook-guard.sh",
-            "timeout": 5000
-          },
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/enforce-claudeaf-agentf.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/enforce-gitidentity-agentf.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/enforce-gh-account-agentf.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/block-agentf-push-to-jleechanorg.sh",
-            "timeout": 10000
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/context_monitor.py\" ] && python3 \"$ROOT/.claude/hooks/context_monitor.py\"; fi; exit 0'"
           }
         ]
       },
@@ -258,12 +193,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/hooks/openclaw-config-guard.sh",
-            "timeout": 5000
-          },
-          {
-            "type": "command",
-            "command": "bash /Users/jleechan/.local/bin/conflict-warn-pre-tool.sh",
+            "command": "bash /home/jleechan/.local/bin/conflict-warn-pre-tool.sh",
             "timeout": 15000
           }
         ]
@@ -273,90 +203,45 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/hooks/openclaw-config-guard.sh",
-            "timeout": 5000
-          },
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/check_root_files.sh",
-            "timeout": 5000
-          },
-          {
-            "type": "command",
-            "command": "bash /Users/jleechan/.local/bin/conflict-warn-pre-tool.sh",
+            "command": "bash /home/jleechan/.local/bin/conflict-warn-pre-tool.sh",
             "timeout": 15000
           }
         ]
-      },
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/block-runtime-mirror-edits.sh",
-            "timeout": 5000
-          }
-        ]
       }
     ],
-    "PostToolUse": [
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ~/.claude/hooks/python_async_lint.py",
-            "timeout": 5000
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
+    "Stop": [
       {
         "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/hooks/UserPromptSubmit.sh",
-            "timeout": 5000
-          },
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/disable-bughunter.sh",
-            "timeout": 5000
-          },
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/compose-commands.sh --",
-            "timeout": 10000
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); if [ -x \"$ROOT/.claude/hooks/git-header.sh\" ]; then exec \"$ROOT/.claude/hooks/git-header.sh\" --status-only; fi; fi; exit 0'"
           }
         ]
       }
     ]
   },
-  "enableWorkflows": true,
   "statusLine": {
     "type": "command",
     "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); if [ -x \"$ROOT/.claude/hooks/git-header.sh\" ]; then exec \"$ROOT/.claude/hooks/git-header.sh\" --status-only; fi; fi; if [ -x \"$HOME/.claude/hooks/git-header.sh\" ]; then exec \"$HOME/.claude/hooks/git-header.sh\" --status-only; fi'",
     "padding": 0
   },
   "enabledPlugins": {
-    "superpowers-chrome@superpowers-marketplace": false,
-    "superpowers@claude-plugins-official": true,
-    "pyright-lsp@claude-plugins-official": true
+    "warp@claude-code-warp": true,
+    "rust-analyzer-lsp@claude-plugins-official": true
   },
-  "effortLevel": "high",
+  "extraKnownMarketplaces": {
+    "claude-code-warp": {
+      "source": {
+        "source": "github",
+        "repo": "warpdotdev/claude-code-warp"
+      }
+    }
+  },
   "skipDangerousModePermissionPrompt": true,
+  "skipWorkflowUsageWarning": true,
   "theme": "dark",
   "verbose": false,
   "agentPushNotifEnabled": true,
-  "autoUpdaterStatus": "disabled",
-  "autoUpdates": false,
-  "dangerouslySkipPermissions": true,
-  "plugins": {},
-  "security": {
-    "folderTrust": {
-      "enabled": false
-    }
-  }
+  "dangerouslySkipPermissions": true
 }
