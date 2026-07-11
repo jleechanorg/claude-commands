@@ -549,6 +549,9 @@ approves another model/tool for that mission.
    plan must include a second, independent check (main-session monitor, or
    an in-turn blocking until-loop instead of a background task). Two
    background pollers died silently on PR #8292, each costing ~1h of
-   undetected idle. Prefer in-turn blocking polls for waits under ~1h;
-   if using a background task, the spawner must record the expected
-   wake-by time in STATE.md so anyone reading it can detect the miss.
+   undetected idle. Prefer in-turn blocking polls only for waits under the
+   Bash tool's hard cap (~10 min / 600s — a "blocking poll under 1h" is NOT
+   executable in this harness, and the timeout-integrity rule caps all
+   layers at 600s); anything longer MUST be a background task, and the
+   spawner must record the expected wake-by time in STATE.md so anyone
+   reading it can detect the miss (tracked structural fix: rev-nm314).
