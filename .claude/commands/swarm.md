@@ -15,13 +15,21 @@ Run the goal as a multi-agent swarm with adversarial verification, cost-routed s
 **Instant start (mandatory UX).** The FIRST tool calls of any `/swarm <goal>`
 invocation — before any analysis, recall, or lane scoping — are:
 1. Write the branch/mission-scoped STATE.md (30 seconds, from the goal text).
-2. Spawn the sidekick as an **interactive tmux TUI** (claude Sonnet,
-   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, `--teammate-mode tmux`) so its
-   lanes run as a REAL Claude team — split panes, named teammates.
-3. Spawn a named main-session supervision teammate
-   (`sidekick-supervisor-<mission-slug>`) via the Agent tool.
-The user must see a live Claude team + sidekick within the first minute;
-context recall and lane design happen after the team exists, not before.
+2. **Spawn the worker lanes as OFFICIAL Agent Teams teammates IN THE CURRENT
+   SESSION** (Agent tool with `name: lane-<n>-<topic>`) — this is the real
+   /team-claude-class feature: the teammates appear in THIS session's team UI
+   immediately, are SendMessage-addressable, and register in
+   `~/.claude/teams/session-*/config.json` with per-teammate inboxes. The user
+   must SEE the team in their own window — a team hidden inside a tmux
+   sidekick's session does not satisfy this contract.
+3. Spawn the tmux sidekick as the **durability keeper** (`/sidekick`): it owns
+   STATE.md checkpoints and respawns/re-drives the mission if this
+   conversation crashes. It does NOT own the visible lanes in an attended
+   session.
+Headless/unattended runs (cron, overnight) invert this: lanes run inside the
+sidekick (interactive TUI mode for team lanes) since no user is watching.
+The user must see a live in-session Claude team + the sidekick within the
+first minute; context recall and lane design happen after the team exists.
 
 Read `~/.claude/skills/swarm/SKILL.md` and execute the full playbook with the provided goal.
 

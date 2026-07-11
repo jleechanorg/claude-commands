@@ -19,6 +19,18 @@ Run a goal as a **swarm**: a deterministic Workflow-tool fan-out (ultracode) or 
 
 "Ultracode" = the Workflow tool, never /team-claude teammates (user corrected this twice).
 
+## Stall watchdog — TUI swarms stall alive on quota modals (2026-07-11)
+
+Interactive-TUI sidekicks AND every teammate lane stall SIMULTANEOUSLY on the
+per-account session-limit modal (`/rate-limit-options`), which never
+auto-dismisses after the quota window resets. Liveness+progress monitors miss it
+(process alive, no events). Supervisors MUST watch STATE.md **staleness** (~15
+min alarm + pane-grep for `session limit|rate-limit-options|Enter to confirm`),
+and on recovery send Enter to **every pane** in the session (`tmux list-panes`),
+not just the lead — then have the lead re-task idle lanes via SendMessage. Full
+recipe: sidekick SKILL.md § "Stall watchdog (interactive TUI)". Cost of missing
+this: 3 lane-hours frozen, 2026-07-11.
+
 ## Sidekick durability layer ([Devin Fusion](https://cognition.com/blog/devin-fusion) sidekick pattern)
 
 **ALL /swarm work runs inside the sidekick — always, no exceptions** (user directive, 2026-07; reaffirmed 2026-07-10). The main session does NOT own the fan-outs — it spawns a **sidekick** (see `~/.claude/skills/sidekick/SKILL.md`, command `/sidekick`) and the sidekick runs the swarm:
@@ -72,9 +84,9 @@ A resume must be possible from the bead body ALONE: repo/branch, task list with 
 
 ## Execution recipe
 
-0. **Instant start (mandatory UX)**: before ANY analysis — write the mission STATE.md from the goal text, spawn the sidekick as an INTERACTIVE tmux TUI (real Claude team lanes), and spawn a named `sidekick-supervisor-<slug>` teammate in the main session. The user sees a live team + sidekick within the first minute; everything below happens after.
+0. **Instant start (mandatory UX)**: before ANY analysis — write the mission STATE.md from the goal text, then spawn the worker lanes as OFFICIAL Agent Teams teammates IN THE CURRENT SESSION (Agent tool + `name: lane-<n>-<topic>`; visible in the user's own team UI, SendMessage-addressable, registered in `~/.claude/teams/session-*/config.json` — the real /team-claude-class feature), and spawn the tmux sidekick as the durability keeper (STATE.md owner + crash respawner). The user SEES the team in their own window within the first minute — a team hidden inside the sidekick's tmux session does NOT satisfy this. Headless/unattended runs invert: lanes live inside an interactive-TUI sidekick instead.
 1. **Recall context first**: `/history <goal keywords>` + `/ms <goal keywords>` — find prior swarms, datasets, and findings before spawning anything else. Session JSONLs may live under `~/.claude-wa/projects/` (not only `~/.claude/projects/`); workflow journals under `<project>/<session-id>/workflows/*.json`.
-1.5. **Sidekick wrap (mandatory, no exceptions)**: write/refresh STATE.md, spawn (or reuse) the sidekick via `/sidekick` (real tmux Claude Code process; steered via STATE.md + tmux, never SendMessage — it's a separate session; interactive sidekicks run their lanes as a real Claude team, `-p` sidekicks fall back to Agent-tool subagents), hand it ALL lanes. The main loop only supervises and relays — even quick fan-outs run inside the sidekick. STATE.md path resolution for swarm missions: on a git feature branch, use `<branch>` per the sidekick convention; on `main`/no branch, derive the mission slug with the sidekick skill's OWN rule applied to the full goal text (first 4–6 significant words, lowercased, kebab-case, ~40 char cap) — never a `--shape`-specific variant, so a later bare `/sidekick` crash-recovery invocation recomputes the SAME slug. Before spawning, ALWAYS `ls` the computed STATE_DIR: existing STATE.md → reuse/respawn the existing sidekick; missing → fresh spawn. Never let two derivations of the same goal spawn two concurrent sidekicks owning one OUTDIR.
+1.5. **Sidekick wrap (mandatory, no exceptions)**: write/refresh STATE.md, spawn (or reuse) the sidekick via `/sidekick` (real tmux Claude Code process; steered via STATE.md + tmux, never SendMessage — it's a separate session). Division of labor: in an ATTENDED session the visible in-session Agent Teams lanes (step 0) do the work and the sidekick keeps durable state + respawns after a crash; in UNATTENDED/headless runs the sidekick owns ALL lanes itself (interactive-TUI sidekicks run them as a real Claude team; `-p` sidekicks fall back to Agent-tool subagents). STATE.md path resolution for swarm missions: on a git feature branch, use `<branch>` per the sidekick convention; on `main`/no branch, derive the mission slug with the sidekick skill's OWN rule applied to the full goal text (first 4–6 significant words, lowercased, kebab-case, ~40 char cap) — never a `--shape`-specific variant, so a later bare `/sidekick` crash-recovery invocation recomputes the SAME slug. Before spawning, ALWAYS `ls` the computed STATE_DIR: existing STATE.md → reuse/respawn the existing sidekick; missing → fresh spawn. Never let two derivations of the same goal spawn two concurrent sidekicks owning one OUTDIR.
 2. **Scope lanes** and check independence (disjoint files/OUTDIRs).
 3. **Author the Workflow script(s)**: meta with named phases, schemas for structured outputs, explicit models, single-file write permission per doc agent.
 3.5. **Cost-route gate (mandatory, run before launch)**: `grep -n "agent(" <script>` — every match needs an explicit `model:` unless it's the deliberate final-synthesis call on the main-loop model. Fix any bare `agent()` call before proceeding; do not launch on a "looks fine" read of the script.
