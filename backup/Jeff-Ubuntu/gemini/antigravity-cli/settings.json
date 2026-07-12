@@ -1,0 +1,24 @@
+{
+  "artifactReviewPolicy": "always-proceed",
+  "model": "Gemini 3.5 Flash (High)",
+  "toolPermission": "always-proceed",
+  "trustedWorkspaces": [
+    "/home/jleechan/.ao/data/worktrees/agent-orchestrator-golang/agent-orchestrator-golang-1",
+    "/home/jleechan/.ao/data/worktrees/agent-orchestrator-golang/agent-orchestrator-golang-2",
+    "/home/jleechan/.ao/data/worktrees/agent-orchestrator/agent-orchestrator-1",
+    "/home/jleechan/.ao/data/worktrees/smartclaw/smartclaw-1",
+    "/home/jleechan/.ao/data/worktrees/test-agent-orchestrator-locally/test-agent-orchestrator-locally-2",
+    "/home/jleechan/.ao/data/worktrees/worldai_claw/worldai_claw-1",
+    "/home/jleechan/.ao/data/worktrees/agent-orchestrator/agent-orchestrator-2",
+    "/home/jleechan/.ao/data/worktrees/agent-orchestrator-golang/agent-orchestrator-golang-3",
+    "/home/jleechan/.ao/data/worktrees/smartclaw/smartclaw-2",
+    "/home/jleechan/.ao/data/worktrees/test-agent-orchestrator-locally/test-agent-orchestrator-locally-3",
+    "/home/jleechan/.ao/data/worktrees/worldai_claw/worldai_claw-2",
+    "/home/jleechan/projects/worktree_runner",
+    "/home/jleechan/projects/ez-gh-actions",
+    "/home/jleechan/projects/worktree_fix_ci",
+    "/home/jleechan/projects/dark-factory",
+    "/tmp/claude-1000/-home-jleechan-projects-worldarchitect-ai/dffc25a8-0c7a-4f05-8eb6-65490b240669/scratchpad/agy_trust_test_1783467122"
+  ],
+  "showFeedbackSurvey": false
+}
