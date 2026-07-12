@@ -1,5 +1,4 @@
 {
-  "showFeedbackSurvey": false,
   "allowNonWorkspaceAccess": true,
   "colorScheme": "solarized dark",
   "dangerouslySkipPermissions": true,
@@ -20,6 +19,7 @@
       "enabled": false
     }
   },
+  "showFeedbackSurvey": false,
   "trustedWorkspaces": [
     "/Users/jleechan/.ao-sessions/jc-1933/.worktrees/jleechanclaw/jc-1974",
     "/Users/jleechan/.ao-sessions/jc-1933/.worktrees/jleechanclaw/jc-1973",
@@ -1773,6 +1773,22 @@
     "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-8cvp696u",
     "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-cg7ik78u",
     "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-yokdmpus",
-    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-ds4pdppu"
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-ds4pdppu",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-t1ppzsb8",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-jhh6nhqv",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-44n1j_gf",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-5q_xt_u6",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-4sgely3p",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-78wk071_",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-sovg_h22",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-8w8bivjb",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-1k28a_rc",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-mqcos3et",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-5eyp_0bl",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-lbsm2bqp",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-itxv1bss",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-k4yz2gjy",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-qnnhdl6i",
+    "/private/var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/worldai-agy-runtime-20lwp1wt"
   ]
 }
