@@ -1836,8 +1836,8 @@
   "penguinModeOrgEnabled": false,
   "pluginUsage": {
     "superpowers@claude-plugins-official": {
-      "usageCount": 4520,
-      "lastUsedAt": 1783730272737,
+      "usageCount": 4521,
+      "lastUsedAt": 1783811598447,
       "lastUsedNumStartups": 3969
     },
     "pyright-lsp@claude-plugins-official": {
