@@ -830,6 +830,7 @@ BACKUP_ITEMS=(
   "copy|$HOME/.gemini/GEMINI.md|gemini/GEMINI.md|gemini_conversations/GEMINI.md||sync"
   "copy|$HOME/memory/|memory/|memory/||sync"
   "copy|$HOME/.gemini/settings.json|gemini/settings.json|gemini_conversations/settings.json||sync"
+  "copy|$HOME/.gemini/antigravity-cli/settings.json|gemini/antigravity-cli/settings.json|gemini_conversations/antigravity-cli/settings.json||sync"
   "copy|$HOME/.gemini/mcp.json|gemini/mcp.json|gemini_conversations/mcp.json||sync"
   "copy|$HOME/.gemini/projects.json|gemini/projects.json|gemini_conversations/projects.json||sync"
   "copy|$HOME/.gemini/trusted_hooks.json|gemini/trusted_hooks.json|gemini_conversations/trusted_hooks.json||sync"
