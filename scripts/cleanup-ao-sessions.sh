@@ -17,9 +17,13 @@
 # SAFETY (read these — they're the difference between safe and catastrophic)
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. Dry-run by default. Pass --clean to actually rename session dirs to .bak.<ts>.
-# 2. NEVER auto-deletes .bak.<ts>. Use --drop-bak to actually drop them. Backups
-#    are intended for human review before deletion; the script never reaches
-#    inside a .bak.<ts> dir on its own.
+# 2. Existing *.bak.* dirs are NEVER re-renamed (pre-2026-07-11 versions
+#    re-swept them daily, compounding suffixes like
+#    ao-X.bak.<ts1>.bak.<ts2>.bak.<ts3> forever — bead jleechan-6poe).
+#    Backups age out via retention instead: --clean auto-drops .bak.<ts>
+#    dirs older than AO_SESSIONS_BAK_RETENTION_DAYS (default 14; set 0 to
+#    disable auto-drop and restore the old never-delete behavior).
+#    --drop-bak remains the manual pass with its own --days gate.
 # 3. Sessions matching the orchestrator role prefixes (wa-*, jc-*) are NEVER
 #    touched. Orchestrator tmux sessions are long-running control planes; deleting
 #    their on-disk state corrupts AO state without killing the live tmux.
@@ -166,27 +170,37 @@ if [[ ! -d "$AO_SESSIONS_DIR" ]]; then
   exit 0
 fi
 
-# ── Drop-backup pass (manual-only) ───────────────────────────────────────────
-if [[ "$DROP_BAK" == true ]]; then
-  log "=== --drop-bak pass: removing .bak.<ts> dirs older than ${THRESHOLD_DAYS}d ==="
-  bak_pruned=0
-  bak_freed_kb=0
+# ── Backup-drop pass (shared by manual --drop-bak and --clean retention) ─────
+# $1 = min age in days; $2 = label for logs; $3 = apply (true/false)
+drop_bak_pass() {
+  local min_days="$1" label="$2" apply="$3"
+  local bak_pruned=0 bak_freed_kb=0 bak_dir age size_kb size_h
   while IFS= read -r -d '' bak_dir; do
     [[ -d "$bak_dir" ]] || continue
     age=$(dir_age_days "$bak_dir") || continue
-    if (( age < THRESHOLD_DAYS )); then
+    if (( age < min_days )); then
       continue
     fi
     size_kb=$(du -sk "$bak_dir" 2>/dev/null | cut -f1 || echo 0)
     size_h=$(size_human "$bak_dir")
-    log "drop-bak: removing $bak_dir (${age}d old, ${size_h})"
-    rm -rf "$bak_dir"
+    if [[ "$apply" == true ]]; then
+      log "$label: removing $bak_dir (${age}d old, ${size_h})"
+      rm -rf "$bak_dir"
+    else
+      log "$label: DRY-RUN would remove $bak_dir (${age}d old, ${size_h})"
+    fi
     bak_pruned=$(( bak_pruned + 1 ))
     bak_freed_kb=$(( bak_freed_kb + size_kb ))
   done < <(find "$AO_SESSIONS_DIR" -mindepth 1 -maxdepth 1 -type d -name "*.bak.*" -print0 2>/dev/null)
 
+  local bak_freed_gb
   bak_freed_gb=$(awk "BEGIN {printf \"%.2f\", $bak_freed_kb / 1048576}")
-  log "--drop-bak DONE: removed $bak_pruned backup dir(s), ~${bak_freed_gb} GB freed"
+  log "$label DONE: $bak_pruned backup dir(s), ~${bak_freed_gb} GB"
+}
+
+if [[ "$DROP_BAK" == true ]]; then
+  log "=== --drop-bak pass: removing .bak.<ts> dirs older than ${THRESHOLD_DAYS}d ==="
+  drop_bak_pass "$THRESHOLD_DAYS" "drop-bak" true
   exit 0
 fi
 
@@ -204,6 +218,12 @@ total_reclaimable_kb=0
 for session_dir in "${AO_SESSIONS_DIR}"/*/; do
   [[ -d "$session_dir" ]] || continue
   sid=$(basename "$session_dir")
+
+  # Existing backups are never re-renamed (compounding-suffix bug,
+  # bead jleechan-6poe) — the retention pass below owns their lifecycle.
+  if [[ "$sid" == *.bak.* ]]; then
+    continue
+  fi
 
   # Orchestrator-prefix guard — never touch wa-* or jc-* on-disk state.
   if is_orchestrator_session "$sid"; then
@@ -280,7 +300,22 @@ if [[ "$DRY_RUN" == true ]]; then
   log "  Skipped ${skipped_count} sessions (orchestrator, fresh, active, or below threshold)"
   log "  Run with --clean to proceed."
 else
-  log "DONE: ${pruned_count} sessions renamed to .bak.<ts>, ~${total_reclaimable_gb} GB reclaimable (after --drop-bak)"
+  log "DONE: ${pruned_count} sessions renamed to .bak.<ts>, ~${total_reclaimable_gb} GB reclaimable"
   log "  Skipped ${skipped_count} sessions (orchestrator, fresh, active, or below threshold)"
-  log "  Backups are NOT auto-deleted. Use --drop-bak --days N to manually drop them."
+fi
+
+# ── Retention pass: age out old backups automatically ────────────────────────
+# Default 14 days; AO_SESSIONS_BAK_RETENTION_DAYS=0 disables (restores the
+# old never-auto-delete contract). Runs in dry-run preview mode unless --clean.
+BAK_RETENTION_DAYS="${AO_SESSIONS_BAK_RETENTION_DAYS:-14}"
+if (( BAK_RETENTION_DAYS > 0 )); then
+  echo ""
+  log "=== retention pass: .bak.<ts> dirs older than ${BAK_RETENTION_DAYS}d (AO_SESSIONS_BAK_RETENTION_DAYS=0 to disable) ==="
+  if [[ "$DRY_RUN" == true ]]; then
+    drop_bak_pass "$BAK_RETENTION_DAYS" "retention" false
+  else
+    drop_bak_pass "$BAK_RETENTION_DAYS" "retention" true
+  fi
+else
+  log "  Backup retention disabled (AO_SESSIONS_BAK_RETENTION_DAYS=0); use --drop-bak --days N to drop manually."
 fi
