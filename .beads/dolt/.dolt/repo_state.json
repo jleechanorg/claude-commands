@@ -1,0 +1,24 @@
+{
+  "head": "refs/heads/main",
+  "remotes": {
+    "origin": {
+      "name": "origin",
+      "url": "git+https://github.com/jleechanorg/user_scope.git",
+      "fetch_specs": [
+        "refs/heads/*:refs/remotes/origin/*"
+      ],
+      "params": {}
+    }
+  },
+  "backups": {
+    "backup_export": {
+      "name": "backup_export",
+      "url": "file:///Users/jleechan/projects_other/user_scope/.beads/backup",
+      "fetch_specs": [
+        "refs/heads/*:refs/remotes/backup_export/*"
+      ],
+      "params": {}
+    }
+  },
+  "branches": {}
+}
