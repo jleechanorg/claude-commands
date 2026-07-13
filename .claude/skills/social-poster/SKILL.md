@@ -16,10 +16,7 @@ Canonical implementation:
 When this skill is invoked:
 1. Read and follow `~/.hermes/skills/social-poster/SKILL.md` as the source of truth.
 2. Prefer the skill-defined workflow over re-specifying individual script calls in slash commands.
-3. Preserve the skill's safety model, especially:
-   - draft-only by default
-   - visual verification of staged drafts
-   - no posting without literal `POST APPROVED`
+3. **Local `/social` override:** preserve draft-only behavior. Never invoke the canonical skill’s Phase 4, `post_approved.py`, or any site’s live publish control, even if the user supplies `POST APPROVED`.
 4. Treat current live browser state as higher-confidence evidence than old logs, stale session notes, or previous failed runs.
 
 ## Operational rules added from the 2026-07-11 Fable run
@@ -42,6 +39,26 @@ When this skill is invoked:
 7. For Instagram, prefer a real media-post workflow when a screenshot/image asset is part of the creative. Do not treat Instagram as caption-only if the intended post mirrors a LinkedIn image + video-link format.
 8. For Instagram media posts, leave “Share to Threads” and “Share to Facebook” enabled by default unless the user explicitly opts out. Mention the cross-post state in the staging summary.
 9. Do not trust screenshots of login walls or empty compose boxes as proof of staging.
+
+## Universal stage verification
+
+For every selected platform, whether running inside Aside or from another local harness:
+
+1. Drafting produces platform-specific files and works without Aside.
+2. If browser staging is requested and Aside’s live browser bridge is available, populate the actual draft fields and capture evidence. Never activate a live publish control.
+3. Use named/semantic fields and verify the visible text. A composer, redirect, login screen, or unchanged form is not a staged draft.
+4. If Aside/browser staging is unavailable, report the drafts as ready for manual use. Do not block drafting and do not substitute a fresh unauthenticated browser.
+
+## Reddit staging supplement
+
+This is a Reddit-only supplement to the universal staging flow:
+
+1. Read the subreddit rules and choose a required post flair before staging. Use a context-appropriate flair such as `Discussion`; do not assume a flair is optional.
+2. On old Reddit self-post forms, target named fields: `textarea[name="title"]` and `textarea[name="text"]`. Do not use generic `input` selectors, which can reach hidden fields or page-level search controls.
+3. Verify the staged visible title, body, and selected flair. A submit form, search page, unchanged fields, or a page that merely loaded is **not staged**.
+4. Exclude zero-self-promotion communities from default targets unless the user explicitly names them.
+
+Do not configure PRAW, OAuth credentials, or a Reddit posting MCP inside `/social`. Keep those tools separate from the draft-only workflow.
 
 ## Why this shim exists
 
