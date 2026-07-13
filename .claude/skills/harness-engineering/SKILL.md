@@ -1,6 +1,6 @@
 ---
 name: harness-engineering
-description: Diagnose recurring failures as harness gaps and produce durable guardrail fixes.
+description: Use when auditing or optimizing CLAUDE.md, AGENTS.md, GEMINI.md, slash commands, skills, or other coding-agent harness surfaces, or when recurring agent failures suggest instruction, policy, memory, test, or automation gaps.
 ---
 
 # Harness Engineering Skill
@@ -261,6 +261,74 @@ Report findings as a table:
 | Stale | ~/.claude/CLAUDE.md | 42 | Remove reference to deprecated tool X |
 | Gap | repo CLAUDE.md | - | Add rule about Y (corrected 3x in memory) |
 ```
+
+## Optimization mode (`/harness --optimize`)
+
+Use this mode to review active coding-agent harness files and suggest useful,
+small improvements. In scope: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, skills,
+agents, slash commands, and their discovery metadata.
+
+### Scope guard
+
+The product is the instruction harness itself. Start from the named harness
+files and keep proposed edits inside those surfaces. Do not turn this task into
+an AO, beads, evaluation-corpus, notification, or general process project.
+
+If most planned work does not directly inspect, test, or change instruction
+surfaces, stop: the task has drifted.
+
+### Review posture
+
+1. Batch cheap discovery with `rg`, metadata parsing, broken-link checks, and
+   word counts.
+2. Consult recent `/history` and `/ms` evidence for repeated corrections and
+   concrete friction.
+3. Read focused evidence for the highest-value findings; do not recursively
+   expand context without a concrete question.
+4. Rank ideas by expected agent-quality benefit, confidence, and change risk.
+5. Prefer an existing canonical file over creating another skill or command.
+6. Prefer small, reviewable change groups over broad prompt rewrites.
+7. If evidence is weak or no improvement is worthwhile, report `no change`.
+
+For a proposed or implemented change, record enough before/after evidence to
+explain the decision. A frozen corpus, new gate, or organization-wide cleanup
+campaign is not required.
+
+### Weekly job contract
+
+A weekly job may automate this mode. Keep it thin:
+
+- inspect the authorized harness roots read-only;
+- produce a short ranked list of optimization ideas with exact file evidence;
+- open small, focused harness-only PRs when changes are high-confidence and can
+  be validated with existing checks;
+- otherwise publish the ideas or an explicit `no change` result;
+- deliver the report and PR links through the already configured weekly
+  Slack/email notification path;
+- never make direct user-scope edits from the scheduled run;
+- never require beads, `/nextsteps`, a frozen evaluation corpus, AO workers, or
+  unrelated process changes as prerequisites.
+
+The scheduler and delivery mechanism belong to the owning repository. They are
+implementation details of this one weekly job, not a new harness workflow.
+
+### Source principles
+
+- [Dropbox: optimizing Dash's relevance judge with DSPy](https://dropbox.tech/machine-learning/optimizing-dropbox-dash-relevance-judge-with-dspy) — use measured evidence, make model-specific improvements, and constrain high-blast-radius prompt changes.
+- [GitHub: better tools made Copilot code review worse](https://github.blog/ai-and-ml/github-copilot/better-tools-made-copilot-code-review-worse-heres-how-we-actually-improved-it/) — job-specific tool instructions matter; start from a narrow question; batch discovery; read focused evidence; use traces to diagnose context-expansion loops.
+- [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model) — favor lean prompts, state instructions once, expose only relevant tools, remove one instruction group at a time, and rerun representative evals before accepting the change.
+
+### Output contract
+
+Return:
+
+1. a short ranked idea list with exact file evidence;
+2. the recommended minimal change, if any;
+3. validation evidence for any implemented change;
+4. PR URLs when the weekly job opened any, or `no change`.
+
+Unless invoked with `--fix`, do not edit the harness. Audit, create the durable
+recommendation, and stop.
 
 ## Anti-patterns
 

@@ -22,6 +22,7 @@ picking the right fix.
 | `/harness <description>` | Analyze a specific failure pattern, propose fixes, wait for approval |
 | `/harness --fix` | Analyze AND implement fixes without waiting for approval |
 | `/harness --audit` | Scan all instruction files for staleness, contradictions, gaps, duplication |
+| `/harness --optimize` | Review active harness files, rank optimization ideas, and optionally produce one small harness-only fix |
 
 ## Input
 
