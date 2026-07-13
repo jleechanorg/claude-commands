@@ -14,7 +14,7 @@ Alias to invoke the babysit orchestration and monitoring loop.
 
 Execute these steps in order:
 
-Read `.claude/skills/babysit/SKILL.md` for the full protocol, 7-gate criteria, and anti-patterns.
+Read `.claude/skills/pr-babysit/SKILL.md` for the full protocol, 7-gate criteria, and anti-patterns.
 
 **Testing Gap Integration**: If at any point the target tests fail to produce compliant `/es` evidence bundles, immediately load and execute `.claude/commands/testing-gap-close.md` to identify and resolve the failure.
 

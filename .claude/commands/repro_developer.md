@@ -1,23 +1,18 @@
 ---
-description: Build a developer repro bundle with raw agent transcripts and repo evidence.
-type: evidence
+description: Build a developer reproduction bundle for agent-review failures, missed-plan retrospectives, Claude/Codex transcript comparisons, or cases where Anthropic/OpenAI engineers need raw conversation JSONL, subagent state, repo evidence, hashes, and a concise replay guide.
+type: skill
 execution_mode: immediate
 ---
 
-## Execution Instructions
+# /repro_developer [args]
 
-Load and execute the repo-local `repro-developer` skill:
+Build a developer reproduction bundle with raw agent transcripts and repo evidence, for cases where an Anthropic/OpenAI engineer needs a faithful replay of a Claude/Codex failure.
 
-```
-Skill("repro-developer", args="$ARGUMENTS")
-```
+Read `~/.claude/skills/repro-developer/SKILL.md` and execute the full workflow with the provided args.
 
-Use this when an Anthropic/OpenAI engineer needs a faithful reproduction bundle with raw Claude/Codex JSONL transcripts, subagent state, repo evidence, hashes, and a replay guide.
+## Notes
 
-If the user asks about the July 6-7, 2026 Claude/fable vs Codex plan-miss incident, use the committed LFS artifact unless they explicitly request a fresh collection:
-
-```
-artifacts/repro-developer/claude-fable-adversarial-review-codex-plan-miss/
-```
-
-For a fresh collection, run `.claude/skills/repro-developer/scripts/collect_repro.py` with `--sanitize --require-gitleaks-clean --encrypt-raw --publish-dir ...`, verify LFS pointers with `git lfs status`, and never commit the raw passphrase.
+| Case | Action |
+|------|--------|
+| July 6-7, 2026 Claude/fable vs Codex plan-miss incident | Use committed LFS artifact `artifacts/repro-developer/claude-fable-adversarial-review-codex-plan-miss/` unless a fresh collection is explicitly requested |
+| Fresh collection | Run `.claude/skills/repro-developer/scripts/collect_repro.py --sanitize --require-gitleaks-clean --encrypt-raw --publish-dir ...`, verify LFS pointers with `git lfs status`, never commit the raw passphrase |

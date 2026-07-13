@@ -1,6 +1,10 @@
 name: Hook Tests
 
 # Optimized CI triggers - no duplication on PR branches
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:              # Run on all PRs regardless of target branch
     paths:
@@ -13,36 +17,32 @@ on:
       - '.github/workflows/hook-tests.yml'
 
 jobs:
-  limit-pr-runs:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - name: Limit PR runs
-        uses: ./.github/actions/limit-pr-runs
-        with:
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
-
   run-hook-tests:
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # Hybrid failover PoC (design/hybrid-runner-failover-design.md): route to
+    # GitHub-hosted ubuntu-latest ONLY when the repo variable
+    # SELF_HOSTED_CAPACITY_MODE has been explicitly flipped to "degraded" by
+    # the runner-capacity-failover.sh controller after a CONFIRMED, sustained
+    # jeff-ubuntu outage (two-signal: SSH unreachable AND gh api online=0).
+    # Default/normal path is unchanged (self-hosted only, same as before).
+    runs-on: ${{ vars.SELF_HOSTED_CAPACITY_MODE == 'degraded' && 'ubuntu-latest' || fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 10
 
     steps:
 
+    - name: Reset inherited self-hosted workspace
+      run: |
+        find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
         persist-credentials: false
 
+    - name: Materialize full workspace after checkout
+      run: |
+        git sparse-checkout disable 2>/dev/null || true
+        git config --unset core.sparseCheckout 2>/dev/null || true
 
     - name: Prepare runner tool cache for setup actions
       run: |
@@ -61,8 +61,8 @@ jobs:
           cd .claude/hooks/tests
           echo "🧪 Running Claude Code Hook Tests..."
           echo "========================================"
-          chmod +x *.sh
-          chmod +x ../*.sh
+          chmod +x -- ./*.sh
+          chmod +x -- ../*.sh
           if bash run_all_hook_tests.sh; then
             echo ""
             echo "✅ All hook tests passed!"

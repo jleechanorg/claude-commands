@@ -1,6 +1,6 @@
 ---
 name: evidence-review
-description: Enforcement rules for reviewing evidence artifacts against the evidence-standards skill. Invoked by /er. Produces PASS / PARTIAL / FAIL verdicts.
+description: Enforcement rules for reviewing evidence artifacts against the evidence-standards skill. Invoked by /er. Produces PASS / PARTIAL / FAIL / INCONCLUSIVE verdicts.
 ---
 
 # Evidence Review Skill
@@ -17,10 +17,21 @@ description: Enforcement rules for reviewing evidence artifacts against the evid
 
 | Verdict | Meaning |
 |---------|---------|
-| **PASS** | Every claim has a matching artifact of STRONG quality and every mandatory check below passes. |
-| **PARTIAL** | Claims are supported but one or more mandatory checks fail or soft-warn (e.g., WARN in verification_report.json, missing downloadable MP4). A PR at PARTIAL is not merge-ready. |
+| **PASS** | Every claim has a matching artifact of STRONG quality and every mandatory check below passes. **Required for `/green` on PRODUCTION tier PRs.** |
+| **PARTIAL** | Claims are supported but one or more mandatory checks soft-warn (e.g., WARN in an optional verification_report.json, missing downloadable MP4). A PR at PARTIAL is not merge-ready for production. **Acceptable for `/green` on NON_PRODUCTION tier PRs (with explicit waiver).** |
 | **FAIL** | A claim is contradicted by an artifact, or integrity is broken (sha256 mismatch, dirty capture producing the claim, scope exclusion). |
 | **INCONCLUSIVE** | Not enough artifact data exists to decide. Request more. |
+
+## Two-Tier Integration with `/green` (added 2026-07-02)
+
+`/er` verdicts are now consumed by `/green` to gate the merge:
+
+- **PRODUCTION PRs** (changes to `$PROJECT_ROOT/**` production code, prompts, CI, schema): require `/er` = **PASS**.
+- **NON_PRODUCTION PRs** (docs, tests, tooling, roadmap, repo-hygiene): require `/er` ≥ **PARTIAL** (PARTIAL with explicit waiver from the operator is acceptable).
+
+When invoked via `gh pr comment N --body "/er"`, the evidence-review-bot
+returns the verdict as a structured comment with one of the four values
+above. `/green` parses this and includes it in the gate table.
 
 ---
 
@@ -28,39 +39,40 @@ description: Enforcement rules for reviewing evidence artifacts against the evid
 
 ### 1. Bundle integrity
 
-Evidence bundles use one of two checksum modes (declared in `metadata.json` → `checksum_mode`):
-
-- **`bundle_checksum`**: a single top-level `checksums.sha256` file lists every tracked artifact
-- **`per_file_checksums`**: each artifact has its own sibling `<file>.sha256`
-
-Detect the mode, then verify accordingly. If `metadata.json` is absent or silent, infer: top-level `checksums.sha256` → `bundle_checksum`; otherwise fall back to per-file.
-
 ```bash
 cd <bundle_dir>
-if [ -f checksums.sha256 ]; then
+
+if [[ -f checksums.sha256 ]]; then
   sha256sum -c checksums.sha256
+elif find . -name "*.sha256" -print -quit | grep -q .; then
+  find . -name "*.sha256" -execdir sha256sum -c '{}' \;
 else
-  # per_file_checksums mode — verify each sibling .sha256
-  find . -name '*.sha256' -exec sh -c 'd=$(dirname "$1") && b=$(basename "$1") && (cd "$d" && sha256sum -c "$b")' _ {} \;
+  echo "No checksum files found"
+  exit 2
 fi
 ```
 
-- Any mismatch → **FAIL** (the bundle is tampered or stale; treat as a hard integrity failure, not just PARTIAL)
-- Also verify the manifest or per-file checksums cover every file referenced by the claim map — a missing entry is a **FAIL**
-- The `INVALID` label may be used per-artifact in the claim map (Phase 2 below) to mark contradicted or corrupted individual artifacts, but the **overall verdict vocabulary stays `PASS | PARTIAL | FAIL | INCONCLUSIVE`**
+- Top-level `checksums.sha256` means bundle-checksum mode.
+- If no top-level checksum exists, verify every per-file `*.sha256` file.
+- Any checksum mismatch → **FAIL** (not just PARTIAL — the bundle is tampered/stale)
+- No checksum files → **INCONCLUSIVE** for integrity; do not award PASS.
+- Check manifest has entries for every file listed in the claim map and every file covered by either `checksums.sha256` or the discovered per-file `*.sha256` files, resolving per-file checksum entries relative to each `.sha256` file's directory.
 
-### 2. Verification report ceiling (when applicable)
+### 2. Verification report ceiling
 
-`verification_report.json` is **optional** — it is produced by bundles that went through an explicit verifier pass, but is not required by `evidence-standards`. Treat its presence as a ceiling constraint, not a prerequisite:
+`verification_report.json` is optional unless the subject claims verifier output exists.
 
 ```bash
-[ -f verification_report.json ] && jq -r '.overall_verdict' verification_report.json
+if [[ -f verification_report.json ]]; then
+  jq -r '.overall_verdict' verification_report.json
+fi
 ```
 
-- File absent → **not applicable**, continue with the other checks (do NOT downgrade to PARTIAL on this alone)
-- File present, `PASS` → proceed
-- File present, `WARN` → verdict ceiling is **PARTIAL** (never promote WARN to PASS without resolving each recorded violation)
-- File present, other value → note the value and treat as PARTIAL pending clarification
+- Missing and not claimed → record "verification_report.json absent / not applicable"; no verdict ceiling by itself.
+- Missing but claimed → **INCONCLUSIVE** for that verifier claim until the report is supplied.
+- `PASS` → proceed
+- `WARN` or `PARTIAL` → verdict ceiling is **PARTIAL** (never promote to PASS without resolving each violation)
+- `FAIL` → verdict ceiling is **FAIL**
 
 ### 3. Scope note consistency
 
@@ -135,7 +147,7 @@ For each claim, identify the single primary artifact that proves it. Rate qualit
 | **STRONG** | Claim directly observable in a raw artifact (log line, screenshot frame, test output, sha256-verified file) |
 | **WEAK** | Claim is indirect — derived from self-reporting (evidence.md, summary.md) without raw backing |
 | **MISSING** | No artifact supports the claim |
-| **INVALID** | An artifact exists but contradicts the claim, or fails integrity check |
+| **INVALID** | Artifact-quality label only: an artifact exists but contradicts the claim, or fails integrity check. Overall verdict remains **FAIL**. |
 
 ### Phase 3 — Mandatory Checks
 
@@ -153,6 +165,13 @@ Produce output in this format:
 **Overall**: PASS | PARTIAL | FAIL | INCONCLUSIVE
 **Confidence**: HIGH | MEDIUM | LOW
 
+### What This Evidence Proves vs. Does NOT Prove
+**Proves**:
+- <list of specific, verified claims supported by STRONG artifacts>
+
+**Does NOT Prove**:
+- <list of limitations, untested scenarios, or claims with WEAK/MISSING artifacts>
+
 ### Claim Map
 | # | Claim | Artifact | Quality | Notes |
 |---|-------|----------|---------|-------|
@@ -160,8 +179,8 @@ Produce output in this format:
 | 2 | ...   | (none)   | MISSING | No artifact found |
 
 ### Mandatory Checks
-- [x] sha256sum -c → 38/38 OK
-- [x] verification_report.json overall_verdict = PASS
+- [x] bundle or per-file checksums verified → 38/38 OK
+- [x] verification_report.json absent/not applicable, or overall_verdict = PASS
 - [x] Scope note matches claimed domain
 - [x] Terminal GIF + MP4 + caption present
 - [ ] Browser UI GIF: 404 — private repo hosting (→ PARTIAL)
@@ -182,7 +201,7 @@ Produce output in this format:
 ## Anti-Patterns to Reject
 
 - **Self-referencing claims**: `evidence.md` cites itself instead of raw artifacts → WEAK
-- **Circular provenance**: the bypass gate reads the reference file it's supposed to match against → INVALID
+- **Circular provenance**: the bypass gate reads the reference file it's supposed to match against → artifact INVALID, overall FAIL
 - **Evidence committed but not linked**: bundle in `evidence/` but PR description has no gist/release link → PR fails "clean computer" check
 - **Private repo release as inline image**: GitHub won't proxy it → broken GIF → PARTIAL
 - **"Native video attachment"** (drag & drop into PR comment): not directly downloadable via URL → PARTIAL
@@ -192,8 +211,57 @@ Produce output in this format:
 
 ---
 
+## Invocation Contract (`/evidence_review` / `/er`)
+
+`/er [subject or path]` runs this skill's judging rubric against a subject, combined
+with a manual `evidence-standards` compliance pass, into one verdict.
+
+**Skill-load guard is mandatory.** Before running any review, resolve this skill's
+path (user-scope `~/.claude/skills/evidence-review/SKILL.md` takes priority over any
+repo-scope copy). If the skill file cannot be found, **abort command execution
+immediately and report the error** — do not proceed with an inline/paraphrased
+methodology. The canonical skill is the single source of truth and must be present;
+a subagent invoked as a fallback reviewer must load this file itself rather than
+have the methodology inlined into its prompt.
+
+**Dispatch order:**
+1. Attempt codex dispatch first (`ai_orch run --agent-cli codex "<review prompt>"`).
+   On success, read the resulting log for findings.
+2. On codex failure/no-log, fall back to the `evidence-reviewer` subagent, which
+   must load this skill file itself (per the guard above) rather than receive an
+   inlined summary.
+3. Regardless of which path produced the evidence-review result, always continue
+   to a separate manual `evidence-standards` compliance pass (read both the
+   user-scope and any repo-scope `evidence-standards` skill, then judge the
+   collected evidence against them) — the standards check is not optional and is
+   not skipped just because codex succeeded.
+
+**Two-source verdict synthesis.** `/er` combines this skill's verdict (evidence
+review) with the separate evidence-standards compliance verdict into one raw
+overall verdict. Harnesses (e.g. `/goal_harness`) own final normalization
+(collapsing PARTIAL/INCONCLUSIVE to FAIL, WARN to PASS, per their own convergence
+policy) — `/er` itself returns the raw, unnormalized verdict:
+
+| ER verdict | ES verdict | Raw overall verdict | Harness-normalized |
+|-----------|-----------|---------------------|--------------------|
+| PASS | PASS | PASS | PASS |
+| PASS | WARN | WARN | PASS |
+| PASS | FAIL | FAIL | FAIL |
+| PASS | PARTIAL | PARTIAL | FAIL |
+| WARN | PASS | WARN | PASS |
+| WARN | WARN | WARN | PASS |
+| WARN | FAIL | FAIL | FAIL |
+| PARTIAL | any | PARTIAL | FAIL |
+| FAIL | any | FAIL | FAIL |
+| INCONCLUSIVE | any | INCONCLUSIVE | FAIL |
+
+**Proves vs does NOT prove reconfirmation is mandatory.** For every claim, the
+final report must explicitly restate what the evidence proves and what it does
+NOT prove — never skip this even when both the evidence-review and
+evidence-standards passes individually PASS.
+
 ## Historical Lessons (keep the bar high)
 
 - **2026-04-11 PR #6161**: GIFs hosted on private `your-project.com` release returned 404. Moved to public `agent-orchestrator` release. → Added mandatory check 5.
 - **Pre-existing**: dirty GREEN captures (working tree dirty during the run that produced the artifact) require explicit exception in `verification_report.json` with rationale.
-- **Pre-existing**: WARN verdict in `verification_report.json` is a ceiling — never promote to PASS without resolving each recorded violation.
+- **Pre-existing**: if `verification_report.json` exists, a WARN/PARTIAL verdict is a ceiling — never promote to PASS without resolving each recorded violation.

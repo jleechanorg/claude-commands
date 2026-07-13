@@ -30,23 +30,6 @@ on:
       - '*.md'
 
 jobs:
-  limit-pr-runs:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - name: Limit PR runs
-        uses: ./.github/actions/limit-pr-runs
-        with:
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
   schema-coverage:
     name: Schema Coverage Guard
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
@@ -56,7 +39,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           persist-credentials: false
 
       - name: Enforce game_state schema coverage
@@ -106,7 +89,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           persist-credentials: false
       # Note: do not use actions/setup-python here — the contract validator
       # is pure stdlib (hashlib + json), and a few self-hosted runners
@@ -120,6 +103,25 @@ jobs:
             exit 2
           fi
           $PYTHON scripts/validate_prompt_tool_contracts.py
+  agy-json-contract:
+    name: AGY JSON Contract Reviewer
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
+          persist-credentials: false
+      - name: Review AGY JSON strictness
+        run: |
+          PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          if [ -z "$PYTHON" ]; then
+            echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+            exit 2
+          fi
+          $PYTHON scripts/check_agy_json_contract.py
   python-lint:
     name: Python Linting (Ruff)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
@@ -129,8 +131,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           persist-credentials: false
+
+      - name: Prepare runner tool cache for setup actions
+        run: |
+          chmod +x scripts/ci/setup-runner-tool-cache.sh
+          ./scripts/ci/setup-runner-tool-cache.sh
+
+      - name: Set up Python
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+        with:
+          python-version: '3.11'
+          token: ''
 
       - name: Install Ruff
         run: |
@@ -139,9 +153,15 @@ jobs:
             echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
             exit 2
           fi
-          $PYTHON -m venv --clear .venv-ruff
-          .venv-ruff/bin/pip install --upgrade pip
-          .venv-ruff/bin/pip install ruff==0.8.4
+          if ! $PYTHON -m venv --clear .venv-ruff; then
+            echo "::warning::Failed to create virtual environment. Attempting global user-level installation..."
+            $PYTHON -m pip install --user ruff==0.8.4 || true
+            mkdir -p .venv-ruff/bin
+            ln -sf $(which ruff || echo ~/.local/bin/ruff) .venv-ruff/bin/ruff || true
+          else
+            .venv-ruff/bin/pip install --upgrade pip
+            .venv-ruff/bin/pip install ruff==0.8.4
+          fi
 
       - name: Run Ruff linter
         run: |
@@ -169,8 +189,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           persist-credentials: false
+
+      - name: Prepare runner tool cache for setup actions
+        run: |
+          chmod +x scripts/ci/setup-runner-tool-cache.sh
+          ./scripts/ci/setup-runner-tool-cache.sh
+
+      - name: Set up Python
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+        with:
+          python-version: '3.11'
+          token: ''
 
       - name: Install dependencies
         run: |
@@ -179,13 +211,17 @@ jobs:
             echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
             exit 2
           fi
-          $PYTHON -m venv --clear .venv-mypy
-          .venv-mypy/bin/pip install --upgrade pip
-          # Install mypy with pinned version
-          .venv-mypy/bin/pip install mypy==1.13.0
-          # Install project dependencies for type checking
-          if [ -f requirements.txt ]; then .venv-mypy/bin/pip install -r requirements.txt; fi
-          if [ -f mvp_site/requirements.txt ]; then .venv-mypy/bin/pip install -r mvp_site/requirements.txt; fi
+          if ! $PYTHON -m venv --clear .venv-mypy; then
+            echo "::warning::Failed to create virtual environment. Attempting global user-level installation..."
+            $PYTHON -m pip install --user mypy==1.13.0 || true
+            mkdir -p .venv-mypy/bin
+            ln -sf $(which mypy || echo ~/.local/bin/mypy) .venv-mypy/bin/mypy || true
+          else
+            .venv-mypy/bin/pip install --upgrade pip
+            .venv-mypy/bin/pip install mypy==1.13.0
+            if [ -f requirements.txt ]; then .venv-mypy/bin/pip install -r requirements.txt; fi
+            if [ -f mvp_site/requirements.txt ]; then .venv-mypy/bin/pip install -r mvp_site/requirements.txt; fi
+          fi
 
       - name: Run mypy type checker
         run: |
@@ -203,7 +239,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           persist-credentials: false
 
       - name: Set up Node.js

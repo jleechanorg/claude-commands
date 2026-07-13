@@ -68,7 +68,7 @@ echo "🔄 Syncing with PR #$PR_NUMBER..."
 
 # Get PR info using gh CLI
 
-PR_INFO=$(gh pr view "$PR_NUMBER" --json headRefName,baseRefName,headRepository 2>/dev/null)
+PR_INFO=$(gh pr view "$PR_NUMBER" --json headRefName,baseRefName,headRepository,headRepositoryOwner 2>/dev/null)
 if [ $? -ne 0 ]; then
     echo "❌ Failed to fetch PR #$PR_NUMBER info"
     exit 1
@@ -78,14 +78,33 @@ fi
 
 HEAD_BRANCH=$(echo "$PR_INFO" | jq -r '.headRefName')
 BASE_BRANCH=$(echo "$PR_INFO" | jq -r '.baseRefName')
-HEAD_REPO=$(echo "$PR_INFO" | jq -r '.headRepository.owner.login')
+HEAD_REPO=$(echo "$PR_INFO" | jq -r '(.headRepositoryOwner.login // "" )')
+if [ -z "$HEAD_REPO" ]; then
+    HEAD_REPO=$(echo "$PR_INFO" | jq -r '(.headRepository.nameWithOwner // "" )' | awk -F'/' '{print $1}')
+fi
+if [ -z "$HEAD_REPO" ]; then
+    HEAD_REPO=$(gh api repos/:owner/:repo --jq .owner.login)
+fi
 REMOTE_BRANCH="$HEAD_BRANCH"  # Store original remote branch name
 
-echo "📋 PR #$PR_NUMBER: $HEAD_BRANCH -> $BASE_BRANCH"
+CURRENT_ORIGIN_URL=$(git remote get-url origin 2>/dev/null || echo "")
+CURRENT_OWNER=""
+if [[ "$CURRENT_ORIGIN_URL" == git@github.com:* ]]; then
+    CURRENT_OWNER="${CURRENT_ORIGIN_URL#git@github.com:}"
+    CURRENT_OWNER="${CURRENT_OWNER%%/*}"
+elif [[ "$CURRENT_ORIGIN_URL" == https://github.com/* ]] || [[ "$CURRENT_ORIGIN_URL" == http://github.com/* ]]; then
+    CURRENT_OWNER="${CURRENT_ORIGIN_URL#*://github.com/}"
+    CURRENT_OWNER="${CURRENT_OWNER%%/*}"
+fi
+if [ -z "$CURRENT_OWNER" ]; then
+    CURRENT_OWNER=$(gh api repos/:owner/:repo --jq .owner.login 2>/dev/null || echo "")
+fi
+
+echo "📋 PR #$PR_NUMBER: $HEAD_BRANCH -> $BASE_BRANCH (owner=$HEAD_REPO; repo=$CURRENT_OWNER)"
 
 # Handle fork PRs using gh pr checkout
 
-if [ "$HEAD_REPO" != "$(gh api repos/:owner/:repo --jq .owner.login)" ]; then
+if [ -n "$HEAD_REPO" ] && [ -n "$CURRENT_OWNER" ] && [ "$HEAD_REPO" != "$CURRENT_OWNER" ]; then
     echo "🔗 Fork detected, using gh pr checkout for proper remote setup..."
     gh pr checkout "$PR_NUMBER"
 else
@@ -109,51 +128,40 @@ else
             if [ -z "$WORKTREE_INFO" ]; then
                 WORKTREE_INFO="unknown location"
             fi
-            echo "⚠️ Branch $HEAD_BRANCH is checked out elsewhere: $WORKTREE_INFO"
             echo "🔄 Attempting to resolve branch conflict with remote..."
-
+            echo "⚠️ Checkout failed for $HEAD_BRANCH; creating a safe local sync branch instead."
             if [ "$WORKTREE_INFO" != "unknown location" ]; then
-                # Delete the blocking local branch if possible (only works if not checked out)
-                if git branch -D "$HEAD_BRANCH" 2>/dev/null; then
-                    echo "✅ Removed stale local branch reference"
-                    # Now create fresh branch from remote
-                    if git checkout -b "$HEAD_BRANCH" "origin/$REMOTE_BRANCH" 2>/dev/null; then
-                        echo "✅ Created fresh local branch: $HEAD_BRANCH"
-                        SWITCHED_TO_TARGET=true
-                    else
-                        echo "❌ Failed to create fresh local branch: $HEAD_BRANCH"
-                        echo "🔄 Syncing content on current branch instead..."
-                        if ! git fetch origin "$REMOTE_BRANCH"; then
-                            echo "❌ Failed to fetch origin/$REMOTE_BRANCH"
-                            exit 1
-                        fi
-                        if ! git reset --hard "origin/$REMOTE_BRANCH"; then
-                            echo "❌ Failed to reset to remote state"
-                            exit 1
-                        fi
-                        echo "✅ Content synced to remote state"
-                        HEAD_BRANCH="$CURRENT_BRANCH"
-                    fi
-                else
-                    echo "⚠️ Unable to delete $HEAD_BRANCH; it may be active in another worktree"
-                    # Cannot delete the blocking branch, so sync content on current branch instead
-                    if ! git fetch origin "$REMOTE_BRANCH"; then
-                        echo "❌ Failed to fetch origin/$REMOTE_BRANCH"
-                        exit 1
-                    fi
-                    if ! git reset --hard "origin/$REMOTE_BRANCH"; then
-                        echo "❌ Failed to reset to remote state"
-                        exit 1
-                    fi
-                    echo "✅ Content synced to remote state"
-                    # This is our last resort - stay on current branch but with correct content
-                    echo "⚠️ Cannot switch to $HEAD_BRANCH - branch is actively in use elsewhere"
-                    echo "📍 Stayed on $CURRENT_BRANCH and replaced content from origin/$REMOTE_BRANCH. If this was intentional local work, consider force-pushing or stashing your changes."
-                    HEAD_BRANCH="$CURRENT_BRANCH"
-                fi
+                echo "⚠️ Branch $HEAD_BRANCH is checked out elsewhere: $WORKTREE_INFO"
+            fi
+
+            # Create a unique local branch that still tracks the PR remote branch.
+            # This avoids blocking the existing checked-out worktree and preserves both copies.
+            SYNC_BRANCH_BASE="${HEAD_BRANCH}__sync-${PR_NUMBER}"
+            SYNC_BRANCH="$SYNC_BRANCH_BASE"
+            SYNC_SUFFIX=1
+            while git show-ref --verify --quiet "refs/heads/$SYNC_BRANCH"; do
+                SYNC_BRANCH="${SYNC_BRANCH_BASE}-${SYNC_SUFFIX}"
+                SYNC_SUFFIX=$((SYNC_SUFFIX + 1))
+            done
+
+            if git checkout -b "$SYNC_BRANCH" --track "origin/$REMOTE_BRANCH" 2>/dev/null; then
+                echo "✅ Created local sync branch: $SYNC_BRANCH (tracking origin/$REMOTE_BRANCH)"
+                HEAD_BRANCH="$SYNC_BRANCH"
+                SWITCHED_TO_TARGET=true
             else
-                echo "❌ Checkout failed for $HEAD_BRANCH and no worktree conflict was detected. Please clean your working tree or stash changes before retrying."
-                exit 1
+                echo "❌ Failed to create local sync branch $SYNC_BRANCH"
+                echo "🔄 Falling back to syncing content on current branch..."
+                if ! git fetch origin "$REMOTE_BRANCH"; then
+                    echo "❌ Failed to fetch origin/$REMOTE_BRANCH"
+                    exit 1
+                fi
+                if ! git reset --hard "origin/$REMOTE_BRANCH"; then
+                    echo "❌ Failed to reset to remote state"
+                    exit 1
+                fi
+                echo "✅ Content synced to remote state"
+                echo "📍 Stayed on $CURRENT_BRANCH and replaced content from origin/$REMOTE_BRANCH."
+                HEAD_BRANCH="$CURRENT_BRANCH"
             fi
         fi
     else

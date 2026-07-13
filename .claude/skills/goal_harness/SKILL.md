@@ -38,6 +38,10 @@ Subagent (via the `Agent` tool) runs evidence-review + evidence-standards synthe
 Subagent reviews: Map claims → artifacts, rate STRONG/WEAK/MISSING.
 Verdict: PASS / WARN / PARTIAL / FAIL / INCONCLUSIVE.
 
+The evidence-review skill loads from the repo-root required path
+`.claude/skills/evidence-review.md`. **If that path is not present, immediately
+abort Gate 2 and emit a missing-skill error — do not continue synthesis.**
+
 Normalization rule: WARN → PASS (document warnings). PARTIAL → FAIL (gaps remain). INCONCLUSIVE → FAIL (cannot confirm).
 
 ### Gate 3: /code_standards (3 parallel adversarial lanes)
@@ -49,6 +53,7 @@ Normalization rule: WARN → PASS (document warnings). PARTIAL → FAIL (gaps re
 | Root-cause-first | `~/.claude/skills/root-cause-first/SKILL.md` | Root cause documented before adding protections |
 
 Dispatch all 3 in parallel. Any lane FAIL → overall /code_standards FAIL.
+WARN is acceptable but must be documented.
 
 ### Gate 4: Independent Agent Review
 

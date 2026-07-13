@@ -3,6 +3,8 @@ name: skeptic-agent
 description: Define and run skeptic exit criteria for non-trivial tasks — independent verification agent with inverted incentive to find gaps
 ---
 
+> **DELETED SYSTEM (2026-07-09).** The skeptic verdict system was fully removed (repo PR #8217 + workflow registrations disabled + .gemini toml deletion PR #8313). This skill is retained as a historical record only — do NOT dispatch skeptic verdicts or wait for them.
+
 # Skeptic Agent — Exit Criteria Verification
 
 ## When This Skill Activates
@@ -60,7 +62,6 @@ Rules:
 4. Unit tests do NOT satisfy E2E criteria
 5. Manual tool calls do NOT satisfy pipeline criteria
 6. "Code compiles" does NOT mean "feature works"
-7. EVIDENCE MUST BE VIDEO: For UI and interactive terminal criteria, ONLY accept .gif, .mp4, or .cast videos tied to a commit SHA. Reject static screenshots unless explicitly justified.
 
 Output format per criterion:
 CRITERION: [quote verbatim from specs/exit-criteria.md]

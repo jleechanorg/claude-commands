@@ -77,14 +77,6 @@ Edit the worker script when:
 - `launchd` can detect candidates but hangs or times out during classification
 - prompt wording changes and the regexes need to expand
 
-**Pattern wiring rule (mandatory):** Detection regexes in this worker are checked at
-**two call sites** — `is_approval_candidate()` (the gate) and `heuristic_decision()`
-(the action). A pattern added to `heuristic_decision()` but not `is_approval_candidate()`
-will silently fail because the gate drops it first. When adding a detection regex or
-phrase, you MUST add test strings to **both** functions. The test file at
-`scripts/test_approval_patterns.py` enforces this by running every dialog through both
-functions — it will fail if a pattern is only wired into one.
-
 Check these first when debugging:
 - `$HOME/.claude/supervisor/cmux-codex-launchd.log`
 - `$HOME/.claude/supervisor/cmux-codex-launchd.stderr.log`

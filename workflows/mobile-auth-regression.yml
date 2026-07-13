@@ -1,0 +1,213 @@
+name: Mobile Auth Same-Origin Regression
+
+# Regression guard for the Chrome iOS Incognito same-origin auth fix (PR #7697)
+# and the IDB persistence fallback (PR #7720). Catches:
+#   - Removal of /__/auth/<path:subpath> proxy route in mvp_site/main.py
+#   - Loss of window.resolveAuthDomain or SAME_ORIGIN_AUTH_DOMAINS in auth.js
+#   - Loss of window.__authPersistenceForcedLocalStorage boolean
+#
+# Triggered on PRs that touch the regression surface, plus push to main/dev.
+# Self-hosted runner (same pool as styleguide-compliance-gate.yml).
+#
+# No real LLM, no real OAuth, no external creds. Real Flask + Playwright WebKit.
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "mvp_site/main.py"
+      - "mvp_site/frontend_v1/auth.js"
+      - "testing_ui/mobile_auth_same_origin/**"
+      - ".github/workflows/mobile-auth-regression.yml"
+  push:
+    branches: [main, dev]
+    paths:
+      - "mvp_site/main.py"
+      - "mvp_site/frontend_v1/auth.js"
+      - "testing_ui/mobile_auth_same_origin/**"
+      - ".github/workflows/mobile-auth-regression.yml"
+
+jobs:
+  mobile-auth-regression:
+    name: Mobile Auth Same-Origin Regression
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    timeout-minutes: 15
+    env:
+      TESTING_AUTH_BYPASS: "true"
+      PYTHONUNBUFFERED: "1"
+      PIP_NO_CACHE_DIR: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Disk preflight + cleanup
+        # Same pattern as styleguide-compliance-gate.yml: self-hosted runners
+        # occasionally run low on disk and Errno 28 mid-pip install cascades
+        # into a misleading ModuleNotFoundError. Free up space first.
+        run: |
+          set -euo pipefail
+          AVAIL_KB="$(df -Pk . | awk 'NR==2 {print $4}')"
+          AVAIL_GB=$((AVAIL_KB / 1024 / 1024))
+          echo "Disk free before cleanup: ${AVAIL_GB} GB"
+
+          rm -rf /tmp/your-project.com 2>/dev/null || true
+          python3 -m pip cache purge >/dev/null 2>&1 || true
+          rm -rf "$HOME/.cache/pip" 2>/dev/null || true
+
+          if [ "${AVAIL_KB:-0}" -lt 2097152 ]; then
+            echo "Disk below 2 GB — running aggressive cleanup"
+            if [ "$(uname)" = "Darwin" ] && command -v brew >/dev/null 2>&1; then
+              brew cleanup -s >/dev/null 2>&1 || true
+            fi
+            if [ -d /var/cache/apt ]; then
+              sudo rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || \
+                rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+            fi
+            rm -rf /home/runner/_work/*/_temp 2>/dev/null || \
+              rm -rf "$HOME/actions-runner/_work"/*/_temp 2>/dev/null || true
+            rm -rf /tmp/playwright* /tmp/.org.chromium.Chromium* 2>/dev/null || true
+          fi
+
+          AVAIL_KB_AFTER="$(df -Pk . | awk 'NR==2 {print $4}')"
+          echo "Disk free after cleanup: $((AVAIL_KB_AFTER / 1024 / 1024)) GB"
+          if [ "${AVAIL_KB_AFTER:-0}" -lt 1048576 ]; then
+            echo "::error::low_disk_space_after_cleanup"
+            df -h
+            exit 1
+          fi
+
+      - name: Resolve Python interpreter
+        id: python_resolve
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            echo "python_bin=$PWD/venv/bin/python3" >> "$GITHUB_OUTPUT"
+          else
+            echo "python_bin=$(which python3.11 || which python3)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python 3.11
+        if: runner.os == 'Linux'
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          python3 -m venv venv
+          venv/bin/pip install --upgrade pip
+          venv/bin/pip install --no-cache-dir -r mvp_site/requirements.txt
+          venv/bin/pip install --no-cache-dir requests
+          echo "$PWD/venv/bin" >> "$GITHUB_PATH"
+          echo "VIRTUAL_ENV=$PWD/venv" >> "$GITHUB_ENV"
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          ${{ steps.python_resolve.outputs.python_bin }} -m pip install --break-system-packages --no-cache-dir -r mvp_site/requirements.txt
+          ${{ steps.python_resolve.outputs.python_bin }} -m pip install --break-system-packages --no-cache-dir requests
+
+      - name: Install Playwright system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          if [ "$(id -u)" -eq 0 ]; then
+            venv/bin/python -m playwright install-deps webkit
+          elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+            venv/bin/python -m playwright install-deps webkit
+          elif command -v apt-get >/dev/null 2>&1 && command -v dpkg-deb >/dev/null 2>&1; then
+            mkdir -p .playwright-system-libs/debs .playwright-system-libs/root
+            (
+              cd .playwright-system-libs/debs
+              apt-get download libavif16 libgav1-1 libwoff1 libyuv0
+            )
+            for deb in .playwright-system-libs/debs/*.deb; do
+              dpkg-deb -x "$deb" .playwright-system-libs/root
+            done
+            multiarch=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || true)
+            if [ -z "$multiarch" ]; then
+              multiarch=$(find .playwright-system-libs/root/usr/lib -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | head -n 1)
+            fi
+            if [ -z "$multiarch" ]; then
+              echo "::error title=PlaywrightDeps::Could not determine Debian multiarch lib directory"
+              exit 1
+            fi
+            find .playwright-system-libs/root -name 'libwoff*' -o -name 'libavif*' -o -name 'libgav*' -o -name 'libyuv*'
+            {
+              echo "PLAYWRIGHT_FALLBACK_MULTIARCH=$multiarch"
+              echo "LD_LIBRARY_PATH=$PWD/.playwright-system-libs/root/usr/lib/$multiarch:$PWD/.playwright-system-libs/root/lib/$multiarch:${LD_LIBRARY_PATH:-}"
+              echo "GI_TYPELIB_PATH=$PWD/.playwright-system-libs/root/usr/lib/$multiarch/girepository-1.0:${GI_TYPELIB_PATH:-}"
+            } >> "$GITHUB_ENV"
+          else
+            echo "Skipping Playwright system dependency install: non-root runner has no passwordless sudo."
+            echo "Self-hosted runner images must provide WebKit system libraries."
+          fi
+
+      - name: Install Playwright WebKit
+        run: |
+          ${{ steps.python_resolve.outputs.python_bin }} -m playwright install webkit
+          if [ -d .playwright-system-libs/root ]; then
+            multiarch="${PLAYWRIGHT_FALLBACK_MULTIARCH:-}"
+            if [ -z "$multiarch" ]; then
+              multiarch=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || true)
+            fi
+            if [ -z "$multiarch" ]; then
+              multiarch=$(find .playwright-system-libs/root/usr/lib -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | head -n 1)
+            fi
+            if [ -z "$multiarch" ]; then
+              echo "::error title=PlaywrightDeps::Could not determine Debian multiarch lib directory"
+              exit 1
+            fi
+            lib_roots=()
+            for dir in \
+              "$PWD/.playwright-system-libs/root/usr/lib/$multiarch" \
+              "$PWD/.playwright-system-libs/root/lib/$multiarch"
+            do
+              [ -d "$dir" ] && lib_roots+=("$dir")
+            done
+            mapfile -t webkit_runtime_dirs < <(
+              find "$HOME/.cache/ms-playwright" \
+                \( -path '*/webkit-*/minibrowser-wpe/lib' -o -path '*/webkit-*/minibrowser-wpe/bin' \) \
+                -type d 2>/dev/null
+            )
+            if [ "${#lib_roots[@]}" -eq 0 ]; then
+              echo "::error title=PlaywrightDeps::No lib_roots directories found under .playwright-system-libs; refusing to search cwd"
+              exit 1
+            fi
+            for webkit_dir in "${webkit_runtime_dirs[@]}"; do
+              find "${lib_roots[@]}" -maxdepth 1 \( -type f -o -type l \) \
+                \( -name 'libwoff*.so*' -o -name 'libavif*.so*' -o -name 'libgav*.so*' -o -name 'libyuv*.so*' \) \
+                -exec cp -P -f {} "$webkit_dir/" \;
+              echo "Copied fallback Playwright libs into $webkit_dir"
+            done
+          fi
+
+      - name: Run mobile auth same-origin regression test
+        run: |
+          set -o pipefail
+          ${{ steps.python_resolve.outputs.python_bin }} testing_ui/mobile_auth_same_origin/test_auth_same_origin.py 2>&1 | tee /tmp/mobile_auth_run.log
+
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        continue-on-error: true
+        with:
+          name: mobile-auth-regression-log
+          path: |
+            /tmp/mobile_auth_run.log
+            /tmp/your-project.com/fix-mobile-auth-domain-match/auth_same_origin/latest/results.json
+          retention-days: 7

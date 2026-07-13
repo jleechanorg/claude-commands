@@ -1,0 +1,138 @@
+name: Infra Contract Tests
+
+# Catches self-hosted-runner infra-glue regressions before they ship:
+#   1. shellcheck on every *.sh under self-hosted-oss/ and self-hosted-colima/
+#   2. Static contract tests (plist placeholders, heal-runners graceful stop,
+#      pre-job-hook header, install.sh stable-path mirror, plist↔install
+#      template coverage).
+#   3. Forbidden-pattern grep (docker rm -f against a runner identifier).
+#
+# Context: 14d runner regression mining (wf_ec5eb96b-aed,
+# /tmp/synthesis.md) showed that the runner fleet's recurring pain (8 stuck
+# AO auxiliaries, 478 Green Gate failures) traces back to bash scripts that
+# silently regressed away from documented contracts — `docker rm -f` instead
+# of `docker stop --time=30`, hard-coded `~/Library/...` paths in plists,
+# `pre-job-hook.sh` losing its ACTIONS_RUNNER_HOOK_JOB_STARTED header. This
+# workflow is the immune-system net that makes such regressions fail PR
+# review instead of failing in production.
+
+on:
+  pull_request:
+    paths:
+      - 'self-hosted-oss/**'
+      - 'self-hosted-colima/**'
+      - '.github/workflows/*runner*'
+      - '.github/workflows/infra-contract-tests.yml'
+      - 'deploy.sh'
+      - 'self-hosted-oss/launchd/**'
+      - 'self-hosted-colima/launchd/**'
+  push:
+    branches: [main]
+    paths:
+      - 'self-hosted-oss/**'
+      - 'self-hosted-colima/**'
+      - '.github/workflows/infra-contract-tests.yml'
+      - 'deploy.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  contract-tests:
+    name: Shellcheck + infra contract suite
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          persist-credentials: false
+
+      - name: Install shellcheck
+        run: |
+          set -euo pipefail
+          if command -v shellcheck >/dev/null 2>&1; then
+            shellcheck --version
+          elif [ "$(id -u)" -eq 0 ]; then
+            apt-get update -qq
+            apt-get install -y -qq shellcheck
+          elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq shellcheck
+          elif command -v apt-get >/dev/null 2>&1 && command -v dpkg-deb >/dev/null 2>&1; then
+            mkdir -p .ci-tools/debs .ci-tools/root
+            (
+              cd .ci-tools/debs
+              apt-get download shellcheck
+            )
+            for deb in .ci-tools/debs/*.deb; do
+              dpkg-deb -x "$deb" .ci-tools/root
+            done
+            echo "$PWD/.ci-tools/root/usr/bin" >> "$GITHUB_PATH"
+            .ci-tools/root/usr/bin/shellcheck --version
+          else
+            echo "::error::shellcheck is not installed and this runner has no passwordless sudo."
+            echo "Install shellcheck on the self-hosted runner image."
+            exit 1
+          fi
+
+      - name: shellcheck -x on self-hosted-oss scripts
+        # -x follows `source` so library functions are checked too.
+        # We tolerate SC1090/1091 (sourced files not found at static-analysis
+        # time — these run only inside a real install env, which CI cannot
+        # replicate here).
+        run: |
+          set -e
+          if compgen -G 'self-hosted-oss/scripts/*.sh' >/dev/null; then
+            shellcheck -x \
+              -e SC1090 -e SC1091 \
+              self-hosted-oss/scripts/*.sh
+          else
+            echo 'NOTE: self-hosted-oss/scripts/*.sh not present — skipping'
+          fi
+
+      - name: shellcheck -x on self-hosted-colima scripts
+        run: |
+          set -e
+          if compgen -G 'self-hosted-colima/scripts/*.sh' >/dev/null; then
+            shellcheck -x \
+              --severity=error \
+              -e SC1090 -e SC1091 -e SC2170 \
+              self-hosted-colima/scripts/*.sh
+          else
+            echo 'NOTE: self-hosted-colima/scripts/*.sh not present — skipping'
+          fi
+
+      - name: shellcheck -x on the contract suite itself
+        # Meta-test: the test script must itself be clean.
+        run: shellcheck -x --severity=error -e SC2016 self-hosted-oss/tests/infra_contract_tests.sh
+
+      - name: Run infra contract suite
+        run: bash self-hosted-oss/tests/infra_contract_tests.sh
+
+      - name: "Forbidden-pattern grep: docker rm -f against runner identifiers"
+        # The known-good heal-runners path uses `docker stop --time=30` (SIGTERM
+        # so the GitHub runner session can deregister cleanly). A regression
+        # to `docker rm -f $RUNNER_CONTAINER` (or any pattern where the rm
+        # target is a runner-named variable) silently breaks deregistration
+        # and orphans sessions. This grep fires whenever `docker rm -f` and a
+        # token containing "runner" appear on the same line of an infra-glue
+        # file. `defaults.sh` / `stop-runner.sh` are excluded by file path —
+        # they intentionally use `docker rm -f` via the bounded
+        # docker_rm_force_with_timeout helper for explicit operator cleanup.
+        run: |
+          set -e
+          # Excluded paths: operator-stop path that intentionally uses rm -f.
+          if grep -RnE 'docker rm -f.*runner' \
+               --exclude-dir='.git' \
+               --exclude-dir='node_modules' \
+               self-hosted-oss/ self-hosted-colima/ \
+               | grep -vE '^self-hosted-oss/defaults\.sh:' \
+               | grep -vE '^self-hosted-oss/stop-runner\.sh:' \
+               | grep -vE '^self-hosted-oss/tests/infra_contract_tests\.sh:' \
+               | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' \
+             | grep -q .; then
+            echo '::error::Forbidden pattern `docker rm -f ... runner` found in infra-glue scripts.'
+            echo 'Use `docker stop --time=30 <name>` followed by `docker rm <name>` so the'
+            echo 'GitHub runner session can deregister cleanly. See heal-runners.sh:204-217.'
+            exit 1
+          fi
+          echo 'OK: no forbidden docker rm -f runner pattern in infra-glue scripts'

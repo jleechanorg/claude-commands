@@ -41,15 +41,15 @@ tmux list-sessions | wc -l
 
 ```bash
 # Create PR
-gh api repos/jleechanorg/agent-orchestrator/pulls --method POST \
+gh api repos/jleechanorg/agent-orchestrator-ts/pulls --method POST \
   -f title='[agento] ...' -f head='branch-name' -f base='main' -f body='...'
 
 # Comment on PR
-gh api repos/jleechanorg/agent-orchestrator/issues/<PR_NUMBER>/comments --method POST \
+gh api repos/jleechanorg/agent-orchestrator-ts/issues/<PR_NUMBER>/comments --method POST \
   -f body='...'
 
 # Get PR details
-gh api repos/jleechanorg/agent-orchestrator/pulls/<PR_NUMBER>
+gh api repos/jleechanorg/agent-orchestrator-ts/pulls/<PR_NUMBER>
 ```
 
 ## Approval output format

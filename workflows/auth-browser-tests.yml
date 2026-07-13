@@ -1,0 +1,453 @@
+name: Auth Browser Tests
+
+# /auth-test — PR comment trigger that runs testing_ui/auth/test_fresh_login_browsers.py
+# against the PR's deployed preview server. Tests Chromium and WebKit iPhone 16 UA
+# fresh login via Firebase browser-SDK signInWithCustomToken(), verifying UA-gated
+# IDB persistence (PR #7759 regression guard).
+#
+# Auto-trigger: also fires on pull_request (opened/synchronize/reopened) when the
+# PR touches any auth-relevant file. The "Resolve deployed preview service URL"
+# step polls up to 7 minutes for the PR preview to land before falling through
+# to SKIPPED, so the auto-run typically tests the deployed build instead of
+# running on a "not-yet-deployed" service. /auth-test and workflow_dispatch
+# benefit from the same polling — they no longer race the deploy.
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.event.comment.id || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'mvp_site/frontend_v1/auth.js'
+      - 'mvp_site/frontend_v1/auth_*.js'
+      - 'mvp_site/main.py'
+      - 'testing_ui/auth/**'
+      - '.github/workflows/auth-browser-tests.yml'
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to test'
+        required: true
+        type: number
+  # NOTE on auto-trigger timing: the `pull_request: synchronize` trigger fires
+  # immediately on push. The "Resolve deployed preview service URL" step
+  # POLLS for the preview service up to 7 minutes (typical Cloud Build + Cloud
+  # Run rollout is 2-5 min) before falling through to SKIPPED. This means
+  # the auto-trigger almost always tests the actually-deployed build, not a
+  # "not-yet-deployed" service. `/auth-test` and `workflow_dispatch` benefit
+  # from the same polling — no more guessing the post-deploy window.
+  #
+  # We considered chaining via `workflow_run: workflows: ["Deploy PR Preview
+  # (Rotating Pool)"]` to test the deployed build automatically, but
+  # GitHub Actions runs `workflow_run` using the workflow file from the
+  # DEFAULT BRANCH (main), not the PR branch. So this trigger cannot fire
+  # until the workflow file is on main, which means it would only start
+  # working after this PR merges. Polling in resolve_url is simpler and
+  # works pre-merge.
+
+env:
+  GCP_REGION: us-central1
+  GCP_PROJECT: worldarchitecture-ai
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  resolve-pr-context:
+    name: Resolve PR context
+    if: >-
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/auth-test') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'workflow_dispatch')
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    outputs:
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+      pr_head_sha: ${{ steps.resolve.outputs.pr_head_sha }}
+      pr_head_ref: ${{ steps.resolve.outputs.pr_head_ref }}
+    steps:
+      - name: Resolve PR number + head SHA
+        id: resolve
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            let prNumber;
+            if (context.eventName === 'pull_request') {
+              prNumber = context.payload.pull_request.number;
+            } else if (context.eventName === 'workflow_dispatch') {
+              const raw = context.payload?.inputs?.pr_number;
+              if (raw) prNumber = Number(raw);
+            } else if (context.eventName === 'issue_comment') {
+              if (!context.payload.issue?.pull_request) {
+                core.setFailed('Comment is not on a pull request');
+                return;
+              }
+              prNumber = context.payload.issue.number;
+            }
+
+            if (!prNumber || Number.isNaN(prNumber)) {
+              core.setFailed('Could not determine PR number');
+              return;
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            core.setOutput('pr_number', String(prNumber));
+            core.setOutput('pr_head_sha', pr.head.sha);
+            core.setOutput('pr_head_ref', pr.head.ref);
+
+      - name: Post started comment
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const body = [
+              '🌐 **Auth Browser Tests Started**',
+              '',
+              'Running Playwright Chromium + WebKit iPhone 16 UA fresh login tests against deployed GCP preview.',
+              '',
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+  run-auth-browser-tests:
+    name: Playwright auth browser tests (Chromium + WebKit)
+    needs: resolve-pr-context
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    outputs:
+      # `test_run` is the success/failure step (skipped when no preview).
+      # `set_skipped` is the no-preview fallback (skipped when preview exists).
+      # Both are mutually exclusive via `if:`, so the OR picks whichever ran.
+      # Final `|| 'unknown'` is a safety net for any future step-skip path.
+      test_outcome: ${{ steps.test_run.outputs.test_outcome || steps.set_skipped.outputs.test_outcome || 'unknown' }}
+      service_url: ${{ steps.resolve_url.outputs.service_url }}
+      deployed: ${{ steps.resolve_url.outputs.deployed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          ref: ${{ needs.resolve-pr-context.outputs.pr_head_ref }}
+          persist-credentials: false
+
+      # Inlined gcloud auth + preview-URL lookup.
+      #
+      # We do NOT use the `run-pr-preview-test` composite action here even though
+      # it does the same work, because that action is downloaded as a full-repo
+      # archive of $GITHUB_REPOSITORY@main. Some paths under
+      # `evidence/pr-*/.../latest` are symlinks whose targets aren't part of the
+      # sparse blob set, and Mac self-hosted runners fail the action download with
+      # "Could not find file .../evidence/pr-7483/banned-names-always-on/iteration_001/latest"
+      # at checkout. Inlining avoids the action download entirely and keeps the
+      # PR's HEAD out of scope for the `gcp_sa_key` secret (still safer than
+      # `uses: ./.github/actions/...`, which would load the PR's own action copy).
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200  # v2
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Resolve deployed preview service URL
+        id: resolve_url
+        env:
+          GCP_REGION: ${{ env.GCP_REGION }}
+          GCP_PROJECT: ${{ env.GCP_PROJECT }}
+          SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER="${{ needs.resolve-pr-context.outputs.pr_number }}"
+          PR_HEAD_SHA="${{ needs.resolve-pr-context.outputs.pr_head_sha }}"
+
+          if [ -z "$PR_NUMBER" ] || [ -z "$PR_HEAD_SHA" ]; then
+            echo "::error::Missing pr_number or pr_head_sha"
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            echo "service_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Poll for the preview service. The PR preview deploy may first wait
+          # for a self-hosted runner, then spend ~2-5 min in Cloud Build + Cloud
+          # Run update. The `pull_request: synchronize` auth run starts
+          # immediately, so wait long enough to cover runner-start delay too.
+          #
+          # 15 min ceiling is well under GitHub Actions' 6-hour default job
+          # timeout and prevents false failure when deploy-preview starts late.
+          MAX_WAIT_SECONDS=900
+          POLL_INTERVAL_SECONDS=20
+          ELAPSED=0
+          SERVICE_NAME=""
+
+          echo "🔍 Searching for preview for PR #${PR_NUMBER} at commit ${PR_HEAD_SHA} (will poll up to ${MAX_WAIT_SECONDS}s)"
+
+          while [ $ELAPSED -le $MAX_WAIT_SECONDS ]; do
+            SERVICE_NAME=$(gcloud run services list \
+              --region="${GCP_REGION}" \
+              --project="${GCP_PROJECT}" \
+              --filter="metadata.labels.pr-number=${PR_NUMBER} AND metadata.labels.commit-sha=${PR_HEAD_SHA}" \
+              --format="value(metadata.name)" \
+              --limit=1 \
+              --quiet 2>/dev/null || echo "")
+
+            if [ -n "$SERVICE_NAME" ]; then
+              echo "✅ Found service ${SERVICE_NAME} after ${ELAPSED}s"
+              break
+            fi
+
+            if [ $ELAPSED -eq 0 ]; then
+              echo "⏳ Preview not yet deployed. Polling every ${POLL_INTERVAL_SECONDS}s (max ${MAX_WAIT_SECONDS}s)..."
+            fi
+            sleep $POLL_INTERVAL_SECONDS
+            ELAPSED=$((ELAPSED + POLL_INTERVAL_SECONDS))
+          done
+
+          if [ -z "$SERVICE_NAME" ]; then
+            echo "::warning::No deployed preview found for PR #${PR_NUMBER} at commit ${PR_HEAD_SHA} after ${MAX_WAIT_SECONDS}s of polling"
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            echo "service_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
+            --region "${GCP_REGION}" \
+            --project "${GCP_PROJECT}" \
+            --format="value(status.url)" \
+            --quiet 2>/dev/null || echo "")
+
+          if [ -z "$SERVICE_URL" ]; then
+            echo "::warning::Service $SERVICE_NAME found but no URL was returned"
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            echo "service_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "✅ Found deployed preview: $SERVICE_URL"
+          TOKEN_LOGIN_URL="${SERVICE_URL%/}/api/test_client_token_login?uid=auth-browser-readiness&redirect=/"
+          TOKEN_READY=false
+          for attempt in $(seq 1 18); do
+            status=$(curl -sS -o /tmp/auth-browser-token-readiness.html -w '%{http_code}' \
+              --max-time 10 \
+              -H "X-MCP-Smoke-Token: ${SMOKE_TOKEN}" \
+              "$TOKEN_LOGIN_URL" || true)
+            if [ "$status" = "200" ] && grep -q 'const customToken' /tmp/auth-browser-token-readiness.html; then
+              echo "✅ Preview smoke-token login route ready on attempt ${attempt}"
+              TOKEN_READY=true
+              break
+            fi
+            echo "⏳ Preview smoke-token login route not ready yet (HTTP ${status}); retrying in 10s"
+            sleep 10
+          done
+          if [ "$TOKEN_READY" != "true" ]; then
+            echo "::warning::Preview smoke-token login route was not ready after 180s; skipping auth browser tests for this preview"
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            echo "service_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "deployed=true" >> "$GITHUB_OUTPUT"
+          echo "service_url=$SERVICE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        if: steps.resolve_url.outputs.deployed == 'true'
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies + Playwright browsers
+        if: steps.resolve_url.outputs.deployed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHON=$(command -v python3.12 || command -v python3.11 || command -v python3)
+          "$PYTHON" -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r mvp_site/requirements.txt
+          # Install Playwright browser binaries (Chromium + WebKit only — no Firefox needed)
+          playwright install chromium webkit
+          if [ "${RUNNER_OS:-Linux}" = "Linux" ]; then
+            if [ "$(id -u)" -eq 0 ]; then
+              playwright install-deps chromium webkit
+            elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+              playwright install-deps chromium webkit
+            elif command -v apt-get >/dev/null 2>&1 && command -v dpkg-deb >/dev/null 2>&1; then
+              mkdir -p .playwright-system-libs/debs .playwright-system-libs/root
+              (
+                cd .playwright-system-libs/debs
+                apt-get download libavif16 libgav1-1 libwoff1 libyuv0
+              )
+              for deb in .playwright-system-libs/debs/*.deb; do
+                dpkg-deb -x "$deb" .playwright-system-libs/root
+              done
+              multiarch=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || true)
+              if [ -z "$multiarch" ]; then
+                multiarch=$(find .playwright-system-libs/root/usr/lib -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | head -n 1)
+              fi
+              if [ -z "$multiarch" ]; then
+                echo "::error title=PlaywrightDeps::Could not determine Debian multiarch lib directory"
+                exit 1
+              fi
+              {
+                echo "LD_LIBRARY_PATH=$PWD/.playwright-system-libs/root/usr/lib/$multiarch:$PWD/.playwright-system-libs/root/lib/$multiarch:${LD_LIBRARY_PATH:-}"
+                echo "GI_TYPELIB_PATH=$PWD/.playwright-system-libs/root/usr/lib/$multiarch/girepository-1.0:${GI_TYPELIB_PATH:-}"
+              } >> "$GITHUB_ENV"
+              lib_roots=()
+              for dir in \
+                "$PWD/.playwright-system-libs/root/usr/lib/$multiarch" \
+                "$PWD/.playwright-system-libs/root/lib/$multiarch"
+              do
+                [ -d "$dir" ] && lib_roots+=("$dir")
+              done
+              mapfile -t webkit_runtime_dirs < <(
+                find "$HOME/.cache/ms-playwright" \
+                  \( -path '*/webkit-*/minibrowser-wpe/lib' -o -path '*/webkit-*/minibrowser-wpe/bin' \) \
+                  -type d 2>/dev/null
+              )
+              for webkit_dir in "${webkit_runtime_dirs[@]}"; do
+                find "${lib_roots[@]}" -maxdepth 1 \( -type f -o -type l \) \
+                  \( -name 'libwoff*.so*' -o -name 'libavif*.so*' -o -name 'libgav*.so*' -o -name 'libyuv*.so*' \) \
+                  -exec cp -P -f {} "$webkit_dir/" \;
+                echo "Copied fallback Playwright libs into $webkit_dir"
+              done
+            else
+              echo "Skipping Playwright system dependency install: non-root runner has no passwordless sudo."
+              echo "Self-hosted runner images must provide Chromium/WebKit system libraries."
+            fi
+          else
+            playwright install-deps chromium webkit
+          fi
+
+      - name: Write Firebase service account key
+        if: steps.resolve_url.outputs.deployed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}' > /tmp/firebase_sa_ci.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase_sa_ci.json" >> "$GITHUB_ENV"
+
+      - name: Run auth browser tests against preview
+        id: test_run
+        if: steps.resolve_url.outputs.deployed == 'true'
+        shell: bash
+        env:
+          TEST_BASE_URL: ${{ steps.resolve_url.outputs.service_url }}
+          WORLDAI_DEV_MODE: 'false'
+          # Server-mint path: the test fetches a custom token from the deployed
+          # preview's `/api/test_client_token_login` (smoke-token-gated) instead
+          # of using the runner's FIREBASE_SERVICE_ACCOUNT_KEY. The server's
+          # Firebase Admin SDK is initialized with the deployed-project's SA,
+          # so the JWT signature is valid for the preview's Firebase project.
+          # Without this, the runner's SA-minted token gets rejected by the
+          # browser SDK as `auth/invalid-custom-token` whenever the runner's
+          # SA is for a different project than the deployed preview.
+          WORLDAI_SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
+        run: |
+          set -uo pipefail
+          source venv/bin/activate
+          mkdir -p /tmp/your-project.com/auth-login-tests
+
+          echo ""
+          echo "=== Auth Browser Tests ==="
+          echo "Target: ${TEST_BASE_URL}"
+          echo ""
+
+          python3 testing_ui/auth/test_fresh_login_browsers.py
+          exit_code=$?
+
+          if [ $exit_code -eq 0 ]; then
+            echo "test_outcome=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "test_outcome=failure" >> "$GITHUB_OUTPUT"
+          fi
+          exit $exit_code
+
+      - name: Set skipped outcome when no preview
+        id: set_skipped
+        if: steps.resolve_url.outputs.deployed != 'true'
+        shell: bash
+        run: echo "test_outcome=no-preview" >> "$GITHUB_OUTPUT"
+
+      - name: Clean up Firebase key
+        if: always()
+        shell: bash
+        run: rm -f /tmp/firebase_sa_ci.json
+
+      - name: Upload evidence artifacts
+        if: always() && steps.resolve_url.outputs.deployed == 'true'
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+        with:
+          name: auth-browser-evidence-${{ needs.resolve-pr-context.outputs.pr_head_sha }}
+          # Match testing_ui/auth/test_fresh_login_browsers.py EVIDENCE_DIR
+          path: /tmp/your-project.com/auth-login-tests/
+          retention-days: 14
+          if-no-files-found: warn
+
+  post-result:
+    name: Post result comment
+    needs: [resolve-pr-context, run-auth-browser-tests]
+    if: always() && needs.resolve-pr-context.outputs.pr_number != ''
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    steps:
+      - name: Post result comment
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        env:
+          TEST_OUTCOME: ${{ needs.run-auth-browser-tests.outputs.test_outcome }}
+          SERVICE_URL: ${{ needs.run-auth-browser-tests.outputs.service_url }}
+          PR_NUMBER: ${{ needs.resolve-pr-context.outputs.pr_number }}
+        with:
+          script: |
+            const outcome = process.env.TEST_OUTCOME || 'unknown';
+            const serviceUrl = process.env.SERVICE_URL || '';
+            const prNumber = parseInt(process.env.PR_NUMBER || '', 10);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const icons = { success: '✅', failure: '❌', 'no-preview': '⚠️', unknown: '❓' };
+            const labels = {
+              success: 'PASSED',
+              failure: 'FAILED',
+              'no-preview': 'SKIPPED — no deployed preview found',
+              unknown: 'UNKNOWN',
+            };
+
+            const icon = icons[outcome] || icons.unknown;
+            const label = labels[outcome] || labels.unknown;
+
+            const lines = [
+              `${icon} **Auth Browser Tests: ${label}**`,
+              '',
+              '| Browser | Test |',
+              '|---------|------|',
+              '| Chromium desktop | `forcedLocalStorage=null` (IDB native) + reload restored |',
+              '| WebKit iPhone 16 UA | `forcedLocalStorage=true` (localStorage fallback) + reload restored |',
+            ];
+
+            if (serviceUrl) lines.push('', `Preview: ${serviceUrl}`);
+            lines.push('', `Run: ${runUrl}`);
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: lines.join('\n'),
+            });

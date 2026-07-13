@@ -1,6 +1,9 @@
 ---
-description: Generate comprehensive product spec, engineering design, and TDD implementation plan documents for any feature or project. Generalized from your-project.com /design command.
+description: Generate comprehensive product spec, engineering design, and TDD implementation plan documents for any feature or project. Consolidated 2026-07-11 from the retired /design command (whose newer Phase-0 exit-criteria-first + batch-decision contract is authoritative — see the AUTHORITATIVE ENTRY CONTRACT section) and the retired design HTML skill.
 ---
+
+> **Start here:** run the "AUTHORITATIVE ENTRY CONTRACT" section (end of file) FIRST — Phase 0
+> exit-criteria-first, batch-decision mode. It supersedes conflicting steps in the body below.
 
 # /design — Product & Engineering Design Documentation
 
@@ -16,7 +19,17 @@ When invoked, execute these steps immediately. This is NOT documentation — the
 
 ## 🚨 Execution Workflow
 
-### Phase 0: Multi-Perspective Analysis
+### Phase 0: Exit Criteria First (runs BEFORE any product spec / design content)
+
+1. **Step 0a — Brainstorm the finish line**: Invoke the superpowers brainstorming skill (Skill tool, skill name `superpowers:brainstorming`) to explore with the user/context: "How will we know this project is truly DONE and WORKING? What would an adversarial reviewer verify before sign-off?"
+   - **Batch-decision mode (mandatory)**: never ask the user brainstorming questions one-by-one. Answer every brainstorming question yourself (or via a spawned subagent — e.g. a brainstorming subagent that self-answers, or `AskUserQuestion` with all decisions batched) with a recommended decision — including the exit criteria — using repo/conversation context and sensible senior-engineer defaults. Then present ALL recommended decisions to the user AT ONCE in a single review table: decision | recommendation | one-line rationale | rejected alternative worth noting. Contract: zero one-by-one questioning, one consolidated review checkpoint, then proceed.
+2. **Step 0b — Write exit criteria FIRST**: Record the resulting exit criteria as the FIRST section of the product spec, before goals/requirements. Each criterion must be:
+   - **Binary**: pass/fail, no partial credit
+   - **Executable**: a stated command or observable check
+   - **Externally anchored**: verified at the layer users experience — real system-of-record state, not implementer-authored logs/telemetry
+3. **Ground rules** (per `~/projects/dark-factory/docs/cutover-exit-criteria.md`, R1–R6 + X1–X10 charter, hardened 2026-07-04 by a 3-reviewer adversarial pass): implementer-authored artifacts are corroborating, never sufficient; the verifier reproduces rather than inspects; satisfied-via-mock/dry-run = FAIL; default verdict is FAIL.
+
+### Phase 0.5: Multi-Perspective Analysis
 
 1. **Architecture Assessment**: Technical approach and system design
 2. **Product Strategy Review**: User experience and business value
@@ -99,14 +112,20 @@ The `/design` command generates **3 comprehensive documents** with TDD integrati
 # [Feature] Product Specification
 
 ## Table of Contents
-1. Executive Summary
-2. Goals & Objectives
-3. User Stories
-4. Feature Requirements
-5. User Journey Maps
-6. UI/UX Requirements
-7. Success Criteria
-8. Metrics & KPIs
+1. Exit Criteria
+2. Executive Summary
+3. Goals & Objectives
+4. User Stories
+5. Feature Requirements
+6. User Journey Maps
+7. UI/UX Requirements
+8. Success Criteria
+9. Metrics & KPIs
+
+## Exit Criteria (FIRST section — from Phase 0)
+- Binary (pass/fail) criteria only, each with an executable command or observable check
+- Externally anchored: verified at the layer users experience (real system-of-record state)
+- Implementer-authored artifacts are corroborating, never sufficient; satisfied-via-mock/dry-run = FAIL
 
 ## Executive Summary
 - Feature overview
@@ -414,3 +433,32 @@ The `/design` command succeeds when:
 
 Generalized from `your-project.com/.claude/commands/design.md` (1140 lines, 35KB).
 Original repo-specific backup preserved at `~/.claude/skills/design-doc-backup-worldarchitect.md`.
+
+---
+
+## AUTHORITATIVE ENTRY CONTRACT — consolidated from the retired /design command (2026-07-11, user directive)
+
+The standalone `/design` command (newest of the merged sources, updated 2026-07-11) and `design`
+skill were removed; their contracts live here. **Where anything below in this section conflicts
+with the older flow above, THIS section wins** — run Phase 0 first, batch-decision mode always.
+`/design` with no custom override resolves to Claude Code's builtin (if present).
+
+### Phase 0 — Exit criteria first (runs BEFORE any spec/design content)
+- Invoke `superpowers:brainstorming` to explore: "How will we know this is truly DONE and WORKING?
+  What would an adversarial reviewer verify before sign-off?"
+- **Batch-decision mode (mandatory):** never ask brainstorming questions one-by-one. Answer every
+  question yourself with a recommended decision (including exit criteria) from repo/conversation
+  context and senior-engineer defaults, then present ALL decisions AT ONCE in a single review table
+  (decision, recommendation, one-line rationale, rejected alternative worth noting). Zero one-by-one
+  questioning; one consolidated review checkpoint; then proceed.
+- Write exit criteria as the FIRST spec section: binary, executable, externally anchored (real
+  system-of-record state, never implementer-authored logs). Mock/dry-run satisfaction = FAIL;
+  default verdict is FAIL. (Charter: ~/projects/dark-factory/docs/cutover-exit-criteria.md R1-R6+X1-X10.)
+- Run an adversarial review (pass|warn|fail, fix all P0/P1) between spec→design and design→plan.
+
+### Optional HTML+MD output mode (from the retired `design` skill)
+If the target repo has a `docs/design/*.html` style, ALSO emit a matching HTML+MD pair (both files
+written in parallel, single message) matching the repo's canonical HTML (CSS tokens `--bg #f2efe7`,
+`--panel #fffdf8`, `--ink #1f1a16`, `--muted #6f6357`, `--brand #165a72`, `--line #dfd3c2`; hero +
+tag pills, overview card grid, section-label dividers, summary table + honest-capability callout,
+responsive grids at 900px). The markdown three-doc set remains the source of truth.

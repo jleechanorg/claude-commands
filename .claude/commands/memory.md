@@ -22,7 +22,7 @@ execution_mode: immediate
 ### Phase 2: 🔍 SEARCH Action
 
 **Action Steps:**
-1. **Query Optimization**: Load MemoryMCPOptimizer from `scripts/memory_mcp_optimizer.py`
+1. **Query Optimization**: Use the configured Memory MCP optimization workflow instead of referencing a repo-local optimizer script
 2. **Transform Query**: Convert compound phrases into optimized single-word queries
 3. **Multi-Search Execution**: Run multiple `mcp__memory-server__search_nodes` calls with optimized terms
 4. **Result Merging**: Combine and deduplicate results from all searches
@@ -110,7 +110,7 @@ When `/memory` is invoked, execute the following workflow based on the action:
 ## 🔗 Integration Points
 
 **Command Composition**: Works with existing Memory MCP infrastructure:
-- **Optimizer System**: `scripts/memory_mcp_optimizer.py` for query enhancement
+- **Optimizer System**: The configured Memory MCP search workflow for query enhancement
 - **Memory MCP Tools**: All standard `mcp__memory-server__*` tools
 - **Learning Integration**: Compatible with `/learn` command workflows
 - **Guidelines System**: Enhances `/guidelines` Memory MCP consultations

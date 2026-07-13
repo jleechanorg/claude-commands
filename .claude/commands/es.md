@@ -1,22 +1,22 @@
 ---
-description: Evidence Standards — alias that reads the evidence-standards skill
-type: reference
+description: Evidence standards slash command — run /evidence_review on a file or directory
+aliases: [es]
+type: slash
 execution_mode: immediate
 ---
 
-# /es — Evidence Standards Alias
+# /es — Evidence Standards
 
-Thin alias that reads both layers of the evidence-standards skill.
+Run `/evidence_review` on a file, directory, or subject to verify claims have real evidence
+(not just assertions).
 
-**Usage**: `/es`
+**Usage**: `/es <path-or-description>`
 
-## Action
+Read `~/.claude/skills/evidence-standards/SKILL.md` and execute the full workflow — evidence
+class table, unit-only disallow rule (3 exceptions), gist-first publication, and the mandatory
+reconfirm-what-evidence-proves rule all live there.
 
-Read and display both layers (agents must consult both):
-1. `~/.claude/skills/evidence-standards/SKILL.md` — general cross-project standards
-2. `.claude/skills/evidence-standards.md` — WorldArchitect-specific standards
-3. If the evidence claim mentions BigQuery, `llm_forensics`, raw LLM payloads,
-   token counts, RAG shadow comparison, or BQ readback, also read
-   `.claude/skills/bq-evidence-reading.md` or run `/bq`.
-
-**Caveats**: After reading, you MUST always reconfirm by explicitly stating what the evidence proves vs what it does NOT prove.
+**Examples**:
+- `/es src/rewards/box.py` — review evidence standards compliance
+- `/es "the LLM sprite system works"` — verify claim about a feature
+- `/es .` — review current directory

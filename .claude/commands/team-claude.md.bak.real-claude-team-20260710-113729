@@ -1,0 +1,111 @@
+---
+description: Sonnet/Haiku fan-out for parallel implementation under one orchestrator
+execution_mode: immediate
+---
+
+`/team-claude` runs the user's `<prompt>` on a fan-out of Anthropic Sonnet
+coding/verifying subagents (with haiku for trivial reads), orchestrated by
+this Claude session. Use this for higher-quality work where you want
+structured coder+verifier pairs and tighter coordination; pay Sonnet token
+cost.
+
+`/team-mini` does the same with MiniMax-M3 — prefer the cheaper one unless
+this is a Sonnet-required path.
+
+## Execution steps
+
+1. **Decompose** the user's prompt into 2–6 independent subtasks. Subtasks
+   must NOT contend on the same files; each owns its own slice.
+2. **Fan out in a single message** — every `Agent` call in one block runs
+   concurrently. Pair coder + verifier in the SAME block for independent
+   review:
+
+```python
+Agent(
+    subagent_type="claude-pair-coder",
+    isolation="worktree",
+    run_in_background=true,
+    name="coder-<id>",
+    team_name="claude-team-<short-scope>",
+    description="<5-10 words>",
+    prompt="""..."""
+)
+Agent(
+    subagent_type="claude-pair-verifier",
+    isolation="worktree",
+    run_in_background=true,
+    name="verifier-<id>",
+    team_name="claude-team-<short-scope>",
+    description="<5-10 words>",
+    prompt="""...review the coder's branch..."""
+)
+```
+
+3. **Haiku** for trivial reads/scans:
+
+```python
+Agent(
+    subagent_type="general-purpose",
+    model="haiku",
+    run_in_background=true,
+    description="...",
+    prompt="""..."""
+)
+```
+
+4. **Aggregate**. Read the agent outputs as they return, send follow-ups via
+   the agent IDs (the system provides a routing channel), and write the
+   final summary to the user.
+
+## Subagent types — what each actually does
+
+| Agent type | What it is best at | Cost tier |
+|---|---|---|
+| `claude-pair-coder` | Implementation, TDD, refactor | Sonnet |
+| `claude-pair-verifier` | Adversarial review, test verification | Sonnet |
+| `general-purpose` (model="haiku") | File lookups, simple checks | Cheap |
+| `general-purpose` (default) | Plain Sonnet fallback | Sonnet |
+| `general-purpose` (model="opus") | Hard reasoning, judgement | Expensive — minimize |
+
+## Pair protocol
+
+1. Coder agent implements in a fresh worktree, pushes branch.
+2. Verifier agent checks out the coder's branch (its own worktree), runs
+   `cargo test` / `npm test` / your preferred verifier, reads the diff
+   adversarially, reports defects with file:line.
+3. Coder agent fixes defects identified by the verifier (a separate spawn).
+4. Verifier agent re-runs on the updated branch.
+5. Hand the user the branch URLs.
+
+This is the shape that pairs work in; do not skip the verifier step on
+critical changes.
+
+## Failure modes
+
+- Agent never finishes: `/tasks` shows it's running; check the worktree
+  `/tmp/wt-<id>` for what it last touched.
+- Agent returned but branch is empty: ask the agent for `git log --oneline`
+  output in a follow-up.
+- Subagents collided on the same files (one overwrote the other): prefer
+  better decomposition; not a coder fault.
+
+## Usage
+
+```
+/team-claude <prompt>
+```
+
+The `<prompt>` is interpreted as a high-level goal; decompose first, then fan
+out. No `TeamCreate` / `TaskCreate` / `TaskUpdate` / `SendMessage` exist in
+the Claude Code harness exposed to this skill — `Agent` is the primitive.
+
+## Why these docs differ from a generic "Claude team" guide
+
+A lot of Claude-Agent-SDK / `Task` / `TeamCreate` tooling exists in the
+broader Anthropic agent ecosystem, but it is **not** what Claude Code's
+`Agent` tool exposes in this session. If you find yourself writing
+`TeamCreate(...)` or `TaskCreate(...)`, you have copy-pasted from the wrong
+reference — there is no TaskList-backed shared task graph here. The
+real-time message routing looks similar to `SendMessage`-style agents in
+other places; here, the `Agent` tool's `run_in_background: true` +
+`isolation: "worktree"` is the equivalent for parallelism + isolation.

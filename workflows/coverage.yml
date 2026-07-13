@@ -52,7 +52,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           persist-credentials: false
 
       - name: Prepare runner tool cache for setup actions
@@ -67,6 +67,7 @@ jobs:
           python-version: ${{ vars.PYTHON_VERSION || '3.11' }}
 
       - name: Cache pip dependencies
+        continue-on-error: true
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
         with:
           path: |
@@ -213,7 +214,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           # persist-credentials must be true here: py-cov-action needs to
           # 'git fetch origin main' to compute diff coverage for PR comments.
           persist-credentials: true

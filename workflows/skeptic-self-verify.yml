@@ -82,9 +82,14 @@ jobs:
             ')
             
             # Gate 4: Cursor Bugbot (Action CheckRun)
+            # Lowercase the conclusion so Gate-4 can match against the same lowercase
+            # set the REST fallback and skeptic-evaluate.sh use. Also normalize empty/null
+            # to "none" so an unset BUGBOT can never produce FAIL(bugbot=) when Bugbot is
+            # actually clean (Bugbot=neutral is the typical "no bugs found" signal).
             BUGBOT=$(echo "$GH_PR_VIEW" | jq -r '
               [.statusCheckRollup[] | select((.name // "") | test("Cursor Bugbot"; "i"))] | last | .conclusion // "none"
-            ')
+            ' | tr '[:upper:]' '[:lower:]')
+            BUGBOT="${BUGBOT:-none}"
             
             # Gate 6: Evidence. The PR body is the canonical design/evidence
             # source for skeptic review; generated PR design-doc artifacts are
@@ -118,7 +123,11 @@ jobs:
             BUGBOT=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/check-runs"               --paginate 2>/dev/null               | jq -rs '[.[] | .check_runs[]? | select(.name | test("Cursor Bugbot"; "i"))]
                   | if length == 0 then "none"
                     else (sort_by(.completed_at // "") | last | .conclusion // "none")
-                    end'               2>/dev/null || echo "error")
+                    end'               2>/dev/null | tr '[:upper:]' '[:lower:]' || echo "error")
+            # Normalize empty string (jq returned nothing on a successful API call) to "none".
+            # "error" (from || echo "error" above on API/jq failure) is intentionally kept
+            # as "error" so that API failures remain fail-closed → FAIL(bugbot=error).
+            BUGBOT="${BUGBOT:-none}"
               
             PR_BODY=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUM" --jq '.body // ""' 2>/dev/null || echo "")
             PR_COMMENTS=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUM/comments" --paginate 2>/dev/null | jq -r '.[].body' 2>/dev/null || echo "")
@@ -156,9 +165,22 @@ jobs:
           echo "  [3] CodeRabbit:    $G3"
 
           # Gate 4: Cursor Bugbot
-          # Note: GraphQL 'conclusion' is UPPERCASE (e.g. SUCCESS), REST is lowercase (success).
-          # We use a case-insensitive match for the valid states.
-          if echo "$BUGBOT" | grep -qiE "^(success|neutral|skipped|none)$"; then G4="PASS"; else G4="FAIL(bugbot=$BUGBOT)"; fi
+          # Defensive normalization before the decision:
+          #   - empty string (jq returned nothing from a successful API response) → "none"
+          #   - literal "null" (jq -r output for JSON null) → "none"
+          # "error" (set by the REST fallback's `|| echo "error"` when gh api/jq fails)
+          # is intentionally NOT normalized — it falls through to FAIL(bugbot=error)
+          # to keep API failures fail-closed, consistent with skeptic-evaluate.sh Gate-4.
+          BUGBOT="${BUGBOT:-none}"
+          if [ "$BUGBOT" = "null" ]; then
+            BUGBOT="none"
+          fi
+          BUGBOT=$(printf '%s' "$BUGBOT" | tr '[:upper:]' '[:lower:]')
+          if [ "$BUGBOT" = "success" ] || [ "$BUGBOT" = "neutral" ] || [ "$BUGBOT" = "skipped" ] || [ "$BUGBOT" = "none" ]; then
+            G4="PASS"
+          else
+            G4="FAIL(bugbot=$BUGBOT)"
+          fi
           echo "  [4] Bugbot:        $G4"
 
           # Gate 5: Unresolved review threads (paginated)
@@ -351,12 +373,21 @@ jobs:
             # Gate 8 requires REAL-service coverage: the smoke comment encodes
             # mode (mcp-smoke-mode: real|mock). A mock smoke (the default) must
             # never satisfy the gate — only a real-mode pass for this SHA does.
-            if echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed" && echo "$SMOKE_COMMENT_BODY" | grep -q "mcp-smoke-mode: real"; then
+            if echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Passed" && echo "$SMOKE_COMMENT_BODY" | grep -qF "<!-- mcp-smoke-mode: real -->"; then
               G8="PASS"
-            elif echo "$SMOKE_RUNS" | jq -e 'any(.[]; .status == "in_progress" or .status == "queued")' > /dev/null; then
+            elif echo "$SMOKE_RUNS" | jq -e 'any(.[]; .status == "in_progress" or .status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")' > /dev/null; then
               G8="WAIT(smoke-still-running)"
-            elif echo "$SMOKE_COMMENT_BODY" | grep -q "mcp-smoke-mode: mock"; then
-              G8="FAIL(smoke-ran-mock-need-real-run-/smoke)"
+            elif echo "$ALL_SMOKE" | jq -e --arg branch "$GITHUB_REF_NAME" '
+                any(.[]; (.headBranch // "") == $branch
+                  and (.status == "in_progress" or .status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested"))
+              ' >/dev/null 2>&1; then
+              G8="WAIT(smoke-retry-in-progress-on-branch)"
+            elif echo "$SMOKE_COMMENT_BODY" | grep -qF "<!-- mcp-smoke-mode: mock -->"; then
+              # Mock auto-smoke (bot / workflow_dispatch default) is never gate
+              # coverage. WAIT instead of FAIL so a concurrent or follow-up real
+              # /smoke run can land without posting a transient FAIL verdict
+              # (mirrors green-gate Gate 8 retry-in-progress guard; PR #8043).
+              G8="WAIT(mock-smoke-passed-await-real-run-/smoke)"
             elif echo "$SMOKE_COMMENT_BODY" | grep -qi "MCP Smoke Tests Failed"; then
               G8="FAIL(smoke-comment-failed-for-SHA)"
             elif [ "$(echo "$SMOKE_RUNS" | jq 'length')" -eq 0 ]; then

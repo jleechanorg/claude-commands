@@ -16,6 +16,11 @@ for proof of integration correctness. The companion files in this directory
 (`bundle-anatomy.md`, `tmux-video-evidence.md`, `ui-video-evidence.md`) cover
 the structural and recording details; this file is the policy.
 
+**After running any evidence-gathering pass, you MUST always reconfirm** by
+explicitly stating what the evidence proves vs what it does NOT prove — this
+applies to the response you give the user, not just the bundle's own
+"What This Evidence Does NOT Prove" section (below).
+
 ## Core principle: raw req/resp > unit tests > nothing
 
 Ordered by strength, for a production behavior claim:
@@ -133,6 +138,17 @@ A claim that mixes Layer 2 (real BQ) with Layer 1 (synthetic LLM) is **not**
 Layer 2 proof for the LLM-behavior part. The /er verdict for that claim must
 be **PARTIAL** or **INSUFFICIENT**, not **PASS**. A claim that lacks the
 layer label is non-compliant and the verdict must be downgraded to PARTIAL.
+
+
+## Publication (gist-first)
+
+When evidence is ready for a PR:
+
+1. **Publish to a secret/unlisted gist** with sanitized artifacts (README, metadata, pytest output, checksums).
+2. Put **only the gist URL** in the PR `## Evidence` section (and linked sections as required by the description gate).
+3. **Do not commit** evidence bundles under `docs/evidence/` on the PR branch unless a repo gate explicitly requires in-tree paths — local `/tmp/<repo>/<branch>/` is the working bundle; gist is the published copy.
+4. Gate-6 accepts `gist.github.com/` URLs; prefer that over `docs/evidence/` tree links in the PR body.
+
 
 ## Bundle anatomy (minimal)
 

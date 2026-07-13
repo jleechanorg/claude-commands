@@ -1,11 +1,12 @@
 ---
 description: /callpath — trace execution across hops, services, and call stacks (read-only)
-type: llm-orchestration
+type: skill
 execution_mode: immediate
 ---
-## ⚡ EXECUTION INSTRUCTIONS
 
-**Read-only. Two paths — never mix them up.**
+# /callpath [profile|target] [args]
+
+Read-only execution tracer. Two paths — never mix them up.
 
 ### 1. Profile matches the target
 

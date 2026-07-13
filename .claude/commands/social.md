@@ -6,7 +6,7 @@ execution_mode: deferred
 
 # /social — Draft + Stage Social Posts
 
-Loads `~/.hermes/skills/social-poster/SKILL.md` and runs the draft + stage pipeline.
+Loads `~/.claude/skills/social-poster/SKILL.md` first, which routes to the canonical Hermes social-poster skill.
 
 ## Usage
 
@@ -24,14 +24,16 @@ Loads `~/.hermes/skills/social-poster/SKILL.md` and runs the draft + stage pipel
 
 ## Behavior
 
-1. Runs `python3 ~/.hermes/skills/social-poster/scripts/draft_social_post.py` with the intent + flags.
-2. Runs `python3 ~/.hermes/skills/social-poster/scripts/stage_in_aside.py` to open Aside tabs + screenshots.
-3. Surfaces screenshots via Slack `MEDIA:` + draft text.
+1. Read and execute `~/.claude/skills/social-poster/SKILL.md`.
+2. That skill should resolve to `~/.hermes/skills/social-poster/SKILL.md` as the canonical workflow.
+3. Follow the skill-defined draft + Aside staging flow, including screenshot verification, direct-asset propagation, and platform-specific handling.
 4. **WAITS** for user to type `POST APPROVED` (optionally `POST APPROVED <platforms>`).
-5. On approval, runs `python3 ~/.hermes/skills/social-poster/scripts/post_approved.py`.
+5. On approval, follow the skill-defined posting flow.
 
 ## Safety
 
 - Without `POST APPROVED` token, `post_approved.py` exits code 2. No bypass.
-- Instagram has no web compose — draft surfaces caption + mobile-app instructions.
+- Never treat a loaded compose form or login-wall screenshot as proof a draft was staged.
+- Prefer canonical outbound links and explicit media assets over reposting LinkedIn shortlinks.
+- Instagram may require a media-upload flow instead of text-only staging, especially when the intended creative is an image/screenshot plus an outbound video link. For those media posts, cross-share to Threads and Facebook by default unless the user opts out.
 - Default mode is pure templating — no LLM call. Pass `--use-llm` to enable LLM refinement.

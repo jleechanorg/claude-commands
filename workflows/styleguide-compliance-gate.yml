@@ -4,6 +4,10 @@ permissions:
   contents: read
   pull-requests: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   pull_request:
@@ -39,11 +43,14 @@ jobs:
       PYTHONUNBUFFERED: "1"
       GEMINI_API_KEY: "test-ci-key-only"
       GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+      # Avoid retaining pip's download cache on disk-constrained self-hosted runners.
+      PIP_NO_CACHE_DIR: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -51,6 +58,53 @@ jobs:
         run: |
           chmod +x scripts/ci/setup-runner-tool-cache.sh
           ./scripts/ci/setup-runner-tool-cache.sh
+
+      - name: Disk preflight + cleanup
+        # Self-hosted runners in the shared pool occasionally run low on disk
+        # (Errno 28 / "No space left on device" during pip install) which
+        # cascades into ModuleNotFoundError on the smoke step and a misleading
+        # "No manifest found" from the compliance scorer. Free up space before
+        # pip install and fail loudly with a clear cause if we still don't have
+        # enough room.
+        run: |
+          set -euo pipefail
+          AVAIL_KB="$(df -Pk . | awk 'NR==2 {print $4}')"
+          AVAIL_GB=$((AVAIL_KB / 1024 / 1024))
+          echo "Disk free before cleanup: ${AVAIL_GB} GB"
+
+          # Always: purge any stale pip cache and prior gate evidence so we
+          # don't inherit state from earlier failed runs on the same runner.
+          rm -rf /tmp/worldarchitectai 2>/dev/null || true
+          python3 -m pip cache purge >/dev/null 2>&1 || true
+          rm -rf "$HOME/.cache/pip" 2>/dev/null || true
+
+          # Aggressive cleanup only when low.
+          if [ "${AVAIL_KB:-0}" -lt 2097152 ]; then
+            echo "Disk below 2 GB — running aggressive cleanup"
+            if [ "$(uname)" = "Darwin" ] && command -v brew >/dev/null 2>&1; then
+              brew cleanup -s >/dev/null 2>&1 || true
+            fi
+            # Drop apt cache on Linux self-hosted images.
+            if [ -d /var/cache/apt ]; then
+              sudo rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || \
+                rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+            fi
+            # Trim Actions runner workspace of any prior job workspaces.
+            rm -rf /home/runner/_work/*/_temp 2>/dev/null || \
+              rm -rf "$HOME/actions-runner/_work"/*/_temp 2>/dev/null || true
+            # Clean up old test artifacts from previous gates.
+            rm -rf /tmp/playwright* /tmp/.org.chromium.Chromium* 2>/dev/null || true
+          fi
+
+          AVAIL_KB_AFTER="$(df -Pk . | awk 'NR==2 {print $4}')"
+          AVAIL_GB_AFTER=$((AVAIL_KB_AFTER / 1024 / 1024))
+          echo "Disk free after cleanup: ${AVAIL_GB_AFTER} GB"
+
+          if [ "${AVAIL_KB_AFTER:-0}" -lt 1048576 ]; then
+            echo "::error::low_disk_space_after_cleanup: ${AVAIL_GB_AFTER} GB free, need at least 1 GB for pip install + Playwright Chromium"
+            df -h
+            exit 1
+          fi
 
       - name: Resolve Python interpreter
         id: python_resolve
@@ -72,21 +126,36 @@ jobs:
         run: |
           python3 -m venv venv
           venv/bin/pip install --upgrade pip
-          venv/bin/pip install -r mvp_site/requirements.txt
-          venv/bin/pip install playwright pillow
+          venv/bin/pip install --no-cache-dir -r mvp_site/requirements.txt
+          venv/bin/pip install --no-cache-dir playwright pillow
           echo "$PWD/venv/bin" >> "$GITHUB_PATH"
           echo "VIRTUAL_ENV=$PWD/venv" >> "$GITHUB_ENV"
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          ${{ steps.python_resolve.outputs.python_bin }} -m pip install --break-system-packages -r mvp_site/requirements.txt
-          ${{ steps.python_resolve.outputs.python_bin }} -m pip install --break-system-packages playwright pillow
+          # playwright and pillow are both already in mvp_site/requirements.txt
+          # (playwright is a direct dep; pillow is transitive). A second
+          # pip install pass was duplicating work and was the trigger for
+          # Errno 28 "No space left on device" on disk-constrained runners.
+          ${{ steps.python_resolve.outputs.python_bin }} -m pip install --break-system-packages --no-cache-dir -r mvp_site/requirements.txt
 
       - name: Install Playwright system dependencies
         if: runner.os == 'Linux'
         run: |
-          venv/bin/python -m playwright install-deps chromium
+          set -euo pipefail
+          if [ "$(id -u)" -eq 0 ]; then
+            venv/bin/python -m playwright install-deps chromium || {
+              echo "::warning::Playwright Chromium system dependency install failed; continuing to browser install and launch probe"
+            }
+          elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+            venv/bin/python -m playwright install-deps chromium || {
+              echo "::warning::Playwright Chromium system dependency install failed; continuing to browser install and launch probe"
+            }
+          else
+            echo "Skipping Playwright Chromium system dependency install: non-root runner has no passwordless sudo."
+            echo "Self-hosted runner images must provide Chromium system libraries."
+          fi
 
       - name: Install Playwright browsers
         run: |

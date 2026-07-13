@@ -16,7 +16,7 @@ Read `~/.claude/skills/history-search/SKILL.md` and execute the full workflow wi
 |--------|------|
 | Claude Code | `~/.claude/projects/*/*.jsonl` |
 | Codex | `~/.codex/state_5.sqlite` threads |
-| Hermes | `~/.hermes_prod/state.db` messages (FTS5) |
+| Hermes | `~/.hermes/state.db` messages (FTS5) |
 
 ## Flags
 

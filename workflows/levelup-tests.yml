@@ -81,6 +81,16 @@ jobs:
   run-levelup-tests:
     name: Level-up Organic (all) against PR preview
     needs: resolve-pr-context
+    # Bot actors (coderabbitai[bot], cursor[bot], chatgpt-codex-connector[bot],
+    # etc.) cannot trigger /levelup — they would consume real Gemini budget
+    # for an LLM scenario whose result no human is waiting on. Mirrors the
+    # same cost-safe bot-actor guard added to /smoke in PR #7893 (the
+    # determine-smoke-mode.sh script applies the same `[bot]` suffix check
+    # for the smoke flow; /levelup has no mock variant so we skip the job
+    # entirely instead of switching mode).
+    if: >-
+      (github.event_name == 'workflow_dispatch')
+      || (github.event_name == 'issue_comment' && !contains(github.actor, '[bot]'))
     runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
     timeout-minutes: 65  # matches the daily GCP job's 3600s task-timeout
     env:

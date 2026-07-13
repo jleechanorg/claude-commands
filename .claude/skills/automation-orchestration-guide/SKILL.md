@@ -1,8 +1,3 @@
----
-name: automation-orchestration-guide
-description: Guide PR automation and multi-agent orchestration library workflows.
----
-
 # Automation & Orchestration Libraries Guide
 
 **Purpose**: Comprehensive guide to the automation and orchestration libraries for PR automation and multi-agent task execution.

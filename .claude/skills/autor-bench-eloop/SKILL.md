@@ -1,8 +1,3 @@
----
-name: autor-bench-eloop
-description: Run the autor research and SWE-bench benchmark loop.
----
-
 # autor-bench-eloop — Autor Research + SWE-bench Benchmark Loop
 
 **Loop interval**: 30m | **Max duration**: 12h (24 iterations)

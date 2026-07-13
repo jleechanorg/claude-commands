@@ -19,6 +19,17 @@ jobs:
     # 🚨 PROTECTED ENVIRONMENT - Requires manual approval in GitHub UI
     environment: production
 
+    # Memory/CPU/autoscaling: shared defaults from scripts/shared_config.sh +
+    # deploy.sh (8Gi, 4 vCPU, maxScale 40, containerConcurrency 16,
+    # GUNICORN_WORKERS 1, GUNICORN_THREADS 16 — the post-#7961 Cloud Run pattern
+    # from PR #7984). Per-request capacity is identical to dev (mvp-site-app-dev)
+    # because both deploy through the same deploy.sh path with no per-env
+    # sizing override. The two intentional differences from dev: (1) deploy.sh
+    # pins min-instances=1 only for stable so the warm instance absorbs real-user
+    # traffic without paying a cold-start; (2) stable scales to max-instances
+    # from the same shared default (40). Single-instance concurrency ceiling is
+    # 16; Cloud Run horizontal autoscale handles >16 concurrent requests.
+
     steps:
       - name: Checkout code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
@@ -51,6 +62,12 @@ jobs:
           gcloud auth list
           gcloud config list project
           echo "✅ GCP authentication verified"
+
+      # Install Python + precompute deps (fastembed, numpy, GCS) via the
+      # shared composite action. Non-fatal — deploy.sh has its own skip path
+      # if the precompute can't run.
+      - name: Setup precompute Python deps
+        uses: ./.github/actions/setup-precompute-deps
 
       - name: Deploy to Cloud Run (Production)
         env:

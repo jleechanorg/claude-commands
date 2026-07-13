@@ -6,7 +6,7 @@ type: skill
 
 ## Purpose
 
-Produce a comprehensive status report for all PRs agento is handling in `jleechanorg/agent-orchestrator`. Includes per-PR 6-green checks AND zero-touch-by-operator rate analysis. Display inline and post summary to Slack.
+Produce a comprehensive status report for all PRs agento is handling in `jleechanorg/agent-orchestrator-ts`. Includes per-PR 6-green checks AND zero-touch-by-operator rate analysis. Display inline and post summary to Slack.
 
 ---
 
@@ -17,13 +17,13 @@ Produce a comprehensive status report for all PRs agento is handling in `jleecha
 Use REST (not GraphQL — GraphQL is frequently exhausted):
 
 ```bash
-gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open&per_page=30&sort=updated" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls?state=open&per_page=30&sort=updated" \
   --jq '.[] | "\(.number)\t\(.head.ref)\t\(.title[:60])"'
 ```
 
 Also collect recently merged (last 24h):
 ```bash
-gh api "repos/jleechanorg/agent-orchestrator/pulls?state=closed&per_page=30&sort=updated&direction=desc" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls?state=closed&per_page=30&sort=updated&direction=desc" \
   --jq '.[] | select(.merged_at != null) | "\(.number)\t\(.head.ref)\t\(.title[:70])\t\(.merged_at)"'
 ```
 Filter merged ones to last 24h by comparing `.merged_at` timestamp.
@@ -34,20 +34,20 @@ For each open PR number NUM, fetch mergeability, CI, and reviews via REST:
 
 ```bash
 # Mergeability (REST returns boolean mergeable + string mergeable_state)
-gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls/NUM" \
   --jq '{mergeable, mergeable_state}'
 
 # CI checks
-SHA=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM" --jq '.head.sha')
-gh api "repos/jleechanorg/agent-orchestrator/commits/$SHA/check-runs" \
+SHA=$(gh api "repos/jleechanorg/agent-orchestrator-ts/pulls/NUM" --jq '.head.sha')
+gh api "repos/jleechanorg/agent-orchestrator-ts/commits/$SHA/check-runs" \
   --jq '.check_runs[] | {name, status, conclusion}'
 
 # Reviews
-gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM/reviews" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls/NUM/reviews" \
   --jq '.[] | {user: .user.login, state}'
 
 # Inline comments (check for High Severity / Critical / Major blockers)
-gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM/comments" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls/NUM/comments" \
   --jq '[.[] | select(.body | test("High Severity|Critical|Major"))] | length'
 ```
 
@@ -81,7 +81,7 @@ Apply all 6 conditions:
 For each merged PR in the window:
 
 ```bash
-gh api "repos/jleechanorg/agent-orchestrator/pulls?state=closed&per_page=30&sort=updated&direction=desc" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls?state=closed&per_page=30&sort=updated&direction=desc" \
   --jq '.[] | select(.merged_at != null) | {
     number,
     title: .title[:70],
@@ -109,7 +109,7 @@ For each non-[agento] PR, note WHY it wasn't zero-touch — common reasons:
 ## Agento Status Report — YYYY-MM-DD HH:MM
 
 ### Summary
-- Repo: jleechanorg/agent-orchestrator
+- Repo: jleechanorg/agent-orchestrator-ts
 - Open PRs: N
 - GREEN (ready to merge): N
 - Not green: N
@@ -145,7 +145,7 @@ Post to `#ai-slack-test` (channel ID: `C0AKALZ4CKW`):
 ```
 mcp__slack__conversations_add_message(
   channel_id="C0AKALZ4CKW",
-  text="*Agento Status Report — YYYY-MM-DD HH:MM*\n\nRepo: jleechanorg/agent-orchestrator\nOpen: N PRs | GREEN: N | Not green: N\nMerged (24h): N | Zero-touch rate: X%\n\n<per-PR details>"
+  text="*Agento Status Report — YYYY-MM-DD HH:MM*\n\nRepo: jleechanorg/agent-orchestrator-ts\nOpen: N PRs | GREEN: N | Not green: N\nMerged (24h): N | Zero-touch rate: X%\n\n<per-PR details>"
 )
 ```
 
@@ -153,7 +153,7 @@ mcp__slack__conversations_add_message(
 
 ## Notes
 
-- Scope: `jleechanorg/agent-orchestrator` (not jleechanclaw — that repo is deprecated for AO work).
+- Scope: `jleechanorg/agent-orchestrator-ts` (not jleechanclaw — that repo is deprecated for AO work).
 - Use REST API (`gh api`) not GraphQL (`gh pr view --json`) — GraphQL is frequently exhausted.
 - `mergeable_state` from REST: `clean`, `dirty`, `unstable`, `unknown`.
 - Zero-touch convention: `[agento]` prefix in PR title (from `~/.openclaw/SOUL.md`).

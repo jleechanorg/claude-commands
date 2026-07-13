@@ -32,7 +32,7 @@ User-specified AO parameters remain mandatory.
 
 ## Requirements
 
-- For AO tasks: `ao session ls` must not show ≥20 active sessions (spawn cap)
+- For AO tasks: `ao session ls` must not show ≥30 active sessions (spawn cap)
 - For Hermes fallback: gateway must be healthy via `hermes gateway status`
 - Slash command resolution must search `.claude/commands` first, then `.claude/skills`
 
@@ -75,7 +75,7 @@ PY
   )
 fi
 
-export HERMES_HOME="${HERMES_HOME:-$HOME/.hermes_prod}"
+export HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
 HERMES_CFG="$HERMES_HOME/config.yaml"
 
 if [ ! -f "$HERMES_CFG" ]; then
@@ -89,10 +89,36 @@ fi
 
 # Hermes gateway health check. The `hermes gateway status` CLI is unreliable —
 # it can report "not running" / "draining" with phantom PIDs while the actual
-# gateway is healthy on :8642. Trust the live health endpoint instead.
+# gateway is healthy. Trust the live health endpoint instead.
+#
+# Port resolution order:
+#   1. $CLAW_HERMES_PORT (override for testing / staging / non-prod gateways)
+#   2. `port:` under the `gateway:` block in $HERMES_CFG (canonical config)
+#   3. Hard-coded default :8643 (current prod gateway port as of 2026-06-28;
+#      see ~/.hermes/config.yaml)
+#
+# Note: the previous default of :8642 is stale — the live Hermes gateway has
+# been on :8643 for some time. Hard-coding 8642 silently breaks /claw on
+# healthy gateways. Always resolve from the YAML config or CLAW_HERMES_PORT.
+HERMES_PORT="${CLAW_HERMES_PORT:-$(python3 -c "
+import yaml, sys
+try:
+    with open('$HERMES_CFG') as fh:
+        cfg = yaml.safe_load(fh) or {}
+    gw = cfg.get('gateway') or {}
+    p = gw.get('port')
+    if isinstance(p, int):
+        print(p)
+    elif isinstance(p, str) and p.isdigit():
+        print(p)
+except Exception:
+    pass
+" 2>/dev/null)}"
+HERMES_PORT="${HERMES_PORT:-8643}"
 HEALTH_LOG="$(mktemp "$LOGDIR/.claw-health-XXXXXXXX")"
-if ! curl -sS -m 3 http://127.0.0.1:8642/health >"$HEALTH_LOG" 2>&1; then
-  echo "Hermes gateway is not reachable on :8642."
+if ! curl -sS -m 3 "http://127.0.0.1:${HERMES_PORT}/health" >"$HEALTH_LOG" 2>&1; then
+  echo "Hermes gateway is not reachable on :${HERMES_PORT}."
+  echo "(Override via CLAW_HERMES_PORT=<port> or set gateway.port in $HERMES_CFG)"
   sed -n '1,20p' "$HEALTH_LOG"
   exit 1
 fi

@@ -21,7 +21,7 @@ Cache dir: `~/llm_wiki/.cache/memory-search/`
 1. **~/roadmap** — Project roadmaps and planning docs (`~/roadmap/`)
 2. **beads** — Issue/bead tracking (`~/.claude/projects/*/memory/*.md` or `.beads/issues.jsonl`)
 3. **claude memories** — Session memories (`~/.claude/projects/*/memory/`)
-4. **hermes sqlite** — `~/.hermes_prod/state.db` (3.6 GB Hermes prod state; table `messages`; FTS5 via `messages_fts`). **Note**: `~/.hermes/memory.db` is 0 bytes (empty); the data lives in `state.db`.
+4. **hermes sqlite** — `~/.hermes/state.db` (3.6 GB Hermes state; table `messages`; FTS5 via `messages_fts`). **Note**: `~/.hermes/memory.db` is 0 bytes (empty); the data lives in `state.db`.
 5. **hermes briefings** — `~/.hermes/memory/briefing-*.md` and `mcp-mail-ack-log.md`
 6. **hermes index** — `~/.hermes/MEMORY.md`
 7. **openclaw memories** — `~/openclaw-repo/MEMORY.md`, `~/.hermes/memory/`
@@ -42,7 +42,7 @@ Run all searches in parallel via `/e` subagents:
 
 /e Search ~/.claude/projects/*/memory/ for "$QUERY". Search MEMORY.md indexes and individual .md files. Show snippets.
 
-/e Search ~/.hermes_prod/state.db (Hermes prod state, 3.6GB): use the FTS5 index — sqlite3 ~/.hermes_prod/state.db "SELECT m.timestamp, m.role, substr(coalesce(m.content,m.tool_name,m.tool_calls),1,200) AS snippet, m.tool_name FROM messages_fts f JOIN messages m ON m.id=f.rowid WHERE messages_fts MATCH '$QUERY' LIMIT 20;" — FTS5 trigram tokenizer matches partial words without full-table LIKE scans. **Do NOT use `~/.hermes/memory.db` (0 bytes, no tables).**
+/e Search ~/.hermes/state.db (Hermes state, 3.6GB): use the FTS5 index — sqlite3 ~/.hermes/state.db "SELECT m.timestamp, m.role, substr(coalesce(m.content,m.tool_name,m.tool_calls),1,200) AS snippet, m.tool_name FROM messages_fts f JOIN messages m ON m.id=f.rowid WHERE messages_fts MATCH '$QUERY' LIMIT 20;" — FTS5 trigram tokenizer matches partial words without full-table LIKE scans. **Do NOT use `~/.hermes/memory.db` (0 bytes, no tables).**
 
 /e Search ~/.hermes/memory/briefing-*.md and ~/.hermes/memory/mcp-mail-ack-log.md for "$QUERY" using: grep -m 5 -n "$QUERY" ~/.hermes/memory/briefing-*.md ~/.hermes/memory/mcp-mail-ack-log.md 2>/dev/null | head -20. The -m 5 per-file limit prevents reading full large files.
 

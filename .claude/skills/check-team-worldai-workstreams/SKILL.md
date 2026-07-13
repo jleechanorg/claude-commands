@@ -1,8 +1,3 @@
----
-name: check-team-worldai-workstreams
-description: Check worldai-workstreams team agents and summarize status, commits, and beads.
----
-
 # check-team-worldai-workstreams
 
 Check the status of the worldai-workstreams team agents and report on their progress.

@@ -1,5 +1,5 @@
 ---
-name: evolve_loop
+name: eloop
 description: Run the evolve-loop skill. Canonical instructions live in ~/.claude/skills/evolve-loop/SKILL.md.
 type: skill
 ---

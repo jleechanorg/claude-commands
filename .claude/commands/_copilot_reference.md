@@ -236,3 +236,10 @@ After processing all comments, `/copilot` updates the PR description with a trac
 ```
 
 **Implementation**: `commentreply.py` calls `update_pr_description_with_tracking()` after posting the consolidated summary comment. Uses `<!-- COPILOT_TRACKING_START -->` / `<!-- COPILOT_TRACKING_END -->` markers for idempotent replacement on re-runs.
+
+## Thread Resolution Policy
+
+- `/copilot` itself does not auto-resolve GitHub review threads as part of the main comment-processing loop.
+- `responses.json` stays comment-centric. Follow-up actions derive review-thread IDs from the recorded `comment_id` values by querying GitHub review threads, then log the resulting `comment_id -> thread_id` mapping in their run output.
+- If a separate follow-up action is explicitly resolving threads, it must use the real GraphQL `resolveReviewThread` mutation and only for comments already recorded as `FIXED` or `ALREADY_IMPLEMENTED`.
+- Record the tracked or resolved thread IDs in the run output so the follow-up action stays auditable and does not silently mutate merge-gate state.

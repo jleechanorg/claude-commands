@@ -2,8 +2,7 @@ name: Daily GCP Cost Report
 
 on:
   schedule:
-    # 09:20 UTC daily — 10 minutes after the existing daily-gemini-cost-report
-    # so we don't race the BQ billing export refresh window.
+    # 09:20 UTC daily — timed so we don't race the BQ billing export refresh window.
     - cron: '20 9 * * *'
   workflow_dispatch:
     inputs:
@@ -52,7 +51,7 @@ jobs:
           FAIL_ON_STALE_EXPORT: false
           FAIL_ON_UNKNOWN_EXPORT: false
           ENFORCE_SCHEMA_VERSION: true
-          EXPECTED_REPORT_SCHEMA_VERSION: 2026-06-17.1
+          EXPECTED_REPORT_SCHEMA_VERSION: 2026-06-22.3
         run: |
           set -euo pipefail
           if [[ "${REPORT_RECIPIENT}" != "$USER@gmail.com" ]]; then
@@ -85,6 +84,7 @@ jobs:
               f.write(f"export_coverage_state={_safe(cost_obj.get('export_coverage_state'))}\n")
               f.write(f"export_age_days={_safe(cost_obj.get('export_age_days'))}\n")
               f.write(f"send_mode={_safe(payload.get('send_mode'))}\n")
+              f.write(f"subject={_safe(payload.get('subject', ''))}\n")
 
           summary_lines = [
               "## Daily GCP Cost Report",
@@ -118,16 +118,13 @@ jobs:
             exit 1
           fi
 
-      - name: Send report email
-        if: steps.report.outputs.send_mode != 'deferred'
-        uses: dawidd6/action-send-mail@6d98ae34d733f9a723a9e04e94f2f24ba05e1402  # v6
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USER }}
-          password: ${{ secrets.EMAIL_APP_PASSWORD }}
-          subject: ${{ steps.report.outputs.subject }}
-          to: ${{ env.REPORT_RECIPIENT }}
-          from: WorldArchitect Reports <${{ secrets.EMAIL_USER }}>
-          body: file:///tmp/gcp_daily_report.txt
-          attachments: /tmp/gcp_daily_report.txt,/tmp/gcp_daily_report.json
+      # NOTE: do NOT add a separate `Send report email` step here. The
+      # python script `scripts/daily_gcp_cost_report.py` is the single
+      # source of truth for sending — it calls
+      # `cost_report_lib.send_email()` which sends a multipart/alternative
+      # email (text/plain + text/html) via SMTP, with the JSON report
+      # attached. A previous version of this workflow also had a
+      # `dawidd6/action-send-mail` step that re-sent the same body as
+      # plain text, producing a SECOND email in the operator's INBOX
+      # with literal `**` and `|` characters. Regression test:
+      # scripts/tests/test_daily_gcp_workflow_no_duplicate_send.py.
