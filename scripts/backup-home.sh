@@ -20,6 +20,15 @@ DROPBOX_BASE_DIR="${DROPBOX_BASE_DIR:-$_dropbox_default}"
 DROPBOX_TARGET="${DROPBOX_BASE_DIR}/${DROPBOX_BACKUP_SUBDIR:-conversation-backups}"
 unset _dropbox_default
 DRY_RUN=0
+ALLOW_GIT_BACKUP_PUSH="${ALLOW_GIT_BACKUP_PUSH:-0}"
+ALLOW_GIT_BACKUP_SYNC="${ALLOW_GIT_BACKUP_SYNC:-$ALLOW_GIT_BACKUP_PUSH}"
+TOKEN_HEALTH_PRECHECK="${TOKEN_HEALTH_PRECHECK:-0}"
+TOKEN_HEALTH_PRECHECK_FAIL_ON_FAILURE="${TOKEN_HEALTH_PRECHECK_FAIL_ON_FAILURE:-1}"
+REQUIRE_DROPBOX_ONLY="${REQUIRE_DROPBOX_ONLY:-1}"
+GIT_BACKUP_PUSH_REMOTE="${GIT_BACKUP_PUSH_REMOTE:-origin}"
+GIT_BACKUP_PUSH_BRANCH="${GIT_BACKUP_PUSH_BRANCH:-main}"
+GIT_BACKUP_ALLOWED_REMOTE_HTTPS="https://github.com/jleechanorg/claude-commands.git"
+GIT_BACKUP_ALLOWED_REMOTE_SSH="git@github.com:jleechanorg/claude-commands.git"
 CODEX_SESSIONS_EXCLUDE_PATTERNS="${CODEX_SESSIONS_EXCLUDE_PATTERNS:-sessions_archive/}"
 OPENCLAW_BACKUP_DIR="${OPENCLAW_BACKUP_DIR:-$HOME/.openclaw}"
 OPENCLAW_CONVO_DIR="${OPENCLAW_CONVO_DIR:-}"
@@ -45,12 +54,60 @@ cleanup() {
 }
 trap cleanup EXIT
 
+run_token_healthcheck() {
+  if [[ "$TOKEN_HEALTH_PRECHECK" != "1" ]]; then
+    return 0
+  fi
+
+  local check_script="$SCRIPT_DIR/check-bashrc-token-health.sh"
+  local result_file="$SECURE_TEMP/token_healthcheck.log"
+  local check_status=0
+
+  if [[ ! -x "$check_script" ]]; then
+    log "Token health check skipped: missing $check_script"
+    return 0
+  fi
+
+  if "$check_script" >"$result_file" 2>&1; then
+    log "Token health check passed"
+    while IFS= read -r line; do
+      log "token-health: $line"
+    done <"$result_file"
+  else
+    check_status=1
+    log "Token health check reported failures."
+    while IFS= read -r line; do
+      log "token-health: $line"
+    done <"$result_file"
+  fi
+
+  if [[ "$check_status" -ne 0 && "$TOKEN_HEALTH_PRECHECK_FAIL_ON_FAILURE" == "1" ]]; then
+    log "Token health check failure policy active: aborting backup"
+    return 1
+  fi
+}
+
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [--dry-run]
 
 Backs up Codex/Claude/OpenClaw home data from ~ into repo-local Git backup
-and Dropbox in parallel. A failure in one target does not stop the other.
+and Dropbox in parallel.
+
+Default safety mode is Dropbox-only:
+- ALLOW_GIT_BACKUP_SYNC=0 (skip Git backup snapshot copy entirely)
+- ALLOW_GIT_BACKUP_PUSH=0 (skip Git snapshot push even if sync runs)
+
+Set ALLOW_GIT_BACKUP_SYNC=1 to allow local git-target snapshots and
+set ALLOW_GIT_BACKUP_PUSH=1 only when you explicitly want a guarded push.
+Set REQUIRE_DROPBOX_ONLY=1 (default) to force both git snapshot flags off unless
+you explicitly opt out with REQUIRE_DROPBOX_ONLY=0.
+Set TOKEN_HEALTH_PRECHECK=1 to run token liveness smoke checks on each run.
+Set TOKEN_HEALTH_PRECHECK_FAIL_ON_FAILURE=1 (default) to fail backup when checks fail.
+
+Git snapshot push is disabled by default.
+Set ALLOW_GIT_BACKUP_PUSH=1 (explicit opt-in) to permit snapshots to push.
+Default behavior is Dropbox-only.
 EOF
 }
 
@@ -73,6 +130,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 log() { echo "[$(date +%F' '%T)] $*"; }
+
+if [[ "$REQUIRE_DROPBOX_ONLY" == "1" ]]; then
+  if [[ "$ALLOW_GIT_BACKUP_SYNC" != "0" || "$ALLOW_GIT_BACKUP_PUSH" != "0" ]]; then
+    log "Dropbox-only guard active (REQUIRE_DROPBOX_ONLY=1): forcing ALLOW_GIT_BACKUP_SYNC=0 and ALLOW_GIT_BACKUP_PUSH=0"
+  fi
+  ALLOW_GIT_BACKUP_SYNC=0
+  ALLOW_GIT_BACKUP_PUSH=0
+fi
+
+run_token_healthcheck
 
 # Lock configuration to prevent concurrent overlapping runs
 LOCK_FILE="/var/tmp/backup-home.lock"
@@ -133,6 +200,31 @@ require_cmd() {
     echo "Missing required command: $cmd" >&2
     exit 1
   fi
+}
+
+require_snapshot_push_target() {
+  local work_dir="$1"
+  local remote="$2"
+  local branch="$3"
+
+  if ! git -C "$work_dir" remote get-url "$remote" >/dev/null 2>&1; then
+    log "ERROR: snapshot push blocked — remote '$remote' is not configured"
+    return 1
+  fi
+
+  local remote_url
+  remote_url="$(git -C "$work_dir" remote get-url "$remote")"
+  if [[ "$remote_url" != "$GIT_BACKUP_ALLOWED_REMOTE_HTTPS" && "$remote_url" != "$GIT_BACKUP_ALLOWED_REMOTE_SSH" ]]; then
+    log "ERROR: snapshot push blocked — remote '$remote_url' is not an allowed repository"
+    return 1
+  fi
+
+  if ! git -C "$work_dir" rev-parse --verify --quiet "$branch" >/dev/null; then
+    log "ERROR: snapshot push blocked — branch '$branch' is missing locally"
+    return 1
+  fi
+
+  return 0
 }
 
 validate_path() {
@@ -893,59 +985,68 @@ dump_crontab() {
 }
 dump_crontab
 
-git_result_file="$(mktemp "$SECURE_TEMP/git_target_XXXXXXXX")"
 dropbox_result_file="$(mktemp "$SECURE_TEMP/dropbox_target_XXXXXXXX")"
-run_target_job "git" "$GIT_BACKUP_ROOT" "git" "$git_result_file"
-git_pid="$RUN_TARGET_JOB_PID"
+if [[ "$ALLOW_GIT_BACKUP_SYNC" == "1" ]]; then
+  git_result_file="$(mktemp "$SECURE_TEMP/git_target_XXXXXXXX")"
+  run_target_job "git" "$GIT_BACKUP_ROOT" "git" "$git_result_file"
+  git_pid="$RUN_TARGET_JOB_PID"
+else
+  log "Skipping git backup target: set ALLOW_GIT_BACKUP_SYNC=1 for local snapshot copies"
+fi
 run_target_job "dropbox" "$DROPBOX_TARGET" "dropbox" "$dropbox_result_file"
 dropbox_pid="$RUN_TARGET_JOB_PID"
 
-wait "$git_pid" || true
+if [[ "$ALLOW_GIT_BACKUP_SYNC" == "1" ]]; then
+  wait "$git_pid" || true
+fi
 wait "$dropbox_pid" || true
 
-git_status="$(cat "$git_result_file")"
+if [[ "$ALLOW_GIT_BACKUP_SYNC" == "1" ]]; then
+  git_status="$(cat "$git_result_file")"
+else
+  git_status="SUCCESS"
+fi
 dropbox_status="$(cat "$dropbox_result_file")"
 
 log "Home backup results: git=$git_status dropbox=$dropbox_status"
 
 if [[ "$git_status" == "SUCCESS" && "$DRY_RUN" -eq 0 ]]; then
-  cd "$REPO_ROOT"
-  # Push-safety note: AGENTS.md requires human approval for pushes in interactive
-  # agent sessions. This script runs on a schedule and cannot request approval;
-  # instead it enforces the mechanical safety checks (branch verification,
-  # explicit <local_ref>:<remote_branch> target, no force).
-  current_branch="$(git rev-parse --abbrev-ref HEAD)"
-  _snapshot_main_branch="main"
-  if ! git show-ref --verify --quiet refs/heads/main && \
-     git show-ref --verify --quiet refs/heads/master; then
-    _snapshot_main_branch="master"
-  fi
+  if [[ "$ALLOW_GIT_BACKUP_PUSH" != "1" ]]; then
+    log "Skipping git snapshot commit/push: set ALLOW_GIT_BACKUP_PUSH=1 to enable"
+  elif [[ "$ALLOW_GIT_BACKUP_SYNC" != "1" ]]; then
+    log "Skipping git snapshot commit/push: ALLOW_GIT_BACKUP_SYNC must be 1 to stage a snapshot"
+  elif ! require_snapshot_push_target "$REPO_ROOT" "$GIT_BACKUP_PUSH_REMOTE" "$GIT_BACKUP_PUSH_BRANCH"; then
+    git_status="FAILED"
+  else
+    cd "$REPO_ROOT"
+    current_branch="$(git rev-parse --abbrev-ref HEAD)"
+    _snapshot_main_branch="$GIT_BACKUP_PUSH_BRANCH"
 
-  _do_snapshot_commit() {
-    local work_dir="$1"
-    local branch="$2"
-    if [[ -n "$(git -C "$work_dir" status --porcelain "backup/")" ]]; then
-      git -C "$work_dir" add "backup/"
-      # Run gitleaks before commit to detect secrets
-      # Use baseline to ignore known leaks in existing files
-      if command -v gitleaks >/dev/null 2>&1; then
-        local gl_config_args=()
-        [[ -f "${work_dir}/.gitleaks.toml" ]] && gl_config_args=(--config "${work_dir}/.gitleaks.toml")
+    _do_snapshot_commit() {
+      local work_dir="$1"
+      local branch="$2"
+      if [[ -n "$(git -C "$work_dir" status --porcelain "backup/")" ]]; then
+        git -C "$work_dir" add "backup/"
+        # Run gitleaks before commit to detect secrets
+        # Use baseline to ignore known leaks in existing files
+        if command -v gitleaks >/dev/null 2>&1; then
+          local gl_config_args=()
+          [[ -f "${work_dir}/.gitleaks.toml" ]] && gl_config_args=(--config "${work_dir}/.gitleaks.toml")
 
-        if ! gitleaks protect --staged \
-            "${gl_config_args[@]}" 2>/dev/null; then
+          if ! gitleaks protect --staged \
+              "${gl_config_args[@]}" 2>/dev/null; then
 
-          # Auto-remediate: get leaks from staged files and scrub them in-place
-          local gl_report="/tmp/gitleaks-staged-$$_$(date +%s).json"
-          gitleaks protect --staged "${gl_config_args[@]}" \
-            --report-format json --report-path "$gl_report" 2>/dev/null || true
+            # Auto-remediate: get leaks from staged files and scrub them in-place
+            local gl_report="/tmp/gitleaks-staged-$$_$(date +%s).json"
+            gitleaks protect --staged "${gl_config_args[@]}" \
+              --report-format json --report-path "$gl_report" 2>/dev/null || true
 
-          local leak_count
-          leak_count="$(python3 -c "import json; d=json.load(open('$gl_report')); print(len(d))" 2>/dev/null || echo 0)"
-          log "WARNING: gitleaks found $leak_count secret(s) in staged files — scrubbing tokens in-place"
+            local leak_count
+            leak_count="$(python3 -c "import json; d=json.load(open('$gl_report')); print(len(d))" 2>/dev/null || echo 0)"
+            log "WARNING: gitleaks found $leak_count secret(s) in staged files — scrubbing tokens in-place"
 
-          # Scrub secrets from staged files using the report
-          python3 -c "
+            # Scrub secrets from staged files using the report
+            python3 -c "
 import json, os, sys
 
 work_dir = '$work_dir'
@@ -980,60 +1081,61 @@ for rel_path, secrets in by_file.items():
 print(scrubbed)
 " > /tmp/gitleaks-scrub-count.txt 2>/tmp/gitleaks-scrub-log.txt
 
-          local scrub_count
-          scrub_count="$(cat /tmp/gitleaks-scrub-count.txt)"
-          while IFS= read -r scrub_line; do
-            [[ -n "$scrub_line" ]] && log "INFO: $scrub_line"
-          done < /tmp/gitleaks-scrub-log.txt
-          rm -f /tmp/gitleaks-scrub-log.txt /tmp/gitleaks-scrub-count.txt "$gl_report"
+            local scrub_count
+            scrub_count="$(cat /tmp/gitleaks-scrub-count.txt)"
+            while IFS= read -r scrub_line; do
+              [[ -n "$scrub_line" ]] && log "INFO: $scrub_line"
+            done < /tmp/gitleaks-scrub-log.txt
+            rm -f /tmp/gitleaks-scrub-count.txt /tmp/gitleaks-scrub-log.txt "$gl_report"
 
-          if [[ "$scrub_count" -eq 0 || "$scrub_count" == "" ]]; then
-            log "ERROR: gitleaks found leaks but could not scrub any files — refusing to commit"
-            return 1
+            if [[ "$scrub_count" -eq 0 || "$scrub_count" == "" ]]; then
+              log "ERROR: gitleaks found leaks but could not scrub any files — refusing to commit"
+              return 1
+            fi
+
+            log "INFO: scrubbed $scrub_count file(s); re-staging and re-scanning"
+            git -C "$work_dir" add "backup/" 2>/dev/null || true
+
+            # Re-scan — must be clean now
+            if ! gitleaks protect --staged \
+                "${gl_config_args[@]}" 2>/dev/null; then
+              log "ERROR: gitleaks still found secrets after auto-remediation — refusing to commit"
+              return 1
+            fi
+            log "INFO: gitleaks clean after auto-remediation"
           fi
-
-          log "INFO: scrubbed $scrub_count file(s); re-staging and re-scanning"
-          git -C "$work_dir" add "backup/" 2>/dev/null || true
-
-          # Re-scan — must be clean now
-          if ! gitleaks protect --staged \
-              "${gl_config_args[@]}" 2>/dev/null; then
-            log "ERROR: gitleaks still found secrets after auto-remediation — refusing to commit"
-            return 1
-          fi
-          log "INFO: gitleaks clean after auto-remediation"
         fi
+        git -C "$work_dir" commit "backup/" -m "backup: automated home config snapshot $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        log "Pushing: ${branch} -> ${GIT_BACKUP_PUSH_REMOTE}/${branch} (branch verified, no force)"
+        git -C "$work_dir" push "$GIT_BACKUP_PUSH_REMOTE" "${branch}:${branch}"
+        log "Committed and pushed config snapshot to git"
+      else
+        log "No config changes to commit"
       fi
-      git -C "$work_dir" commit "backup/" -m "backup: automated home config snapshot $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-      log "Pushing: ${branch} -> origin/${branch} (branch verified, no force)"
-      git -C "$work_dir" push origin "${branch}:${branch}"
-      log "Committed and pushed config snapshot to git"
-    else
-      log "No config changes to commit"
-    fi
-  }
+    }
 
-  if [[ "$current_branch" == "$_snapshot_main_branch" ]]; then
-    if ! _do_snapshot_commit "$REPO_ROOT" "$_snapshot_main_branch"; then
-      git_status="FAILED"
-      log "ERROR: git snapshot commit/push failed"
-    fi
-  else
-    log "Not on $_snapshot_main_branch (got '$current_branch') — committing via temporary worktree"
-    _snapshot_worktree="$(mktemp -d)"
-    if git worktree add "$_snapshot_worktree" "$_snapshot_main_branch" 2>/dev/null; then
-      git -C "$_snapshot_worktree" pull origin "$_snapshot_main_branch" --ff-only 2>/dev/null || true
-      rsync -a "$GIT_BACKUP_ROOT/" "$_snapshot_worktree/backup/$MACHINE_NAME/"
-      if ! _do_snapshot_commit "$_snapshot_worktree" "$_snapshot_main_branch"; then
+    if [[ "$current_branch" == "$_snapshot_main_branch" ]]; then
+      if ! _do_snapshot_commit "$REPO_ROOT" "$_snapshot_main_branch"; then
         git_status="FAILED"
-        log "ERROR: git snapshot commit/push failed (via worktree)"
+        log "ERROR: git snapshot commit/push failed"
       fi
-      git worktree remove --force "$_snapshot_worktree" 2>/dev/null || true
     else
-      git_status="FAILED"
-      log "ERROR: could not create worktree for $_snapshot_main_branch — skipping automated snapshot commit"
+      log "Not on $_snapshot_main_branch (got '$current_branch') — committing via temporary worktree"
+      _snapshot_worktree="$(mktemp -d)"
+      if git worktree add "$_snapshot_worktree" "$_snapshot_main_branch" 2>/dev/null; then
+        git -C "$_snapshot_worktree" pull "$GIT_BACKUP_PUSH_REMOTE" "$_snapshot_main_branch" --ff-only 2>/dev/null || true
+        rsync -a "$GIT_BACKUP_ROOT/" "$_snapshot_worktree/backup/$MACHINE_NAME/"
+        if ! _do_snapshot_commit "$_snapshot_worktree" "$_snapshot_main_branch"; then
+          git_status="FAILED"
+          log "ERROR: git snapshot commit/push failed (via worktree)"
+        fi
+        git worktree remove --force "$_snapshot_worktree" 2>/dev/null || true
+      else
+        git_status="FAILED"
+        log "ERROR: could not create worktree for $_snapshot_main_branch — skipping automated snapshot commit"
+      fi
+      rm -rf "$_snapshot_worktree" 2>/dev/null || true
     fi
-    rm -rf "$_snapshot_worktree" 2>/dev/null || true
   fi
 fi
 

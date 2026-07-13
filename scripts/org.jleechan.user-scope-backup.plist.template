@@ -9,6 +9,23 @@
     <string>/opt/homebrew/bin/bash</string>
     <string>@HOME@/projects_other/user_scope/scripts/backup-home.sh</string>
   </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>REQUIRE_DROPBOX_ONLY</key>
+    <string>1</string>
+    <key>ALLOW_GIT_BACKUP_SYNC</key>
+    <string>0</string>
+    <key>ALLOW_GIT_BACKUP_PUSH</key>
+    <string>0</string>
+    <key>TOKEN_HEALTH_PRECHECK</key>
+    <string>1</string>
+    <key>TOKEN_HEALTH_PRECHECK_FAIL_ON_FAILURE</key>
+    <string>1</string>
+    <key>GIT_BACKUP_PUSH_REMOTE</key>
+    <string>origin</string>
+    <key>GIT_BACKUP_PUSH_BRANCH</key>
+    <string>main</string>
+  </dict>
   <key>RunAtLoad</key>
   <false/>
   <key>StartInterval</key>
