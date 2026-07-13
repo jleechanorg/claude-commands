@@ -85,6 +85,53 @@ $PROJECT_ROOT/tests/
 | `/tester` | Real | Full E2E with real Firestore + Gemini |
 | `/testerc` | Real + Capture | Real mode with data capture |
 | `/4layer` | TDD | Four-layer testing protocol |
+| `/adde2e` | Add/Update | Add or update E2E tests for a new/changed feature — runs the workflow below |
+
+## Workflow for adding or updating E2E tests (`/adde2e`)
+
+**MANDATORY**: Read this skill BEFORE writing any tests. Use TodoWrite to track progress through the phases below.
+
+### Phase 0: Context Analysis
+1. Analyze current conversation context — what features were just added/modified?
+2. Read the user's feature description from the command arguments if provided.
+3. Identify affected API endpoints and service layers.
+4. Determine if this is a NEW test file or an UPDATE to an existing one.
+
+### Phase 1: Discovery — Existing Test Landscape
+1. List existing E2E tests: `ls $PROJECT_ROOT/tests/test_end2end/`
+2. Search for related existing tests covering similar functionality: `grep -r "<FEATURE_KEYWORD>" $PROJECT_ROOT/tests/test_end2end/`
+3. Read this skill file fully.
+4. Read fake implementations for reference: `cat $PROJECT_ROOT/tests/fake_firestore.py`
+
+### Phase 2: Test Planning
+1. Determine test scope — which API endpoints, which service layers, which external APIs need mocking (Gemini, Firestore).
+2. Define test cases: success path (happy path), error handling (API failures, validation errors), edge cases (empty data, special characters, limits).
+3. Choose test location — new feature → create `$PROJECT_ROOT/tests/test_end2end/test_{feature}_end2end.py`; existing feature enhancement → add to the existing test file.
+
+### Phase 3: Test Implementation
+
+Follow the "Flask API End2End Test Pattern (MANDATORY)" below. An alternate template style seen in older call sites imports directly (`from mvp_site import main`, `from mvp_site.tests.fake_firestore import FakeFirestoreClient`, `from mvp_site.tests.fake_llm import FakeLLMResponse`) rather than the relative-import style shown in "Required Imports and Base Class" — both are acceptable as long as the base class, `TESTING_AUTH_BYPASS`, and fake-implementation rules below are followed; prefer the relative-import style for new files.
+
+Follow mock patterns from this skill:
+- Use `@patch("mvp_site.firestore_service.get_db")` for Firestore.
+- Prefer `@patch("mvp_site.llm_providers.gemini_provider.generate_content_with_code_execution")` for new LLM mocks.
+- Use `@patch("mvp_site.llm_service._call_llm_api_with_llm_request")` only when updating legacy tests.
+- Use `side_effect` for multi-phase function testing.
+
+Add error test cases: API errors (Gemini failures, Firestore errors), validation errors (missing fields, invalid data), authentication failures.
+
+### Phase 4: Test Verification
+1. Run the new tests: `TESTING=true python3 -m pytest $PROJECT_ROOT/tests/test_end2end/test_{feature}_end2end.py -v`
+2. Verify all tests pass — if tests fail, debug and fix; check mock setup is correct; verify assertions match expected behavior.
+3. Run the full E2E suite to ensure no regressions: `TESTING=true python3 -m pytest $PROJECT_ROOT/tests/test_end2end/ -v`
+
+### Enforcement rules (adding/updating E2E tests)
+
+1. Read this skill file BEFORE writing any tests.
+2. Mock ONLY external APIs, NEVER internal services.
+3. Use `FakeFirestoreClient`/`FakeLLMResponse`, NOT `Mock()`.
+4. All tests MUST pass before completion.
+5. Follow the existing naming convention: `test_{feature}_end2end.py`.
 
 ## Fake Implementations
 

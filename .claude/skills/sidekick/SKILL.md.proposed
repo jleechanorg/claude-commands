@@ -1,0 +1,191 @@
+# Sidekick — persistent restartable Claude Code teammate
+
+> **DRAFT — proposed rewrite.** Not deployed. Original lives at
+> `~/.claude/skills/sidekick/SKILL.md`. Diff vs original is summarized at the
+> bottom of this file. To activate, run `/advice` on this draft, address all
+> CONFIRMED findings, then `mv` over the original.
+
+One named background teammate owns long-running orchestration. The main session
+supervises and relays milestones. If the conversation crashes, a fresh session
+respawns the sidekick and it resumes from a disk state file with zero
+conversation context.
+
+## Hard pre-flight gates (REQUIRED before any teammate or tmux path)
+
+**These are HARD gates. If any of these fail, DO NOT silently fall back to a
+different execution path. Surface the failure to the user.**
+
+1. **`CLAUDE_CONFIG_DIR` must be exported in the spawning shell.** Verified
+   with `[[ -n "$CLAUDE_CONFIG_DIR" ]] && [[ -d "$CLAUDE_CONFIG_DIR" ]]`.
+   Failure mode (2026-07-11): `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` silently
+   fell back to the default account, which has no auth for the WA user →
+   "Not logged in · Please run /login" exit=1. Skill doc previously implied
+   inline propagation was sufficient; the inline form `${CLAUDE_CONFIG_DIR:-...}`
+   only works if the variable is exported, which Claude Code's bash shell does
+   NOT do by default.
+
+2. **Auth reachability check.** Before any teammate spawn, verify the account
+   reachable via `claude -p "echo SIDEKICK_AUTH_OK"` (≤5s). If it fails,
+   surface the failure and DO NOT proceed.
+
+3. **`isActive:true` ack required within 30s of registration**
+   *(isActive is an internal field observed in
+   `~/.claude*/teams/session-*/config.json` — undocumented, may change
+   without notice; the 30s threshold is a local convention from 2026-07-11
+   repro timings — not an Anthropic SLA)*. A teammate is registered when
+   its entry appears in `~/.claude/teams/<session>/config.json`. It is
+   **NOT** ready for work until `isActive` flips to `true` AND its inbox
+   is non-empty. Failure mode (2026-07-11, anthropics/claude-code#24108
+   — closed as duplicate, verified 2026-07-11 via `gh api`): teammate
+   registered with the mission in `prompt:` field but never read its
+   mailbox — `isActive: false` indefinitely, survived 3 SendMessage
+   nudges and 4 `idle_notification`s, produced zero output for 5+
+   minutes. **If `isActive` does not flip within 30 seconds
+   *(local convention from 2026-07-11 repro timings — not an Anthropic
+   SLA)*, surface the hang to the user with a clear remediation and DO
+   NOT silently fall back to tmux.**
+
+4. **TUI visual lanes require matching on-disk registry.** If the TUI bottom
+   bar shows `◯ <lane-name>` but `~/.claude/teams/<session>/config.json` does
+   NOT list `<lane-name>` as a member, the lane is a phantom. Failure mode
+   (2026-07-11, anthropics/claude-code#24771 — closed as duplicate, verified
+   2026-07-11 via `gh api`): sidekick spawned 4+ minutes of forensic search
+   for a teammate that doesn't exist in any registry. **A phantom lane is
+   unrecoverable for this session — disclose to user and recommend `/advice`
+   for diagnosis.**
+
+## DEFAULT MODE: in-session teammate (user directive 2026-07-11)
+
+Per claude-code CHANGELOG v2.1.178: "every session now has one implicit
+team — spawn teammates directly with the Agent tool's name parameter".
+Spawn the sidekick (and its lanes) as named teammates of the
+INVOKING session's implicit Agent Team via the `Agent` tool with
+`{name, model: "sonnet", run_in_background: true}`. This is what "real
+`/team-claude`" means — the roster is visible in the user's own panel,
+every member is SendMessage-addressable both ways, and the user can
+watch/steer without attaching to anything.
+
+- Durability = **STATE.md checkpoints + a P1 resumption bead (`br`) +
+  commit-often**, NOT process persistence. Teammates die with the
+  conversation; that is an accepted trade for visibility. On crash: a
+  fresh session re-reads STATE.md / `br show <runbook-bead>` and respawns
+  the same named teammates.
+- **External `tmux new-session` sidekicks are the FALLBACK ONLY** — for
+  missions that must survive the conversation process itself (multi-day
+  unattended runs) or when Agent Teams is unavailable. When used:
+  - Pre-flight gate #1 must pass
+  - The user must be told explicitly that the sidekick will NOT appear
+    in their panel
+  - Provide the exact attach command (`tmux attach -t <session>`)
+  - Prefer INTERACTIVE (TUI) over `-p` for any tmux spawn the user may
+    want to watch
+
+**Everything below (tmux launch commands, engines, stall watchdog) applies to
+the FALLBACK external-tmux mode. The STATE.md / beads / commit-often /
+milestone-reporting protocol applies to BOTH modes.**
+
+The known failure modes of the tmux path are documented below in "Known bug
+class" — read them before choosing tmux as the fallback.
+
+## Invocation
+
+`/sidekick [sonnet|codex] [mission...]`
+
+- `engine/model`: default is **claude with Sonnet**. `codex` selects the Codex
+  CLI engine (below). Any other model only if the user explicitly asks in
+  the current message.
+- `mission`: freeform priorities. If omitted, resume whatever the state file says.
+
+## Engines: claude (default) | codex — both verified 2026-07-10
+
+The protocol (STATE.md, tmux, commit-often, respawn) is engine-agnostic. Only
+the launch command and the between-run steering command differ.
+
+**codex launch** (auth comes from `~/.codex` — no `CLAUDE_CONFIG_DIR` needed):
+
+```bash
+tmux new-session -d -s "$SESSION" -x 160 -y 48 \
+  "cd '$PWD' && codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \"\$(cat '$STATE_DIR/sidekick.prompt.md')\"; rc=\$?; printf '\n[sidekick done exit=%s]\n' \"\$rc\"; exec bash"
+```
+
+Verify with `pgrep -fl "codex exec"`; unlike claude `-p`, codex exec streams
+progress into the pane while working.
+
+**Mode choice: `-p` (headless) vs interactive TUI — verified 2026-07-10.**
+`-p` is the default for unattended batch missions (clean `[sidekick done
+exit=]` marker), but it gets NO team primitives. For missions that benefit
+from a REAL in-sidekick Claude team or live steering, launch the interactive
+TUI in tmux instead:
+
+```bash
+# MANDATORY: export CLAUDE_CONFIG_DIR FIRST
+export CLAUDE_CONFIG_DIR="$HOME/.claude-wa"   # or your account dir; MUST be exported
+tmux new-session -d -s "$SESSION" -x 200 -y 50 \
+  "cd '$PWD' && CLAUDE_CONFIG_DIR='$CLAUDE_CONFIG_DIR' CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions; exec bash"
+```
+
+**Pre-flight gate #1 check**: `[[ -n "$CLAUDE_CONFIG_DIR" ]]` MUST be true
+before running this command. If false, ABORT — do not run the tmux launch.
+
+- First run in a new directory shows a **trust dialog** — capture-pane, then
+  `tmux send-keys -t "$SESSION" Enter` to accept before sending the mission.
+- Deliver the mission as a pointer to STATE.md (single source of truth), with
+  text and the submitting Enter as **separate** send-keys calls.
+- **Completion detection** (no exit marker in TUI mode): gate on the
+  STATE.md condition, not the pane alone.
+- **Teardown** (the TUI never exits on its own):
+  `tmux kill-session -t "$SESSION"` after verifying STATE.md shows
+  "(mission complete)" and deliverables are on disk.
+
+## Known bug class (the model cannot fix these)
+
+The five bugs below were reproduced live on 2026-07-11 and explain every
+silent failure observed in today's diagnostic. They are upstream of this
+skill — the model can detect them but cannot patch them. When you see the
+symptom, surface it; do not silently work around. **All four Anthropic
+issues are now closed upstream (verified 2026-07-11 via `gh api`):
+#24108 closed/duplicate, #24771 closed/duplicate, #46691 closed/not_planned,
+#24292 closed/duplicate.** Reproduction still happens locally because the
+upstream fixes have not yet landed in the installed `claude` binary.
+
+| Issue | Status (verified 2026-07-11 via `gh api`) | Symptom | Reproduced 2026-07-11 |
+|---|---|---|---|
+| [anthropics/claude-code#24108](https://github.com/anthropics/claude-code/issues/24108) | closed as duplicate | Teammate stuck at idle prompt; mailbox never polled; no `--prompt` flag passed. In-process probe registered with mission in `prompt:` field but `isActive: false` indefinitely, 3 SendMessage nudges ignored, 4 `idle_notification`s, zero output for 5+ min. | ✅ |
+| [anthropics/claude-code#46691](https://github.com/anthropics/claude-code/issues/46691) | closed not_planned | Lead stalls after teammates report back; needs keystroke to unblock. TUI sidekick stalled 4+ min searching for phantom lane; SendMessage nudges queued; only unblocked when tmux send-keys delivered keystroke. | ✅ |
+| [anthropics/claude-code#24771](https://github.com/anthropics/claude-code/issues/24771) | closed as duplicate | Teammate pane creation works but routing to pane broken. TUI showed `◯ lane-test-1` in bottom bar but `~/.claude/teams/<session>/config.json` only had `team-lead`. | ✅ |
+| [anthropics/claude-code#24292](https://github.com/anthropics/claude-code/issues/24292) | closed as duplicate | tmux silent fallback to in-process. First `-p` tmux sidekick failed with "Not logged in" because `CLAUDE_CONFIG_DIR` was unset and bashrc parameter expansion fell back to default account. | ✅ |
+| [anthropics/claude-code#23513](https://github.com/anthropics/claude-code/issues/23513) | closed not_planned | tmux send-keys race with shell init. Some SendMessage nudges never landed. | plausible |
+
+When the symptom matches, the right action is to:
+1. Document the failure with timestamps + file:line evidence
+2. Recommend the user file/track the issue
+3. If the failure is recoverable, retry with the documented workaround
+4. If not recoverable for this session, disclose and recommend `/advice`
+
+Do NOT silently fall back to an alternative execution path — that hides the
+bug and erodes user trust.
+
+## Core mechanics
+
+**State file (per project + branch/mission):**
+`/tmp/<project-slug>/sidekick/<branch-or-mission>/STATE.md`
+
+[... rest of original SKILL.md body — STATE.md template, spawn procedure,
+respawn procedure, milestone reporting, stall watchdog, drive-loop
+invariants — UNCHANGED ...]
+
+## Diff vs original SKILL.md (summary)
+
+| Section | Change |
+|---|---|
+| Top of file | Added "Hard pre-flight gates (REQUIRED before any teammate or tmux path)" section enumerating 4 hard gates |
+| tmux launch command | Removed `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` bash parameter expansion; replaced with `export CLAUDE_CONFIG_DIR=...` BEFORE the tmux command, plus a `[[ -n "$CLAUDE_CONFIG_DIR" ]]` pre-check |
+| After "Engines" section | Added "Known bug class" table mapping today's reproduction to upstream Anthropic issues |
+| Throughout | Removed "skill can suggest" framing in favor of "hard pre-flight gates"; the model is now instructed to surface failures, not work around them |
+| Stall watchdog | Unchanged in this draft — isActive-ack monitoring is covered by pre-flight gate #3; full watchdog extension tracked in bead jleechan-slkb |
+| Drive-loop invariants | Unchanged |
+
+(For the original spawn procedure, respawn procedure, STATE.md template,
+milestone reporting, and PR endgame invariants — see the live SKILL.md at
+`~/.claude/skills/sidekick/SKILL.md`. This proposed draft does not change
+those mechanics.)

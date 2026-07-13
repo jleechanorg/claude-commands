@@ -223,6 +223,23 @@ Use the comprehensive matrix testing approach from `/tdd`:
 **RULE 6**: Green phase must demonstrate all tests pass, not just absence of error
 **RULE 7**: Consider test types: integration tests (real services), functional tests (fixtures), unit tests - use judgment
 
+**RULE 8 — RED PROOF DISCIPLINE (HARD GATE):** A red proof MUST be a fresh, real
+failing test that runs locally against the codebase (e.g. `testing_mcp/test_*.py`
+or `$PROJECT_ROOT/tests/test_*.py`) and FAILS before the fix is applied.
+- A past bug report does NOT count as red proof, even if it captures the exact
+  original error stack. Past reports are narrative, not test runs.
+- A BigQuery / Firestore / production log showing the bug in prod does NOT count
+  as red proof on its own. Replay the symptom through a fresh running test.
+- A copy-campaign replay script that "shows" the bug via offline LLM replay does
+  NOT count as red proof unless it runs a deterministic test that fails pre-fix.
+- For LLM-behavior bugs: prefer a unit test that asserts a deterministic contract
+  (e.g. prompt contains required rule strings) OR a `testing_mcp/` test that runs
+  against a real local server and a real LLM and fails for the same reason as prod.
+  LLM behavior tests should set `AGY_PROVIDER_ENABLED=false` to bypass wrapper
+  tooling and use the real Gemini API directly.
+- If you cannot produce a red proof, STOP. Do not write the fix. Do not proceed.
+  Ship a bead instead and surface the missing red proof as the blocker.
+
 ## Example Workflow
 
 ```bash

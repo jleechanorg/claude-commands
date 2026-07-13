@@ -1,8 +1,3 @@
----
-name: modal-agent-pattern
-description: Design modal agents that cannot be exited until explicit completion choices are selected.
----
-
 # Modal Agent Pattern - Strict Character Creation & Level-Up
 
 **Purpose:** Design specification for "modal" agents that cannot be exited until the user explicitly chooses to exit. This prevents accidental escapes from character creation and level-up flows.

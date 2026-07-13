@@ -1,8 +1,3 @@
----
-name: minimax-cli-fix
-description: Run Claude Code CLI through the MiniMax Anthropic-compatible API endpoint.
----
-
 # Running Claude with MiniMax
 
 **Usage**: Use this skill when you need to run Claude Code CLI with MiniMax API.

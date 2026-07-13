@@ -1,10 +1,11 @@
 ---
-name: agentor
 description: Alias for /agento_report — Get a status report of all PRs agento is handling
-type: git
-execution_mode: background
+type: skill
+execution_mode: immediate
 ---
 
-## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+# /agentor
 
-Invoke `/agento_report` — load the skill at `.claude/skills/agento_report.md` and execute it.
+Generate a full agento PR status report: 6-point green checks per PR, zero-touch-by-operator rate analysis, display inline, and post summary to Slack #ai-slack-test.
+
+Read `~/.claude/skills/agento-report/SKILL.md` and execute the full workflow.

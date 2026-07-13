@@ -25,23 +25,6 @@ permissions:
   pull-requests: write
 
 jobs:
-  limit-pr-runs:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - name: Limit PR runs
-        uses: ./.github/actions/limit-pr-runs
-        with:
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
   deploy-preview:
     if: >
       github.event.pull_request.draft == false &&
@@ -52,12 +35,30 @@ jobs:
       GCP_REGION: us-central1
       GCP_PROJECT: worldarchitecture-ai
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
+    # Memory/CPU/autoscaling: shared defaults from scripts/shared_config.sh +
+    # deploy.sh (8Gi, 4 vCPU, containerConcurrency 16, GUNICORN_WORKERS 1,
+    # GUNICORN_THREADS 16 — the post-#7961 Cloud Run pattern from PR #7984).
+    # Per-request capacity is identical to dev and stable; the one intentional
+    # difference is min-instances=0 (preview scales to zero when idle) so each
+    # fresh PR preview pays ~21s Cloud Run provisioning + 1-worker init on the
+    # first request. PRs that need warm preview can override via
+    # SERVICE_NAME_OVERRIDE + min-instances on a follow-up, but the default is
+    # cheap-idle-first.
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           persist-credentials: false
+
+      # Checkout above uses the mutable head.ref (required so self-hosted
+      # runners can fetch it — raw PR head SHAs can hit "unadvertised object"
+      # fetch failures). Resolve the SHA actually checked out here and reuse
+      # it for every downstream tag/label/comment so a same-window push to
+      # the PR branch can't desync "what was built" from "what got labeled".
+      - name: Resolve checked-out commit
+        id: resolved_sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
@@ -78,6 +79,12 @@ jobs:
             artifactregistry.googleapis.com \
             --project="${{ env.GCP_PROJECT }}" \
             --quiet
+
+      - name: Configure gcloud CLI defaults
+        run: |
+          set -euo pipefail
+          gcloud config set project "${{ env.GCP_PROJECT }}"
+          gcloud config set run/region "${{ env.GCP_REGION }}"
 
       - name: Assign server from pool
         id: server_pool
@@ -113,14 +120,32 @@ jobs:
             echo "eviction_message=null" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build and Deploy PR Preview
+      - name: Build and Deploy PR Preview via centralized deploy.sh
         env:
           SERVICE_NAME: ${{ steps.server_pool.outputs.service_name }}
           SERVER: ${{ steps.server_pool.outputs.server }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_SHA: ${{ steps.resolved_sha.outputs.sha }}
           PR_NUMBER: ${{ github.event.number }}
           SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
-        timeout-minutes: 20
+          # deploy.sh builds the IMAGE_TAG from BASE_SERVICE_NAME, but the
+          # PR pool assigns a per-PR service name (mvp-site-app-preview-pr-N).
+          # We override the tag so the registry build matches the deploy
+          # target — the previous inline gcloud builds submit did this
+          # implicitly; the centralized path needs both SERVICE_NAME_OVERRIDE
+          # AND IMAGE_TAG_OVERRIDE.
+          IMAGE_TAG_OVERRIDE: gcr.io/${{ env.GCP_PROJECT }}/${{ steps.server_pool.outputs.service_name }}:${{ steps.resolved_sha.outputs.sha }}
+          # Rate-limit exemption: smoke-test@example.com is the CI identity
+          # for SMOKE_TOKEN auth. MCP smoke tests need to bypass rate limits
+          # without disabling them for all preview traffic.
+          RATE_LIMIT_EXEMPT_EMAILS: smoke-test@example.com
+          GCP_PROJECT_OVERRIDE: ${{ env.GCP_PROJECT }}
+          # Cache the embed store on the same bucket dev/stable use, so
+          # preview pods and dev pods read the same precomputed vectors.
+          EMBED_STORE_BUCKET: worldarchitecture-ai-frontend-static
+          # PR previews prioritize fast feedback. Dev/stable/prod still run
+          # deploy.sh's fail-loud prompt-embedding precompute path.
+          SKIP_PROMPT_EMBEDDINGS_PRECOMPUTE: "true"
+        timeout-minutes: 30
         run: |
           set -euo pipefail
           if [ -z "${SMOKE_TOKEN:-}" ]; then
@@ -128,95 +153,33 @@ jobs:
             exit 1
           fi
 
-          echo "🚀 Deploying PR #$PR_NUMBER to server $SERVER..."
+          echo "🚀 Deploying PR #$PR_NUMBER to server $SERVER via centralized deploy.sh"
           echo "Service name: $SERVICE_NAME"
+          echo "Image tag: $IMAGE_TAG_OVERRIDE"
 
-          # Build and push Docker image with unique tag
-          IMAGE_TAG="gcr.io/${{ env.GCP_PROJECT }}/$SERVICE_NAME:$PR_HEAD_SHA"
+          # Pass the per-PR service name into deploy.sh so the deploy target
+          # matches the pool assignment, and the IMAGE_TAG matches what the
+          # build step just pushed. The previous preview workflow duplicated
+          # ~80 lines of gcloud build + gcloud run deploy inline; the
+          # centralized path here means the same precompute, build, and
+          # deploy commands run for dev, stable, and preview — only the
+          # SERVICE_NAME / IMAGE_TAG / label set differ. See PR #7880.
+          SERVICE_NAME_OVERRIDE="$SERVICE_NAME" \
+            ./deploy.sh preview mvp_site
 
-          echo "Building Docker image: $IMAGE_TAG"
-          # Create inline cloudbuild.yaml to build from project root with Dockerfile in mvp_site/
-          cat > /tmp/cloudbuild.yaml <<EOF
-          steps:
-          - name: 'gcr.io/cloud-builders/docker'
-            args: ['build', '-t', '$IMAGE_TAG', '-f', 'mvp_site/Dockerfile', '.']
-          images: ['$IMAGE_TAG']
-          EOF
-
-          # Submit asynchronously to avoid VPC-SC log-streaming restriction.
-          # --async exits immediately with the build ID; we then poll describe
-          # (metadata API, not logs API) until SUCCESS or failure.
-          BUILD_ID=$(gcloud builds submit \
-            --config=/tmp/cloudbuild.yaml \
-            --project="${{ env.GCP_PROJECT }}" \
-            --timeout=15m \
-            --async \
-            --format='value(id)' \
-            .)
-          echo "Build submitted: $BUILD_ID"
-
-          # Allow Cloud Build queue time on top of the 15m execution timeout.
-          MAX_WAIT=1200
-          POLL_INTERVAL=30
-          ELAPSED=0
-          BUILD_STATUS=""
-          while [ $ELAPSED -le $MAX_WAIT ]; do
-            BUILD_STATUS=$(gcloud builds describe "$BUILD_ID" \
-              --project="${{ env.GCP_PROJECT }}" \
-              --format='value(status)' 2>/dev/null || echo "UNKNOWN")
-            echo "Build $BUILD_ID status: $BUILD_STATUS (${ELAPSED}s elapsed)"
-            if [ "$BUILD_STATUS" = "SUCCESS" ]; then
-              break
-            elif [ "$BUILD_STATUS" = "FAILURE" ] || [ "$BUILD_STATUS" = "TIMEOUT" ] || [ "$BUILD_STATUS" = "CANCELLED" ] || [ "$BUILD_STATUS" = "INTERNAL_ERROR" ] || [ "$BUILD_STATUS" = "EXPIRED" ]; then
-              echo "::error::Cloud Build failed with status: $BUILD_STATUS"
-              exit 1
-            fi
-            sleep $POLL_INTERVAL
-            ELAPSED=$((ELAPSED + POLL_INTERVAL))
-          done
-
-          if [ "$BUILD_STATUS" != "SUCCESS" ]; then
-            echo "::error::Cloud Build did not complete within ${MAX_WAIT}s. Last status: $BUILD_STATUS"
-            exit 1
-          fi
-          echo "Docker image built: $IMAGE_TAG"
-
-          # Preview mirrors dev/prod per-request sizing for fidelity: memory + CPU
-          # come straight from the shared defaults in shared_config.sh (8Gi /
-          # 4 vCPU, the validated 10-50 QPS streaming config) with no per-env pin,
-          # so a PR preview behaves like the environment it will ship to. Preview
-          # still scales to zero when idle (--min-instances=0 below).
-          source scripts/shared_config.sh
-
-          # Remove SMOKE_TOKEN secret reference if it was previously mounted via --set-secrets.
-          # Cloud Run rejects updating a secret-type env var to a plain string literal.
+          # deploy.sh already applied the service with the right memory/CPU
+          # + PRODUCTION_MODE=true + ENVIRONMENT=preview, but the historical
+          # preview workflow also added the SMOKE_TOKEN env, GEMINI/CEREBRAS/
+          # OPENROUTER secrets, and pr-number/commit-sha labels. Apply those
+          # with a follow-up `gcloud run services update` (Cloud Run has no
+          # "merge env on update" command — the env list must be the full
+          # union). deploy.sh's --update-labels already set the labels, so
+          # the follow-up only needs to add SMOKE_TOKEN and the API secrets.
           gcloud run services update "$SERVICE_NAME" \
-            --remove-secrets=SMOKE_TOKEN \
             --region="${{ env.GCP_REGION }}" \
             --project="${{ env.GCP_PROJECT }}" \
-            --quiet 2>/dev/null || true
-
-          # Deploy to Cloud Run with PR label
-          # RATE_LIMIT_EXEMPT_EMAILS: Exempt smoke-test@example.com (CI identity for
-          # SMOKE_TOKEN auth) so MCP smoke tests bypass rate limits without disabling
-          # limits for all preview traffic or growing Firestore rate_limits docs.
-          echo "Deploying to Cloud Run service: $SERVICE_NAME"
-          echo "Using memory: $WORLDARCH_MEMORY, timeout: $WORLDARCH_TIMEOUT_SECONDS"
-          gcloud run deploy "$SERVICE_NAME" \
-            --image "$IMAGE_TAG" \
-            --region="${{ env.GCP_REGION }}" \
-            --project="${{ env.GCP_PROJECT }}" \
-            --platform=managed \
-            --allow-unauthenticated \
-            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview,PRODUCTION_MODE=true,SMOKE_TOKEN=$SMOKE_TOKEN,RATE_LIMIT_EXEMPT_EMAILS=smoke-test@example.com,GUNICORN_THREADS=$WORLDARCH_GUNICORN_THREADS" \
+            --update-env-vars="SMOKE_TOKEN=$SMOKE_TOKEN" \
             --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,CEREBRAS_API_KEY=cerebras-api-key:latest,OPENROUTER_API_KEY=openrouter-api-key:latest" \
-            --memory="$WORLDARCH_MEMORY" \
-            --cpu="$WORLDARCH_CPU" \
-            --cpu-boost \
-            --min-instances=0 \
-            --max-instances="$WORLDARCH_MAX_INSTANCES" \
-            --concurrency="$WORLDARCH_CONCURRENCY" \
-            --timeout="$WORLDARCH_TIMEOUT_SECONDS" \
             --update-labels="pr-number=$PR_NUMBER,commit-sha=$PR_HEAD_SHA" \
             --quiet
 
@@ -228,7 +191,7 @@ jobs:
           GCP_REGION: ${{ env.GCP_REGION }}
           SERVICE_NAME: ${{ steps.server_pool.outputs.service_name }}
           PR_NUMBER: ${{ github.event.number }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_SHA: ${{ steps.resolved_sha.outputs.sha }}
         run: |
           echo "🏷️  Verifying service labels"
 
@@ -334,7 +297,7 @@ jobs:
           ASSIGNED_SERVER: ${{ steps.server_pool.outputs.server }}
           EVICTION_MESSAGE: ${{ steps.server_pool.outputs.eviction_message }}
           GCP_REGION: ${{ env.GCP_REGION }}
-          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+          COMMIT_SHA: ${{ steps.resolved_sha.outputs.sha }}
           BRANCH_NAME: ${{ github.head_ref }}
           WORKFLOW_NAME: ${{ github.workflow }}
           RUN_ID: ${{ github.run_id }}
@@ -454,7 +417,7 @@ jobs:
           SERVICE_NAME: ${{ steps.server_pool.outputs.service_name }}
           ASSIGNED_SERVER: ${{ steps.server_pool.outputs.server }}
           GCP_REGION: ${{ env.GCP_REGION }}
-          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+          COMMIT_SHA: ${{ steps.resolved_sha.outputs.sha }}
           BRANCH_NAME: ${{ github.head_ref }}
           RUN_ID: ${{ github.run_id }}
           GITHUB_SERVER_URL: ${{ github.server_url }}

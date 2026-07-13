@@ -1,28 +1,39 @@
 ---
-description: Code standards review - dispatch independent ZFC, ZFC leveling, root-cause-first, code-quality, and thermo review lanes
+description: "User-scope /code-standards — review code, diffs, PRs, or proposed implementations against the user-wide standards: ZFC, ZFC leveling, root-cause-first, and the ponytail (lazy senior dev) ladder. Same skill family lives at `~/.claude/skills/code-standards/SKILL.md`."
 type: quality
 execution_mode: immediate
 ---
 
-# /code-standards
+# /code-standards [scope]
 
-Load and follow `.claude/skills/code-standards/SKILL.md`.
+> This is the **user-scope** `/code-standards` command, at
+> `~/.claude/commands/code-standards.md`, so every repo — including ones
+> without a repo-local `.claude/commands/code-standards.md` — can invoke the
+> same review lanes against the same source skills. **If a repo-local
+> `.claude/commands/code-standards.md` exists, prefer it.**
 
-Use this command when reviewing current work, a PR, a file, or a proposed fix
-against the repo's core code standards. It must dispatch adversarial,
-independent review lanes for all source standards:
+Read `~/.claude/skills/code-standards/SKILL.md` and execute the full
+four-lane workflow (ponytail, ZFC, ZFC leveling, root-cause-first) against
+`<scope>`, or the current diff/PR if no scope is given.
 
-- `/zfc` via `.claude/skills/zero-framework-cognition/SKILL.md` (user-scope: `~/.claude/skills/`)
-- `/zfclevel` via repo command `.claude/commands/zfclevel.md`
-- `/root-cause-first` via `.claude/skills/root-cause-first/SKILL.md` (user-scope: `~/.claude/skills/`)
-- `/code-quality` via `.claude/skills/code-quality/SKILL.md` (alias `/cq`) — metric-driven complexity / duplication / coupling review with file:line evidence
-- `/thermo` via `Agent` tool with `subagent_type: thermo-nuclear-code-quality-review` (Agent tool subagent type, NOT a bash command)
+## Quick reference
 
-Source skills live at `~/.claude/skills/` (user-scope, shared across all repos)
-and are mirrored under `.codex/skills/` as pointer files. The repo-local
-`.claude/skills/` paths resolve via skill discovery order: personal > project.
+| Lane | Skill |
+|---|---|
+| Ponytail (do discipline) | `~/.claude/skills/ponytail/SKILL.md` |
+| ZFC | `~/.claude/skills/zero-framework-cognition/SKILL.md` |
+| ZFC leveling | `~/.claude/skills/zfc-leveling-roadmap/SKILL.md` |
+| Root-cause-first | `~/.claude/skills/root-cause-first/SKILL.md` |
 
-Pass any command arguments through as the review scope.
+## Flags
 
-For Claude callers: use a Codex subagent or Codex reviewer plugin for at least
-one independent review lane when available.
+- `smoke-test` — load-only check; reports command/skill paths and revision
+  marker without dispatching review lanes or editing files.
+
+## Examples
+
+```
+/code-standards
+/code-standards $PROJECT_ROOT/rewards_engine.py
+/code-standards smoke-test
+```

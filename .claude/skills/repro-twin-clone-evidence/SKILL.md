@@ -56,6 +56,26 @@ Goal: create a safe Firestore copy under the test user, then reproduce one repor
 6. Export the test subject after replay with `scripts/download_campaign.py`.
 7. Save raw request/response or streaming payloads and Firestore pre/post snapshots when the repro touches LLM/runtime state.
 
+### 2.1 First-touch state proof for stale persisted-state bugs
+
+When the bug is a stale persisted Firestore condition, orphaned session, legacy
+flag, migration, cleanup, or routing loop:
+
+1. Capture the copied campaign's pre-state with a direct Firestore document read
+   before any app API call that could clean, migrate, normalize, or project state.
+2. Do not call `get_campaign_state`, preview APIs, export endpoints, or UI loads
+   before the evidence-bearing action unless the claim explicitly includes those
+   first-touch paths.
+3. Run the exact production ingress being validated (for gameplay, prefer
+   `/api/campaigns/<id>/interaction/stream`) as the first app touch.
+4. Capture post-state with another direct Firestore read.
+5. Record selected agent/routing evidence when the claim is "not stuck on an
+   agent" or "routes back to gameplay".
+
+If a pre-action observer can mutate or seal the state, the evidence is only proof
+that cleanup exists somewhere; it is not proof that the reported gameplay path is
+fixed.
+
 ## 3. Red/green code provenance requirement
 
 A red repro must not run against the candidate fix codepath. Before calling any run RED, record the code/environment provenance:
@@ -127,6 +147,8 @@ Or, if you already know the resolved UID from the copy step output, pass it dire
 | Same-symptom criteria written before replay | |
 | Baseline/test clone separation preserved | |
 | Exact input/action replayed | |
+| First-touch direct Firestore pre-state captured for stale persisted-state bugs | |
+| Production ingress under test was the first app API touch | |
 | Full campaign export saved | |
 | Raw captures/snapshots saved | |
 | Verdict table filled with `REPRO`, `RELATED`, or `NON-REPRO` | |

@@ -30,23 +30,6 @@ on:
       - '*.md'
 
 jobs:
-  limit-pr-runs:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - name: Limit PR runs
-        uses: ./.github/actions/limit-pr-runs
-        with:
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
   detect-changes:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
     runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
@@ -59,7 +42,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           fetch-depth: 0  # Full history for accurate change detection
           persist-credentials: false
 
@@ -100,7 +83,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Run import validation
@@ -126,7 +109,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           persist-credentials: false
       - name: Set up Python
         if: runner.os != 'macOS'
@@ -174,6 +157,18 @@ jobs:
         persist-credentials: false
         fetch-depth: 1
 
+    - name: Prepare runner tool cache for setup actions
+      run: |
+        chmod +x scripts/ci/setup-runner-tool-cache.sh
+        ./scripts/ci/setup-runner-tool-cache.sh
+
+    - name: Set up Python
+      if: runner.os != 'macOS'
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+      with:
+        python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
+        token: ''
+
     - name: Resolve Python version for cache keys
       id: python-version
       shell: bash
@@ -190,6 +185,7 @@ jobs:
         echo "python_version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
 
     - name: Cache merge-commit venv
+      if: runner.os != 'macOS'
       id: cache-ci-venv
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
       with:
@@ -205,24 +201,33 @@ jobs:
 
         VENV_OK=false
         VERIFY_CACHED_VENV=false
-        # On exact cache hit, check if cached .ci-venv is healthy.
-        # On partial hit or cache miss, we recreate it cleanly to avoid stale dependencies.
+        # On exact cache hit, verify the cached .ci-venv is healthy AND can import
+        # crucial C extensions (binary compatibility — a stale ABI silently breaks
+        # imports). On partial hit or cache miss, recreate it cleanly to avoid stale deps.
         if [ "${{ steps.cache-ci-venv.outputs.cache-hit }}" = "true" ]; then
           if [ -d .ci-venv ] && [ -x .ci-venv/bin/python ] && [ -x .ci-venv/bin/pip ] \
             && timeout 30 .ci-venv/bin/python --version >/dev/null 2>&1 \
-            && timeout 30 .ci-venv/bin/pip --version >/dev/null 2>&1; then
+            && timeout 30 .ci-venv/bin/pip --version >/dev/null 2>&1 \
+            && .ci-venv/bin/python -c "import pydantic_core, cryptography" >/dev/null 2>&1; then
             echo "Reusing healthy cached .ci-venv"
             VENV_OK=true
             VERIFY_CACHED_VENV=true
           else
-            echo "Cached .ci-venv is unhealthy"
+            echo "Cached .ci-venv is missing or unhealthy (C extension binary mismatch). Recreating..."
           fi
         fi
 
         if [ "$VENV_OK" != "true" ]; then
           echo "Recreating clean .ci-venv"
           rm -rf .ci-venv
-          "$PYTHON_BIN" -m venv .ci-venv
+          if ! "$PYTHON_BIN" -m venv .ci-venv; then
+            echo "::warning::Failed to create virtual environment .ci-venv. Attempting global user-level fallback..."
+            mkdir -p .ci-venv/bin
+            echo "export PATH=\$PATH" > .ci-venv/bin/activate
+            ln -sf "$PYTHON_BIN" .ci-venv/bin/python || true
+            ln -sf "$(command -v pip3 || command -v pip || echo ~/.local/bin/pip)" .ci-venv/bin/pip || true
+            PIP_USER_INSTALL=true
+          fi
         fi
 
         source .ci-venv/bin/activate
@@ -231,12 +236,19 @@ jobs:
         if [ "$VERIFY_CACHED_VENV" = "true" ]; then
           echo "Verifying cached .ci-venv imports for extension-backed dependencies..."
           if ! .ci-venv/bin/python -c "import importlib; import sys; \
-mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
-[importlib.import_module(m) for m in mods]"; then
+            mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
+            [importlib.import_module(m) for m in mods]"; then
             echo "::warning::Cached .ci-venv failed critical import validation; rebuilding"
             VENV_OK=false
             rm -rf .ci-venv
-            "$PYTHON_BIN" -m venv .ci-venv
+            if ! "$PYTHON_BIN" -m venv .ci-venv; then
+              echo "::warning::Failed to create virtual environment .ci-venv. Attempting global user-level fallback..."
+              mkdir -p .ci-venv/bin
+              echo "export PATH=\$PATH" > .ci-venv/bin/activate
+              ln -sf "$PYTHON_BIN" .ci-venv/bin/python || true
+              ln -sf "$(command -v pip3 || command -v pip || echo ~/.local/bin/pip)" .ci-venv/bin/pip || true
+              PIP_USER_INSTALL=true
+            fi
             source .ci-venv/bin/activate
           fi
         fi
@@ -244,10 +256,17 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
         # Install dependencies only if we don't have a healthy exact cache hit.
         # Run pip install with --no-cache-dir to minimize memory usage and avoid OOM (Exit Code 137).
         if [ "${{ steps.cache-ci-venv.outputs.cache-hit }}" != "true" ] || [ "$VENV_OK" != "true" ]; then
-          python -m pip install --no-cache-dir --upgrade pip
-          python -m pip install --no-cache-dir pytest
-          if [ -f requirements.txt ]; then python -m pip install --no-cache-dir -r requirements.txt; fi
-          if [ -f mvp_site/requirements.txt ]; then python -m pip install --no-cache-dir -r mvp_site/requirements.txt; fi
+          if [ "${PIP_USER_INSTALL:-}" = "true" ]; then
+            python3 -m pip install --user --no-cache-dir --upgrade pip || true
+            python3 -m pip install --user --no-cache-dir pytest || true
+            if [ -f requirements.txt ]; then python3 -m pip install --user --no-cache-dir -r requirements.txt || true; fi
+            if [ -f mvp_site/requirements.txt ]; then python3 -m pip install --user --no-cache-dir -r mvp_site/requirements.txt || true; fi
+          else
+            python -m pip install --no-cache-dir --upgrade pip
+            python -m pip install --no-cache-dir pytest
+            if [ -f requirements.txt ]; then python -m pip install --no-cache-dir -r requirements.txt; fi
+            if [ -f mvp_site/requirements.txt ]; then python -m pip install --no-cache-dir -r mvp_site/requirements.txt; fi
+          fi
         else
           echo "Exact cache hit and healthy venv - skipping dependency installation step."
         fi
@@ -323,10 +342,19 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
         # For PRs: checkout the actual head commit, not the synthetic merge commit.
         # testmon fingerprints files using the working tree state; the merge commit
         # creates a different checkout that defeats testmon's change detection.
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
         persist-credentials: false
         fetch-depth: 0  # Full history needed for git diff in JS test step
         clean: true  # Remove untracked files from prior runs on self-hosted runners
+
+    - name: Restore git-tracked executable permissions
+      run: |
+        # Self-hosted runner workspaces are reused across jobs; a tracked file whose
+        # exec bit was previously stripped on disk keeps that state across checkouts
+        # when content/size/mtime look unchanged to git. Force every git-tracked
+        # 100755 file back to +x so permission-dependent tests (e.g.
+        # test_script_permissions_are_correct) don't fail on stale workspace state.
+        git ls-files -s | awk '$1 == "100755" {print $4}' | xargs -r chmod +x
 
     - name: Set up Node.js 20
       if: matrix.test-group == 'core-mvp-1'
@@ -365,6 +393,12 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
         echo "python_version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
 
     - name: Cache pip dependencies
+      # Skip on self-hosted macOS runners: ~/.cache/pip persists on the host
+      # disk between jobs, so the actions/cache round-trip is redundant AND
+      # the ~1.2GB restore intermittently stalls the job at ~1m40s on
+      # GitHub's cache service. Matches the established pattern of
+      # "Set up Python" above (line 317), which already gates macOS out.
+      if: runner.os != 'macOS'
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
       with:
         path: |
@@ -375,6 +409,12 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
           ${{ runner.os }}-python-${{ steps.python-version.outputs.python_version }}-
 
     - name: Cache testmon data
+      # Not gated on macOS: .testmondata is a small SQLite file (KB-range),
+      # so the actions/cache round-trip is fast and not the stall source.
+      # Skipping it would drop testmon's selective-execution baseline and
+      # cause macOS to fall back to --testmon-noselect (full serial suite)
+      # on every run — counterproductive. Only the pip cache (~1.2GB) is
+      # gated above.
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
       with:
         path: |
@@ -608,11 +648,7 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
         fi
 
         if echo "$CHANGED_FILES" | grep -qE '^mvp_site/frontend_v1/|^world_reference/campaign_module_dragon_knight\.md'; then
-          node --test \
-            mvp_site/frontend_v1/tests/settings_listeners.test.js \
-            mvp_site/frontend_v1/tests/campaign_wizard_dragon_knight_submit.test.js \
-            mvp_site/frontend_v1/tests/campaign_wizard_dragon_knight_canonical.test.js \
-            mvp_site/frontend_v1/tests/fetchapi_public_optin.test.js
+          node --test mvp_site/frontend_v1/tests/*.test.js
         else
           echo "No frontend_v1 / Dragon Knight canonical changes detected; skipping JS unit tests."
         fi
@@ -891,19 +927,37 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
     name: PR Coverage Report
     needs: [test]
     if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false && needs.test.result != 'cancelled'
-    runs-on: ubuntu-latest
+    # Self-hosted Linux X64 runner (cost optimization #1 of 3). org-runner-1..16 carry
+    # labels [self-hosted, Linux, X64] (plus the 'self-hosted-mikey' umbrella tag).
+    # Migrated from github-hosted ubuntu-latest; expected savings ~$165/mo on Actions minutes.
+    runs-on: [self-hosted, Linux, X64]
     permissions:
       contents: read
       pull-requests: write
     timeout-minutes: 5
 
     steps:
+      - name: Repair workspace permissions for checkout
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE"
+          if [ -d "$GITHUB_WORKSPACE" ]; then
+            chmod -R u+rwX "$GITHUB_WORKSPACE" || true
+          fi
+          if [ -d "$GITHUB_WORKSPACE/.git" ]; then
+            find "$GITHUB_WORKSPACE/.git" -name "*.lock" -delete || true
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           fetch-depth: 0  # Full history needed for git diff (delta coverage)
           persist-credentials: false
+
+      - name: Prepare runner tool cache for setup actions
+        run: |
+          chmod +x scripts/ci/setup-runner-tool-cache.sh
+          ./scripts/ci/setup-runner-tool-cache.sh
 
       - name: Set up Python
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0

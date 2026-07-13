@@ -1,8 +1,3 @@
----
-name: verify-secrets-backup
-description: Verify gitignored OpenClaw secret files are present and fresh in Dropbox backup.
----
-
 # /verify-secrets-backup — Check gitignored secret files are in Dropbox backup
 
 Verify that all gitignored config files containing real tokens/secrets from `~/.openclaw/`

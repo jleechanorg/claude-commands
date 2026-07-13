@@ -42,7 +42,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
         fetch-depth: 1
 
     - name: Runner Preflight & Health Score check
@@ -65,7 +65,8 @@ jobs:
         python -m pytest \
           tests/scripts/test_pr_autonomy_metrics.py \
           tests/scripts/test_trace_to_eval_case.py \
-          tests/scripts/test_validate_prompt_tool_contracts.py
+          tests/scripts/test_validate_prompt_tool_contracts.py \
+          tests/scripts/test_exportcommands.py
 
         python scripts/validate_prompt_tool_contracts.py
 
@@ -102,7 +103,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
         fetch-depth: 1
 
     - name: Runner Preflight & Health Score check
@@ -123,6 +124,8 @@ jobs:
         echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-1)"
         chmod +x run_tests.sh
         ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp --include-end2end
+        echo "🧪 Running frontend_v1 JS unit tests"
+        node --test mvp_site/frontend_v1/tests/*.test.js
       env:
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"
@@ -140,6 +143,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
+        TEST_SUITE_TIMEOUT: "1800"
         TEST_MAX_WORKERS: 1
         TEST_SHARD_TOTAL: "3"
         TEST_SHARD_INDEX: "0"
@@ -168,7 +172,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
         fetch-depth: 1
 
     - name: Runner Preflight & Health Score check
@@ -206,6 +210,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
+        TEST_SUITE_TIMEOUT: "1800"
         TEST_MAX_WORKERS: 1
         TEST_SHARD_TOTAL: "3"
         TEST_SHARD_INDEX: "1"
@@ -235,7 +240,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
         fetch-depth: 1
 
     - name: Runner Preflight & Health Score check
@@ -273,6 +278,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
+        TEST_SUITE_TIMEOUT: "1800"
         TEST_MAX_WORKERS: 1
         TEST_SHARD_TOTAL: "3"
         TEST_SHARD_INDEX: "2"

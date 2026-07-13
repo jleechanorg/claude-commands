@@ -6,15 +6,15 @@ execution_mode: immediate
 
 # /keychain_kill
 
-When this command is invoked, immediately dismiss all stacked macOS `SecurityAgent` credential popups by hard-killing their processes.
+Immediately dismiss all stacked macOS `SecurityAgent` credential popups by hard-killing their processes, then diagnose the headless keyring root cause.
 
-## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
-**YOU (Claude) must execute these steps immediately:**
+Read `~/.claude/skills/keychain-kill/SKILL.md` and execute the full workflow.
 
-1. Run the hard kill on SecurityAgent and related warning dialogs:
-   ```bash
-   pkill -9 -f SecurityAgent || killall -9 SecurityAgent || true
-   pkill -9 -f universalAccessAuthWarn || true
-   ```
-2. Read and apply the comprehensive diagnostic guide in `~/.claude/skills/keychain-kill/SKILL.md`.
-3. Inform the user that the keychain prompts have been dismissed.
+## Quick reference
+
+| Step | Action |
+|------|--------|
+| 1 | Hard kill `SecurityAgent` / `universalAccessAuthWarn` immediately |
+| 2 | Diagnose headless keyring root cause (locked login keychain) |
+| 3 | Apply permanent fix (isolated session keychain / `--bare` / trusted folders) |
+| 4 | Inform the user prompts are dismissed |

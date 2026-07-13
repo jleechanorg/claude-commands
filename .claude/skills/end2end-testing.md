@@ -116,12 +116,82 @@ fake_doc = FakeFirestoreDocument()
 fake_doc.set({"name": "test"})
 ```
 
-### Available Fakes (fake_firestore.py)
+### Available Fakes
 
-- `FakeFirestoreClient` - Mimics Firestore client behavior
-- `FakeFirestoreDocument` - Returns real dictionaries
-- `FakeFirestoreCollection` - Handles nested collections
-- `FakeLLMResponse` - Simple response with text attribute
+- `FakeFirestoreClient` — Mimics Firestore client behavior (`fake_firestore.py`)
+- `FakeFirestoreDocument` — Returns real dictionaries
+- `FakeFirestoreCollection` — Handles nested collections
+- `FakeLLMResponse` — Shallow SDK stub, legacy tests (`fake_llm.py`)
+- `RealisticFakeLLMResponse` — SDK-faithful structure, new tests (`fake_llm_realistic.py`)
+
+## Response Fidelity Levels
+
+The two LLM fakes differ in how faithfully they mirror the real `google.genai` SDK response shape.
+Choose based on what the test is verifying.
+
+### Level 1 — `FakeLLMResponse` (legacy, shallow)
+
+```python
+from mvp_site.tests.fake_llm import FakeLLMResponse
+mock_gemini_generate.return_value = FakeLLMResponse(json.dumps(payload))
+```
+
+**Structure shortcut:** `candidates = [self]` — the response object IS also the candidate
+AND the content. Duck-typing means `candidates[0].content.parts` accidentally resolves
+to `self.parts` via `self.content = self`, so `_get_text_from_response()` works, but:
+
+- `usage_metadata` has **wrong field names**: `input_tokens`/`output_tokens` instead of
+  `prompt_token_count`/`candidates_token_count`/`total_token_count`
+- No `finish_reason` attribute on the candidate
+- `FakePart` has no `executable_code` or `code_execution_result` attrs (code_execution path)
+
+**Use when**: the test only needs a valid JSON response to flow through — it does not
+inspect usage metadata, finish reason, or code_execution parts.
+
+### Level 2 — `RealisticFakeLLMResponse` (SDK-faithful)
+
+```python
+from mvp_site.tests.fake_llm_realistic import RealisticFakeLLMResponse, make_realistic_fake
+
+# Default fixture (real prod Gemini 3 Flash response, truncated):
+mock_gemini_generate.return_value = make_realistic_fake()
+
+# Custom payload + realistic token counts:
+mock_gemini_generate.return_value = RealisticFakeLLMResponse(
+    json.dumps(payload),
+    prompt_token_count=45_000,
+    candidates_token_count=800,
+)
+
+# Code_execution path (stub dice parts prepended):
+mock_gemini_generate.return_value = make_realistic_fake(
+    json_text=json.dumps(payload), with_dice=True
+)
+```
+
+**Correct structure:**
+
+```
+response.candidates[0]                       ← _FakeCandidate
+    .content                                 ← _FakeContent
+        .parts[0]                            ← _FakePart (optional: executable_code)
+        .parts[1]                            ← _FakePart (optional: code_execution_result)
+        .parts[-1].text                      ← JSON string (the game response)
+    .finish_reason = "STOP"
+response.usage_metadata.prompt_token_count
+response.usage_metadata.candidates_token_count
+response.usage_metadata.total_token_count
+```
+
+**Fixture provenance:** `FIXTURE_STORY_RESPONSE_TEXT` was extracted from a real
+Gemini 3 Flash prod response captured in
+`/tmp/your-project.com/unknown/test_level_up_organic/iteration_001/llm_request_responses.jsonl`.
+The keys (narrative, session_header, entities_mentioned, location_confirmed,
+state_updates, planning_block) match the live production schema.
+
+**Use when**: the test verifies code that reads `usage_metadata.prompt_token_count`,
+`finish_reason`, or iterates `candidates[0].content.parts` (e.g. code_execution
+result extraction in `gemini_code_execution.py`).
 
 ## Firestore Structure
 

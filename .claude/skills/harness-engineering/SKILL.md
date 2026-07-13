@@ -151,6 +151,46 @@ After user approval (or if invoked with `--fix`):
 - **5 Whys are mandatory**: Never skip them. Short-circuit analysis produces shallow fixes.
 - **Agent path is mandatory**: Never analyze only the technical dimension. Always ask why the agent failed too.
 
+## Quick examples (compact form)
+
+**User says "don't mock the database in these tests"**:
+→ Failure class: wrong approach
+→ 5 Whys technical: mock used → no instructions prohibiting it → testing philosophy not documented → ...
+→ 5 Whys agent: agent defaulted to mock → common pattern in training data → no skill redirecting to real tests → ...
+→ Add instruction to CLAUDE.md, save feedback memory
+
+**Test labeled "e2e" but only does unit-level work**:
+→ Failure class: mislabeled artifact
+→ 5 Whys technical: E2E criteria not met → criteria not checked → no checklist for E2E → ...
+→ 5 Whys agent: agent named it e2e without verifying → no skill mandating verification → ...
+→ Add/update test classification rules in CLAUDE.md + AGENTS.md, update /validate-e2e skill
+
+**Same code review comment given 3 conversations in a row**:
+→ Failure class: repeated manual fix → mandatory harness fix, no exceptions
+→ Add instruction to CLAUDE.md, save memory, consider lint rule
+
+**Automation cleanup silently fails every cycle**:
+→ Failure class: silent degradation (harness layer present but broken)
+→ 5 Whys technical: cleanup fn uses wrong grep key → porcelain format not verified → no test for cleanup path → ...
+→ 5 Whys agent: agent said "cleanup present" without running it → assumed present = working → skill doesn't mandate verifying harness script correctness → ...
+→ Fix script, add verification step to skill, add integration test for cleanup path
+
+**AO worker spawned on original PR branch instead of isolated clone**:
+→ Failure class: LLM path error — wrong abstraction level (agent acted at "spawn worker" level without verifying branch isolation)
+→ 5 Whys technical: `ao spawn` reuses existing worktrees → `--claim-pr` only adds dashboard tracking → no clone created → worker lands on original branch → pushes commits directly to live PR
+→ 5 Whys agent: request said "spawn for PR 6198" → agent assumed `ao spawn` would create isolation → flag name implies PR association but not branch isolation → no skill/instruction to redirect to clone-before-spawn → harness had no rule for this failure class
+→ Fix: add clone-before-spawn rule to jleechanclaw CLAUDE.md, add verification to team-mini.md, add failure class to harness.md, save feedback memory
+
+**General principle — tool semantic mismatch**: many tool names imply
+capabilities they don't actually provide (`ao spawn --claim-pr` implies PR
+isolation but provides only dashboard tracking; `git checkout -b` implies a new
+branch but can be from HEAD, not an isolated PR clone; `gh pr checkout` checks
+out the PR branch directly, not a clone). When a tool's name semantically
+promises isolation or safety guarantees, verify those guarantees exist in the
+implementation before relying on them — if the name over-promises relative to
+behavior, the harness gap is the misleading name, fixed in docs/skill rather
+than expecting agents to discover the gap on their own.
+
 ## Example failure pattern: CLI redacts secrets but scripts still export them
 
 **Observable:** Gateway returns `unauthorized` / embedded fallback; logs show token value `__OPENCLAW_REDACTED__` or similar.
@@ -197,6 +237,30 @@ After user approval (or if invoked with `--fix`):
 4. **Memory** — `feedback_2026_04_21_silent_ci_success.md`: Document the specific PRs where this was observed
 
 **Verification:** For any PR where Green Gate shows `completed/success`, independently run the REST API VERDICT check and confirm the VERDICT comment exists before reporting 7-green.
+
+## Audit mode (`/harness --audit`)
+
+In addition to single-failure analysis, this skill supports a full sweep of all
+harness files for accumulated drift. Scan `~/.claude/CLAUDE.md`, repo-local
+`CLAUDE.md`, `~/.codex/AGENTS.md`, workspace `.claude/commands/`, and
+`~/.claude/skills/*/` for:
+
+- **Stale rules** — instructions that reference files/tools/patterns that no
+  longer exist
+- **Contradictions** — rules in different files that conflict
+- **Gaps** — known failure patterns (from memory) without corresponding
+  instructions
+- **Duplication** — the same rule stated in multiple places (consolidate to the
+  most durable layer per the Decision Rules above)
+
+Report findings as a table:
+
+```
+| Issue | File | Line | Recommendation |
+|-------|------|------|----------------|
+| Stale | ~/.claude/CLAUDE.md | 42 | Remove reference to deprecated tool X |
+| Gap | repo CLAUDE.md | - | Add rule about Y (corrected 3x in memory) |
+```
 
 ## Anti-patterns
 

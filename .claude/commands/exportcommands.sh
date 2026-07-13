@@ -188,9 +188,6 @@ union_dir() {
     \( -not -name '*.pyo' \) \
     \( -not -name '.DS_Store' \) \
     \( -not -path '*/__pycache__/*' \) \
-    \( -not -path '*/node_modules/*' \) \
-    \( -not -path '*/_archive/*' \) \
-    \( -not -path '*/_removed/*' \) \
     \( -not -path '*/.ruff_cache/*' \) \
     \( -not -path '*/canvas-fonts/*' \) \
     \( -not -name '*.ttf' \) \
@@ -230,9 +227,6 @@ union_dir() {
     \( -not -name '*.pyc' \) \
     \( -not -name '.DS_Store' \) \
     \( -not -path '*/__pycache__/*' \) \
-    \( -not -path '*/node_modules/*' \) \
-    \( -not -path '*/_archive/*' \) \
-    \( -not -path '*/_removed/*' \) \
     \( -not -path '*/.ruff_cache/*' \) \
     \( -not -path '*/canvas-fonts/*' \) \
     -not -name 'exportcommands.py' \
@@ -508,7 +502,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
-git push --no-verify -u origin "$BRANCH"
+git push -u origin "$BRANCH"
 
 PR_STDERR=$(mktemp /tmp/exportcommands_pr_err.XXXXXX)
 PR_URL=$(gh api repos/"$TARGET_REPO"/pulls --method POST \

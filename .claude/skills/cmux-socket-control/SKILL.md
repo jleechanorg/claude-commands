@@ -5,37 +5,17 @@ description: Control cmux tabs, workspaces, and terminal panes via Unix socket. 
 
 # cmux Socket Control
 
-> **REQUIRED (2026-06-09):** For any `cmux send` calls in this skill, use the canonical `send_and_submit()` wrapper at `~/.hermes_prod/skills/cmux/scripts/cmux_client.py` — the bare two-command pattern below has no proof of submission and burned us 3 times in 30 minutes on the cost-workspace agent. This skill is fine for socket discovery, read operations, and tree/walk ops; steering must go through the wrapper. See `~/.hermes_prod/skills/cmux-send-submit/SKILL.md`.
-
 ## Find the socket
 
 ```bash
-# Release build (main cmux.app)
-SOCK="$HOME/Library/Application Support/cmux/cmux.sock"
-
-# Dev builds — each has its own socket, discoverable two ways:
-# 1. From the saved last-socket-path files:
-ls ~/Library/Application\ Support/cmux/dev-*-last-socket-path
-cat ~/Library/Application\ Support/cmux/dev-may-18-last-socket-path
-# → /tmp/cmux-debug-may-18.sock
-
-# 2. From the running process:
-lsof -p $(pgrep -f "cmux DEV may-18") | grep -E "\.sock"
-# → /tmp/cmux-debug-may-18.sock
+SOCK=$(ls /tmp/cmux-debug-*.sock /tmp/cmux-debug.sock /tmp/cmux.sock 2>/dev/null | head -1)
+echo "Using: $SOCK"
 ```
 
 Common paths:
-- Release: `~/Library/Application Support/cmux/cmux.sock`
-- Tagged debug build: `/tmp/cmux-debug-<tag>.sock` (e.g. `/tmp/cmux-debug-may-18.sock`)
+- Tagged debug build: `/tmp/cmux-debug-<tag>.sock`
 - Untagged debug: `/tmp/cmux-debug.sock`
-
-## Routing CLI commands to a specific build
-
-```bash
-# Use CMUX_SOCKET_PATH to target any build
-CMUX_SOCKET_PATH=/tmp/cmux-debug-may-18.sock cmux list-workspaces
-CMUX_SOCKET_PATH=/tmp/cmux-debug-may-18.sock cmux tree
-```
+- Release: `/tmp/cmux.sock`
 
 ---
 
@@ -203,54 +183,6 @@ Run: `python scripts/cmux_mcp_server.py --socket /tmp/cmux-debug-appclick.sock`
 non-loopback HTTP binding (mjs:865). Do not expose HTTP port on non-loopback hosts.
 
 ---
-
-## Workspace actions (pin, rename, color, reorder)
-
-Use `workspace-action` — **not** `tab-action` — for workspace-level operations.
-
-```bash
-# Pin a workspace in the sidebar
-cmux workspace-action --action pin --workspace workspace:4
-CMUX_SOCKET_PATH=/tmp/cmux-debug-may-18.sock cmux workspace-action --action pin --workspace workspace:4
-
-# Unpin
-cmux workspace-action --action unpin --workspace workspace:4
-
-# Bulk pin (loop over multiple workspaces)
-for ws in workspace:4 workspace:6 workspace:7; do
-    CMUX_SOCKET_PATH=/tmp/cmux-debug-may-18.sock cmux workspace-action --action pin --workspace $ws
-done
-
-# Rename
-cmux workspace-action --action rename --workspace workspace:4 --title "new name"
-
-# Set color
-cmux workspace-action --action set-color --workspace workspace:4 --color Blue
-
-# Reorder
-cmux workspace-action --action move-top --workspace workspace:4
-```
-
-**⚠ `tab-action --action pin` is WRONG for workspace pinning** — it pins a surface tab
-within a pane's horizontal tab bar, not the workspace in the sidebar. These are different.
-
-| Command | What it pins |
-|---|---|
-| `workspace-action --action pin` | Workspace row in the sidebar ✅ |
-| `tab-action --action pin` | Surface tab in a pane's horizontal tab bar ❌ (not workspaces) |
-
-## Surface (tab) actions within a pane
-
-```bash
-# Pin a surface tab in the horizontal tab bar of a pane
-cmux tab-action --action pin --surface surface:7 --workspace workspace:2
-
-# Rename a tab
-cmux tab-action --action rename --surface surface:7 --title "my label"
-
-# Close other tabs
-cmux tab-action --action close-others --surface surface:7
-```
 
 ## Rules (non-negotiable)
 

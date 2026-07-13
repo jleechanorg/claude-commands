@@ -7,12 +7,12 @@ When `lifecycle.backfill.claim_failed` errors appear in the lifecycle-worker log
 ## Two distinct root causes (same error surface)
 
 ### Cause A: Main repo on wrong branch
-**Symptom**: `checked out at '$HOME/project_agento/agent-orchestrator'`
-**Diagnosis**: `git -C $HOME/project_agento/agent-orchestrator branch --show-current`
+**Symptom**: `checked out at '$HOME/project_agento/agent-orchestrator-ts'`
+**Diagnosis**: `git -C $HOME/project_agento/agent-orchestrator-ts branch --show-current`
 **Fix**:
 ```bash
-git -C $HOME/project_agento/agent-orchestrator checkout main
-git -C $HOME/project_agento/agent-orchestrator pull --ff-only
+git -C $HOME/project_agento/agent-orchestrator-ts checkout main
+git -C $HOME/project_agento/agent-orchestrator-ts pull --ff-only
 ```
 **Why it happens**: An AO agent (or manual work) checked out a feature branch in the main repo and was killed before resetting to main.
 

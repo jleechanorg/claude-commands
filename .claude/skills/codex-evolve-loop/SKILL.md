@@ -10,14 +10,14 @@ Use this skill when you need a Codex-native version of the `evolve-loop` workflo
 ## Source of truth
 
 - Canonical loop policy: `$HOME/.claude/skills/evolve-loop/SKILL.md`
-- Local deterministic cycle executor: `$HOME/project_agento/agent-orchestrator/scripts/codex-evolve-cycle.sh`
-- Long-running bounded loop: `$HOME/project_agento/agent-orchestrator/scripts/codex-eloop.sh`
+- Local deterministic cycle executor: `$HOME/project_agento/agent-orchestrator-ts/scripts/codex-evolve-cycle.sh`
+- Long-running bounded loop: `$HOME/project_agento/agent-orchestrator-ts/scripts/codex-eloop.sh`
 
 ## Workflow
 
 1. Run the local cycle executor first:
    ```bash
-   cd $HOME/project_agento/agent-orchestrator
+   cd $HOME/project_agento/agent-orchestrator-ts
    REPORT_DIR=/tmp/codex-evolve-cycle-$(date +%Y%m%d-%H%M%S) \
      APPEND_ROADMAP=1 \
      bash ./scripts/codex-evolve-cycle.sh

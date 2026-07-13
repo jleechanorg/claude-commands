@@ -76,7 +76,7 @@ cmux close-workspace --workspace "$WS"
 
 For multi-step TUI flows (multi-screen dialogs, follow-up pickers), repeat
 steps 4-5 with appropriate `send-key` calls between (arrow keys, enter,
-etc.). See the cmux skill (`~/.hermes_prod/skills/cmux/SKILL.md`) for the
+etc.). See the cmux skill (`~/.hermes/skills/cmux/SKILL.md`) for the
 full key set.
 
 ## Bundled helper: `scripts/test-tui-feature.sh`
@@ -148,8 +148,8 @@ was performed.
 
 ## References
 
-- cmux skill: `~/.hermes_prod/skills/cmux/SKILL.md`
-- Source memory file: `~/.claude/projects/-Users-$USER--hermes-prod/memory/bestpractice_2026-06-23_test-tui-features-via-cmux.md`
+- cmux skill: `~/.hermes/skills/cmux/SKILL.md`
+- Source memory file: `~/.claude/projects/-Users-$USER-.hermes/memory/bestpractice_2026-06-23_test-tui-features-via-cmux.md`
 - Wiki source page: `~/llm_wiki/wiki/sources/bestpractice-2026-06-23-test-tui-features-via-cmux.md`
 - Wiki concept: `~/llm_wiki/wiki/concepts/TUISlashCommandTesting.md`
 - Bead: `$USER-37uv` (closed)

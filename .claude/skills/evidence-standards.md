@@ -108,7 +108,17 @@ Evidence captured at a prior SHA remains valid at HEAD when only non-behavioral 
 | **CI/workflow** | `.github/workflows/*test*.yml`, lint configs — **excluding** `deploy*.yml`, `*preview*.yml` | Deployment workflows always require fresh evidence |
 | **Type hints/comments** | `*.pyi`, type annotations, docstrings, comments | No runtime effect |
 
-For any `.py` files classified as "type hints/comments", run `git diff <evidence-sha> HEAD -- <file>` to confirm — `--name-only` can't distinguish a comment-only change from a behavioral one.
+
+
+## Publication (gist-first)
+
+When evidence is ready for a PR:
+
+1. **Publish to a secret/unlisted gist** with sanitized artifacts (README, metadata, pytest output, checksums).
+2. Put **only the gist URL** in the PR `## Evidence` section (and linked sections as required by the description gate).
+3. **Do not commit** evidence bundles under `docs/evidence/` on the PR branch unless a repo gate explicitly requires in-tree paths — local `/tmp/<repo>/<branch>/` is the working bundle; gist is the published copy.
+4. Gate-6 accepts `gist.github.com/` URLs; prefer that over `docs/evidence/` tree links in the PR body.
+
 
 ## Minimum Viable Evidence Checklist
 
@@ -139,9 +149,6 @@ def capture_provenance():
     return provenance
 ```
 
-**Quick validation:** If `metadata.json` is missing ANY of these, the test is incomplete:
-`provenance.merge_base`, `provenance.commits_ahead_of_main`, `provenance.diff_stat_vs_main`,
-`provenance.server.pid`, `provenance.server.port`, `provenance.server.process_cmdline`
 
 ## Mock Mode Prohibition
 

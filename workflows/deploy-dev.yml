@@ -39,9 +39,11 @@ jobs:
       REF_NAME: ${{ inputs.ref_name || github.ref_name }}
       # Memory/CPU/autoscaling come from the shared defaults in
       # scripts/shared_config.sh + deploy.sh (8Gi, 4 vCPU, maxScale 40,
-      # containerConcurrency 40, GUNICORN_THREADS 16 — the validated 10-50 QPS
-      # streaming config). Dev and prod (mvp-site-app-stable) deploy through the
-      # same deploy.sh path with no per-env sizing override, so per-request
+      # containerConcurrency 16, GUNICORN_WORKERS 1, GUNICORN_THREADS 16 — the
+      # post-#7961 Cloud Run pattern from PR #7984). With 1 worker × 16 threads,
+      # single-instance capacity is 16 concurrent requests; >16 triggers
+      # Cloud Run autoscale. Dev and prod (mvp-site-app-stable) deploy through
+      # the same deploy.sh path with no per-env sizing override, so per-request
       # capacity is identical. The one intentional difference: deploy.sh pins
       # min-instances=1 only for stable (warm for real users) and scales dev to
       # zero when idle. The dev daily level-up test's ~450K-char instruction
@@ -65,6 +67,12 @@ jobs:
         run: |
           gcloud config set project ${{ env.GCP_PROJECT }}
           gcloud config set run/region ${{ env.GCP_REGION }}
+
+      # Install Python + precompute deps (fastembed, numpy, GCS) via the
+      # shared composite action. Non-fatal — deploy.sh has its own skip path
+      # if the precompute can't run.
+      - name: Setup precompute Python deps
+        uses: ./.github/actions/setup-precompute-deps
 
       - name: Deploy to Cloud Run
         run: |

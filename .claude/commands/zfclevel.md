@@ -1,5 +1,5 @@
 ---
-description: ZFC level-up flow review — judge clean architecture, file ownership, and model-owned cognition for level-up work
+description: ZFC leveling alignment check — verify PR/work conforms to ZFC leveling principles, roadmap, and doc sync
 type: quality
 execution_mode: immediate
 ---
@@ -8,113 +8,117 @@ execution_mode: immediate
 
 ## Purpose
 
-Review level-up, rewards, XP, and modal-flow work for clean architecture and
-ZFC compliance. This is a judgment-first review command, not a grep gate.
+Verify that the current work (branch, PR, or in-progress changes) is aligned with:
+1. ZFC leveling principles and architecture
+2. The canonical ZFC leveling roadmap docs
+3. `~/roadmap` and `roadmap/` doc sync for ZFC leveling topics
 
-Primary standards:
-- Clean code: small coherent changes, clear ownership, minimal coupling, no
-  duplicated decision logic, and no unrelated scope in a level-up PR.
-- ZFC: model decides, server executes. Application code must not add semantic
-  routing, keyword/prefix classification, heuristic scoring, or backend
-  recomputation of model-owned level-up decisions.
-- Level-up architecture: follow `.claude/skills/zfc-leveling-roadmap/SKILL.md`
-  and its file responsibility table.
-- Root-cause-first: before accepting backend guards, fallbacks, suppressions,
-  retries, or server-synthesized choices, require prompt/schema/agent evidence
-  from the real path.
+This is a **gate/check command** — run it before opening a PR, before merging, or when you are unsure whether work is ZFC-aligned.
 
-Automated grep gates, line counts, CI labels, PR body claims, and previous bot
-comments are supporting evidence only. They never determine the verdict.
+---
 
-## Required Context
+## Step 1 — Load Required Skills and Roadmap Context
 
-Load these repo-local skills before judging:
-- `.claude/skills/zero-framework-cognition/SKILL.md`
+Load and follow this skill **first**:
 - `.claude/skills/zfc-leveling-roadmap/SKILL.md`
-- `.claude/skills/root-cause-first/SKILL.md`
-- `.claude/skills/code-standards/SKILL.md`
 
-If a command argument is provided, review that scope. Otherwise review the
-current diff or active PR. For PR work, prefer changed lines from
-`origin/main...HEAD`; do not block on pre-existing debt unless this PR newly
-uses, expands, or relies on it.
+Canonical roadmap files (read in order):
+1. `~/roadmap/zfc-level-up-model-computes-2026-04-19.md`
+2. `~/roadmap/zfc-pr-task-specs-2026-04-22.md`
+3. `roadmap/zfc-level-up-model-computes-2026-04-19.md` (repo-local copy — compare with ~/roadmap copy)
+4. `roadmap/zfc-pr-task-specs-2026-04-22.md` (repo-local copy)
+5. `~/roadmap/2026-04-21-level-up-zfc-loop-postmortem.md`
+6. Any other `roadmap/*zfc*` or `roadmap/*level-up*` files relevant to the current PR or work item
 
-## Review Workflow
+If `~/roadmap` and `roadmap/` copies of the same file differ, that is a **doc sync violation** — record it explicitly and prefer the `~/roadmap` version as the canonical source.
 
-1. Identify changed files and classify each change by responsibility:
-   - Does the added behavior belong in the file's OWNS column?
-   - Does it cross into a MUST NOT DO column?
-   - Does it duplicate or scatter a level-up decision already owned elsewhere?
-2. Review level-up flow cleanliness:
-   - Is the flow understandable as model output -> canonical rewards/level-up
-     formatting -> modal/session execution?
-   - Are modal locks, prompt contracts, parser behavior, routing, and UI
-     submission separated cleanly?
-   - Are tests proving the contract rather than pinning workaround behavior?
-3. Review ZFC risks:
-   - New semantic routing by choice ID, prefix, label, text, or CSS class.
-   - Backend level, XP, target-level, or eligibility computation as a primary
-     path.
-   - Backend suppression, choice synthesis, parser mutation, or fallback that
-     changes model-owned output without root-cause-first proof.
-   - New public APIs that let callers second-guess canonical level-up helpers.
-4. Review root-cause-first evidence:
-   - selected agent and prompt/schema provenance
-   - raw request/response
-   - state before/after
-   - prompt/schema/agent fix attempted first
-   - why a backend invariant remains necessary
-5. Review scope:
-   - Separate in-PR blockers from follow-up debt.
-   - Do not demand a redesign when a small PR-tightening is enough.
-   - Do not excuse new architecture debt merely because it is central to the PR;
-     label it honestly as accepted debt if the human chooses to ship it.
+---
 
-## Verdict Rules
+## Step 2 — ZFC Level-Up Principles Checklist
 
-Use `FAIL` when current changed lines introduce or expand:
-- backend semantic classification/routing
-- backend primary XP/level/eligibility computation
-- broad suppression or fallback over model-owned state
-- file-role violations in the level-up responsibility table
-- undocumented server-synthesized choices or parser mutation of planning choices
+Verify ALL of the following for the current work:
 
-Use `WARN` when the issue is real but can be safely deferred because it is
-display-only, documentation-only, or pre-existing debt not expanded by this PR.
+### Core ZFC Tenets
+- [ ] **Model decides, server executes** — no keyword routing or heuristic classification in application code
+- [ ] Level-up decisions are made by the model, not inferred by backend threshold crossings
+- [ ] XP state expressed as `previous_turn_exp` + `current_turn_exp` pair (not computed delta)
+- [ ] No legacy level-up inference paths that bypass the model-owned signal
+- [ ] `xp_gained`, `progress_percent`, and level-up trigger are formatted/validated server-side from explicit model output, not inferred independently
 
-Use `PASS` only when the changed lines preserve clean ownership and ZFC
-principles, with any backend correction narrow, logged, and justified.
+### File Boundaries (from zfc-leveling-roadmap skill)
+- [ ] No modifications to files outside the PR's authorized scope per the file-responsibility table
+- [ ] No changes to frozen public contracts without explicit roadmap authorization
+- [ ] Level-up/rewards/XP ownership follows the centralized ownership table in the roadmap
 
-## Report Format
+### Pre-flight Checks
+- [ ] Grep gates from the roadmap design doc pass (no ZFC violations in changed files)
+- [ ] Tests required by the roadmap design are present and passing
+- [ ] No deletion of legacy code that the roadmap marks as not-yet-deleted
 
-```markdown
-## /zfclevel Report
+---
 
-Scope: <diff, PR, file, or task>
+## Step 3 — Doc Sync Check
 
-### Verdict
-PASS/WARN/FAIL - <one sentence>
+Compare `~/roadmap/` and `roadmap/` for all ZFC-leveling-related files:
 
-### Changed-File Ownership
-| File | Added behavior | Owner verdict | Evidence |
-|---|---|---|---|
+```
+~/roadmap/zfc-level-up-model-computes-2026-04-19.md
+roadmap/zfc-level-up-model-computes-2026-04-19.md
 
-### ZFC / Clean-Code Findings
-- <severity>: <file:line> <issue> -> <required action>
+~/roadmap/zfc-pr-task-specs-2026-04-22.md
+roadmap/zfc-pr-task-specs-2026-04-22.md
 
-### Backend Adjustment Proof
-| Component | Non-prompt behavior | Proof state | Verdict |
-|---|---|---|---|
-
-### In This PR
-- <small, scope-tight fixes required before merge>
-
-### Later
-- <tracked follow-up debt with bead/design reference>
-
-### Supporting Checks
-- <grep gates, tests, CI, evidence status; supporting only>
+~/roadmap/2026-04-21-level-up-zfc-loop-postmortem.md
+roadmap/2026-04-21-level-up-zfc-loop-postmortem.md
 ```
 
-End with `PASS`, `WARN`, or `FAIL`; do not report a grep-gate pass as ZFC
-alignment.
+For any file pair where content differs:
+1. Record the specific diff (which section/line changed)
+2. Prefer `~/roadmap` as canonical
+3. Update the `roadmap/` copy to match `~/roadmap` if the `~/roadmap` version is newer/more accurate
+4. If unsure which is canonical, flag it for human review
+
+---
+
+## Step 4 — PR Alignment Check
+
+If running against an open PR:
+
+1. Check PR title and description for ZFC alignment signals
+2. Verify the PR is targeting the correct merge lane (per roadmap PR sequencing)
+3. Confirm no merge conflicts with `origin/main`
+4. Run `./run_tests.sh` and confirm all tests pass
+5. Run `./run_lint.sh` and confirm lint is clean
+6. If the PR is marked `zfc_level`:
+   - Confirm it has a skeptic review or CodeRabbit APPROVED verdict
+   - Confirm it has evidence attached (video or E2E logs as required by the evidence policy)
+7. Flag any PR that has ZFC implications but is NOT labeled `zfc_level` — it needs the label
+
+---
+
+## Step 5 — Report
+
+Present findings in this format:
+
+```
+## /zfclevel Report — [branch/PR name]
+
+### ZFC Principles
+✅/❌ [Principle name] — [evidence or violation detail]
+
+### Doc Sync
+✅/❌ [File pair] — [status: in sync / diverged / missing in X]
+
+### PR Readiness
+✅/❌ [Check name] — [detail]
+
+### Blockers (must fix before merge/PR)
+- [list of blocking issues]
+
+### Non-blocking notes
+- [advisory observations]
+```
+
+If all checks pass, end with: `✅ ZFC alignment verified — ready to proceed.`
+
+If blockers exist, end with: `❌ ZFC gate failed — fix blockers before proceeding.`

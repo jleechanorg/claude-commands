@@ -6,6 +6,10 @@ permissions:
   pull-requests: write
   issues: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.pr_number || github.event.comment.id || github.ref }}
+  cancel-in-progress: true
+
 # Smoke coverage:
 # - Real E2E preview smoke tests on /smoke PR comment or explicit
 #   workflow_dispatch (with pr_number input).
@@ -256,9 +260,13 @@ jobs:
         # determine it, even if the action above failed to find a preview. That
         # way the contract check in `smoke-mode-routing-contract` can still grep
         # for `determine-smoke-mode.sh` references in this file.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_MODE: ${{ github.event.inputs.test_mode || '' }}
+          ACTOR: ${{ github.actor }}
         run: |
           chmod +x scripts/determine-smoke-mode.sh
-          TEST_MODE=$(scripts/determine-smoke-mode.sh "${{ github.event_name }}" "${{ github.event.inputs.test_mode || '' }}")
+          TEST_MODE=$(scripts/determine-smoke-mode.sh "$EVENT_NAME" "$MANUAL_MODE" "$ACTOR")
           echo "mode=$TEST_MODE" >> "$GITHUB_OUTPUT"
 
       - name: Run MCP smoke tests

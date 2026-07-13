@@ -19,7 +19,7 @@ Invoked via `/loop 10m /eloop` or run manually with `/eloop`.
 ```
 SYSTEM_NAME:        AO + Antigravity
 QUALITY_METRIC:     zero-touch rate (autonomous PR merges / total PR merges)
-REPOS:              jleechanorg/agent-orchestrator, jleechanorg/worldai_claw
+REPOS:              jleechanorg/agent-orchestrator-ts, jleechanorg/worldai_claw
 WORKER_PATTERN:     tmux sessions matching (ao|jc|wa|cc|ra|wc)-[0-9]+
 IDE_MONITOR:        Antigravity (via /antig skill)
 ISSUE_TRACKER:      br (beads, .beads/issues.jsonl)
@@ -37,7 +37,7 @@ HEALTHY_THRESHOLD: 20% (below = chronic problem, triggers code-level diagnosis)
 tmux list-sessions 2>/dev/null | grep -E '(ao|jc|wa|cc|ra|wc)-[0-9]+' || echo "no workers"
 
 # Open PRs across repos
-for repo in jleechanorg/agent-orchestrator jleechanorg/worldai_claw; do
+for repo in jleechanorg/agent-orchestrator-ts jleechanorg/worldai_claw; do
   gh api "repos/$repo/pulls?state=open&per_page=10" \
     --jq '.[]|"\(.number) \(.title[:60]) \(.mergeable_state)"' 2>/dev/null
 done
@@ -52,7 +52,7 @@ done
 
 ```bash
 # Merged PRs in last 24h — zero-touch rate
-gh api 'repos/jleechanorg/agent-orchestrator/pulls?state=closed&per_page=30&sort=updated&direction=desc' \
+gh api 'repos/jleechanorg/agent-orchestrator-ts/pulls?state=closed&per_page=30&sort=updated&direction=desc' \
   --jq '.[] | select(.merged_at != null) | {number, title: .title[:70], autonomous: (.title | test("^\\[agento\\]"))}' \
   2>/dev/null | python3 -c "
 import sys, json

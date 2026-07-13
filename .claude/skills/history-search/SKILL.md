@@ -14,7 +14,7 @@ Searches Claude Code JSONL, Codex SQLite threads, Hermes messages (FTS5), and An
 |--------|------|------|
 | Claude Code | JSONL per session | `~/.claude/projects/*/*.jsonl` |
 | Codex | SQLite threads + first message | `~/.codex/state_5.sqlite` |
-| Hermes | Messages with FTS5 | `~/.hermes_prod/state.db` |
+| Hermes | Messages with FTS5 | `~/.hermes/state.db` |
 | Antigravity | Markdown exports | `~/Library/CloudStorage/Dropbox/conversation-backups/antigravity/` |
 | OpenCode | Session diff JSON | `~/.local/share/opencode/storage/session_diff/` |
 | Cursor | Prompt history + chats | `~/.cursor/prompt_history.json`, `~/.cursor/chats/` |
@@ -116,7 +116,7 @@ Note: Codex `state_5.sqlite` stores `created_at` in milliseconds (Unix ms). Use 
 import sqlite3, os
 
 query = "<QUERY>"
-db = os.path.expanduser("~/.hermes_prod/state.db")
+db = os.path.expanduser("~/.hermes/state.db")
 if not os.path.exists(db):
     print("[Hermes] DB not found"); exit()
 
@@ -223,6 +223,25 @@ else:
                     break
     for prompt in results:
         print(f"[Cursor] | {prompt[:150]}")
+
+### Parallel block G — git fsck --lost-found scan
+
+For each worktree under candidate locations (passed as a positional arg, defaulting to `$HOME/projects/`):
+
+```bash
+for wt in $(git -C <location> worktree list --porcelain | grep -E '^worktree ' | awk '{print $2}'); do
+  dangling=$(git -C "$wt" fsck --lost-found --no-reflogs --no-progress 2>/dev/null | grep "^dangling commit" || true)
+  if [ -n "$dangling" ]; then
+    for sha in $dangling; do
+      subject=$(git -C "$wt" log -1 --format="%h %s" "$sha" 2>/dev/null)
+      files=$(git -C "$wt" diff-tree --no-commit-id --name-only -r "$sha" 2>/dev/null | wc -l)
+      echo "[fsck:$wt] $subject ($files files)"
+    done
+  fi
+done
+```
+
+**Why**: when investigating "lost" work, dangling commits are the first place to look. The 2026-06-22 PR-B'' incident had 751 dangling commits in the candidate worktree, one of which (`7d72209`) held the full 13-file diff the parent agent declared "lost."
 
 ## Output format
 

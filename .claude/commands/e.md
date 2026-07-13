@@ -8,6 +8,30 @@ execution_mode: immediate
 **This is NOT documentation - these are COMMANDS to execute right now.**
 **Use TodoWrite to track progress through multi-phase workflows.**
 
+## 💰 MODEL SELECTION (cost-aware execution)
+
+When delegating work to subagents or pair-programming partners, **default to the cheapest coding model that can complete the task correctly**. Cost-aware routing is the default; expensive models are the exception, not the baseline.
+
+### Claude family
+- **Haiku** — quick reads, transforms, summarization, lint sweeps, deterministic mechanical edits, single-file lookups.
+- **Sonnet** — routine implementation, multi-file edits, test generation, conventional refactors, most code-pair work.
+- **Opus** — reserve ONLY for genuinely hard architectural reasoning, cross-context synthesis, ambiguous debugging, or when Sonnet demonstrably fails. Do not reach for Opus by default.
+
+### Codex family
+- **Codex Spark** (or other GPT-medium variants) — fast code generation, scaffolding, mechanical edits, well-scoped refactors.
+- **GPT-large** — reserve ONLY for hard architectural tasks where Codex Spark has demonstrably failed.
+
+### Other providers
+- **Cerebras / Gemini Flash / GLM-5.1 / wafer.ai** — preferred for high-volume mechanical code generation.
+- **Premium tiers (Claude Opus, GPT-large, top Gemini)** — reserve for low-volume, high-stakes decisions.
+
+### Decision rule
+If the task is **well-scoped** (clear inputs, deterministic output, no architectural ambiguity, single-file or small blast radius), pick the **cheapest model that can complete it**. Use a more expensive model ONLY when:
+1. The cheaper tier has demonstrably failed (with evidence), OR
+2. The task requires cross-context synthesis that cheaper tiers cannot handle.
+
+This guidance is binding for `/e` execution: do not pick Opus / GPT-large by reflex.
+
 ## 🚨 EXECUTION WORKFLOW
 
 ### Phase 1: Execute Documented Workflow

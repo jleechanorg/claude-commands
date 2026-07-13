@@ -76,7 +76,7 @@ done
 
 ### 5. What are the non-green reasons per PR?
 ```bash
-gh pr list --repo jleechanorg/agent-orchestrator --state open \
+gh pr list --repo jleechanorg/agent-orchestrator-ts --state open \
   --json number,title,mergeable,mergeStateStatus,reviewDecision
 
 # Also verify auto-merge config (REQUIRED for autonomous merging):
