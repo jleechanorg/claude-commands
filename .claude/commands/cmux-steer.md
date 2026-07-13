@@ -1,11 +1,11 @@
-# /cmux-steer — Control cmux terminal tabs headlessly
+---
+description: cmux-steer — Control another cmux terminal tab via the Unix socket
+type: skill
+execution_mode: immediate
+---
 
-Sends commands or prompts to cmux terminal surfaces via the Unix socket JSON API. Works cross-workspace without switching focus.
+# /cmux-steer <workspace-name> <surface-index> <text to send>
 
-## Usage
-```
-/cmux-steer <workspace-name> <surface-index> <text to send>
-```
+Sends commands or prompts to cmux terminal surfaces via the Unix socket JSON API. Reads and steers another agent's terminal pane from within cmux, without disrupting the user's active workspace navigation.
 
-## Execution
-When invoked, load and follow `~/.claude/skills/cmux-steer/SKILL.md`.
+Read `~/.claude/skills/cmux-steer/SKILL.md` and execute the full workflow with the provided workspace, surface index, and text.
