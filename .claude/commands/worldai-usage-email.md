@@ -1,8 +1,15 @@
 ---
-description: Send daily/weekly Your Project usage report email to $USER@gmail.com
+description: Send daily/weekly Your Project usage report email to $USER@gmail.com (worldarchitect.ai only — requires worldarchitect.ai worktree + scripts/daily_campaign_report.py)
 type: git
 execution_mode: manual
 ---
+> **Worldai-only command.** Sends the WorldArchitect.AI daily + weekly
+> usage report. Requires a `worldarchitect.ai` worktree on disk and the
+> `scripts/daily_campaign_report.py` script. The repo-local counterpart
+> lives at
+> `jleechanorg/worldarchitect.ai/.claude/commands/worldai-usage-email.md`
+> (currently a thin pointer to this file).
+
 # WorldAI Usage Email - Send Daily/Weekly Report
 
 Sends the Your Project daily + weekly usage report email to $USER@gmail.com.

@@ -1,8 +1,17 @@
 ---
-description: /end2end-testing - Show end-to-end testing principles and patterns
+description: /end2end-testing - Show end-to-end testing principles and patterns (worldarchitect.ai only — primary E2E directory is $PROJECT_ROOT/tests/test_end2end/)
 type: documentation
 execution_mode: immediate
 ---
+> **Worldai-only command.** This command's content is specific to
+> `jleechanorg/worldarchitect.ai` (Fake Firestore, Fake LLM, the
+> `$PROJECT_ROOT/tests/test_end2end/` directory, and `End2EndBaseTestCase`).
+> The repo-local counterpart lives at
+> `jleechanorg/worldarchitect.ai/.claude/commands/end2end-testing.md` and
+> is preferred when working in that repo. When invoked outside the worldai
+> repo, this file is the fallback but the E2E directory paths will not
+> exist.
+
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
 

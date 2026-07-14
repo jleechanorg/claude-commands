@@ -1,8 +1,17 @@
 ---
-description: "/benchg-ts - TypeScript Migration Benchmark: Genesis vs Ralph"
+description: "/benchg-ts - TypeScript Migration Benchmark: Genesis vs Ralph (worldarchitect.ai only — hardcoded to worldai_genesis2 / worldai_ralph2 target paths under worktree_ralph/)"
 type: orchestration
 execution_mode: immediate
 ---
+> **Worldai-only command.** This is a TypeScript migration benchmark
+> comparing the Genesis and Ralph orchestration systems. It hardcodes
+> worldarchitect.ai paths (`/Users/$USER/projects/worktree_ralph/`,
+> `worldai_genesis2`, `worldai_ralph2`) and worldai-specific LLM cost
+> weights. The repo-local counterpart lives at
+> `jleechanorg/worldarchitect.ai/.claude/commands/benchg-ts.md` and is
+> preferred when working in that repo. When invoked outside the worldai
+> repo, the hardcoded paths will not resolve.
+
 # /benchg-ts - TypeScript Migration Benchmark: Genesis vs Ralph
 
 **Command Summary**: Execute comprehensive TypeScript migration benchmark comparing Genesis and Ralph orchestration systems with automated monitoring, validation, and reporting

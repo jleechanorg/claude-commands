@@ -1,8 +1,16 @@
 ---
-description: Investigate dice integrity warnings for a campaign. Queries GCP logs, Firestore story entries, and game_state to diagnose dice fabrication issues.
+description: Investigate dice integrity warnings for a campaign. Queries GCP logs, Firestore story entries, and game_state to diagnose dice fabrication issues. (worldarchitect.ai only — queries GCP project worldarchitecture-ai and the dice service.)
 type: llm-orchestration
 execution_mode: immediate
 ---
+> **Worldai-only command.** Hardcoded to the worldarchitect.ai GCP project
+> (`worldarchitecture-ai`), the worldai dice service, and the
+> `mvp_site/world_logic.py` injection path. The repo-local counterpart
+> lives at
+> `jleechanorg/worldarchitect.ai/.claude/commands/investigatedice.md`
+> (currently a thin pointer to this file). When invoked outside the
+> worldai repo, the GCP queries will fail.
+
 ## EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, execute these steps immediately.**
 **This is NOT documentation - these are COMMANDS to execute right now.**

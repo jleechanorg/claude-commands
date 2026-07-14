@@ -1,8 +1,14 @@
 ---
-description: /gene - Genesis Execution (Auto-Execute)
+description: /gene - Genesis Execution (Auto-Execute) (worldarchitect.ai only — the Genesis orchestration system is part of WorldArchitect.AI)
 type: llm-orchestration
 execution_mode: immediate
 ---
+> **Worldai-only command.** Genesis is the WorldArchitect.AI orchestration
+> system. The repo-local counterpart lives at
+> `jleechanorg/worldarchitect.ai/.claude/commands/gene.md` and is preferred
+> when working in that repo. When invoked outside the worldai repo, the
+> Genesis-specific routing/state assumptions will not apply.
+
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
 **This is NOT documentation - these are COMMANDS to execute right now.**

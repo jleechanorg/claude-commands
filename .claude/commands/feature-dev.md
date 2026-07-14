@@ -1,9 +1,16 @@
 ---
-description: Guided feature development with systematic codebase understanding and architecture focus
+description: Guided feature development with systematic codebase understanding and architecture focus (worldarchitect.ai only — defaults to $PROJECT_ROOT/ layouts and Flask/Firebase/Gemini patterns)
 type: llm-orchestration
 execution_mode: immediate
 argument-hint: Optional feature description
 ---
+
+> **Worldai-only command.** Hardcoded to the WorldArchitect.AI narrative
+> (Python / Flask / Firebase / Gemini) and the `$PROJECT_ROOT/` package
+> layout. The repo-local counterpart lives at
+> `jleechanorg/worldarchitect.ai/.claude/commands/feature-dev.md` and is
+> preferred when working in that repo. When invoked outside the worldai
+> repo, the layout and stack assumptions will not apply.
 
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately.**
