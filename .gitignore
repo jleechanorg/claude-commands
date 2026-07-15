@@ -97,5 +97,14 @@ results/
 # Claude Code runtime files
 .claude/scheduled_tasks.lock
 
-# home-config snapshots must NEVER be committed here (2026-07-12 public leak incident)
-backup/
+# 2026-07-15: removed backup/ from .gitignore so the user-scope launchd backup
+# can auto-commit + push snapshots to origin/main. This reverses the
+# 2026-07-12 leak-purge policy (commits a30c037d + 22f2d8c4 + e891b1ad) per
+# user explicit directive 2026-07-15: "A) do this".
+#
+# Defense-in-depth guards that STILL apply:
+# - backup-home.sh runs `gitleaks protect --staged` before every commit and
+#   auto-scrubs leaks in-place before refusing to push (lines ~1032-1122).
+# - The script refuses to push anywhere except the jleechanorg/claude-commands
+#   remote via GIT_BACKUP_ALLOWED_REMOTE_HTTPS / _SSH whitelist.
+# - gitleaks baseline at .gitleaks.toml filters known historical false-positives.
