@@ -890,6 +890,22 @@ BACKUP_ITEMS=(
   # Not git-tracked because sessions are large ephemeral chat history.
   "copy|$HOME/.hermes/sessions/||hermes_conversations/hermes/sessions/||sync"
   "copy|$HOME/.hermes_prod/sessions/||hermes_conversations/hermes_prod/sessions/||sync"
+  # Hermes config + workspace policy/state — small text files, mirror to BOTH git and Dropbox.
+  # Excludes secrets (auth.json, .env), SQLite (state.db* would need a sqlite backup mode row),
+  # launchd plists (tracked in the canonical hermes repo), and *.bak pre-edit copies.
+  # Added 2026-07-14: the SOUL.md Subagent-model-routing /up rule landed in the live file
+  # but was never snapshotted because BACKUP_ITEMS only covered hermes/sessions/.
+  "copy|$HOME/.hermes/CLAUDE.md|hermes/CLAUDE.md|hermes_conversations/CLAUDE.md||sync"
+  "copy|$HOME/.hermes/config.yaml|hermes/config.yaml|hermes_conversations/config.yaml|,*.bak|sync"
+  "copy|$HOME/.hermes/agent-orchestrator.yaml|hermes/agent-orchestrator.yaml|hermes_conversations/agent-orchestrator.yaml|,*.bak|sync"
+  "copy|$HOME/.hermes/workspace/SOUL.md|hermes/workspace/SOUL.md|hermes_conversations/workspace/SOUL.md||sync"
+  "copy|$HOME/.hermes/workspace/HEARTBEAT.md|hermes/workspace/HEARTBEAT.md|hermes_conversations/workspace/HEARTBEAT.md||sync"
+  "copy|$HOME/.hermes/workspace/AGENTS.md|hermes/workspace/AGENTS.md|hermes_conversations/workspace/AGENTS.md||sync"
+  "copy|$HOME/.hermes/workspace/IDENTITY.md|hermes/workspace/IDENTITY.md|hermes_conversations/workspace/IDENTITY.md||sync"
+  "copy|$HOME/.hermes/workspace/MEMORY.md|hermes/workspace/MEMORY.md|hermes_conversations/workspace/MEMORY.md||sync"
+  "copy|$HOME/.hermes/workspace/USER.md|hermes/workspace/USER.md|hermes_conversations/workspace/USER.md||sync"
+  "copy|$HOME/.hermes/workspace/TOOLS.md|hermes/workspace/TOOLS.md|hermes_conversations/workspace/TOOLS.md||sync"
+  "copy|$HOME/.hermes/workspace/BOOTSTRAP.md|hermes/workspace/BOOTSTRAP.md|hermes_conversations/workspace/BOOTSTRAP.md||sync"
   "copy|$HOME/.claude/agents/|claude/agents/|claude_conversations/agents/||sync"
   "copy|$HOME/.claude/hooks/|claude/hooks/|claude_conversations/hooks/||sync"
   "copy|$HOME/.claude/CLAUDE.md|claude/CLAUDE.md|claude_conversations/CLAUDE.md||sync"
