@@ -1,10 +1,16 @@
 ---
-description: /gene - Genesis Execution (Auto-Execute)
+description: /gene - Genesis Execution (Auto-Execute) (your-project.com only — the Genesis orchestration system is part of Your Project)
 type: llm-orchestration
 execution_mode: immediate
 ---
+> **Worldai-only command.** Genesis is the Your Project orchestration
+> system. The repo-local counterpart lives at
+> `$GITHUB_REPOSITORY/.claude/commands/gene.md` and is preferred
+> when working in that repo. When invoked outside the worldai repo, the
+> Genesis-specific routing/state assumptions will not apply.
+
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
-**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**When this command is invoked, YOU (Claude) must execute these steps immediately.**
 **This is NOT documentation - these are COMMANDS to execute right now.**
 **Use TodoWrite to track progress through multi-phase workflows.**
 
