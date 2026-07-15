@@ -895,10 +895,18 @@ BACKUP_ITEMS=(
   # launchd plists (tracked in the canonical hermes repo), and *.bak pre-edit copies.
   # Added 2026-07-14: the SOUL.md Subagent-model-routing /up rule landed in the live file
   # but was never snapshotted because BACKUP_ITEMS only covered hermes/sessions/.
-  "copy|$HOME/.hermes/CLAUDE.md|hermes/CLAUDE.md|hermes_conversations/CLAUDE.md||sync"
+  # ~/.hermes/CLAUDE.md, ~/.hermes/agent-orchestrator.yaml, and
+  # ~/.hermes/workspace/SOUL.md contain Agnt-F / jleechan-af identity
+  # references (slack-channel-agentf-maps-to-local-agentf COMMIT, AO
+  # workers, etc.). Mirrors the ~/.claude-agent-f/ pattern above
+  # (line 884) — dropbox-only with empty git_rel so the
+  # block-agentf-push-to-jleechanorg pre-push hook doesn't refire
+  # every cycle. config.yaml + the other workspace/*.md files don't
+  # reference Agnt-F and stay dual-target.
+  "copy|$HOME/.hermes/CLAUDE.md||hermes_conversations/CLAUDE.md||sync"
   "copy|$HOME/.hermes/config.yaml|hermes/config.yaml|hermes_conversations/config.yaml|,*.bak|sync"
-  "copy|$HOME/.hermes/agent-orchestrator.yaml|hermes/agent-orchestrator.yaml|hermes_conversations/agent-orchestrator.yaml|,*.bak|sync"
-  "copy|$HOME/.hermes/workspace/SOUL.md|hermes/workspace/SOUL.md|hermes_conversations/workspace/SOUL.md||sync"
+  "copy|$HOME/.hermes/agent-orchestrator.yaml||hermes_conversations/agent-orchestrator.yaml|,*.bak|sync"
+  "copy|$HOME/.hermes/workspace/SOUL.md||hermes_conversations/workspace/SOUL.md||sync"
   "copy|$HOME/.hermes/workspace/HEARTBEAT.md|hermes/workspace/HEARTBEAT.md|hermes_conversations/workspace/HEARTBEAT.md||sync"
   "copy|$HOME/.hermes/workspace/AGENTS.md|hermes/workspace/AGENTS.md|hermes_conversations/workspace/AGENTS.md||sync"
   "copy|$HOME/.hermes/workspace/IDENTITY.md|hermes/workspace/IDENTITY.md|hermes_conversations/workspace/IDENTITY.md||sync"
