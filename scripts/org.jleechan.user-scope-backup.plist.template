@@ -12,11 +12,11 @@
   <key>EnvironmentVariables</key>
   <dict>
     <key>REQUIRE_DROPBOX_ONLY</key>
-    <string>1</string>
+    <string>0</string>
     <key>ALLOW_GIT_BACKUP_SYNC</key>
-    <string>0</string>
+    <string>1</string>
     <key>ALLOW_GIT_BACKUP_PUSH</key>
-    <string>0</string>
+    <string>1</string>
     <key>TOKEN_HEALTH_PRECHECK</key>
     <string>0</string>
     <key>TOKEN_HEALTH_PRECHECK_FAIL_ON_FAILURE</key>
