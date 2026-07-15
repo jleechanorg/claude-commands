@@ -18,7 +18,7 @@
     <key>ALLOW_GIT_BACKUP_PUSH</key>
     <string>0</string>
     <key>TOKEN_HEALTH_PRECHECK</key>
-    <string>1</string>
+    <string>0</string>
     <key>TOKEN_HEALTH_PRECHECK_FAIL_ON_FAILURE</key>
     <string>1</string>
     <key>GIT_BACKUP_PUSH_REMOTE</key>

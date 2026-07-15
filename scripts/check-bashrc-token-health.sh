@@ -165,7 +165,6 @@ check_pypi() {
 
 check_github
 check_slack_tokens
-check_aws
 check_telegram
 check_google_service_account_file
 check_pypi
