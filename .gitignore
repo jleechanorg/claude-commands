@@ -96,3 +96,6 @@ task_outputs/
 results/
 # Claude Code runtime files
 .claude/scheduled_tasks.lock
+
+# home-config snapshots must NEVER be committed here (2026-07-12 public leak incident)
+backup/
