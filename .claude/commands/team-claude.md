@@ -1,134 +1,128 @@
 ---
-description: Create a Claude-native agent team with opus orchestrating sonnet/haiku workers
-type: agent-orchestration
+description: Launch a real Sonnet Claude Code team — official in-session Agent Teams by default, tmux lanes as fallback
+type: orchestration
 execution_mode: immediate
 ---
 
-## EXECUTION INSTRUCTIONS FOR CLAUDE
+# /team-claude — real Claude Code team (in-session Agent Teams DEFAULT)
 
-**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+`/team-claude <prompt>` decomposes `<prompt>` into independent lanes and starts
+REAL Claude Code teammates. **DEFAULT (user directive 2026-07-11): use the
+official Agent Teams feature IN THE CURRENT SESSION** — teammates spawned via
+the Agent tool with `name:` are real Claude Code agents, visible in the user's
+team panel, SendMessage-addressable, and registered on disk in
+`${CLAUDE_CONFIG_DIR:-~/.claude}/teams/session-<id>/config.json` with
+per-teammate inboxes (claudewa sessions register under `~/.claude-wa/teams/`,
+NOT `~/.claude/teams/` — always resolve via `CLAUDE_CONFIG_DIR`). A team
+the user cannot see in their own panel does not satisfy this command.
 
-1. Parse the user's prompt from the command arguments
-2. Create tasks using `TaskCreate` for each subtask (one task per lane/worker)
-3. Spawn teammates using `Agent` with `name` parameter (set the `team_name` parameter too but expect it to be ignored — see Notes)
-4. Coordinate via `SendMessage` and `TaskUpdate`
-5. Shutdown teammates when complete
+## Hard contract — DEFAULT mode (in-session Agent Teams)
 
-## HOW TEAM-CLAUDE WORKS
+- **LEAD MUST NOT CARRY `--teammate-mode=tmux` (root cause, A/B-confirmed
+  2026-07-12):** that flag on the lead assigns every teammate
+  `backendType: "tmux"` — the broken-mailbox backend — and they dead-register
+  (flag-free lead → `backendType: "in-process"` → teammate executed in <1
+  min; flagged lead → zero execution; 2026-07-11's 3/3 dead lanes were all
+  tmux-backend under a flagged claudewa lead). ALL standard bashrc wrappers
+  (clauded/claudewa/claudem/claudeg/…) bake this flag — check
+  `ps -p $PPID -o command=` or the member's `backendType` after first spawn;
+  if teammates come up `"tmux"`, this session cannot run reliable in-session
+  teams: use direct-CLI workers or relaunch the lead flag-free
+  (`claudedanger` / bare `claude`). Memory:
+  `teams-lanes-dead-minimax-cli-fallback`.
 
-This command dispatches a **parallel subagent team** using the `Agent` tool with `run_in_background=true`. The current Claude Code session has a single implicit team; explicit `TeamCreate` calls are NOT supported in this environment (the tool is unavailable).
+- **Primitive:** every teammate is spawned via the Agent tool with an explicit
+  `name: lane-<n>-<topic>` and `model: sonnet`. These are NOT pseudo agents —
+  they register in the session team config with inboxes and colors.
+- **Sonnet-only:** every lane uses `model: sonnet`; the orchestrating session
+  is the team lead.
+- **Proof:** after launch, verify the registry on disk —
+  `ls ~/.claude*/teams/session-*/inboxes/` shows one inbox per named lane, and
+  the config.json `members[]` lists them. The user additionally SEES the
+  teammates in the session panel; teammate messages render with team colors.
+- **Liveness gate (registration ≠ execution):** ~5 min with ZERO activity
+  signals — no task claim, no file mtime change, no `isActive: true` — marks
+  a lane SUSPECT. This is a suspicion threshold, NOT a completion deadline:
+  a slow lane showing ANY signal passes. Signal strength: task claim / file
+  change = STRONG; `isActive: true` = WEAK (can be stale-true for crashed
+  lanes — anthropics/claude-code#51818). Lanes can dead-register (in
+  `members[]` with delivered inboxes but never polling them — #24108 class;
+  hit live 2026-07-11, 3/3 lanes incl. a plain sonnet one). On SUSPECT:
+  nudge once, allow ~5 more min grace; still zero signals → send
+  `shutdown_request`s (dead lanes typically cannot ack — confirm by absence
+  of new activity, then treat as dead) and fall back to direct CLI workers
+  (`claude -p` background Bash; MiniMax recipe in /team-mini) or the tmux
+  fallback below. NEVER start a fallback writer while a possibly-live lane
+  may still write the same files (single-writer rule).
+- **Isolation:** each lane gets a clear lane name and either a dedicated
+  worktree or an explicit read-only role. Two lanes never write the same file.
+- **Collection:** lanes go `idle_notification` WITHOUT auto-delivering — the
+  lead must SendMessage-nudge each idle lane for its report.
+- **Crash recovery:** write lane prompts + a mission STATE.md under
+  `/tmp/team-claude-<slug>/` so a later session can inspect or respawn. Lanes
+  die with the parent CLI — durable state lives on disk, per the sidekick
+  skill's STATE.md pattern.
+- **5-minute checkpoint cadence** applies here too — each lane owner carries
+  the same crash-window and commit-safety risk as a sidekick lane, so it
+  follows the same ≤5 min STATE.md/bead/commit contract, including the
+  commit-safety escape hatch (isolated state repo / WIP branch /
+  path-scoped `git add`, never `git add -A` on a dirty shared worktree —
+  see the `sidekick` skill's "5-minute checkpoint cadence" section).
+- **Verification lanes** are teammates too (refute-by-default prompts). Do not
+  mark work ready without verifier output.
 
-- **Opus** (you, the orchestrator/team lead) — plans, creates tasks, coordinates, reviews
-- **Sonnet** teammates — `claude-pair-coder` and `claude-pair-verifier` for implementation and verification
-- **Haiku** — quick tasks like file searches, simple checks, formatting
+## FALLBACK mode — external tmux lanes
 
-The team gets a shared task list, automatic message delivery between teammates, and coordinated task ownership.
+Use ONLY when the mission must survive this session exiting, or Agent Teams is
+unavailable. Disclose to the user up front: "these lanes will NOT appear in
+your panel; watch with `tmux attach -t team-<slug>-lane-<n>` (detach:
+ctrl+b d)."
 
-## TEAM-CLAUDE COMMAND
-
-Usage: `/team-claude <prompt>`
-
-### Execution Steps:
-
-1. **Create tasks** from the user's prompt:
-   ```python
-   TaskCreate(subject="<task>", description="<details>")
-   ```
-   Set up `blockedBy` dependencies between tasks where needed.
-
-2. **Spawn sonnet teammates:**
-   ```python
-   Agent(
-       subagent_type="claude-pair-coder",
-       model="sonnet",
-       name="coder-1",
-       team_name="claude-team-<name>",
-       description="<task description>",
-       prompt="<detailed prompt>",
-       run_in_background=True
-   )
-   ```
-   ```python
-   Agent(
-       subagent_type="claude-pair-verifier",
-       model="sonnet",
-       name="verifier-1",
-       team_name="claude-team-<name>",
-       description="<verification description>",
-       prompt="<detailed prompt>",
-       run_in_background=True
-   )
-   ```
-
-4. **Use haiku for lightweight tasks:**
-   ```python
-   Agent(
-       model="haiku",
-       name="scout",
-       team_name="claude-team-<name>",
-       description="<quick task>",
-       prompt="<simple task prompt>"
-   )
-   ```
-
-5. **Orchestrate via task list:**
-   - Teammates check `TaskList` for available work
-   - Claim tasks with `TaskUpdate(owner="coder-1")`
-   - Mark tasks done with `TaskUpdate(status="completed")`
-   - Communicate via `SendMessage(to="coder-1", message="...")`
-
-6. **Shutdown teammates** when all tasks complete:
-   ```python
-   SendMessage(
-       to="coder-1",
-       message={"type": "shutdown_request", "reason": "All tasks complete"}
-   )
-   ```
-
-### Notes (added 2026-06-27)
-
-- The `TeamCreate` primitive described in earlier versions of this skill is **not callable** in the current Claude Code session. The `Agent` tool description explicitly notes `team_name (Deprecated; ignored. The session has a single implicit team.)`. Skip step 1 (team creation) and dispatch agents directly.
-- If `TaskCreate` is unavailable in your session, fall back to `Agent` dispatch only and track work via the inbox messages instead.
-- For minimax/M2.5 backend, use the sister command `/team-mini` (which uses `minimax-pair-coder` agent types that shell out to `claudem()` from `~/.bashrc`).
-
-### Model Budget Rules:
-- **Opus**: Only for orchestration decisions, final review, complex reasoning
-- **Sonnet**: Primary workhorse — coding, testing, verification, code review
-- **Haiku**: File lookups, simple checks, formatting, trivial subtasks
-- **Goal**: Maximize sonnet usage, minimize opus token spend
-
-### Key Differences from Raw Agent() Calls:
-- **Shared task list** — all teammates see progress and can claim work
-- **Message routing** — teammates can communicate with each other and the lead
-- **Task ownership** — prevents duplicate work, tracks who's doing what
-- **Idle management** — teammates wake up when messaged with new work
-- **Graceful shutdown** — proper cleanup when work is done
-
-### Batching & Parallelization Rules (MANDATORY — include in every teammate prompt)
-
-Teammates must **never** make a sequence of independent tool calls one-at-a-time when they can be batched or parallelized. Wall-clock cost is dominated by round-trip latency, not by the work.
-
-When briefing a teammate, **explicitly tell them to**:
-
-1. **Chain independent CLI calls in a SINGLE Bash invocation** with `&&`, `;`, or a `for` loop:
-   ```bash
-   br create --title "A" ... && \
-   br create --title "B" ... && \
-   br create --title "C" ...
-   ```
-   Twelve `br create`s chained = ~3-5 s. Twelve separate tool round-trips = 10-15 minutes.
-
-2. **Fan out to parallel sub-Agents** when work is naturally chunked and concurrent CLI use is safe. Dispatch them in **one message with multiple `Agent` calls**, each with `run_in_background=True`. Example: 12 beads → 3 sub-Agents × 4 beads each.
-
-3. **Batch file edits**: use `MultiEdit` for multiple changes to the same file, or send multiple `Edit` calls in one message for different files.
-
-4. **Default to batching.** A sequence of >3 independent tool calls is a red flag — stop and ask "can this be a single Bash call or a parallel sub-Agent fan-out?"
-
-5. **Anti-pattern:** "I'll do A, then B, then C, then D..." in separate messages. Replace with "I'll do A+B+C+D in parallel".
-
-If a teammate prompt has a "do NOT spawn child agents" constraint by default, **explicitly lift it** for batchable operations when steering: "I'm lifting the no-child-agent constraint for this batch operation."
-
-### Example:
+```bash
+SESSION="team-${SLUG}-lane-1"
+PROMPT_FILE="$BASE/lane-1.prompt.md"
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+  tmux capture-pane -t "$SESSION" -p -S -20 | tail -20   # never kill a live lane blind
+fi
+tmux new-session -d -s "$SESSION" -x 160 -y 48 \
+  "cd '$PWD' && CLAUDE_CONFIG_DIR='${CLAUDE_CONFIG_DIR:-$HOME/.claude}' claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions -p \"\$(cat '$PROMPT_FILE')\"; rc=\$?; printf '\n[team-claude lane done exit=%s]\n' \"\$rc\"; exec bash"
 ```
-/team-claude Implement bd-awq PR poller plugin with TDD — write failing tests first, then implement
+
+Verify with `tmux ls | grep "team-${SLUG}"`, `pgrep -fl -- "--teammate-mode tmux"`
+(match the flag — ps may show a full binary path), and capture-pane. Blank pane
+in `-p` mode is normal while working. Poll/aggregate with capture-pane loops.
+Inline `CLAUDE_CONFIG_DIR` always — the tmux server strips it (wrong-account
+session-limit failures otherwise).
+
+## Failure modes
+
+- **User says "I don't see the team":** you used tmux mode without disclosure,
+  or spawned unnamed agents. Switch to DEFAULT mode — named in-session
+  teammates — immediately; this exact complaint recurred 5× across 3 sessions
+  on 2026-07-10/11 before the default was flipped.
+- **No inbox file for a lane:** the spawn was not a named teammate; respawn
+  with `name:`.
+- **Idle lanes, no reports:** you forgot the SendMessage nudge — OR the lane
+  dead-registered (#24108 class). Distinguish via the liveness gate above:
+  no task claim + no file changes + `isActive` never flipped = dead lane, not
+  a missing nudge. Roster/isActive check — target YOUR OWN session's config
+  (session id appears in every Agent spawn result as `name@session-<id>`);
+  NEVER `ls -t`-pick the newest config: concurrent sessions make the glob
+  grab another session's team (observed live 2026-07-11). Fail closed if the
+  file is missing:
+  `CONFIG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/teams/session-<your-id>/config.json"; [ -f "$CONFIG" ] || echo "FAIL-CLOSED: no team config"; python3 -c "import json;print([(m.get('name'),m.get('isActive')) for m in json.load(open('$CONFIG')).get('members',[])])"`
+  (remember `isActive` can be stale-true, #51818 — corroborate with task
+  claims / file changes before trusting it either way).
+- **Two lanes edit the same files:** stop one lane and serialize the work.
+- **(fallback) Pane is only a shell:** Claude exited immediately; capture the
+  pane and fix prompt/auth before claiming the lane is active.
+
+## Usage
+
+```text
+/team-claude <prompt>
 ```
+
+The current Claude session is the orchestrator/team lead. Related: the sidekick
+skill (durability layer, STATE.md pattern) and /swarm (which composes this
+team primitive with adversarial verification).

@@ -1,8 +1,17 @@
 ---
-description: /end2end-testing - Show end-to-end testing principles and patterns
+description: /end2end-testing - Show end-to-end testing principles and patterns (your-project.com only — primary E2E directory is $PROJECT_ROOT/tests/test_end2end/)
 type: documentation
 execution_mode: immediate
 ---
+> **Worldai-only command.** This command's content is specific to
+> `$GITHUB_REPOSITORY` (Fake Firestore, Fake LLM, the
+> `$PROJECT_ROOT/tests/test_end2end/` directory, and `End2EndBaseTestCase`).
+> The repo-local counterpart lives at
+> `$GITHUB_REPOSITORY/.claude/commands/end2end-testing.md` and
+> is preferred when working in that repo. When invoked outside the worldai
+> repo, this file is the fallback but the E2E directory paths will not
+> exist.
+
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
 
@@ -26,7 +35,11 @@ See the full authoritative skill at: `.claude/skills/end2end-testing.md`
 - **Primary E2E Directory**: `$PROJECT_ROOT/tests/test_end2end/`
 - **Shared Base Class**: `$PROJECT_ROOT/tests/test_end2end/__init__.py` -> `End2EndBaseTestCase`
 - **Fake Firestore**: `$PROJECT_ROOT/tests/fake_firestore.py` -> `FakeFirestoreClient`
-- **Fake LLM Response**: `$PROJECT_ROOT/tests/fake_llm.py` -> `FakeLLMResponse`
+- **Fake LLM (shallow/legacy)**: `$PROJECT_ROOT/tests/fake_llm.py` -> `FakeLLMResponse`
+- **Fake LLM (SDK-faithful)**: `$PROJECT_ROOT/tests/fake_llm_realistic.py` -> `RealisticFakeLLMResponse`, `make_realistic_fake()`
+  - Use for tests that read `usage_metadata.prompt_token_count`, `finish_reason`, or iterate `candidates[0].content.parts` (code_execution path)
+  - `make_realistic_fake(with_dice=True)` adds stub `executable_code` / `code_execution_result` parts
+  - Fixture `FIXTURE_STORY_RESPONSE_TEXT` sourced from a real prod Gemini 3 Flash response
 
 ## Mandatory E2E Coverage Rules
 When a PR creates or updates multiple non-test files under `$PROJECT_ROOT/**`, it must add or update at least one end-to-end test unless the PR explicitly justifies why the changed code is unreachable through an end-to-end application path.
