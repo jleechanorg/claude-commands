@@ -120,7 +120,7 @@ when the mission completes.
 
 ## 5-minute checkpoint cadence (mandatory)
 
-The sidekick and every lane it owns checkpoint at least every 5 minutes:
+The sidekick and every lane it owns checkpoint at a ≤5 min cadence:
 1. STATE.md heartbeat — append a timestamped Progress Log line.
 2. `br update`/`br sync` on the resumption bead — single-writer rule: only
    the sidekick (never lanes) writes the bead body, so concurrent lanes never
