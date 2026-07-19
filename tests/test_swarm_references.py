@@ -55,6 +55,7 @@ REFERENCED_COMMANDS = {
     "/research": "research.md",
     "/innov": "innov.md",
     "/er": "er.md",
+    "/claw": "claw.md",
 }
 
 # Genuine skill references found in swarm/SKILL.md, mapped to their expected
