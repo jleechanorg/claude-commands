@@ -143,6 +143,8 @@ The sidekick and every lane it owns checkpoint at a ≤5 min cadence:
      STATE.md on respawn.
 
    ```bash
+   PROJECT_SLUG="<derived per above>"   # e.g. worldarchitect.ai
+   MISSION_SLUG="<derived per above>"   # e.g. fleet-ci-health
    STATE_DIR="/tmp/${PROJECT_SLUG}/sidekick/${MISSION_SLUG}"
    mkdir -p "$STATE_DIR"
    ```
