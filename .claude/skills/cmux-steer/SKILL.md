@@ -7,6 +7,49 @@ description: Read and steer another cmux terminal tab through the Unix socket.
 
 > **REQUIRED (2026-06-09):** This skill is **deprecated for runtime steering**. The bare `cmux send` + `cmux send-key enter` pattern documented here does NOT include proof of submission. Use the canonical wrapper instead: `python3 -c "from cmux_client import send_and_submit; print(send_and_submit('workspace:N', 'surface:M', 'text'))"` and include the returned `proof` + `proof_ts` in your reply. See `~/.hermes_prod/skills/cmux-send-submit/SKILL.md`. This skill is preserved for socket read operations (`workspace.list`, `surface.read_text`, `tree`, `system.ping`) only.
 
+## ⚠️ SUPERSEDED — Use `cmux` CLI, not raw socket protocol
+
+The raw `nc -U $SOCK` examples below still work for low-level access, but they
+have a **name → surface resolution gap** that has caused repeated failures
+("why do you always get confused when I name a surface"). The canonical recipe
+is the `cmux` CLI, which exposes workspace/surface/tab refs directly.
+
+**Always start here when the user names a surface, tab, or workspace:**
+
+```bash
+# 1. MY workspace = caller.workspace_ref (NOT focused — focus may be elsewhere).
+#    When run inside cmux itself, `caller` is populated; when run from a
+#    standalone terminal, use the workspace you already know about or fall
+#    back to `cmux identify --json | jq '.focused.workspace_ref'`.
+WS=$(cmux identify --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["caller"]["workspace_ref"])')
+
+# 2. Every pane + tab by name; ◀ here = caller surface, ◀ active = focus.
+#    Do NOT filter the output — sibling tabs and the ◀ markers are the signal.
+cmux tree --all --workspace "$WS"
+
+# 3. Read the target by the surface:N ref shown in the tree.
+cmux read-screen --workspace "$WS" --surface surface:N --lines 80
+```
+
+### Three anti-patterns this skill now warns against
+
+- **Global name search** — `cmux list-pane-surfaces | grep <name>` matches a
+  same-named tab in another workspace and you steer the wrong agent.
+- **grep-filtering the tree** — `cmux tree --all | grep <name>` hides sibling
+  tabs and the `◀ here` / `◀ active` markers you need to disambiguate.
+- **`list-pane-surfaces` defaults** — defaults to ONE pane and omits tabs in
+  other panes; use `cmux tree --all --workspace "$WS"` for the full picture.
+
+### What this skill still does well
+
+The raw `nc -U $SOCK` blocks below remain useful for low-level debugging
+(`system.tree`, `system.identify`, custom JSON-RPC methods) and for
+environments where the `cmux` CLI binary is not on PATH. The CLI recipes
+above are the **default**; fall back to the raw socket blocks only when the
+CLI fails or is unavailable.
+
+---
+
 **Usage**: Read and follow this skill directly; no `/cmux-steer` slash command is defined.
 
 **Purpose**: Read and steer another agent's terminal pane (e.g. a coding agent)
