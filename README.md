@@ -1,3 +1,4 @@
+<!-- ao smoke test 1784855710 -->
 ---
 description: Claude Commands - Command Library Overview
 type: llm-orchestration
