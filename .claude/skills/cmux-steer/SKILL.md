@@ -17,18 +17,35 @@ is the `cmux` CLI, which exposes workspace/surface/tab refs directly.
 **Always start here when the user names a surface, tab, or workspace:**
 
 ```bash
-# 1. MY workspace = caller.workspace_ref (NOT focused — focus may be elsewhere).
-#    When run inside cmux itself, `caller` is populated; when run from a
-#    standalone terminal, use the workspace you already know about or fall
-#    back to `cmux identify --json | jq '.focused.workspace_ref'`.
-WS=$(cmux identify --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["caller"]["workspace_ref"])')
+# 1. MY workspace = caller.workspace_ref, falling back to focused.
+#    `caller` is populated only when this command runs inside cmux itself;
+#    from a standalone terminal (and from most skill invocations) it is null,
+#    and a naive `["caller"]["workspace_ref"]` lookup will KeyError. The
+#    defensive form below silently falls back to the focused workspace.
+WS=$(cmux identify --json | python3 -c '
+import sys, json
+d = json.load(sys.stdin)
+c = d.get("caller") or {}
+print(c.get("workspace_ref") or d.get("focused", {}).get("workspace_ref"))
+')
 
 # 2. Every pane + tab by name; ◀ here = caller surface, ◀ active = focus.
 #    Do NOT filter the output — sibling tabs and the ◀ markers are the signal.
 cmux tree --all --workspace "$WS"
 
-# 3. Read the target by the surface:N ref shown in the tree.
-cmux read-screen --workspace "$WS" --surface surface:N --lines 80
+# 3. Read the target surface. ⚠ Cross-workspace `cmux read-screen
+#    --workspace X --surface Y` is NOT reliable in current cmux (verified
+#    bug — see ~/.hermes/skills/cmux/references/surface-read-routing-bug.md):
+#    it can silently return the currently-focused surface's content even
+#    when the `result` echoes the requested refs. The reliable recipe for
+#    reading a non-focused surface is **focus-then-read**:
+#      a. `cmux focus-surface --workspace "$WS" --surface surface:N` (or the
+#         JSON-RPC `surface.focus` equivalent) to make surface:N the focused
+#         surface, then
+#      b. `cmux read-screen --lines 80` (no --workspace / --surface args —
+#         the bare invocation reads the focused surface).
+#    For an already-focused surface, the bare `cmux read-screen --lines N`
+#    is sufficient and matches what you see on screen.
 ```
 
 ### Three anti-patterns this skill now warns against
@@ -47,6 +64,15 @@ The raw `nc -U $SOCK` blocks below remain useful for low-level debugging
 environments where the `cmux` CLI binary is not on PATH. The CLI recipes
 above are the **default**; fall back to the raw socket blocks only when the
 CLI fails or is unavailable.
+
+### Known cmux CLI bugs (verified)
+
+- **`cmux read-screen --workspace <ws> --surface <surface>`** can silently
+  return the focused surface's content instead of the named one (see
+  `~/.hermes/skills/cmux/references/surface-read-routing-bug.md`). Use the
+  focus-then-read recipe above for any non-focused surface.
+- **`surface.read_text` with `workspace_ref`/`surface_ref`** ignores the ref
+  params and returns the focused surface's text. Same focus-then-read fix.
 
 ---
 
