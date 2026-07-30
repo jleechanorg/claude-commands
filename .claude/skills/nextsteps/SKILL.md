@@ -1,23 +1,77 @@
 ---
 name: nextsteps
-description: Situational assessment, beads + roadmap sync after a work block; writes a self-contained nextsteps markdown doc (TOC, executive summary, full detail, bead links), updates learnings + README, Claude auto-memory, mem0, and beads. Prefers editing existing roadmap docs over creating new files.
+description: Situational assessment and roadmap sync after a work block. Default mode reads ONLY beads (`br`) and `~/roadmap` (lean: independent nextsteps markdown doc + beads update + roadmap README + ~/roadmap learnings log). `--full` preserves the legacy all-source behavior (adds Claude auto-memory writes, mem0 sync, and GitHub Issue creation). Prefers editing existing roadmap docs over creating new files.
 ---
 
 # /nextsteps — Situational Assessment & Roadmap Update
 
 Situational assessment and roadmap sync after a work block.
 
+## Modes (read first — determines which phases run)
+
+`/nextsteps` has **two mutually exclusive modes**. Pick one based on the
+invocation; do not silently blend them.
+
+| Mode | Invocation | Sources read | Side effects written |
+|------|------------|--------------|----------------------|
+| **default** (lean) | `/nextsteps` or `/nextsteps [brief]` | beads (`br list`/`br show`) + `~/roadmap/` + `roadmap/README.md` | nextsteps `.md` doc + `br` updates + `roadmap/README.md` rolling activity + `~/roadmap/learnings-YYYY-MM.md` |
+| **`--full`** (legacy all-source) | `/nextsteps --full` or `/nextsteps --full [brief]` | everything in default + Claude auto-memory (`~/.claude/projects/<key>/memory/`) + mem0 | everything in default + Claude auto-memory writes + `MEMORY.md` pointers + `mem0_shared_client.py add` + GitHub Issue creation |
+
+**Default mode skips these phases on purpose** (they are owned by `--full`):
+
+- **Phase 4 — Write to Claude auto-memory** (writes `~/.claude/projects/.../memory/*.md` and `MEMORY.md` pointers).
+- **Phase 5 — Save to mem0** (calls `~/.hermes/scripts/mem0_shared_client.py`).
+- **Phase 7b — Create or update GitHub Issues** (calls `gh issue create` for each new bead).
+
+<!-- USER REQUEST (verbatim, preserved per task brief): "Make /nextsteps only do beads and ~/roadmap and /nextsteps --full does everything" -->
+
+If a user wants the side-effecting phases in the default run, they must invoke
+`/nextsteps --full`. Rationale: the lean default keeps `/nextsteps` focused on
+bead + roadmap state, which is what the user is asking for; the memory/issue
+mirroring is opt-in and lives behind `--full`.
+
+### How to parse the flag
+
+1. Look at the literal text right after `/nextsteps`.
+2. If the first non-whitespace token is exactly `--full`, run in `--full` mode and strip it from the brief.
+3. Otherwise (no `--full` anywhere on the line), run in default mode and treat the rest as the user-provided brief.
+4. `--full` is the only recognized flag. Any other token (`--help`, `-h`, etc.) is treated as part of the brief.
+
+Report the chosen mode on the **first line of the Phase 8 report**, e.g.:
+
+```
+Mode: default (beads + ~/roadmap)
+```
+
+or
+
+```
+Mode: --full (beads + ~/roadmap + Claude memory + mem0 + GH Issues)
+```
+
 ## Fail-closed rule
 
-A `/nextsteps` run is **incomplete** unless it leaves **all** of these artifacts:
+A `/nextsteps` run is **incomplete** unless it leaves **all** of these artifacts
+**for its chosen mode**:
 
-1. **Independent summary markdown doc** (see [Nextsteps document](#nextsteps-document-mandatory)) — TOC, executive summary, then full self-contained detail; bead links throughout  
-2. Beads updated/created via `br`  
-3. Claude memory files written with `MEMORY.md` pointers  
-4. `~/roadmap/learnings-YYYY-MM.md` appended  
-5. **`roadmap/README.md` “Recent activity (rolling)”** updated (repo git root — create section if absent)
+### Default mode (lean) — required artifacts
 
-If the session has no repo checkout, skip item 5 only and note that in the Phase 8 report.
+1. **Independent summary markdown doc** (see [Nextsteps document](#nextsteps-document-mandatory)) — TOC, executive summary, then full self-contained detail; bead links throughout
+2. Beads updated/created via `br`
+3. `~/roadmap/learnings-YYYY-MM.md` appended
+4. **`roadmap/README.md` “Recent activity (rolling)”** updated (repo git root — create section if absent)
+
+If the session has no repo checkout, skip item 4 only and note that in the Phase 8 report.
+
+### `--full` mode — required artifacts
+
+In addition to all default-mode artifacts above, a `--full` run must also
+leave:
+
+5. Claude memory files written with `MEMORY.md` pointers
+6. mem0 entry saved (or `⚠️ mem0 unavailable (skipped)` recorded)
+
+If the session has no repo checkout, skip item 4 only and note that in the Phase 8 report.
 
 ## Doc discovery — prefer update over create
 
@@ -150,7 +204,9 @@ The independent `.md` file is the **handoff artifact**: a reader must be able to
 
 For each finding, run Phases 4–7 below.
 
-### Phase 4 — Write to Claude auto-memory
+### Phase 4 — Write to Claude auto-memory  (`--full` only)
+
+**Skipped by default mode.** Run only when the invocation includes `--full`.
 
 For each learning/finding:
 
@@ -180,7 +236,9 @@ For each learning/finding:
 5. Append pointer to `MEMORY.md` (create file if missing): `- [Title](filename) — one-liner`
 6. Report: `✅ Claude auto-memory: {filename}`
 
-### Phase 5 — Save to mem0
+### Phase 5 — Save to mem0  (`--full` only)
+
+**Skipped by default mode.** Run only when the invocation includes `--full`.
 
 1. Check: skip if `~/.hermes/scripts/mem0_shared_client.py` is absent
 2. Build text: `"{title}: {one_liner}. {body_1_sentence}"`
@@ -224,7 +282,9 @@ For each gap/finding that warrants tracking:
    ```
 3. Report: `✅ bead <bd-id> created/referenced`
 
-### Phase 7b — Create or update GitHub Issues (parallel with Phase 7)
+### Phase 7b — Create or update GitHub Issues (parallel with Phase 7)  (`--full` only)
+
+**Skipped by default mode.** Run only when the invocation includes `--full`. The lean default leaves beads as the sole tracker; mirroring to GitHub Issues is opt-in via `--full`.
 
 For each bead created in Phase 7, attempt to create a linked GitHub Issue. Run all issue creates in parallel.
 
@@ -254,14 +314,28 @@ Report: `✅ GH Issue #N created` or `⚠️ GH Issues disabled — bead bd-xxx 
 
 ### Phase 8 — Report
 
-List all: **path to Nextsteps summary doc**, beads updated/created, `roadmap/README.md` touched, memory files written, mem0 status, recommended next actions.
+**First line:** the chosen mode (see [Modes](#modes-read-first--determines-which-phases-run)).
 
-Include an explicit artifact checklist:
+Then list all: **path to Nextsteps summary doc**, beads updated/created, `roadmap/README.md` touched, memory files written, mem0 status, recommended next actions.
+
+Include an explicit artifact checklist **for the chosen mode**:
+
+**Default mode checklist:**
+
+- `[x]` **Nextsteps independent `.md`** (TOC + executive summary + full detail; bead index + linked beads in queue)
+- `[x]` Beads (`br`) written
+- `[x]` `~/roadmap/learnings-YYYY-MM.md` updated (includes nextsteps doc path)
+- `[x]` `roadmap/README.md` rolling activity updated
+- `[ ]` (intentionally blank — Claude memory + mem0 + GH Issues are owned by `--full`)
+
+**`--full` mode checklist:**
 
 - `[x]` **Nextsteps independent `.md`** (TOC + executive summary + full detail; bead index + linked beads in queue)
 - `[x]` Beads (`br`) written
 - `[x]` Claude memory + `MEMORY.md` pointers written
 - `[x]` `~/roadmap/learnings-YYYY-MM.md` updated (includes nextsteps doc path)
 - `[x]` `roadmap/README.md` rolling activity updated
+- `[x]` mem0 entry saved (or `⚠️ mem0 unavailable (skipped)`)
+- `[x]` GH Issues created (or `⚠️ GH Issues disabled — bead only`)
 
 **Merge-order sanity:** If any recommended action was “merge **A** before **B**” (or “land A then rebase B”), re-assert **A** using the Phase 1 `gh pr view` results from **this** run. If **A** is **MERGED**, do **not** tell the reader to land A; say instead to **rebase B on `main`** (or the appropriate default branch). If **A** is still **OPEN**, keep the ordering advice. If **A** is **CLOSED** without merge, drop merge-order advice and flag that the stack needs re-triage.
