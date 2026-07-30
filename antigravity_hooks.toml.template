@@ -1,0 +1,10 @@
+# antigravity (Gemini CLI) hooks.toml overlay
+# Documented at https://geminicli.com/docs/hooks/reference/.
+# Antigravity's AfterAgent event is the closest analogue to Claude/Codex Stop;
+# it is documented as carrying `cwd` and a `decision` field, but rate-limit
+# fields are not published.
+[hooks]
+[[hooks.AfterAgent]]
+command = "python3"
+args = ["-c", "import os, sys, runpy; os.environ['HERMES_HOOK_CLI']='antigravity'; os.environ['HERMES_HOOK_EVENT']='AfterAgent'; runpy.run_path(os.path.expanduser('~/.claude/hooks/cross_cli_status.py'), run_name='__main__')"]
+timeout = 15

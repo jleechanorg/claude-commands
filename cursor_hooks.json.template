@@ -1,0 +1,20 @@
+// Cursor hooks configuration — installed at <repo>/.cursor/hooks.json
+// Documented at https://cursor.com/docs/agent/hooks. The Stop event ships
+// a payload shaped like {conversation_id, generation_id, model, model_id,
+// model_params, status, loop_count} (no rate-limit fields); the
+// cross-cli hook records status + loop_count so callers can fire on
+// Cursor loop storms (loop_count >= 4 with status="error").
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "bash -lc 'repo_root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; for cand in \"$repo_root/.claude/hooks/cross_cli_status.py\" \"$repo_root/.codex/hooks/cross_cli_status.py\" \"$HOME/.claude/hooks/cross_cli_status.py\" \"$HOME/.codex/hooks/cross_cli_status.py\"; do if [ -x \"$cand\" ]; then HERMES_HOOK_CLI=cursor HERMES_HOOK_EVENT=stop exec \"$cand\"; fi; done; echo \"cross_cli_status.py not found (looked in repo and home hooks dirs)\" >&2; exit 1'",
+        "env": {
+          "HERMES_HOOK_CLI": "cursor",
+          "HERMES_HOOK_EVENT": "stop"
+        }
+      }
+    ]
+  }
+}
