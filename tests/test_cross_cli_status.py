@@ -384,12 +384,11 @@ class CrossCliHookTestCase(unittest.TestCase):
             capture_output=True,
             text=True,
             env=env,
-            cwd="/Users/jleechan/projects/worldarchitect.ai",
+            cwd=str(self.tmp),
             timeout=20,
         )
-        # We do not require the header to capture anything (depends on
-        # the actual git state of worldarchitect.ai) but we DO require
-        # exit 0 and a valid JSON record.
+        # We do not require the header to capture anything (self.tmp has no
+        # git state) but we DO require exit 0 and a valid JSON record.
         self.assertEqual(proc.returncode, 0)
         rec = json.loads(proc.stdout)
         self.assertIn("cli", rec)
