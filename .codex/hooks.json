@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -lc 'repo_root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; repo_script=\"$repo_root/.codex/hooks/cross_cli_status.py\"; home_script=\"$HOME/.codex/hooks/cross_cli_status.py\"; if [ -x \"$repo_script\" ]; then exec \"$repo_script\"; elif [ -x \"$home_script\" ]; then exec \"$home_script\"; else echo \"Missing cross_cli_status.py\" >&2; exit 1; fi'",
+            "command": "bash -lc 'repo_root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; repo_script=\"$repo_root/.codex/hooks/cross_cli_status.py\"; home_script=\"$HOME/.codex/hooks/cross_cli_status.py\"; if [ -x \"$repo_script\" ]; then HERMES_HOOK_CLI=codex HERMES_HOOK_EVENT=Stop exec \"$repo_script\"; elif [ -x \"$home_script\" ]; then HERMES_HOOK_CLI=codex HERMES_HOOK_EVENT=Stop exec \"$home_script\"; else echo \"Missing cross_cli_status.py\" >&2; exit 1; fi'",
             "timeoutSec": 30,
             "statusMessage": "Capturing cross-cli Stop status"
           },
