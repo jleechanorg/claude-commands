@@ -35,8 +35,7 @@ NEXTSTEPS_LOOSE = REPO_ROOT / ".claude" / "skills" / "nextsteps.md"
 
 # Verbatim user request, preserved per the task brief.
 USER_REQUEST = (
-    "Make /nextsteps only do beads and ~/roadmap and "
-    "/nextsteps --full does everything"
+    "Make /nextsteps only do beads and ~/roadmap and /nextsteps --full does everything"
 )
 
 
@@ -149,7 +148,11 @@ class NextstepsCommandContractTest(unittest.TestCase):
         """
         # We accept the same content distributed across command + skill files.
         combined = (
-            read(NEXTSTEPS_CMD) + "\n" + read(NEXTSTEPS_SKILL) + "\n" + read(NEXTSTEPS_LOOSE)
+            read(NEXTSTEPS_CMD)
+            + "\n"
+            + read(NEXTSTEPS_SKILL)
+            + "\n"
+            + read(NEXTSTEPS_LOOSE)
         )
         # Match on the unique "Make /nextsteps only do beads" prefix so we
         # don't false-positive on partial phrases elsewhere.
@@ -196,14 +199,11 @@ class NextstepsSkillContractTest(unittest.TestCase):
             r"only does? beads.*~/roadmap",
         ]
         # Table form (the Modes table has a row labeled `default`)
-        table_pattern = (
-            r"\|.*\*\*default\*\*.*\|.*\bbr\b.*~/roadmap"
-        )
+        table_pattern = r"\|.*\*\*default\*\*.*\|.*\bbr\b.*~/roadmap"
         combined = self.text
-        ok = (
-            any(re.search(p, combined, re.IGNORECASE | re.DOTALL) for p in sentence_patterns)
-            or re.search(table_pattern, combined, re.IGNORECASE | re.DOTALL)
-        )
+        ok = any(
+            re.search(p, combined, re.IGNORECASE | re.DOTALL) for p in sentence_patterns
+        ) or re.search(table_pattern, combined, re.IGNORECASE | re.DOTALL)
         self.assertTrue(
             ok,
             "default mode must be explicitly scoped to beads + ~/roadmap "
@@ -222,14 +222,11 @@ class NextstepsSkillContractTest(unittest.TestCase):
         ]
         # Table form: the Modes table has a `--full` row listing Claude memory
         # + mem0 + GH Issues as side effects.
-        table_pattern = (
-            r"\|.*--full.*\|.*Claude.*memory.*mem0.*GH\s*Issues"
-        )
+        table_pattern = r"\|.*--full.*\|.*Claude.*memory.*mem0.*GH\s*Issues"
         combined = self.text
-        ok = (
-            any(re.search(p, combined, re.IGNORECASE | re.DOTALL) for p in sentence_patterns)
-            or re.search(table_pattern, combined, re.IGNORECASE | re.DOTALL)
-        )
+        ok = any(
+            re.search(p, combined, re.IGNORECASE | re.DOTALL) for p in sentence_patterns
+        ) or re.search(table_pattern, combined, re.IGNORECASE | re.DOTALL)
         self.assertTrue(
             ok,
             "--full mode must explicitly preserve the legacy all-source "
@@ -250,9 +247,7 @@ class NextstepsSkillContractTest(unittest.TestCase):
         ):
             # Look for a heading line that mentions the phase number/name and
             # includes the `--full only` marker.
-            pattern = (
-                rf"###\s+{re.escape(phase_num)}[^#\n]*{phase_name}[^#\n]*`--full`\s*only"
-            )
+            pattern = rf"###\s+{re.escape(phase_num)}[^#\n]*{phase_name}[^#\n]*`--full`\s*only"
             self.assertRegex(
                 self.text,
                 pattern,
