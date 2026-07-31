@@ -33,6 +33,16 @@
             "description": "Display git status and branch information"
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'SCRIPT=\"\"; if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/cross_cli_status.py\" ] && SCRIPT=\"$ROOT/.claude/hooks/cross_cli_status.py\"; fi; if [ -z \"$SCRIPT\" ] && [ -x \"$HOME/.claude/hooks/cross_cli_status.py\" ]; then SCRIPT=\"$HOME/.claude/hooks/cross_cli_status.py\"; fi; [ -n \"$SCRIPT\" ] && HERMES_HOOK_CLI=claude HERMES_HOOK_EVENT=Stop exec python3 \"$SCRIPT\"; exit 0'",
+            "description": "Cross-CLI Stop status: claude, codex, cursor, antigravity, agy"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
