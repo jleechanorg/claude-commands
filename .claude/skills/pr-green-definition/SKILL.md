@@ -1,97 +1,83 @@
 ---
 name: pr-green-definition
-description: Canonical 7-green PR merge criteria, PR status check pattern, PR freeze discipline, and admin merge protocol
+description: Use when checking whether a pull request is merge-ready or before executing an authorized merge.
 type: policy
 ---
 
-# PR "Green" Definition (7-Green)
+# PR Green Definition
 
-A PR is "green" (merge-ready) when **all 7 conditions** hold:
+A PR is `/green` only when exactly two gates pass at the same current HEAD SHA:
 
-| # | Condition | Verification |
-|---|---|---|
-| 1 | **CI passing** | All checks show SUCCESS |
-| 2 | **No merge conflicts** | mergeable: MERGEABLE |
-| 3 | **CodeRabbit APPROVED** | CR must post explicit APPROVED review state (configured via `.coderabbit.yaml` `approve=true`); COMMENTED alone does not pass |
-| 4 | **Bugbot clean** | Zero error-severity comments from cursor[bot] |
-| 5 | **All inline comments resolved** | Zero unresolved non-nit inline review comments |
-| 6 | **Evidence review passed** | evidence-review-bot APPROVED or evidence-gate CI passed |
-| 7 | **Skeptic PASS** | github-actions[bot] posted VERDICT: PASS on the PR (from skeptic-cron.yml workflow) |
+| Gate | Pass condition |
+|---|---|
+| CI | Every required non-advisory check is terminal with a successful conclusion |
+| Conflicts | GitHub reports `mergeable == MERGEABLE` |
 
-**Pre-merge verification is MANDATORY.** Before executing any merge command (`gh pr merge`, `gh api .../merge`), verify all 7 gates pass. If ANY gate fails, do NOT merge — fix the failing gate first. Merging a non-green PR is a commitment integrity violation.
+CodeRabbit and Bugbot are advisory reviewers. Evidence, `/advice`, and
+review-thread cleanup are draft-phase quality work, not extra `/green` gates.
 
-## Verification Procedure (Mandatory)
+## Verification
 
-**WARNING: `gh pr checks` is NOT sufficient for 7-green verification.** The Green Gate workflow always exits 0 (success), so `gh pr checks` shows "Green Gate: pass" even when individual gates FAIL. The "CodeRabbit: pass" line means the webhook responded, NOT that CodeRabbit gave an APPROVED review.
+1. Resolve the PR and capture its full URL and `headRefOid`.
+2. Inspect `statusCheckRollup`. A `CheckRun` uses `.status` and `.conclusion`;
+   a `StatusContext` uses `.state`.
+3. Exclude the exact advisory contexts `CodeRabbit` and `Cursor Bugbot` from
+   the CI gate.
+4. Require every remaining check to be terminal and one of
+   `SUCCESS`, `NEUTRAL`, or `SKIPPED`.
+5. Require `mergeable == MERGEABLE`; retry only while it is `UNKNOWN`.
+6. Re-read `headRefOid`. If it changed, discard the verdict and start again.
 
-### Step-by-step verification
-
-Given a PR number `N` and its branch name `BRANCH`:
-
-```bash
-# 1. Get branch name
-BRANCH=$(gh pr view N --repo OWNER/REPO --json headRefName --jq '.headRefName')
-
-# 2. Get latest Green Gate run ID (use workflow file name to avoid ambiguity)
-RUN_ID=$(gh run list --workflow green-gate.yml --repo OWNER/REPO --branch "$BRANCH" -L 1 --json databaseId --jq '.[0].databaseId')
-
-# 3. Read gate-by-gate results (THE ONLY RELIABLE CHECK)
-gh run view "$RUN_ID" --repo OWNER/REPO --log 2>/dev/null | grep -E "GATE-[1-5] (PASS|FAIL)"
-
-# 4. Get latest Skeptic Gate run (use workflow file name)
-SKEPTIC_ID=$(gh run list --workflow skeptic-gate.yml --repo OWNER/REPO --branch "$BRANCH" -L 1 --json databaseId --jq '.[0].databaseId')
-
-# 5. Read skeptic verdict
-gh run view "$SKEPTIC_ID" --repo OWNER/REPO --log 2>/dev/null | grep -E "VERDICT"
-
-# 6. Cross-reference CR review state (do NOT trust gh pr checks)
-gh pr view N --repo OWNER/REPO --json reviews --jq '[.reviews[] | select(.state != "COMMENTED") | {author: .author.login, state: .state}] | last'
-```
-
-### What each gate checks
-
-| Gate | `gh pr checks` shows | Actually verifies |
-|------|---------------------|-------------------|
-| 1 | CI check statuses | `commits/{sha}/status` API = "success" |
-| 2 | (not shown) | `pulls/{N}` API `.mergeable` = true |
-| 3 | "CodeRabbit: pass" (MISLEADING) | Latest non-COMMENTED coderabbitai review = APPROVED |
-| 4 | "Cursor Bugbot: pass" (MISLEADING) | cursor[bot] check conclusion = success, no error comments |
-| 5 | (not shown) | GraphQL: zero unresolved review threads |
-| 6 | (not shown) | Evidence review bot APPROVED |
-| 7 | "Skeptic Gate: pass" (MISLEADING) | VERDICT: PASS posted by skeptic-cron |
-
-**Rule**: A PR is 7-green ONLY when all 7 gates show PASS in the workflow logs. Never report 7-green status based on `gh pr checks` output alone.
-
-## PR status check — canonical pattern (mandatory)
-
-**Every PR status check (loops, hooks, one-off) MUST check merge/close state FIRST:**
+The following query shape was verified against a live PR:
 
 ```bash
-# STEP 0 — always first. If merged/closed, stop checking green conditions.
-gh api repos/OWNER/REPO/pulls/N --jq '{state, merged}'
-# If merged:true or state:"closed" → report and exit. Do NOT check mergeable_state, reviews, etc.
+gh pr view N --repo OWNER/REPO \
+  --json url,headRefOid,mergeable,statusCheckRollup \
+  --jq '
+    def check_label: (.name // .context // "");
+    def advisory:
+      (check_label | test("^(CodeRabbit|Cursor Bugbot)$"; "i"));
+    {
+      url: .url,
+      head: .headRefOid,
+      mergeable: .mergeable,
+      pending: [
+        .statusCheckRollup[]
+        | select(
+            (advisory | not)
+            and (
+              (.__typename == "CheckRun" and .status != "COMPLETED")
+              or
+              (.__typename == "StatusContext"
+               and (.state == "PENDING" or .state == "EXPECTED"))
+            )
+          )
+        | check_label
+      ],
+      failed: [
+        .statusCheckRollup[]
+        | select(
+            (advisory | not)
+            and (
+              (.__typename == "CheckRun"
+               and .status == "COMPLETED"
+               and ((.conclusion == "SUCCESS"
+                     or .conclusion == "NEUTRAL"
+                     or .conclusion == "SKIPPED") | not))
+              or
+              (.__typename == "StatusContext" and .state != "SUCCESS")
+            )
+          )
+        | check_label
+      ]
+    }'
 ```
 
-Why: `mergeable_state` returns `unknown` for merged PRs (identical to its transient CI-running state). Checking only these fields causes loops to report "blocked" on already-merged PRs for hours.
+Gate 1 passes when `pending` and `failed` are empty. Gate 2 passes only when
+`mergeable` is `MERGEABLE`.
 
-## PR Freeze Discipline
+## Merge Boundary
 
-**Pre-push commit count check**: Before pushing a PR branch, run COMMITS=$(git rev-list --count origin/main..HEAD). If > 5 commits, warn: "N commits — squash before final review to avoid CR incremental stall and merge conflicts."
-
-**Squash before final merge**: When all 7-green conditions are met (or CR has verbally approved in comments), squash all commits into ONE before pushing:
-
-```bash
-git reset --soft origin/main
-git commit -m "feat(scope): concise single-commit message"
-git push --force-with-lease
-```
-
-Then let skeptic-cron merge (or `gh pr merge N --squash --admin`).
-
-**Why**: 16-commit PR #412 took 5 review rounds. CR treats squashed commits as "already reviewed" and refuses re-review. 1-commit squash merged in one shot.
-
-**Never use `git commit --no-edit`** after a merge conflict — it steals origin/main's commit message. Always provide an explicit squash commit message.
-
-**Admin merge** (when CR is in incremental stall): `gh pr merge N --squash --admin --subject "feat(scope): message"`. Verify `gh api repo --jq .permissions.admin` first.
-
-**Export PR admin merge**: For `jleechanorg/claude-commands` export PRs (title contains "Export"), when `cr-loop-guard.sh` returns `skip` AND CR state is `CHANGES_REQUESTED` on acknowledged design limitations (not code bugs), treat the PR as merge-ready.
+`/green` verifies; it does not merge. Before any merge, satisfy the target
+repository's live authorization rule. A new commit invalidates `/green` and
+every SHA-bound draft verdict.

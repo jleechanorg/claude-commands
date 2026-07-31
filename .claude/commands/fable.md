@@ -60,7 +60,7 @@ This command is a session-level contract. Once invoked, the rules below apply to
 
 ## Cross-references
 
-- Skill: `~/.claude/skills/parallel-subagents/` (when to fan out)
+- Skill: `~/.claude/skills/superpowers-dispatching-parallel-agents/SKILL.md` (when to fan out)
 - Skill: `~/.claude/skills/zero-framework-cognition/SKILL.md` (the "hardest stuff" that Fable is reserved for)
 - Skill: `~/.claude/skills/root-cause-first/SKILL.md` (RCF = Fable territory)
 - Hook: `~/.claude/hooks/rtk.sh` (token-savings on shell commands; always-on, not /fable-specific)
