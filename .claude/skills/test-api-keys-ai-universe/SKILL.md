@@ -218,9 +218,9 @@ Set up a cron job to test keys periodically:
 
 ## Related Skills
 
-- [ai-universe-auth.md](ai-universe-auth.md) - Authentication setup for AI Universe MCP server
-- [ai-universe-httpie.md](ai-universe-httpie.md) - Using HTTPie with AI Universe APIs
-- [gcp-deployment.md](gcp-deployment.md) - GCP deployment and service management
+- [ai-universe-auth](../ai-universe-auth/SKILL.md) - Authentication setup for AI Universe MCP server
+- [ai-universe-httpie](../ai-universe-httpie/SKILL.md) - Using HTTPie with AI Universe APIs
+- [gcp-deployment](../gcp-deployment/SKILL.md) - GCP deployment and service management
 
 ## Script Location
 

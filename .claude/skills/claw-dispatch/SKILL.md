@@ -11,7 +11,7 @@ description: Use when dispatching work through the Hermes gateway with /claw, es
 
 | Input | Default action |
 |-------|---------------|
-| PR number (`#633`, `PR 633`, `633`) | Expand to "bring to 7-green" + post to Slack → Hermes (5 attempt cap) |
+| PR number (`#633`, `PR 633`, `633`) | Expand to "complete draft quality and bring to `/green`" + post to Slack → Hermes (5 attempt cap) |
 | General task description | Post to Slack → Hermes |
 | `--max-attempts N` | Override attempt cap (default 5 for PR tasks) |
 | `--bidi` prefix | Hermes interactive session (streaming) |
@@ -105,7 +105,7 @@ fi
 TASK_WITH_RESOLVED="$TASK_DESCRIPTION"
 
 # PR shorthand expansion: when the task is a bare PR number (e.g. "6976", "PR 6976",
-# "#6976"), expand it to the full "bring to 7-green" task with repo auto-detection.
+# "#6976"), expand it to the full "complete draft quality and bring to /green" task with repo auto-detection.
 PR_NUMBER=$(printf '%s' "$TASK_DESCRIPTION" | python3 -c "
 import sys, re
 text = sys.stdin.read().strip()
@@ -127,7 +127,7 @@ if m:
   else
     PR_URL="PR #${PR_NUMBER}"
   fi
-  TASK_WITH_RESOLVED="Bring ${PR_URL} to 7-green. Fix CI failures, resolve review comments, address CodeRabbit issues, resolve merge conflicts, and ensure all checks pass. Use /green ${PR_NUMBER} to verify. Act autonomously — do not ask for permission to fix things. IMPORTANT: attempt at most ${CLAW_MAX_ATTEMPTS:-5} fix-push-CI cycles. After reaching the limit, post a status summary of remaining blockers and stop — do not continue iterating."
+  TASK_WITH_RESOLVED="Bring ${PR_URL} through draft quality and to /green. Fix CI failures, resolve applicable review comments, triage advisory bot feedback, resolve merge conflicts, and ensure required checks pass. Use /green ${PR_NUMBER} to verify the two current-head gates. Act autonomously — do not ask for permission to fix things. IMPORTANT: attempt at most ${CLAW_MAX_ATTEMPTS:-5} fix-push-CI cycles. After reaching the limit, post a status summary of remaining blockers and stop — do not continue iterating."
   TASK_DESCRIPTION="$TASK_WITH_RESOLVED"
 fi
 

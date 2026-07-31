@@ -122,7 +122,7 @@ Print a summary table:
 | Auto-merge (`scm.mergePR()`) | `src/scm/` |
 | Stuck/idle session detection | `src/lifecycle-manager/` |
 | Session state reactions | `src/session-manager/` |
-| CodeRabbit approval check | `src/session-manager/` |
+| Advisory review triage | `src/session-manager/` |
 | Spawn sessions for PRs | `ao spawn` CLI |
 
 ### jleechanclaw — BUILT (not in upstreams)

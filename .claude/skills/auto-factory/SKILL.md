@@ -102,28 +102,31 @@ For new-work beads, check for new PR:
 gh pr list --repo "$TARGET_REPO" --head "factory/<bead_id>-r<attempt>" --state open --json number,url
 ```
 
-## 7. Verifier tick (gate assessment)
+## 7. Verifier tick
 
-For every ATTESTED bead (PR opened/updated), run the 7 gates:
+For every ATTESTED bead (PR opened/updated), evaluate the two current-head
+`/green` gates and the separate draft-quality signals:
 
 ```bash
 gh pr view <pr> --repo "$TARGET_REPO" --json headRefOid,mergeable,reviewDecision,statusCheckRollup
 gh pr checks <pr> --repo "$TARGET_REPO" --json name,state,conclusion
 ```
 
-Assess each gate:
-- ci_green: every check `conclusion=success` (or state=SUCCESS)
-- no_conflicts: `mergeable=MERGEABLE`, mergeStateStatus not DIRTY
-- coderabbit: latest `coderabbitai[bot]` review APPROVED
-- bugbot: zero error-severity `cursor[bot]` comments
-- comments_resolved: every reviewThread `isResolved=true`
-- evidence_review: 5-criterion /er rubric pass
-- skeptic: parallel minimax cold review
+`/green` gates:
+- `ci_green`: every required non-advisory check is terminal and successful
+- `no_conflicts`: `mergeable=MERGEABLE`
+
+Draft quality:
+- CodeRabbit and Bugbot findings: advisory, triage actionable feedback
+- comments: resolve applicable non-nit review threads
+- evidence: satisfy `/es` and `/er`
+- advice: obtain the required `/advice` verdict
 
 Record via `$H gate-assessment <bead_id> <pr> '<gates_json>'`.
 
-All-green → `$H ready <bead_id> <pr>` (terminal state; verifier stops driving).
-Any-red → `$H reroll-verdict <bead_id> <pr> <in_place_fixable|reroll_worthy> "<rationale>"`.
+Draft quality complete plus both `/green` gates → `$H ready <bead_id> <pr>`
+(terminal state; verifier stops driving). Otherwise record the failing green
+gate or draft-quality blocker and reroll.
 
 ## 8. Autonomy time-box
 

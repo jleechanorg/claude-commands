@@ -244,7 +244,7 @@ fi
 
 **Source of truth: `scripts/shared_config.sh`** (read it for current values; do not trust hardcoded numbers here). As of this writing: `WORLDARCH_MAX_INSTANCES=40` (maxScale), `WORLDARCH_CONCURRENCY=40` (containerConcurrency), `WORLDARCH_MEMORY=16Gi`, `WORLDARCH_CPU=4`; `MIN_INSTANCES`=1 for stable/dev, 0 for preview/ephemeral (`deploy.sh`).
 
-> The service runs as **multiple load-balanced instances with no session affinity** — see [distributed-caching.md](distributed-caching.md) before adding any in-process cache.
+> The service runs as **multiple load-balanced instances with no session affinity** — see [distributed-caching](../distributed-caching.md) before adding any in-process cache.
 
 **Why multiple instances**:
 - maxScale sized via Little's law (QPS × mean_turn_seconds / concurrency); concurrency spreads the CPU-bound ~450K-char instruction build across instances

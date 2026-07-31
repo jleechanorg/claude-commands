@@ -4,7 +4,7 @@
 <ONE of: green-pr-merged | pr-open-green | local-state-verified | dry-run-on-machine>
 
 ### Proof artifact
-<exact artifact the agent must produce at completion — e.g. "PR #N on $GITHUB_REPOSITORY, Green Gate workflow log showing 7/7 gates PASS, /er PASS verdict, screenshot of /campaigns/new after merge">
+<exact artifact the agent must produce at completion — e.g. "PR #N on $GITHUB_REPOSITORY, required current-head CI successful, mergeable/no conflicts, /er PASS verdict, screenshot of /campaigns/new after merge">
 
 ## Scope
 - Repo(s): <owner/repo>
@@ -35,7 +35,7 @@
   - <workflow 2> — PASS
   - ...
 - Green Gate exit-0 is NOT sufficient — read the Green Gate workflow log and assert gate-by-gate PASS for the named gates from prior sessions on this repo (Phase 2 output)
-- 7-green means: <list the 7 gates if this repo runs them; else list the repo's actual green bar>
+- `/green` has exactly two gates: required current-head CI successful and mergeable/no conflicts.
 - Failure on a gate = iterate the fix, push to PR head branch (pr-ci-fix-autopush rule: push without being asked), re-check. Do NOT report "fixed" until the new head SHA shows the gate green.
 
 ## Quality bar (adversarial gates this repo uses)

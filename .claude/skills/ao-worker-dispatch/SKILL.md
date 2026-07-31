@@ -103,20 +103,21 @@ If the user asked for Codex workers, the session is invalid unless:
 
 If verification fails, kill and respawn the session. Do not continue with a mismatched worker.
 
-## Post-push CodeRabbit verification (worker responsibility)
+## Post-push advisory review triage
 
-CI passing does **not** imply CodeRabbit re-reviewed. The latest review can remain `CHANGES_REQUESTED` or `COMMENTED` until a new review is submitted **after** your fix push.
+CI passing does **not** imply that advisory reviewers re-reviewed the latest
+commit. Read new feedback after a fix push, but do not redefine `/green`.
 
 **After every push** that is meant to clear review feedback:
 
 1. **Wait for GitHub checks** to finish (do not declare done while checks are `pending` or `in_progress`).
-2. **Inspect CodeRabbit’s latest review** (must be tied to the current head or newer than your push):
+2. **Inspect CodeRabbit’s latest review** for actionable new feedback:
    ```bash
    gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews \
      --jq '[.[] | select(.user.login=="coderabbitai[bot]")] | sort_by(.submitted_at) | .[-1] | {state, submitted_at}'
    ```
-3. If state is not `APPROVED`, do **not** treat the PR as merge-ready. Post `@coderabbitai all good?` once checks have settled (see harness `CLAUDE.md` PR Green Loop), then re-check after a new review appears.
-4. If the latest CR review’s `submitted_at` is **older than** the timestamp of your latest fix commit on the PR branch, assume review is **stale** until a new review lands.
+3. If the review predates the fix, label it stale. Request one re-review only
+   when useful; silence or a non-approval state is not a `/green` blocker.
 
 Same pattern applies to other blocking checks: confirm the **bot state reflects the latest SHA**, not only that CI is green.
 
@@ -126,7 +127,7 @@ Send a nudge if the worker:
 - Has >4 changed files with 0 commits at >40% context
 - Is referencing a PR number that is not its own PR
 - Has been "thinking" (Gitifying/Ebbing/Booping) for >10 minutes with no output
-- Declares "done" or "ready for merge" while CodeRabbit’s latest review is not `APPROVED` at current head
+- Declares `/green` without verifying required current-head CI and live mergeability
 
 ## ao send broken pipe — retry pattern
 

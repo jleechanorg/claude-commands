@@ -197,6 +197,6 @@ The API endpoint requires Firebase authentication.
 
 ## Related Skills
 
-- [browser-testing-ocr-validation.md](browser-testing-ocr-validation.md) - OCR validation for browser tests
-- [chrome-superpowers-reference.md](chrome-superpowers-reference.md) - Chrome Superpowers MCP reference
-- [playwright-mcp-manual-interaction.md](playwright-mcp-manual-interaction.md) - Playwright MCP manual interaction
+- [browser-testing-ocr-validation](../browser-testing-ocr-validation/SKILL.md) - OCR validation for browser tests
+- [chrome-superpowers-reference](../chrome-superpowers-reference/SKILL.md) - Chrome Superpowers MCP reference
+- [playwright-mcp-manual-interaction](../playwright-mcp-manual-interaction/SKILL.md) - Playwright MCP manual interaction

@@ -160,6 +160,6 @@ echo $FIREBASE_PROJECT_ID  # Should output your project ID
 
 ## See Also
 
-- [ai-universe-auth.md](ai-universe-auth.md) - Authentication setup guide
-- [ai-universe-httpie.md](ai-universe-httpie.md) - HTTPie usage examples
-- [second_opinion.md](../commands/second_opinion.md) - Command documentation
+- [ai-universe-auth](../ai-universe-auth/SKILL.md) - Authentication setup guide
+- [ai-universe-httpie](../ai-universe-httpie/SKILL.md) - HTTPie usage examples
+- [second_opinion.md](../../commands/second_opinion.md) - Command documentation
