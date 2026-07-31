@@ -7,4 +7,4 @@
 [[hooks.AfterAgent]]
 command = "python3"
 args = ["-c", "import os, sys, runpy; os.environ['HERMES_HOOK_CLI']='antigravity'; os.environ['HERMES_HOOK_EVENT']='AfterAgent'; runpy.run_path(os.path.expanduser('~/.claude/hooks/cross_cli_status.py'), run_name='__main__')"]
-timeout = 15
+timeout = 15000

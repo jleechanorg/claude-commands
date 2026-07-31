@@ -93,7 +93,14 @@ HOME = Path(os.environ.get("HOME") or str(Path.home()))
 STATE_DIR = HOME / ".claude" / "var" / "cross_cli_status"
 LAST_PATH = STATE_DIR / "last.json"
 HISTORY_PATH = STATE_DIR / "history.jsonl"
-HISTORY_MAX = int(os.environ.get("CROSS_CLI_STATUS_HISTORY_MAX", "500"))
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+HISTORY_MAX = _int_env("CROSS_CLI_STATUS_HISTORY_MAX", 500)
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +158,11 @@ def detect_cli(payload: Mapping[str, Any]) -> str:
             return "codex"
     if "conversation_id" in payload and "generation_id" in payload:
         return "cursor"
+    # Antigravity (Gemini CLI) AfterAgent payload: {cwd, session_id, model,
+    # decision}. No published Stop payload; `decision` is the only field
+    # unique to this shape among the CLIs covered here.
+    if "decision" in payload:
+        return "antigravity"
     if "session_id" in payload and "model" in payload and "transcript_path" in payload:
         return "claude"
     if "lastAssistantMessage" in payload or "thread_id" in payload:
@@ -204,8 +216,10 @@ def extract_claude(payload: Mapping[str, Any]) -> dict[str, Any]:
         ))),
         "rate_limit_pct": _coerce_int(
             five.get("used_percentage")
-            or seven.get("used_percentage")
-            or _resolve(payload, ("rate_limit_pct",))
+            if five.get("used_percentage") is not None
+            else seven.get("used_percentage")
+            if seven.get("used_percentage") is not None
+            else _resolve(payload, ("rate_limit_pct",))
         ),
         "rate_limit_window": (
             "5h" if five.get("used_percentage") is not None
@@ -213,7 +227,9 @@ def extract_claude(payload: Mapping[str, Any]) -> dict[str, Any]:
             else None
         ),
         "rate_limit_reset_at": _coerce_int(
-            five.get("resets_at") or seven.get("resets_at")
+            five.get("resets_at")
+            if five.get("resets_at") is not None
+            else seven.get("resets_at")
         ),
         "session_id": payload.get("session_id"),
         "version": payload.get("version"),
@@ -345,15 +361,18 @@ def _capture_git_header(cwd: str) -> tuple[str | None, str | None]:
             continue
         try:
             proc = subprocess.run(
-                ["bash", script, "--status-only"],
+                [shutil.which("bash") or "bash", script, "--status-only"],
                 cwd=cwd,
                 capture_output=True,
                 text=True,
-                timeout=8,
+                timeout=30,
                 check=False,
+                shell=False,
                 env={**os.environ, "COLUMNS": "500"},
             )
-        except Exception:
+        except (subprocess.SubprocessError, OSError) as exc:
+            print(f"cross_cli_status: git-header capture failed for {script}: {exc}",
+                  file=sys.stderr)
             continue
         out = (proc.stdout or "").strip()
         if not out:
@@ -459,10 +478,10 @@ def main(argv: list[str] | None = None) -> int:
         record["error"] = "unknown_cli_payload"
     else:
         record.update(extractor(payload))
-        record["cwd"] = (
-            record.get("cwd")
-            or _resolve(payload, ("cwd", "workspace.current_dir", "working_dir"))
-        )
+    record["cwd"] = (
+        record.get("cwd")
+        or _resolve(payload, ("cwd", "workspace.current_dir", "working_dir"))
+    )
 
     if not args.no_header and record.get("cwd"):
         status_line, pr_url = _capture_git_header(str(record["cwd"]))

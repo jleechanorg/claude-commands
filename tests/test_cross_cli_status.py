@@ -192,6 +192,23 @@ class CrossCliHookTestCase(unittest.TestCase):
         self.assertEqual(rec["rate_limit_window"], "7d")
         self.assertEqual(rec["rate_limit_reset_at"], 1785999999)
 
+    def test_claude_zero_five_hour_usage_is_not_dropped(self) -> None:
+        # A freshly-reset 5h window reports used_percentage=0. An `or`
+        # chain would treat that falsy 0 as "missing" and fall through to
+        # the (nonzero) seven-day value while still labeling the window
+        # "5h" — corrupting the record. 0 must be preserved.
+        payload = json.loads(json.dumps(CLAUDE_FIXTURE))
+        payload["rate_limits"] = {
+            "five_hour": {"used_percentage": 0, "resets_at": 1785400000},
+            "seven_day": {"used_percentage": 81, "resets_at": 1785999999},
+        }
+        proc = _run_hook(json.dumps(payload),
+                         env_overrides={"HERMES_HOOK_CLI": "claude"})
+        rec = json.loads(proc.stdout)
+        self.assertEqual(rec["rate_limit_pct"], 0)
+        self.assertEqual(rec["rate_limit_window"], "5h")
+        self.assertEqual(rec["rate_limit_reset_at"], 1785400000)
+
     def test_claude_legacy_statusline_shape_detected(self) -> None:
         # No HERMES_HOOK_CLI env. Detection must still pick claude from
         # the rate_limits.five_hour key + session_id + transcript_path.
@@ -310,6 +327,16 @@ class CrossCliHookTestCase(unittest.TestCase):
         self.assertEqual(rec["error"], "unknown_cli_payload")
         # Non-strict by default: exit 0.
         self.assertEqual(proc.returncode, 0)
+
+    def test_unknown_payload_still_resolves_cwd(self) -> None:
+        # cwd resolution previously lived only in the extractor-found
+        # branch, so an unrecognized payload never got a "cwd" key even
+        # when the raw payload carried a resolvable cwd field.
+        proc = _run_hook(json.dumps({"foo": "bar", "cwd": "/tmp/some-project"}),
+                         env_overrides={"HERMES_HOOK_CLI": "unknown"})
+        rec = json.loads(proc.stdout)
+        self.assertEqual(rec["cli"], "unknown")
+        self.assertEqual(rec["cwd"], "/tmp/some-project")
 
     def test_strict_unknown_payload_exits_2(self) -> None:
         proc = subprocess.run(

@@ -22,8 +22,8 @@ import time
 import unittest
 from pathlib import Path
 
-HOOK = Path(__file__).resolve().parents[1] / ".claude" / "hooks" / "cross_cli_status.py"
-LAST = Path.home() / ".claude" / "var" / "cross_cli_status" / "last.json"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+HOOK = REPO_ROOT / ".claude" / "hooks" / "cross_cli_status.py"
 
 
 @unittest.skipUnless(
@@ -32,14 +32,39 @@ LAST = Path.home() / ".claude" / "var" / "cross_cli_status" / "last.json"
 )
 class LiveCrossCliStopTestCase(unittest.TestCase):  # type: ignore[misc]
     def setUp(self) -> None:
+        self.original_home = os.environ.get("HOME")
         self.tmp = Path(tempfile.mkdtemp(prefix="cross-cli-live-"))
         os.environ["HOME"] = str(self.tmp)
         os.environ["CROSS_CLI_STATUS_HISTORY_MAX"] = "5"
-        LAST.parent.mkdir(parents=True, exist_ok=True)
-        if LAST.exists():
-            LAST.unlink()
+        self.last_path = self.tmp / ".claude" / "var" / "cross_cli_status" / "last.json"
+        self.last_path.parent.mkdir(parents=True, exist_ok=True)
+        # Install a minimal Stop-hook registration into the isolated HOME so
+        # a spawned CLI actually discovers and invokes the hook — without
+        # this, the CLI reads $HOME/.claude/settings.json from the fresh
+        # temp dir, finds no hooks configured, and never fires it.
+        settings_dir = self.tmp / ".claude"
+        settings_dir.mkdir(parents=True, exist_ok=True)
+        (settings_dir / "settings.json").write_text(json.dumps({
+            "hooks": {
+                "Stop": [
+                    {
+                        "matcher": "*",
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": f'python3 "{HOOK}"',
+                            }
+                        ],
+                    }
+                ]
+            }
+        }))
 
     def tearDown(self) -> None:
+        if self.original_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = self.original_home
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _spawn(self, cli: str, prompt: str, timeout: int = 90) -> dict:
@@ -60,9 +85,9 @@ class LiveCrossCliStopTestCase(unittest.TestCase):  # type: ignore[misc]
             },
             timeout=timeout,
         )
-        if not LAST.exists():
-            self.fail(f"Stop hook did not write {LAST}; stderr={proc.stderr[:400]}")
-        return json.loads(LAST.read_text())
+        if not self.last_path.exists():
+            self.fail(f"Stop hook did not write {self.last_path}; stderr={proc.stderr[:400]}")
+        return json.loads(self.last_path.read_text())
 
     def test_claude_stop_records_rate_limit(self) -> None:
         rec = self._spawn("claude", "Reply with one word: ping")

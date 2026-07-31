@@ -63,7 +63,7 @@ if [ -n "$cross_cli_status" ]; then
   # normalized record; the script writes ~/.claude/var/cross_cli_status/last.json
   # itself. We discard stdout to keep the Codex response clean.
   printf '%s' "$input" | HERMES_HOOK_CLI=codex HERMES_HOOK_EVENT=Stop \
-      python3 "$cross_cli_status" --no-header >/dev/null 2>&1 || \
+      python3 "$cross_cli_status" >/dev/null 2>&1 || \
       printf 'cross-cli: FAIL (ignored)\n' >> "$log_file"
 fi
 
