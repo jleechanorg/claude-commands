@@ -1,5 +1,6 @@
 ---
-description: Orientation guide for navigating the WorldArchitect.ai repository and tooling
+name: worldarchitect-codebase-sherpa
+description: Use when orienting in the WorldArchitect.ai repository, locating subsystems, or selecting its tooling.
 type: usage
 scope: project
 ---

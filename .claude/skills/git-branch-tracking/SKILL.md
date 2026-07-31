@@ -1,3 +1,8 @@
+---
+name: git-branch-tracking
+description: Use when a local branch has no upstream, a branch was pushed without tracking, or a PR branch needs remote verification.
+---
+
 # Git Branch Tracking & PR Workflow
 
 **Purpose**: Ensure proper remote branch tracking after creating PRs to avoid "no remote" and "no upstream" status issues.

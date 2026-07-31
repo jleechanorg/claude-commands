@@ -1,5 +1,6 @@
 ---
-description: How to start a local development server for Your Project
+name: local-dev-server
+description: Use when starting or troubleshooting the local development server for a WorldArchitect-derived project.
 ---
 
 # Running the Local Development Server

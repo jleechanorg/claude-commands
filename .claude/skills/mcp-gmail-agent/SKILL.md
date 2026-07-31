@@ -1,5 +1,6 @@
 ---
-description: MCP Gmail Agent - Email Automation and Processing with Model Context Protocol
+name: mcp-gmail-agent
+description: Use when automating or processing Gmail through an MCP server.
 type: setup
 scope: project
 ---

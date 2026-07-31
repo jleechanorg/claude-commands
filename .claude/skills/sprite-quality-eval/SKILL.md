@@ -1,3 +1,8 @@
+---
+name: sprite-quality-eval
+description: Use when evaluating generated sprite quality, consistency, transparency, framing, or animation readiness.
+---
+
 # Sprite Quality Evaluation — Strict Visual Assessment
 
 Evaluate sprite quality via **visual analysis only**. No pixel metrics, no PIL — only `mcp__minimax__understand_image`.

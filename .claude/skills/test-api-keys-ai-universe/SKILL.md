@@ -1,5 +1,6 @@
 ---
-description: Test API keys against jleechanorg/ai_universe repository services
+name: test-api-keys-ai-universe
+description: Use when testing API keys against services exposed by the ai_universe repository.
 type: testing
 scope: project
 ---

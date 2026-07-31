@@ -1,5 +1,6 @@
 ---
-description: Use Oracle CLI in browser mode (no API key) for context bundling and analysis
+name: oracle-browser-usage
+description: Use when running Oracle CLI in browser mode without an API key for context bundling or analysis.
 type: usage
 scope: oracle
 ---

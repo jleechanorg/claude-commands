@@ -1,5 +1,6 @@
 ---
-description: Sparse conversation history triage for current repo/worktree using ~/.claude/projects and ~/.codex/sessions with strict context budgets.
+name: conversation-history-sparse
+description: Use when searching recent Claude or Codex conversation history for the current repository under a strict context budget.
 type: analysis
 scope: project
 ---

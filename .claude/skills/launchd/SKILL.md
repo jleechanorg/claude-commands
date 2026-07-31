@@ -1,3 +1,8 @@
+---
+name: launchd
+description: Use when creating, changing, loading, or troubleshooting a macOS launchd job.
+---
+
 # macOS launchd Job Installation Standards
 
 ## Purpose

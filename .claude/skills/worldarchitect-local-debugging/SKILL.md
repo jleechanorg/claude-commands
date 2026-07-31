@@ -1,3 +1,8 @@
+---
+name: worldarchitect-local-debugging
+description: Use when reproducing or debugging WorldArchitect locally across server, auth, Firebase, LLM, or browser paths.
+---
+
 # Your Project Local Debugging Reference
 
 ## Log File Locations

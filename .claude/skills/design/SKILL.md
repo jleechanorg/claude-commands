@@ -1,5 +1,6 @@
 ---
-description: Generate HTML + MD design docs for a feature or PR, matching the repo's existing design doc style. Always produces both formats in parallel.
+name: design
+description: Use when a feature or PR needs a design document matching the repository's established format.
 ---
 
 Generate a design reference doc for the current feature or PR.

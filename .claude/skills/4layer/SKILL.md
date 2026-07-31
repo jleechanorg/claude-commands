@@ -1,5 +1,6 @@
 ---
-description: /4layer - Four-Layer Minimal Repro Testing Protocol
+name: 4layer
+description: Use when a blocker needs a minimal reproduction across progressively more realistic test layers.
 type: testing
 execution_mode: immediate
 ---
@@ -14,6 +15,9 @@ Primary source is the existing command definition and protocol companion:
 
 ## Minimal Repro Ladder
 
+Prerequisite: set `$PROJECT_ROOT` to your repository root, or replace it with the
+absolute repository path in the commands below.
+
 Run tests in this order and stop at the first layer that conclusively reproduces the blocker:
 
 1. Unit tests (`$PROJECT_ROOT/tests/`)
@@ -22,10 +26,10 @@ Run tests in this order and stop at the first layer that conclusively reproduces
 ./vpython -m pytest $PROJECT_ROOT/tests/test_[relevant].py -q
 ```
 
-2. End-to-end tests (`$PROJECT_ROOT/tests/test_end2end/`)
+2. End-to-end tests (`$PROJECT_ROOT/$PROJECT_ROOT/tests/test_end2end/`)
 
 ```bash
-./vpython -m pytest $PROJECT_ROOT/tests/test_end2end/test_[feature]_end2end.py -q
+./vpython -m pytest $PROJECT_ROOT/$PROJECT_ROOT/tests/test_end2end/test_[feature]_end2end.py -q
 ```
 
 3. MCP/HTTP API tests (`testing_mcp/`)
@@ -53,6 +57,8 @@ Run tests in this order and stop at the first layer that conclusively reproduces
 After each test run, capture:
 
 - Full absolute evidence directory path (for example `/tmp/worldarchitectai/<branch>/<test>/latest/`).
+  Verify the actual path from test configuration, environment variables, or run output
+  because local and CI evidence directories may differ.
 - Signature failure lines with context (`rg`/`grep` output).
 - Screenshot + server log consistency checks where applicable.
 - Final decision notes mapping blocker layer to component class:
@@ -63,5 +69,6 @@ After each test run, capture:
 
 ## References
 
+- `.claude/skills/testing-layers/SKILL.md` for deciding which layer to write NEW tests in and evidence implications.
 - `.claude/skills/pr-blocker-min-repro.md` for BYOK-specific starter commands and bead note patterns.
 - `.claude/skills/integration-verification.md` for minimum evidence completeness.

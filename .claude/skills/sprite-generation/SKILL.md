@@ -1,3 +1,8 @@
+---
+name: sprite-generation
+description: Use when generating, editing, or integrating game sprites and sprite-sheet assets.
+---
+
 # Sprite Generation Skill
 
 ## PROBLEM

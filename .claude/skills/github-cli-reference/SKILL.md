@@ -1,5 +1,6 @@
 ---
-description: Complete reference for GitHub CLI (gh) installation, authentication, and usage in Claude Code environment
+name: github-cli-reference
+description: Use when installing, authenticating, or troubleshooting GitHub CLI operations in an agent environment.
 type: reference
 scope: project
 ---

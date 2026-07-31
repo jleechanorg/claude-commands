@@ -1,5 +1,6 @@
 ---
-description: End-to-end testing architecture, philosophy, and patterns for Your Project
+name: end2end-testing
+description: Use when designing or reviewing end-to-end tests that exercise a complete user or service workflow.
 type: usage
 scope: project
 ---
@@ -26,6 +27,20 @@ Provide Claude with a comprehensive reference for writing and understanding end-
 | `firebase_admin.firestore.client()` | `firestore_service.py` functions |
 | `google.genai.Client()` | `llm_service.py` functions |
 | `requests.post()` (API calls) | `main.py` route handlers |
+
+## Mandatory Coverage for Multi-File `mvp_site` Changes
+
+When a PR creates or updates multiple non-test files under `$PROJECT_ROOT/**`, it must add or update at least one end-to-end test unless the PR explicitly justifies why the changed code is unreachable through an end-to-end application path.
+
+The E2E test must:
+
+- Exercise every newly introduced or modified production code path in the PR.
+- Drive the application through the real in-process route/service flow instead of calling each helper directly.
+- Assert the observable response, persisted state, emitted structured fields, or other user/server-visible effect from each changed path.
+- Fail if any changed path is skipped, bypassed, or only imported.
+- Remain deterministic with fake external APIs for Layer 2; add MCP/Browser `/es` evidence separately when real services or UI behavior must be proven.
+
+Unit tests can support the change, but they do not satisfy this multi-file E2E requirement by themselves.
 
 ## Environment Configuration
 
@@ -327,6 +342,7 @@ class TestFeatureEndToEnd(End2EndBaseTestCase):
 
 ## Related Documentation
 
+- `.claude/skills/testing-layers/SKILL.md` — Layer decision framework: when to use E2E (Layer 2) vs Unit (Layer 1) vs MCP/Browser (Layer 3+)
 - `$PROJECT_ROOT/tests/README_END2END_TESTS.md` - Full E2E philosophy
 - `$PROJECT_ROOT/tests/README.md` - Test coverage overview
 - `.claude/commands/teste.md` - Mock mode command

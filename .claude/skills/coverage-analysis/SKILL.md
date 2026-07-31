@@ -1,5 +1,6 @@
 ---
-description: Code coverage analysis using coverage.sh script and pytest-cov
+name: coverage-analysis
+description: Use when measuring, interpreting, or improving test coverage with coverage.sh or pytest-cov.
 type: usage
 scope: project
 ---

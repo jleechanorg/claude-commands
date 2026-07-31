@@ -1,5 +1,6 @@
 ---
-description: Browser-based login to WorldAI via Firebase Google OAuth using Chrome Superpowers MCP
+name: worldai-browser-login
+description: Use when logging into WorldAI through Firebase Google OAuth in a browser automation session.
 type: reference
 scope: project
 ---

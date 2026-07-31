@@ -1,3 +1,8 @@
+---
+name: playwright-mcp-manual-interaction
+description: Use when manually driving or troubleshooting a Playwright MCP browser session.
+---
+
 # Playwright MCP - Manual Interaction Guide
 
 ## Status

@@ -1,3 +1,8 @@
+---
+name: llm-prompt-engineering
+description: Use when writing, reviewing, or debugging model prompts, system instructions, schemas, or agent behavior contracts.
+---
+
 # LLM Prompt Engineering - System Instruction Best Practices
 
 **Purpose**: Guidelines for writing effective system instructions that LLMs actually follow, based on real debugging experiences.

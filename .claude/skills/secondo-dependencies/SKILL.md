@@ -1,5 +1,6 @@
 ---
-description: Dependencies required for /secondo command
+name: secondo-dependencies
+description: Use when the /secondo command is missing a dependency or cannot reach its model providers.
 type: setup
 scope: project
 ---

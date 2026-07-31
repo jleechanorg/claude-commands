@@ -1,5 +1,6 @@
 ---
-description: Authenticate with AI Universe MCP server for multi-model commands
+name: ai-universe-auth
+description: Use when AI Universe MCP authentication is required for a multi-model command.
 type: setup
 scope: project
 ---

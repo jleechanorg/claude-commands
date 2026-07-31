@@ -1,3 +1,8 @@
+---
+name: browser-testing-ocr-validation
+description: Use when browser screenshot assertions require OCR validation or when visual text is missing, clipped, or unreadable.
+---
+
 # Browser Testing with OCR Validation
 
 **CRITICAL**: Always validate browser screenshots with OCR when testing UI changes, especially for bugs where visual elements may or may not be present.

@@ -1,5 +1,6 @@
 ---
-description: Complete workflow for using AI Universe MCP /secondo command
+name: ai-universe-second-opinion-workflow
+description: Use when running the AI Universe MCP second-opinion workflow or the /secondo command.
 type: usage
 scope: project
 ---

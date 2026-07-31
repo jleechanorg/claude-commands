@@ -1,3 +1,8 @@
+---
+name: chrome-localhost3000-usage
+description: Use when testing a local web application served on localhost port 3000 in a browser automation session.
+---
+
 # Chrome Superpowers - localhost:3000 Usage
 
 ## AI Universe Frontend Testing

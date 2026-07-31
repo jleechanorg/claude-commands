@@ -1,3 +1,8 @@
+---
+name: dice-roll-audit
+description: Use when auditing recorded dice rolls, roll provenance, modifiers, or discrepancies in campaign data.
+---
+
 # Dice Roll Audit - Campaign Analysis
 
 ## Overview

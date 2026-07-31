@@ -1,3 +1,8 @@
+---
+name: integration-verification
+description: Use when proving that a configuration or component integration works through its real trigger and observable output.
+---
+
 # Integration Verification Protocol
 
 **Purpose**: When claiming ANY integration works, you MUST provide the Three Evidence Rule to prove automatic behavior, not just manual testing.

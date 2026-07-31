@@ -1,3 +1,8 @@
+---
+name: visual-verification
+description: Use when a user-visible change needs screenshot or video evidence and visual acceptance checks.
+---
+
 # Visual Verification Skill
 
 ## Purpose
