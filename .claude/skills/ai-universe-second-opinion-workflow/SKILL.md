@@ -1,5 +1,6 @@
 ---
-description: Complete workflow for using AI Universe MCP /secondo command
+name: ai-universe-second-opinion-workflow
+description: Use when running the AI Universe MCP second-opinion workflow or the /secondo command.
 type: usage
 scope: project
 ---
@@ -38,7 +39,7 @@ scope: project
 > - ID token: 1-hour expiration
 > - Refresh token: enables 30+ day sessions
 
-> ℹ️ For a dedicated authentication walkthrough see [ai-universe-auth.md](ai-universe-auth.md). Dependency notes live in [secondo-dependencies.md](secondo-dependencies.md).
+> ℹ️ For a dedicated authentication walkthrough see [ai-universe-auth](../ai-universe-auth/SKILL.md). Dependency notes live in [secondo-dependencies](../secondo-dependencies/SKILL.md).
 
 ## Primary commands
 | Scenario | Command |
@@ -95,7 +96,7 @@ scope: project
    ```
 6. **Review synthesis** to confirm consensus and recommended actions.
 
-> 📌 Need more HTTPie patterns? Use [ai-universe-httpie.md](ai-universe-httpie.md) as a companion reference.
+> 📌 Need more HTTPie patterns? Use [ai-universe-httpie](../ai-universe-httpie/SKILL.md) as a companion reference.
 
 ## SlashCommand fallback (Option A)
 Use `/secondo "QUESTION"` for quick prompts **only when the command file is healthy**. If it fails or hangs, switch to the HTTPie workflow.
@@ -133,6 +134,6 @@ For advanced prompting templates and interactive options, see the existing `~/.c
 
 ## Related references
 - `skills/second_opinion_workflow/scripts/` for helper tooling.
-- [ai-universe-auth.md](ai-universe-auth.md) for login instructions.
-- [secondo-dependencies.md](secondo-dependencies.md) for HTTPie/JQ requirements.
-- [ai-universe-httpie.md](ai-universe-httpie.md) for advanced HTTPie patterns.
+- [ai-universe-auth](../ai-universe-auth/SKILL.md) for login instructions.
+- [secondo-dependencies](../secondo-dependencies/SKILL.md) for HTTPie/JQ requirements.
+- [ai-universe-httpie](../ai-universe-httpie/SKILL.md) for advanced HTTPie patterns.

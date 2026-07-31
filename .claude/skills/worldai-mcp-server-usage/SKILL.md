@@ -1,3 +1,8 @@
+---
+name: worldai-mcp-server-usage
+description: Use when calling, configuring, or troubleshooting the WorldAI MCP server and its JSON-RPC tools.
+---
+
 # Your Project MCP Server Usage
 
 ## Overview

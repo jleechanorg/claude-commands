@@ -1,3 +1,8 @@
+---
+name: dice-real-mode-tests
+description: Use when validating dice behavior end to end with real runtime paths rather than isolated mocks.
+---
+
 # Dice Real-Mode Tests (MCP)
 
 Use this when validating **dice integrity** end-to-end with real services.

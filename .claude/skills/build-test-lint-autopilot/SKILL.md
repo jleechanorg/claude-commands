@@ -1,5 +1,6 @@
 ---
-description: Turnkey workflow for running tests, lint, and quality automation
+name: build-test-lint-autopilot
+description: Use when a change needs coordinated build, test, lint, and quality validation.
 type: usage
 scope: project
 ---

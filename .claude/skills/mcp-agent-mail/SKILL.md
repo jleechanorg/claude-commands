@@ -1,5 +1,6 @@
 ---
-description: MCP Agent Mail - Inter-Agent Messaging and Coordination System
+name: mcp-agent-mail
+description: Use when coordinating agents through MCP Agent Mail or diagnosing inter-agent messages.
 type: setup
 scope: project
 ---

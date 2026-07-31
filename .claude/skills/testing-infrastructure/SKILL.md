@@ -1,3 +1,8 @@
+---
+name: testing-infrastructure
+description: Use when working with shared test runners, fixtures, discovery rules, environments, or test execution conventions.
+---
+
 # Testing Infrastructure
 
 **Purpose**: Centralized testing utilities, debug protocols, and CI/local parity guidelines.

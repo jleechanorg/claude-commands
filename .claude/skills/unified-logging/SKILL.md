@@ -1,3 +1,8 @@
+---
+name: unified-logging
+description: Use when adding or changing Python logging in a project that uses a shared logging utility.
+---
+
 # Unified Logging
 
 **Purpose**: All Python files in `$PROJECT_ROOT/` MUST use the unified logging module.

@@ -1,3 +1,8 @@
+---
+name: claude-code-schema-validation
+description: Use when validating Claude Code or Codex configuration files, settings, hooks, commands, or skill schemas.
+---
+
 # Claude Code Schema Validation & Testing
 
 **Purpose**: Comprehensive guide for validating Claude Code settings.json and agent files using official and community tools.

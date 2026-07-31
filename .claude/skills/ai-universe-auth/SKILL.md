@@ -1,5 +1,6 @@
 ---
-description: Authenticate with AI Universe MCP server for multi-model commands
+name: ai-universe-auth
+description: Use when AI Universe MCP authentication is required for a multi-model command.
 type: setup
 scope: project
 ---
@@ -213,5 +214,5 @@ cp ~/projects/ai_universe/scripts/auth-cli.mjs ~/.claude/scripts/
 
 ## Related Skills
 
-- [ai-universe-httpie.md](ai-universe-httpie.md) - HTTPie usage examples
-- [secondo-dependencies.md](secondo-dependencies.md) - /secondo command dependencies
+- [ai-universe-httpie](../ai-universe-httpie/SKILL.md) - HTTPie usage examples
+- [secondo-dependencies](../secondo-dependencies/SKILL.md) - /secondo command dependencies

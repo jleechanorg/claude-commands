@@ -1,5 +1,6 @@
 ---
-description: Always check ~/.bashrc for credentials, API keys, passwords, and configuration values before asking user
+name: bashrc-credential-guard
+description: Use when diagnosing local credentials, API keys, passwords, or shell configuration before asking the user to re-enter values.
 type: usage
 scope: project
 ---

@@ -1,5 +1,6 @@
 ---
-description: Guidelines for autonomous execution in automation/orchestration contexts
+name: autonomous-execution
+description: Use when a task requests autonomous execution, orchestration, fullrun, or hands-off completion.
 type: usage
 scope: project
 ---

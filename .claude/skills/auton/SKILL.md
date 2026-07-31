@@ -42,10 +42,10 @@ AO lifecycle-worker (every ~5 min via launchd)
   ↓ agento: reads comments, fixes code, pushes
   ↓ agento: posts @coderabbitai all good?
   ↓ agento: runs /er evidence review
-  ↓ CI passes, CR APPROVED, Bugbot neutral, comments resolved
+  ↓ draft quality completes; advisory reviewer findings are triaged
   ↓ worker-signals-completion reaction fires → skeptic-review
   ↓ skeptic-review runs `ao skeptic verify` and posts VERDICT comment
-  ↓ skeptic-cron.yml checks 7-green and merges when all applicable gates pass
+  ↓ `/green` verifies current-head required CI plus mergeable/no conflicts
 ```
 
 **Key config to verify** (from the ACTIVE config — run Step 0 first):
@@ -139,7 +139,7 @@ gh api repos/jleechanorg/jleechanclaw/issues/comments?per_page=5 | \
   python3 -c "import json,sys; [print(c['user']['login'],c['body'][:100]) for c in json.load(sys.stdin) if 'rate limit' in c['body'].lower()]"
 ```
 
-### 7. Is the 7-green review + merge chain working correctly?
+### 7. Is the draft-review and two-gate `/green` chain working correctly?
 ```bash
 # Verify latest skeptic markers and VERDICT comment are bound to the head SHA
 gh api repos/jleechanorg/agent-orchestrator/issues/<PR_NUM>/comments --paginate | \
@@ -159,8 +159,8 @@ git -C ~/.openclaw worktree list | grep -v "~/.openclaw\b\|~/.worktrees"
 | Sessions spawn but die immediately | `--claim-pr` fails (stray worktree) | clear stale paths / targeted unlock |
 | Sessions alive but no pushes | Agent hits rate limit or auth failure | Check agent logs, re-auth |
 | CR never APPROVED | Rate limited (too many PRs) | Wait for limit reset, or reduce simultaneous PRs |
-| 7-green checks pass except skeptic | `worker-signals-completion` missing, marker mismatch, or skeptic-review failed | Verify skeptic-review hook and latest VERDICT comment markers |
-| `skeptic-cron` runs but merges 0 PRs | No PR is truly 7-green | Inspect gate-by-gate failures in workflow logs |
+| Draft review passes but `/green` does not | Required CI is pending/failing or mergeability is unknown/conflicting | Inspect current-head check rows and live mergeability |
+| `skeptic-cron` runs but merges 0 PRs | Authorization or one of the two `/green` gates is missing | Inspect live merge policy, CI, and conflicts |
 | `/tmp/ao-pr-poller.log` missing | **NOT A BUG** — ao-pr-poller is deprecated/removed | Ignore; its absence is correct and expected |
 | PRs cycling CR changes_requested | Agent not reading CR comments correctly | Check agento's comment-reading skill |
 | Spawned sessions are idle shells | `is_agent_alive_in_session` returns false | Check Hermes gateway is running (`hermes gateway status`) |

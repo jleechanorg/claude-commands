@@ -64,22 +64,18 @@ aliases: [plan]
 - Context remaining is **> 35%** AND task is trivial
 - Only 1-2 quick tasks in the plan
 
-**Bead Creation Hierarchy**: For each work item identified in the plan, create a bead using the following explicit fallback chain:
+**Bead Creation**: For each work item identified in the plan, use the canonical
+`br` CLI:
 
 ```bash
-# Try Beads MCP first (preferred), then BD CLI, then direct file creation
-if mcp-cli list-tools 2>/dev/null | grep -q beads; then
-  # Use Beads MCP (via printf to avoid newline issues)
-  printf '{"title":"[TASK] Work item title","description":"Detailed description","status":"open","priority":1,"issue_type":"task"}' | mcp-cli call beads/create -
-elif command -v bd >/dev/null 2>&1; then
-  # Fallback to BD CLI
-  bd create "Work item title" --description "Detailed description" --priority 1
-else
-  # Fallback to direct file creation
-  mkdir -p .beads
-  printf '{"id":"unique-id","title":"[TASK] Work item title","description":"Detailed description","status":"open","priority":1,"issue_type":"task","created_at":"%s","updated_at":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .beads/issues.jsonl
-fi
+br create "[TASK] Work item title" \
+  --description "Detailed description" \
+  --priority 1 \
+  --type task
 ```
+
+In a feature worktree, prefix the command with `br --no-auto-flush`. If `br`
+is unavailable, report the blocker; never hand-author issue-database records.
 
 **Bead Structure**:
 - **id**: Unique identifier (e.g., `session-id-task-name` or auto-generated)

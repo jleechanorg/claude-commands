@@ -1,5 +1,6 @@
 ---
-description: Run a Shadow Execution Gate for high-risk changes using isolated replay, objective evidence, and promotion criteria
+name: shadow-execution-gate
+description: Use when a high-risk change needs isolated replay and objective promotion evidence before rollout.
 type: process
 scope: project
 ---

@@ -154,15 +154,15 @@ if [ "$ROOT_CHECK_FAILED" -eq 0 ]; then
         TEST_FAILURES=$((TEST_FAILURES + 1))
     fi
 
-    # Test 7: Verify GitHub CLI instructions in CLAUDE.md
+    # Test 7: Verify GitHub CLI instructions in installation documentation
     echo ""
     echo "✓ Test 7: Verifying GitHub CLI instructions..."
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    if grep -q "GITHUB CLI (gh) INSTALLATION" CLAUDE.md 2>/dev/null;
+    if grep -qi "GitHub CLI" INSTALL.md 2>/dev/null;
      then
-        echo "  ✅ GitHub CLI installation instructions found in CLAUDE.md"
+        echo "  ✅ GitHub CLI installation instructions found in INSTALL.md"
     else
-        echo "  ❌ GitHub CLI instructions missing from CLAUDE.md"
+        echo "  ❌ GitHub CLI instructions missing from INSTALL.md"
         TEST_FAILURES=$((TEST_FAILURES + 1))
     fi
 
@@ -268,7 +268,11 @@ except Exception as e:
             else
                 echo "  ✅ $skill_file frontmatter is valid"
             fi
-        done < <(find .claude/skills -name "SKILL.md" -type f)
+        done < <(
+            find .claude/skills \
+                \( -path "*/_archive" -o -path "*/_archived_loose_md" \) -prune \
+                -o -name "SKILL.md" -type f -print
+        )
 
         if [ $INVALID_FRONTMATTER -eq 0 ]; then
             echo "  ✅ All SKILL.md frontmatter files are valid"

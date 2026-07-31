@@ -1,3 +1,8 @@
+---
+name: code-centralization
+description: Use when adding code that may duplicate existing functions, helpers, dependencies, or shared behavior.
+---
+
 # Code Centralization - Mandatory Investigation Protocol
 
 **Purpose**: Before writing ANY new code, you MUST investigate existing code to prevent duplication. This is not optional.

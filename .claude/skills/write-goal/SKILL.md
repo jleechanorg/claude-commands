@@ -39,7 +39,7 @@ changelog:
 Three failure modes that keep recurring in the user's last month of coding-CLI sessions (May 22 → June 28, 2026):
 
 1. **Vague goal → vague outcome.** Goal written as "fix the cold-start bug" produces an investigation summary, not a merged PR. No verifiable end-state is named up front, so the agent ships a write-up and stops.
-2. **No evidence contract.** Goal says "make it work" but never says which evidence layer counts. Agent posts a Green Gate exit-0 claim that isn't actually 7-green — `gh pr checks` ≠ green gate-by-gate PASS (env-preferences rule).
+2. **No evidence contract.** Goal says "make it work" but never says which evidence layer counts. Agent mistakes one successful workflow label for `/green` instead of checking every required current-head CI row and live mergeability.
 3. **No project-specific quality bar.** Goal omits the repo's own adversarial gates (ZFC, ZFC-leveling, root-cause-first, /es, /er). The agent thinks lint + unit tests are "done" and the user has to redo the work in a follow-up PR.
 
 **The fix:** mine the last 30 days of coding-CLI convos + memory for the real failure shape and the real success shape on this codebase, then write a goal spec that encodes the specific evidence artifacts, CI gates, and quality checks the agent must produce. The goal becomes a contract the agent can drive itself against — `/h`, `/a`, `/finish` all consume it.
@@ -84,7 +84,7 @@ Pull the user's actual coding history so the goal is grounded. Run two parallel 
 **B. Memory search** — invoke `/ms <topic> --recent 30 --source beads --limit 5` (and a second `/ms <topic> --source hermes --limit 5` if beads is sparse). Pull:
 - User preferences (e.g. `(h)` no parallel PRs, `(i)` centralize repeated frontend strings as constants, `(j)` thread-roadmap cadence)
 - Environment facts (Node 22, gog CLI, Hermes deploy pipeline, launchd plist rules, gh dual-bucket fallback)
-- Tool quirks (`gh pr checks` ≠ 7-green, `.beads/issues.jsonl` is huge—use `br`, etc.)
+- Tool quirks (a single `gh pr checks` summary does not prove both `/green` gates; use `br` rather than reading `.beads/issues.jsonl`, etc.)
 - Past failures with the same shape — these become the "Pitfalls" section in the goal.
 
 **If both history and memory return nothing** → say so explicitly in the goal doc's "Prior Context" section: "No prior CLI sessions or memory entries matched `<topic>` in the last 30 days. Goal spec written from the user's input only; first run — pitfalls to be discovered during execution."
@@ -129,7 +129,7 @@ Write the goal to `.converge/goal.md` in the session's cwd (the path `/goal_harn
 <ONE of: green-pr-merged | pr-open-green | local-state-verified | dry-run-on-machine>
 
 ### Proof artifact
-<exact artifact the agent must produce at completion — e.g. "PR #N on $GITHUB_REPOSITORY, Green Gate workflow log showing 7/7 gates PASS, /er PASS verdict, screenshot of /campaigns/new after merge">
+<exact artifact the agent must produce at completion — e.g. "PR #N on $GITHUB_REPOSITORY, required current-head CI successful, mergeable/no conflicts, /er PASS verdict, screenshot of /campaigns/new after merge">
 
 ## Scope
 - Repo(s): <owner/repo>
@@ -156,8 +156,8 @@ Write the goal to `.converge/goal.md` in the session's cwd (the path `/goal_harn
   - <workflow 1> — PASS
   - <workflow 2> — PASS
   - ...
-- Green Gate exit-0 is NOT sufficient — read the Green Gate workflow log and assert gate-by-gate PASS for the named gates from prior sessions on this repo (Phase 2 output)
-- 7-green means: <list the 7 gates if this repo runs them; else list the repo's actual green bar>
+- One workflow exit-0 is NOT sufficient — verify every required current-head CI row.
+- `/green` has exactly two gates: required CI successful and mergeable/no conflicts.
 - Failure on a gate = iterate the fix, push to PR head branch (pr-ci-fix-autopush rule: push without being asked), re-check. Do NOT report "fixed" until the new head SHA shows the gate green.
 
 ## Quality bar (adversarial gates this repo uses)
@@ -262,7 +262,7 @@ Post a single reply containing:
 3. `finish-the-job` (the end-state contract the goal spec plugs into)
 4. `drive-pr-to-green` (Phase 3 green-pr-merged outcome shape)
 5. `evidence-standards` (Phase 4 evidence-requirements section — load to know what counts as evidence)
-6. `pr-green-definition` (Phase 4 green-CI section — what 7-green actually means)
+6. `pr-green-definition` (Phase 4 green-CI section — what `/green` means)
 7. `ponytail` (Phase 4 quality bar — referenced by /code_standards Gate 3)
 8. `root-cause-first` (Phase 4 quality bar — referenced by /code_standards Gate 3)
 9. `harness` (Phase 6 hand-off — if user picks `/h`)

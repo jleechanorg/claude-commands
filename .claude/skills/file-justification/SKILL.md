@@ -1,3 +1,8 @@
+---
+name: file-justification
+description: Use when creating or modifying a tracked file and the change needs a concrete necessity and integration rationale.
+---
+
 # File Justification Protocol
 
 **Purpose**: Before creating or modifying ANY file, you MUST document the justification to prevent unnecessary file creation and ensure changes are well-reasoned.

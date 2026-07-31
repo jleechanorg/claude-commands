@@ -155,8 +155,8 @@ Task({
 ### **File Tracking & Proactive Beads Usage**
 - **NEVER gitignore .beads/**: Issue tracking database must be version controlled
 - **User Requirement**: `.beads/` directory and contents MUST be tracked in git
-- **Proactive Bead Creation**: When agents discover bugs, regressions, test failures, or architectural issues during their work, they should proactively create beads using `bd create "<description>"` rather than only logging or reporting the issue. Beads are the project's canonical issue tracker — if something is worth mentioning, it's worth a bead.
-- **Bead Lifecycle**: Update beads as work progresses (`bd update <id> --status in_progress`), and close them when resolved (`bd update <id> --status done`). Always include `.beads/` diffs in commits.
+- **Proactive Bead Creation**: When agents discover bugs, regressions, test failures, or architectural issues during their work, they should proactively create beads using `br create "<description>"` rather than only logging or reporting the issue. Beads are the project's canonical issue tracker — if something is worth mentioning, it's worth a bead.
+- **Bead Lifecycle**: Update beads as work progresses (`br update <id> --status in_progress`), and close them when resolved (`br close <id> --reason "<verification>"`). Include `.beads/` diffs only when they belong to the current change.
 
 ## 🎯 Usage Guidelines
 

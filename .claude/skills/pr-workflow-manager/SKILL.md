@@ -1,5 +1,6 @@
 ---
-description: Best practices and automation helpers for creating and maintaining high-quality pull requests
+name: pr-workflow-manager
+description: Use when creating or maintaining a pull request through review, validation, and publication.
 type: usage
 scope: project
 ---

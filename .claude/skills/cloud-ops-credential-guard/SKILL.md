@@ -1,5 +1,6 @@
 ---
-description: Securely guide teammates through cloud configuration, secrets management, and incident triage
+name: cloud-ops-credential-guard
+description: Use when cloud configuration, secrets, credentials, or incident triage requires safe handling.
 type: usage
 scope: project
 ---

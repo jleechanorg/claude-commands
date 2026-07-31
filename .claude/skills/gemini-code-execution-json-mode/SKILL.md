@@ -1,3 +1,8 @@
+---
+name: gemini-code-execution-json-mode
+description: Use when Gemini code execution must return structured JSON or when code-execution JSON parsing fails.
+---
+
 # Gemini Code Execution + JSON Mode Compatibility
 
 ## CRITICAL: Model-Specific Behavior

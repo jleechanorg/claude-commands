@@ -290,4 +290,4 @@ Before modifying any file, verify your changes against these boundaries. If your
 
 - `.claude/skills/field-ownership-contracts.md` — full field writer/reader registry
 - `~/.claude/skills/evidence-standards.md` — evidence requirements for production PRs
-- `~/.claude/skills/pr-green-definition.md` — 7-green merge-readiness criteria
+- `~/.claude/skills/pr-green-definition/SKILL.md` — two-gate current-head merge-readiness criteria

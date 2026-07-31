@@ -1,3 +1,8 @@
+---
+name: chrome-superpowers-reference
+description: Use when operating or troubleshooting the Chrome Superpowers MCP browser tools.
+---
+
 # Chrome Superpowers MCP - Reference Guide
 
 ## Location

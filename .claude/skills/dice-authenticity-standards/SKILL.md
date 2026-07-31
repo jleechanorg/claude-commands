@@ -1,3 +1,8 @@
+---
+name: dice-authenticity-standards
+description: Use when reviewing or validating whether dice rolls are authentic, auditable, and free from hidden overrides.
+---
+
 # Dice Roll Authenticity Standards
 
 ## Overview

@@ -1,5 +1,6 @@
 ---
-description: Generate comprehensive product spec, engineering design, and TDD implementation plan documents for any feature or project. Generalized from your-project.com /design command.
+name: design-doc
+description: Use when a feature or project needs a product specification, engineering design, or TDD implementation plan.
 ---
 
 # /design — Product & Engineering Design Documentation

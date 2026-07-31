@@ -1,3 +1,8 @@
+---
+name: testing-layers
+description: Use when classifying test evidence as unit, integration, end-to-end, or real-service proof.
+---
+
 # Testing Layers — When to Use Each Layer and How to Decide
 
 ## Purpose

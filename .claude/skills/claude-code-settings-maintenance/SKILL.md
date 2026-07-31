@@ -1,3 +1,8 @@
+---
+name: claude-code-settings-maintenance
+description: Use when maintaining Claude Code settings, hooks, permissions, environment entries, or user configuration.
+---
+
 # Claude Code Settings & Configuration Maintenance
 
 **Purpose**: Best practices for maintaining Claude Code settings.json and agent files to avoid validation errors and ensure proper configuration.
