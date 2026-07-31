@@ -77,6 +77,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import fcntl
 import json
 import os
 import shutil
@@ -404,28 +405,23 @@ def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
 def _append_history(payload: dict[str, Any]) -> None:
     HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n"
-    with tempfile.NamedTemporaryFile(
-        mode="a", dir=str(HISTORY_PATH.parent),
-        prefix=HISTORY_PATH.name + ".", suffix=".tmp",
-        delete=False, encoding="utf-8",
-    ) as fh:
-        tmp = Path(fh.name)
-        fh.write(line)
-    # Append into main log then trim.
-    with HISTORY_PATH.open("a", encoding="utf-8") as fh:
-        with tmp.open("r", encoding="utf-8") as src:
-            shutil.copyfileobj(src, fh)
-    tmp.unlink(missing_ok=True)
-    if HISTORY_MAX > 0:
+    # Append and trim under a single exclusive lock so a concurrent hook
+    # invocation (a realistic scenario — this is a multi-CLI Stop hook)
+    # can never read-modify-write over this one's just-appended entry.
+    with HISTORY_PATH.open("a+", encoding="utf-8") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
         try:
-            lines = HISTORY_PATH.read_text(encoding="utf-8").splitlines()
-        except FileNotFoundError:
-            return
-        if len(lines) > HISTORY_MAX:
-            HISTORY_PATH.write_text(
-                "\n".join(lines[-HISTORY_MAX:]) + "\n",
-                encoding="utf-8",
-            )
+            fh.write(line)
+            fh.flush()
+            if HISTORY_MAX > 0:
+                fh.seek(0)
+                lines = fh.read().splitlines()
+                if len(lines) > HISTORY_MAX:
+                    fh.seek(0)
+                    fh.truncate()
+                    fh.write("\n".join(lines[-HISTORY_MAX:]) + "\n")
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
 
 
 # ---------------------------------------------------------------------------

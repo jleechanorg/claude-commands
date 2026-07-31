@@ -7,6 +7,7 @@ live-tmux integration suite is at
 """
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import os
 import shutil
@@ -393,6 +394,25 @@ class CrossCliHookTestCase(unittest.TestCase):
                       env_overrides={"HERMES_HOOK_CLI": "cursor"})
         history = (self.tmp / ".claude" / "var" / "cross_cli_status" / "history.jsonl").read_text().splitlines()
         self.assertEqual(len(history), 20)
+
+    def test_concurrent_appends_do_not_lose_entries(self) -> None:
+        # Concurrent hook invocations (e.g. two CLIs stopping near the same
+        # moment) each do an append-then-trim on history.jsonl. An unlocked
+        # read-modify-write there is a lost-update race: two invocations can
+        # both read the pre-append content, then each overwrite the other's
+        # write when they save the trimmed tail back. With HISTORY_MAX left
+        # comfortably above the invocation count, every entry must survive.
+        count = 8
+        with concurrent.futures.ThreadPoolExecutor(max_workers=count) as pool:
+            procs = list(pool.map(
+                lambda _: _run_hook(json.dumps(CURSOR_FIXTURE),
+                                     env_overrides={"HERMES_HOOK_CLI": "cursor"}),
+                range(count),
+            ))
+        for proc in procs:
+            self.assertEqual(proc.returncode, 0, msg=proc.stderr)
+        history = (self.tmp / ".claude" / "var" / "cross_cli_status" / "history.jsonl").read_text().splitlines()
+        self.assertEqual(len(history), count)
 
     # --- Legacy git-header merge ----------------------------------------
     def test_no_header_skips_git_header(self) -> None:
