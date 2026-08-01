@@ -1,7 +1,12 @@
 name: Documentation Size Check
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - '.cursor/rules/*.md*'
       - 'CLAUDE.md'
@@ -17,37 +22,24 @@ on:
       - 'mvp_site/monitor_doc_sizes.sh'
 
 jobs:
-  limit-pr-runs:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest # APPROVED_EXCEPTION
-    permissions:
-      actions: write
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - name: Limit PR runs
-        uses: ./.github/actions/limit-pr-runs
-        with:
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
   doc-size-check:
+    # Draft PRs skip this check (CI capacity hardening); push to
+    # main is unaffected since draft is only defined on pull_request events.
     if: |
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false)
+    # ubuntu-latest ($USER-oud/LANE-D): pure Python (test_documentation_performance.py
+    # + monitor_doc_sizes.sh), zero self-hosted-only dependency. The former
+    # retry-self-hosted job (which duplicated this exact work on ubuntu-latest
+    # as a fallback) is now redundant and removed — see PR body.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      success: ${{ steps.mark-success.outputs.success }}
 
     steps:
 
     - uses: actions/checkout@v4
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || github.sha }}
         persist-credentials: false
 
 
@@ -74,50 +66,4 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             body: '⚠️ **Documentation Size Warning**\n\nSome documentation files exceed recommended size limits and may cause API timeouts.\n\nPlease run `python3 mvp_site/tests/test_documentation_performance.py` locally to see which files need reduction.'
-          })
-
-    - name: Mark successful completion
-      id: mark-success
-      if: success()
-      run: echo "success=true" >> $GITHUB_OUTPUT
-
-  retry-self-hosted:
-    needs: doc-size-check
-    if: needs.doc-size-check.outputs.success != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
-    # same self-hosted pool: this is a job-level retry path, not runner-level failover.
-    runs-on: ubuntu-latest # APPROVED_EXCEPTION
-    timeout-minutes: 10
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
-        persist-credentials: false
-
-    - name: Set up Python
-      if: runner.os == 'Linux'
-      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
-      with:
-        python-version: '3.11'
-
-    - name: Run documentation size check
-      run: |
-        echo "🔄 Running on retry self-hosted path..."
-        python3 mvp_site/tests/test_documentation_performance.py
-
-    - name: Quick size monitor
-      run: |
-        chmod +x mvp_site/monitor_doc_sizes.sh
-        ./mvp_site/monitor_doc_sizes.sh
-
-    - name: Comment PR if files too large
-      if: failure() && github.event_name == 'pull_request'
-      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
-      with:
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: '⚠️ **Documentation Size Warning** (via retry self-hosted path)\n\nSome documentation files exceed recommended size limits and may cause API timeouts.\n\nPlease run `python3 mvp_site/tests/test_documentation_performance.py` locally to see which files need reduction.'
           })

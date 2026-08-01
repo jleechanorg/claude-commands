@@ -26,7 +26,7 @@
 - Forbidden:
   - Bullet list of command names only (proof-before-claim rule)
   - "Key output observed: dependency install completed" (fabrication pattern)
-  - Green Gate exit-0 claim without gate-by-gate log PASS (env-preferences rule)
+  - Green Gate exit-0 claim without independent current-head CI and mergeability proof
   - `<60s` completion claim on a multi-step I/O task (proof-before-claim)
 
 ## Green-CI definition (specific to this repo)
@@ -34,8 +34,8 @@
   - <workflow 1> — PASS
   - <workflow 2> — PASS
   - ...
-- Green Gate exit-0 is NOT sufficient — read the Green Gate workflow log and assert gate-by-gate PASS for the named gates from prior sessions on this repo (Phase 2 output)
-- 7-green means: <list the 7 gates if this repo runs them; else list the repo's actual green bar>
+- Green Gate exit-0 is NOT sufficient — verify current-head CI conclusions and mergeability using the canonical `/green` skill
+- Draft readiness follows the canonical `draft-first-pr` skill before the PR is marked ready
 - Failure on a gate = iterate the fix, push to PR head branch (pr-ci-fix-autopush rule: push without being asked), re-check. Do NOT report "fixed" until the new head SHA shows the gate green.
 
 ## Quality bar (adversarial gates this repo uses)

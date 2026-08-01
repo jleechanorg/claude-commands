@@ -11,28 +11,60 @@ permissions:
   pull-requests: read
 
 # When to run the tests (optimized - no duplication on PR branches)
+# push trigger removed (PR #8363, bead rev-37jr1 extension): main/dev only
+# receive squash-merge commits whose tree is byte-identical to the PR head
+# SHA already validated by the pull_request trigger below. A push re-run
+# was pure duplication of a run that already passed on the PR, ~16 min avg
+# × 268 push runs/48h = 71.7 compute-hours wasted. The push trigger's
+# paths-ignore filter (removed with it) previously eliminated docs-only
+# pushes; this change eliminates the REMAINING push runs (those that DO
+# touch test-relevant paths) because they duplicate an already-passed PR
+# run, not because path-filtering was insufficient.
+#
+# Trigger-level positive paths filter (Lane B of round5-2026-07-13,
+# bead rev-792ix partial — full dorny/paths-filter per-job scoping is the
+# larger follow-up, mirrors PR #8367 on presubmit.yml).
+#
+# Actionlint: GitHub Actions does NOT allow both `paths:` AND
+# `paths-ignore:` on the same event — they're mutually exclusive.
+# Use `!pattern` negation INSIDE the positive paths: block instead.
+# Pattern fires when: at least one changed path matches the positive
+# list AND no changed path matches a `!`-negated entry.
+#   docs/** is intentionally INCLUDED to preserve the existing
+#   "do not ignore all docs/**" contract (design-doc bot commits and
+#   world_reference/campaign_module_dragon_knight.md must still trigger
+#   tests via the campaign wizard JS sync).
+#   testing_*/** covers all 8 peer dirs (mcp/ui/utils + config/http/
+#   integration/llm/util) so adding new test dirs doesn't silently break
+#   test coverage.
 on:
   workflow_dispatch:
   pull_request:              # Run on all PRs regardless of target branch
-    paths-ignore:
-      # Do not ignore all *.md: world_reference/campaign_module_dragon_knight.md
-      # must trigger tests (sync with campaign wizard JS). docs/roadmap stay ignored.
-      # Do not ignore all docs/** — see presubmit.yml (design-doc bot commits).
-      - 'roadmap/**'
-      - '.github/ISSUE_TEMPLATE/**'
-  push:
-    branches: [ main, dev ]  # Run on pushes to main/dev for post-merge validation
-    paths-ignore:
+    types: [opened, ready_for_review, reopened, synchronize]
+    paths:
+      - 'mvp_site/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'testing_*/**'
       - 'docs/**'
-      - 'roadmap/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      # Match presubmit push: skip pure-markdown pushes on main/dev (not PR paths — see above).
-      - '*.md'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'eslint.config.js'
+      - '.eslintrc.cjs'
+      - '.eslintignore'
+      - 'mypy.ini'
+      - '.github/workflows/test.yml'
+      # Negations (actionlint requires these in the positive paths block,
+      # not in a separate paths-ignore key — preserves prior paths-ignore
+      # semantics for the two original ignore patterns):
+      - '!roadmap/**'
+      - '!.github/ISSUE_TEMPLATE/**'
 
 jobs:
   limit-pr-runs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 15
     permissions:
       actions: write
       contents: read
@@ -41,7 +73,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
           persist-credentials: false
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
@@ -49,7 +81,8 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
   detect-changes:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 15
     outputs:
       test-dirs: ${{ steps.changes.outputs.test-dirs }}
       selected-groups: ${{ steps.changes.outputs.selected-groups }}
@@ -59,13 +92,45 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0  # Full history for accurate change detection
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
+          # Pull requests fetch the base/head SHAs below; push events only need
+          # HEAD~1..HEAD. Avoid full-history checkout here: on large repos it can
+          # consume the whole five-minute detect-changes budget before the script runs.
+          fetch-depth: 2
           persist-credentials: false
+
+      - name: Fetch pull request diff endpoints
+        if: github.event_name == 'pull_request'
+        run: |
+          # Checkout uses persist-credentials: false, so `origin` has no stored
+          # auth. Point it at an authenticated URL (same pattern as
+          # green-gate.yml's "Refresh PR head from GitHub" step) before this
+          # step's `git fetch` calls run, or every fetch below fails with
+          # "could not read Username for 'https://github.com'".
+          git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          git fetch --no-tags --depth=200 origin "$BASE_SHA" "$HEAD_SHA"
+          if ! git merge-base "$BASE_SHA" "$HEAD_SHA" >/dev/null 2>&1; then
+            echo "Initial shallow fetch did not include the merge base; deepening."
+            git fetch --no-tags --deepen=1000 origin "$BASE_SHA" "$HEAD_SHA"
+          fi
+          if ! git merge-base "$BASE_SHA" "$HEAD_SHA" >/dev/null 2>&1; then
+            echo "Still no merge base after deepening; unshallowing as last resort."
+            git fetch --no-tags --unshallow origin "$BASE_SHA" "$HEAD_SHA"
+          fi
+          git merge-base "$BASE_SHA" "$HEAD_SHA" >/dev/null
 
       - name: Detect directory changes
         id: changes
         run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags --filter=blob:none origin \
+              "${{ github.event.pull_request.base.sha }}" \
+              "${{ github.event.pull_request.head.sha }}"
+          fi
+
           # Use shared change detection script
           chmod +x scripts/ci-detect-changes.sh
 
@@ -93,15 +158,19 @@ jobs:
 
   # Import validation (always runs)
   import-validation:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    timeout-minutes: 5
+    needs: detect-changes
+    # !failure() is required alongside !cancelled(): any status-check function in an
+    # if: drops the implicit success() gate for the WHOLE expression, so !cancelled()
+    # alone would let this job run even after a real detect-changes failure.
+    if: ${{ !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
+          fetch-depth: 1
           persist-credentials: false
       - name: Run import validation
         run: |
@@ -119,14 +188,18 @@ jobs:
           path: scripts/validate_imports.log
 
   beads-jsonl-validation:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    timeout-minutes: 5
+    needs: detect-changes
+    # !failure() is required alongside !cancelled(): any status-check function in an
+    # if: drops the implicit success() gate for the WHOLE expression, so !cancelled()
+    # alone would let this job run even after a real detect-changes failure.
+    if: ${{ !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
           persist-credentials: false
       - name: Set up Python
         if: runner.os != 'macOS'
@@ -136,6 +209,46 @@ jobs:
       - name: Validate Beads JSONL (python scripts/validate_beads_issues_jsonl.py --path .beads/issues.jsonl)
         run: python scripts/validate_beads_issues_jsonl.py --path .beads/issues.jsonl
 
+  # rev-xvlo1: scripts/tests/test_*.sh files existed and passed locally but
+  # had no CI caller at all (violates the "every automation script needs a
+  # caller" principle -- confirmed via repo-wide search, no workflow
+  # discovered/ran anything under scripts/tests/). Named explicitly rather
+  # than glob-discovering the whole directory: at least 2 confirmed sibling
+  # files (test_backup_cron_tdd.sh reads real host crontab state and is a
+  # RED-phase TDD scratch script, test_run_local_server.sh sources ~/.bashrc
+  # for secrets and hardcodes dev ports) have real host/environment
+  # assumptions never vetted for this CI runner -- auto-running the whole
+  # directory risks new, unrelated CI failures. Not every sibling file is
+  # necessarily unsafe (some may be CI-plausible on inspection), but each
+  # needs individual vetting before being added, not a blanket assumption
+  # either way.
+  # Add future scripts/tests/*.sh files to this list deliberately, one at a
+  # time, after confirming they're CI-safe, rather than switching to a
+  # blanket glob. The restart-gate harness lives beside its watchdog skill,
+  # so it is also named explicitly after its host-command fixtures were vetted.
+  shell-script-tests:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
+          persist-credentials: false
+      - name: Run ezgha restart-gate harness
+        run: bash .claude/skills/ezgha-watchdog/scripts/test_restart_gate.sh
+      - name: Run scripts/tests/test_ezgha_watchdog.sh
+        run: bash scripts/tests/test_ezgha_watchdog.sh
+      - name: Run scripts/tests/test_host_disk_guardian.sh
+        run: bash scripts/tests/test_host_disk_guardian.sh
+      - name: Run scripts/tests/test_scratch_guard.sh
+        run: bash scripts/tests/test_scratch_guard.sh
+      - name: Run scripts/tests/test_disk_cleanup_scratch_root_protection.sh
+        run: bash scripts/tests/test_disk_cleanup_scratch_root_protection.sh
+      - name: Run scripts/tests/test_local_sh_agy_no_optout.sh
+        run: bash scripts/tests/test_local_sh_agy_no_optout.sh
+
   # Merge-commit correctness gate (REV-q4cmy)
   # The testmon test jobs checkout PR head SHA for cache stability,
   # but that skips validation against the merge commit (base+head).
@@ -143,8 +256,13 @@ jobs:
   # integration breakages that would only appear after merging.
   merge-commit-gate:
     name: Merge commit validation
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    needs: detect-changes
+    # Draft PRs skip this (pull_request-only trigger; CI capacity hardening).
+    # !failure() is required alongside !cancelled(): any status-check function in an
+    # if: drops the implicit success() gate for the WHOLE expression, so !cancelled()
+    # alone would let this job run even after a real detect-changes failure.
+    if: ${{ !failure() && !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 10
     env:
       TESTING: 'true'
@@ -174,6 +292,18 @@ jobs:
         persist-credentials: false
         fetch-depth: 1
 
+    - name: Prepare runner tool cache for setup actions
+      run: |
+        chmod +x scripts/ci/setup-runner-tool-cache.sh
+        ./scripts/ci/setup-runner-tool-cache.sh
+
+    - name: Set up Python
+      if: runner.os != 'macOS'
+      continue-on-error: true
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+      with:
+        python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
+
     - name: Resolve Python version for cache keys
       id: python-version
       shell: bash
@@ -190,6 +320,7 @@ jobs:
         echo "python_version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
 
     - name: Cache merge-commit venv
+      if: runner.os != 'macOS'
       id: cache-ci-venv
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
       with:
@@ -205,24 +336,33 @@ jobs:
 
         VENV_OK=false
         VERIFY_CACHED_VENV=false
-        # On exact cache hit, check if cached .ci-venv is healthy.
-        # On partial hit or cache miss, we recreate it cleanly to avoid stale dependencies.
+        # On exact cache hit, verify the cached .ci-venv is healthy AND can import
+        # crucial C extensions (binary compatibility — a stale ABI silently breaks
+        # imports). On partial hit or cache miss, recreate it cleanly to avoid stale deps.
         if [ "${{ steps.cache-ci-venv.outputs.cache-hit }}" = "true" ]; then
           if [ -d .ci-venv ] && [ -x .ci-venv/bin/python ] && [ -x .ci-venv/bin/pip ] \
             && timeout 30 .ci-venv/bin/python --version >/dev/null 2>&1 \
-            && timeout 30 .ci-venv/bin/pip --version >/dev/null 2>&1; then
+            && timeout 30 .ci-venv/bin/pip --version >/dev/null 2>&1 \
+            && .ci-venv/bin/python -c "import pydantic_core, cryptography" >/dev/null 2>&1; then
             echo "Reusing healthy cached .ci-venv"
             VENV_OK=true
             VERIFY_CACHED_VENV=true
           else
-            echo "Cached .ci-venv is unhealthy"
+            echo "Cached .ci-venv is missing or unhealthy (C extension binary mismatch). Recreating..."
           fi
         fi
 
         if [ "$VENV_OK" != "true" ]; then
           echo "Recreating clean .ci-venv"
           rm -rf .ci-venv
-          "$PYTHON_BIN" -m venv .ci-venv
+          if ! "$PYTHON_BIN" -m venv .ci-venv; then
+            echo "::warning::Failed to create virtual environment .ci-venv. Attempting global user-level fallback..."
+            mkdir -p .ci-venv/bin
+            echo "export PATH=\$PATH" > .ci-venv/bin/activate
+            ln -sf "$PYTHON_BIN" .ci-venv/bin/python || true
+            ln -sf "$(command -v pip3 || command -v pip || echo ~/.local/bin/pip)" .ci-venv/bin/pip || true
+            PIP_USER_INSTALL=true
+          fi
         fi
 
         source .ci-venv/bin/activate
@@ -231,12 +371,19 @@ jobs:
         if [ "$VERIFY_CACHED_VENV" = "true" ]; then
           echo "Verifying cached .ci-venv imports for extension-backed dependencies..."
           if ! .ci-venv/bin/python -c "import importlib; import sys; \
-mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
-[importlib.import_module(m) for m in mods]"; then
+            mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
+            [importlib.import_module(m) for m in mods]"; then
             echo "::warning::Cached .ci-venv failed critical import validation; rebuilding"
             VENV_OK=false
             rm -rf .ci-venv
-            "$PYTHON_BIN" -m venv .ci-venv
+            if ! "$PYTHON_BIN" -m venv .ci-venv; then
+              echo "::warning::Failed to create virtual environment .ci-venv. Attempting global user-level fallback..."
+              mkdir -p .ci-venv/bin
+              echo "export PATH=\$PATH" > .ci-venv/bin/activate
+              ln -sf "$PYTHON_BIN" .ci-venv/bin/python || true
+              ln -sf "$(command -v pip3 || command -v pip || echo ~/.local/bin/pip)" .ci-venv/bin/pip || true
+              PIP_USER_INSTALL=true
+            fi
             source .ci-venv/bin/activate
           fi
         fi
@@ -244,10 +391,17 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
         # Install dependencies only if we don't have a healthy exact cache hit.
         # Run pip install with --no-cache-dir to minimize memory usage and avoid OOM (Exit Code 137).
         if [ "${{ steps.cache-ci-venv.outputs.cache-hit }}" != "true" ] || [ "$VENV_OK" != "true" ]; then
-          python -m pip install --no-cache-dir --upgrade pip
-          python -m pip install --no-cache-dir pytest
-          if [ -f requirements.txt ]; then python -m pip install --no-cache-dir -r requirements.txt; fi
-          if [ -f mvp_site/requirements.txt ]; then python -m pip install --no-cache-dir -r mvp_site/requirements.txt; fi
+          if [ "${PIP_USER_INSTALL:-}" = "true" ]; then
+            python3 -m pip install --user --no-cache-dir --upgrade pip || true
+            python3 -m pip install --user --no-cache-dir pytest || true
+            if [ -f requirements.txt ]; then python3 -m pip install --user --no-cache-dir -r requirements.txt || true; fi
+            if [ -f mvp_site/requirements.txt ]; then python3 -m pip install --user --no-cache-dir -r mvp_site/requirements.txt || true; fi
+          else
+            python -m pip install --no-cache-dir --upgrade pip
+            python -m pip install --no-cache-dir pytest
+            if [ -f requirements.txt ]; then python -m pip install --no-cache-dir -r requirements.txt; fi
+            if [ -f mvp_site/requirements.txt ]; then python -m pip install --no-cache-dir -r mvp_site/requirements.txt; fi
+          fi
         else
           echo "Exact cache hit and healthy venv - skipping dependency installation step."
         fi
@@ -299,10 +453,16 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
   test:
     name: Directory tests (${{ matrix.test-group }})
     needs: detect-changes
-    if: needs.detect-changes.outputs.has-changes == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    # Core group runs with coverage enabled and sequential execution, which can exceed 15m.
-    timeout-minutes: 30
+    # Draft PRs skip the heavy test matrix (CI capacity hardening).
+    if: needs.detect-changes.outputs.has-changes == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    # E4 EXCEPTION: per-leg cap set in scripts/ci-detect-changes.sh. Both
+    # core-* and non-core legs run at 25min — observed worst case "Directory
+    # tests (claude)" took 11m25s, and the self-hosted fleet is regularly
+    # seen at 17-18/18 busy (contention inflates wall-clock beyond raw test
+    # time), so 25min restores real margin instead of the bare 15min flat
+    # default this leg previously had.
+    timeout-minutes: ${{ matrix.job_timeout_minutes }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
@@ -323,31 +483,38 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
         # For PRs: checkout the actual head commit, not the synthetic merge commit.
         # testmon fingerprints files using the working tree state; the merge commit
         # creates a different checkout that defeats testmon's change detection.
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
         persist-credentials: false
         fetch-depth: 0  # Full history needed for git diff in JS test step
         clean: true  # Remove untracked files from prior runs on self-hosted runners
 
-    - name: Set up Node.js 20
-      if: matrix.test-group == 'core-mvp-1'
-      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
-      with:
-        node-version: '20'
+    - name: Restore git-tracked executable permissions
+      run: |
+        # Self-hosted runner workspaces are reused across jobs; a tracked file whose
+        # exec bit was previously stripped on disk keeps that state across checkouts
+        # when content/size/mtime look unchanged to git. Force every git-tracked
+        # 100755 file back to +x so permission-dependent tests (e.g.
+        # test_script_permissions_are_correct) don't fail on stale workspace state.
+        git ls-files -s | awk '$1 == "100755" {print $4}' | xargs -r chmod +x
 
     - name: Prepare runner tool cache for setup actions
       run: |
         chmod +x scripts/ci/setup-runner-tool-cache.sh
         ./scripts/ci/setup-runner-tool-cache.sh
 
+    - name: Set up Node.js 20
+      if: startsWith(matrix.test-group, 'core-mvp-')
+      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
+      with:
+        node-version: '20'
+
     - name: Set up Python
       id: setup_python
       if: runner.os != 'macOS'
+      continue-on-error: true
       uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
       with:
         python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
-        # Avoid setup-python's authenticated manifest path on self-hosted
-        # runners; a bad token there fails before local preflight can run.
-        token: ''
 
     - name: Resolve Python version for cache keys
       id: python-version
@@ -365,6 +532,12 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
         echo "python_version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
 
     - name: Cache pip dependencies
+      # Skip on self-hosted macOS runners: ~/.cache/pip persists on the host
+      # disk between jobs, so the actions/cache round-trip is redundant AND
+      # the ~1.2GB restore intermittently stalls the job at ~1m40s on
+      # GitHub's cache service. Matches the established pattern of
+      # "Set up Python" above (line 317), which already gates macOS out.
+      if: runner.os != 'macOS'
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
       with:
         path: |
@@ -375,6 +548,12 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
           ${{ runner.os }}-python-${{ steps.python-version.outputs.python_version }}-
 
     - name: Cache testmon data
+      # Not gated on macOS: .testmondata is a small SQLite file (KB-range),
+      # so the actions/cache round-trip is fast and not the stall source.
+      # Skipping it would drop testmon's selective-execution baseline and
+      # cause macOS to fall back to --testmon-noselect (full serial suite)
+      # on every run — counterproductive. Only the pip cache (~1.2GB) is
+      # gated above.
       uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809  # v4.2.4
       with:
         path: |
@@ -524,7 +703,16 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
           else
             echo "Creating new venv"
             rm -rf venv
-            $PYTHON -m venv venv
+            # Try normal venv; fall back to --without-pip for macOS/stripped runners
+            # where ensurepip is not available, then bootstrap pip via get-pip.py.
+            if ! $PYTHON -m venv venv 2>/dev/null; then
+              echo "[test.yml] Normal venv failed; trying --without-pip fallback..."
+              $PYTHON -m venv --without-pip venv
+              # Activate and bootstrap pip
+              source venv/bin/activate
+              curl -sS https://bootstrap.pypa.io/get-pip.py | python - --quiet 2>/dev/null || true
+              deactivate 2>/dev/null || true
+            fi
           fi
           set +e
           {
@@ -608,11 +796,16 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
         fi
 
         if echo "$CHANGED_FILES" | grep -qE '^mvp_site/frontend_v1/|^world_reference/campaign_module_dragon_knight\.md'; then
-          node --test \
-            mvp_site/frontend_v1/tests/settings_listeners.test.js \
-            mvp_site/frontend_v1/tests/campaign_wizard_dragon_knight_submit.test.js \
-            mvp_site/frontend_v1/tests/campaign_wizard_dragon_knight_canonical.test.js \
-            mvp_site/frontend_v1/tests/fetchapi_public_optin.test.js
+          # Source the shared ladder — kept in sync with mvp_site/tests/_node_path.py.
+          source scripts/node_utils.sh
+          resolve_node_bin
+          if [ -z "$NODE_BIN" ]; then
+            echo "::warning::Node not found; skipping JS unit tests on this runner"
+          else
+            echo "Using node: $NODE_BIN ($($NODE_BIN --version))"
+            "$NODE_BIN" --test mvp_site/frontend_v1/tests/*.test.js
+          fi
+
         else
           echo "No frontend_v1 / Dragon Knight canonical changes detected; skipping JS unit tests."
         fi
@@ -702,7 +895,20 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
         done
 
         if [ "$TOTAL_TESTS" -eq 0 ]; then
-          TEST_CMD="./run_tests.sh --ci --parallel --exclude-integration --exclude-mcp"
+          # This shard's assigned directories (matrix.test-dirs) genuinely
+          # have zero test_*.py files (e.g. the mcp shard's mcp_servers/ has
+          # none yet) -- that's "nothing to run", not "discovery failed".
+          # Previously this fell through to a bare `--ci` invocation with no
+          # --test-dirs, which made run_tests.sh silently discover and run
+          # the ENTIRE mvp_site suite instead, duplicating core-mvp-* work
+          # and running tests (e.g. node-dependent auth tests) this shard
+          # never provisions dependencies for. See rev-1vhh6. Skip invoking
+          # run_tests.sh entirely rather than relying on its own --test-dirs
+          # guard (belt-and-suspenders: correct even if that guard regresses).
+          echo "No test files in this shard's directories (${{ matrix.test-dirs }}); nothing to run"
+          echo "infra_failure_class=" >> "$GITHUB_OUTPUT"
+          ATTEMPT=0
+          TEST_CMD=""
         elif [[ "${{ matrix.test-group }}" == core-mvp-* ]] && [ "${{ github.event_name }}" = "pull_request" ]; then
           export TEST_SUITE_TIMEOUT=1080  # 18 min (vs default 15 min)
           export TEST_MAX_WORKERS=2
@@ -715,6 +921,9 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
           TEST_CMD="./run_tests.sh --test-dirs=\"${{ matrix.test-dirs }}\" --parallel --exclude-integration --exclude-mcp --testmon"
         fi
 
+        if [ -z "$TEST_CMD" ]; then
+          echo "Skipping test execution: no test files in this shard's scope"
+        else
         ATTEMPT=1
         MAX_ATTEMPTS=2
         TEST_INFRA_CLASS=""
@@ -742,6 +951,7 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
           echo "infra_failure_class=${TEST_INFRA_CLASS}" >> "$GITHUB_OUTPUT"
           exit "$TEST_EXIT"
         done
+        fi
 
         echo "test_attempts=${ATTEMPT}" >> "$GITHUB_OUTPUT"
 
@@ -890,20 +1100,43 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
   coverage-report:
     name: PR Coverage Report
     needs: [test]
-    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false && needs.test.result != 'cancelled'
-    runs-on: ubuntu-latest
+    # Draft PRs skip this (pull_request-only trigger; CI capacity hardening).
+    # needs.test will already be 'skipped' on drafts via the `test` job's own
+    # draft guard, so this AND is defense-in-depth that also documents intent.
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false && needs.test.result != 'cancelled'
+    # Self-hosted runner via the shared label variable. This job was already
+    # self-hosted (previously hardcoded [self-hosted, Linux, X64]); OS/arch labels
+    # were removed from the ezgha fleet, so route on the variable like every other
+    # self-hosted job in this repo.
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     permissions:
       contents: read
       pull-requests: write
-    timeout-minutes: 5
+    timeout-minutes: 15
 
     steps:
+      - name: Repair workspace permissions for checkout
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE"
+          if [ -d "$GITHUB_WORKSPACE" ]; then
+            chmod -R u+rwX "$GITHUB_WORKSPACE" || true
+          fi
+          if [ -d "$GITHUB_WORKSPACE/.git" ]; then
+            find "$GITHUB_WORKSPACE/.git" -name "*.lock" -delete || true
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
           fetch-depth: 0  # Full history needed for git diff (delta coverage)
+          filter: blob:none
           persist-credentials: false
+
+      - name: Prepare runner tool cache for setup actions
+        run: |
+          chmod +x scripts/ci/setup-runner-tool-cache.sh
+          ./scripts/ci/setup-runner-tool-cache.sh
 
       - name: Set up Python
         uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
@@ -1157,3 +1390,57 @@ mods=['cryptography', 'pydantic_core', 'google.protobuf']; \
           else
             echo "No coverage data available for this PR." >> $GITHUB_STEP_SUMMARY
           fi
+
+  # Stable-named fail-closed aggregator for the dynamic `test` matrix (rev-lbyz9).
+  #
+  # `test` (line ~453) expands into per-path matrix legs named
+  # "Directory tests (${{ matrix.test-group }})" — a job name that is NOT
+  # stable across PRs, because `detect-changes` computes the matrix from
+  # changed paths. Classic branch-protection required-status-checks matches
+  # by exact job name; a PR whose changed paths don't produce a given
+  # matrix entry means that named check never appears in the run at all,
+  # which permanently blocks merge under classic required checks. This job
+  # exists solely to give branch protection one stable name to depend on.
+  #
+  # `coverage-report` (line ~1100) is NOT a safe proxy either: its own
+  # `if` runs it even when `needs.test.result == 'failure'` (guarded only
+  # against `cancelled`), so a green "PR Coverage Report" does not mean the
+  # test matrix passed.
+  #
+  # This job has no draft/fork condition of its own: `test`'s own `if`
+  # (line 457) already skips it for draft PRs, fork PRs, and no-changes
+  # runs, which surfaces as `needs.test.result == 'skipped'` here — treated
+  # as pass below. Using `if: always()` (no extra condition) guarantees
+  # this job's stable name appears in every run of this workflow, so it is
+  # always safe to add as a required check once proven stable.
+  tests-required-gate:
+    name: Tests Required Gate
+    needs: [detect-changes, test]
+    if: always()
+    # No checkout, no secrets, no repo tooling — a pure string comparison on
+    # upstream job results. Runs on ubuntu-latest so it never queues behind
+    # the self-hosted fleet (this job is the thing a future required-status-
+    # check depends on, so it must never be capacity-starved itself).
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if detect-changes or the test matrix failed or was cancelled
+        run: |
+          DC_RESULT="${{ needs.detect-changes.result }}"
+          TEST_RESULT="${{ needs.test.result }}"
+          echo "detect-changes result: ${DC_RESULT}"
+          echo "test job result: ${TEST_RESULT}"
+          # detect-changes' own `if:` legitimately skips it for fork PRs, so
+          # 'skipped' is an acceptable result there. A 'failure'/'cancelled'
+          # result means the change-detection script itself broke, which
+          # silently skips the downstream `test` job (GitHub Actions' default
+          # implicit needs-success gate) — that must NOT read as a pass.
+          if [ "${DC_RESULT}" != "success" ] && [ "${DC_RESULT}" != "skipped" ]; then
+            echo "::error::Tests Required Gate: FAIL (detect-changes result=${DC_RESULT})"
+            exit 1
+          fi
+          if [ "${TEST_RESULT}" != "success" ] && [ "${TEST_RESULT}" != "skipped" ]; then
+            echo "::error::Tests Required Gate: FAIL (test matrix result=${TEST_RESULT})"
+            exit 1
+          fi
+          echo "Tests Required Gate: PASS (detect-changes=${DC_RESULT}, test=${TEST_RESULT})"

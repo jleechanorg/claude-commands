@@ -29,7 +29,7 @@ Operator-specific overrides (only if present):
 5. Use at most 5 parallel workers total across core lanes and valid support lanes.
 6. Record every manual intervention and why it was needed.
 7. Never end a cycle with roadmap work unowned. A cycle must explicitly decide what happens next.
-8. No roadmap lane counts as complete until it is truly 7-green under `~/.claude/skills/pr-green-definition.md`.
+8. No roadmap lane counts as complete until it is truly `/green` (CI green + no merge conflicts) under `~/.claude/skills/pr-green-definition.md`, plus draft-phase quality gates (`/es`, `/er`, `/advice`) for production PRs.
 9. Production-code PRs require full evidence discipline; only non-production PRs may skip video evidence.
 10. Prefer parallel subagents/workers whenever the work is genuinely independent and materially useful.
 11. Every worker must be driving its assigned lane or PR to an explicit finish bar, not merely classifying the state.
@@ -40,7 +40,7 @@ Operator-specific overrides (only if present):
 16. Do not treat a worker as active just because its tmux pane exists; a pane stuck in repeated `Continue working...` prompts is a waiting-state failure until explicitly corrected.
 17. Do not treat stale review summaries as truth; always verify fresh current-head review state, unresolved threads, and evidence comments before declaring a lane done or review-only.
 18. Every related open ZFC PR must carry the GitHub label `zfc_level`; audit and repair missing labels in the same cycle.
-19. Do not call a PR 7-green or merge-ready from check runs alone; verify current-head issue comments for fresh `/smoke`, `/er`, evidence-required, or bot-reported failures that can invalidate the green story.
+19. Do not call a PR `/green` or merge-ready from check runs alone; verify current-head issue comments for fresh `/smoke`, `/er`, evidence-required, or bot-reported failures that can invalidate the green story.
 20. Trust hierarchy for cycle decisions is: current-head PR state first, tmux conversation second, AO status last.
 21. Do not let a worker spend more than one cycle in pure bot-rereview or stale-review argument loops without fresh branch movement.
 22. A waiting pane must be repurposed, explicitly parked, or closed in the same or next cycle; do not carry it as fake active capacity.
@@ -82,12 +82,12 @@ Promote a non-PR subagent result into an AO worker only when it becomes a real b
 
 For this project, parallel support work is allowed when it is independent and materially helps the active merge lane. Valid examples:
 - upstream blocker root-cause/fix work
-- true 7-green / evidence audit work
+- true `/green` / evidence audit work
 - supersede/split planning for a parked lane
 - architecture prework that does not violate M0-first sequencing
 
 Finish bars by lane type:
-- production merge lane: true 7-green, or explicit justified-wait when only non-branch-owned blockers remain
+- production merge lane: true `/green` plus draft-phase quality gates, or explicit justified-wait when only non-branch-owned blockers remain
 - production support PR: green enough to unblock the active merge lane, then explicit stop/park
 - non-production PR: CodeRabbit approval plus the repo-appropriate evidence bar
 - planning/support artifact lane: promised artifact or PR/body/note delivered, then stop
@@ -197,7 +197,7 @@ For each related PR:
 - does current-head evidence actually exist as a posted gist/comment/video, not just as local temp files?
 - do current-head issue comments show fresh `/smoke`, `/er`, or bot-reported failures that still need action?
 - what is the exact next step for this PR?
-- what is the shortest path from the current state to either true 7-green or, for non-production lanes, CodeRabbit-approved with the proper evidence bar?
+- what is the shortest path from the current state to either true `/green` plus draft-phase quality gates, or for non-production lanes, CodeRabbit-approved with the proper evidence bar?
 
 For each active worker:
 - is the worker truly executing or just sitting in repeated `Continue working...` prompts?
@@ -302,7 +302,7 @@ Special case: merge conflicts and serious GitHub comments
 Special case: `#6420` / `#6404` AO fallback
 - `#6420` and `#6404` are not allowed to sit in repeated nominal-ownership states without real execution
 - if either PR still lacks a truly on-track AO worker after one full loop cycle of direct steering or respawn, the next cycle must stop waiting on AO quality
-- for `#6420`, spawn parallel subagents to directly drive the branch to true 7-green
+- for `#6420`, spawn parallel subagents to directly drive the branch to true `/green`
 - for `#6404`, spawn parallel subagents to directly drive the branch to the non-production finish bar: current-head CI green, CodeRabbit approved, proper evidence
 - record the failed AO attempt, the specific reason AO was judged insufficient, and the subagent takeover decision in both roadmap logs and the cycle bead
 
@@ -323,12 +323,12 @@ Also read `.claude/skills/level-up-zfc/SKILL.md` as the phase-checklist source, 
 - M0 checklist
 - M0 anti-patterns
 - M1/M2 sequencing constraints
-Before treating any PR as ready to advance the roadmap, verify it against the real 7-green policy, not `gh pr checks` alone.
+Before treating any PR as ready to advance the roadmap, verify it against the real `/green` policy (CI green + no merge conflicts), not `gh pr checks` alone.
 
 Review workflow adaptation:
 - adapt `/copilot` logic first for serious comment triage to determine whether the PR is fundamentally wrong, then later for cleanup once correctness is restored
 - adapt `/polish` logic only as a terminal tightening loop after evidence exists; do not use its default "iterate toward green" structure as a substitute for evidence-first discipline
-- because `/polish` is 6-green-oriented, the loop must retain the repo's 7-green standard instead of inheriting `/polish` as-is
+- `/polish` and the repo's canonical `/green` standard (CI green + no merge conflicts only — CodeRabbit/Bugbot/comments/evidence are now draft-phase quality gates, not `/green` conditions) must still apply the ZFC-specific evidence-first rigor above (Design Doc Compliance, level-up file boundaries, etc.) during the draft phase, not just adopt `/polish`'s generic "iterate toward green" loop structure as-is
 - adapt skeptic-agent logic before polish: skeptic should first assess whether the current-head evidence bundle and gate story are sufficient and truthful
 - if skeptic or major PR comments indicate the whole PR direction is wrong, stop polish work and route the lane back to design/scope correction
 
@@ -382,7 +382,7 @@ Roadmap execution split for the current queue:
   - if env-backed auth does not work, repurpose an existing dormant worker or start a manual Codex tmux worker
   - do not silently reduce worker count when valid parallel work still exists
 - every worker instruction must include its finish bar explicitly:
-  - production lane: true 7-green if branch-owned work remains, otherwise explicit justified-wait
+  - production lane: true `/green` plus draft-phase quality gates if branch-owned work remains, otherwise explicit justified-wait
   - support PR: keep going until the PR is actually unblocked or proven external-only
   - non-production PR: CodeRabbit approval and required evidence state
   - planning lane: promised artifact, PR body update, or PR note delivered
@@ -414,7 +414,7 @@ Default decision order:
 
 When the active lane is in `wait`, ask:
 1. Is the wait caused by an upstream issue that can be root-caused/fixed in parallel?
-2. Is there unresolved 7-green/evidence audit work that can be done in parallel?
+2. Is there unresolved `/green`/evidence audit work that can be done in parallel?
 3. Is there a parked-lane prep task that can be advanced without violating sequencing?
 
 If yes, spawn support workers up to the total cap instead of leaving only one worker alive.
@@ -468,7 +468,7 @@ Worker completion rule:
 - if the only remaining activity is repeated bot rereview nudges without branch movement, demote the lane from active execution to review-state waiting or repurpose the slot
 
 Cross-PR audit rule:
-- every cycle, do a compact 7-green sweep across all active ZFC PRs
+- every cycle, do a compact `/green` sweep across all active ZFC PRs
 - if the same missing gate appears repeatedly (for example G6 evidence or G7 skeptic), record it once as a shared harness problem and route one worker to address that system gap
 
 ### Phase 6.7: M0 Integrity Gate
@@ -499,7 +499,7 @@ Each cycle record must also include:
 - a worker-by-worker evaluation grounded in tmux conversation plus sparse codex/Claude history
 - a PR-by-PR status block for all active or roadmap-related open PRs
 - a PR-by-PR next-step block
-- a PR-by-PR finish path to either true 7-green or, for non-production lanes, CodeRabbit-approved plus proper evidence
+- a PR-by-PR finish path to either true `/green` plus draft-phase quality gates, or for non-production lanes, CodeRabbit-approved plus proper evidence
 - the chosen next work item
 - whether the next state is `execute` or `wait`
 - the owning worker/session if any

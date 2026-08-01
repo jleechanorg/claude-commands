@@ -1,4 +1,3 @@
----
 name: zero-touch-metrics
 description: Measure zero-touch and one-touch rates from merged PRs — run in evolve loop cycles
 
@@ -12,13 +11,13 @@ Measure autonomy metrics for the evolve loop. Run via `/eloop` or standalone.
 
 ### Zero-touch
 - First commit author != "$USER" (agent-proposed)
-- Merged by github-actions[bot]
 - No CR CHANGES_REQUESTED ever
+- (Not counted: who executes the final merge — see `zero-touch` skill. Repos without an auto-merge bot always merge via human-authorized `gh pr merge`; that step alone doesn't make a PR operator-assisted.)
 
 ### One-touch
-- First commit author == "$USER" (human-proposed via /claw)  
-- Merged by github-actions[bot]
+- First commit author == "$USER" (human-proposed via /claw)
 - No CR CHANGES_REQUESTED ever
+- (Not counted: who executes the final merge — see `zero-touch` skill.)
 
 ### External
 - Not agent or $USER authored
@@ -27,11 +26,11 @@ Measure autonomy metrics for the evolve loop. Run via `/eloop` or standalone.
 
 ```bash
 # Run in agent-orchestrator repo
-cd $HOME/project_agento/agent-orchestrator
+cd $HOME/project_agento/agent-orchestrator-ts
 
 echo "=== Touch Rate (last N PRs) ==="
-for pr in $(gh api 'repos/jleechanorg/agent-orchestrator/pulls?state=closed&per_page=30' --jq '.[] | select(.merged_at != null) | .number' 2>/dev/null | head -25); do
-  author=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/$pr/commits" --jq '.[0].commit.author.name' 2>/dev/null)
+for pr in $(gh api 'repos/jleechanorg/agent-orchestrator-ts/pulls?state=closed&per_page=30' --jq '.[] | select(.merged_at != null) | .number' 2>/dev/null | head -25); do
+  author=$(gh api "repos/jleechanorg/agent-orchestrator-ts/pulls/$pr/commits" --jq '.[0].commit.author.name' 2>/dev/null)
   echo "$pr|$author"
 done
 ```

@@ -37,13 +37,13 @@ Execute one full loop cycle now:
    - worker-by-worker AO evaluation grounded in tmux + sparse codex/Claude history
    - PR-by-PR status
    - PR-by-PR next steps
-   - PR-by-PR path to true 7-green, or CodeRabbit-approved plus proper evidence for non-production PRs
+   - PR-by-PR path to true `/green` (CI green + no merge conflicts) plus draft-phase quality gates (`/es`, `/er`, `/advice`) for production PRs, or CodeRabbit-approved plus proper evidence for non-production PRs
    - the bead created or updated for this cycle
 9. Explicitly decide what to work on next from the roadmap and open PR state
 10. Do not end the cycle with roadmap work unowned unless you record an intentional wait state with the exact signal being awaited
-11. Before treating any lane as done, verify true 7-green with a deep review and apply the evidence rule: only non-production PRs can skip video evidence
-11a. For 7-green, inspect current-head issue comments too; fresh `/smoke`, `/er`, evidence-required, or bot-failure comments can invalidate a nominally green check surface
-12. Ensure every active worker has an explicit finish bar: true 7-green for production lanes, CodeRabbit approval plus proper evidence for non-production lanes, or a delivered planning artifact/body update/note for planning lanes
+11. Before treating any lane as done, verify true `/green` (CI green + no merge conflicts) plus draft-phase quality gates with a deep review and apply the evidence rule: only non-production PRs can skip video evidence
+11a. For `/green`, inspect current-head issue comments too; fresh `/smoke`, `/er`, evidence-required, or bot-failure comments can invalidate a nominally green check surface
+12. Ensure every active worker has an explicit finish bar: true `/green` plus draft-phase quality gates for production lanes, CodeRabbit approval plus proper evidence for non-production lanes, or a delivered planning artifact/body update/note for planning lanes
 13. Treat any `upstream-owned` blocker label as provisional only: within 1-2 cycles force a fresh `origin/main` repro; if `main` is green, immediately reclassify the blocker as branch-owned divergence on the active PR and push the merge-lane worker back into execute mode
 14. Sequence production work as: merge conflicts or serious GitHub correctness comments first, then evidence, then skeptic/reviewer approval of that evidence/gate story, then adapted `/polish`-style green tightening
 15. Do not run polish-first on a production PR that still has merge conflicts, serious correctness comments, or lacks a credible evidence bundle for the current head SHA

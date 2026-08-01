@@ -17,7 +17,7 @@ The loop is driven by a **system profile** — a set of parameters that describe
 ```
 SYSTEM_NAME:        AO + Antigravity
 QUALITY_METRIC:     [agento] zero-touch rate (autonomous PR merges / total PR merges)
-REPOS:              jleechanorg/agent-orchestrator, jleechanorg/worldai_claw, jleechanorg/jleechanclaw
+REPOS:              jleechanorg/agent-orchestrator-ts, jleechanorg/worldai_claw, jleechanorg/jleechanclaw
 WORKER_PATTERN:     tmux sessions matching (ao|jc|wa|cc|ra|wc)-[0-9]+
 IDE_MONITOR:        Antigravity (via /antig skill)
 ISSUE_TRACKER:      br (beads, .beads/issues.jsonl)
@@ -230,7 +230,7 @@ touch /tmp/evolve_loop_last_run
 /eloop
 
 # With IDE monitor
-/loop 10m /eloop and /antig — monitor worldai_claw Antigravity conversation (PIL Allow scan, steer agent, merge PRs at 7-green)
+/loop 10m /eloop and /antig — monitor worldai_claw Antigravity conversation (PIL Allow scan, steer agent, complete draft readiness and `/green`; merge remains separately authorized)
 ```
 
 ---

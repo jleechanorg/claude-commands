@@ -1,6 +1,6 @@
 ---
 name: skillify
-description: "Turn any feature, script, or workflow into a properly-skilled, tested, auditable Hermes skill. Use when the user says skillify, is this a skill, make this proper, or add tests and evals. Runs the 10-item skillify checklist against the target and creates all missing artifacts."
+description: "Turn any feature, script, or workflow into a properly-skilled, tested, auditable Hermes/Claude skill. Use when the user says skillify, is this a skill, make this proper, or add tests and evals. Runs the 10-item skillify checklist against the target and creates all missing artifacts. Slash command: /skillify."
 when_to_use: "Use when the user says: skillify this, is this a skill?, make this proper, add tests and evals for this, check skill completeness, turn this into a skill, capture this workflow. Also use proactively after building any new feature without the full skill infrastructure."
 arguments:
   - target_path
@@ -25,6 +25,7 @@ A feature is "properly skilled" when all 10 items are present:
 8. **check-resolvable** — the resolver passes: skill is reachable, MECE against siblings, no DRY violations
 9. **E2E test** — exercises the full pipeline from user turn to side effect
 10. **Brain filing** — if the feature writes to memory/brain, the brain RESOLVER has an entry so pages aren't orphaned
+11. **Thin slash command (DEFAULT strategy, 2026-07-12)** — if the feature has a slash command, the command file is a THIN dispatcher (≤ ~15 lines: frontmatter + "Read `<skill path>/SKILL.md` and execute with $ARGUMENTS" + usage examples). ALL substance lives in the SKILL.md. Never duplicate workflow content between command and skill — the /ms → memory-search pattern is canonical; /ironclad and /cmux-goal are reference implementations. A fat command file with no backing skill fails this item.
 
 ## Routing — Where Does the Skill Live?
 
@@ -59,7 +60,7 @@ fi
 keyword=$(echo "$SKILL_NAME" | tr '-' ' ' | awk '{print $1}')
 similar=$(ls "$TARGET" | grep -i "$keyword" 2>/dev/null)
 if [ -n "$similar" ]; then
-  echo "⚠️  Similar skills already in $TARGET: $similar"
+  echo "Similar skills already in $TARGET: $similar"
   echo "Consider extending one instead."
 fi
 ```
@@ -89,7 +90,7 @@ For the target, answer:
   9. E2E test — full pipeline test?
   10. Brain filing — brain/RESOLVER entry?
   ```
-- Print audit: mark each item ✓ (present) or ✗ (missing)
+- Print audit: mark each item present or missing
 
 ### Phase 2: Create Missing Pieces
 
@@ -140,17 +141,17 @@ NOT skilled until:
 
 ## Anti-Patterns
 
-- ❌ Code with no SKILL.md — invisible to the resolver
-- ❌ SKILL.md with no tests — contract regresses silently
-- ❌ Tests that reimplement production — reimplementation bugs hide production bugs
-- ❌ Resolver entry with internal jargon users never type
-- ❌ Feature writes brain pages with no brain RESOLVER entry
-- ❌ Deterministic logic in LLM space — should be a script
-- ❌ LLM judgment in deterministic space — should be an eval
+- Code with no SKILL.md — invisible to the resolver
+- SKILL.md with no tests — contract regresses silently
+- Tests that reimplement production — reimplementation bugs hide production bugs
+- Resolver entry with internal jargon users never type
+- Feature writes brain pages with no brain RESOLVER entry
+- Deterministic logic in LLM space — should be a script
+- LLM judgment in deterministic space — should be an eval
 
-## Critical Scope Limitation (2026-04-22)
+## Scope Limitation
 
-**gbrain check-resolvable and skillify-check.ts only scan ~/projects/gbrain/skills/, NOT ~/.hermes/skills/.**
+**gbrain check-resolvable and skillify-check.ts only scan `~/projects/gbrain/skills/`, NOT `~/.hermes/skills/`.**
 
 When auditing a Hermes skill, gbrain's automated tools report the skill as missing even when properly wired in Hermes's own `RESOLVER.md`.
 
@@ -160,16 +161,12 @@ To audit a Hermes skill manually, run the 10-item checklist yourself:
 3. Run the actual test suite for the target
 4. Run `scripts/skillify-check.ts` if available
 
-**Actual test count for gbrain's skillify skill:** 11 pass, 0 fail:
-- `test/skills-conformance/skillify-resolver-trigger-eval.test.ts` — 8/8
-- `test/e2e/skillify-e2e.test.ts` — 3/3
-
-## Known Bugs in skillify Test Suite (2026-04-22)
+## Known Bugs in skillify Test Suite (historical, gbrain)
 
 ### Bug 1: skillify-check.ts subdirectory test discovery is broken
 **File:** `~/projects/gbrain/scripts/skillify-check.ts`
-**Problem:** Only checks top-level `test/` files. Tests in subdirectories like `test/skills-conformance/` are missed, causing false negatives. Reports 6/10 for skillify even though actual bun test suite proves 11/10.
-**Fix:** Patched in `~/projects/gbrain/scripts/skillify-check.ts` (commit fbb4936). Without patch, use bun test directly instead of skillify-check to verify coverage.
+**Problem:** Only checks top-level `test/` files. Tests in subdirectories like `test/skills-conformance/` are missed, causing false negatives.
+**Fix:** Patched in `~/projects/gbrain/scripts/skillify-check.ts` (commit fbb4936). Without the patch, use `bun test` directly instead of skillify-check to verify coverage.
 
 ### Bug 2: `test_resolver_trigger` regex only captures heading line
 **File:** `tests/test_skillify_resolver_trigger.py`

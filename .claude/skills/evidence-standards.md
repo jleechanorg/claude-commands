@@ -88,14 +88,93 @@ Evidence must show ALL of these:
 - `llm_request_responses.jsonl` or equivalent — real LLM API calls with real responses (not mocked)
 - `metadata.json` with git SHA (matching PR HEAD preferred; if SHA differs, apply Evidence Staleness Tolerance)
 
+**Real-LLM provider note:** The `agy` CLI (Google Antigravity) is the cost-saving
+**default** real-LLM provider for local/test runs since PR #7971 (`008c55aaaa`), selected by
+`is_agy_provider_mode()` in `$PROJECT_ROOT/llm_providers/provider_gateway.py`. For evidence that
+proves LLM judgment, agy-by-default is valid — it is a real LLM, not a mock. Do **not**
+treat an agy-backed judgment run as "mocked" or insufficient. This does **not** prove the
+production Gemini-SDK streaming or native tool-call path: `agy_provider.py` has no true
+streaming/native tool-call API, and `generate_content_stream` yields a single completed
+response. If the claim depends on token-by-token SSE, Gemini SDK tool-call behavior, or
+production streaming semantics, require an explicit Gemini SDK run with
+`AGY_PROVIDER_ENABLED=false` and record that rationale in the evidence bundle.
+Conversely, if a bundle sets `AGY_PROVIDER_ENABLED=false`, the evidence should state the
+matching reason rather than opting out silently: if the claim is about streaming or
+tool-calling behavior, reason (1) — validating the production streaming/tool-calling
+path — applies. For a **non-streaming judgment claim**, only reason (2) applies — the
+flow depends on strict JSON-mode output and hits agy's known JSON-reliability gap (agy
+lists "JSON-only response grammar" as a non-goal); reason (1) does not justify opting out
+of a claim that was never about streaming in the first place. Silent opt-out is a cost
+regression, not an evidence defect, but reviewers should flag the missing or mismatched
+rationale.
+
+### BQ-Logged Real LLM Request/Response Requirement (Mandatory for LLM-communication changes)
+
+Any PR that changes logic affecting **what is sent to or received from the LLM** —
+prompt construction/assembly, request payload shaping, provider selection/dispatch
+(`gemini_provider.py`, `agy_provider.py`, `provider_gateway.py`), response parsing
+(`llm_parser.py`), or the god-mode/directive/state-update contract the model reads or
+writes — must include real LLM request/response evidence sourced from **BigQuery**
+(`worldarchitecture-ai.llm_forensics.llm_payloads` and/or `.log_events`), not only a
+local `llm_request_responses.jsonl` capture.
+
+**Why BQ, not just local capture:** local jsonl captures are written by the same process
+under test and are trivially editable/fabricable (this repo caught fabricated local
+evidence — byte-identical RED/GREEN pytest hashes — on PR #8132 during review, 2026-07-09).
+BQ rows are written by the production `log_llm_payload()` path independent of the evidence
+bundle, are timestamped server-side, and can be independently queried by a reviewer who
+never touched the PR's branch — making them meaningfully harder to fabricate or
+misrepresent than a file the author generated locally.
+
+**Minimum BQ evidence for an LLM-communication-affecting PR:**
+1. A `bq query` (or gist of one) against `llm_payloads`, filtered to the campaign/run used
+   for the PR's evidence, showing at least one real row **within the evidence run's window — between test start
+   and bundle creation. Do NOT require rows at-or-after the bundle timestamp:
+   `metadata.timestamp`/`bundle_timestamp` is assigned when `create_evidence_bundle()` runs
+   AFTER the scenario has already driven the LLM calls
+   (`testing_mcp/lib/evidence_utils.py`), so matching rows logged earlier in the same run
+   are valid** — with non-placeholder `request_json` / `response_text` content (i.e. not
+   `is_test = true` synthetic fixtures unless the PR is explicitly testing-infrastructure-only).
+2. The row's `model`, `campaign_id`, and `event_type` must match what the PR's evidence
+   bundle claims was exercised — a BQ query that can't be tied to the specific claim (wrong
+   campaign, wrong event type, wrong time window) does not satisfy this rule.
+3. If the claim is about a SPECIFIC content property (e.g. "the model no longer echoes a
+   stale fact," "the directive is now honored," "the field carries `_updated_at`"), quote the
+   actual `request_json`/`response_text` substring from the BQ row demonstrating it — a row
+   existing is not sufficient; its content must support the claim.
+4. Cross-reference: the metadata/SHA tying the evidence to PR HEAD (per "What Real Server +
+   Real LLM Means" above) still applies — a BQ row proves the LLM call was real, not which
+   code version produced it. Both are required together.
+
+This requirement is **in addition to**, not a replacement for, the local
+`llm_request_responses.jsonl` capture already required under "What Real Server + Real LLM
+Means" — the two corroborate each other (local capture proves the harness ran against a
+specific code checkout; BQ proves the call actually reached the LLM and wasn't just
+written by the harness itself).
+
+**Does not apply** to: prompt-adjacent PRs that don't change LLM-communication *logic*
+(e.g. a pure prose/wording tweak to an instruction file, where the Prompt File Rule's
+local-capture requirement is sufficient on its own — unless the wording change itself is
+the claim under test), or to changes entirely outside the LLM request/response path
+(UI-only, CSS, non-LLM backend routes).
+
+### AGY Local Evidence Guardrail
+
+For local AGY evidence, configuration alone is insufficient. The bundle must contain
+`provider_http_request_responses.jsonl` (or an equivalent raw provider capture) with a
+successful `agy_request` and matching `agy_response`. Local launchers must fail closed
+when the sanitized AGY runtime is missing; run `$PROJECT_ROOT/install.sh` rather than silently
+falling back to the Gemini SDK.
+
 ### Decision Rule for Reviewers
 
 1. **Did any prompt files change?** (`$PROJECT_ROOT/prompts/**`) → require Server + LLM evidence with real LLM output. Never N/A.
-2. **Does the change touch LLM-interacting code?** → require Server + LLM evidence.
-3. **Is there a running server?** Check `provenance.server.pid`. If empty/null and the tier requires a server → FAIL.
-4. **Are there real LLM calls?** Check for `llm_request_responses.jsonl`. If absent and tier requires LLM → FAIL.
-5. **Does the change affect what a user sees?** → check for video evidence. If absent → FAIL.
-6. **Does the git SHA match the PR HEAD?** If not → apply Evidence Staleness Tolerance.
+2. **Does the change affect LLM-communication logic** (prompt construction, provider dispatch, request/response parsing, or the directive/state-update contract)? → require the BQ-Logged Real LLM Request/Response Requirement above, in addition to local capture. Never satisfied by a local-only jsonl file or a unit test alone.
+3. **Does the change touch LLM-interacting code?** → require Server + LLM evidence.
+4. **Is there a running server?** Check `provenance.server.pid`. If empty/null and the tier requires a server → FAIL.
+5. **Are there real LLM calls?** Check for `llm_request_responses.jsonl`. If absent and tier requires LLM → FAIL.
+6. **Does the change affect what a user sees?** → check for video evidence. If absent → FAIL.
+7. **Does the git SHA match the PR HEAD?** If not → apply Evidence Staleness Tolerance.
 
 ### Evidence Staleness Tolerance for Test/Docs-Only Changes
 
@@ -108,7 +187,36 @@ Evidence captured at a prior SHA remains valid at HEAD when only non-behavioral 
 | **CI/workflow** | `.github/workflows/*test*.yml`, lint configs — **excluding** `deploy*.yml`, `*preview*.yml` | Deployment workflows always require fresh evidence |
 | **Type hints/comments** | `*.pyi`, type annotations, docstrings, comments | No runtime effect |
 
-For any `.py` files classified as "type hints/comments", run `git diff <evidence-sha> HEAD -- <file>` to confirm — `--name-only` can't distinguish a comment-only change from a behavioral one.
+
+
+## Publication (gist-first)
+
+When evidence is ready for a PR:
+
+1. **Publish to a secret/unlisted gist** with sanitized artifacts (README, metadata, pytest output, checksums).
+2. Put **only the gist URL** in the PR `## Evidence` section (and linked sections as required by the description gate).
+3. **Do not commit** evidence bundles under `docs/evidence/` on the PR branch unless a repo gate explicitly requires in-tree paths — local `/tmp/<repo>/<branch>/` is the working bundle; gist is the published copy.
+4. Gate-6 accepts `gist.github.com/` URLs; prefer that over `docs/evidence/` tree links in the PR body.
+
+### Visual evidence → gist (MANDATORY for PNGs / GIFs / MP4s / MP3s / .cast)
+
+Visual evidence binaries (screenshots, gameplay captures, before/after images, video, audio) MUST live in a public GitHub gist, NOT committed to the PR branch. Committing binaries bloats the PR diff and makes it unreviewable. Procedure:
+
+1. Create a public gist for the bundle: `gh api /gists` with `{public: true, description, files: {README.md: {content: "..."}}}`.
+2. Clone the gist locally: `git clone https://<token>@gist.github.com/<id>.git /tmp/gist-<id>`.
+3. Copy the real binary bytes in (do NOT use `gh gist create --public` with base64 — it stores the bytes as utf-8 text and serves `text/plain`, which prevents rendering).
+4. Commit + push: `git add . && git commit -m "..." && git push origin HEAD`.
+5. Reference each binary in the PR body via the **raw URL** with the commit SHA: `https://gist.githubusercontent.com/<user>/<id>/raw/<sha>/<filename>`. The `/raw/HEAD/` form returns 404 — always use a real commit SHA.
+6. Verify the raw URL serves the right `content-type`: `curl -sSI <url>` must show `content-type: image/png` (or `image/gif`, `video/mp4`, etc.) — not `text/plain`.
+
+For Slack threads (where the same binary is also surfaced to the user as a downloadable attachment), use the 3-stage Slack `files.completeUploadExternal` API: stage 1 `files.getUploadURLExternal`, stage 2 `POST <upload_url>` with the file body, stage 3 `files.completeUploadExternal` with `files=[{id, title}]`. The bare `MEDIA:/absolute/path` text convention does NOT work through `mcp__slack__conversations_add_message`; Slack renders the literal text without creating an attachment.
+
+Anti-pattern: passing `MEDIA:/path/to/file.png` inline as message text — Slack shows the path string, no attachment is created, and the user sees nothing.
+
+### Repo gates that override gist-first
+
+Some repo gates may require in-tree evidence paths (e.g., a deployment script that downloads artifacts from `docs/evidence/`). When a gate explicitly requires in-tree paths, follow the gate; otherwise default to gist-first.
+
 
 ## Minimum Viable Evidence Checklist
 
@@ -139,9 +247,6 @@ def capture_provenance():
     return provenance
 ```
 
-**Quick validation:** If `metadata.json` is missing ANY of these, the test is incomplete:
-`provenance.merge_base`, `provenance.commits_ahead_of_main`, `provenance.diff_stat_vs_main`,
-`provenance.server.pid`, `provenance.server.port`, `provenance.server.process_cmdline`
 
 ## Mock Mode Prohibition
 
@@ -166,6 +271,35 @@ For any `$PROJECT_ROOT/**` non-test change, there is no acceptable substitute fo
 3. Classes classified `LOGGING_ONLY` **outside `$PROJECT_ROOT/**`** or `TEST_ONLY` per the table below. A `LOGGING_ONLY` change under `$PROJECT_ROOT/**` still requires the minimal real-server run from the table (unit-only is NOT sufficient there).
 
 **Always warn the user explicitly** when a claim is unit-only — the burden of disclosure is on the agent, not the reviewer.
+
+## RED PROOF — A past bug report is NOT red proof (HARD GATE)
+
+A red proof (i.e. the "this bug reproduces" step of `/redgreen` Phase 1) MUST be a fresh,
+real failing test that runs locally against the codebase and FAILS before the fix is applied.
+This is a non-negotiable hard gate. The following do NOT constitute red proof, no matter
+how complete they look:
+
+| Source | Counts as red proof? | Why |
+|--------|----------------------|-----|
+| A past bug report (Slack thread, GitHub issue, user transcript) | **NO** | Narrative only — was never a test run. |
+| BigQuery / Firestore / GCP logs showing the bug in prod | **NO** on its own | Observational, not a reproducible test. May be used as inspiration for the test, but the test itself must run. |
+| A copy-campaign script that replays inputs through an offline or wrapper LLM | **NO** | The replay is a script, not a test that asserts the failure. |
+| A modified prompt + LLM output that "looks broken" to a human | **NO** | Subjective. The test must mechanically assert the missing behavior. |
+| A unit test that asserts a prompt contains the fix strings | **CONDITIONAL YES** — deterministic contract red proof, but **only sufficient as a stand-alone red proof when ALL THREE hold**: (i) the asserted string is the documented load-bearing rule the model is told (not a side-effect description); (ii) there is no plausible non-contract path for the bug to recur (e.g. no sibling rule the model could contradict the new rule against); AND (iii) the PR also ships **either** a VCR regression fixture (a recorded raw LLM request/response capturing the buggy output) **or** a paired LLM-output assertion in `testing_mcp/test_*.py` that runs against the real local server + real LLM and FAILS pre-fix for the same reason as prod. If any of (i)/(ii)/(iii) fails, the contract test alone is **INSUFFICIENT** and the PR must ship a real-LLM red proof. | Prompt-string contract tests are necessary but not sufficient on their own — they reproduce the *contract gap*, but a behavior-level reproduction is required to prove the fix actually changes model output. |
+| A `testing_mcp/test_*.py` test that runs against a real local server + real LLM and FAILS pre-fix for the same reason as prod | **YES** (full Layer 2 red proof) | This is the gold standard and is sufficient on its own. Set `AGY_PROVIDER_ENABLED=false` to bypass wrapper tooling and use the real Gemini API directly. |
+| A unit test that mocks the model and asserts the parser handles bad output | **YES** for parser regressions only — NOT acceptable as red proof for LLM-behavior bugs | Mocking the model hides the very behavior being tested. |
+
+**Conditional-yes examples that have passed review:** a contract test for a brand-new ESSENTIALS clause that has no sibling contradiction candidate AND is paired with a VCR fixture or `testing_mcp` real-LLM assertion of the model-output change.
+
+**Conditional-yes examples that have FAILED review:** a contract test alone for a rule that the model has historically contradicted with a sibling clause (e.g. a new "MUST propagate NPC capture status" rule added while a sibling rule says "MUST keep narrative concise"). The contract was added, the model still chose the contradicting sibling, and the contract test alone never caught it. Such fixes require a real-LLM red proof.
+
+**If you cannot produce a red proof, STOP.** Do not write the fix. Do not proceed to GREEN.
+Ship a bead (`br create ...`) documenting the missing red proof as the blocker.
+
+**Where to put red proof in a PR description:** link the failing-test invocation output
+(red run) and the passing-test invocation output (green run) in the `## Unit Test Evidence`
+section (for the contract test) or `## Non-Unit Test Evidence` section (for the real-LLM
+test run via `testing_mcp/`). Cite exact commit SHAs for both runs.
 
 ## PR-class classification → required evidence
 
@@ -211,6 +345,28 @@ A PR adds a single `logger.info("rewards_decision", extra={...})` call in `$PROJ
 - One real local-server run with `provenance.server.pid` / `process_cmdline` showing the new log line in captured server output.
 
 Do NOT require an LLM assertion, video, or full streaming bundle — but unit tests alone are NOT sufficient under `$PROJECT_ROOT/`. (A truly evidence-free logging change must live outside `$PROJECT_ROOT/**` — e.g. `scripts/` or `orchestration/`.)
+
+### Example 4 — Changing what `custom_campaign_state.character_identity` sends to the LLM (PROD_BEHAVIOR_CHANGE + BQ requirement)
+
+A PR changes the canonicalization path in `$PROJECT_ROOT/game_state.py`
+(`validate_and_correct_state` → the `character_identity` normalize block) so
+`character_identity` is retained and stamped with `_updated_at`, and stops
+`_strip_llm_redundancies()` in `$PROJECT_ROOT/llm_service.py` from popping it — so the field is
+now sent to the model instead of being stripped. This is a direct change to
+LLM-communication logic (what the prompt contains). Evidence required:
+
+- Local `llm_request_responses.jsonl` capture showing the field present with a stamp (per
+  "What Real Server + Real LLM Means").
+- A `bq query` against `llm_forensics.llm_payloads` for the campaign used in the repro
+  (e.g. `WHERE campaign_id = "xK3fp5XrV24oarIINTF7" AND event_type = "gameplay_streaming"
+  ORDER BY ingested_at DESC LIMIT 1`), with the row's `request_json` quoted showing
+  `character_identity` present with the expected `_updated_at` value, and `response_text`
+  quoted showing the model's narrative is now consistent with the authoritative field
+  (not just that a timestamp exists — a stamped-but-still-wrong value does not satisfy this
+  claim).
+- If the PR's claim is "this stops a specific hallucination" (e.g. a false parentage
+  relationship), the BQ row's `response_text` must be checked for absence of the specific
+  stale claim, not merely presence of the corrected field in the request.
 
 ## Cross-references
 

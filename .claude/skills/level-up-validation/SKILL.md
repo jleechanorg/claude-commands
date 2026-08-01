@@ -33,8 +33,11 @@ artifacts, not agent claims.
 - Normal story output shows level-up availability when the model-owned signal
   says `target_level > current_level`.
 - Before the modal starts, the player can choose `level_up_now`.
-- `level_up_now` opens or continues the modal only. It does not commit the new
-  level, advance time, roll HP, award rewards, or resolve story actions.
+- `level_up_now` opens the modal AND commits the new level atomically: the model
+  MUST emit `state_updates.player_character_data.level = target_level` on this
+  turn; the server calls `apply_level_up` which writes `pcd.level = to_level`
+  together with `level_up_session.status = in_progress`. It does not advance
+  time, roll HP, award rewards, or resolve story actions.
 
 ### 2. Complete Recommended Package
 
@@ -127,6 +130,26 @@ On `finish_level_up_return_to_game`:
 - Do not return only generic placeholders such as "Continue Story" or
   "Custom Action" when concrete scene choices are available.
 
+### 7. Persisted Reload / Orphan Session Boundary
+
+For regressions involving stuck `LevelUpAgent` routing, stale modal flags, GOD
+MODE promotions, or alternate level commits, evidence must include a reload case
+from persisted Firestore state:
+
+- Capture direct Firestore pre-state before any app get-state/export/UI call.
+- Include `player_character_data.level`, `level_up_session.status`,
+  `level_up_session.current_level`, `level_up_session.target_level`,
+  `level_up_session.review_open`, `custom_campaign_state.level_up_in_progress`,
+  and `custom_campaign_state.level_up_pending`.
+- If `player_character_data.level >= level_up_session.target_level` and
+  `level_up_session.status == "available"`, the first gameplay streaming turn
+  must seal the session before routing.
+- Post-state must show `level_up_session.status` is terminal (`complete`) or
+  `is_session_active(...) is false`, and the response must route to normal
+  gameplay rather than LevelUpAgent.
+- Passing modal/reducer tests alone do not satisfy this boundary; the proof must
+  cover persisted reload -> cleanup -> routing.
+
 ## Evidence Procedure
 
 1. Run the canonical real test when real LLM proof is requested:
@@ -148,6 +171,9 @@ On `finish_level_up_return_to_game`:
    - screenshots or video if UI/browser behavior is claimed
 6. Compare the evidence bundle SHA to the live PR head. If stale, declare
    exactly which later diffs are behavior-neutral before accepting it.
+7. For stuck-agent or orphan-session claims, verify the persisted reload boundary
+   in section 7 with direct Firestore pre/post snapshots and selected-agent/routing
+   evidence.
 
 ## Verdict Template
 
@@ -165,7 +191,7 @@ Auto-selection:
 Click editing:
 Free-form editing:
 Finish commit:
+Persisted reload/orphan boundary:
 
 Blocking gaps:
 ```
-

@@ -7,31 +7,48 @@ name: Level-up Tests
 # test by setting `SKIP_CODEX_REVIEW=true` (see _run_codex_firestore_leveling_review
 # in testing_mcp/core/test_level_up_organic.py:888, which is gated on that env var).
 
+
+# issue_comment events always carry github.ref = refs/heads/main, so keying on
+# ref made ONE global lock across all PRs (cross-PR cancellation, proven live
+# 2026-07-07: runs 28905070397 (PR #8228) / 28905070266 (PR #8233), cancelled
+# within the same second by two *different* PRs' /levelup comments -- see
+# FIXPLAN §3.2, docs/FIXPLAN-gh-actions-systemic-20260707.md in ez-gh-actions).
+# Key per-PR instead so a re-/levelup on the SAME PR still supersedes its own
+# stale run, without killing unrelated PRs' runs. Pattern mirrors
+# mcp-smoke-tests.yml (the /smoke sibling this file's header comment
+# references). cancel-in-progress simplified to unconditional true: this file
+# has no `release` trigger, so the old ternary was constant-true anyway.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write
   issues: write
 
+# NOTE: issue_comment trigger removed (PR ci/tier1-trim-2026-07-12).
+# /levelup PR comments are routed via .github/workflows/comment-router.yml.
+# NOTE: issue_comment trigger removed (PR ci/tier1-trim-2026-07-12).
+# /levelup PR comments are routed via .github/workflows/comment-router.yml.
 on:
-  issue_comment:
-    types: [created]
   workflow_dispatch:
     inputs:
       pr_number:
+        # NOTE: typed as `string` (was `number` pre-PR-8354) so comment-router.yml's
+        # `gh workflow run --field "pr_number=..."` dispatch works — GitHub's --field
+        # always sends strings, and a number-typed input rejects string values.
+        # Downstream code already does `Number(rawInput)` to coerce.
         description: 'PR number to test'
         required: true
-        type: number
+        type: string
 
 jobs:
   resolve-pr-context:
     name: Resolve PR context
-    if: >-
-      (github.event_name == 'issue_comment' &&
-       github.event.issue.pull_request &&
-       startsWith(github.event.comment.body, '/levelup') &&
-       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
-      || github.event_name == 'workflow_dispatch'
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 5
     outputs:
       pr_number: ${{ steps.resolve.outputs.pr_number }}
       pr_head_sha: ${{ steps.resolve.outputs.pr_head_sha }}
@@ -73,7 +90,7 @@ jobs:
             }
 
             const headSha = pr.data.head.sha || '';
-            const headRef = headSha || `refs/pull/${pr.data.number}/head`;
+            const headRef = headSha || pr.data.head.sha;
             core.setOutput('pr_number', String(pr.data.number));
             core.setOutput('pr_head_sha', headSha);
             core.setOutput('pr_head_ref', headRef);
@@ -81,8 +98,28 @@ jobs:
   run-levelup-tests:
     name: Level-up Organic (all) against PR preview
     needs: resolve-pr-context
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    timeout-minutes: 65  # matches the daily GCP job's 3600s task-timeout
+    # Bot actors (coderabbitai[bot], cursor[bot], chatgpt-codex-connector[bot],
+    # etc.) cannot trigger /levelup — they would consume real Gemini budget
+    # for an LLM scenario whose result no human is waiting on. Mirrors the
+    # same cost-safe bot-actor guard added to /smoke in PR #7893 (the
+    # determine-smoke-mode.sh script applies the same `[bot]` suffix check
+    # for the smoke flow; /levelup has no mock variant so we skip the job
+    # entirely instead of switching mode).
+    if: >-
+      (github.event_name == 'workflow_dispatch')
+      || (github.event_name == 'issue_comment' && !contains(github.actor, '[bot]'))
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    # E4 EXCEPTION: the daily GCP job's own real-mode LLM run body is bounded
+    # at 3600s (60min), but this job's *outer* GHA timeout must cover that
+    # inner bound PLUS the checkout / "started" comment / composite-action
+    # overhead (GCP auth, gcloud SDK setup, preview-URL resolution, Python
+    # setup, pip install of mvp_site/requirements*.txt) that all runs BEFORE
+    # `test_level_up_organic.py` starts — see .github/actions/run-pr-preview-test/
+    # action.yml. This is a real-mode organic LLM test (CLAUDE.md: LLM waits
+    # need >=3min/180s budget, not a bare-minimum match); 65min restores a
+    # real ~5min buffer instead of the 60min flat match which left zero
+    # margin for that setup overhead.
+    timeout-minutes: 65
     env:
       GCP_REGION: us-central1
       GCP_PROJECT: worldarchitecture-ai
@@ -96,8 +133,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ needs.resolve-pr-context.outputs.pr_head_ref }}
+          ref: ${{ needs.resolve-pr-context.outputs.pr_head_ref || github.sha }}
           persist-credentials: false
+          filter: blob:none
 
       - name: Post "started" comment
         if: github.event_name == 'issue_comment'

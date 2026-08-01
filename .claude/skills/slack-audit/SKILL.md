@@ -1,6 +1,6 @@
 ---
 name: slack-audit
-description: Audit Slack channel threads for untracked work items — checks each thread against GH issues/PRs, reports gaps, and optionally redrives dropped threads by posting a status reply to the channel.
+description: "Audit Slack channel threads for untracked work items — checks each thread against GH issues/PRs, reports gaps, and optionally redrives dropped threads by posting a status reply to the channel. Slash command: /slack-audit."
 metadata:
   type: skill
 ---
@@ -143,4 +143,4 @@ After any `--fix` run, call `/learn` to capture:
 - A thread counts as "redriven" only if a reply is actually posted AND the channel root message is bumped (reply-to-channel).
 - The dry-run report is the default so you can review before posting.
 - Skip threads where the root message is from a cron bot and there are no human replies.
-- Skip threads where the only message is a `/repro` or `/green` command that completed (has a bot success reply with ✅).
+- Skip threads where the only message is a `/repro` or `/green` command that completed (has a bot success reply with a checkmark).

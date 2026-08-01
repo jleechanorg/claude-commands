@@ -1,0 +1,124 @@
+﻿Character Template Document (System-Agnostic / 5E Engine Format)
+
+
+This revised template formats the mechanical framework using D&D 5e/Pathfinder nomenclature as its baseline, while utilizing universal, descriptive tags. This allows a player to instantly translate the sheet into D&D 5e, Pathfinder 1e/2e, or any custom homebrew d20/point-buy system without anchoring the narrative to specific official lore.
+
+
+Character Dossier Template
+Part 1: Personality Profile
+I. Core Identity
+* Name: [Character Name]
+* Archetype/Role: [e.g., The Disgraced Academic / The Hidden Prodigy]
+* Occupation/Social Standing: [Current societal status, institutional rank, or class standing; include any specific titles or public stigmas, e.g., Exiled Nobility / Political Pariah]
+* System Alignment / Moral Framework: (Internal) [Alignment, e.g., Neutral Good] — [Brief description of the gap between their true internal values and their self-perception, trauma, or external behavior.]
+* Personality Type (MBTI): (Internal) [MBTI Type, e.g., INFJ] — [How their dominant cognitive functions manifest internally, particularly how trauma, stress, or environment distorts their core idealism or logic.]
+II. Psychology & Personality
+* Core Motivation (The "Why"): [The primary psychological driver, e.g., Atonement / Vengeance / Survival]. [Explain the specific internal or external catalyst behind this drive, detailing any underlying guilt or responsibility.]
+* Greatest Fear: [The core vulnerability or phobia, e.g., Helplessness / Exposure / Loss of Control]. [Explain how past trauma reinforces this fear during active scenarios.]
+* Key Personality Traits: [List 4–6 descriptive adjectives capturing their core temperament, e.g., Analytical, Anxious, Empathetic, Guarded].
+* Quirks & Habits:
+   * [Physical manifestation of stress, trauma, or memory, e.g., touching a specific scar or heirloom].
+   * [Unconscious habit during cognitive focus or deep concentration].
+   * [Specific social aversion or behavioral tells when interacting with certain demographics/factions].
+III. Behavior & Speech
+* Demeanor Under Stress: [Describe the exact psychological and behavioral response to high-stakes or threatening scenarios, e.g., Freeze/Fight/Flight/Fawn mechanics, analysis paralysis, or hyper-focus].
+* Speech Patterns: [Acoustic qualities, tone, pacing, and vocabulary choices, e.g., hesitant whispering, clinical precision, over-apologetic phrasing].
+* Reputation: [How the broader world, society, or key factions perceive this character publicly, e.g., universally negative, tragic, celebrated, or untrustworthy].
+IV. Backstory
+* Defining Moment: [The singular, catalytic event that formed the foundation of their current identity, trauma, or worldview. Detail the precise sequence of action, choice, and perceived failure].
+* Relevant History: [Chronological summary of upbringing, childhood environment, early training, the specific crisis or betrayal, and the subsequent path leading to their current isolation, exile, or starting position].
+* Secrets: [Deeply held internal secrets or hidden past actions that are completely unknown to the public or other party members. Explain the secondary layers of hidden internal guilt or liability beneath their public reputation].
+V. System Mechanics (Narrative Integration)
+* Feats/Perks: [List any baseline mechanical perks, or note if none are present at current progression level].
+* Special Abilities / Powers: [Describe latent, unawakened, or highly volatile unique abilities. Detail the narrative conditions blocking this power, such as psychological blocks, lack of training, or emotional trauma].
+VI. Psychological Deep Dive
+1. Portrait Summary
+[Character Name] is a brilliant mind drowning in [Core Emotional Conflict, e.g., guilt/fear]. They are defined not by their immense potential, but by their belief that they are [Core Negative Self-Belief]. Every action is filtered through a lens of [Self-Evaluation, e.g., self-loathing/paranoia], leaving them a figure of immense latent capability who is terrified to act.
+2. Composite Psychological Sketch
+Dimension
+	Reading / Metric
+	Personal Twist / Manifestation
+	Big Five Trait Profile
+	O: [1-5], C: [1-5], E: [1-5], A: [1-5], N: [1-5]
+	[How these extreme or balanced scores interact. Explain how high/low scores fuel specific strengths while exacerbating internal anxieties or flaws.]
+	Dominant Defenses
+	[Defense Mechanism 1], [Defense Mechanism 2]
+	[How the character subconsciously protects their ego from trauma, e.g., repressing memories or converting guilt into self-punishing behavior.]
+	Attachment Style
+	[e.g., Anxious-Fearful / Dismissive-Avoidant]
+	[How they approach interpersonal dynamics; their paradoxical desire for connection versus their fear of vulnerability or causing harm to others.]
+	3. Social Persona vs. Repressed Interior
+* Social Persona: [The outward-facing mask, public behavior, or stereotype they allow the world to see, e.g., the broken pariah, the cold intellectual].
+* Inner Person: [The raw, unmasked internal reality; how they analyze their own performance, hold internal trials, or harbor hidden motivations].
+4. Defense-Mechanism Diagnostics
+Mechanism
+	Everyday Illustration / Trigger Event
+	[Mechanism 1, e.g., Repression]
+	[Specific behavioral trigger] $\rightarrow$ [Physiological and emotional trauma response combined with cognitive denial or avoidance].
+	[Mechanism 2, e.g., Moral Masochism]
+	[Specific interpersonal trigger] $\rightarrow$ [Submission to or agreement with negative external treatment to validate internal self-hatred].
+	[Mechanism 3, e.g., Intellectualization]
+	[Specific crisis trigger] $\rightarrow$ [Obsessing over technical, historical, or academic data to completely bypass overwhelming emotional pain].
+	5. Relational Decoding
+* Attachment Script: ["If I let you get close to me, then [Negative Consequence Based on Core Fear]."]
+* Distance Mechanics: [How they actively manage boundaries with allies, companions, or loved ones].
+* Interpretation Bias: [How they misinterpret positive reinforcement, kindness, or utility from others, e.g., viewing kindness as pity or transactional manipulation].
+6. Core Unconscious Beliefs
+* [Unconscious Belief 1, e.g., I am the cause of all suffering.]
+* [Unconscious Belief 2, e.g., My core traits are inherently dangerous.]
+* [Unconscious Belief 3, e.g., I deserve the negative outcomes I receive.]
+7. Personal Myth Narrative
+* Role: [The psychological title they assign themselves in their own story, e.g., The Living Wound / The Eternal Burden].
+* Story Told: ["[Summary statement of their personal myth, contrasting past glory or others' excellence with their own perceived darkness/failure]."]
+* Comfort/Safe Haven: [The exact physical or environmental conditions where they seek absolute isolation, anonymity, or cognitive escape].
+* Toxicity/Stagnation: [How this personal myth actively prevents healing, growth, or the recognition of their actual talent, locking them into a cycle of failure].
+8. Break-Point Scenario
+* Catalyst: [The exact crisis situation required to force a psychological shift, e.g., a specific companion put in mortal danger where this character is the sole line of defense].
+* What Fractures: [The specific core unconscious belief or psychological wall that shatters under the pressure of this catalyst].
+* Immediate Cost: [The immediate psychological, emotional, or physical toll of breaking that wall, e.g., fear of their own sudden agency, panic, or loss of control].
+* Liberation/Evolution: [The long-term transformative result of surviving this breakpoint; how it alters their personal myth and begins their mechanical or narrative redemption arc].
+9. Closing Pulse
+They believe themselves to be [Metaphor for current broken/diminished state], not realizing they hold the power of [Metaphor for latent, unexploited potential].
+Part 2: Mechanical Character Sheet
+System Adaptability Note: This sheet uses standard d20 (D&D 5e / Pathfinder) attributes and terminology as a framework. If using a custom rule system, point-buy engine, or alternative tabletop platform, map these parameters to your system's equivalent physical, mental, and tactical values.
+I. Core Attributes & Scaling
+* Name: [Character Name]
+* Class / Build Concept: [e.g., Wizard / Scholar / Latent Caster]
+* Level / Progression Stage: [Current Level] (XP / Progression Points: [Current] / [Next Target])
+Primary Attribute Array
+* Strength (STR) / Physique: [Score] ([Modifier]) — Melee capability, physical burden, brute force.
+* Dexterity (DEX) / Coordination: [Score] ([Modifier]) — Agility, reflexes, manual speed, ranged precision.
+* Constitution (CON) / Durability: [Score] ([Modifier]) — Health pool, stamina, physical resilience.
+* Intelligence (INT) / Logic: [Score] ([Modifier]) — Rote memory, academic analysis, arcane/technical theory.
+* Wisdom (WIS) / Intuition: [Score] ([Modifier]) — Perception, insight, psychological willpower, raw awareness.
+* Charisma (CHA) / Presence: [Score] ([Modifier]) — Force of personality, social manipulation, internal resolve.
+Underlying Personality Metrics (Optional System Baseline)
+* Openness: [1-5] | Conscientiousness: [1-5] | Extraversion: [1-5] | Agreeableness: [1-5] | Neuroticism: [1-5]
+II. Combat & Tactical Vitality
+* Hit Points / Vitality Pool (HP): [Current] / [Maximum] (Hit Die / Growth Value: [e.g., d6/d8/d10])
+* Resource / Power Pool (MP/EP): [Current] / [Maximum] — Spell slots, mana, or energy currency derived from primary mental attribute.
+* Armor Class (AC) / Static Defense: [Value] — Target number required to hit this character (Base Calculation Formula: e.g., 10 + DEX).
+* Tactical Mobility / Speed: [Value, e.g., 30 ft. / 6 squares] — Movement capacity per tactical turn.
+* Initiative / Reflex Action Modifier: [Modifier] — Turn order priority bonus based on Agility/Dexterity/Intuition.
+* Proficiency / Combat Scaling Bonus: [Modifier, e.g., +2] — Universal competency bonus scaling with level.
+III. Proficiencies & Expertise
+* Armor Competencies: [List permitted armor weights or note total evasion/penalties].
+* Weapon Groups: [List specific martial/simple weapons handled without penalty].
+* Skill Proficiencies / Knowledge Tags: [List specialized fields of study, historical records, or technical skills, e.g., Arcana, History, Insight, Investigation, Cryptography].
+IV. Features, Traits & Flaws
+Heritage / Bloodline Traits
+* [Trait Name 1 - Heritage Gift]: [Positive mechanical or narrative effect tied to their species, origin, bloodline, or background].
+* [Trait Name 2 - Heritage Flaw]: [Negative mechanical penalty, vulnerability, or behavioral restriction tied to their origin or background].
+Class / Archetype Features
+* [Feature Name 1 - The Trauma Block / Flaw]: [Detail the specific mechanical penalty or restriction imposed on standard actions—such as a Disadvantage mechanical modifier—due to trauma, psychological blocks, or lack of motor control].
+* [Feature Name 2 - The Latent/Volatile Power]: [Detail the high-variance mechanical system, trigger conditions, and GM-intervention rules for rolling a d20 or system check to subconsciously manifest unlearned or high-level abilities under extreme combat stress].
+Feats / Talents
+* [List selected feats/talents or state "None at current progression level"].
+V. Inventory & Equipment
+* Apparel: [Standard starting garments, uniforms, or armor emphasizing social status or condition].
+* Primary Tool/Focus: [A specific narrative object or documentation item detailing their primary study, research, or curse].
+* Memento / Relic: [An item of deep personal significance linked directly to their defining trauma, including its current state or condition].
+* Currency/Resources: [Starting funds or material assets carried].
+Template Metadata
+* Word Count: 1,029 words
+* Estimated Token Count: ~1,390 tokens

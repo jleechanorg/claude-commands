@@ -59,7 +59,15 @@ else
     PROJECT_ROOT="$PWD"
 fi
 
-BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+# Detect detached HEAD vs. symbolic ref
+# --symbolic-full-name HEAD returns "refs/heads/<branch>" for normal state,
+# or "HEAD" (with detached flag) when in detached HEAD state.
+if git symbolic-ref -q HEAD >/dev/null 2>&1; then
+    BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+else
+    # Detached HEAD — use short commit hash for uniqueness, prefixed with "detached-"
+    BRANCH_NAME="detached-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+fi
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/claude"
 mkdir -p "$LOG_DIR"
 chmod 700 "$LOG_DIR" 2>/dev/null || true

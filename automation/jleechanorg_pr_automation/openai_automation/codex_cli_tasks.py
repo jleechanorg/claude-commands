@@ -458,14 +458,14 @@ class CodexCloudAPI:
         If that fails due to existing branch, try to delete and recreate.
         """
         result = subprocess.run(
-            ["git", "-C", worktree_str, "checkout", "-B", branch, reset_target],
+            ["git", "-C", worktree_str, "checkout", "--ignore-other-worktrees", "-B", branch, reset_target],
             capture_output=True,
             text=True,
             timeout=max(self.timeout, 120),
         )
         if result.returncode != 0:
-            # If -B fails (e.g., branch exists), try deleting and recreating
-            if "already exists" in result.stderr:
+            # If -B fails (e.g., branch exists or is checked out), try deleting and recreating
+            if "already exists" in result.stderr or "already checked out" in result.stderr:
                 subprocess.run(
                     ["git", "-C", worktree_str, "branch", "-D", branch],
                     capture_output=True,
@@ -473,7 +473,7 @@ class CodexCloudAPI:
                     timeout=30,
                 )
                 subprocess.run(
-                    ["git", "-C", worktree_str, "checkout", "-b", branch, reset_target],
+                    ["git", "-C", worktree_str, "checkout", "--ignore-other-worktrees", "-b", branch, reset_target],
                     capture_output=True,
                     text=True,
                     check=True,

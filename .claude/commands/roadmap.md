@@ -26,7 +26,12 @@ execution_mode: immediate
        memory_files = []
    # Keyword filter: roadmap, planning, architecture, decision, goals
    keywords = ['roadmap', 'planning', 'architecture', 'decision', 'goal']
-   relevant = [f for f in memory_files if any(k in open(f).read().lower() for k in keywords)]
+   relevant = []
+   for f in memory_files:
+       with open(f, encoding='utf-8') as handle:
+           memory_text = handle.read().lower()
+       if any(k in memory_text for k in keywords):
+           relevant.append(f)
    ```
    Display any matches as "📍 From Memory" before proceeding.
 
@@ -40,7 +45,7 @@ execution_mode: immediate
    - If a doc matches the current task topic (keyword match against filenames + first 5 lines), flag it as "EXISTING — consider updating"
 
 3. **Scan beads** for related open items:
-   - Run: `br list --status open 2>/dev/null`
+   - Run: `br list --status open`, and abort the bead-match step if the command returns a non-zero exit code
    - Keyword-match against current task input
    - If matches found, show them as "EXISTING BEADS — consider updating these instead of creating new ones"
 
@@ -104,7 +109,8 @@ For each task, execute in sequence:
 
 6. Check for uncommitted changes regardless of current branch:
    - Run `git status --porcelain`
-   - If changes exist, commit them with a descriptive message before any branch switch
+   - If changes exist, stage only roadmap-related files before any branch switch
+   - If unrelated changes are present, do not auto-commit them; ask for confirmation before including them
 
 7. Switch to main branch: `git checkout main`
 
