@@ -34,6 +34,18 @@ RESUME_PROMPT = (
 )
 DEBOUNCE_SECONDS = 15 * 60
 MAX_RESUME_BACKOFF_SECONDS = 60 * 60
+# Per-surface attempt ceiling. After MAX_ATTEMPT_COUNT consecutive
+# WOULD_RESUME attempts, the surface is parked for 24 hours even if the
+# classifier still classifies it as quota/network. Prevents a mislabeled
+# surface from spamming cmux send-input indefinitely (verified failure
+# mode: state.json showed attempt_count=7 on one surface after PR #38
+# merged, with 1h backoff floor = ~24 resumes/day forever).
+MAX_ATTEMPT_COUNT = 24
+# Process-wide daily resume cap. After DAILY_RESUME_CAP successful sends
+# across all surfaces in a single UTC day, the watchdog refuses to send
+# any more until midnight UTC. Prevents classifier-mislabel cascade from
+# turning into dozens of stray cmux inputs per tick.
+DAILY_RESUME_CAP = 50
 FASTEMBED_ACTION_THRESHOLD = 0.68
 FASTEMBED_CLEAR_THRESHOLD = 0.58
 LLM_TIMEOUT_SECONDS = 12
@@ -579,6 +591,16 @@ def run_tick(args: argparse.Namespace, semantic_predict: Callable[[str], tuple[s
                             now + (next_backoff_seconds - (now - last_resume)),
                             LOCAL_TZ,
                         ).isoformat()
+                    elif attempt_count >= MAX_ATTEMPT_COUNT:
+                        # Per-surface ceiling: park this surface for 24h so a
+                        # mislabeled one cannot spam cmux send-input. Operator
+                        # sees PAUSE_24H + reset_epoch in the log line; the
+                        # state.json attempt_count stays clamped until the
+                        # surface is re-classified as clear (line 585).
+                        action = "PAUSE_24H"
+                        retry_after = dt.datetime.fromtimestamp(
+                            now + 24 * 60 * 60, LOCAL_TZ,
+                        ).isoformat()
                 state[key] = surface_state
 
             if not decision.eligible and not dry_run:
@@ -593,8 +615,25 @@ def run_tick(args: argparse.Namespace, semantic_predict: Callable[[str], tuple[s
 
             if action != "WOULD_RESUME" or dry_run:
                 continue
+            # Process-wide daily resume cap. Reads/writes the cumulative
+            # counter at state["_meta"]["daily_resume_count"]; resets to 0
+            # when the UTC day rolls over. Operator can override per-tick
+            # with --no-debounce; we leave the cap in place even then since
+            # it's a process-wide throttle, not a per-surface debounce.
+            meta = state.setdefault("_meta", {})
+            today_key = dt.datetime.fromtimestamp(now, LOCAL_TZ).strftime("%Y-%m-%d")
+            if meta.get("daily_resume_date") != today_key:
+                meta["daily_resume_date"] = today_key
+                meta["daily_resume_count"] = 0
+            if int(meta.get("daily_resume_count", 0)) >= DAILY_RESUME_CAP:
+                log(
+                    f"DAILY_CAP_HIT socket={surface.socket} workspace={surface.workspace} "
+                    f"surface={surface.surface} cap={DAILY_RESUME_CAP} action=SKIP"
+                )
+                continue
             try:
                 send_resume(surface, MENU_RE.search(screen) is not None)
+                meta["daily_resume_count"] = int(meta["daily_resume_count"]) + 1
                 key = f"{surface.socket}|{surface.workspace}|{surface.surface}"
                 surface_state = dict(state.get(key, {}))
                 surface_state["last_resume"] = now

@@ -7,11 +7,8 @@ from pathlib import Path
 import pytest
 
 
-# This test ships alongside cmux_resume_watchdog.py inside the
-# cmux-resume-watchdog skill. The script lives in the same dir as this test
-# (NOT in a sibling scripts/ subdir as it does in $GITHUB_REPOSITORY).
-SCRIPT_DIR = Path(__file__).resolve().parent
-SCRIPT = SCRIPT_DIR / "cmux_resume_watchdog.py"
+REPO_ROOT = Path(__file__).resolve().parent
+SCRIPT = REPO_ROOT / "cmux_resume_watchdog.py"
 
 
 def load_module():
@@ -303,7 +300,7 @@ def test_dry_run_collects_menu_based_quota_signals(monkeypatch, tmp_path, capsys
                 socket_path,
                 "workspace:22",
                 "surface:44",
-                "$USER@localhost: ~/projects/test-workspace",
+                "jleechan@jeffreys-macbook-pro: ~/projects/cold-reviewer",
             ),
         ],
     )
@@ -840,3 +837,226 @@ def test_all_historical_error_permutations_backtest(bullet, snippet, expected_ki
     assert decision.action == "WOULD_RESUME"
 
 
+
+
+
+
+# ── Attempt-count + daily-cap regression tests (PR-fix-cmux-resume-watchdog-attempt-cap) ──
+
+
+def _seed_state(state_file, surface_key, attempt_count=0, last_resume=0.0, daily_meta=None):
+    """Write a state.json with one surface + optional _meta."""
+    full = {
+        surface_key: {
+            "attempt_count": attempt_count,
+            "kind": "quota",
+            "last_resume": last_resume,
+        },
+        "_meta": daily_meta or {},
+    }
+    state_file.write_text(json.dumps(full))
+
+
+def test_max_attempt_count_constant_is_24():
+    watchdog = load_module()
+    assert watchdog.MAX_ATTEMPT_COUNT == 24
+    # 24 attempts at 1h backoff floor = ~1 day of retries before park;
+    # this is the "sleep on it overnight" gate the /advice Reviewer B flagged.
+
+
+def test_daily_resume_cap_constant_is_50():
+    watchdog = load_module()
+    assert watchdog.DAILY_RESUME_CAP == 50
+    # 50 sends/day across ALL surfaces caps a classifier-mislabel cascade
+    # before it can spam dozens of stray cmux inputs per tick.
+
+
+def test_per_surface_attempt_count_cap_triggers_pause_24h(monkeypatch, tmp_path, capsys):
+    """Surface with attempt_count >= MAX_ATTEMPT_COUNT must park for 24h (no send)."""
+    watchdog = load_module()
+    state_file = tmp_path / "state.json"
+    # Use the actual surface key the daemon generates:
+    sock = "/tmp/live.sock"
+    surface_key = f"{sock}|ws:1|surface:1"
+    # Initialize state.json to {surface_key: {attempt_count: 0}, _meta: {}}
+    _seed_state(state_file, surface_key, attempt_count=0)
+    monkeypatch.setattr(watchdog, "STATE_FILE", state_file)
+    monkeypatch.setattr(watchdog, "discover_cmux_sockets", lambda: [sock])
+    surface_obj = watchdog.Surface(sock, "ws:1", "surface:1", "test-surface")
+    monkeypatch.setattr(
+        watchdog, "list_terminal_surfaces",
+        lambda socket_path: [surface_obj] if socket_path == sock else [],
+    )
+    screen = "⏺ Token Plan usage limit reached. Please upgrade or wait.\n❯ "
+    monkeypatch.setattr(watchdog, "read_screen", lambda surface: screen)
+    sent = []
+    monkeypatch.setattr(watchdog, "send_resume", lambda surface, menu_open: sent.append(surface) or None)
+    monkeypatch.setattr(
+        watchdog, "classify_screen",
+        lambda screen, semantic, llm: watchdog.Decision(
+            kind="quota", score=0.9, path="fastembed", eligible=True, action="WOULD_RESUME",
+        ),
+    )
+    # Overwrite to set attempt_count at MAX_ATTEMPT_COUNT (boundary case)
+    full = {surface_key: {"attempt_count": watchdog.MAX_ATTEMPT_COUNT,
+                          "kind": "quota",
+                          "last_resume": 0.0},  # epoch = backoff long-passed
+            "_meta": {}}
+    state_file.write_text(json.dumps(full))
+
+    rc = watchdog.main([])
+    assert rc == 0
+    assert sent == [], f"PAUSE_24H should skip send_resume, got {sent}"
+    output = capsys.readouterr().out
+    assert "PAUSE_24H" in output, f"expected PAUSE_24H log line, got:\n{output}"
+    assert "action=PAUSE_24H" in output
+
+
+def test_per_surface_attempt_count_cap_below_threshold_still_resumes(monkeypatch, tmp_path, capsys):
+    """Surface at attempt_count = MAX_ATTEMPT_COUNT - 1 must still resume (1h gate passes)."""
+    watchdog = load_module()
+    state_file = tmp_path / "state.json"
+    sock = "/tmp/live.sock"
+    surface_key = f"{sock}|ws:1|surface:1"
+    full = {surface_key: {"attempt_count": watchdog.MAX_ATTEMPT_COUNT - 1,
+                          "kind": "quota",
+                          "last_resume": 0.0},  # epoch; 1h backoff long-passed
+            "_meta": {}}
+    state_file.write_text(json.dumps(full))
+    monkeypatch.setattr(watchdog, "STATE_FILE", state_file)
+    monkeypatch.setattr(watchdog, "discover_cmux_sockets", lambda: [sock])
+    surface_obj = watchdog.Surface(sock, "ws:1", "surface:1", "test-surface")
+    monkeypatch.setattr(
+        watchdog, "list_terminal_surfaces",
+        lambda socket_path: [surface_obj] if socket_path == sock else [],
+    )
+    screen = "⏺ Token Plan usage limit reached. Please upgrade or wait.\n❯ "
+    monkeypatch.setattr(watchdog, "read_screen", lambda surface: screen)
+    sent = []
+    monkeypatch.setattr(watchdog, "send_resume", lambda surface, menu_open: sent.append(surface) or None)
+    monkeypatch.setattr(
+        watchdog, "classify_screen",
+        lambda screen, semantic, llm: watchdog.Decision(
+            kind="quota", score=0.9, path="fastembed", eligible=True, action="WOULD_RESUME",
+        ),
+    )
+
+    rc = watchdog.main([])
+    assert rc == 0
+    assert len(sent) == 1, f"below-cap attempt should resume, got {sent}"
+    # Verify attempt_count incremented
+    new_state = json.loads(state_file.read_text())
+    assert new_state[surface_key]["attempt_count"] == watchdog.MAX_ATTEMPT_COUNT
+
+
+def test_daily_resume_cap_blocks_sends_after_threshold(monkeypatch, tmp_path, capsys):
+    """After DAILY_RESUME_CAP successful resumes in a UTC day, further sends are SKIPPED."""
+    watchdog = load_module()
+    state_file = tmp_path / "state.json"
+    sock = "/tmp/live.sock"
+    surface_key = f"{sock}|ws:1|surface:1"
+    today_key = watchdog.dt.datetime.now(watchdog.LOCAL_TZ).strftime("%Y-%m-%d")
+    full = {surface_key: {"attempt_count": 1,
+                          "kind": "quota",
+                          "last_resume": 0.0},
+            "_meta": {"daily_resume_date": today_key,
+                      "daily_resume_count": watchdog.DAILY_RESUME_CAP}}
+    state_file.write_text(json.dumps(full))
+    monkeypatch.setattr(watchdog, "STATE_FILE", state_file)
+    monkeypatch.setattr(watchdog, "discover_cmux_sockets", lambda: [sock])
+    surface_obj = watchdog.Surface(sock, "ws:1", "surface:1", "test-surface")
+    monkeypatch.setattr(
+        watchdog, "list_terminal_surfaces",
+        lambda socket_path: [surface_obj] if socket_path == sock else [],
+    )
+    screen = "⏺ Token Plan usage limit reached. Please upgrade or wait.\n❯ "
+    monkeypatch.setattr(watchdog, "read_screen", lambda surface: screen)
+    sent = []
+    monkeypatch.setattr(watchdog, "send_resume", lambda surface, menu_open: sent.append(surface) or None)
+    monkeypatch.setattr(
+        watchdog, "classify_screen",
+        lambda screen, semantic, llm: watchdog.Decision(
+            kind="quota", score=0.9, path="fastembed", eligible=True, action="WOULD_RESUME",
+        ),
+    )
+
+    rc = watchdog.main([])
+    assert rc == 0
+    assert sent == [], f"daily cap should skip send_resume, got {sent}"
+    output = capsys.readouterr().out
+    assert "DAILY_CAP_HIT" in output, f"expected DAILY_CAP_HIT log line, got:\n{output}"
+
+
+def test_daily_resume_counter_resets_on_new_day(monkeypatch, tmp_path):
+    """When the UTC day rolls over, daily_resume_count resets to 0 (→ resume succeeds)."""
+    watchdog = load_module()
+    state_file = tmp_path / "state.json"
+    sock = "/tmp/live.sock"
+    surface_key = f"{sock}|ws:1|surface:1"
+    # Pre-seed with YESTERDAY's counter at the cap
+    yesterday = "2020-01-01"
+    full = {surface_key: {"attempt_count": 1,
+                          "kind": "quota",
+                          "last_resume": 0.0},
+            "_meta": {"daily_resume_date": yesterday,
+                      "daily_resume_count": watchdog.DAILY_RESUME_CAP}}
+    state_file.write_text(json.dumps(full))
+    monkeypatch.setattr(watchdog, "STATE_FILE", state_file)
+    monkeypatch.setattr(watchdog, "discover_cmux_sockets", lambda: [sock])
+    surface_obj = watchdog.Surface(sock, "ws:1", "surface:1", "test-surface")
+    monkeypatch.setattr(
+        watchdog, "list_terminal_surfaces",
+        lambda socket_path: [surface_obj] if socket_path == sock else [],
+    )
+    screen = "⏺ Token Plan usage limit reached. Please upgrade or wait.\n❯ "
+    monkeypatch.setattr(watchdog, "read_screen", lambda surface: screen)
+    sent = []
+    monkeypatch.setattr(watchdog, "send_resume", lambda surface, menu_open: sent.append(surface) or None)
+    monkeypatch.setattr(
+        watchdog, "classify_screen",
+        lambda screen, semantic, llm: watchdog.Decision(
+            kind="quota", score=0.9, path="fastembed", eligible=True, action="WOULD_RESUME",
+        ),
+    )
+
+    rc = watchdog.main([])
+    assert rc == 0
+    assert len(sent) == 1, f"new-day reset should allow resume, got {sent}"
+    new_state = json.loads(state_file.read_text())
+    # Counter should have reset then incremented to 1
+    assert new_state["_meta"]["daily_resume_count"] == 1
+    assert new_state["_meta"]["daily_resume_date"] != yesterday
+
+
+def test_attempt_count_resets_on_cleared_decision(monkeypatch, tmp_path):
+    """Surface re-classified as 'clear' (eligible=False) should reset attempt_count."""
+    watchdog = load_module()
+    state_file = tmp_path / "state.json"
+    sock = "/tmp/live.sock"
+    surface_key = f"{sock}|ws:1|surface:1"
+    full = {surface_key: {"attempt_count": 5,
+                          "kind": "quota",
+                          "last_resume": 0.0},
+            "_meta": {}}
+    state_file.write_text(json.dumps(full))
+    monkeypatch.setattr(watchdog, "STATE_FILE", state_file)
+    monkeypatch.setattr(watchdog, "discover_cmux_sockets", lambda: [sock])
+    surface_obj = watchdog.Surface(sock, "ws:1", "surface:1", "test-surface")
+    monkeypatch.setattr(
+        watchdog, "list_terminal_surfaces",
+        lambda socket_path: [surface_obj] if socket_path == sock else [],
+    )
+    monkeypatch.setattr(watchdog, "read_screen", lambda surface: "Agent finished successfully.\n❯ ")
+    monkeypatch.setattr(watchdog, "send_resume", lambda surface, menu_open: None)
+    monkeypatch.setattr(
+        watchdog, "classify_screen",
+        lambda screen, semantic, llm: watchdog.Decision(
+            kind=None, score=0.9, path="fastembed", eligible=False, action="SKIP",
+        ),
+    )
+
+    rc = watchdog.main([])
+    assert rc == 0
+    new_state = json.loads(state_file.read_text())
+    assert "attempt_count" not in new_state.get(surface_key, {}), \
+        f"attempt_count should reset on clear, got: {new_state}"
