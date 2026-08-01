@@ -15,7 +15,8 @@ export PATH="$HOME/.local/bin:/Applications/cmux.app/Contents/Resources/bin:/opt
 
 for candidate in "$HOME/.local/orch-venv/bin/python3" /opt/homebrew/bin/python3; do
   if [[ -x "$candidate" ]] && "$candidate" -c 'import fastembed, numpy, onnxruntime' >/dev/null 2>&1; then
-    exec "$candidate" "$HOME/projects/user_scope/scripts/cmux_resume_watchdog.py" --daemon --interval 120
+    # The watchdog script lives in the same directory as this wrapper.
+  exec "$candidate" "$(dirname "$0")/cmux_resume_watchdog.py" --daemon --interval 120
   fi
 done
 

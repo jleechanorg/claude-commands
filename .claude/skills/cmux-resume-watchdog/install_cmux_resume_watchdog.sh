@@ -8,21 +8,28 @@
 set -euo pipefail
 
 SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
-LABEL="com.$USER.cmux-resume-watchdog"
+# LABEL is a stable namespace — NOT dependent on $USER, because launchd plists
+# do not expand shell variables. The literal "localhost" matches the
+# com.localhost.X convention common in vendored skills.
+LABEL="com.localhost.cmux-resume-watchdog"
 DEST="$HOME/.local/libexec/cmux-resume-watchdog"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
 mkdir -p "$DEST"
 cp "$SKILL_DIR/cmux_resume_watchdog.py" "$DEST/"
 
-sed "s|@HOME@|$HOME|g" "$SKILL_DIR/$LABEL.plist.template" \
-  > "$PLIST"
+# Substitute placeholders: @HOME@ → $HOME, @LABEL@ → $LABEL, @DEST@ → $DEST
+sed -e "s|@HOME@|$HOME|g" \
+    -e "s|@LABEL@|$LABEL|g" \
+    -e "s|@DEST@|$DEST|g" \
+    "$SKILL_DIR/cmux-resume-watchdog.plist.template" \
+    > "$PLIST"
 
 # Note: the plist points at the run-cmux-resume-watchdog.sh wrapper that lives
 # in the SKILL_DIR. If you move the skill, re-run this installer to update the
 # path (or symlink the wrapper into ~/.local/bin).
 
-# Retire any old watchdog that pointed at the user_scope checkout.
+# Retire any old watchdog that pointed at the user_scope checkout (or any other path).
 if launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; then
   launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 fi
