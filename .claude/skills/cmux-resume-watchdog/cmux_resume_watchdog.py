@@ -50,12 +50,12 @@ AGENT_CHROME_RE = re.compile(
     re.I | re.M,
 )
 STRUCTURAL_FAILURE_RE = re.compile(
-    r"^\s*[⏺●]\s|HTTP\s+\d{3}|\bcode\s+\d{3}\b|\"type\"\s*:\s*\"error\"|API Error:|Request rejected",
+    r"^\s*[⏺●⎿›»•·]\s|HTTP\s+\d{3}|\bcode\s+\d{3}\b|\"type\"\s*:\s*\"error\"|API Error:|Request rejected|overloaded|rate_limit|stalled mid-stream|idle timeout|fetch failed|connection failed|connection reset|RESOURCE_EXHAUSTED|Too many requests|hit your",
     re.I | re.M,
 )
 MENU_RE = re.compile(r"Stop and wait for limit to reset|Enter to confirm", re.I)
 QUICK_QUOTA_HINT_RE = re.compile(
-    r"(?im)(?:^[\s⎿▝▜█▙▟▛▜✦✧◆◇▶▷▸◀◁◂◃►▻›»•·❘❙❚▒▓░▢▣▤▥▦▧▨▩▪▫]*"
+    r"(?im)(?:^[\s⏺●⎿▝▜█▙▟▛▜✦✧◆◇▶▷▸◀◁◂◃►▻›»•·❘❙❚▒▓░▢▣▤▥▦▧▨▩▪▫]*"
     r"(?:what do you want to do\?|"
     r"1\.\s*stop and wait for limit to reset|"
     r"you've hit your (?:weekly|session|usage|message) limit|"
@@ -81,6 +81,9 @@ ANCHORS = {
         "monthly usage limit reached and resets in several days",
         "rate limit error caused by account quota exhaustion",
         "five hour usage limit reached and work is blocked until reset",
+        "bugbot usage limit reached for this user or team",
+        "overloaded error the service is temporarily overwhelmed by requests",
+        "response exceeded the output token maximum limit",
     ],
     "network": [
         "the API connection was lost and the agent stopped waiting for input",
@@ -88,6 +91,10 @@ ANCHORS = {
         "request failed because the service is unreachable",
         "connection reset or timed out and the agent could not continue",
         "service unavailable and the last turn failed",
+        "API returned an empty or malformed response check for a proxy or gateway intercepting the request",
+        "socket hang up or connection refused by the remote host",
+        "502 bad gateway or 503 service unavailable response from proxy",
+        "response stalled mid-stream or stream idle timeout no chunks received",
     ],
     "clear": [
         "the coding agent is idle and ready for a new user request",
@@ -99,6 +106,7 @@ ANCHORS = {
         "github API quota documentation is being discussed",
     ],
 }
+
 
 LLM_PROMPT = """Classify this live terminal tail for an automatic resume watchdog.
 Return exactly one token: QUOTA, NETWORK, or CLEAR.
@@ -177,9 +185,9 @@ def classify_screen(
         if llm_predict is not None and (structural_evidence or score >= 0.45):
             label = (llm_predict(text) or "clear").lower()
             path = "llm-fallback"
-        elif structural_evidence and re.search(r"Token Plan|usage limit|429|quota|rate limit|resource.*exhausted|exceeded.*limit", text, re.I):
+        elif structural_evidence and re.search(r"Token Plan|usage limit|429|quota|rate limit|resource.*exhausted|exceeded.*limit|account.*exhausted|overloaded|output token maximum|too many requests|hit your|402|insufficient credits", text, re.I):
             label = "quota"
-        elif structural_evidence and re.search(r"empty or malformed|proxy or gateway|connection|connect|network|socket|econnreset|enotfound|etimedout|502|503|504|server error|fetch failed|api error", text, re.I):
+        elif structural_evidence and re.search(r"empty or malformed|proxy or gateway|connection|connect|network|socket|econnreset|enotfound|etimedout|econnrefused|502|503|504|server error|fetch failed|api error|stalled mid-stream|idle timeout|529|connection closed|2064", text, re.I):
             label = "network"
         else:
             label = "clear"
