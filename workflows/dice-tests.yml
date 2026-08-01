@@ -18,15 +18,21 @@ permissions:
   pull-requests: write
   issues: write
 
+# NOTE: issue_comment trigger removed (PR ci/tier1-trim-2026-07-12).
+# /dice PR comments are routed via .github/workflows/comment-router.yml.
+# NOTE: issue_comment trigger removed (PR ci/tier1-trim-2026-07-12).
+# /dice PR comments are routed via .github/workflows/comment-router.yml.
 on:
-  issue_comment:
-    types: [created]
   workflow_dispatch:
     inputs:
       pr_number:
+        # NOTE: typed as `string` (was `number` pre-PR-8354) so comment-router.yml's
+        # `gh workflow run --field "pr_number=..."` dispatch works — GitHub's --field
+        # always sends strings, and a number-typed input rejects string values.
+        # Downstream code already does `Number(rawInput)` to coerce.
         description: 'PR number to associate this run with'
         required: true
-        type: number
+        type: string
       user_id:
         description: 'Optional: scope audit to a specific user_id (Firestore uid). Defaults to PR author when pr_number is set.'
         required: false
@@ -45,13 +51,11 @@ concurrency:
 jobs:
   resolve-pr-context:
     name: Resolve PR context
-    if: >-
-      (github.event_name == 'issue_comment' &&
-       github.event.issue.pull_request &&
-       startsWith(github.event.comment.body, '/dice') &&
-       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
-      || github.event_name == 'workflow_dispatch'
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # NOTE: issue_comment branch removed (PR ci/tier1-trim-2026-07-12);
+    # routing lives in .github/workflows/comment-router.yml.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 5
     outputs:
       pr_number: ${{ steps.resolve.outputs.pr_number }}
       pr_head_sha: ${{ steps.resolve.outputs.pr_head_sha }}
@@ -105,7 +109,7 @@ jobs:
             }
 
             const headSha = pr.data.head.sha || '';
-            const headRef = headSha || `refs/pull/${pr.data.number}/head`;
+            const headRef = headSha;
             const authorLogin = pr.data.user?.login || '';
             const authorAssociation = pr.data.author_association || '';
             
@@ -169,7 +173,14 @@ jobs:
   run-dice-audit:
     name: Daily Dice Audit (Firestore, on-demand)
     needs: resolve-pr-context
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    # E4 EXCEPTION: the daily GCP Cloud Run job's own task body is bounded at
+    # 3600s (60min), but this job's *outer* GHA timeout must cover that inner
+    # bound PLUS the checkout / GCP auth / Python setup / pip install /
+    # Firebase-user-resolution overhead that runs BEFORE "Run dice audit"
+    # starts (all of it counts against this same job-level timeout). 65min
+    # restores a real ~5min buffer for that setup — 60min flat leaves zero
+    # margin and risks killing a run whose actual audit step is still healthy.
     timeout-minutes: 65
     env:
       GCP_PROJECT: worldarchitecture-ai
@@ -182,8 +193,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ needs.resolve-pr-context.outputs.pr_head_ref }}
+          ref: ${{ needs.resolve-pr-context.outputs.pr_head_ref || github.sha }}
           persist-credentials: false
+          filter: blob:none
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
@@ -196,18 +208,12 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install test dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -m venv venv
-          source venv/bin/activate
-          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> "$GITHUB_ENV"
-          echo "$VIRTUAL_ENV/bin" >> "$GITHUB_PATH"
-          venv/bin/python -m pip install --upgrade pip
-          venv/bin/python -m pip install -r mvp_site/requirements.txt
-          if [ -f mvp_site/requirements-test.txt ]; then
-            venv/bin/python -m pip install -r mvp_site/requirements-test.txt
-          fi
+        uses: ./.github/actions/setup-ci-venv
+        with:
+          python-bin: 'command -v python3'
+          requirements-files: |
+            mvp_site/requirements.txt
+            mvp_site/requirements-test.txt
 
       - name: Resolve PR author Firebase user_id
         id: resolve_firebase_user

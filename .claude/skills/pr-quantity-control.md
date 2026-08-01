@@ -21,15 +21,15 @@ gh pr list --state open --search "<feature-scope> in:title" --json number,title 
 - **If a prior PR was closed** for the same goal: reuse its branch or cherry-pick its commits. Do not start fresh if work has already been started elsewhere.
 
 ## PR Classification & Review Tracks
-Not all PRs require the full Skeptic review track.
+Not all PRs carry the same review/evidence bar.
 
 - **Docs/Evidence/Test-only PRs**:
   - Lighter review track.
-  - Skip the Skeptic Gate.
+  - Evidence sections may be marked N/A (per PR description gate).
   - Single reviewer approval is sufficient for merge readiness.
 - **Production Code Changes**:
-  - Full 7-green track required.
-  - Skeptic Gate mandatory.
+  - Full `/green` track required (CI green + no merge conflicts; see pr-green-definition.md) plus draft-phase quality gates (`/es`, `/er`, `/advice`) before leaving DRAFT.
+  - Full evidence sections required, human MERGE APPROVED before merge.
 
 ## Efficiency Targets
 All agents should aim for the following performance metrics:

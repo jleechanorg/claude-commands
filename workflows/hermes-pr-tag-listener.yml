@@ -1,0 +1,38 @@
+# Calls the reusable @hermes mention listener from jleechanorg/.github.
+# Round 2 trim (PR-XXXXX, bead rev-8g8ql): dropped pull_request,
+# issue_comment, pull_request_review_comment triggers. The upstream
+# reusable (`jleechanorg/.github/.github/workflows/hermes-pr-tag-listener.yml`)
+# has a job-level `if:` that already filters for `@hermes` mentions — but
+# GitHub Actions creates a workflow_run BEFORE evaluating the filter, so
+# the wrapper still produced 755 skipped runs / 48h (100% skip rate).
+# GitHub's workflow-level triggers can't check comment body content, so
+# the only way to eliminate the wasted runs is to drop the triggers that
+# never produce useful work.
+#
+# Behavioral change: Slack notifications on @hermes PR/comment mentions
+# no longer fire automatically. The AO worker can still dispatch via
+# `repository_dispatch: hermes-task-completed` to post a notification,
+# which is the documented "work done" signal.
+#
+# Required repo secret:
+#   HERMES_SLACK_WEBHOOK_URL — incoming webhook for the target Slack channel
+
+name: hermes-pr-tag-listener
+
+on:
+  repository_dispatch:
+    types: [hermes-task-completed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  notify:
+    uses: jleechanorg/.github/.github/workflows/hermes-pr-tag-listener.yml@main
+    with:
+      slack_channel: ${{ vars.HERMES_SLACK_CHANNEL || '#worldai' }}
+      dispatch_ao: 'false'
+    secrets:
+      slack_webhook_url: ${{ secrets.HERMES_SLACK_WEBHOOK_URL }}

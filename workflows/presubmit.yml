@@ -12,27 +12,125 @@ permissions:
   actions: read  # Required for cache actions
 
 # Optimized CI triggers - no duplication on PR branches
+# push trigger removed (PR ci/tier1-trim-2026-07-12, bead rev-37jr1):
+# main/dev only receive squash-merge commits whose tree is byte-identical to
+# the PR head SHA already validated by the pull_request trigger below
+# (verified via `git log --format=%P` on the last 30 main commits — all
+# single-parent squash commits). A push re-run of these jobs was pure
+# duplication of a run that already passed on the PR, up to ~6.5 min avg ×
+# 10 jobs per merge. The push trigger's `paths-ignore` filter (removed
+# with it) previously eliminated docs-only/unrelated-path push runs; this
+# change eliminates the REMAINING push runs — the ones that DO touch
+# test-relevant paths — because they duplicate an already-passed PR run,
+# not because path-filtering was insufficient.
 on:
   pull_request:
-    paths-ignore:
-      # Note: do not ignore all of docs/** — PR bodies and checked-in docs can be
-      # evidence/design surfaces that should still receive normal presubmit coverage.
-      - 'roadmap/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      - 'README.md'
-  push:
-    branches: [ main, dev ]
-    paths-ignore:
+    types: [opened, ready_for_review, reopened, synchronize]
+    # Trigger-level positive paths filter (Lane C of round3-2026-07-13,
+    # bead rev-6vf3c partial subset — full dorny/paths-filter per-job
+    # scoping is the larger follow-up).
+    #
+    # Actionlint: GitHub Actions does NOT allow both `paths:` AND
+    # `paths-ignore:` on the same event — they're mutually exclusive.
+    # Use `!pattern` negation INSIDE the positive paths: block instead.
+    # Pattern fires when: at least one changed path matches the positive
+    # list AND no changed path matches a `!`-negated entry.
+    #   docs/** is intentionally INCLUDED to preserve the existing
+    #   "docs are evidence/design surfaces" behavior — the prior
+    #   paths-ignore comment explicitly opted out of ignoring docs/.
+    #   testing_*/** covers all 8 peer dirs (mcp/ui/utils + config/http/
+    #   integration/llm/util) so adding new test dirs doesn't silently
+    #   break lint coverage.
+    paths:
+      - 'mvp_site/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'testing_*/**'
       - 'docs/**'
-      - 'roadmap/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      - 'README.md'
-      - '*.md'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'eslint.config.js'
+      - '.eslintrc.cjs'
+      - '.eslintignore'
+      - 'mypy.ini'
+      - '.github/workflows/presubmit.yml'
+      # Negations (actionlint requires these in the positive paths block,
+      # not in a separate paths-ignore key):
+      - '!roadmap/**'
+      - '!.github/ISSUE_TEMPLATE/**'
+      - '!README.md'
 
 jobs:
+  # Detects which job-relevant path groups changed so downstream jobs can
+  # skip themselves on PRs that don't touch their inputs. Scopes are derived
+  # from each job's actual `run:` command / script defaults (read directly
+  # from scripts/check_schema_coverage.py, validate_prompt_tool_contracts.py,
+  # check_function_loc_ratchet.py, check_agy_json_contract.py, and the
+  # Ruff/mypy/ESLint invocations below) — NOT guessed from job names.
+  # Always runs (cheap) so its outputs are available to every gated job.
+  detect-changes:
+    name: Detect Changed Paths
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 3
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      js: ${{ steps.filter.outputs.js }}
+      schemas: ${{ steps.filter.outputs.schemas }}
+      prompts: ${{ steps.filter.outputs.prompts }}
+      loc_ratchet: ${{ steps.filter.outputs.loc_ratchet }}
+      agy: ${{ steps.filter.outputs.agy }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
+          persist-credentials: false
+      - name: Filter changed paths
+        id: filter
+        # dorny/paths-filter v3.0.3, pinned by full commit SHA (no prior
+        # dorny/paths-filter usage existed elsewhere in this repo to copy
+        # a pin from; SHA verified via `git ls-remote --tags
+        # https://github.com/dorny/paths-filter refs/tags/v3.0.3`).
+        uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
+        with:
+          filters: |
+            python:
+              - 'mvp_site/**/*.py'
+              - 'scripts/**/*.py'
+              - 'mvp_site/mypy.ini'
+              - 'mvp_site/requirements.txt'
+            js:
+              - '**/*.js'
+              - '**/*.mjs'
+              - '!mvp_site/frontend_v2/**'
+              - '.eslintrc.cjs'
+              - 'eslint.config.js'
+              - 'package.json'
+              - 'package-lock.json'
+            schemas:
+              - 'mvp_site/**/*.py'
+              - 'mvp_site/schemas/game_state.schema.json'
+              - 'mvp_site/schemas/game_state_schema_coverage_waivers.txt'
+              - 'scripts/check_schema_coverage.py'
+            prompts:
+              - 'mvp_site/schemas/prompt_tool_contracts.json'
+              - 'mvp_site/mcp_api.py'
+              - 'mvp_site/narrative_response_schema.py'
+              - 'mvp_site/prompts/**'
+              - 'scripts/validate_prompt_tool_contracts.py'
+            loc_ratchet:
+              - 'mvp_site/world_logic.py'
+              - 'mvp_site/llm_service.py'
+              - 'scripts/function_loc_baseline.json'
+              - 'scripts/check_function_loc_ratchet.py'
+            agy:
+              - 'mvp_site/llm_providers/agy_provider.py'
+              - 'mvp_site/tests/test_agy_provider.py'
+              - 'scripts/check_agy_json_contract.py'
   limit-pr-runs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 5
     permissions:
       actions: write
       contents: read
@@ -41,7 +139,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
           persist-credentials: false
       - name: Limit PR runs
         uses: ./.github/actions/limit-pr-runs
@@ -49,15 +147,33 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
   schema-coverage:
     name: Schema Coverage Guard
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    needs: detect-changes
+    # Draft PRs skip this heavy self-hosted check (CI capacity hardening).
+    # Also skips on PRs where detect-changes found no schema-relevant diff.
+    if: needs.detect-changes.outputs.schemas == 'true' && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
           persist-credentials: false
+
+      - name: Materialize full workspace after checkout
+        run: |
+          git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+          git reset --hard HEAD
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            expected="${{ github.event.pull_request.head.sha }}"
+            actual="$(git rev-parse HEAD)"
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::Checked out $actual, expected PR head $expected"
+              exit 1
+            fi
+          fi
+          test -f scripts/check_schema_coverage.py
 
       - name: Enforce game_state schema coverage
         run: |
@@ -99,14 +215,20 @@ jobs:
             --required-path player_character_data.cantrips
   prompt-contracts:
     name: Prompt / Tool Contract Hash Validation
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    needs: detect-changes
+    # Draft PRs skip this heavy self-hosted check (CI capacity hardening).
+    # Also skips on PRs where detect-changes found no prompt-contract diff.
+    if: needs.detect-changes.outputs.prompts == 'true' && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+    # ubuntu-latest ($USER-gbs): pure stdlib Python (hashlib + json) hash
+    # validation against tracked files in this checkout — no Docker socket,
+    # no self-hosted-only network/secret, no macOS-specific tooling.
+    runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
           persist-credentials: false
       # Note: do not use actions/setup-python here — the contract validator
       # is pure stdlib (hashlib + json), and a few self-hosted runners
@@ -120,17 +242,87 @@ jobs:
             exit 2
           fi
           $PYTHON scripts/validate_prompt_tool_contracts.py
+  function-loc-ratchet:
+    name: Function LOC Ratchet (world_logic.py / llm_service.py)
+    needs: detect-changes
+    # Draft PRs skip this heavy self-hosted check (CI capacity hardening).
+    # Also skips on PRs where detect-changes found no LOC-ratchet-relevant diff.
+    if: needs.detect-changes.outputs.loc_ratchet == 'true' && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+    # ubuntu-latest ($USER-gbs): pure stdlib Python (ast + json) ratchet
+    # check against two tracked files — no Docker socket, no self-hosted-only
+    # network/secret, no macOS-specific tooling.
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
+          persist-credentials: false
+      # Note: do not use actions/setup-python here — the ratchet checker
+      # is pure stdlib (ast + json), same rationale as prompt-contracts above.
+      - name: Check function LOC ratchet
+        run: |
+          PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          if [ -z "$PYTHON" ]; then
+            echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+            exit 2
+          fi
+          $PYTHON scripts/check_function_loc_ratchet.py
+  agy-json-contract:
+    name: AGY JSON contract static review
+    needs: detect-changes
+    # Draft PRs skip this heavy self-hosted check (CI capacity hardening).
+    # Also skips on PRs where detect-changes found no AGY-provider-relevant diff.
+    if: needs.detect-changes.outputs.agy == 'true' && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+    # ubuntu-latest ($USER-gbs): pure stdlib Python static review of two
+    # tracked files — no Docker socket, no self-hosted-only network/secret,
+    # no macOS-specific tooling.
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
+          persist-credentials: false
+      - name: Review AGY JSON strictness
+        run: |
+          PYTHON=$(command -v python3.11 || command -v python3 || command -v python || true)
+          if [ -z "$PYTHON" ]; then
+            echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
+            exit 2
+          fi
+          $PYTHON scripts/check_agy_json_contract.py
   python-lint:
     name: Python Linting (Ruff)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    needs: detect-changes
+    # Draft PRs skip this heavy self-hosted check (CI capacity hardening).
+    # Also skips on PRs where detect-changes found no Python diff.
+    if: needs.detect-changes.outputs.python == 'true' && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+    # ubuntu-latest ($USER-gbs): pip-installed Ruff via actions/setup-python
+    # + venv, non-blocking (`|| true`) lint/format check — no Docker socket,
+    # no self-hosted-only network/secret, no macOS-specific tooling.
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
           persist-credentials: false
+
+      - name: Prepare runner tool cache for setup actions
+        run: |
+          chmod +x scripts/ci/setup-runner-tool-cache.sh
+          ./scripts/ci/setup-runner-tool-cache.sh
+
+      - name: Set up Python
+        if: runner.os != 'macOS'
+        continue-on-error: true
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+        with:
+          python-version: '3.11'
 
       - name: Install Ruff
         run: |
@@ -139,9 +331,15 @@ jobs:
             echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
             exit 2
           fi
-          $PYTHON -m venv --clear .venv-ruff
-          .venv-ruff/bin/pip install --upgrade pip
-          .venv-ruff/bin/pip install ruff==0.8.4
+          if ! $PYTHON -m venv --clear .venv-ruff; then
+            echo "::warning::Failed to create virtual environment. Attempting global user-level installation..."
+            $PYTHON -m pip install --user ruff==0.8.4 || true
+            mkdir -p .venv-ruff/bin
+            ln -sf $(which ruff || echo ~/.local/bin/ruff) .venv-ruff/bin/ruff || true
+          else
+            .venv-ruff/bin/pip install --upgrade pip
+            .venv-ruff/bin/pip install ruff==0.8.4
+          fi
 
       - name: Run Ruff linter
         run: |
@@ -156,8 +354,14 @@ jobs:
   # Python type checking with mypy
   python-typecheck:
     name: Python Type Checking (mypy)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    needs: detect-changes
+    # Draft PRs skip this heavy self-hosted check (CI capacity hardening).
+    # Also skips on PRs where detect-changes found no Python diff.
+    if: needs.detect-changes.outputs.python == 'true' && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+    # ubuntu-latest ($USER-gbs): pip-installed mypy via actions/setup-python
+    # + venv, non-blocking (`|| true`) type check — no Docker socket, no
+    # self-hosted-only network/secret, no macOS-specific tooling.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Repair workspace permissions for checkout
@@ -169,8 +373,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
           persist-credentials: false
+
+      - name: Prepare runner tool cache for setup actions
+        run: |
+          chmod +x scripts/ci/setup-runner-tool-cache.sh
+          ./scripts/ci/setup-runner-tool-cache.sh
+
+      - name: Set up Python
+        if: runner.os != 'macOS'
+        continue-on-error: true
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+        with:
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
@@ -179,13 +395,17 @@ jobs:
             echo "::error::No suitable Python interpreter found (tried: python3.11, python3, python)" >&2
             exit 2
           fi
-          $PYTHON -m venv --clear .venv-mypy
-          .venv-mypy/bin/pip install --upgrade pip
-          # Install mypy with pinned version
-          .venv-mypy/bin/pip install mypy==1.13.0
-          # Install project dependencies for type checking
-          if [ -f requirements.txt ]; then .venv-mypy/bin/pip install -r requirements.txt; fi
-          if [ -f mvp_site/requirements.txt ]; then .venv-mypy/bin/pip install -r mvp_site/requirements.txt; fi
+          if ! $PYTHON -m venv --clear .venv-mypy; then
+            echo "::warning::Failed to create virtual environment. Attempting global user-level installation..."
+            $PYTHON -m pip install --user mypy==1.13.0 || true
+            mkdir -p .venv-mypy/bin
+            ln -sf $(which mypy || echo ~/.local/bin/mypy) .venv-mypy/bin/mypy || true
+          else
+            .venv-mypy/bin/pip install --upgrade pip
+            .venv-mypy/bin/pip install mypy==1.13.0
+            if [ -f requirements.txt ]; then .venv-mypy/bin/pip install -r requirements.txt; fi
+            if [ -f mvp_site/requirements.txt ]; then .venv-mypy/bin/pip install -r mvp_site/requirements.txt; fi
+          fi
 
       - name: Run mypy type checker
         run: |
@@ -196,15 +416,26 @@ jobs:
   # JavaScript linting with ESLint
   javascript-lint:
     name: JavaScript Linting (ESLint)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    needs: detect-changes
+    # Draft PRs skip this heavy self-hosted check (CI capacity hardening).
+    # Also skips on PRs where detect-changes found no JS diff.
+    if: needs.detect-changes.outputs.js == 'true' && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+    # ubuntu-latest ($USER-gbs): actions/setup-node + `npm ci` + non-blocking
+    # (`|| true`) ESLint over the checked-out tree — no Docker socket, no
+    # self-hosted-only network/secret, no macOS-specific tooling.
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
           persist-credentials: false
+
+      - name: Prepare runner tool cache for setup actions
+        run: |
+          chmod +x scripts/ci/setup-runner-tool-cache.sh
+          ./scripts/ci/setup-runner-tool-cache.sh
 
       - name: Set up Node.js
         uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2

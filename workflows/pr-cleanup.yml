@@ -1,5 +1,11 @@
 name: Clean up PR Preview (Rotating Pool)
 
+
+# Cancel in-progress runs on the same ref — supersedes are wasted runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 on:
   pull_request:
     types: [closed]
@@ -9,8 +15,16 @@ permissions:
   pull-requests: write
 
 jobs:
+  # NOTE: job ids `try-self-hosted`/`retry-self-hosted` are retained verbatim
+  # (not renamed) even though both now run on ubuntu-latest — see PR body for
+  # rationale (retry semantics are runner-flake-driven, not host-driven; a
+  # rename would just be churn on `needs:`/`if:` references below).
   try-self-hosted:
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # ubuntu-latest ($USER-oud/LANE-D): pure gcloud/gh/jq API orchestration
+    # (Cloud Run label update + `gcloud artifacts docker images delete`, a
+    # remote Artifact Registry API call, not a local docker socket op) — zero
+    # self-hosted-only dependency.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
       success: ${{ steps.mark-success.outputs.success }}
@@ -24,7 +38,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || github.sha }}
           persist-credentials: false
 
       - name: Authenticate to Google Cloud
@@ -160,8 +174,10 @@ jobs:
   retry-self-hosted:
     needs: try-self-hosted
     if: needs.try-self-hosted.outputs.success != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
-    # same self-hosted pool: this is a job-level retry path, not runner-level failover.
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # ubuntu-latest ($USER-oud/LANE-D): job-level retry path (retries after
+    # a transient failure in try-self-hosted), not runner-host failover — same
+    # pure gcloud/gh/jq API work, safe on GitHub-hosted runners.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       GCP_REGION: us-central1
@@ -172,7 +188,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || github.sha }}
           persist-credentials: false
 
       - name: Authenticate to Google Cloud

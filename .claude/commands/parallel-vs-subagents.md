@@ -150,7 +150,8 @@ ccusage daily --instances --since 2025-07-29
 ## Integration with Commands
 
 This guide is referenced by:
-- `/planexec` - Planning execution strategy
+- `/parallel` — parallelize-to-ceiling (resource-bound sizing for any fan-out)
+- `/planexec` — Planning execution strategy
 - `/execute` - Choosing execution method
 - `/arch` - Architectural task distribution
 - `/test` - Test execution strategy

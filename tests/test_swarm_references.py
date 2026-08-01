@@ -55,6 +55,7 @@ REFERENCED_COMMANDS = {
     "/research": "research.md",
     "/innov": "innov.md",
     "/er": "er.md",
+    "/harness": "harness.md",
     "/claw": "claw.md",
 }
 

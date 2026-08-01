@@ -1,0 +1,14 @@
+{"intent": "create a new campaign from scratch", "expected_skill": "campaign-creation"}
+{"intent": "design me a campaign bible for a Wuxia cultivation arc", "expected_skill": "campaign-creation"}
+{"intent": "follow the campaign template for a new solo RPG", "expected_skill": "campaign-creation"}
+{"intent": "follow the character personality template", "expected_skill": "campaign-creation"}
+{"intent": "use Sub-Template A for every character", "expected_skill": "campaign-creation"}
+{"intent": "use Sub-Template B for the factions", "expected_skill": "campaign-creation"}
+{"intent": "use Sub-Template C for the magic items", "expected_skill": "campaign-creation"}
+{"intent": "design a sovereign-tier solo campaign", "expected_skill": "campaign-creation"}
+{"intent": "design a god-mode campaign", "expected_skill": "campaign-creation"}
+{"intent": "write me a high-stakes campaign", "expected_skill": "campaign-creation"}
+{"intent": "create a brand new campaign bible using the Google Doc template", "expected_skill": "campaign-creation"}
+{"intent": "I want a campaign from scratch with 10 factions", "expected_skill": "campaign-creation"}
+{"intent": "make me a level 20 god-tier campaign", "expected_skill": "campaign-creation"}
+{"intent": "design a brand new Dark Urge campaign", "expected_skill": "campaign-creation"}

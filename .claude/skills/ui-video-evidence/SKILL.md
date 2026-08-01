@@ -122,3 +122,21 @@ Reject these:
 5. URL and route match claim
 6. Git SHA linkage is visible
 7. Gist contains matching metadata/caption artifacts
+
+## First-frame verification (MANDATORY)
+
+Moved here from `~/.claude/CLAUDE.md` on 2026-07-25. Applies to AGY CLI and any browser-capture pipeline.
+
+1. **Wait for page readiness before capture.** Replace fixed-delay sleeps with `page.wait_for_load_state("networkidle")` AND `page.wait_for_selector(<expected-ui-element>, state="visible")`. A blank/white first frame is invalid evidence — it means the page had not rendered.
+2. **Verify the first frame visually before pushing.** Extract frame 1 from the MP4 and confirm it shows the expected starting state (dashboard, modal opener, etc.), not a loading screen:
+
+   ```bash
+   ffmpeg -i video.mp4 -vf "select=eq(n\,0)" -vframes 1 frame1.png
+   ```
+
+3. **Reject evidence with a white/blank first frame.** Re-capture with stronger wait conditions. Do NOT push the gist and label it as evidence.
+4. **Evidence Gate caveat:** the `evidence-gate` CI check validates `metadata.json` freshness, NOT visual content. Visual verification is the responsibility of the agent pushing the gist — a green evidence-gate says nothing about whether the video shows anything.
+
+### Capture script standard *(your-project.com-specific)*
+
+Every `testing_ui/capture_*.py` script must use the shared `browser_test_helpers.py` helpers — `wait_for_page_ready()` and `verify_first_frame_not_blank()`. New scripts that re-implement waits inline are a regression.

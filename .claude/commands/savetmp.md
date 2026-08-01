@@ -1,11 +1,14 @@
 ---
 description: Save evidence to /tmp structure
-type: llm-orchestration
+type: skill
 execution_mode: immediate
 ---
-## EXECUTION INSTRUCTIONS
 
-Execute `.claude/commands/savetmp.py` to archive evidence following `.claude/skills/evidence-standards.md`.
+# /savetmp <work_name> [--flags]
+
+Archive evidence to a structured `/tmp` layout following evidence standards.
+
+Read `~/.claude/skills/evidence-standards/SKILL.md` for the full evidence methodology, then execute `.claude/commands/savetmp.py` to archive evidence.
 
 **Features:**
 - SHA256 checksums for all evidence files (evidence integrity)
@@ -47,7 +50,7 @@ python .claude/commands/savetmp.py "<work_name>" \
 ├── methodology.md + .sha256
 ├── evidence.md + .sha256
 ├── notes.md + .sha256
-├── metadata.json + .sha256   # Includes git_provenance
+├── metadata.json + .sha256   # Includes provenance + checksum_mode
 ├── README.md + .sha256
 ├── git_provenance_full.txt + .sha256   # Optional, with --capture-git-provenance-full
 └── artifacts/
@@ -55,7 +58,7 @@ python .claude/commands/savetmp.py "<work_name>" \
 
 ## Evidence Standards Reference
 
-See `.claude/skills/evidence-standards.md` for:
+See `~/.claude/skills/evidence-standards/SKILL.md` for:
 - Three Evidence Rule (Configuration, Trigger, Log)
 - Mock vs Real mode decision tree
 - Git provenance requirements

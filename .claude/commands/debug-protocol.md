@@ -458,11 +458,6 @@ Use `/memory` command for all debugging pattern discovery and learning:
 - **Universal Composition Benefits**: `/memory` command handles all optimization and fallback automatically
 - **Graceful Degradation**: Continue debugging even if Memory MCP unavailable
 - **User Notification**: Automatic user notification when Memory MCP unavailable but debugging proceeds
-- **Robust Operation**: Never let Memory MCP failures prevent debugging progress
-
-**Error Handling Strategy**:
-- **Graceful Degradation**: Continue debugging even if Memory MCP fails
-- **User Notification**: Inform user when Memory MCP unavailable but debugging proceeds
 - **Fallback Mode**: Local-only debugging documentation when Memory MCP unavailable
 - **Robust Operation**: Never let Memory MCP failures prevent debugging progress
 

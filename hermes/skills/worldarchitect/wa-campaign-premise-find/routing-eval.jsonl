@@ -1,0 +1,19 @@
+{"intent": "find the campaign where I was reincarnated and investigating my daughter from a past life", "expected_skill": "wa-campaign-premise-find", "ambiguous_with": ["memory-search"]}
+{"intent": "I was a demon lord or demon king reincarnation I think the campaign might be in the LLM wiki", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "find my campaign where I was a female resurrected OP person", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "find a campaign where I was reincarnated as a succubus", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "which campaign had Isekai", "expected_skill": "wa-campaign-premise-find", "ambiguous_with": ["campaign-creation"]}
+{"intent": "find my BG3 aftermath campaign", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "search my campaigns for any isekai trope", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "locate my Re:Zero campaign", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "which campaign was I playing as Nocturne", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "do I have a campaign where I'm a 16yo female prodigy", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "I had a campaign where I was a swords bard in Thay", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "find WA campaign by premise", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "find campaign with premise", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "premise-driven campaign lookup", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "find campaign by trope", "expected_skill": "wa-campaign-premise-find"}
+{"intent": "who did I play as", "expected_skill": "wa-campaign-premise-find", "ambiguous_with": ["campaign-creation"]}
+{"intent": "download the Iseki v1 campaign", "expected_skill": "download-campaign"}
+{"intent": "analyze my Nocturne campaign content", "expected_skill": "wa-campaign-content-analysis"}
+{"intent": "how many users played WA last week", "expected_skill": "wa-prod-data-query"}

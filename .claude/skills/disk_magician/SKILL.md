@@ -1,9 +1,6 @@
 ---
 name: disk-magician-claude
-description: Run disk usage diagnostics, growth history logs, and automated cache/temp cleanup on development machines.
-metadata:
-  type: skill
-  runtime: claude
+description: Use when diagnosing disk capacity or growth and when previewing repository-gated cache, temp, or worktree cleanup.
 ---
 
 # Disk Magician — Claude Skill
@@ -12,26 +9,21 @@ This skill teaches Claude how to use `disk_magician` to audit disk space, identi
 
 ## Skill Integration & Commands
 
-* **Snapshot Validation (Phase 0)**: Check the coverage and timeouts of the snapshot file located in your backup repository:
+* **Default diagnosis (Phase 0)**: Run the concurrent top-down 5 GiB accounting, coverage-validated snapshot deltas, and safe quick-win report before drilling down. Follow `../disk-root-cause/SKILL.md` for the full forensic procedure. Residual is not backup size or reclaimable without evidence.
   ```bash
-  ./disk_magician.sh audit --dry-run
+  disk-magician audit
   ```
-  Check the output to make sure coverage is >= 70% and there are no warnings.
-* **Scan / Discover (Phase 1)**: Scan for directories > 5 GB not currently in the monitored configuration:
-  ```bash
-  ./disk_magician.sh discover
-  ```
-* **Audit Candidates (Phase 2)**: View cleanup candidates and regressions:
-  ```bash
-  ./disk_magician.sh audit
-  ```
-* **Safe Cleanup (Phase 3)**: Execute safe cache and temp cleanups (which deletes stale temporary PR clones, dev caches, and orphaned worktrees):
+* **Safe cleanup preview (Phase 1)**: Preview cache and temp cleanup through the repository gates:
   ```bash
   ./disk_magician.sh clean
   ```
-* **Destructive Cleanup (Phase 4)**: Interactively clear Docker VM disk images, Colima VMs, and old agent session folders:
+* **Destructive cleanup (Phase 2)**: Interactively clear Docker VM disk images, Colima VMs, and old agent session folders:
   ```bash
   ./disk_magician.sh clean-all
+  ```
+* **Worktree Hygiene Sweep (deep pass)**: For a dedicated triage-and-delete pass across all monitored project roots (not just the current repo), run `scripts/worktree_hygiene.sh` instead of `clean`. Dry-run by default; apply mode requires both `--execute` and `WORKTREE_HYGIENE_APPROVED=1`:
+  ```bash
+  ./scripts/worktree_hygiene.sh
   ```
 
 ## Safety Constraints & Guardrails
