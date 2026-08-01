@@ -1,0 +1,12 @@
+{"intent": "consolidate the open claude-commands PRs", "expected_skill": "claude-commands-export-superset", "ambiguous_with": ["drive-pr-to-green"]}
+{"intent": "fresh /exportcommands and check the PRs", "expected_skill": "claude-commands-export-superset", "ambiguous_with": ["drive-pr-to-green"]}
+{"intent": "the export is stale / has new content since last run", "expected_skill": "claude-commands-export-superset", "ambiguous_with": []}
+{"intent": "see what else is needed / what's incremental", "expected_skill": "claude-commands-export-superset", "ambiguous_with": ["pr-triage-and-next-steps"]}
+{"intent": "supersede #N / close #N as superseded", "expected_skill": "claude-commands-export-superset", "ambiguous_with": ["drive-pr-to-green"]}
+{"intent": "/exportcommands [from ~/worldarchitect.ai]", "expected_skill": "claude-commands-export-superset", "ambiguous_with": []}
+{"intent": "the cmux-goal / ironclad pair isn't on main yet", "expected_skill": "claude-commands-export-superset", "ambiguous_with": ["cmux-goal"]}
+{"intent": "the latest commands/skills aren't in jleechanorg/claude-commands", "expected_skill": "claude-commands-export-superset", "ambiguous_with": []}
+{"intent": "run a fresh export of my claude config", "expected_skill": "claude-commands-export-superset", "ambiguous_with": []}
+{"intent": "audit the open export PRs", "expected_skill": "claude-commands-export-superset", "ambiguous_with": ["pr-triage-and-next-steps"]}
+{"intent": "close #324 as superseded", "expected_skill": "claude-commands-export-superset", "ambiguous_with": ["drive-pr-to-green", "github-pr-workflow"]}
+{"intent": "the export script regenerated cmux-goal but it isn't on main", "expected_skill": "claude-commands-export-superset", "ambiguous_with": ["drive-pr-to-green"]}

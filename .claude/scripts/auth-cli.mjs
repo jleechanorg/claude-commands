@@ -27,13 +27,16 @@ const TOKEN_EXPIRATION_MS = 3600000; // 1 hour
 const AUTH_TIMEOUT_MS = 300000; // 5 minutes
 const REFRESH_TOKEN_URL = 'https://securetoken.googleapis.com/v1/token';
 
-// Default project configuration (AI Universe)
+// Default project configuration (AI Universe) — Render retired 2026-07-31, now served
+// from Google Cloud Run (consensus-ml.ai is the public front-end; the MCP backend lives
+// at ai-universe-backend-114133832173.us-central1.run.app). WorldAI MCP replacement URL
+// is pending migration — see todo in getProjectConfig().
 const DEFAULT_PROJECT = {
   id: 'ai-universe-b3551',
   authDomain: 'ai-universe-b3551.firebaseapp.com',
   envPrefix: 'VITE_AI_UNIVERSE_FIREBASE',
   name: 'AI Universe',
-  mcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp'
+  mcpUrl: 'https://ai-universe-backend-114133832173.us-central1.run.app/mcp'
 };
 
 // Known project configurations for convenience
@@ -45,7 +48,9 @@ const KNOWN_PROJECTS = {
     authDomain: 'worldarchitecture-ai.firebaseapp.com',
     envPrefix: 'VITE_FIREBASE',
     name: 'World Architecture AI',
-    mcpUrl: 'https://worldarchitecture-ai-backend.onrender.com/mcp'
+    // TODO(worldai-mcp-migration): WorldAI Render service was retired 2026-07-31.
+    // Set this to the new WorldAI MCP host once the migration target is confirmed.
+    mcpUrl: null
   }
 };
 
@@ -90,14 +95,14 @@ function getProjectConfig(projectOverride) {
     return knownProject;
   }
 
-  // Assume custom project ID format: project-id
-  return {
-    id: projectOverride,
-    authDomain: `${projectOverride}.firebaseapp.com`,
-    envPrefix: `VITE_${projectOverride.toUpperCase().replace(/-/g, '_')}_FIREBASE`,
-    name: projectOverride,
-    mcpUrl: `https://${projectOverride}.onrender.com/mcp`
-  };
+  // Assume custom project ID format: project-id.
+  // Render auto-URL pattern was retired 2026-07-31 — custom projects must now supply
+  // their MCP host explicitly (env var or override) since onrender.com is no longer
+  // a valid default.
+  throw new Error(
+    `Unknown --project '${projectOverride}'. Render auto-hosting is retired; ` +
+    `set the MCP URL explicitly via the project config or env override.`
+  );
 }
 
 const ACTIVE_PROJECT = getProjectConfig(projectOverride);
@@ -119,7 +124,11 @@ const CONFIG = {
   callbackPort: 9005,
   callbackPath: '/auth/callback',
   tokenPath: join(homedir(), '.ai-universe', `auth-token-${ACTIVE_PROJECT.id}.json`),
-  productionMcpUrl: ACTIVE_PROJECT.mcpUrl || 'https://ai-universe-backend-final.onrender.com/mcp',
+  // productionMcpUrl fallback is only safe for the default AI Universe project; any
+  // project with an unmigrated MCP host (e.g. worldarchitecture-ai) is left null so
+  // downstream commands fail with a clear missing-URL error rather than hitting the
+  // wrong backend.
+  productionMcpUrl: ACTIVE_PROJECT.mcpUrl,
   activeProject: ACTIVE_PROJECT
 };
 
@@ -686,10 +695,18 @@ async function testMcp() {
         jsonrpc: '2.0',
         method: 'tools/call',
         params: {
-          name: 'get_second_opinion',
+          // Cloud Run MCP renamed the legacy `get_second_opinion` tool to
+          // `agent.second_opinion`. _stubMode avoids burning a real model call
+          // during a connectivity check.
+          name: 'agent.second_opinion',
           arguments: {
-            feedback_type: 'design',
-            question: 'Authentication connectivity check'
+            question: 'Authentication connectivity check',
+            _authenticatedUserUid: tokenData?.user?.uid,
+            _authenticatedUserEmail: tokenData?.user?.email,
+            _authenticatedUserName: tokenData?.user?.displayName,
+            primaryModel: 'gemini',
+            maxOpinions: 1,
+            _stubMode: true
           }
         },
         id: 1

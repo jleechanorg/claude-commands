@@ -1,7 +1,12 @@
 name: Codex Skill Sync Check
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - ".claude/skills/**"
       - ".codex/skills/**"
@@ -22,10 +27,16 @@ permissions:
 jobs:
   check:
     name: Codex skill symlink drift
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # GitHub-hosted by explicit user exception: checkout + a Python symlink-
+    # drift check only, no secrets beyond the default GITHUB_TOKEN. Same
+    # convention as the ping-coderabbit and doc-size-check precedents.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
 
       - name: Verify Claude skills are exposed to Codex
         run: |

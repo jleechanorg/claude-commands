@@ -149,7 +149,7 @@ TASK
 ao send <session-name> --file "$TASK_FILE"
 
 # 3b. For LONG bodies (>4 KB) on a FRESH spawn, `ao send` does NOT auto-submit.
-#     Use tmux load-buffer + paste-buffer + Enter. See references/ao-spawn-long-task-body.md.
+#     Use tmux load-buffer + paste-buffer + Enter. See references/ao-spawn-long-ta[REDACTED_OPENAI_KEY]
 #     Verified 2026-06-16 (wa-2369, level-up label fix): the worker received the
 #     8.3 KB brief into its input box but never started processing until
 #     `tmux send-keys -t <tmux-name> Enter` was issued explicitly. `ao send`'s
@@ -218,7 +218,7 @@ Only write `running.json` by hand if `ao start` was already run but the file wen
 
 **Heuristic for "session ls shows working but spawn still fails":** `ao session ls` can show `[working]` for ~30s before `running.json` is written and the lifecycle polling loop is bound. Spawning during that gap fails with the "lifecycle polling is inactive" error even though `session ls` looks healthy. Always confirm `running.json` exists before re-spawning.
 
-**Sibling failure mode — `tmux new-session: command too long`:** this is the documented runtime-tmux env-buffer overflow on $USER's host (243 exported bashrc vars, ~30KB of `-e K=V` args to `tmux new-session`). It is **prevented by the `env -i` wrapper in §"Spawn wrapper" above** — that's the whole reason the wrapper exists. If you spawn WITHOUT the wrapper and hit this error, retry once with the wrapper. If it still fails, load and follow the `ao-spawn-fallback-inline` skill — the 2-attempt cap there applies (one direct attempt + one `ao-spawn-lean.sh` wrapper attempt, then pivot to inline-implement in the worktree). Verified 2026-06-17 (RAG-seam cleanup on `worldarchitect` project): the failure reproduces 1:1 from the 2026-06-15 incident — the runtime-tmux plugin has not been patched yet. The real fix is a separate PR against `jleechanorg/agent-orchestrator` (env whitelist or tmpfile-based env passing in `packages/plugins/runtime-tmux/src/index.ts:143-200` / `:404-435`); do not block the task on it.
+**Sibling failure mode — `tmux new-session: command too long`:** this is the documented runtime-tmux env-buffer overflow on $USER's host (243 exported bashrc vars, ~30KB of `-e K=V` args to `tmux new-session`). It is **prevented by the `env -i` wrapper in §"Spawn wrapper" above** — that's the whole reason the wrapper exists. If you spawn WITHOUT the wrapper and hit this error, retry once with the wrapper. If it still fails, load and follow the `ao-spawn-fallback-inline` skill — the 2-attempt cap there applies (one direct attempt + one `ao-spawn-lean.sh` wrapper attempt, then pivot to inline-implement in the worktree). Verified 2026-06-17 (RAG-seam cleanup on `worldarchitect` project): the failure reproduces 1:1 from the 2026-06-15 incident — the runtime-tmux plugin has not been patched yet. The real fix is a separate PR against `jleechanorg/agent-orchestrator-ts` (env whitelist or tmpfile-based env passing in `packages/plugins/runtime-tmux/src/index.ts:143-200` / `:404-435`); do not block the task on it.
 
 ## Coordinating with a stale / misrouted AO session (Jeffrey's red line)
 
@@ -262,9 +262,9 @@ cd ~/.worktrees/<project>/<session-id> && \
 
 **The right pattern:**
 
-1. **Write the brief to `/tmp/<project>-<phenotype>/ao-task-brief.md`** (NOT to a worktree, because you don't have one yet — the brief lives at `/tmp/` until AO makes the worktree).
+1. **Write the brief to `/tmp/<project>-<phenotype>/ao-ta[REDACTED_OPENAI_KEY]`** (NOT to a worktree, because you don't have one yet — the brief lives at `/tmp/` until AO makes the worktree).
 2. **Spawn AO.** AO prints the worktree path + tmux name + auto-derived branch.
-3. **Copy the brief into the worker-created worktree root** (`cp /tmp/<project>/ao-task-brief.md ~/.worktrees/<project>/<N>/AO-TASK-BRIEF.md`). Worker reads it from the worktree root.
+3. **Copy the brief into the worker-created worktree root** (`cp /tmp/<project>/ao-ta[REDACTED_OPENAI_KEY] ~/.worktrees/<project>/<N>/AO-TASK-BRIEF.md`). Worker reads it from the worktree root.
 4. **Don't reset the branch unless the auto-derived name is genuinely unusable.** For bead IDs + issue numbers embedded in the slug, the auto-derived name is fine. For vague prose, reset to `fix/<bead>-<phenomenon>` (see `agento` skill "Spawn Output — Branch Name Auto-Derivation").
 
 **Exception — when pre-creating IS correct:** if you are operating in the same worktree an earlier session already used (e.g. bring-to-green on PR #N), the existing worktree IS the dispatch target and you should NOT pre-create. `ao spawn --claim-pr N` reuses the PR head branch.
@@ -279,7 +279,7 @@ When one parent issue splits into N child PRs (verified 2026-06-20, issue #7722 
 
 **Recipe:**
 
-1. **Write one brief per child PR** to `/tmp/<project>-<phenotype>/pr<N>-task-brief.md`. Each brief must declare:
+1. **Write one brief per child PR** to `/tmp/<project>-<phenotype>/pr<N>-ta[REDACTED_OPENAI_KEY]`. Each brief must declare:
    - **Scope boundary** — what THIS PR owns vs what is the OTHER PR's territory (Jeffrey hates scope creep across the fanout).
    - **Shared evidence paths** — when two PRs need to reference the same evidence bundle (e.g. `docs/evidence/pr-7722-shared/`), name the path once and have each brief point to it.
    - **Cross-PR coordination markers** — name the other PR's bead ID explicitly so each worker can grep for it and avoid stepping on the other PR's files.
@@ -309,7 +309,7 @@ TMUX_NAME="953501c04ccc-wa-2404"
 # 2. Copy the long task brief + any root-cause evidence into the worktree root
 #    (the worker reads these as ./AO-TASK-BRIEF.md and ./root-cause-evidence.md
 #     — make them visible from inside the worktree)
-cp /tmp/<project>-<phenotype>/ao-task-brief.md "$WT/AO-TASK-BRIEF.md"
+cp /tmp/<project>-<phenotype>/ao-ta[REDACTED_OPENAI_KEY] "$WT/AO-TASK-BRIEF.md"
 cp /tmp/<project>-<phenotype>/root-cause-evidence.md "$WT/root-cause-evidence.md"
 
 # 3. Reset the branch name BEFORE the worker commits (auto-derived slugs are
@@ -439,7 +439,7 @@ The mctrl supervisor loop (`ai.mctrl.supervisor` launchd agent) runs every 30s a
 
 ## References (companion files)
 
-- `references/ao-spawn-long-task-body.md` — Fresh-spawn `ao send --file` does NOT auto-submit for bodies >4 KB; `tmux load-buffer` + `paste-buffer` + Enter is required. Verified 2026-06-16, wa-2369.
+- `references/ao-spawn-long-ta[REDACTED_OPENAI_KEY]` — Fresh-spawn `ao send --file` does NOT auto-submit for bodies >4 KB; `tmux load-buffer` + `paste-buffer` + Enter is required. Verified 2026-06-16, wa-2369.
 - `references/beads-rust-cli-gotchas.md` — `br` CLI flag pitfalls table (`--label` vs `--labels`, positional ID ordering, `--append-notes` does not exist), host ID format (`$USER-XXXX`), and the append-notes recipe. Verified 2026-06-20, wa-2455 + wa-2458 latency-repro twin dispatch.
 - `templates/antig-pr-body.md` — Canonical PR body shape for `[antig]` PRs (production symptom + RED→GREEN + out-of-scope declaration).
 - `scripts/babysit-one-session.sh` — Single-session babysit template; polls every 5 min, posts per-poll status.

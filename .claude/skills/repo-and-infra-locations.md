@@ -10,20 +10,20 @@ type: reference
 
 | Repo | Local path | origin | upstream |
 |---|---|---|---|
-| jleechanorg/agent-orchestrator (agento fork) | `$HOME/project_agento/agent-orchestrator` | `jleechanorg/agent-orchestrator` | `ComposioHQ/agent-orchestrator` |
+| jleechanorg/agent-orchestrator-ts (agento fork) | `$HOME/project_agento/agent-orchestrator-ts` | `jleechanorg/agent-orchestrator-ts` | `ComposioHQ/agent-orchestrator` |
 | jleechanorg/jleechanclaw (orchestration) | `~/.hermes` | `jleechanorg/jleechanclaw` | — |
 
-**Worktrees for agento**: create from `$HOME/project_agento/agent-orchestrator`, reset to `origin/main` before use.
+**Worktrees for agento**: create from `$HOME/project_agento/agent-orchestrator-ts`, reset to `origin/main` before use.
 **Do NOT use** `~/projects/agent-orchestrator` — its `origin` points to ComposioHQ directly (wrong for agent work).
 
-## ao CLI — always from jleechanorg/agent-orchestrator
+## ao CLI — always from jleechanorg/agent-orchestrator-ts
 
-The `ao` binary is built from `jleechanorg/agent-orchestrator` — NOT from any ComposioHQ npm package.
+The `ao` binary is built from `jleechanorg/agent-orchestrator-ts` — NOT from any ComposioHQ npm package.
 
 - **Binary**: `$HOME/bin/ao` → `packages/cli/dist/index.js`
-- **Repo**: `$HOME/project_agento/agent-orchestrator` (origin: `jleechanorg/agent-orchestrator`)
+- **Repo**: `$HOME/project_agento/agent-orchestrator-ts` (origin: `jleechanorg/agent-orchestrator-ts`)
 - **Package namespace**: `@jleechanorg/ao-core` — NOT `@composio/*`
-- **Rebuild after updates**: `cd $HOME/project_agento/agent-orchestrator && npm run build`
+- **Rebuild after updates**: `cd $HOME/project_agento/agent-orchestrator-ts && npm run build`
 - **If broken with `ERR_MODULE_NOT_FOUND @composio/ao-core`**: stale dist/; fix with `npm run build`
 - **NEVER install from npm** (`npm i -g @composio/agent-orchestrator`) — always build from the local jleechanorg fork
 

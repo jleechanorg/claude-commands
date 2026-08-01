@@ -1,5 +1,9 @@
 # God Mode Directive Enforcement Gap
 
+**DEPRECATION NOTE (2026-07-08):** This reference captures the single-instance advisory-only gap from issue #7162/#7154. Five subsequent repros (#8012, #8080, #8103, #8065, #8275) revealed that "LLM ignored my directive" can be 4 different root causes — streaming-path save-drop (A), wrong-storage routing (B), stale streaming bundle (C, NEW), or backend override (D), with the original advisory-only gap now a tail case. For any repro where the campaign has multiple god-mode turns, defer to **`references/god-mode-directive-missing-subclasses.md`** first, which has the 4-factor matrix + BQ forensic recipe. Keep this file for the `_should_reject_directive` filter patterns (still canonical) and the original advisory-only framing when that's known to be the active root cause.
+
+---
+
 ## Finding (2026-05-29, issue #7154)
 
 God-mode directives are **advisory-only in the system prompt** — there is no runtime enforcement.
@@ -9,8 +13,7 @@ The LLM can and does narratively escalate past directives when its story logic p
 
 1. **Directive save path**: `world_logic.py` `_should_reject_directive()` filters → saved to
    `custom_campaign_state.god_mode_directives[]` in Firestore
-2. **Directive injection path**: `agent_prompts.py` `build_god_mode_directives_block()` →
-   `finalize_instructions()` → inserted into system prompt as `## Active God Mode Directives`
+2. **Directive injection path**: `agent_prompts.py` `build_god_mode_directives_block()` → `finalize_instructions()` → inserted into system prompt as `## Active God Mode Directives`
 3. **No enforcement**: No structured field in the response schema prevents the LLM from
    narrating content that violates directives. No server-side guard in `world_logic.py` checks
    narrative output against directive constraints.
@@ -63,3 +66,5 @@ When a god-mode directive appears ignored:
 3. Check `build_god_mode_directives_block` output in system prompt — is it injected?
 4. Check LLM response — does the narrative violate the directive despite it being in the prompt?
 5. If (4), root cause is advisory-only enforcement, not a routing or save bug
+
+**ADDITION (2026-07-08, #8275 verdict):** Steps 1-4 above can ALL pass (directive saved + injected + LLM respects it in the immediate turn) and the bug still recurs in later turns because of Factor C (stale streaming bundle) — the LLM reads game-state data from a bundle that doesn't reflect recent god-mode writes. Always cross-check the LLM-payload bundle against direct Firestore read for the same entity. See `references/god-mode-directive-missing-subclasses.md` for the full matrix.

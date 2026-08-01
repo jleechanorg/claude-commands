@@ -1,6 +1,6 @@
 ---
 name: hermes-health-check
-description: Diagnose Hermes gateway health, Hermes monitor issues, and launchd service failures. Run when the user shares a monitor report, says "is everything ok", "check Hermes", "hermes is down", or when a launchd service exits with code 127 (command not found).
+description: Diagnose Hermes gateway health, Hermes monitor issues, and launchd service failures. Run when the user shares a monitor report, says "is everything ok", "check Hermes", "hermes is down", "slack-digest failed", "cronjob response failed", or when a launchd service exits with code 127 (command not found). Covers provider-layer triage (MiniMax 429, OpenRouter 402/401, fallback exhaustion), gateway-vs-port confusion, dual-profile DM races, foreign-cron relay (bot this session can't see), and the dead-API-key vs out-of-credits diagnostic probe.
 triggers:
   - hermes is down
   - check health
@@ -58,6 +58,63 @@ grep -A3 ProgramArguments ~/Library/LaunchAgents/<service>.plist
 # Create the missing script (see references/hermes-watchdog-template.sh)
 ```
 
+### Stale worktree path baked into multiple plists (exit 127, fan-out class)
+
+**Symptom (verified 2026-07-22, GH Actions Cost Monitor + Spend Alert + 3 sibling jobs):**
+- `launchctl list` shows multiple `ai.hermes.*` rows with `- 127` in the exit-code column.
+- Log tail shows `/bin/bash: /path/to/deleted/worktree/scripts/foo.sh: No such file or directory` written by `bash` itself before any user-script code runs.
+- Each scheduled tick fires launchd, launchd forks `/bin/bash`, bash tries to `exec` the first arg (the dead path), bash exits 127. No script-level logging. No Slack notification. **Silent OK from launchd's POV** (exit 127 ≠ non-zero in launchd's "last run" semantic — the job will keep firing on the next interval).
+
+**Root cause — a previous harness install substituted the wrong REPO_ROOT:**
+The Hermes launchd plist templates use `@REPO_ROOT@/scripts/<file>` placeholders. When a one-off harness install (e.g. `jleechanclaw-harness-9` worktree) was active at substitution time, every plist rendered to:
+```
+$HOME/.ao/data/worktrees/jleechanclaw-harness/jleechanclaw-harness-9/scripts/launchd-env-wrapper.sh
+```
+After that worktree is deleted, every plist that captured the path during install silently breaks. **The fix is the plist path, NOT the script** — `~/.hermes/scripts/<file>.sh` already exists.
+
+**5-minute triage for "launchctl shows 127 on multiple jobs at once":**
+```bash
+# 1. Confirm the fan-out: how many plists are broken with the same root path?
+launchctl list | awk '$2 == 127 {print $3}' | sort -u | head -20
+grep -l "jleechanclaw-harness-9\|worktrees/" ~/Library/LaunchAgents/*.plist 2>/dev/null
+
+# 2. Sanity-check the canonical paths exist
+ls $HOME/.hermes/scripts/launchd-env-wrapper.sh \
+   $HOME/.hermes/scripts/gh-actions-cost-monitor.sh \
+   $HOME/.hermes/scripts/spend-alert-daily.sh 2>&1
+
+# 3. Patch each plist: replace the stale worktree prefix with the canonical HERMES_HOME.
+# Use the env-var-from-bashrc helper if it exists, otherwise hard-code HOME:
+sed -i.bak 's|$HOME/.ao/data/worktrees/jleechanclaw-harness/jleechanclaw-harness-9/scripts|$HOME/.hermes/scripts|g' \
+    ~/Library/LaunchAgents/<label>.plist
+
+# 4. Reload and verify — column 2 should be 0 (not 127) after the next tick
+launchctl unload ~/Library/LaunchAgents/<label>.plist 2>&1
+launchctl load -w ~/Library/LaunchAgents/<label>.plist 2>&1
+launchctl list | grep <label>
+# Expect: "- 0 ai.hermes.schedule.<label>"
+```
+
+**Why this fires silently:** Unlike a script that aborts via `set -e` (which produces log lines), bash's own "no such file" exits immediately at the wrapper layer, before stderr redirection reaches `StandardErrorPath`. So the log file shows only the bash error line, no script-level context, no Slack post. The `dropped-thread-watcher-of-watchers` SOUL.md COMMIT covers the same shape at a higher level — every cron needs a watcher-of-watchers because silent OK exits are launchd's default.
+
+**Auditor recipe — find all plists with stale worktree paths before they bite:**
+```bash
+# Run this BEFORE any harness install/uninstall to detect the pattern early.
+for f in ~/Library/LaunchAgents/*.plist; do
+    if grep -q "worktrees/" "$f" 2>/dev/null; then
+        echo "STALE: $f"
+        grep -A1 ProgramArguments "$f" | head -3
+    fi
+done
+```
+
+**Long-term fix (the durable pattern):**
+- All Hermes launchd plist templates MUST live in `~/.hermes/launchd/*.plist` with `@HOME@`/`@REPO_ROOT@` placeholders, per `hermes-deploy-pipeline`.
+- The install pipeline (`scripts/setup-launchd.sh`) is the ONLY place that substitutes `@REPO_ROOT@`. If it ever substitutes to a non-canonical path (a worktree, a different machine), it MUST update the canonical plist template and rerun — never write a one-off plist to `~/Library/LaunchAgents/` with a non-canonical REPO_ROOT.
+- Add the auditor recipe above as a daily launchd job (`ai.hermes.schedule.launchd-path-audit.plist`) that posts a Slack alert to `#ai-general` if any loaded plist has `worktrees/` or `~/<ephemeral>/` in its ProgramArguments.
+
+**Runnable auditor:** `scripts/audit-launchd-stale-paths.sh` — exits 1 with the offending plist paths when any stale reference is detected. Run it before deleting any harness worktree, or as a daily launchd watcher.
+
 ### Symptom: monitor says "Hermes staging — process down"
 Check `launchctl list | grep hermes-staging` — if PID is `-` the process isn't running but may be registered. If the process IS running (`ps aux` shows it), the monitor is checking the wrong port.
 
@@ -83,6 +140,69 @@ The monitor's phase 2 runs `ai_orch run` which can timeout at 180s. This is a **
 
 ### Hermes prod gateway alive but HTTP port not responding
 If the gateway PID is alive (`ps aux` shows `hermes gateway`) but `curl localhost:8643/health` returns nothing, the HTTP server never initialized. The ECONNRESET storms on the Slack WebSocket (visible in `gateway.err.log`) can leave the process alive but the HTTP listener broken. Fix: `launchctl bootout gui/$(id -u)/ai.hermes.gateway && launchctl load -w ~/Library/LaunchAgents/ai.hermes.gateway.plist`. Full diagnostic in `references/hermes-monitor-checks.md`.
+
+### Watchdog "gateway DOWN (port 8643)" false-positive on Socket-Mode-only deployments
+
+**Symptom (2026-07-09):** `hermes-watchdog.sh` fires `:rotating_light: Hermes prod gateway DOWN (port 8643) — sustained 4 checks (~20 min)` despite the gateway being healthy: Socket Mode connected, actively processing inbound Slack messages, agent cache functioning. Alert posts every 5 minutes. Streak counter climbs to 18+ within 90 minutes of gateway startup.
+
+**Root cause:** The watchdog unconditionally probes `http://localhost:8643/health`, but the **prod Hermes gateway is a Slack Socket Mode client that never binds a TCP port by default**. The `api_server` platform is force-disabled by `scripts/launchd-env-wrapper.sh` lines 81-86:
+```bash
+# Prod path: api_server is not deployed. Force-disable...
+unset API_SERVER_ENABLED
+unset API_SERVER_PORT
+unset API_SERVER_KEY
+```
+So nothing ever listens on 8643, and the curl probe returns connection-refused forever. The watchdog reports a phantom outage, not a real one.
+
+**How to recognize this in 30 seconds:**
+```bash
+# 1. Gateway process is alive?
+ps aux | grep "hermes gateway" | grep -v grep
+# 2. Slack Socket Mode actually connected?
+grep -E "Socket Mode connected|Connecting to slack|Authenticated as" \
+  ~/.hermes/logs/gateway.log | tail -5
+# 3. Is the watchdog probing a port that's expected to listen?
+curl -sf -m 3 http://localhost:8643/health
+# expected: 7 (connection refused) — NOT a real outage, just an absent api_server
+# 4. Is API_SERVER_ENABLED set?
+env | grep API_SERVER
+# expected: empty (prod force-disables it)
+```
+
+**The fix (canonical):** Patch `scripts/hermes-watchdog.sh` to use **PID-file liveness** (`$HERMES_HOME/gateway.pid` + `kill -0`) as the primary health probe, and demote the HTTP `/health` probe to a secondary signal gated on `API_SERVER_ENABLED=true`. See commit `4c8ef8ac7d` on `jleechanorg/jleechanclaw` `dev1783275795` for the full patch.
+
+```bash
+# New probe order in hermes-watchdog.sh:
+check_pid_alive() {                                  # PRIMARY
+  local pid_file="$HERMES_HOME/gateway.pid"
+  [[ -f "$pid_file" ]] || return 1
+  local pid; pid=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('pid',''))" "$pid_file" 2>/dev/null) || return 1
+  [[ -n "$pid" ]] || return 1
+  kill -0 "$pid" 2>/dev/null
+}
+
+if check_pid_alive "prod"; then
+  if [ "${API_SERVER_ENABLED:-false}" = "true" ]; then
+    check_gateway "prod" 8643   # probe api_server only when it's enabled
+  else
+    # Socket-Mode-only deployment — PID liveness IS the health signal
+    PROD_HEALTHY=true
+  fi
+fi
+```
+
+**After-streak recovery:** Reset stale counters so the false-positive streak doesn't carry over:
+```bash
+rm -f /tmp/hermes/watchdog-state/prod.streak /tmp/hermes/watchdog-state/prod.last_alerted_streak
+```
+
+**Verify the fix:**
+```bash
+HERMES_HOME=$HOME/.hermes bash $HOME/.hermes/scripts/hermes-watchdog.sh
+# expected: "prod gateway: healthy (pid file, socket-mode)" + streak stays 0
+```
+
+**Companion concern — alert channel routing:** Watchdog alerts default to `HERMES_WATCHDOG_ALERT_CHANNEL` (legacy: `C09GRLXF9GR` = #all-$USER-ai) with `HERMES_OPS_SLACK_CHANNEL` as fallback. Per `~/.hermes/config.yaml` `SLACK_HOME_CHANNEL: C0AJQ5M0A0Y` (= #ai-general = the home channel for system-generated messages), the plist should pin both env vars to `C0AJQ5M0A0Y`. After pinning, `launchctl bootout gui/$(id -u)/ai.hermes.watchdog && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.hermes-watchdog.plist` to pick up the new env. Every launchd plist also requires a committed template at `~/.hermes/launchd/<label>.plist.template` per env-preferences.mdc — write the template FIRST, then derive the deployed plist by substituting `@HOME@`.
 
 ### Gateway Startup Warning: `duplicate plugin id detected`
 
@@ -169,6 +289,91 @@ lsof -i :8644 -P  # staging
 **Fix location:** Likely in `hermes.staging.json` — add `"mode": "socket"` with a note or disable Socket Mode entirely if staging doesn't need Slack event processing.
 
 **Reference:** `references/slack-dm-routing-diag.md` — diagnostic script for comparing DM reply behavior via Slack API directly.
+### Canary / SLO / fleet-watchdog alerts from jleechanorg/ez-gh-actions
+
+**This is a DIFFERENT class of alert than the Hermes monitor above.** The `ez-gh-actions` project (Rust daemon + workflow_dispatch canary + bash fleet-watchdog) posts its own `[ez-gh-actions:WARNING]` style Slack messages. When one lands, treat it as "investigate a third-party watchdog claim" — don't trust the framing, validate against the actual run data.
+
+**Trigger phrases you'll see:**
+- `[ez-gh-actions:WARNING] ezgha canary SLO breach`
+- `[ez-gh-actions:ERROR] fleet below target`
+- `[ez-gh-actions:INFO] canary completed` (usually fine, no investigation needed)
+
+**Canonical investigation order (90 seconds to root cause):**
+
+1. **Get the run itself.** From the alert body, extract the `run_id` and hit the run API:
+   ```bash
+   gh api repos/jleechanorg/ez-gh-actions/actions/runs/<RUN_ID> \
+     --jq '{id,status,conclusion,created_at,run_started_at,event,display_title}'
+   gh api repos/jleechanorg/ez-gh-actions/actions/runs/<RUN_ID>/jobs \
+     --jq '.jobs[] | {id,name,started_at,completed_at,runner_id,runner_name,labels,conclusion}'
+   ```
+   Compute the actual `time_to_start_seconds = job.started_at - run.created_at`. If it's under the SLO (90s default), the alert is a false positive — confirm by reading the watchdog's own log.
+
+2. **Read `/tmp/ezgha-watchdog.log`** (the bash fleet watchdog — distinct from the Rust canary scheduler). Tail 100 lines:
+   ```bash
+   tail -100 /tmp/ezgha-watchdog.log
+   ```
+   Look for `BELOW TARGET`, `WARN: one or more hosts missing`, or `consecutive=N` patterns. The bash watchdog uses `consecutive<=2` before auto-restarting, which means a **persistent drain can sit at `consecutive=1` for hours** if the auto-recovery step keeps resetting the counter (common: COLIMA `state=Stopped` → auto-start → `configured=6 actual=` empty → reset).
+
+3. **Confirm the daemon is up:**
+   ```bash
+   launchctl list | grep -E 'ezgha|ez-gh'
+   # Look for a PID on org.jleechanorg.ezgha (the Rust daemon)
+   ```
+   Exit code `-15` (SIGTERM) is normal — the daemon self-restarts every ~15 min during the canary scheduler cycle.
+
+**Critical pitfall — the "unmeasured != breached" race in `src/canary.rs:303-305`:**
+
+The canary's `slo_breached` computation has a known anti-pattern:
+```rust
+let slo_breached = time_to_start_seconds
+    .map(|secs| secs > slo_start_seconds as i64)
+    .unwrap_or(run.status == "completed");  // <-- the trap
+```
+
+When the canary's poll catches the run row already `completed` but the job row's `started_at` is briefly `null` on that snapshot (REST eventual consistency for fast 50s jobs), `time_to_start_seconds` is `None` → `slo_breached` is forced to `true` → `should_alert()` fires with `time_to_start=Nones`. The alert body literally tells you the field is `None` — that's the signature of this false-positive race.
+
+**How to confirm it's the race vs. a real SLO breach:**
+- Alert body shows `time_to_start=Nones` → race bug, not a real breach.
+- Alert body shows `time_to_start=NNNs` with N > 90 → real SLO breach; investigate runner registration delays.
+- Alert body shows `time_to_start=NNNs` with N <= 90 → daemon logic bug; the SLO check itself is wrong.
+
+**Masked real outages — fleet drain hiding behind canary chatter:**
+
+The fleet-watchdog logs are independent of the canary scheduler. A persistent `[ez-gh-actions:WARNING] fleet below target` (Linux `configured=16, managed=0` for 95+ minutes, observed 2026-07-10) can sit silently in `/tmp/ezgha-watchdog.log` while the canary keeps firing false-positive SLO alerts on the **mac fleet** (which is healthy). The mac canary at 50s start vs. 90s SLO looks fine in isolation but the alert payload has `time_to_start=Nones` due to the race bug — masking the real Linux drain.
+
+**Diagnostic commands specific to jleechanorg/ez-gh-actions:**
+
+```bash
+# 1. Recent selftest history (canary cadence + success rate)
+gh api 'repos/jleechanorg/ez-gh-actions/actions/runs?workflow_file=selftest.yml&per_page=20' \
+  --jq '.workflow_runs[] | "\(.id) \(.created_at) \(.status) \(.conclusion // "-") \(.event) \(.display_title)"'
+
+# 2. Linux fleet drain signal (look for long-running "BELOW TARGET" streaks)
+grep -E 'BELOW TARGET|WARN.*unreachable|consecutive=' /tmp/ezgha-watchdog.log | tail -20
+
+# 3. COLIMA state on the Linux box (if applicable)
+ssh jeff-ubuntu 'systemctl --user status ezgha 2>&1 | head -20'
+
+# 4. Last few daemon restarts (SIGTERM = -15)
+grep -E 'ezgha' /var/log/com.apple.xpc.launchd/launchd.log 2>/dev/null | tail -5
+# OR for user-level launchd:
+log show --predicate 'subsystem == "com.apple.launchd"' --last 1h 2>/dev/null | grep ezgha | tail -10
+```
+
+**When you decide to patch the false-positive race:**
+
+The minimal fix is changing `.unwrap_or(run.status == "completed")` to `.unwrap_or(false)`. But that suppresses legitimate "could not measure" alerts too. The recommended fix is to introduce a `measurement: "ok" | "incomplete"` enum in `CanaryResult`, set `slo_breached = false` when measurement is incomplete, and surface the incomplete measurement as a separate (lower-severity) alert category. Don't ship the one-line fix without considering the second case.
+
+**Long-term fixes to land in a follow-up PR (not in the alert-investigation PR):**
+- Tighten the `consecutive<=2` guard in `ezgha-fleet-watchdog.sh` — use time-based backoff (1h of < target → restart) instead of tick-based.
+- Separate the canary alert channel from the fleet-watchdog alert channel so a canary false positive doesn't drown out a real fleet outage.
+- The existing test `result_does_not_accept_wrong_runner_prefix_from_fallback_job` at canary.rs:481 codifies the "missing field = breach" anti-pattern as expected behavior — when you fix the race, fix those tests too.
+
+**References:**
+- `references/hermes-monitor-checks.md` — Hermes monitor checks (separate concern).
+- `references/ez-gh-actions-watchdog-diag.md` — full investigation script + log-format reference for the ezgha canary/fleet-watchdog alert class.
+
 ### `channel_no_mention` intermittent failures (2026-05-27+)
 
 **Pattern:** `channel_no_mention=failed` appears intermittently (~30-40% of runs), often alongside `thread_no_mention=failed`, producing 2/6 or 3/6 pass counts instead of the usual 4/6.
@@ -251,6 +456,142 @@ cat ~/.hermes_prod/config.yaml | jq '.channels.slack | {dmPolicy, replyToModeByC
 
 **Related:** `references/slack-dm-routing-diag.md` — concrete diagnostic script for comparing DM reply behavior in the Slack API directly.
 
+### User reports "nothing happening" on Slack — provider-layer triage (canonical recipe, 2026-07-14)
+
+**Symptom:** A Slack user (typically Jeffrey in a channel like `#needs-jeff` / `C0BGM3A4ZC0`) posts "someting broken how come nothing ever happening here?" or an equivalent "I asked X 30 min ago and got no reply." The gateway log shows repeated `[Slack] Send error: cannot_reply_to_message` errors. The monitor may or may not flag anything — the failure is at the model provider layer, not the gateway transport.
+
+**Anti-pattern (will burn 1-2 hours):** Stop at "Slack returned `cannot_reply_to_message`" and assume it's a channel-membership or token-routing issue. **It is not.** `cannot_reply_to_message` is downstream noise — the agent run failed before producing a reply, the gateway's stale queued response gets retried, and each retry emits this error. The actual cause is upstream of Slack entirely.
+
+**Canonical 90-second triage (run in parallel, not serial):**
+
+1. **launchd state** — `launchctl print gui/$(id -u)/ai.hermes.prod | grep -E 'state =|pid =|last exit'` → confirm gateway is running (state=running, pid > 0). If state != running, restart first; if state == running, the gateway is fine and the issue is downstream.
+
+2. **Slack bot-token probe of the affected channel** — proves whether the bot can post AT ALL, independent of model health:
+   ```bash
+   BOT_TOKEN=$(grep '^export SLACK_BOT_TOKEN=' ~/.profile | head -1 | sed 's/export SLACK_BOT_TOKEN=//; s/"//g')
+   curl -fsS -X POST https://slack.com/api/chat.postMessage \
+     -H "Authorization: Bearer $BOT_TOKEN" -H "Content-Type: application/json; charset=utf-8" \
+     -d "{\"channel\":\"C0BGM3A4ZC0\",\"thread_ts\":\"<user_msg_ts>\",\"mrkdwn\":false,\"text\":\"[diagnostic probe — will delete]\"}"
+   # Then chat.delete on the returned ts.
+   ```
+   `ok:true` from both → bot CAN post in this channel. The failure is upstream. `not_in_channel` or `missing_scope` → real channel-membership issue, but rare; check `conversations.members` first.
+
+3. **Primary model provider probe** — proves the configured primary is healthy:
+   ```bash
+   curl -fsS -X POST "${MINIMAX_BASE_URL}/v1/messages" \
+     -H "x-api-key: ${MINIMAX_API_KEY}" -H "anthropic-version: 2023-06-01" \
+     -H "content-type: application/json" \
+     -d '{"model":"MiniMax-M3","max_tokens":32,"messages":[{"role":"user","content":"Reply with the single word pong."}]}'
+   # Expected: HTTP 200 with content[0].text="pong"
+   # 429 → primary rate-limited; check fallback chain
+   # 401/403 → primary credential rotated; check ~/.bashrc / ~/.profile drift
+   ```
+
+4. **Fallback provider probe** — proves the configured fallback (if any) is healthy. The probe URL depends on whatever the live `~/.hermes/config.yaml` `providers:` block names — substitute as needed:
+
+   ```bash
+   # EXAMPLE probe (vendor-specific, NOT a constant). Check the live config first:
+   grep -E '^\s+-?\s*(provider|name):' ~/.hermes/config.yaml | head -10
+   # Then probe whichever provider is in the fallback_providers list.
+   #
+   # The historic 2026-07-14 example was:
+   #   POST https://opencode.ai/zen/go/v1/chat/completions  /  model: glm-5.1
+   # That provider was REMOVED from this config on 2026-07-16 — see swap-hermes-provider.
+   # The shape of the probe stays the same; only the URL and model id vary.
+   #
+   # Response codes:
+   #   200 → fallback works.
+   #   429 + GoUsageLimitError (or equivalent quota-exhaustion error body) →
+   #     vendor-specific MONTHLY workspace quota exhausted; recovers in days/weeks.
+   #     Gateway retry loop will hammer this for the entire reset window unless
+   #     suppressed (see Long-term fix below).
+   #   403 + error code: 1010 → Cloudflare blocking egress; key fine.
+   ```
+
+**Reading the gateway error log alongside the probes:**
+- `[Slack] Send error: cannot_reply_to_message` → downstream noise from queued retries; ignore as cause.
+- `Switching to fallback: <model> via <provider>` → primary failed, fallback chain kicked in.
+- `HTTP 429: Monthly usage limit reached. Resets in N days. (GoUsageLimitError)` → fallback quota exhausted; THIS is the real cause. The `Resets in N days` field tells you how long the outage will last.
+- `HTTP 429: rate limit exceeded(TPM) (1039)` → transient per-minute rate limit; recovers in seconds.
+
+**Root-cause taxonomy:**
+
+| Probe 2 | Probe 3 | Probe 4 | Root cause |
+|---|---|---|---|
+| ok | 200 | 200 | Gateway transport fine; transient in the specific agent run. Self-recovers. |
+| ok | 429 | 200 | Primary rate-limited, fallback works. Self-recovers. |
+| ok | 200 | n/a (no fallback) | Primary works. Transient; self-recovers. |
+| ok | 429 | 429 (quota exhausted) | **Both providers quota-exhausted.** Gateway silently retries the dead fallback for the reset window. See Long-term fix. See also `swap-hermes-provider` for the fix-it recipe (drop the dead provider from `fallback_providers`). |
+| ok | 401/403 | n/a | Primary credential rotated. Update ~/.bashrc AND ~/.profile (both). Restart gateway. |
+| not_in_channel | n/a | n/a | Real channel-membership issue. `/invite @hermes` in channel. |
+
+**Long-term fix (avoid the silent retry trap):** When the fallback hits any quota-exhaustion error class (e.g., `GoUsageLimitError`, vendor-specific 429 with a "Resets in N days" body, Cloudflare `error code: 1010`), the gateway default is to keep retrying for the reset window. Each retry consumes session budget on a dead-end. Suggested patch: `gateway/run.py` `resolve_runtime_provider()` matches on the error body's quota signature and short-circuits to the previous successful provider for 24h, surfacing a startup warning. Not yet shipped as of 2026-07-16; tracked as `$USER-tqy2` followup. Faster alternative when the quota-out is permanent: remove the dead provider from `~/.hermes/config.yaml` `fallback_providers` (see `swap-hermes-provider` skill — the worked example with `opencode-go/glm-5.1` is at `references/rm-opencode-go-glm51.md`).
+
+**Recovery from a quota-exhaustion outage (no fix yet):**
+1. Reply to the user in-thread via direct bot-token post (probe 2 path) with the root-cause explanation.
+2. Wait for primary quota to refresh, OR temporarily edit `~/.hermes_prod/config.yaml` `fallback_providers` to remove the dead provider (one-line yaml edit; `launchctl kickstart -k gui/$(id -u)/ai.hermes.prod`). For a permanent quota-out, use the `swap-hermes-provider` skill to do the full removal across all six touch-points in `~/.hermes/config.yaml` + `~/.hermes/scripts/launchd-env-wrapper.sh` + the prod mirror.
+3. Do NOT bounce the gateway hoping it will start working — gateway is fine; upstream is dead.
+
+**What you should NOT do:**
+- Do NOT add `SLACK_BOT_TOKEN` to the launchd plist directly — the wrapper already handles it from ~/.profile/~/.bashrc. Adding it directly can cause drift (see memory `bashrc-profile-xapp-drift-blocks-launchd`).
+- Do NOT auto-schedule a "20-min status cron" preemptively. A cron's value is small when the gateway is alive and the user can re-ask — and a leaked status cron is itself a class of bug (see `babysit-stale-watchdog`). If you must schedule a watchdog, schedule a `gh pr view`-style PR-terminal cron, not a Slack status cron.
+- Do NOT assume `not_in_channel` from the MCP slack tool means the running gateway can't post. The MCP tool may use a different bot identity than the gateway (verified 2026-07-14: `HERMES_SLACK_BOT_TOKEN` (`mcp_agent_mail` / U0A4G7LDJ4R) is `not_in_channel` on `C0BGM3A4ZC0`, but `SLACK_BOT_TOKEN` (`hermes` / U0AEZC7RX1Q) IS in the channel and posting works).
+- Do NOT conclude "token is broken" from a single env probe. launchd jobs don't source `~/.bashrc` by default; the `_extract_bashrc_var` mechanism in `launchd-env-wrapper.sh` is the bridge. Inline sessions have the same trap from the `execute_code` side (clean Python subprocess doesn't source bashrc). For the canonical dual-probe recipe and worked example, see `cli-env-var-verification/references/execute_code-bashrc-env-isolation-dual-probe.md` (verified 2026-07-28).
+
+**Bug-ref:** 2026-07-14 — `#needs-jeff` / `C0BGM3A4ZC0` / `ts 1784061033.250339`. The two `:warning: The model provider failed after retries.` messages from `hermes_pc` (B0BBUN50HQB) are the visible symptom. Root cause: `MiniMax-M3` returned HTTP 429 (Token Plan rate limit), fallback to `glm-5.1` via `opencode-go` hit `GoUsageLimitError` (monthly workspace cap, resets in 14 days). The 4-probe triage pinpointed both providers as dead in ~2 min. Direct bot-token post at `ts 1784061855.393669` confirmed the channel/token path is healthy. See `references/user-reports-nothing-happening-2026-07-14.md` for the full transcript and `swap-hermes-provider/references/rm-opencode-go-glm51.md` for the cleanup that followed on 2026-07-16 (the `opencode-go` provider was removed from `~/.hermes/config.yaml` + `~/.hermes_prod/config.yaml` + `launchd-env-wrapper.sh`, six touch-points, ~10 min wall time).
+
+### Foreign-cron relay — "slack-digest failed" from a bot this session can't see
+
+**Symptom (verified 2026-07-29):** A Slack thread receives a "Cronjob
+Response: <name> failed: <error>" message from a bot identity like
+`hermes_pc` (or any other foreign instance — different process, different
+machine, or a different Hermes profile with its own cron DB). The job_id
+in the message (e.g. `dbbbf6a173b5`) is NOT visible in this gateway's
+`hermes cron list --all` and the corresponding label is NOT in
+`launchctl list`.
+
+**Anti-pattern (will burn 30+ min):** Try to `hermes cron update
+<job_id>` or `hermes cron remove <job_id>` from this session. Returns
+"job not found". Then try to inspect via `launchctl print
+gui/$(id -u)/<label>` — also returns "service not found". Then dig into
+the gateway's logs assuming the failure originated here. None of those
+diagnostics will resolve anything because **the cron is not running on
+this machine under this gateway**.
+
+**How to recognize it in 30 seconds:**
+
+```bash
+# 1. Is the cron visible in this gateway's DB?
+hermes cron list --all | grep -i <name>
+# → empty? it's foreign. move on.
+
+# 2. Is there a launchd plist for the label?
+launchctl list | grep -i <label>
+ls ~/Library/LaunchAgents/ai.hermes.schedule.<label>.plist 2>/dev/null
+# → empty? it's foreign. move on.
+
+# 3. Is the failure message from a bot identity this gateway owns?
+mcp__slack__conversations_replies <thread> | grep -E 'BotName|UserName'
+# Look for foreign bot names (hermes_pc, another bot) vs. U0AEZC7RX1Q
+# (canonical Hermes bot).
+```
+
+**The right move:** treat the relay message as **external telemetry**
+about an underlying problem (usually a credential, a vendor outage, or a
+config drift). Fix the underlying cause in the place this session CAN
+reach — typically a key in `~/.hermes/.env`, a config in
+`~/.hermes_prod/config.yaml`, or a script under `~/.hermes/scripts/`. Do
+NOT try to stop or inspect the foreign cron; this session has no handle
+on it.
+
+**Companion pattern** — `recurring-job-notifications` Pitfall 21 (added
+2026-07-29) covers the most common relay cause: a dead vendor API key
+surfaces as `HTTP 402: Insufficient credits` to the foreign cron,
+relayed as a Slack alert that says "vendor out of credits" when the
+actual problem is `401 User not found`. Probe the vendor's `/auth/key`
+endpoint with the key from `~/.hermes/.env` before chasing the credit
+path.
+
 ### MiniMax Token Plan rate-limit (HTTP 429)
 
 **Symptom:** Slack thread shows a "switching to fallback" message but the same MiniMax model is the only configured model. E2E stays at 6/6.
@@ -278,7 +619,7 @@ This is MiniMax's API-level rate limiting, not an Hermes config problem. It typi
 grep "embedded_run_failover_decision" /tmp/hermes/hermes-$(date +%Y-%m-%d).log 2>/dev/null | tail -5
 ```
 
-**Long-term fix:** Add a distinct fallback model (e.g., `minimax/MiniMax-M2.5` or a different provider) to `~/.hermes_prod/config.yaml` under `models.providers`. When `fallbackConfigured: true` and a real fallback exists, the gateway will retry automatically instead of surfacing the 429 to Slack.
+**Long-term fix:** Add a distinct fallback model OR drop `fallback_providers: []` so the gateway surfaces the 429 to Slack instead of looping. The historic recipe was "add `minimax/MiniMax-M2.5` or a different vendor" — that advice assumed at least one fallback was configured. As of 2026-07-16 the `opencode-go/glm-5.1` fallback was removed entirely (see `swap-hermes-provider`); if no replacement is added, the gateway will surface any further primary-provider 429 directly to Slack. Pick a fallback (single local + one cloud vendor is the suggested pattern) before relying on this surface-error path.
 
 **Severity assessment:** 6/6 E2E pass with this message = MiniMax transient rate-limit, not a system failure. The Slack reply still went through. No action needed for single occurrences.
 
@@ -538,7 +879,8 @@ grep "HERMES_STATE_DIR\|HERMES_CONFIG_PATH" ~/.hermes_prod/launchd/ai.hermes.gat
 - `HERMES_STATE_DIR=$HOME/.hermes_prod bash doctor.sh` → validates `~/.hermes_prod/config.yaml` (full prod) → true health picture
 - Always run doctor against the actual live profile to get real results, not the skeleton staging config.
 
-- `scripts/hermes gateway-quick-check.sh` — one-shot dual-profile health snapshot: both gateway ports, process+port bindings, Qdrant, Ollama, memory probe, latest errors.
+- `scripts/probe-socket-mode-gateway.sh` — 30-second decision script: is the watchdog's "port 8643 DOWN" a real outage or a Socket-Mode-only false-positive? Returns 0 (false positive / port-binding issue / real outage) with explanation. Run before any launchctl restart to avoid unnecessary churn.
+- `scripts/hermes-gateway-quick-check.sh` — one-shot dual-profile health snapshot: both gateway ports, process+port bindings, Qdrant, Ollama, memory probe, latest errors.
 
 ## AO Dashboard Plist Gotcha
 The plist lives in `~/.hermes/launchd/` (repo-tracked) but launchd only reads from `~/Library/LaunchAgents/`. If you see "AO dashboard plist missing" in doctor output:

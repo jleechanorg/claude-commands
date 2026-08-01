@@ -1,0 +1,147 @@
+name: Wizard Mobile Scroll Regression
+
+# Regression guard for the mobile wizard scroll/CSS bug class introduced by
+# PR #8017 ("[antig] feat(wizard): mobile UX sticky Next + single scroll
+# context (#8015)") and reported broken by Jeffrey on 2026-07-19
+# (Slack C0BDEAJH8PK/1784429960):
+#   "The next button css messed up on mobile and the first screen shouldn't
+#    even show a previous button."
+#
+# The pre-existing mvp_site/frontend_v1/tests/campaign_wizard_mobile_ux.test.js
+# suite (node --test, vm-sandboxed) only asserted CSS *source text* and JS
+# state against a fake DOM with no layout engine — structurally incapable of
+# catching a *rendered* regression. This job runs
+# testing_ui/test_campaign_wizard_mobile_scroll_regression.py, which drives
+# the wizard in a real headless browser at an iPhone-class mobile viewport
+# and asserts the rendered geometry: Previous button hidden on step 1, the
+# nav bar's real computed position, whether step-1 content gets visually
+# truncated, and that the outer page itself scrolls on mobile.
+#
+# Private-repo jobs use the repo's shared self-hosted runner selector. The
+# browser and its dependencies are installed by this job's own steps.
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
+    paths:
+      - "mvp_site/frontend_v1/index.html"
+      - "mvp_site/frontend_v1/app.js"
+      - "mvp_site/frontend_v1/style.css"
+      - "mvp_site/frontend_v1/js/animation-helpers.js"
+      - "mvp_site/frontend_v1/js/theme-bootstrap.js"
+      - "mvp_site/frontend_v1/js/theme-manager.js"
+      - "mvp_site/frontend_v1/js/ui-utils.js"
+      - "mvp_site/frontend_v1/js/campaign-wizard.js"
+      - "mvp_site/frontend_v1/styles/**"
+      - "mvp_site/frontend_v1/themes/**"
+      - ".github/actions/setup-ci-venv/**"
+      - "testing_ui/test_campaign_wizard_mobile_scroll_regression.py"
+      - "tests/test_campaign_wizard_mobile_scroll_harness.py"
+      - ".github/workflows/wizard-mobile-scroll-regression.yml"
+  push:
+    branches: [dev]
+    paths:
+      - "mvp_site/frontend_v1/index.html"
+      - "mvp_site/frontend_v1/app.js"
+      - "mvp_site/frontend_v1/style.css"
+      - "mvp_site/frontend_v1/js/animation-helpers.js"
+      - "mvp_site/frontend_v1/js/theme-bootstrap.js"
+      - "mvp_site/frontend_v1/js/theme-manager.js"
+      - "mvp_site/frontend_v1/js/ui-utils.js"
+      - "mvp_site/frontend_v1/js/campaign-wizard.js"
+      - "mvp_site/frontend_v1/styles/**"
+      - "mvp_site/frontend_v1/themes/**"
+      - ".github/actions/setup-ci-venv/**"
+      - "testing_ui/test_campaign_wizard_mobile_scroll_regression.py"
+      - "tests/test_campaign_wizard_mobile_scroll_harness.py"
+      - ".github/workflows/wizard-mobile-scroll-regression.yml"
+
+jobs:
+  wizard-mobile-scroll-regression:
+    name: Wizard Mobile Scroll/CSS Regression
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 15
+    env:
+      TESTING_AUTH_BYPASS: "true"
+      GEMINI_API_KEY: "test-ci-key-only"
+      GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+      PYTHONUNBUFFERED: "1"
+      PIP_NO_CACHE_DIR: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        env:
+          GIT_CONFIG_GLOBAL: ${{ runner.temp }}/checkout-gitconfig
+        with:
+          ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact PR head
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          expected="${{ github.event.pull_request.head.sha }}"
+          actual="$(git rev-parse HEAD)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Checked out $actual, expected PR head $expected"
+            exit 1
+          fi
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        uses: ./.github/actions/setup-ci-venv
+        with:
+          python-bin: 'command -v python3'
+          extra-packages: 'playwright'
+          no-cache-dir: 'true'
+
+      - name: Install Playwright system dependencies
+        run: |
+          set -euo pipefail
+          venv/bin/python -m playwright install-deps chromium || {
+            echo "::warning::Playwright Chromium system dependency install failed; continuing to browser install and launch probe"
+          }
+
+      - name: Install Playwright browsers
+        run: |
+          venv/bin/python -m playwright install chromium
+
+      - name: Check Playwright browser availability
+        run: |
+          venv/bin/python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); b = p.chromium.launch(args=['--no-sandbox','--disable-dev-shm-usage']); b.close(); p.stop()" || {
+            echo "::error::Playwright Chromium not available on this runner — wizard mobile regression requires working Playwright"
+            exit 1
+          }
+
+      - name: Run wizard mobile scroll/CSS regression test
+        run: |
+          set -o pipefail
+          export WIZARD_MOBILE_SCROLL_EVIDENCE_DIR="$RUNNER_TEMP/wizard-mobile-scroll-regression"
+          mkdir -p "$WIZARD_MOBILE_SCROLL_EVIDENCE_DIR"
+          venv/bin/python -m testing_ui.test_campaign_wizard_mobile_scroll_regression 2>&1 | tee "$WIZARD_MOBILE_SCROLL_EVIDENCE_DIR/console.log"
+
+      - name: Upload run log + evidence
+        if: always()
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        continue-on-error: true
+        with:
+          name: wizard-mobile-scroll-regression-evidence
+          path: |
+            ${{ runner.temp }}/wizard-mobile-scroll-regression/**
+          retention-days: 7

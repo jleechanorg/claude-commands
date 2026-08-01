@@ -471,7 +471,7 @@ curl -s -X POST \
 **With gh:**
 
 ```bash
-gh gist create script.py --public --desc "Useful script"
+~/.hermes/scripts/gh-safe-publish gist create script.py --public --desc "Useful script"
 gh gist list
 ```
 

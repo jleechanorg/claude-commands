@@ -42,6 +42,7 @@ For each piece of knowledge, pick the right bucket:
 | Durable workflows (5+ steps, multiple commands) | `skill_manage` action='create' (new SKILL.md) | Loaded on-demand by future sessions |
 | Specific pitfalls / gotchas | Patch an EXISTING skill with `skill_manage` action='patch' | Lives where future lookups will find it |
 | Three-home artifact contract | Patch `~/.hermes_prod/SOUL.md` `## COMMIT:` sections | Enforced by session-init scan |
+| User explicitly asked for a report in `~/roadmap` (verified 2026-07-20, Slack `C09GRLXF9GR/p1784573431`) | Also write a dedicated `~/roadmap/<topic>-YYYY-MM-DD.md` | Short-form audit trail lives in the monthly log; the dedicated report is the referenceable artifact |
 
 **Anti-pattern:** Don't put environment facts in skills (they go in memory). Don't put preferences in memory if they're session-specific.
 
@@ -95,3 +96,16 @@ Total artifacts produced in 1 turn: 1 new skill + 2 skill patches + 3 mem0 entri
 - `hermes-deploy-pipeline` — staging/prod/origin sync contract
 - `mem0_search` / `mem0_conclude` — memory tool reference
 - `~/.hermes_prod/SOUL.md` `## COMMIT: three-home-artifact-closure-contract`
+
+## Hermes-side `wiki-ingest` resolver gap (added 2026-07-20)
+
+The Claude-side `/wiki-ingest` skill lives at `~/.claude/skills/wiki-ingest/SKILL.md` and is **not** in the Hermes resolver (`skill_view(name='wiki-ingest')` returns "Skill not found" from Hermes sessions). When running /learn closure from a Hermes session, this skill's "Always wiki-ingest (call the skill, do not write files manually)" rule cannot be honored.
+
+**Fallback when wiki-ingest is unreachable from the runtime:**
+1. Write `~/llm_wiki/wiki/sources/<slug>.md` directly via `write_file` with full YAML frontmatter (title, type, tags, sources, created, updated) — match the format used by existing source pages in the wiki
+2. Write/update `~/llm_wiki/wiki/entities/<name>.md` for every named entity (orgs, hosts, tools) — same frontmatter shape
+3. Prepend a Sources entry at the top of `~/llm_wiki/wiki/index.md` `## Sources` section (after the `## Sources` heading, before the first existing entry) via `patch` mode=replace targeting the heading + first-row anchor
+4. Append `## [YYYY-MM-DD] ingest | <title>` to `~/llm_wiki/wiki/log.md` listing every file created/updated
+5. Use `[[wikilinks]]` in source pages linking to entity pages (e.g. `[[Prime Radiant]]`, `[[Cloud-Superpowers-Build]]`)
+
+This deviation from the Claude-side `/learn` skill's "do not write files into `~/llm_wiki/wiki/` directly" rule is acceptable because the rule's purpose (forcing the skill to do entity/concept extraction) cannot be honored when the skill is unreachable. **Long-term fix**: ship a Hermes-side overlay at `~/.hermes/skills/wiki-ingest/SKILL.md` so `skill_view(name='wiki-ingest')` resolves from any runtime — separate bead.

@@ -39,8 +39,8 @@ The color story is starkly binary. Product sections alternate between pure black
 - **Near Black** (`#1d1d1f`): Primary text on light backgrounds, dark button fills. Slightly warmer than pure black for comfortable reading.
 
 ### Interactive
-- **Apple Blue** (`#0071e3`): `--sk-focus-color`, primary CTA backgrounds, focus rings. The ONLY chromatic color in the interface.
-- **Link Blue** (`#0066cc`): `--sk-body-link-color`, inline text links. Slightly darker than Apple Blue for text-level readability.
+- **Apple Blue** (`#0071e3`): `--[REDACTED_OPENAI_KEY]`, primary CTA backgrounds, focus rings. The ONLY chromatic color in the interface.
+- **Link Blue** (`#0066cc`): `--[REDACTED_OPENAI_KEY]`, inline text links. Slightly darker than Apple Blue for text-level readability.
 - **Bright Blue** (`#2997ff`): Links on dark backgrounds. Higher luminance for contrast on black sections.
 
 ### Text
@@ -113,7 +113,7 @@ The color story is starkly binary. Product sections alternate between pure black
 - Font: SF Pro Text, 17px, weight 400
 - Hover: background brightens slightly
 - Active: `#ededf2` background shift
-- Focus: `2px solid var(--sk-focus-color, #0071E3)` outline
+- Focus: `2px solid var(--[REDACTED_OPENAI_KEY], #0071E3)` outline
 - Use: Primary call-to-action ("Buy", "Shop iPhone")
 
 **Primary Dark**
@@ -139,7 +139,7 @@ The color story is starkly binary. Product sections alternate between pure black
 - Padding: 0px 14px
 - Radius: 11px
 - Border: 3px solid `rgba(0, 0, 0, 0.04)`
-- Focus: `2px solid var(--sk-focus-color, #0071E3)` outline
+- Focus: `2px solid var(--[REDACTED_OPENAI_KEY], #0071E3)` outline
 - Use: Search bars, filter controls
 
 **Media Control**
@@ -147,7 +147,7 @@ The color story is starkly binary. Product sections alternate between pure black
 - Text: `rgba(0, 0, 0, 0.48)`
 - Radius: 50% (circular)
 - Active: scale(0.9), background shifts
-- Focus: `2px solid var(--sk-focus-color, #0071e3)` outline, white bg, black text
+- Focus: `2px solid var(--[REDACTED_OPENAI_KEY], #0071e3)` outline, white bg, black text
 - Use: Play/pause, carousel arrows
 
 ### Cards & Containers

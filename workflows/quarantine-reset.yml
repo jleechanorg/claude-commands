@@ -1,5 +1,11 @@
 name: Runner Quarantine Reset
 
+
+# Cancel in-progress runs on the same ref — supersedes are wasted runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -14,7 +20,7 @@ on:
 
 jobs:
   reset-quarantine:
-    runs-on: ${{ (inputs.runner_pattern != 'all' && !contains(inputs.runner_pattern, '*')) && fromJson(format('["{0}"]', inputs.runner_pattern)) || fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    runs-on: ${{ (inputs.runner_pattern != 'all' && !contains(inputs.runner_pattern, '*')) && fromJson(format('["{0}"]', inputs.runner_pattern)) || fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 5
     steps:
       - name: Reset runner quarantine score

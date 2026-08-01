@@ -6,18 +6,41 @@ permissions:
   pull-requests: write
   issues: write
 
+concurrency:
+  group: mcp-smoke-tests-${{ inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
 # Smoke coverage:
-# - Real E2E preview smoke tests on /smoke PR comment or explicit
-#   workflow_dispatch (with pr_number input).
+# - Real E2E preview smoke tests on trusted /smoke PR comments; cost-safe mock
+#   by default for explicit workflow_dispatch runs.
 # - Triggers workflow_run, pull_request, and push were removed (see #7517) because
 #   they drove re-queue loops in the self-hosted runner pool after merges. The
-#   issue_comment trigger remains for human /smoke comments; workflow_dispatch
-#   was added so the Green Gate (gate-8) headBranch filter can match runs
-#   attributed to the PR's actual headBranch+headSha (issue_comment runs use
-#   the workflow's default branch, so gate-8's branch filter never matched).
+#   router now calls this workflow directly for human /smoke comments;
+#   workflow_dispatch remains available for manual runs whose metadata can be
+#   matched to the PR's actual head branch and SHA.
+# NOTE: issue_comment trigger was removed (PR ci/tier1-trim-2026-07-12).
+# /smoke PR comments are routed via .github/workflows/comment-router.yml, which
+# calls this reusable workflow without replacing the human issue_comment actor.
+# workflow_dispatch remains the cost-safe manual override path.
 on:
-  issue_comment:
-    types: [created]
+  workflow_call:
+    inputs:
+      pr_number:
+        description: 'PR number to run smoke tests against'
+        required: true
+        type: string
+      test_mode:
+        description: 'Test mode override (real|mock). Default: mock (cost-safe).'
+        required: false
+        type: string
+        default: 'mock'
+    secrets:
+      GCP_SA_KEY:
+        description: 'GCP service account JSON key, forwarded to ./.github/actions/run-pr-preview-test for preview lookup + signing-secret drift check.'
+        required: true
+      SMOKE_TOKEN:
+        description: 'Authentication token for remote /mcp endpoints, forwarded to ./.github/actions/run-mcp-smoke-tests.'
+        required: true
   workflow_dispatch:
     inputs:
       pr_number:
@@ -36,27 +59,24 @@ on:
 jobs:
   resolve-self-hosted-pr-context:
     name: Resolve self-hosted PR context
-    if: >-
-      (
-        github.event_name == 'issue_comment' &&
-        github.event.issue.pull_request &&
-        startsWith(github.event.comment.body, '/smoke') &&
-        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
-      ) || (
-        github.event_name == 'workflow_dispatch' &&
-        github.event.inputs.pr_number != ''
-      )
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # NOTE: issue_comment author gating (cursor[bot]/coderabbitai filter) was
+    # removed alongside the issue_comment trigger (PR ci/tier1-trim-2026-07-12).
+    # Author gating now lives in .github/workflows/comment-router.yml.
+    if: inputs.pr_number != ''
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     permissions:
       contents: read
       issues: read
       pull-requests: read
+    timeout-minutes: 5
     outputs:
       allow_self_hosted: ${{ steps.resolve.outputs.allow_self_hosted }}
     steps:
       - name: Resolve PR trust context
         id: resolve
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
         with:
           script: |
             const repoFullName = `${context.repo.owner}/${context.repo.repo}`;
@@ -64,58 +84,7 @@ jobs:
             const setOutputs = ({ allow }) => {
               core.setOutput('allow_self_hosted', allow ? 'true' : 'false');
             };
-
-            if (context.eventName === 'push') {
-              setOutputs({ allow: true });
-              return;
-            }
-
-            if (context.eventName === 'pull_request') {
-              const pr = context.payload.pull_request;
-              const sameRepo = pr?.head?.repo?.full_name === repoFullName;
-              const allow = Boolean(sameRepo && pr?.head?.repo && pr.head.repo.fork === false);
-              setOutputs({ allow });
-              return;
-            }
-
-            let prNumber;
-
-            if (context.eventName === 'workflow_dispatch') {
-              const rawInput = context.payload?.inputs?.pr_number;
-              if (rawInput) {
-                prNumber = Number(rawInput);
-              }
-            } else if (context.eventName === 'issue_comment') {
-              if (!context.payload.issue?.pull_request) {
-                setOutputs({ allow: false });
-                return;
-              }
-              prNumber = Number(context.payload.issue.number);
-            } else if (context.eventName === 'workflow_run') {
-              const workflowRun = context.payload.workflow_run;
-              if (workflowRun?.pull_requests?.length) {
-                prNumber = Number(workflowRun.pull_requests[0].number);
-              } else if (workflowRun?.head_branch) {
-                const sameRepoCandidates = await github.paginate(
-                  github.rest.pulls.list,
-                  {
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    state: 'open',
-                    head: `${context.repo.owner}:${workflowRun.head_branch}`,
-                    per_page: 100,
-                  }
-                );
-                if (sameRepoCandidates.length === 1) {
-                  prNumber = Number(sameRepoCandidates[0].number);
-                } else {
-                  const match = workflowRun.head_branch.match(/pr-(\d+)/);
-                  if (match) {
-                    prNumber = Number(match[1]);
-                  }
-                }
-              }
-            }
+            const prNumber = Number(process.env.PR_NUMBER);
 
             if (!prNumber || Number.isNaN(prNumber)) {
               setOutputs({ allow: false });
@@ -136,58 +105,33 @@ jobs:
     name: MCP Smoke Tests [Preview E2E]
     needs: resolve-self-hosted-pr-context
     if: >-
-      needs.resolve-self-hosted-pr-context.outputs.allow_self_hosted == 'true' && (
-        (
-          github.event_name == 'issue_comment' &&
-          github.event.issue.pull_request &&
-          startsWith(github.event.comment.body, '/smoke') &&
-          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
-        ) || (
-          github.event_name == 'workflow_dispatch' &&
-          github.event.inputs.pr_number != ''
-        )
-      )
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+      needs.resolve-self-hosted-pr-context.outputs.allow_self_hosted == 'true' &&
+      inputs.pr_number != ''
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    # E4 EXCEPTION: preview environment smoke tests need real deploy+traffic time.
+    timeout-minutes: 30
     env:
       GCP_REGION: us-central1
       GCP_PROJECT: worldarchitecture-ai
       MCP_TEST_TIMEOUT_MS: ${{ vars.MCP_TEST_TIMEOUT_MS || '120000' }}
       MCP_TEST_MAX_ATTEMPTS: ${{ vars.MCP_TEST_MAX_ATTEMPTS || '3' }}
       MCP_TEST_RETRY_DELAY_MS: ${{ vars.MCP_TEST_RETRY_DELAY_MS || '2000' }}
-      STREAM_RESPONSE_SIGNING_SECRET: ${{ secrets.STREAM_RESPONSE_SIGNING_SECRET }}
 
     steps:
-      - name: Post acknowledgment comment
-        if: github.event_name == 'issue_comment'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: '🔥 **MCP Smoke Tests Started**\n\nRunning MCP smoke tests against deployed GCP preview server...\n\n[View workflow run →](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})'
-            });
+      # NOTE: Post-acknowledgment comment step removed (PR ci/tier1-trim-2026-07-12).
+      # The comment-router workflow now posts a "Smoke Tests Started" reply at
+      # dispatch time so the user gets immediate feedback without coupling the
+      # smoke workflow to a fire-and-forget comment that ran before any work.
 
       - name: Get PR ref
         id: pr_ref
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
         with:
           result-encoding: string
           script: |
-            let prNumber;
-            if (context.eventName === 'workflow_dispatch') {
-              const rawInput = context.payload?.inputs?.pr_number;
-              if (rawInput) {
-                prNumber = Number(rawInput);
-              }
-            } else if (context.eventName === 'issue_comment') {
-              if (!context.payload.issue?.pull_request) {
-                core.setFailed('Could not determine PR from issue comment; comment is not on a pull request');
-                return '';
-              }
-              prNumber = context.payload.issue.number;
-            }
+            const prNumber = Number(process.env.PR_NUMBER);
 
             if (!prNumber || Number.isNaN(prNumber)) {
               core.setFailed('Could not determine PR number for workflow trigger');
@@ -202,7 +146,7 @@ jobs:
 
             const headSha = pr.data.head.sha || '';
             // CRITICAL: Checkout must match the SHA used for service lookup to avoid version mismatch
-            const headRef = headSha ? headSha : `refs/pull/${pr.data.number}/head`;
+            const headRef = headSha ? headSha : pr.data.head.sha;
             core.setOutput('pr_number', String(pr.data.number));
             core.setOutput('head_sha', headSha);
             core.setOutput('head_ref', headRef);
@@ -211,8 +155,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
         with:
-          ref: ${{ steps.pr_ref.outputs.result }}
+          ref: ${{ steps.pr_ref.outputs.head_ref || github.sha }}
           persist-credentials: false
+          filter: blob:none
 
       - name: Set up Python
         if: runner.os == 'Linux'
@@ -221,12 +166,9 @@ jobs:
           python-version: ${{ vars.PYTHON_VERSION || '3.12' }}
 
       - name: Install smoke test dependencies
-        run: |
-          PYTHON=$(command -v python3.12 || command -v python3.11 || command -v python3 || command -v python)
-          $PYTHON -m venv venv
-          source venv/bin/activate
-          venv/bin/python -m pip install --upgrade pip
-          venv/bin/python -m pip install -r mvp_site/requirements.txt
+        uses: ./.github/actions/setup-ci-venv
+        with:
+          python-bin: 'command -v python3.12 || command -v python3.11 || command -v python3 || command -v python'
 
       - name: Resolve deployed preview service URL
         id: service_url
@@ -256,10 +198,76 @@ jobs:
         # determine it, even if the action above failed to find a preview. That
         # way the contract check in `smoke-mode-routing-contract` can still grep
         # for `determine-smoke-mode.sh` references in this file.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_MODE: ${{ inputs.test_mode }}
+          ACTOR: ${{ github.actor }}
         run: |
           chmod +x scripts/determine-smoke-mode.sh
-          TEST_MODE=$(scripts/determine-smoke-mode.sh "${{ github.event_name }}" "${{ github.event.inputs.test_mode || '' }}")
+          TEST_MODE=$(scripts/determine-smoke-mode.sh \
+            "$EVENT_NAME" "$MANUAL_MODE" "$ACTOR")
           echo "mode=$TEST_MODE" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve signing secret from GCP (single source of truth)
+        if: steps.service_url.outputs.deployed == 'true'
+        # ROOT-CAUSE FIX (signed streaming digest parity): the preview server signs
+        # streaming done-events with the GCP Secret Manager secret
+        # `stream-response-signing-secret:latest` (mounted server-side by deploy.sh).
+        # The smoke-test client (verifier) previously read a SEPARATE GitHub Actions
+        # secret (secrets.STREAM_RESPONSE_SIGNING_SECRET). When those two sources
+        # drifted, the HMAC digests never matched and the signed-mode streaming
+        # contracts failed with "Streaming response signature digest mismatch
+        # (signed mode)". Deriving the verifier secret from the SAME GCP secret the
+        # server uses makes drift impossible. gcloud is already authenticated by the
+        # "Resolve deployed preview service URL" step above.
+        #
+        # FAIL-CLOSED: if the GCP read fails or is empty we ABORT the smoke run. We do
+        # NOT fall back to the GitHub Actions secret — a silent fallback would
+        # reintroduce the exact drift this fix removes.
+        run: |
+          set -uo pipefail
+          if ! SECRET=$(gcloud secrets versions access latest \
+              --secret=stream-response-signing-secret \
+              --project="$GCP_PROJECT" 2>/dev/null); then
+            echo "::error title=SigningSecretUnavailable::Could not read stream-response-signing-secret from GCP Secret Manager (server's source of truth). Aborting the smoke run instead of falling back to the drift-prone GitHub Actions secret."
+            exit 1
+          fi
+          if [ -z "$SECRET" ]; then
+            echo "::error title=MissingSigningSecret::stream-response-signing-secret resolved to an empty value from GCP Secret Manager."
+            exit 1
+          fi
+          echo "✅ Fetched STREAM_RESPONSE_SIGNING_SECRET from GCP Secret Manager (server's source of truth)"
+          echo "::add-mask::$SECRET"
+          echo "STREAM_RESPONSE_SIGNING_SECRET=$SECRET" >> "$GITHUB_ENV"
+
+      - name: Verify preview instance secret matches latest (detect warm-instance drift)
+        if: steps.service_url.outputs.deployed == 'true'
+        # Cloud Run resolves a `:latest` secretKeyRef ONCE when a container starts
+        # and does not re-read it for the life of that instance. If the preview
+        # was already warm when stream-response-signing-secret was rotated, the
+        # running server keeps signing with the OLD version while this workflow's
+        # prior step just fetched the NEW `latest` value — reintroducing the exact
+        # digest-mismatch drift the GCP-derivation fix above was built to remove,
+        # just with a confusing downstream error instead of an explicit one.
+        # /health exposes a sha256[:16] fingerprint (never the raw secret) of
+        # whichever value the server actually loaded; compare it against the same
+        # hash of what we just fetched so a warm-instance mismatch fails loudly
+        # here, with an actionable message, instead of surfacing as an opaque
+        # "Streaming response signature digest mismatch" deep in the smoke run.
+        run: |
+          set -uo pipefail
+          SERVICE_URL="${{ steps.service_url.outputs.service_url }}"
+          EXPECTED_FINGERPRINT=$(printf '%s' "$STREAM_RESPONSE_SIGNING_SECRET" | sha256sum | cut -c1-16)
+          HEALTH_JSON=$(curl -sS --max-time 10 "$SERVICE_URL/health" || true)
+          SERVER_FINGERPRINT=$(printf '%s' "$HEALTH_JSON" | jq -r '.signing_secret_fingerprint // empty' 2>/dev/null || true)
+          if [ -z "$SERVER_FINGERPRINT" ]; then
+            echo "::warning title=NoSigningFingerprint::Preview /health did not report signing_secret_fingerprint (older revision without the field, or STREAM_RESPONSE_SIGNING_SECRET unset server-side) — skipping drift check, proceeding to smoke."
+          elif [ "$SERVER_FINGERPRINT" != "$EXPECTED_FINGERPRINT" ]; then
+            echo "::error title=SigningSecretDrift::Preview instance is signing with a DIFFERENT stream-response-signing-secret version than the one this workflow just fetched from GCP Secret Manager 'latest'. This preview was likely already warm when the secret was rotated (Cloud Run resolves secretKeyRef once at container start). Force a fresh preview redeploy (push an empty commit or re-run deploy-preview) so the instance picks up the current secret, then re-run smoke."
+            exit 1
+          else
+            echo "✅ Preview instance signing secret matches GCP Secret Manager 'latest' (fingerprint $SERVER_FINGERPRINT)"
+          fi
 
       - name: Run MCP smoke tests
         if: steps.service_url.outputs.deployed == 'true'
@@ -335,6 +343,10 @@ jobs:
 
       - name: Post success comment
         if: steps.pr_ref.outputs.pr_number && steps.service_url.outputs.deployed == 'true' && steps.smoke_tests.outcome == 'success'
+        # Non-blocking: a transient GitHub comment-API failure must not flip the
+        # job conclusion to failure and strand Gate 8 (PR #8461 F1). The step is
+        # still marked failed in the UI, so failures stay visible.
+        continue-on-error: true
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           script: |
@@ -368,6 +380,10 @@ jobs:
           steps.pr_ref.outputs.pr_number != '' &&
           steps.pr_ref.outputs.head_sha != '' &&
           !(steps.service_url.outputs.deployed == 'true' && steps.smoke_tests.outcome == 'success')
+        # Non-blocking: a transient GitHub comment-API failure must not strand
+        # Gate 8 on this fail-fast path (PR #8461 F1). The step is still marked
+        # failed in the UI, so failures stay visible.
+        continue-on-error: true
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           script: |
@@ -401,6 +417,10 @@ jobs:
         # run-pr-preview-test action already posts a clear "No Deployed Preview
         # Found" comment, so we don't want to follow up with an empty body.
         if: steps.pr_ref.outputs.pr_number && steps.service_url.outputs.deployed == 'true' && failure()
+        # Non-blocking: a transient GitHub comment-API failure must not flip the
+        # job conclusion to failure and strand Gate 8 (PR #8461 F1). The step is
+        # still marked failed in the UI, so failures stay visible.
+        continue-on-error: true
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           script: |

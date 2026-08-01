@@ -114,7 +114,7 @@ agent_spec = {
 - ✅ **Parameter Extraction**: Workspace configuration embedded in task descriptions and automatically extracted
 
 **New Naming Examples**:
-- **Default Tasks**: `task-agent-implement-auth` (instead of `task-agent-44509833`)
+- **Default Tasks**: `ta[REDACTED_OPENAI_KEY]` (instead of `ta[REDACTED_OPENAI_KEY]`)
 - **PR Tasks**: `tmux-pr1234` (agent name = workspace name = `tmux-pr1234`)
 - **Workspaces**: Match agent names exactly (no more `agent_workspace_` prefix)
 

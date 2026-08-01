@@ -20,14 +20,10 @@ See the full authoritative skill at: `.claude/skills/testing-layers/SKILL.md`
 
 ## Quick Directory Map
 - **1. Unit**: `$PROJECT_ROOT/tests/` or `tests/`
-- **2. End-to-End**: `$PROJECT_ROOT/tests/test_end2end/` — faked externals → `/end2end-testing`
-- **3. MCP API**: `testing_mcp/` — real LLM, zero mocks → `/llm-testing`
+- **2. End-to-End**: `$PROJECT_ROOT/tests/test_end2end/`
+- **3. MCP API**: `testing_mcp/`
 - **4. HTTP API**: `testing_http/`
-- **5. Browser**: `testing_ui/` — real LLM, zero mocks → `/llm-testing`
-
-**Layer entry points:** Layer 2 = `/end2end-testing` (fake externals, fast, deterministic).
-Layers 3 & 5 = `/llm-testing` (real LLM + real services, **zero mocks** — the only valid source
-of `/es` evidence for `$PROJECT_ROOT/**` changes).
+- **5. Browser**: `testing_ui/`
 
 ## Key Principles for Test Selection
 1. **Does the LLM's judgment affect the outcome?** (Yes = Layer 3+, No = Layer 1/2)

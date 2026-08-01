@@ -1,19 +1,23 @@
 ---
 description: Create or update executable br follow-up beads with implementation instructions, signatures, and acceptance criteria
 aliases: [bead]
-type: workflow
+type: skill
 execution_mode: immediate
 ---
 
-# /beads — Executable Follow-up Beads
+# /beads [finding-or-task]
 
-Use `~/.claude/skills/bead-followup-templates/SKILL.md` as the source of truth.
+Create or update executable `br` follow-up beads.
 
-When invoked as `/beads <finding-or-task>`, create or update `br` follow-up beads using that skill's template. Each bead must include source context, current SHA, file/line evidence, exact implementation instructions, live-code API/function signatures, call-site examples, standards constraints, verification commands, acceptance criteria, and a staleness note.
+Read `~/.claude/skills/bead-followup-templates/SKILL.md` and execute it with the provided finding or task.
 
-Hard rules:
-- Use `br --no-auto-flush` in worktrees and feature branches.
-- Do not use `bd`.
-- Do not invent API/function signatures from memory; read the current code first.
-- If multiple beads come from the same PR, put the PR URL in the body instead of reusing the same `--external-ref`.
-- For production `$PROJECT_ROOT/**` behavior, include the required `/es` evidence class in acceptance criteria.
+Each bead must include source context, current SHA, file/line evidence, exact implementation instructions, live-code API/function signatures, call-site examples, standards constraints, verification commands, acceptance criteria, and a staleness note.
+
+## Hard rules
+
+| Rule | Detail |
+|------|--------|
+| Worktrees/branches | Use `br --no-auto-flush`; never `bd` |
+| Signatures | Read current code first — never invent from memory |
+| Multi-bead PRs | Put the PR URL in the body instead of reusing `--external-ref` |
+| Production `$PROJECT_ROOT/**` | Include required `/es` evidence class in acceptance criteria |

@@ -1,6 +1,6 @@
 ---
 name: pairv2-llm-driven-philosophy
-description: "Pairv2 implementation philosophy: LLM-decided outcomes, fail-soft file handling, and evidence-first promotion"
+description: Pairv2 implementation philosophy: LLM-decided outcomes, fail-soft file handling, and evidence-first promotion
 type: policy
 scope: project
 ---

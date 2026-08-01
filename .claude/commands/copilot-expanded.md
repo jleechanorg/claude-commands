@@ -616,11 +616,7 @@ echo "✨ Quality issues: ${#QUALITY_ISSUES[@]}"
 echo "📁 Work directory: $WORK_DIR"
 echo "📄 Operations log: $OPERATIONS_LOG"
 
-# Validation gates
-
-echo "🔍 Running validation gates"
-
-# Gate 1: Response coverage check
+# Response coverage check
 
 UNRESPONDED_ACTIONABLE=$(jq '.metadata.unresponded_count // 0' "$COMMENTS_FILE")
 TOTAL_ACTIONABLE=$(jq '.metadata.actionable // 0' "$COMMENTS_FILE")
@@ -637,6 +633,97 @@ else
     echo "✅ Response coverage acceptable: $COVERAGE_RATIO%"
     log_operation "Good response coverage: $COVERAGE_RATIO%"
 fi
+
+# Validation gates
+
+echo "🔍 Running validation gates"
+
+# Gate 1: CI status — canonical statusCheckRollup[] contract (green.md / pr-green-definition SKILL)
+# NEVER use `gh pr checks | grep` — it can silently show "pass" during GraphQL rate-limit
+# exhaustion or for stale prior-SHA runs.  Use statusCheckRollup JSON exclusively.
+#
+# Rules:
+#   StatusContext (.state):  must be SUCCESS (null-safe via // "")
+#   CheckRun (.status/.conclusion): must be COMPLETED + SUCCESS (null-safe); .state is unreliable
+#   Advisory exclusions (never a gate): "Green Gate", "Cursor Bugbot"
+#   GitHub Copilot PR reviews: ADVISORY ONLY — read and apply useful feedback in the draft phase;
+#     never block CI gate on Copilot review approval or any bot reviewer verdict.
+#
+# Executable jq fixtures — run inline to verify the filter on every state variant:
+#
+#   PASS (success + advisory exclusions ignored):
+#     echo '[{"__typename":"CheckRun","name":"build","status":"COMPLETED","conclusion":"SUCCESS"},
+#            {"__typename":"CheckRun","name":"Green Gate","status":"COMPLETED","conclusion":"FAILURE"},
+#            {"__typename":"CheckRun","name":"Cursor Bugbot","status":"IN_PROGRESS","conclusion":null},
+#            {"__typename":"StatusContext","name":"ci/lint","state":"SUCCESS"}]' \
+#       | jq '[.[] | select(
+#           (.__typename == "StatusContext" and (((.state // "") | ascii_upcase) != "SUCCESS")) or
+#           (.__typename == "CheckRun" and .name != "Green Gate" and .name != "Cursor Bugbot" and
+#             ((((.status // "") | ascii_upcase) != "COMPLETED") or
+#              (((.conclusion // "") | ascii_upcase) != "SUCCESS")))
+#         )] | length'
+#     # expected: 0  → PASS
+#
+#   FAIL — pending:
+#     echo '[{"__typename":"CheckRun","name":"tests","status":"IN_PROGRESS","conclusion":null}]' \
+#       | jq '[.[] | select(...)] | length'   # expected: 1
+#
+#   FAIL — null conclusion:
+#     echo '[{"__typename":"CheckRun","name":"tests","status":"COMPLETED","conclusion":null}]' \
+#       | jq '[.[] | select(...)] | length'   # expected: 1
+#
+#   FAIL — failure:
+#     echo '[{"__typename":"CheckRun","name":"tests","status":"COMPLETED","conclusion":"FAILURE"}]' \
+#       | jq '[.[] | select(...)] | length'   # expected: 1
+#
+#   FAIL — cancelled:
+#     echo '[{"__typename":"CheckRun","name":"tests","status":"COMPLETED","conclusion":"CANCELLED"}]' \
+#       | jq '[.[] | select(...)] | length'   # expected: 1
+#
+#   FAIL — skipped (skipped is not SUCCESS; treat as non-passing):
+#     echo '[{"__typename":"CheckRun","name":"tests","status":"COMPLETED","conclusion":"SKIPPED"}]' \
+#       | jq '[.[] | select(...)] | length'   # expected: 1
+#
+#   FAIL — neutral:
+#     echo '[{"__typename":"CheckRun","name":"tests","status":"COMPLETED","conclusion":"NEUTRAL"}]' \
+#       | jq '[.[] | select(...)] | length'   # expected: 1
+#
+#   FAIL — StatusContext non-SUCCESS:
+#     echo '[{"__typename":"StatusContext","name":"ci/lint","state":"FAILURE"}]' \
+#       | jq '[.[] | select(...)] | length'   # expected: 1
+#
+#   PASS — advisory exclusions do not count regardless of state:
+#     echo '[{"__typename":"CheckRun","name":"Green Gate","status":"IN_PROGRESS","conclusion":null},
+#            {"__typename":"CheckRun","name":"Cursor Bugbot","status":"COMPLETED","conclusion":"FAILURE"}]' \
+#       | jq '[.[] | select(...)] | length'   # expected: 0  → PASS (both excluded)
+
+echo "🔄 Checking CI status via statusCheckRollup (canonical green.md contract)"
+log_operation "CI checks: querying statusCheckRollup"
+
+CI_FAIL_COUNT=$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '
+  [.statusCheckRollup[] |
+    select(
+      (.__typename == "StatusContext" and (((.state // "") | ascii_upcase) != "SUCCESS")) or
+      (.__typename == "CheckRun" and
+       .name != "Green Gate" and
+       .name != "Cursor Bugbot" and
+       ((((.status // "") | ascii_upcase) != "COMPLETED") or
+        (((.conclusion // "") | ascii_upcase) != "SUCCESS")))
+    )
+  ] | length' 2>/dev/null || echo "error")
+
+if [ "$CI_FAIL_COUNT" = "error" ]; then
+    echo "⚠️ WARNING: Could not fetch statusCheckRollup — check GitHub API rate limit"
+    log_operation "CI checks: statusCheckRollup fetch failed"
+elif [ "$CI_FAIL_COUNT" -eq 0 ]; then
+    echo "✅ CI checks passing (all non-advisory checks COMPLETED+SUCCESS)"
+    log_operation "CI checks: passing (statusCheckRollup count=0)"
+else
+    echo "⚠️ CI checks not fully green: $CI_FAIL_COUNT check(s) not COMPLETED+SUCCESS"
+    log_operation "CI checks: issues detected (statusCheckRollup non-passing count=$CI_FAIL_COUNT)"
+fi
+# Note: GitHub Copilot PR review is advisory (draft-phase feedback) — not a CI gate.
+# Read Copilot suggestions and apply useful ones; never wait on or block on Copilot approval.
 
 # Gate 2: PR mergeable status check
 
@@ -655,22 +742,6 @@ case "$MERGEABLE_STATUS" in
         log_operation "PR mergeable status: $MERGEABLE_STATUS"
         ;;
 esac
-
-# Gate 3: Check for CI status (if available)
-
-if gh pr checks "$PR_NUMBER" --required-only >/dev/null 2>&1; then
-    echo "🔄 Checking CI status"
-    if gh pr checks "$PR_NUMBER" --required-only | grep -q "pass\|success"; then
-        echo "✅ Required CI checks passing"
-        log_operation "CI checks: passing"
-    else
-        echo "⚠️ Some required CI checks not passing"
-        log_operation "CI checks: issues detected"
-    fi
-else
-    echo "ℹ️ No required CI checks configured"
-    log_operation "CI checks: not configured"
-fi
 
 # Final summary
 

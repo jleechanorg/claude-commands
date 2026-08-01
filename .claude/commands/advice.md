@@ -3,4 +3,4 @@ description: Token-efficient second opinion — fans out Opus subagent + /resear
 aliases: [smart-advisor]
 ---
 
-Invoke the `smart-advisor` skill with the following argument: $ARGUMENTS
+Read `~/.claude/skills/advice/SKILL.md` completely, then execute it with `$ARGUMENTS`.

@@ -1,12 +1,12 @@
 # SFT Training Guide
 
-Complete guide to Supervised Fine-Tuning (SFT) with TRL for instruction tuning and task-specific fine-tuning.
+Complete guide to Supervised Fine-Tuning (SFT) with TRL for instruction tuning and ta[REDACTED_OPENAI_KEY] fine-tuning.
 
 ## Overview
 
 SFT trains models on input-output pairs to minimize cross-entropy loss. Use for:
 - Instruction following
-- Task-specific fine-tuning
+- Ta[REDACTED_OPENAI_KEY] fine-tuning
 - Chatbot training
 - Domain adaptation
 

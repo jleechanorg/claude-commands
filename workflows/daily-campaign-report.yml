@@ -1,14 +1,40 @@
 name: Daily Campaign Activity Report
 
+
+# Cancel in-progress runs on the same ref — supersedes are wasted runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 on:
   schedule:
-    # 9am PST = 17:00 UTC (PST is UTC-8)
-    - cron: '0 17 * * *'
+    # $USER-oud/LANE-D: moved off 9am PST (17:00 UTC) daytime slot — that
+    # window directly competes with peak PR CI demand on the shared 22-slot
+    # fleet. New slot 03:15 UTC (7:15pm PST) matches the off-peak convention
+    # already used by this repo's other nightly janitor crons
+    # (preview-image-janitor 03:37 UTC, preview-service-janitor 04:11 UTC).
+    # Blast radius: this report emails a DAU/WAU + duplicate-scene digest to
+    # EMAIL_USER (see Send Email Report step below) — no Slack digest and no
+    # documented "read every morning at 9am" SLA found in this repo (grep for
+    # downstream consumers of daily-campaign-report found none); the report
+    # content is time-window-based (LAST WEEK / LAST 4 WEEKS stats), not
+    # tied to the literal send time, so an off-peak send changes only *when*
+    # the recipient sees it, not what it contains.
+    - cron: '15 3 * * *'
   workflow_dispatch:  # Allow manual trigger for testing
 
 jobs:
   report:
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    # 15min (set in #8232) killed genuinely-successful runs: job-level
+    # started_at->completed_at measurement (n=10) shows p50=3.23min but
+    # max=97.48min, with 2/10 runs exceeding 15min at the job level (not
+    # queue-wait -- this is real execution time). A killed daily report is
+    # a silent data gap, worse than a slow one. 120min gives real margin
+    # over the confirmed outlier. Follow-up: investigate WHY the outlier
+    # runs take ~97min (likely N x M user/campaign scan cost) -- that's a
+    # separate optimization, not a blocker for this timeout fix.
+    timeout-minutes: 120
 
     steps:
       - name: Checkout

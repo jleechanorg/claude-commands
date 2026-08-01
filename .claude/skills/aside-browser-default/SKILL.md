@@ -34,10 +34,61 @@ Aside is a Y Combinator–backed AI-native Chromium browser launched June 2026. 
 ### Phase 1 — Before any browser action
 
 1. **Check Aside is alive:** `aside account list` should show `* u0 $USER@gmail.com  signed in  profiles: Profile 0`. If not, see "Aside is not running" below.
-2. **For complex multi-step work** (scraping, public-data lookups, forms), prefer `aside "..."` NL agent with `--effort ultrabrowse`.
-3. **For deterministic scripted work** (screenshot a URL, click a button, fill a form), prefer `aside repl "..."` with the Playwright-shaped API (`openTab`, `snapshot`, `listBrowserTabs`).
-4. **For agent-runtime MCP tool exposure** (Claude Code/Codex tool calls), use `mcp__aside-mcp__*` if the runtime exposes it; otherwise drop to `aside repl` from a terminal tool call.
-5. **Only if Aside is unavailable or inappropriate**, fall back to `mcp__playwright-mcp` (headless Chromium).
+2. **Probe live browser state before diagnosing failures.** Check whether current signed-in tabs already exist and are usable before concluding Aside is broken.
+3. **For complex multi-step work** (scraping, public-data lookups, forms), prefer `aside "..."` NL agent with `--effort ultrabrowse`.
+4. **For deterministic scripted work** (screenshot a URL, click a button, fill a form), prefer `aside repl "..."` with the Playwright-shaped API (`openTab`, `snapshot`, `listBrowserTabs`).
+5. **For agent-runtime MCP tool exposure** (Claude Code/Codex tool calls), use `mcp__aside-mcp__*` if the runtime exposes it; otherwise drop to `aside repl` from a terminal tool call.
+6. **Only if Aside is unavailable or inappropriate**, fall back to `mcp__playwright-mcp` (headless Chromium).
+
+### Phase 1.6 — When the browser path fails: Python+cookies escape hatch
+
+**Do NOT give up** when `openTab` + `attachBrowserTab` both land on a login page even though a cookie DB has the session. The session may be valid for the *API* even when the dashboard is unreachable. Walk this ladder before declaring the site inaccessible:
+
+1. **Extract cookies from any browser DB** (Aside, Chrome, Brave, Edge) using `browserclaw cookies decrypt --db <path> --output <file> --keychain-service "Aside Safe Storage" --keychain-account "Aside"`. Inspect for `session_id`, `csrf`, `cf_clearance`, etc.
+2. **Probe the internal GraphQL/REST endpoint directly with `requests`**:
+   ```python
+   import json, requests
+   cookies_blob = json.load(open('cookies.json'))['cookies']
+   s = requests.Session()
+   for c in cookies_blob:
+       s.cookies.set(c['name'], c['value'], domain=c['domain'], path=c.get('path','/'))
+   csrf = s.cookies.get('csrftoken', domain='.example.com')
+   s.headers.update({
+       'X-CSRFToken': csrf or '',
+       'Origin': 'https://app.example.com',
+       'Referer': 'https://app.example.com/',
+       'Content-Type': 'application/json',
+   })
+   r = s.post('https://api.example.com/graphql', json={"query": "{ me { id email } }"})
+   ```
+3. **Required headers** (any one missing → 403 CSRF rejection): `X-CSRFToken`, `Origin` (must match the SPA origin, not the API), `Referer` (must match the SPA URL), `Cookie` (auto-set by requests when cookies are loaded).
+4. **Worked Monarch example** (verified 2026-07-22): cookies in `/tmp/budget-monarch/aside-all.json`, GraphQL at `https://api.monarch.com/graphql`. First successful probe: `{ me { id email } }` → `id: 170607937752856546, email: $USER@gmail.com`. Schema uses plural field names (`categories`, `accounts`, `transactions`).
+5. **Schema-quirk debugging**: opaque "Something went wrong while processing" usually means a hidden required subfield or auth-scoped permission. Mitigate by querying one leaf field at a time (`{ accounts { id } }` first, then `{ accounts { id currentBalance } }`, etc.).
+
+**Anti-pattern:** "Chrome headless cookies didn't work + Aside MCP hits login → conclude the site is inaccessible → ask the user for credentials." That's wrong. Try the API path first.
+
+### Phase 1.5 — Failure classification
+
+Before saying "Aside is broken", classify which layer is actually failing:
+
+1. **Transport healthy, browser workflow healthy**
+   - CLI/MCP calls succeed
+   - tab listing / openTab / attach work
+2. **Transport healthy, fresh-tab workflow unhealthy**
+   - CLI/MCP calls succeed
+   - existing tabs may still be readable or attachable
+   - a specific `openTab()` or profile bridge may fail
+3. **Transport healthy, auth/UI blocking**
+   - page loads, but the site is at login, consent, or chooser state
+   - try one-click continuations before declaring a hard blocker
+4. **Transport unhealthy**
+   - CLI/MCP init itself fails
+5. **Runtime split-brain**
+   - standalone `aside` CLI may fail while the agent's built-in Aside browser tool still works
+   - or the reverse: the tool session may be stale while a fresh CLI/MCP session is healthy
+
+Always report which layer failed. Do not collapse these into one generic "Aside failed" diagnosis.
+Do not assume a failing standalone CLI means the browser tool is dead, or that a stale browser tool session means all Aside entrypoints are dead.
 
 ### Phase 2 — During automation
 
@@ -101,9 +152,20 @@ If `aside` CLI itself is missing:
 curl -fsSL https://releases.aside.com/install.sh | bash
 ```
 
+## Additional rules from the 2026-07-11 social-staging run
+
+- A visible compose form is not proof the draft is staged. Read the field back or otherwise verify the text persisted.
+- Login walls, chooser screens, and consent prompts are not final blockers. Treat them as recoverable states first.
+- Prefer current live browser evidence over stale session logs, old failure notes, or previous daemon incidents.
+- If the source content came from a LinkedIn post that links outward, extract and propagate the canonical outbound URL instead of reposting the LinkedIn shortlink.
+- If media is central to the post, carry the exact asset path through the workflow so the agent knows what to upload.
+
 ## Anti-patterns (BANNED)
 
 - ❌ Calling `mcp__playwright-mcp__*` as a first resort without checking Aside first
+- ❌ Declaring a platform "staged" from a screenshot of an empty compose box or login wall
+- ❌ Treating a broken `openTab()` path as proof that all existing Aside tabs are unusable
+- ❌ Reporting generic "Aside broken" status without separating transport, browser-bridge, and auth-state failures
 - ❌ Calling `show_browser` / headed mode without explicit opt-in (Aside supports both, but the headless-only default still applies)
 - ❌ Spawning a fresh Playwright Chromium per agent call (Aside's persistent daemon is faster + more stateful)
 - ❌ Using `mcp__claude-in-chrome__*` for any browser work (requires extension, fails headless/CI)

@@ -10,6 +10,11 @@ supervises and relays milestones. If the conversation crashes, a fresh session
 respawns the same named teammate and it resumes from a disk state file with
 zero conversation context.
 
+**Parallel ceiling:** Before fanning out lanes or anonymous subagents, load
+`/parallel` → `~/.claude/skills/parallelize-to-ceiling/SKILL.md` — size to
+the real resource bound; batch independent CLI calls per the skill's isolation
+invariants.
+
 **Pattern origin:** [Devin Fusion](https://cognition.com/blog/devin-fusion) —
 Cognition's hybrid-model harness that keeps frontier-level coding intelligence
 while cutting costs with sidekick agents. Delegation split + cost goal adopted;
@@ -35,9 +40,16 @@ Agent({
   Recovery = a fresh session respawns the same named teammate from
   STATE.md/bead. Multi-day/overnight missions survive as state on disk, not
   as a running process.
-- Lanes the sidekick fans out are ALSO named teammates
-  (`sidekick-<slug>-lane-<topic>`), each with an explicit `model` — never
-  fire-and-forget `general-purpose` subagents wearing sidekick names.
+- **CONFIRMED 2026-07-21: lanes the sidekick fans out CANNOT be named
+  teammates** — `Agent({name: ...})` called from a teammate (not the
+  top-level session) is hard-rejected by the harness ("Teammates cannot
+  spawn other teammates — the team roster is flat"). Lanes are anonymous
+  subagents with an explicit `model` param, not named/panel-visible. If a
+  lane's work needs to be user-visible, the sidekick asks the top-level
+  session to spawn it directly — only the top-level session can create named
+  teammates. (This corrects earlier guidance in this file that assumed
+  nested named spawns worked; see memory
+  `feedback_2026-07-21_nested_teammate_spawns_may_not_register_visibly.md`.)
 - If Agent Teams fails to form in the current harness, fall back to a named
   background Agent-tool subagent (same name, same explicit `model:
   "sonnet"`, same STATE.md protocol) and record the fallback in STATE.md —
@@ -73,7 +85,7 @@ preflight questions.
 
 Every sidekick spawn and every lane spawn MUST set `model` explicitly.
 Omitting it silently inherits the session model (often Fable/top-tier) — a
-policy violation, not a neutral default. Audit 2026-07-18 (bead jleechan-0020)
+policy violation, not a neutral default. Audit 2026-07-18 (bead $USER-0020)
 found real incidents: `sidekick-us-videos` ran on claude-fable-5 and
 `sidekick-fix-health-check-green` on MiniMax-M3 purely because `model` was
 omitted. The sidekick model is **sonnet**; any other model (including haiku
@@ -82,10 +94,16 @@ keepers) only if the user explicitly approved it in the current mission.
 ## Core mechanics
 
 **State file (per project + branch/mission):**
-`/tmp/<project-slug>/sidekick/<branch-or-mission>/STATE.md` — `<project-slug>`
-is the repo name for repo missions, or any stable slug for non-repo missions;
-`/` in branch names is sanitized to `-`. Minimal skeleton (invent nothing
-else — deliverables go in a subdir like `docs/`, since root-file-pollution
+`$CLAUDE_STATE_DIR/<project-slug>/sidekick/<branch-or-mission>/STATE.md` —
+`<project-slug>` is the repo name for repo missions, or any stable slug for
+non-repo missions; `/` in branch names is sanitized to `-`. `CLAUDE_STATE_DIR`
+defaults to `~/roadmap`; override the env var (`export CLAUDE_STATE_DIR=...`
+in `~/.bashrc`, then `source ~/.bashrc`) to relocate the tree without
+editing skills. If the env var is unset AND `~/roadmap` is missing, ask the
+user once: "create `~/roadmap`, fall back to `/tmp/`, or pick a different
+dir?" — then persist the choice to `CLAUDE_STATE_DIR` in `~/.bashrc` so the
+question isn't asked again. Minimal skeleton (invent nothing else —
+deliverables go in a subdir like `docs/`, since root-file-pollution
 guards on some machines block writes next to STATE.md):
 
 ```markdown
@@ -109,9 +127,11 @@ mission slug instead of a branch name. Sections: Mission, Ground truth,
 Standing rules, Progress Log (append-only, timestamped), Next Actions
 (rewritten every step). This file IS the recovery mechanism.
 
-**Legacy shared file:** if `/tmp/<repo>/sidekick/STATE.md` exists from an
-older spawn, do NOT edit another mission's sections. Migrate only YOUR
-mission's section into the new scoped path, leave a one-line pointer behind.
+**Legacy shared file:** if `$CLAUDE_STATE_DIR/<repo>/sidekick/STATE.md` exists
+from an older spawn, do NOT edit another mission's sections. Migrate only
+YOUR mission's section into the new scoped path, leave a one-line pointer
+behind. (Historical `/tmp/<repo>/sidekick/STATE.md` files from before the
+CLAUDE_STATE_DIR migration may still exist — treat them as legacy too.)
 
 **Resumption bead:** on first spawn, `br create "sidekick: <mission-slug>"
 --type task --priority 1 --description "<STATE.md path + mission one-liner>"`.
@@ -143,10 +163,14 @@ The sidekick and every lane it owns checkpoint at a ≤5 min cadence:
      STATE.md on respawn.
 
    ```bash
-   PROJECT_SLUG="<derived per above>"   # e.g. worldarchitect.ai
+   PROJECT_SLUG="<derived per above>"   # e.g. your-project.com
    MISSION_SLUG="<derived per above>"   # e.g. fleet-ci-health
-   STATE_DIR="/tmp/${PROJECT_SLUG}/sidekick/${MISSION_SLUG}"
+   CLAUDE_STATE_DIR="${CLAUDE_STATE_DIR:-$HOME/roadmap}"   # default ~/roadmap
+   STATE_DIR="${CLAUDE_STATE_DIR}/${PROJECT_SLUG}/sidekick/${MISSION_SLUG}"
    mkdir -p "$STATE_DIR"
+   # If CLAUDE_STATE_DIR was unset and ~/roadmap was missing, ask the user
+   # once now: "create ~/roadmap, fall back to /tmp/, or pick a different
+   # dir?" — then persist the choice to CLAUDE_STATE_DIR in ~/.bashrc.
    ```
 
    If `$STATE_DIR/STATE.md` exists this is a RESPAWN: do not overwrite it.
@@ -173,12 +197,28 @@ The sidekick and every lane it owns checkpoint at a ≤5 min cadence:
       "(mission complete)" and close the resumption bead.
 
    Lane management:
-   - Run fan-out lanes as named teammates of your Agent Team (task claims +
-     SendMessage), each with an explicit model param. If a team fails to
-     form, fall back to named Agent-tool subagents (still explicit model)
-     and record the fallback in STATE.md — never report lanes as
-     "team-based" without proof a team formed. Never use tmux or external
-     processes for lanes.
+   - **CONFIRMED 2026-07-21 (hard API rule, not a preference): a teammate
+     cannot spawn another named teammate.** `Agent({name: ..., ...})` called
+     FROM a teammate (as opposed to the top-level session) is HARD-REJECTED
+     by the harness with the literal error "Teammates cannot spawn other
+     teammates — the team roster is flat. To spawn a subagent instead, omit
+     the `name` parameter." This is not a visibility/config-sync gap you can
+     work around by naming carefully — the call itself never runs when
+     named. Your own fan-out MUST omit `name:` (anonymous subagents,
+     functionally fine, just not panel-visible) — still set `model:`
+     explicitly on every call.
+   - If a piece of work needs to be a user-visible, named,
+     SendMessage-addressable lane, you cannot create it yourself — tell the
+     main session what parallel work you want dispatched and let IT spawn
+     the named lane directly (the main session is the only spawner that can
+     produce named teammates). Report this constraint rather than silently
+     running the work anonymously and calling it "team-based."
+   - Batching a genuinely parallelizable task (e.g. "fix N independent
+     findings from an evidence review") into ONE sequential agent call
+     defeats the purpose of a swarm/team — fan it into N parallel (unnamed,
+     but model-explicit) calls in a single message instead, unless the
+     findings share a mutable file (then single-writer applies and
+     sequencing is correct).
    Your operator steers you via SendMessage and STATE.md — check STATE.md
    Standing rules / Next Actions for new directives at every checkpoint.
 
@@ -203,6 +243,9 @@ The sidekick and every lane it owns checkpoint at a ≤5 min cadence:
    - statusCheckRollup / check-runs APIs can include stale attempts. Group by
      check name and use only the newest attempt's conclusion.
    - Batch independent CLI calls, but keep a single writer per mutable file.
+   - Before any multi-lane fan-out: load `/parallel`
+     (`parallelize-to-ceiling` skill) and prove concurrency by sampling live
+     (`ps` / load), not by trusting a worker flag alone.
 
    Mission:
    <mission text>
@@ -234,6 +277,18 @@ The sidekick and every lane it owns checkpoint at a ≤5 min cadence:
 The sidekick SendMessages milestones; the main session relays them with
 proof — STATE.md excerpt, git status/log, PR/commit URL, or test output. A
 report is not valid without captured proof.
+
+**Operator status cadence (mandatory, user directive 2026-07-29):** while a
+sidekick mission is active, the MAIN SESSION posts a status update to the
+operator in-conversation every ~5 minutes — schedule it mechanically at
+spawn time (`CronCreate` with `*/5 * * * *`, session-only, or `ScheduleWakeup`
+when in /loop dynamic mode); do not rely on remembering. Each update states:
+what changed since the last one, what is proven working vs not working
+(evidence-backed, not aspirational), what the sidekick/lanes are doing right
+now, and blockers. If the sidekick has no STATE.md heartbeat for 10+
+minutes, ping it and say so in the update. Status checkpoints are
+status-only — never start new work from one. Cancel the cron when the
+mission completes or the operator says to stop.
 
 ## Why this beats plain fan-outs
 

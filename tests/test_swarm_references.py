@@ -44,6 +44,7 @@ SWARM_SKILL = REPO_ROOT / ".claude" / "skills" / "swarm" / "SKILL.md"
 # Genuine slash-command references found in swarm/SKILL.md, mapped to their
 # expected command file under .claude/commands/.
 REFERENCED_COMMANDS = {
+    "/harness": "harness.md",
     "/swarm": "swarm.md",
     "/advice": "advice.md",
     "/sidekick": "sidekick.md",

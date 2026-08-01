@@ -1,0 +1,103 @@
+name: bead-jsonl-sort
+
+# Catches wholesale JSONL re-sorts in PR diffs (worldai noise pattern).
+# A change that touches .beads/issues.jsonl must keep the file sorted by
+# id ascending; otherwise a single-bead change becomes a +1686/-1685 rewrite.
+#
+# Background: worldai PR #7848 (2026-06-23) showed +1683/-1682 noise on an
+# unrelated PR because the JSONL was re-sorted by a different br version.
+#
+# PR-only since round 2 trim (PR-XXXXX): push: branches:[main] removed
+# (duplicates the PR run; main/dev only receive squash-merge commits
+# whose tree is byte-identical to the PR head SHA already validated by
+# the pull_request trigger below). Saves 6+ duplicate runs/48h at ~1.1
+# min avg each. Pull_request already has a paths filter on `.beads/**`
+# so it only fires on PRs that actually touch the JSONL.
+#
+# The semantic drift check (added for the merge=union removal, see
+# .gitattributes and .github/workflows/beads-flush-on-main.yml) only runs
+# when a PR's diff actually touches .beads/issues.jsonl. Feature branches
+# use `br --no-auto-flush` and normally never modify this file (see
+# AGENTS.md "Beads Issue Tracking"), so gating on the diff avoids false
+# drift positives on unrelated PRs whose base is a few commits behind
+# main's latest post-merge flush.
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
+    paths:
+      - ".beads/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BR_VERSION: "0.2.16"
+  BR_ASSET: "br-0.2.16-linux_x86_64.tar.gz"
+  BR_ASSET_SHA256: "461efbc44cec9166e7c7334d6c9f9793bea4ab8cb998aa47fd5f50b632ceb1a6"
+
+jobs:
+  check-sort:
+    name: .beads/issues.jsonl sorted by id
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55  # v5.5.0
+        with:
+          python-version: "3.13"
+
+      - name: Check JSONL sort order
+        run: python3 scripts/check_bead_jsonl_sort.py
+
+      - name: Validate JSONL integrity and uniqueness
+        run: python3 scripts/validate_beads_issues_jsonl.py
+
+      - name: Detect whether this PR touches .beads/issues.jsonl
+        if: github.event_name == 'pull_request'
+        run: |
+          set -eo pipefail
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          # Anonymous fetch (persist-credentials: false above) is occasionally
+          # flaky under load ("could not read Username for https://github.com")
+          # — retry with a shallower/plain fetch before giving up, same pattern
+          # as green-gate.yml's "Fetch origin/main" step.
+          if ! git fetch origin "$BASE_SHA" --depth=1 2>&1; then
+            echo "WARN: shallow fetch of base sha failed, retrying without --depth"
+            git fetch origin "$BASE_SHA" 2>&1 || echo "WARN: base sha fetch failed twice"
+          fi
+          if git cat-file -e "$BASE_SHA" 2>/dev/null && \
+              git diff --name-only "$BASE_SHA"...HEAD | grep -qxF ".beads/issues.jsonl"; then
+            echo "TOUCHES_BEADS=true" >> "$GITHUB_ENV"
+          elif git cat-file -e "$BASE_SHA" 2>/dev/null; then
+            echo "TOUCHES_BEADS=false" >> "$GITHUB_ENV"
+          else
+            # Base sha still unreachable after retry — fail open (assume
+            # touched) so a transient fetch flake can't silently skip the
+            # drift guardrail on a PR that actually needs it.
+            echo "WARN: base sha unreachable after retry, assuming TOUCHES_BEADS=true (fail open)"
+            echo "TOUCHES_BEADS=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install br (beads_rust) CLI
+        if: github.event_name != 'pull_request' || env.TOUCHES_BEADS == 'true'
+        run: |
+          set -euo pipefail
+          curl -sL -o /tmp/br.tar.gz \
+            "https://github.com/Dicklesworthstone/beads_rust/releases/download/v${BR_VERSION}/${BR_ASSET}"
+          echo "${BR_ASSET_SHA256}  /tmp/br.tar.gz" | shasum -a 256 -c -
+          tar -xzf /tmp/br.tar.gz -C /tmp
+          sudo install -m 0755 /tmp/br /usr/local/bin/br
+          br --version
+
+      - name: Check DB-vs-JSONL drift (pre-merge guardrail)
+        if: github.event_name != 'pull_request' || env.TOUCHES_BEADS == 'true'
+        run: bash scripts/check_beads_jsonl_drift.sh

@@ -42,16 +42,16 @@ def get_tmux_sessions() -> List[str]:
 
 
 def get_task_agent_sessions() -> List[str]:
-    """Get list of task-agent-* tmux sessions."""
+    """Get list of ta[REDACTED_OPENAI_KEY]* tmux sessions."""
     all_sessions = get_tmux_sessions()
-    return [s for s in all_sessions if s.startswith("task-agent-")]
+    return [s for s in all_sessions if s.startswith("ta[REDACTED_OPENAI_KEY]")]
 
 
 def get_all_monitoring_sessions() -> List[str]:
     """Get list of ALL monitoring tmux sessions (orchestration + manual)."""
     all_sessions = get_tmux_sessions()
     monitoring_patterns = [
-        "task-agent-",  # Orchestration agents
+        "ta[REDACTED_OPENAI_KEY]",  # Orchestration agents
         "gh-comment-monitor-",  # GitHub comment monitoring
         "copilot-",  # Copilot analysis sessions
         "agent-",  # Generic agent sessions
@@ -70,7 +70,7 @@ def get_session_timeout(session_name: str) -> int:
     """
     # Pattern-based timeouts (in seconds)
     SESSION_TIMEOUTS = {
-        "task-agent-": 3600,  # 1 hour (orchestration)
+        "ta[REDACTED_OPENAI_KEY]": 3600,  # 1 hour (orchestration)
         "gh-comment-monitor-": 14400,  # 4 hours (monitoring)
         "copilot-": 7200,  # 2 hours (analysis)
         "agent-": 10800,  # 3 hours (generic agents)
@@ -223,7 +223,7 @@ def cleanup_completed_agents(dry_run: bool = False) -> Dict[str, Any]:
 
     for session in all_monitoring:
         # Check for completion (for task-agent sessions with logs)
-        if session.startswith("task-agent-"):
+        if session.startswith("ta[REDACTED_OPENAI_KEY]"):
             status = check_agent_completion(session)
             if status["completed"]:
                 completed_agents.append(
