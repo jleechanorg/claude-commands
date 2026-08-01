@@ -62,7 +62,7 @@ elif [[ "$SESSION" =~ ^jc- ]]; then
   WT_PARENT="$HOME/.worktrees/jleechanclaw"
 elif [[ "$SESSION" =~ ^ao- ]]; then
   PROJECT="agent-orchestrator"
-  REPO="jleechanorg/agent-orchestrator"
+  REPO="jleechanorg/agent-orchestrator-ts"
   WT_PARENT="$HOME/.worktrees/agent-orchestrator"
 else
   # Default fallback for unknown prefixes

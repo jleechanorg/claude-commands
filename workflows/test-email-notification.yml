@@ -6,6 +6,12 @@
 
 name: Test Email Notification
 
+
+# Cancel in-progress runs on the same ref — supersedes are wasted runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -29,7 +35,7 @@ permissions:
 jobs:
   test-notification:
     name: Test Email Notification Action
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
     timeout-minutes: 5
 
     steps:

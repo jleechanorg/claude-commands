@@ -108,7 +108,7 @@ is_orchestration_running() {
     fi
 
     # Alternative: Check for any active task agents
-    if tmux list-sessions 2>/dev/null | grep -q "task-agent-"; then
+    if tmux list-sessions 2>/dev/null | grep -q "ta[REDACTED_OPENAI_KEY]"; then
         return 0
     fi
 
@@ -321,7 +321,7 @@ EOF
     current_crontab=$(crontab -l 2>/dev/null || echo "")
     CURRENT_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     AUTOMATION_MONITOR_BIN="$CURRENT_PROJECT_ROOT/automation/.venv/bin/jleechanorg-pr-monitor"
-    AUTOMATION_LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+    AUTOMATION_LOG_DIR="$HOME/Library/Logs/${PROJECT_NAME:-your-project}-automation"
     AUTOMATION_LOG_FILE="$AUTOMATION_LOG_DIR/jleechanorg_pr_monitor.log"
 
     if ! echo "$current_crontab" | grep -q "jleechanorg-pr-monitor"; then

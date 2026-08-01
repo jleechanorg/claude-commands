@@ -74,7 +74,7 @@ hermes circuit-breaker reset
 
 ## Full Restore Sequence
 
-1. Add `OPENCODE_GO_API_KEY=sk-Zorf...` to `~/.bashrc` (done)
+1. Add `OPENCODE_GO_API_KEY=[REDACTED_OPENAI_KEY]` to `~/.bashrc` (done)
 2. Verify: `source ~/.bashrc && echo $OPENCODE_GO_API_KEY | head -c 10`
 3. Reset circuit breaker: set `locked_to: null` in `~/.hermes_prod/state/circuit_breaker.json`
 4. Restart gateway: `pkill -x hermes` (let launchd restart)

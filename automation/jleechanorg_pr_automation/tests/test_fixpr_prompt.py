@@ -123,6 +123,81 @@ class TestFixprPrompt(unittest.TestCase):
         self.assertIn("fix/bug#123/urgent", dispatcher.task_description,
                       "Task description should still reference original remote branch name")
 
+    def test_fixpr_prompt_forbids_pr_body_overwrite(self):
+        """Regression test for PR #8477: the daemon overwrote an 858-line PR body
+        down to 100 lines, destroying evidence links, bead citations, and an
+        embedded video. The prompt must explicitly require fetch-then-edit and
+        forbid a from-scratch body replacement."""
+        pr_payload = {
+            "repo_full": "$GITHUB_REPOSITORY",
+            "repo": "your-project.com",
+            "number": 8477,
+            "title": "Test PR",
+            "branch": "feature/test-fixpr",
+        }
+
+        dispatcher = _FakeDispatcher()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.object(runner, "WORKSPACE_ROOT_BASE", Path(tmpdir)):
+                with patch.object(runner, "kill_tmux_session_if_exists", lambda _: None):
+                    ok = runner.dispatch_agent_for_pr(dispatcher, pr_payload, agent_cli="codex")
+
+        self.assertTrue(ok)
+        self.assertIsNotNone(dispatcher.task_description)
+
+        self.assertIn(
+            "ABSOLUTE PROHIBITION - PR DESCRIPTION OVERWRITE",
+            dispatcher.task_description,
+        )
+        self.assertIn(
+            "FIRST fetch the CURRENT body",
+            dispatcher.task_description,
+        )
+        self.assertIn(
+            "gh pr view 8477 --json body --jq .body",
+            dispatcher.task_description,
+            "Prompt should interpolate the real PR number into the fetch-body command",
+        )
+        self.assertIn(
+            "MUST NOT shrink versus the fetched body",
+            dispatcher.task_description,
+        )
+
+    def test_fixpr_prompt_forbids_ci_gate_bypass_commands(self):
+        """Regression test for PR #8477: the daemon posted '@coderabbitai approve'
+        (a force-approve attempt) and retriggered '@coderabbitai full review'
+        while a prior trigger was still rate-limited. The prompt must explicitly
+        forbid both gate-bypass patterns."""
+        pr_payload = {
+            "repo_full": "$GITHUB_REPOSITORY",
+            "repo": "your-project.com",
+            "number": 321,
+            "title": "Test PR",
+            "branch": "feature/test-fixpr",
+        }
+
+        dispatcher = _FakeDispatcher()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.object(runner, "WORKSPACE_ROOT_BASE", Path(tmpdir)):
+                with patch.object(runner, "kill_tmux_session_if_exists", lambda _: None):
+                    ok = runner.dispatch_agent_for_pr(dispatcher, pr_payload, agent_cli="codex")
+
+        self.assertTrue(ok)
+        self.assertIsNotNone(dispatcher.task_description)
+
+        self.assertIn(
+            "ABSOLUTE PROHIBITION - CI/REVIEW-GATE BYPASS COMMANDS",
+            dispatcher.task_description,
+        )
+        self.assertIn(
+            "@coderabbitai approve` (or any bot 'approve' slash command) - this force-approves without a real review.",
+            dispatcher.task_description,
+        )
+        self.assertIn(
+            "still within its rate-limit/cooldown window",
+            dispatcher.task_description,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,191 @@
+name: Mobile Auth Same-Origin Regression
+
+# Regression guard for the Chrome iOS Incognito same-origin auth fix (PR #7697)
+# and the IDB persistence fallback (PR #7720). Catches:
+#   - Removal of /__/auth/<path:subpath> proxy route in mvp_site/main.py
+#   - Loss of window.resolveAuthDomain or SAME_ORIGIN_AUTH_DOMAINS in auth.js
+#   - Loss of window.__authPersistenceForcedLocalStorage boolean
+#
+# Triggered on PRs that touch the regression surface, plus push to main/dev.
+# Self-hosted runner (same pool as styleguide-compliance-gate.yml).
+#
+# No real LLM, no real OAuth, no external creds. Real Flask + Playwright WebKit.
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
+    paths:
+      - "mvp_site/main.py"
+      - "mvp_site/frontend_v1/auth.js"
+      - "testing_ui/mobile_auth_same_origin/**"
+      - ".github/workflows/mobile-auth-regression.yml"
+  push:
+    branches: [main, dev]
+    paths:
+      - "mvp_site/main.py"
+      - "mvp_site/frontend_v1/auth.js"
+      - "testing_ui/mobile_auth_same_origin/**"
+      - ".github/workflows/mobile-auth-regression.yml"
+
+env:
+  PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  mobile-auth-regression:
+    name: Mobile Auth Same-Origin Regression
+    # Draft PRs skip this heavy self-hosted job (CI capacity hardening).
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false)
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    # WebKit dependency fallback can spend close to 10 minutes downloading and
+    # extracting system libraries on constrained self-hosted runners before the
+    # actual regression test starts. Keep enough room for setup plus execution.
+    timeout-minutes: 30
+    env:
+      TESTING_AUTH_BYPASS: "true"
+      PYTHONUNBUFFERED: "1"
+      PIP_NO_CACHE_DIR: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        env:
+          GIT_CONFIG_GLOBAL: ${{ runner.temp }}/checkout-gitconfig
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Refresh PR head from GitHub
+        if: github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          while read -r key; do
+            git config --global --unset-all "$key" || true
+          done < <(git config --global --name-only --get-regexp '^url\..*\.insteadOf$' 2>/dev/null || true)
+          origin_url="https://github.com/${{ github.repository }}.git"
+          trap 'git remote set-url origin "$origin_url" 2>/dev/null || true' EXIT
+          git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          git fetch origin "+refs/pull/${PR_NUMBER}/head:refs/remotes/origin/pr-${PR_NUMBER}" --depth=1
+          git checkout --force "$PR_HEAD_SHA"
+          git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+          git reset --hard "$PR_HEAD_SHA"
+
+      - name: Disk preflight + cleanup
+        # Same pattern as styleguide-compliance-gate.yml: self-hosted runners
+        # occasionally run low on disk and Errno 28 mid-pip install cascades
+        # into a misleading ModuleNotFoundError. Free up space first.
+        run: |
+          set -euo pipefail
+          AVAIL_KB="$(df -Pk . | awk 'NR==2 {print $4}')"
+          AVAIL_GB=$((AVAIL_KB / 1024 / 1024))
+          echo "Disk free before cleanup: ${AVAIL_GB} GB"
+
+          rm -rf /tmp/your-project.com 2>/dev/null || true
+          python3 -m pip cache purge >/dev/null 2>&1 || true
+          rm -rf "$HOME/.cache/pip" 2>/dev/null || true
+
+          if [ "${AVAIL_KB:-0}" -lt 2097152 ]; then
+            echo "Disk below 2 GB — running aggressive cleanup"
+            if [ "$(uname)" = "Darwin" ] && command -v brew >/dev/null 2>&1; then
+              brew cleanup -s >/dev/null 2>&1 || true
+            fi
+            if [ -d /var/cache/apt ]; then
+              sudo rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || \
+                rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+            fi
+            rm -rf /home/runner/_work/*/_temp 2>/dev/null || \
+              rm -rf "$HOME/actions-runner/_work"/*/_temp 2>/dev/null || true
+            rm -rf /tmp/playwright* /tmp/.org.chromium.Chromium* 2>/dev/null || true
+          fi
+
+          AVAIL_KB_AFTER="$(df -Pk . | awk 'NR==2 {print $4}')"
+          echo "Disk free after cleanup: $((AVAIL_KB_AFTER / 1024 / 1024)) GB"
+          if [ "${AVAIL_KB_AFTER:-0}" -lt 1048576 ]; then
+            echo "::error::low_disk_space_after_cleanup"
+            df -h
+            exit 1
+          fi
+
+      - name: Resolve Python interpreter
+        id: python_resolve
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            echo "python_bin=$PWD/venv/bin/python3" >> "$GITHUB_OUTPUT"
+          else
+            echo "python_bin=$(which python3.11 || which python3)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python 3.11
+        if: runner.os == 'Linux'
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-ci-venv
+        with:
+          python-bin: 'command -v python3'
+          extra-packages: 'requests'
+          no-cache-dir: 'true'
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        env:
+          PYTHON_BIN: ${{ steps.python_resolve.outputs.python_bin }}
+        run: |
+          "$PYTHON_BIN" -m pip install --break-system-packages --no-cache-dir -r mvp_site/requirements.txt
+          "$PYTHON_BIN" -m pip install --break-system-packages --no-cache-dir requests
+
+      - name: Install Playwright system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          if [ "$(id -u)" -eq 0 ]; then
+            venv/bin/python -m playwright install-deps webkit
+          elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+            venv/bin/python -m playwright install-deps webkit
+          elif command -v apt-get >/dev/null 2>&1 && command -v dpkg-deb >/dev/null 2>&1; then
+            PLAYWRIGHT_PYTHON="venv/bin/python" bash scripts/ci/playwright-fallback-libs.sh prepare
+          else
+            echo "Skipping Playwright system dependency install: non-root runner has no passwordless sudo."
+            echo "Self-hosted runner images must provide WebKit system libraries."
+          fi
+
+      - name: Install Playwright WebKit
+        env:
+          PYTHON_BIN: ${{ steps.python_resolve.outputs.python_bin }}
+        run: |
+          "$PYTHON_BIN" -m playwright install webkit
+          PLAYWRIGHT_PYTHON="$PYTHON_BIN" bash scripts/ci/playwright-fallback-libs.sh copy
+
+      - name: Run mobile auth same-origin regression test
+        env:
+          PYTHON_BIN: ${{ steps.python_resolve.outputs.python_bin }}
+        run: |
+          set -o pipefail
+          "$PYTHON_BIN" testing_ui/mobile_auth_same_origin/test_auth_same_origin.py 2>&1 | tee /tmp/mobile_auth_run.log
+
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        continue-on-error: true
+        with:
+          name: mobile-auth-regression-log
+          path: |
+            /tmp/mobile_auth_run.log
+            /tmp/your-project.com/fix-mobile-auth-domain-match/auth_same_origin/latest/results.json
+          retention-days: 7

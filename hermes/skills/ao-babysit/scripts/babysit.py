@@ -3,8 +3,8 @@
 ao-babysit — Poll and steer an active AO worker tmux session.
 
 Usage:
-    babysit.py poll    --session SESSION --slack-channel CH --slack-thread-ts TS --task-summary TEXT
-    babysit.py babysit --session SESSION --slack-channel CH --slack-thread-ts TS --task-summary TEXT [--poll-interval 300]
+    babysit.py poll    --session SESSION --slack-channel CH --slack-thread-ts TS --ta[REDACTED_OPENAI_KEY] TEXT
+    babysit.py babysit --session SESSION --slack-channel CH --slack-thread-ts TS --ta[REDACTED_OPENAI_KEY] TEXT [--poll-interval 300]
 """
 
 import argparse
@@ -514,7 +514,7 @@ def main() -> None:
     poll_cmd.add_argument("--session", required=True)
     poll_cmd.add_argument("--slack-channel", required=True)
     poll_cmd.add_argument("--slack-thread-ts", required=True)
-    poll_cmd.add_argument("--task-summary", required=True)
+    poll_cmd.add_argument("--ta[REDACTED_OPENAI_KEY]", required=True)
     poll_cmd.add_argument("--cron-job-id", default="",
                           help="If provided, on terminal PR the babysit will "
                                "issue `cronjob action=remove job_id=<value>` "
@@ -526,7 +526,7 @@ def main() -> None:
     babysit_cmd.add_argument("--session", required=True)
     babysit_cmd.add_argument("--slack-channel", required=True)
     babysit_cmd.add_argument("--slack-thread-ts", required=True)
-    babysit_cmd.add_argument("--task-summary", required=True)
+    babysit_cmd.add_argument("--ta[REDACTED_OPENAI_KEY]", required=True)
     babysit_cmd.add_argument("--poll-interval", type=int, default=300)
     babysit_cmd.add_argument("--cron-job-id", default="",
                              help="If provided, on terminal PR the babysit will "

@@ -41,14 +41,14 @@ class TestUnifiedNaming(unittest.TestCase):
         # RED: This should fail initially
         task = "Run copilot analysis on PR #123"
         name = self.dispatcher._generate_unique_name("task-agent", task_description=task)
-        self.assertEqual(name, "task-agent-pr123")
+        self.assertEqual(name, "ta[REDACTED_OPENAI_KEY]")
 
     def test_meaningful_action_naming(self):
         """Test that action-based tasks generate meaningful names"""
         # RED: This should fail initially
         task = "Implement user authentication system"
         name = self.dispatcher._generate_unique_name("task-agent", task_description=task)
-        self.assertEqual(name, "task-agent-implement-user-authe")
+        self.assertEqual(name, "ta[REDACTED_OPENAI_KEY]")
 
     def test_workspace_config_extraction(self):
         """Test workspace configuration extraction from task descriptions"""
@@ -62,7 +62,7 @@ class TestUnifiedNaming(unittest.TestCase):
         """Test that agent names match workspace directory names exactly"""
         # RED: This should fail initially
         agent_spec = {
-            "name": "task-agent-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "workspace_config": {"workspace_name": "tmux-pr456", "workspace_root": "/tmp/.worktrees"},
             "no_worktree": False,  # Explicitly enable worktree isolation for this test
         }
@@ -95,7 +95,7 @@ class TestUnifiedNaming(unittest.TestCase):
         task = ""
         name = self.dispatcher._generate_unique_name("task-agent", task_description=task)
         # Should contain digits (timestamp) but not meaningful words
-        self.assertRegex(name, r"task-agent-\d+")
+        self.assertRegex(name, r"ta[REDACTED_OPENAI_KEY]\d+")
 
     def test_collision_handling_with_meaningful_names(self):
         """Test collision handling preserves meaningful names"""
@@ -103,7 +103,7 @@ class TestUnifiedNaming(unittest.TestCase):
         task = "Fix bug in authentication"
 
         # Mock existing agents to force collision
-        with patch.object(self.dispatcher, "_check_existing_agents", return_value={"task-agent-fix-bug-authen"}):
+        with patch.object(self.dispatcher, "_check_existing_agents", return_value={"ta[REDACTED_OPENAI_KEY]"}):
             # Use a proper mock for the active_agents property
             original_active_agents = self.dispatcher._active_agents
             self.dispatcher._active_agents = set()
@@ -113,7 +113,7 @@ class TestUnifiedNaming(unittest.TestCase):
                 self.dispatcher._active_agents = original_active_agents
 
         # Should add timestamp suffix to resolve collision while keeping meaningful base
-        self.assertRegex(name, r"task-agent-fix-bug-authen-\d+")
+        self.assertRegex(name, r"ta[REDACTED_OPENAI_KEY]\d+")
 
     def test_generated_name_respects_backend_length_limit(self):
         """Generated names must stay within backend-safe limits."""

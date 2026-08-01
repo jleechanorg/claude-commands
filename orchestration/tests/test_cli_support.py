@@ -103,7 +103,7 @@ class TestAgentCliSelection(unittest.TestCase):
     def test_create_dynamic_agent_uses_codex_command(self):
         """Ensure codex agents execute via `codex exec --yolo`."""
         agent_spec = {
-            "name": "task-agent-codex-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Validate Codex CLI integration",
             "prompt": "Do the work",
             "capabilities": [],
@@ -118,7 +118,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-codex-test", MagicMock(returncode=0, stderr="")),
+                return_value=("/tmp/ta[REDACTED_OPENAI_KEY]", MagicMock(returncode=0, stderr="")),
             ),
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -149,14 +149,14 @@ class TestAgentCliSelection(unittest.TestCase):
         self.assertNotIn("--model ", script_contents)
         self.assertRegex(
             script_contents,
-            r"< /tmp/agent_prompt_task-agent-codex-test[_0-9-]*\.txt",
+            r"< /tmp/agent_prompt_ta[REDACTED_OPENAI_KEY][_0-9-]*\.txt",
         )
         self.assertIn("Codex exit code", script_contents)
 
     def test_create_dynamic_agent_embeds_cli_chain(self):
         """When cli_chain is provided, the generated runner should include both attempts in order."""
         agent_spec = {
-            "name": "task-agent-cli-chain-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Validate CLI chain",
             "prompt": "Do the work",
             "capabilities": [],
@@ -172,7 +172,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-cli-chain-test", MagicMock(returncode=0, stderr="")),
+                return_value=("/tmp/ta[REDACTED_OPENAI_KEY]", MagicMock(returncode=0, stderr="")),
             ),
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -206,7 +206,7 @@ class TestAgentCliSelection(unittest.TestCase):
     def test_create_dynamic_agent_includes_cli_args(self):
         """Custom cli_args from agent_spec must be appended to each CLI attempt."""
         agent_spec = {
-            "name": "task-agent-cli-args-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Validate CLI extra args",
             "prompt": "Do the work",
             "capabilities": [],
@@ -223,7 +223,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-cli-args-test", MagicMock(returncode=0, stderr="")),
+                return_value=("/tmp/ta[REDACTED_OPENAI_KEY]", MagicMock(returncode=0, stderr="")),
             ),
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -254,7 +254,7 @@ class TestAgentCliSelection(unittest.TestCase):
     def test_create_dynamic_agent_wraps_execution_with_memory_cap(self):
         """Generated runner scripts should cap child virtual memory before exec."""
         agent_spec = {
-            "name": "task-agent-memory-cap-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Validate child memory cap wrapper",
             "prompt": "Do the work",
             "capabilities": [],
@@ -269,7 +269,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-memory-cap-test", MagicMock(returncode=0, stderr="")),
+                return_value=("/tmp/ta[REDACTED_OPENAI_KEY]", MagicMock(returncode=0, stderr="")),
             ),
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -303,7 +303,7 @@ class TestAgentCliSelection(unittest.TestCase):
     def test_create_dynamic_agent_wraps_execution_with_memory_cap_preflight(self):
         """Memory cap wrapper is present on the skip_preflight=False (preflight) execution path."""
         agent_spec = {
-            "name": "task-agent-memory-cap-preflight-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Validate child memory cap wrapper (preflight path)",
             "prompt": "Do the work",
             "capabilities": [],
@@ -319,7 +319,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-memory-cap-preflight-test", MagicMock(returncode=0, stderr="")),
+                return_value=("/tmp/ta[REDACTED_OPENAI_KEY]", MagicMock(returncode=0, stderr="")),
             ),
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -349,7 +349,7 @@ class TestAgentCliSelection(unittest.TestCase):
     def test_create_dynamic_agent_handles_malformed_cli_args(self):
         """Malformed cli_args strings should not crash dynamic agent creation."""
         agent_spec = {
-            "name": "task-agent-cli-args-malformed",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Handle broken quotes",
             "prompt": "Do the work",
             "capabilities": [],
@@ -366,7 +366,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-cli-args-malformed", MagicMock(returncode=0, stderr="")),
+                return_value=("/tmp/ta[REDACTED_OPENAI_KEY]", MagicMock(returncode=0, stderr="")),
             ),
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -398,7 +398,7 @@ class TestAgentCliSelection(unittest.TestCase):
         """Agent creation should fail when the requested CLI is absent (no automatic fallback)."""
 
         agent_spec = {
-            "name": "task-agent-fallback-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "No fallback behavior",
             "prompt": "Do the work",
             "capabilities": [],
@@ -413,7 +413,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-fallback-test", MagicMock(returncode=0, stderr="")),
+                return_value=("/tmp/ta[REDACTED_OPENAI_KEY]", MagicMock(returncode=0, stderr="")),
             ),
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -529,7 +529,7 @@ class TestGeminiCliSupport(unittest.TestCase):
     def test_create_dynamic_agent_uses_gemini_command(self):
         """Ensure Gemini agents execute via gemini CLI with correct model."""
         agent_spec = {
-            "name": "task-agent-gemini-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Validate Gemini CLI integration",
             "prompt": "Do the work",
             "capabilities": [],
@@ -544,7 +544,7 @@ class TestGeminiCliSupport(unittest.TestCase):
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-gemini-test", MagicMock(returncode=0, stderr="")),
+                return_value=("/tmp/ta[REDACTED_OPENAI_KEY]", MagicMock(returncode=0, stderr="")),
             ),
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -580,7 +580,7 @@ class TestGeminiCliSupport(unittest.TestCase):
     def test_gemini_cli_fails_when_requested_but_missing(self):
         """Agent creation should fail when Gemini is absent (no automatic fallback)."""
         agent_spec = {
-            "name": "task-agent-gemini-fallback-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "No fallback behavior",
             "prompt": "Do the work",
             "capabilities": [],
@@ -595,7 +595,7 @@ class TestGeminiCliSupport(unittest.TestCase):
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-gemini-fallback-test", MagicMock(returncode=0, stderr="")),
+                return_value=("/tmp/ta[REDACTED_OPENAI_KEY]", MagicMock(returncode=0, stderr="")),
             ),
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -637,7 +637,7 @@ class TestGeminiCliSupport(unittest.TestCase):
     def test_preflight_validation_fallback_to_codex_on_quota(self):
         """Pre-flight validation should fallback to Codex when Gemini quota exhausted."""
         agent_spec = {
-            "name": "task-agent-preflight-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Test pre-flight validation fallback",
             "prompt": "Do the work",
             "capabilities": [],
@@ -653,7 +653,7 @@ class TestGeminiCliSupport(unittest.TestCase):
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-preflight-test", MagicMock(returncode=0, stderr="")),
+                return_value=("/tmp/ta[REDACTED_OPENAI_KEY]", MagicMock(returncode=0, stderr="")),
             ),
             patch("os.makedirs"),
             patch("os.chmod"),
@@ -826,7 +826,7 @@ class TestGeminiCliIntegration(unittest.TestCase):
                 self.assertIn(field, spec, f"Missing spec field: {field}")
 
             self.assertEqual(spec["cli"], "gemini")
-            self.assertTrue(spec["name"].startswith("task-agent-"))
+            self.assertTrue(spec["name"].startswith("ta[REDACTED_OPENAI_KEY]"))
             self.assertEqual(spec["type"], "development")
 
     def test_gemini_model_enforced_in_all_paths(self):
@@ -927,9 +927,9 @@ class TestMinimaxCliEnvironment(unittest.TestCase):
             "PATH": "/usr/bin",
             "HOME": "/Users/test",
             "CLAUDECODE": "1",
-            "ANTHROPIC_API_KEY": "sk-ant-test",
-            "ANTHROPIC_AUTH_TOKEN": "sk-ant-auth-test",
-            "MINIMAX_API_KEY": "sk-minimax-test",
+            "ANTHROPIC_API_KEY": "[REDACTED_OPENAI_KEY]",
+            "ANTHROPIC_AUTH_TOKEN": "[REDACTED_OPENAI_KEY]",
+            "MINIMAX_API_KEY": "[REDACTED_OPENAI_KEY]",
         }
         preflight_env = {k: v for k, v in simulated_os_env.items() if k not in env_unset}
         self.assertNotIn(
@@ -943,8 +943,8 @@ class TestMinimaxCliEnvironment(unittest.TestCase):
         profile = CLI_PROFILES["minimax"]
         env_unset = profile.get("env_unset", [])
         simulated_os_env = {
-            "ANTHROPIC_API_KEY": "sk-ant-key",
-            "ANTHROPIC_AUTH_TOKEN": "sk-ant-auth",
+            "ANTHROPIC_API_KEY": "[REDACTED_OPENAI_KEY]",
+            "ANTHROPIC_AUTH_TOKEN": "[REDACTED_OPENAI_KEY]",
             "CLAUDECODE": "1",
         }
         preflight_env = {k: v for k, v in simulated_os_env.items() if k not in env_unset}
@@ -968,12 +968,12 @@ class TestMinimaxAuthResolution(unittest.TestCase):
         self.dispatcher = TaskDispatcher()
 
     def test_resolve_minimax_api_key_prefers_valid_env_key(self):
-        valid_key = "sk-env-key-1234567890"
+        valid_key = "[REDACTED_OPENAI_KEY]"
         with patch.dict(os.environ, {"MINIMAX_API_KEY": valid_key}, clear=True):
             self.assertEqual(resolve_minimax_api_key(), valid_key)
 
     def test_resolve_minimax_api_key_falls_back_to_bashrc_when_env_invalid(self):
-        fallback_key = "sk-bashrc-key-1234567890"
+        fallback_key = "[REDACTED_OPENAI_KEY]"
         with (
             patch.dict(os.environ, {"MINIMAX_API_KEY": "not-a-real-key"}, clear=True),
             patch("orchestration.task_dispatcher._read_exported_shell_var") as mock_read_shell_var,
@@ -983,7 +983,7 @@ class TestMinimaxAuthResolution(unittest.TestCase):
 
     def test_resolve_minimax_api_key_does_not_use_anthropic_keys(self):
         """Anthropic API keys must never be returned as MiniMax keys (credential leak)."""
-        anthropic_key = "sk-ant-api03-abcdefghijklmnopqrstuvwxyz123456"
+        anthropic_key = "[REDACTED_OPENAI_KEY]"
         with (
             patch.dict(
                 os.environ,
@@ -997,8 +997,8 @@ class TestMinimaxAuthResolution(unittest.TestCase):
             self.assertEqual(result, "", "Should return empty string when no MiniMax key is available")
 
     def test_resolve_minimax_api_key_rejects_anthropic_key_in_minimax_var(self):
-        """Anthropic-format sk-ant-... keys must be rejected even if stored in MINIMAX_API_KEY."""
-        anthropic_key = "sk-ant-api03-abcdefghijklmnopqrstuvwxyz123456"
+        """Anthropic-format [REDACTED_OPENAI_KEY] keys must be rejected even if stored in MINIMAX_API_KEY."""
+        anthropic_key = "[REDACTED_OPENAI_KEY]"
         with (
             patch.dict(os.environ, {"MINIMAX_API_KEY": anthropic_key}, clear=True),
             patch("orchestration.task_dispatcher._read_exported_shell_var", return_value=""),
@@ -1008,7 +1008,7 @@ class TestMinimaxAuthResolution(unittest.TestCase):
 
     def test_resolve_minimax_api_key_accepts_valid_minimax_format(self):
         """Valid non-Anthropic sk- keys should be accepted."""
-        valid_key = "sk-mm-1234567890abc"
+        valid_key = "[REDACTED_OPENAI_KEY]"
         with (
             patch.dict(os.environ, {"MINIMAX_API_KEY": valid_key}, clear=True),
             patch("orchestration.task_dispatcher._read_exported_shell_var", return_value=""),
@@ -1016,7 +1016,7 @@ class TestMinimaxAuthResolution(unittest.TestCase):
             self.assertEqual(resolve_minimax_api_key(), valid_key)
 
     def test_apply_minimax_auth_env_sets_both_anthropic_keys(self):
-        minimax_key = "sk-auth-key-1234567890"
+        minimax_key = "[REDACTED_OPENAI_KEY]"
         with patch("orchestration.task_dispatcher.resolve_minimax_api_key", return_value=minimax_key):
             env = {}
             updated = apply_minimax_auth_env(env)
@@ -1027,14 +1027,14 @@ class TestMinimaxAuthResolution(unittest.TestCase):
 
     def test_minimax_command_uses_token_env_placeholder(self):
         agent_spec = {
-            "name": "task-agent-minimax-secret-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Validate MiniMax token handling",
             "prompt": "Do the work",
             "capabilities": [],
             "type": "development",
             "cli": "minimax",
         }
-        minimax_key = "sk-auth-key-1234567890"
+        minimax_key = "[REDACTED_OPENAI_KEY]"
 
         with (
             patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
@@ -1044,7 +1044,7 @@ class TestMinimaxAuthResolution(unittest.TestCase):
                 self.dispatcher,
                 "_create_worktree_at_location",
                 return_value=(
-                    "/tmp/task-agent-minimax-secret-test",
+                    "/tmp/ta[REDACTED_OPENAI_KEY]",
                     MagicMock(returncode=0, stderr=""),
                 ),
             ),
@@ -1084,7 +1084,7 @@ class TestMinimaxAuthResolution(unittest.TestCase):
 
     def test_non_minimax_cli_path_does_not_inject_minimax_placeholder(self):
         agent_spec = {
-            "name": "task-agent-non-minimax-path-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Ensure non-minimax CLI path unchanged",
             "prompt": "Do the work",
             "capabilities": [],
@@ -1100,7 +1100,7 @@ class TestMinimaxAuthResolution(unittest.TestCase):
                 self.dispatcher,
                 "_create_worktree_at_location",
                 return_value=(
-                    "/tmp/task-agent-non-minimax-path-test",
+                    "/tmp/ta[REDACTED_OPENAI_KEY]",
                     MagicMock(returncode=0, stderr=""),
                 ),
             ),
@@ -1112,7 +1112,7 @@ class TestMinimaxAuthResolution(unittest.TestCase):
             patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
             patch("orchestration.task_dispatcher.shutil.which") as mock_which,
             patch.object(self.dispatcher, "_validate_cli_availability", return_value=True),
-            patch("orchestration.task_dispatcher.resolve_minimax_api_key", return_value="sk-auth-key-1234567890"),
+            patch("orchestration.task_dispatcher.resolve_minimax_api_key", return_value="[REDACTED_OPENAI_KEY]"),
         ):
 
             def which_side_effect(command):
@@ -1136,7 +1136,7 @@ class TestMinimaxAuthResolution(unittest.TestCase):
     def test_cli_chain_clears_minimax_env_before_non_minimax_fallback(self):
         """MiniMax env vars must be unset before non-MiniMax fallback attempts."""
         agent_spec = {
-            "name": "task-agent-minimax-fallback-test",
+            "name": "ta[REDACTED_OPENAI_KEY]",
             "focus": "Validate cleanup between CLI attempts",
             "prompt": "Do the work",
             "capabilities": [],
@@ -1144,7 +1144,7 @@ class TestMinimaxAuthResolution(unittest.TestCase):
             "cli": "minimax",
             "cli_chain": ["minimax", "codex"],
         }
-        minimax_key = "sk-auth-key-1234567890"
+        minimax_key = "[REDACTED_OPENAI_KEY]"
 
         with (
             patch.object(self.dispatcher, "_cleanup_stale_prompt_files"),
@@ -1154,7 +1154,7 @@ class TestMinimaxAuthResolution(unittest.TestCase):
                 self.dispatcher,
                 "_create_worktree_at_location",
                 return_value=(
-                    "/tmp/task-agent-minimax-fallback-test",
+                    "/tmp/ta[REDACTED_OPENAI_KEY]",
                     MagicMock(returncode=0, stderr=""),
                 ),
             ),

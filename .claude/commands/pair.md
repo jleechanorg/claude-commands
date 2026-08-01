@@ -20,8 +20,10 @@ Runs `ralph-pair.sh`, which is ralph.sh with an added verification step after ea
 When `/pair` is invoked, execute:
 
 ```bash
-bash ralph/ralph-pair.sh run
+bash ralph/ralph-pair.sh run $ARGUMENTS
 ```
+
+Forward any optional `/pair` arguments after `run` so custom iteration counts and flags are preserved.
 
 ## Usage
 

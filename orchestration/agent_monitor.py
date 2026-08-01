@@ -395,9 +395,9 @@ class AgentMonitor:
             if result.returncode == 0:
                 sessions = result.stdout.strip().split("\n")
                 for session in sessions:
-                    if session.startswith("task-agent-") and self._validate_agent_name(session):
+                    if session.startswith("ta[REDACTED_OPENAI_KEY]") and self._validate_agent_name(session):
                         active_agents.add(session)
-                    elif session.startswith("task-agent-"):
+                    elif session.startswith("ta[REDACTED_OPENAI_KEY]"):
                         self.logger.warning(f"🔐 Security: Skipping invalid agent name: {session}")
 
         except Exception as e:

@@ -17,7 +17,9 @@ delegation split + cost goal adopted; its dynamic model routing is NOT (the
 sidekick model is fixed at spawn). Durability is this skill's own addition.
 
 Load and follow the `sidekick` skill at `~/.claude/skills/sidekick/SKILL.md`
-(Skill tool: `sidekick`). Works for ANY long-running mission — PR/CI fleets,
+(Skill tool: `sidekick`). **Parallel ceiling:** when fanning out lanes or
+subagents, load `/parallel` → `~/.claude/skills/parallelize-to-ceiling/SKILL.md`
+first. Works for ANY long-running mission — PR/CI fleets,
 research sweeps, migrations, monitoring, ops runbooks, non-repo work — not
 just this repo or PRs. Repo-specific rules go in the mission adapter, never
 the core protocol.
@@ -33,7 +35,7 @@ preflight questions.
 
 **Explicit `model` on EVERY spawn** — sidekick and each lane; an omitted
 model param inherits the session model (often Fable) and is a policy
-violation (audit 2026-07-18, bead jleechan-0020).
+violation (audit 2026-07-18, bead $USER-0020).
 
 Durability model: teammates die with the conversation — by design. The
 mission survives as STATE.md checkpoints + the P1 resumption bead + frequent

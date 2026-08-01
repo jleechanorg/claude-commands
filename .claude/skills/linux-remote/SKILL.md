@@ -72,6 +72,8 @@ rsync -avz /local/ jeff-ubuntu:/remote/       # sync directory
 | Running services | `ssh jeff-ubuntu 'systemctl list-units --state=running'` |
 | Installed packages | `ssh jeff-ubuntu 'dpkg -l \| grep <pkg>'` |
 | Tail a log | `ssh jeff-ubuntu 'sudo journalctl -fu <service>'` |
+| Advice Review | `ssh jeff-ubuntu '~/.claude/commands/advice.md'` (or execute `~/.claude/skills/advice/SKILL.md`) |
+| Web Advice Review | `ssh jeff-ubuntu '~/.claude/commands/web-advice.md'` (or execute `~/.claude/skills/web-advice/SKILL.md`) |
 | Reboot | `ssh jeff-ubuntu 'sudo reboot'` (warn user first) |
 
 ## Caveats

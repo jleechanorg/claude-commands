@@ -221,8 +221,8 @@ class OrchestrationDashboard:
         print("\n🤖 AGENT STATUS:")
         sessions = self.get_tmux_session_info()
 
-        # Only task-coordinator is predefined - all others are dynamic
-        expected_agents = [("task-coordinator", "🎯 Task Coordinator", "Task coordination")]
+        # Only ta[REDACTED_OPENAI_KEY] is predefined - all others are dynamic
+        expected_agents = [("ta[REDACTED_OPENAI_KEY]", "🎯 Task Coordinator", "Task coordination")]
 
         for agent_name, display_name, _description in expected_agents:
             if agent_name in sessions:

@@ -1,15 +1,18 @@
 ---
 description: Automation Audit Skill - Analyze PR automation job runs
-type: execution
+type: skill
 execution_mode: immediate
 ---
 
-## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+# /automation-audit [hours]
 
-**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+Analyze all automation job runs — logs, PR processing metrics, and remote commits with attribution.
 
-Execute the automation-audit skill by invoking the Skill tool with `automation-audit` and pass any arguments provided.
+Read `~/.claude/skills/automation-audit/SKILL.md` and execute it with the provided `[hours]` argument.
 
-**Usage**: `/automation-audit [hours]`
+## Examples
 
-This runs the comprehensive audit of all automation job runs - analyzes logs, checks PR processing metrics, and verifies remote commits with attribution.
+```
+/automation-audit
+/automation-audit 24
+```

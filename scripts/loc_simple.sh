@@ -405,7 +405,7 @@ count_functional_area() {
 }
 
 # Major functional areas (production + documentation)
-count_functional_area "./mvp_site/" "Core Application"
+count_functional_area "./$PROJECT_ROOT/" "Core Application"
 count_functional_area "./scripts/" "Automation Scripts"
 count_functional_area "./.claude/" "AI Assistant"
 count_functional_area "./orchestration/" "Task Management"

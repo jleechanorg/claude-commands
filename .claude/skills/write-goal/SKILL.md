@@ -26,7 +26,7 @@ related_skills:
   - root-cause-first
   - harness
 changelog:
-  - 1.1.0 (2026-06-28): Actually ran /history + /ms against 6,433 Hermes sessions + 18,773 Codex threads + Claude Code JSONL. Added "Ground truth" section with real pattern counts (Skeptic QA 3,305 threads, Green Gate 1,014 threads, /harness only 1 session in 30d). Added Phase 2.5 (/repro for bug-shaped goals). Added audit-grounded goal shapes (verify-completion, meta-goal, design/evaluate). Added 8 design decisions grounded in verbatim user goals from last month. Added mem0 memory findings.
+  - 1.1.0 (2026-06-28): Actually ran /history + /ms against 6,433 Hermes sessions + 18,773 Codex threads + Claude Code JSONL. Added "Ground truth" section with real pattern counts (Skeptic QA 3,305 threads, Green CI 1,014 threads, /harness only 1 session in 30d). Added Phase 2.5 (/repro for bug-shaped goals). Added audit-grounded goal shapes (verify-completion, meta-goal, design/evaluate). Added 8 design decisions grounded in verbatim user goals from last month. Added mem0 memory findings.
   - 1.0.0 (2026-06-28): Initial skill — mines last 30d of coding-CLI convos + memory, writes a structured outcome-driven goal spec wired for evidence/green-CI/quality. Output compatible with /goal_harness and /finish-the-job.
 ---
 
@@ -39,7 +39,7 @@ changelog:
 Three failure modes that keep recurring in the user's last month of coding-CLI sessions (May 22 → June 28, 2026):
 
 1. **Vague goal → vague outcome.** Goal written as "fix the cold-start bug" produces an investigation summary, not a merged PR. No verifiable end-state is named up front, so the agent ships a write-up and stops.
-2. **No evidence contract.** Goal says "make it work" but never says which evidence layer counts. Agent posts a Green Gate exit-0 claim that isn't actually 7-green — `gh pr checks` ≠ green gate-by-gate PASS (env-preferences rule).
+2. **No evidence contract.** Goal says "make it work" but never says which evidence layer counts. Agent posts a green claim without verifying current-head CI green and no merge conflicts — `gh pr checks` alone can report stale passes or miss merge conflicts.
 3. **No project-specific quality bar.** Goal omits the repo's own adversarial gates (ZFC, ZFC-leveling, root-cause-first, /es, /er). The agent thinks lint + unit tests are "done" and the user has to redo the work in a follow-up PR.
 
 **The fix:** mine the last 30 days of coding-CLI convos + memory for the real failure shape and the real success shape on this codebase, then write a goal spec that encodes the specific evidence artifacts, CI gates, and quality checks the agent must produce. The goal becomes a contract the agent can drive itself against — `/h`, `/a`, `/finish` all consume it.
@@ -77,14 +77,14 @@ Pull the user's actual coding history so the goal is grounded. Run two parallel 
 
 **What to extract from the history results:**
 - **Prior attempts on this topic** — what was tried, what failed, what shape the failure took (test red, CI timeout, reviewer CHANGES_REQUESTED, agent stopped halfway, etc.)
-- **The real success shape on this codebase** — was "done" last time a merged PR + green gate log, a screenshot + `/er` verdict, or a local run output? Capture the exact artifact type.
+- **The real success shape on this codebase** — was "done" last time a merged PR + CI log, a screenshot + `/er` verdict, or a local run output? Capture the exact artifact type.
 - **Pitfalls this repo has hit before** — merge conflicts on the same files, flaky tests, quick "looks green" false positives, deny-list patterns from `adoptive-external-agent-convention` if the user has needed it.
-- **The specific gates this repo runs** — note any CI workflow names, Green Gate gate names, /es /er /code_standards invocation patterns that appear in past sessions.
+- **The specific checks this repo runs** — note any CI workflow names, /es /er /code_standards invocation patterns that appear in past sessions.
 
 **B. Memory search** — invoke `/ms <topic> --recent 30 --source beads --limit 5` (and a second `/ms <topic> --source hermes --limit 5` if beads is sparse). Pull:
 - User preferences (e.g. `(h)` no parallel PRs, `(i)` centralize repeated frontend strings as constants, `(j)` thread-roadmap cadence)
 - Environment facts (Node 22, gog CLI, Hermes deploy pipeline, launchd plist rules, gh dual-bucket fallback)
-- Tool quirks (`gh pr checks` ≠ 7-green, `.beads/issues.jsonl` is huge—use `br`, etc.)
+- Tool quirks (`gh pr checks` can report stale passes—use `statusCheckRollup` + `mergeable` check for 2-gate `/green`, `.beads/issues.jsonl` is huge—use `br`, etc.)
 - Past failures with the same shape — these become the "Pitfalls" section in the goal.
 
 **If both history and memory return nothing** → say so explicitly in the goal doc's "Prior Context" section: "No prior CLI sessions or memory entries matched `<topic>` in the last 30 days. Goal spec written from the user's input only; first run — pitfalls to be discovered during execution."
@@ -111,8 +111,8 @@ Pick the ONE end-state the agent must provably reach, drawing on Phase 2's histo
 
 | Outcome shape | When to pick | Required proof artifact |
 |---|---|---|
-| **green-pr-merged** | Default for code changes that touch production paths | `gh pr view <N> --json state` = `MERGED` + Green Gate workflow log gate-by-gate PASS (from raw log, NOT `gh pr checks`) + `/er` verdict URL + Layer-2 evidence (env-preferences rule: unit-only is INSUFFICIENT for production changes) |
-| **pr-open-green** | When the user must do the merge (e.g. protected branch, auth gate) | `gh pr view <N> --json mergeStateStatus,reviewDecision` shows `MERGEABLE` + Green Gate log PASS + one-line blocker the user must clear |
+| **green-pr-merged** | Default for code changes that touch production paths | `gh pr view <N> --json state` = `MERGED` (verified at current-head SHA with CI green + no merge conflicts; `/er` verdicts are advisory) + Layer-2 evidence (env-preferences rule: unit-only is INSUFFICIENT for production changes) |
+| **pr-open-green** | When the user must do the merge (e.g. protected branch, auth gate) | `gh pr view <N> --json statusCheckRollup,mergeable` shows `mergeable == MERGEABLE` + success-only, null-safe current-head `statusCheckRollup[]` (0 non-success checks excluding exact advisory `Green Gate` and `Cursor Bugbot`; reviewDecision, mergeStateStatus advisory only) + one-line blocker the user must clear |
 | **local-state-verified** | For non-PR changes (config, ops, infra) | `git diff --stat` + `git log --oneline -3` + actual command output captured in the final reply (described = fail; shown = pass) |
 | **dry-run-on-machine** | For risky migrations / destructive changes the user will execute | Exact pasteable commands run against a fresh worktree, output captured, user can paste and get the same result |
 
@@ -129,7 +129,7 @@ Write the goal to `.converge/goal.md` in the session's cwd (the path `/goal_harn
 <ONE of: green-pr-merged | pr-open-green | local-state-verified | dry-run-on-machine>
 
 ### Proof artifact
-<exact artifact the agent must produce at completion — e.g. "PR #N on $GITHUB_REPOSITORY, Green Gate workflow log showing 7/7 gates PASS, /er PASS verdict, screenshot of /campaigns/new after merge">
+<exact artifact the agent must produce at completion — e.g. "PR #N on $GITHUB_REPOSITORY merged with current-head CI green + no merge conflicts, /er PASS verdict (advisory), screenshot of /campaigns/new after merge">
 
 ## Scope
 - Repo(s): <owner/repo>
@@ -144,21 +144,20 @@ Write the goal to `.converge/goal.md` in the session's cwd (the path `/goal_harn
 - Artifacts:
   - <e.g. "real callstack log showing the fix path is hit, mock only at external API boundaries">
   - <e.g. "browser screenshot of the user-facing surface after deploy">
-  - <e.g. "/er verdict URL from skeptic gate">
+  - <e.g. "/er verdict URL from evidence review">
 - Forbidden:
   - Bullet list of command names only (proof-before-claim rule)
   - "Key output observed: dependency install completed" (fabrication pattern)
-  - Green Gate exit-0 claim without gate-by-gate log PASS (env-preferences rule)
+  - Green claim without verifying current-head CI green and no merge conflicts (env-preferences rule)
   - `<60s` completion claim on a multi-step I/O task (proof-before-claim)
 
 ## Green-CI definition (specific to this repo)
-- Required workflows (gate names from `gh run list --workflow`):
-  - <workflow 1> — PASS
-  - <workflow 2> — PASS
-  - ...
-- Green Gate exit-0 is NOT sufficient — read the Green Gate workflow log and assert gate-by-gate PASS for the named gates from prior sessions on this repo (Phase 2 output)
-- 7-green means: <list the 7 gates if this repo runs them; else list the repo's actual green bar>
-- Failure on a gate = iterate the fix, push to PR head branch (pr-ci-fix-autopush rule: push without being asked), re-check. Do NOT report "fixed" until the new head SHA shows the gate green.
+- Canonical /green 2-gate definition (current-head SHA):
+  - Gate 1: CI green — every CI check at HEAD passes (`statusCheckRollup` 0 non-success checks, excluding advisory `Green Gate` and `Cursor Bugbot` only)
+  - Gate 2: No merge conflicts — `mergeable == MERGEABLE`
+- Green Gate workflow logs are advisory only and are not aggregate `/green` proof.
+- CodeRabbit/Bugbot and review feedback remain optional advisory checks and do not block `/green`.
+- Failure on CI or merge conflicts = iterate the fix, push to PR head branch (pr-ci-fix-autopush rule: push without being asked), re-check. Do NOT report "fixed" until the new head SHA shows both gates PASS.
 
 ## Quality bar (adversarial gates this repo uses)
 Run all of these at completion (from /goal_harness):
@@ -186,9 +185,9 @@ At the end, the agent's final reply MUST contain (finish-the-job Phase 4):
 4. NO follow-up question — "want me to X?" is a violation
 
 ## Pitfalls (mined from history — Phase 2)
-- <pitfall 1 — e.g. "this repo's Green Gate has a `PR Coverage Report` gate that fails if test lines drop below X%">
+- <pitfall 1 — e.g. "PR mergeability flipped to CONFLICTING after main branch updated — re-verify mergeable status at current HEAD">
 - <pitfall 2 — e.g. "merge conflicts on world_logic.py recur because it's a 421KB file — always pull --rebase before push">
-- <pitfall 3 — e.g. "Quick `looks green` false positive — must read raw workflow log, not `gh pr checks` conclusion">
+- <pitfall 3 — e.g. "Quick `looks green` false positive — must verify current-head statusCheckRollup, not `gh pr checks` conclusion">
 - <pitfall 4 — e.g. "Unit tests pass but Layer 2 integration fails — env-preferences says unit-only is INSUFFICIENT for production changes">
 
 ## Prior context (Phase 2 output summary)
@@ -229,16 +228,16 @@ Post a single reply containing:
    - `/h` — to run the full adversarial 4-gate loop (`/goal_harness`)
    - `/a <topic>` — hands-off single-task drive (`finish-the-job`)
    - `ao spawn --task "$(cat .converge/goal.md)"` — raw worker dispatch
-   - `gh issue create --title "<topic>" --body "$(cat .converge/goal.md)"` — issue-track the goal for babysitting
+   - `gh issue create --title "<topic>" --body-file .converge/goal.md` — issue-track the goal for babysitting
 5. **What was decided mid-stream** — any judgment call you made (which outcome shape, which gates to include, which pitfalls to surface)
 6. **NO follow-up question** — finish-the-job's final-reply contract applies here too
 
 ## Pitfalls (do NOT do these)
 
 - ❌ **Inventing acceptance criteria** — gates, workflow names, pitfall shape that don't appear in Phase 2 history are fabrication. If Phase 2 returned nothing for a field, write "first run — to be discovered during execution" rather than guessing.
-- ❌ **Activity-shaped outcomes** — "improve cold start", "investigate the BQ gap", "address reviewer feedback" are activities. Rewrite as "PR #N merged with cold-start p50 < Xs measured by <probe> / Green Gate PASS / /er PASS".
+- ❌ **Activity-shaped outcomes** — "improve cold start", "investigate the BQ gap", "address reviewer feedback" are activities. Rewrite as "PR #N merged with cold-start p50 < Xs measured by <probe> / CI green + no merge conflicts / /er PASS (advisory)".
 - ❌ **Unit-only evidence for production changes** — env-preferences: unit-only is INSUFFICIENT for production changes (Layer 2 integration minimum). Only the <100 delta lines of non-test code exception applies.
-- ❌ **`gh pr checks` as green proof** — env-preferences: must read the Green Gate workflow log for gate-by-gate PASS, not the aggregate `.conclusion` and definitely not `.state`.
+- ❌ **`gh pr checks` as green proof** — env-preferences: `gh pr checks` can report stale passes; must verify current-head `statusCheckRollup` (CI green) and `mergeable == MERGEABLE` (no conflicts).
 - ❌ **Goal with no dispatch routing** — without an inline-vs-AO rule, a future agent will self-execute a 30-commit PR inline and drop it when the gateway session caps. Cite `scope-pivot-to-ao`.
 - ❌ **Goal with no "no follow-up question" in DoD** — finish-the-job's contract requires the agent drive to conclusion. A goal that allows "want me to X?" mid-stream reproduces the silent-stop pattern.
 - ❌ **Skipping Phase 2 mining** — without history+memory grounding the goal is generic; the third failure mode (vague goal → vague outcome) recurs. **Specific failure mode (2026-06-28):** substituting `session_search` (a different tool that searches message summaries) for actual `/history` queries against the SQLite databases. `session_search` does NOT query `state.db` or `state_5.sqlite` — it has different scope and returns different results. Phase 2 MUST use `session-history-search` to query the actual session stores with the SQL patterns documented in that skill.
@@ -262,9 +261,9 @@ Post a single reply containing:
 3. `finish-the-job` (the end-state contract the goal spec plugs into)
 4. `drive-pr-to-green` (Phase 3 green-pr-merged outcome shape)
 5. `evidence-standards` (Phase 4 evidence-requirements section — load to know what counts as evidence)
-6. `pr-green-definition` (Phase 4 green-CI section — what 7-green actually means)
-7. `ponytail` (Phase 4 quality bar — referenced by /code_standards Gate 3)
-8. `root-cause-first` (Phase 4 quality bar — referenced by /code_standards Gate 3)
+6. `pr-green-definition` (Phase 4 green-CI section — canonical 2-gate PR green definition: CI green + no merge conflicts)
+7. `ponytail` (Phase 4 quality bar — referenced by /code_standards)
+8. `root-cause-first` (Phase 4 quality bar — referenced by /code_standards)
 9. `harness` (Phase 6 hand-off — if user picks `/h`)
 
 ## Ground truth — 30-day history audit (2026-06-28)
@@ -294,7 +293,7 @@ Ran `/history` + `/ms` against all three session stores on 2026-06-28 before des
 
 **Codex threads by first-user-message pattern:**
 - Skeptic QA Agent (adversarial review): **3,305 threads** — dominant pattern
-- Green Gate verification: **1,014 threads**
+- Green CI verification: **1,014 threads**
 - ZFC audit: 147 threads
 - Evidence review (`/er`): 89 threads
 - Fix-gate iterations: 11 threads
@@ -308,7 +307,7 @@ These are the actual goal-shaped messages Jeffrey sent (filtered from cron/test/
 1. *"Make or find the PR where we make all local servers default to agy cli"* — outcome: PR found/created, verified merged
 2. *"did this PR truly merge and is agy_provider.py on origin main?"* — verification goal, needs proof not activity
 3. *"fullrun lets confirm agy cli is the default cli"* — autonomous drive request
-4. *"Why arent these PRs /green?"* — frustration with CI blocking, needs gate-by-gate fix
+4. *"Why arent these PRs /green?"* — frustration with CI blocking, needs 2-gate green fix
 5. *"Run /repro — other people in the battle aren't taking their turns"* — bug repro + fix
 6. *"Lets design/evaluate a plan to convert game state json into a game state ledger"* — design/evaluate goal, not a PR
 7. *"Review this evidence using /er and /advice — how do we increase parallelism?"* — evidence review + meta question
@@ -333,7 +332,7 @@ These are the actual goal-shaped messages Jeffrey sent (filtered from cron/test/
 
 3. **Evidence review is the dominant adversarial pattern** (3,305 Codex threads). The skill must wire evidence deeply — not just "run tests" but route to the actual Skeptic QA Agent + /er pipeline the user already uses.
 
-4. **Green Gate verification is a top-3 activity** (1,014 Codex threads). The skill must encode the real green-check procedure (raw workflow log, not `gh pr checks`).
+4. **Green verification is a top-3 activity** (1,014 Codex threads). The skill must encode the canonical 2-gate green procedure (current-head CI green via `statusCheckRollup` + no merge conflicts via `mergeable`, with review feedback treated as advisory).
 
 5. **/harness is severely underused** (1 session in 30 days). This skill should make it easy to produce goal specs that feed `/h`, increasing harness adoption.
 
@@ -350,7 +349,7 @@ User invoked `/write-goal` after a month of recurring CI/deploy issues that neve
 - **Phase 1 intake:** topic = "fix the auto-deploy precompute OOM", outcome_shape = `green-pr-merged`, scope = `$GITHUB_REPOSITORY` (embed pipeline), hard_constraints = "no parallel PRs; if PR #7880 is open, push onto its head branch".
 - **Phase 2 mining:** `/history "precompute OOM"` returned 3 Slack sessions + 1 CLI session; `/ms "embed batch size"` surfaced the recipe doc at `~/.hermes/skills/worldarchitect/references/auto-deploy-dev-precompute-oom-investigation.md` and `~/.hermes/skills/devops/production-vs-main-drift/references/precompute-oom-deploy-workflow-2026-06-23.md`. Findings: prior sessions diagnosed + wrote a fix recipe but never pushed to main; deploy has been failing 80+ days.
 - **Phase 3:** outcome_shape = `green-pr-merged` (the recipe is a destructive change to `_embed_texts`; user wants it on main, not a worktree dry-run).
-- **Phase 4:** goal doc names the exact EMBED_BATCH_SIZE change, the deploy.sh exit-137 detection, the specific Green Gate workflows, and the prior-failure pitfalls (recipe written twice, never pushed).
+- **Phase 4:** goal doc names the exact EMBED_BATCH_SIZE change, the deploy.sh exit-137 detection, the current-head CI requirements, and the prior-failure pitfalls (recipe written twice, never pushed).
 - **Phase 5:** quality scaffold passes — outcome is verifiable, evidence is Layer 2 (real callstack on embed path), gates named from history, pitfalls cite session ids.
 - **Phase 6:** reply posts `file://.../.converge/goal.md` + hands off `/h precompute OOM fix` or `ao spawn --task "$(cat .converge/goal.md)"`.
 

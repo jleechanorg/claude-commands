@@ -4,6 +4,12 @@ Routes user phrases to skill entries. Each section is a skill with its canonical
 
 ---
 
+## auto-factory — /af, /auto-factory
+
+**File:** `~/.claude/skills/auto-factory/SKILL.md`
+**Triggers:** Explicit `/af` or `/auto-factory` invocation only
+**Note:** Once invoked, all coding work for that task stays inside `/af`. Ordinary coding requests use the normal workflow.
+
 ## skillify — skillify this, make this proper, add tests and evals, run skillify workflow
 
 **File:** `skills/skillify/SKILL.md`
@@ -59,10 +65,24 @@ Routes user phrases to skill entries. Each section is a skill with its canonical
 **File:** `skills/cmux-surface-report-4h/SKILL.md`
 **Triggers:** cmux surface report, cmux 4h report, cmux inventory, cmux health digest, 4h cmux check, what is cmux doing, cmux status
 
+## claude-code-claudem
+
+**File:** `skills/claude-code-claudem/SKILL.md`
+**Triggers:** claudem, claudem coding, claudem delegation, claude code via claudem, claude code via minimax, claude code minimax, MiniMax claude code, M3 coding worker, delegate coding to minimax, run claudem in tmux, claudem -p, claudemc, claudeme
+**Note:** Thin wrapper over the bundled `claude-code` skill. Same two modes (print + tmux) but binary = `claudem` (your bashrc-routed Minimax M3 variant) instead of `claude`. Confirmed 2026-07-24: `claudem -p` round-trips to MiniMax M3 in ~6-8s.
+**Common Confusions:**
+- **vs `claude-code`** — `claude-code` is the bundled general skill (binary = `claude`, routes to Anthropic first-party, real Claude Opus/Sonnet quality). This wrapper exists only to swap the binary. Use `claude-code` when you need real Claude judgment; use this skill for routine coding delegation routed through Minimax.
+- **vs `agento` / `dispatch-task`** — those spawn AO workers for PR-sized multi-turn work. `claudem` is a one-shot print-mode or tmux-orchestrated local subprocess; lighter weight, no PR plumbing. Use this for small/medium local delegations; use agento for PR work.
+- **Anti-pattern: `claude -p` with `ANTHROPIC_BASE_URL` set manually** — never override env vars by hand to force Minimax routing. Always call `claudem`, which sets the env vars at the right scope and exits cleanly.
+
 ## daily-task-prep
 
 **File:** `skills/daily-task-prep/SKILL.md`
 **Triggers:** daily task prep, prepare today's tasks, morning task list, today's tasks
+
+## campaign-creation : create campaign, design new campaign, campaign bible, make me a campaign, follow the template, campaign from scratch, write campaign doc, design a campaign from scratch, follow the campaign template, follow the character personality template, use Sub-Template A, use Sub-Template B, use Sub-Template C, write me a high-stakes campaign, design a sovereign campaign, design a sovereign-tier campaign, design a god-mode campaign, sovereign-tier solo, god-mode campaign, brand new campaign, level 20 god-tier campaign
+
+**File:** `skills/campaign-creation/SKILL.md`
 
 ## download-campaign
 
@@ -196,16 +216,6 @@ Routes user phrases to skill entries. Each section is a skill with its canonical
 ## github-api-fallback
 GitHub API rate-limit fallback — switch between GraphQL and REST buckets (which drain independently at 5000/hr each), diagnose which bucket is exhausted, avoid the false 'rate-limited' trap when one still has headroom. Triggers: "rate limit exceeded", "HTTP 403", "API rate limit exceeded for user ID", "gh dual-bucket", "fallback to REST", "quota exhausted", "gh api rate_limit", "polling-heavy PR fan-out".
 
-## social-poster
-**File:** `skills/social-poster/SKILL.md`
-**Triggers:** draft a social post, draft a post, post to social, post to linkedin, post to hacker news, post to reddit, post to twitter, post to threads, post to facebook, post to instagram, draft linkedin post, draft hacker news post, draft reddit post, draft tweet, draft twitter thread, draft instagram caption, draft threads post, show hn, social poster, /social
-**Slash alias:** `/social` (file: `~/.claude/commands/social.md`). Drafts social-media posts for 9 platforms (LinkedIn, Hacker News, Twitter/X, Reddit, Threads, Facebook, Instagram, Mastodon, Dev.to), stages them in Aside browser tabs + screenshots, and only posts after the user types "POST APPROVED". Pure template logic by default — no LLM call unless `--use-llm`. Instagram has no web compose; surface caption + mobile instructions instead.
-**Common Confusions:**
-- **vs `email-drafting`** — `email-drafting` is for Gmail drafts (also gated); `social-poster` is for social platforms + uses Aside instead of gog gmail.
-- **vs `reddit-competitor-complaints`** — `reddit-competitor-complaints` is a read-only daily digest job; `social-poster` is a write tool gated by POST APPROVED.
-- **Anti-pattern: auto-posting without `POST APPROVED`** — `post_approved.py` hard-exits code 2 without the token. There is NO bypass.
-- **Anti-pattern: using Playwright MCP for compose tabs** — Aside is the canonical browser (signed-in `$USER@gmail.com` session); Playwright spawns a fresh context per call and loses cookies.
-
 ## harness-postmortem
 **File:** `skills/harness-postmortem/SKILL.md`
 **Triggers:** autonomy violation, hermes refused, agent refused, agent stopped halfway, stopped halfway, why did hermes stop, why did the agent stop, agent didn't do its job, hermes didn't do its job, you didn't do your job, fix the agent, fix hermes behavior, fix the harness not the task, meta skill, /meta, run meta, harness postmortem, harness retro, harness audit, harness fix, agent failure analysis, run harness postmortem on
@@ -216,3 +226,24 @@ GitHub API rate-limit fallback — switch between GraphQL and REST buckets (whic
 - **vs `harness-engineering`** — `harness-engineering` is the umbrella / reference (SOUL.md rules, never-rewrite pitfalls, verify-CLI-before-quoting). `harness-postmortem` is the per-incident executor: input → MAST+ETCLOVG → Observe→Isolate→Simulate→Evaluate → fix. `harness-postmortem` calls `/harness` (`~/.claude/commands/harness.md`) for the protocol steps.
 - **vs `Refinex-Space harness-fix`** — Refinex's `harness-fix` covers bug/regression/incident debugging in general software; `harness-postmortem` is Hermes-runtime-specific (SOUL.md/skills/tests). Prior art is cited in the SKILL.md body, not duplicated.
 - **Anti-pattern: "fix the underlying task too while I'm at it"** — `harness-postmortem` is scope-locked. The underlying task is a separate `dispatch-task` job. Do not absorb it under any framing.
+
+## pr-cleanup-replay clean up this PR replay this PR fix PR scope minimal diff replay polluted PR PR has unrelated history branch from origin main never push onto someone else PR head don't push onto someone else PR head PR is not clean from origin main
+The `pr-cleanup-replay` skill (`~/.hermes/skills/pr-cleanup-replay/SKILL.md`) — recipe for replaying a polluted PR as a clean minimal-diff branch from origin/main. Triggered by SOUL.md `## COMMIT: pr-clean-branch-from-main-no-history-bloat` audit findings (diff > 2x load-bearing, commits like "Merge remote-tracking branch" / "[fixpr ...]" / "fix(beads)" in PR history). Phases: (0) confirm diagnosis with `git diff --shortstat origin/main...HEAD` + `git log --oneline origin/main..HEAD`; (1) identify load-bearing commits via cherry-pick strategy A (3-5 fix commits) or strategy B (extract file diff directly); (2) run tests in fresh worktree from origin/main; (3) commit + push + open new PR + close old PR with cross-reference; (4) verify diff stat + branch state. Pitfalls: do not force-push old branch, do not delete immediately, hidden test fixes may need separate commits.
+
+## codex-path-deletion-guard
+**File:** `skills/codex-path-deletion-guard/SKILL.md`
+**Triggers:** guard codex against deletion, block destructive commands outside /tmp, codex safety hook, codex rm -rf hook, codex deletion guard, codex PreToolUse hook, codex sandbox_mode danger-full-access protection, codex hook for rm, codex rmdir hook, codex find -delete hook, codex apply_patch delete hook, codex shutil.rmtree hook, codex malicious rm protection, codex full-access safety net, codex workspace-write sandbox hook, prevent codex from deleting files outside tmp
+**Note:** A Codex / Claude PreToolUse hook (Python) at `~/.codex/hooks/path-deletion-guard.py` that allows `rm -rf`, `rmdir`, `shred`, `find -delete`, `git clean -fdx`, `git reset --hard`, `apply_patch` deletes, `shutil.rmtree`, `os.remove`, etc. ONLY when every target is under `/tmp`, `/private/tmp`, `$TMPDIR`, or a path listed in `$PATH_DELETION_GUARD_ALLOW`. Outside those roots → deny with the canonical Codex `hookSpecificOutput.permissionDecision=deny` JSON (and Claude `continue:false` for cross-runtime). Fails closed on parse error. Companion audit hook at `~/.codex/hooks/path-deletion-guard-audit.sh` appends every payload to `~/.codex/log/path-deletion-guard.log` for review. Wired into `~/.codex/hooks.json` under matchers `Bash` and `apply_patch|Edit|Write|Delete`. Test suite at `~/.codex/hooks/tests/test_path_deletion_guard.sh` covers 30+ cases. **Built in response to X-community incidents** (2026-07) where Codex GPT-5.6 in `sandbox_mode=danger-full-access` overrode `$HOME` and `rm -rf`'d production data. Pitfall: bash `local var=$(cmd)` masks subcommand exit under `set -e`; CWD-targeting destructive commands (`git clean -fdx`, `git reset --hard`) need `working_dir` added to target list; bare-relative paths like `git rm -rf some/dir` need CWD resolution. Pair with sandbox restrictions + Git+backup recovery per SOUL.md — hook is one layer of defense in depth.
+**Common Confusions:**
+- **vs `claude-code-agent-mistakes`** — that skill prevents the model from making mistakes; this skill blocks the destructive tool call even if the model tries to make it. Different layer (planning vs execution).
+- **vs general Codex hardening prompts** (X 2077820292622372866) — the community prompt generates hooks like this one; this skill IS the installed, tested, wired-in implementation of that pattern. Use the skill to install/verify; reference the prompt only for novel hook types.
+- **Anti-pattern: relying on this hook alone** — Twitter consensus and Codex 0.144.x changelog both warn that no hook is sufficient. Always pair with `sandbox_mode=workspace-write` (not `danger-full-access`), `approval_policy=on-request` (not `never`), Git-remote authoritative copy, and Time Machine / external backups. Hook is a safety net, not the safety boundary.
+
+## wa-campaign-premise-find : find my campaign where, find the campaign where I was, find a campaign where I'm, find WA campaign by premise, locate my campaign, which campaign had, I had a campaign where, search my campaigns for, find campaign with premise, premise-driven campaign lookup, find campaign by trope, female resurrected OP, demon lord reincarnation, isekai campaign, who did I play as
+**File:** `skills/worldarchitect/wa-campaign-premise-find/SKILL.md`
+**Triggers:** find my campaign where, find the campaign where I was, find a campaign where I'm, find WA campaign by premise, locate my campaign, which campaign had, I had a campaign where, search my campaigns for, find campaign with premise, premise-driven campaign lookup, find campaign by trope, female resurrected OP, demon lord reincarnation, isekai campaign, who did I play as
+**Note:** Dual-store premise search for Your Project campaigns. Searches BOTH Firestore descriptions (paraphrased) AND wiki raw transcripts (God Mode prompts = ground truth). Returns campaign_id + title + character + verbatim God Mode excerpt + Firestore URL. Hand-classifies candidates by reading opening God Mode prompts — does NOT trust Firestore LLM-rewritten description blocks. Anti-pattern: skipping Phase 3 wiki fan-out and trusting Firestore's 14 false-positive matches alone (Iseki v1 finding 2026-07-28 — 14 Firestore-only candidates that didn't match user's premise). When user hints "the LLM wiki" / "I think it's in the wiki", skip Phase 2 Firestore scan entirely.
+**Common Confusions:**
+- **vs `wa-campaign-content-analysis`** — `content-analysis` reads story entries of a known campaign to diagnose LLM behavior. `premise-find` searches ACROSS campaigns to find the one matching user's remembered premise.
+- **vs `wa-prod-data-query`** — `prod-data-query` analyzes real-user activity / retention / engagement metrics. `premise-find` is premise-text search only.
+- **vs `download-campaign`** — `download-campaign` exports a specific known campaign to disk. `premise-find` discovers which campaign matches.

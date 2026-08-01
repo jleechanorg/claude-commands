@@ -3,6 +3,8 @@ name: skeptic-agent
 description: Define and run skeptic exit criteria for non-trivial tasks — independent verification agent with inverted incentive to find gaps
 ---
 
+> **DELETED SYSTEM (2026-07-09).** The skeptic verdict system was fully removed (repo PR #8217 + workflow registrations disabled + .gemini toml deletion PR #8313). This skill is retained as a historical record only — do NOT dispatch skeptic verdicts or wait for them.
+
 # Skeptic Agent — Exit Criteria Verification
 
 ## When This Skill Activates

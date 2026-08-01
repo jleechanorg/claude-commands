@@ -1,18 +1,15 @@
 ---
 description: "/fe — alias for /factory-evolve; analyzes cold-review vs in-pipeline reviewer gaps, opens PRs end-to-end, drives each through /green, merges with explicit MERGE APPROVED"
-type: llm-orchestration
+type: skill
 execution_mode: immediate
 aliases: [factory-evolve]
 ---
 
-# /fe — Factory Evolve (alias for /factory-evolve)
+# /fe [--flags] (alias for /factory-evolve)
 
-Dispatches to the **`factory-evolve` skill** at
-`~/.claude/skills/factory-evolve/SKILL.md`. Single writer for the
-workflow is `~/.claude/commands/factory-evolve.md`; this file is a
-thin alias so the multi-phase orchestration (history search → subagent
-fanout → G1+G2 audit → proposals doc → open PRs → /green → merge) is
-identical for both entry points.
+Analyzes cold-review vs in-pipeline reviewer gaps, opens PRs end-to-end, drives each through `/green`, and merges with explicit MERGE APPROVED.
+
+Read `~/.claude/skills/factory-evolve/SKILL.md` and execute the full workflow with the provided flags. Single writer for the workflow is `~/.claude/commands/factory-evolve.md`; this file is a thin alias so the multi-phase orchestration (history search → subagent fanout → G1+G2 audit → proposals doc → open PRs → /green → merge) is identical for both entry points.
 
 **Usage**:
 
