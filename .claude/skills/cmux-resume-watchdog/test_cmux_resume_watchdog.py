@@ -303,7 +303,7 @@ def test_dry_run_collects_menu_based_quota_signals(monkeypatch, tmp_path, capsys
                 socket_path,
                 "workspace:22",
                 "surface:44",
-                "jleechan@jeffreys-macbook-pro: ~/projects/cold-reviewer",
+                "$USER@localhost: ~/projects/test-workspace",
             ),
         ],
     )
