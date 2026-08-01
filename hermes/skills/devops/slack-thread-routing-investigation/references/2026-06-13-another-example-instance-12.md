@@ -21,12 +21,12 @@ So Jeffrey's "another example" is a Failure 1 + Failure 4 combo: 2 orphans in C0
 
 ## Why this instance is special (deltas from instance 11)
 
-1. **Jeffrey sent the bot's broken reply as the proof.** He didn't say "you posted in the wrong place" — he linked to the broken post itself. He's not asking for diagnosis; he's asking the gateway to be fixed. The diagnostic skill has done its job. The fix surface is `jleechanorg/agent-orchestrator#684`.
+1. **Jeffrey sent the bot's broken reply as the proof.** He didn't say "you posted in the wrong place" — he linked to the broken post itself. He's not asking for diagnosis; he's asking the gateway to be fixed. The diagnostic skill has done its job. The fix surface is `jleechanorg/agent-orchestrator-ts#684`.
 2. **Jeffrey added two earlier PR-search hints** in his question: *"look at PRs we merged and /ms to see all our failed attempts."* This is an explicit instruction to enumerate prior attempts. The honest answer is the workarounds list (11+ sessions, 3 post paths, 1 SOUL rule, 1 skill) — the assistant should NOT just say "use Path B."
 3. **The right reply target was the orphan, not a new top-level.** Replying in a new channel-root message would have been a 3rd orphan. Replying via `send_message` would have re-triggered the bug. Replying via Path B curl with `thread_ts=1781395161.470019` made the broken orphan into the parent of the actual answer — the thread is now self-documenting for next time someone searches Slack for "out of thread."
 4. **Confusion between the two Slack thread-routing bugs is the most common reply error.** The user said "out of thread." There are TWO bugs:
    - **Bug A** (channel-root leak on context compression) — `jleechanorg/hermes-agent#27` MERGED 2026-06-12, fix live in `gateway/run.py:14681` (`_status_thread_metadata`)
-   - **Bug B** (`send_message` strips `:thread_ts` from `target=slack:CHAN:thread_ts`) — `jleechanorg/agent-orchestrator#684` OPEN, no PR
+   - **Bug B** (`send_message` strips `:thread_ts` from `target=slack:CHAN:thread_ts`) — `jleechanorg/agent-orchestrator-ts#684` OPEN, no PR
    PR #27 *looks* like the same bug (Slack thread, hermes-agent repo) but it's a different failure mode. Conflating them is what makes the user feel like the bug never gets fixed.
 
 ## How to verify the live `hermes` gateway has Bug A's fix
@@ -110,4 +110,4 @@ print('match:', m['thread_ts']=='1781395161.470019')"
 - `1781395171.140989` — bot's 10s-later near-duplicate, also top-level
 - `1781395220.018889` — Jeffrey's actual follow-up: the `/wiki-ingest` Gemini gem request (top-level, unrelated to the broken orphan)
 - `1781395286.695109` — agent's Path B reply to the orphan — `thread_ts=1781395161.470019` ✅
-- Bead `$USER-88x` + issue `jleechanorg/agent-orchestrator#684` — already filed, no new ones needed this session
+- Bead `$USER-88x` + issue `jleechanorg/agent-orchestrator-ts#684` — already filed, no new ones needed this session

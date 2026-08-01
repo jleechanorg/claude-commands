@@ -1,6 +1,6 @@
 ---
 name: dropped-messages
-description: "Diagnose and recover dropped Jeffrey messages — threads or standalone messages that got no response within 30 min. Use when Jeffrey asks about missed messages, the script reports drops, or you need to understand why a message was unanswered. Includes the 3-article redrive-reply recipe (MCP mail bot identity, mcp-mail-ack-log entry, skill-gotcha patch) for replying to mcp_agent_mail's dropped-thread followups."
+description: "Diagnose and recover dropped Jeffrey messages — threads or standalone messages that got no response within 30 min. Use when Jeffrey asks about missed messages, the script reports drops, the followup cron is silently producing actioned=0 every tick (bot removed from channel — see references/silent-cron-not-in-channel.md), or you need to understand why a message was unanswered. Includes the 3-article redrive-reply recipe for replying to mcp_agent_mail's dropped-thread followups."
 type: skill
 ---
 
@@ -81,6 +81,48 @@ Verified 2026-06-25, campaign `btF3Nu4mqQRTVLG6F7tu`:
 - **Jeffrey says "computer crashed" / "find dropped threads" / "redrive top N" / "use my identity"** (added 2026-06-22) — bulk batch redrive across all actionable threads in the lookback window. Use `references/top-10-redrive-ranking-2026-06-19.md` "Edge cases → Computer crash / bulk redrive" + audit-lock bypass pattern; reply shape per thread follows `references/2026-06-21-redrive-reply-mcp-mail-bot.md`. Identity: default MCP mail bot, OR Jeffrey's own (`xoxp` user token from `~/.bashrc` → `SLACK_MCP_XOXP_TOKEN`) if explicitly requested.
 - **Jeffrey says "redrive dropped threads"** (added 2026-06-25) — ad-hoc redrive, lookback = last 60 min only. Scan log + in-flight pending. Reply per thread with permalink + classification + verdict + 2-4 next-step options. Do NOT do a full-log sweep.
 
+## When the cron LOOKS fine but the script + plist template were never wired together — orphaned plist (CRITICAL, added 2026-07-20)
+
+If the dropped-thread story isn't "cron runs, Slack API rejects" — it's **"no cron runs at all because the plist never left `~/.hermes/launchd/`"**, you are looking at an **orphaned plist template**, the install-script equivalent of a deployment that "succeeded" in git but never produced a live service.
+
+**Symptom markers** (verified 2026-07-20, `C0AH3RY3DK6/1784548844.491489`, the 9h-silent Dice Audit thread):
+
+- The script exists at `~/.hermes/scripts/<name>.sh`, is executable, and `bash -n` parses cleanly.
+- The plist template exists at `~/.hermes/launchd/<name>.plist.template` (or `~/.hermes/launchd/<name>.plist`).
+- **`launchctl list | grep <label>` returns no row.** No row in `~/Library/LaunchAgents/`. The cron simply does not exist at the launchd level.
+- Caller says "why aren't you replying in this thread?" / "the bot looks silent" / "is the cron running?" — and the user is RIGHT: there is no agent in the loop because there is no cron.
+- Sibling scripts that DID get installed run fine (e.g. `slack-thread-roadmap-report`, `slack-thread-auto-park`), so it's not a system-wide launchd problem — it's one specific orphan.
+
+**3-step diagnostic** (do these in order before assuming anything else):
+
+1. **Confirm the plist is not loaded**: `ls ~/Library/LaunchAgents/ | grep <name>` and `launchctl list | grep <label>`. If both empty → orphan confirmed.
+2. **Confirm the install script does NOT reference the template**: `grep -nE '<name>|<label>' ~/.hermes/scripts/install-hermes-scheduled-jobs.sh`. Empty result → install script doesn't know about this template, so no `launchctl load` was ever issued.
+3. **Confirm the script itself works in isolation**: `DRY_RUN=1 bash ~/.hermes/scripts/<name>.sh` (every well-written cron script supports a `DRY_RUN=1` env-var path that prints the prompt without exec'ing the LLM) → expect a "DRY_RUN prompt: ..." line.
+
+**Fix the orphan (3 steps, in order)**:
+
+1. **Edit `install-hermes-scheduled-jobs.sh`** to enumerate the new template (sibling templates are already there — copy a working block and substitute the label + Program path).
+2. **Deploy the plist manually for now**: `launchctl load ~/Library/LaunchAgents/<name>.plist` (or copy the template → fill placeholders → drop into `~/Library/LaunchAgents/`).
+3. **Add a verify step** — `~/.hermes/scripts/install-hermes-scheduled-jobs.sh` should end with `launchctl list | grep <label>` so future installs catch orphans immediately.
+
+**Why this happens** (root-cause class):
+
+- A developer (or prior agent) wrote `~/.hermes/scripts/<name>.sh` + `~/.hermes/launchd/<name>.plist.template` in the same PR as the auto-reply mechanism — but `install-hermes-scheduled-jobs.sh` is an enumeration, not a directory walk. If the template isn't enumerated, the install loop never sees it.
+- The `~/.hermes/scripts/thread-reply-nudge.sh` line-2 path-resolution (`resolve_nudge_channels`) makes the prompt-content depend on `~/.hermes/config.yaml`'s `channels.slack.channels` map — so even if the script ran, it would silently degrade to a hardcoded fallback channel. Two layers of failure to verify, not one.
+- Bead `rev-fvv22` captured the structural gap as a 1-pager; tag any new orphan follow-up the same way so the install-script gap eventually becomes auditable.
+
+**Anti-pattern:** trying to "just `launchctl load` the template directly" without also patching `install-hermes-scheduled-jobs.sh`. The next deploy or worktree refresh will silently drop the plist again, and you'll re-discover the same 9h-silence 4-6 weeks later. Always patch BOTH the install script AND load the plist in the same turn.
+
+See `references/orphaned-plist-template-2026-07-20.md` for the full transcript (the Dice Audit thread 9h silence, the bash output of `launchctl list` finding no row, the `grep` of `install-hermes-scheduled-jobs.sh` returning empty, the `DRY_RUN=1` confirmation, and the bead `rev-fvv22` commit).
+
+## When the cron is healthy but produces nothing — bot-removed-from-channel (CRITICAL)
+
+If `dropped-thread-followup.sh` reports `actioned=0 skipped=0` for multiple ticks while launchd AND the watcher-of-watchers both say "ok", the script is healthy but the bot may have lost channel membership. This is **silent multi-hour crash** — the cron runs perfectly, Slack returns `not_in_channel`, the script's `2>/dev/null || return 1` path swallows the actual error, and the watcher reports green because the launchd job IS running.
+
+**Full diagnostic recipe + 3-layer durable fix + auto-rejoin snippet:** [`references/silent-cron-not-in-channel.md`](references/silent-cron-not-in-channel.md).
+
+Trigger phrases: "we crashed", "redrive", "why are dropped threads piling up", "the followup cron isn't doing anything", "actioned=0 every tick", "Failed to fetch threads for ..." in logs, "is the bot still in <channel>".
+
 ## Diagnosis flow (high level)
 
 1. **Read the log:** `grep "ESCALATED + GAVE UP" ~/.hermes/logs/dropped-thread-followup.log | grep "$(date +%Y-%m-%d)"` — find today's escalated threads.
@@ -88,6 +130,21 @@ Verified 2026-06-25, campaign `btF3Nu4mqQRTVLG6F7tu`:
 3. **Classify:** false-positive (work landed) vs genuine (work incomplete). The classification table is in `references/daily-escalation-thread-reply-2026-06-20.md` (it generalizes to any escalation).
 4. **Reply with the 3-article recipe** above for redrive scenarios, OR the daily-summary format from `references/daily-escalation-thread-reply-2026-06-20.md` for daily escalations.
 5. **Log the ack** in `~/.hermes_prod/memory/mcp-mail-ack-log.md` per the `mcp-mail-ack` COMMIT in SOUL.md.
+
+## When a fresh session opens with "why did you miss this?" — the candid-acknowledgment + parallel-evidence recipe (added 2026-07-28)
+
+A specific common shape: the user posts an investigation request (e.g. `/repro <url>`) into a Slack channel, *no agent session picks it up before the session ends*, then the NEXT session opens with the user's reply *"why did you miss this?"*. The dropped-thread cron only catches replies that *follow* a bot message; pure operator posts with no bot reply in the lookback window don't get an automated nudge. **Verified 2026-07-28, `C0BDEAJH8PK/1785197466.704939`** (campaign `FsiyESY987DF2lfgolCI`, `/repro` posted 00:11:06Z, missed until user pushback).
+
+The right shape is NOT to apologize and stop, and NOT to start a fresh diagnostic cold. The right shape:
+
+1. **First reply turn: candid acknowledgment + parallel-evidence invocation.** Do NOT narrate uncertainty about the drop ("it seems like I missed…"). State the failure mode directly: *"your `/repro` arrived in a session that was already closed by then. No agent picked it up between then and this turn. That's a dropped thread, not a bad diagnosis."* Then in the SAME turn fire the static-evidence tool calls in parallel (export download, github search, code-symbol grep, BQ query, etc.). This is the dual benefit: candidness signals competence to the user, and parallel work turns what could be a 6-turn investigation into a 1-turn diagnostic. **Anti-pattern:** "let me look into this" + nothing for 4 turns.
+2. **Reconcile via existing static-evidence recipes BEFORE asking any clarifying question.** If the URL points at a your-project.com campaign, the recipe is `repro` skill § "Bug phenotype capture (Step 0.75)" → 3 static-evidence greps (code-symbol / prior-export / sibling-issue). The `references/phenotype-lock-static-evidence.md` and `references/static-evidence-sufficient-no-live-turn.md` recipes both fire here. For non-repro workflows the same principle holds: read, grep, fetch in parallel — only ask a question if all paths returned ambiguous.
+3. **Post a verdict-shaped reply with PROOF blocks** per the durable-fix shape: (a) failure pattern (root-cause class), (b) static-evidence findings (verbatim export quotes + state-field reads + code-symbol hits + sibling issue/PR links), (c) verdict branch ("not a repro — intentional routing" OR "real bug — fix shape is X"), (d) one clarifying question only if verdict depends on operator context the agent can't observe (e.g. real-world timestamp of the live-combat turn vs in-game clock). No blocking menus. **Verified verdict on the 2026-07-28 case:** PR #8022 (mid-battle turn-handoff anchors) + PR #8490 (combat scope classifier) already on `origin/main`; `combat_state.in_combat=False` is the EXPECTED state when combat has ended; the LLM itself acknowledged at scene 223 ("manually toggled this to true") — verdict: intentional routing + LLM-internal fix landed at scene 224 (3 attack rolls in proper CombatAgent format).
+4. **Arm one-time follow-up cron in the SAME reply.** `cronjob action=create schedule="20m" deliver="slack:<chan>:<thread_ts>" repeat=1 name="<topic> /repro followup"` with a self-cancel clause: `gh pr view <N> --json state` returns MERGED/CLOSED OR 24h elapses → `cronjob action=remove job_id=<THIS_ID>`. Without the cron, a fresh drop on the same thread will repeat the failure.
+
+**Anti-pattern: blocking menu after parallel-evidence.** If after running the static-evidence recipe you can already classify the case ("not a repro" / "fix already merged" / "needs live evidence I can't obtain"), post the verdict + ONE targeted clarifying question if any. Don't post A/B/C/D options. Verified #8528 user pushback verbatim: *"Read the actual raw LLM request in BQ did the LLM even see the directive for scaling the equipment?"* — that complaint targets a menu posted BEFORE the BQ query returned.
+
+**Hard rule:** every reply in this recovery shape MUST include a `🧠 Memories used: [...]` line if the first tool call was `session_search` or `skill_view`. SOUL.md `## COMMIT: ms-on-new-task` enforces this for non-trivial tasks; a "why did you miss" recovery is non-trivial (multi-tool investigation).
 
 ## Operator contract (harness clarity)
 

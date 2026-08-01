@@ -168,9 +168,9 @@ class TestScopeGuardrail(unittest.TestCase):
         self.assertIn("arXiv:2606.06324", text)
         # Working classes still present.
         for cls in (
-            "mid-task-clarification-freeze",
+            "mid-ta[REDACTED_OPENAI_KEY]",
             "local-commit-without-PR",
-            "task-correction-pivot-refused",
+            "ta[REDACTED_OPENAI_KEY]",
             "capable-didn't-execute",
         ):
             self.assertIn(cls, text, f"Phase 0 missing failure class: {cls}")

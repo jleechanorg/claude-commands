@@ -28,6 +28,37 @@ tags: [slack, audit, roadmap, worldarchitect, pr-merge, decisions, automation]
 
 ## Pipeline (deterministic; LLM only for classification + per-thread /nextsteps)
 
+### Step 0 — Tool availability pre-check (mandatory, added 2026-07-28 inline-session meta-failure)
+
+Before any pipeline step, verify the Slack MCP tools are reachable in this session. The skill has TWO invocation surfaces with different auth contexts:
+
+- **Cron-launched** (launchd `ai.hermes.schedule.roadmap-audit` at 9am/5pm PT): Hermes canonical Slack bot (`U0AEZC7RX1Q`) tokens ARE authed. `mcp__slack__conversations_history`, `mcp__slack__conversations_replies`, and `chat.postMessage` all work. Steps 2-4 + 8 run as documented.
+- **Inline** (user types `/roadmap` in a Slack DM with the operator): Hermes canonical bot tokens are `invalid_auth`. Only the `mcp_agent_mail` identity (`U0A4G7LDJ4R`) is authed, and it is cross-workspace-scoped so it CANNOT read operator channels or post to them. NEITHER `mcp__slack__*` tools NOR `chat.postMessage` curl-fallback work.
+
+**Inline-session detection recipe (run BEFORE Step 2):**
+
+```bash
+# 1. Test Slack auth: which bot identity is authed in THIS session?
+curl -fsS -X POST "https://slack.com/api/auth.test" \
+  -H "Authorization: Bearer ${HERMES_SLACK_BOT_TOKEN:-$(printenv SLACK_USER_TOKEN)}" 2>&1
+# If ok=false with error=invalid_auth → inline-session, Hermes-bot offline
+# If ok=true and user_id=B0A3MS7G08P (mcp_agent_mail) → cross-workspace fallback only
+
+# 2. Test MCP tool reachability: if `mcp__slack__conversations_history` is in tool list,
+#    cron-context; if NOT, inline-context (Slack MCP is bound to Hermes-bot identity)
+```
+
+**Inline-session degradation contract:**
+
+When Slack MCP is unavailable (Steps 2-4 + 8 cannot run):
+- **Skip** Steps 2-4 (Slack thread classification). Mark report header with `**Coverage caveat**` block stating which steps were skipped + the `auth.test` evidence.
+- **Still run** Steps 1, 5, 6, 7 (window resolve, PR inventory via `gh api graphql search(...)`, report build, push to roadmap repo). These are pure-gh + git and work in any session.
+- **Carry over** § C per-thread analysis from the most recent cron-launched report (read `reports/<latest-timestamp>-roadmap-report.md` and pull items still marked `pending` / `needs-human-decision` / `STUCK`).
+- **Mark § A explicitly** as `Partial audit — Slack thread sweep NOT executed this session`. Do NOT let § B / § D look authoritative without this banner.
+- **Step 8 (post URL back to thread):** Replace with `inline-fallback` — emit the report URL + 4-section Slack-native reply in the assistant channel (which this Hermes session IS the user's reply channel), and surface a `POST-TO-CURRENT-THREAD` trigger for when the Hermes-bot identity is back. Do NOT silently drop the URL.
+
+Bug-ref: 2026-07-28 18:30Z inline `/roadmap` invocation in `C09GRLXF9GR` thread `1785284642.327189`. Verified: `auth.test → {"ok":false,"error":"invalid_auth"}` for `HERMES_SLACK_BOT_TOKEN`; only `mcp_agent_mail` identity authed; `mcp__slack__conversations_history` NOT in session tool list. Full repro + diagnostic transcripts in `references/inline-session-slack-mcp-meta-failure-2026-07-28.md`.
+
 1. **Resolve the audit window** — now minus `window_hours`, formatted ISO-8601 UTC.
 2. **Pull thread history** — for each `channel_id` in scope (configured in `references/scoped-channels.txt`):
    - `mcp__slack__conversations_history(channel_id, limit=N)` (cursor-paginate if needed)
@@ -51,7 +82,7 @@ classified `C0AH3RY3DK6 / 1782335045` (page-load cold-start, 28-44s on /) as
 
 ```bash
 # Pull open issues from each active repo in scope
-for repo in $GITHUB_REPOSITORY jleechanorg/agent-orchestrator jleechanorg/jleechanclaw; do
+for repo in $GITHUB_REPOSITORY jleechanorg/agent-orchestrator-ts jleechanorg/jleechanclaw; do
   gh issue list --repo "$repo" --state open --limit 100 \
     --json number,title,body,labels,createdAt,updatedAt \
     > /tmp/issues-${repo//\//_}.json
@@ -109,13 +140,32 @@ appearing as `Defer (in-flight)` for at least 3 consecutive reports
 `2026-06-26-1856`, `2026-06-26-1405`, `2026-06-27-0228` all listed it as
 Defer).
 
-#### 2.5.e — "Bot said PR is ready" — verify before marking finished
+5. **"Bot said PR is ready" — verify before marking finished**
 
-If a bot reply contains "✅", "done", "merged", "shipped", "filed", or
-"PUSHED" without a verifiable artifact (commit SHA, PR URL, issue URL,
-or `git show` output), treat the claim as unverified and run the
-4-check pre-flight gate (file/config → CLI tool → daemon health →
-git/deploy state) before accepting it.
+   If a bot reply contains "✅", "done", "merged", "shipped", "filed",
+   or "PUSHED" without a verifiable artifact (commit SHA, PR URL, issue URL,
+   or `git show` output), treat the claim as unverified and run the
+   4-check pre-flight gate (file/config → CLI tool → daemon health →
+   git/deploy state) before accepting it.
+
+#### 2.5.f — Bashrc-sourced secret dual-probe gate (added 2026-07-28)
+
+Before declaring "Slack/GH/Slack token is broken → this /roadmap run is partial":
+
+```bash
+# Terminal probe (sources bashrc)
+bash -c "source ~/.bashrc 2>/dev/null; \
+  echo \"HERMES_SLACK_BOT_TOKEN=\${HERMES_SLACK_BOT_TOKEN:+set(\${#HERMES_SLACK_BOT_TOKEN})}\"; \
+  echo \"GH_TOKEN=\${GH_TOKEN:+set}\""
+```
+
+```python
+# execute_code probe (does NOT source bashrc)
+import os
+print({k: "SET" if os.environ.get(k) else "MISSING" for k in ("HERMES_SLACK_BOT_TOKEN","GH_TOKEN","MINIMAX_API_KEY","ANTHROPIC_API_KEY")})
+```
+
+If terminal reports SET but execute_code reports MISSING, the cause is **execute_code env-isolation**, NOT a broken token — fall through to `bash -c "source ~/.bashrc && curl -fsS ..."` for live Slack/GH calls instead of declaring the run blocked. Same family as `bashrc-profile-xapp-drift-blocks-launchd` but for inline sessions. Bug-ref: 2026-07-28 inline `/roadmap` false-blocked on Slack with `"invalid_auth"` after one execute_code probe; bashrc-sourced bash showed token ok:true across all 4 channels.
 
 3. **Classify each thread** into one of:
    - **finished** — last message ≥ 24h ago with no unresolved question, OR
@@ -329,7 +379,7 @@ The launchd wrapper `scripts/roadmap-audit.sh` runs the cmux enumeration as part
 
 ## Pitfalls (verified)
 
-- **Candidate-list tier classification trap (added 2026-07-07, $GITHUB_REPOSITORY 32-PR /roadmap sweep).** When the /roadmap report's § B "PR Auto-Merge Candidates" table lists PRs by title keywords (`ci:`, `docs:`, `feat(telemetry)`, `chore(`), the classification is WRONG. Title keywords are not authoritative. A `chore(Dockerfile)` PR can touch `$PROJECT_ROOT/Dockerfile` and be PROD; a `feat(observability): BQ rate-limit telemetry` PR can include `$PROJECT_ROOT/bq_logging.py` and be PROD. Verified: 32 PRs from title keywords → 17 had ≥1 file under `$PROJECT_ROOT/` or `testing_*/` after live `gh pr view --json files` re-classification. The authoritative classifier is the project's `PROD_PATH_PREFIXES` tuple (e.g. `($PROJECT_ROOT/, testing_mcp/, testing_ui/)` in `scripts/green_merge_nonprod.py`). The § B table MUST show post-classification numbers: "32 candidates from keywords → 14 strict-non-prod → 1 lite-green-ready at this moment." Honest framing surfaces the user's intuition-vs-policy divergence, not the misleading "we tried 32, all blocked." Companion reference: `finish-the-job/references/nonprod-sweep-candidate-filtering-2026-07-07.md`. Lesson: any § B candidate list MUST be re-checked against `gh pr view --json files` filtered by the project's tier rule BEFORE being presented to the user.
+- **Candidate-list tier classification trap (added 2026-07-07, $GITHUB_REPOSITORY 32-PR /roadmap sweep; verified n=51 on 2026-07-09 01:05Z).** When the /roadmap report's § B "PR Auto-Merge Candidates" table lists PRs by title keywords (`ci:`, `docs:`, `feat(telemetry)`, `chore(`), the classification is WRONG. Title keywords are not authoritative. A `chore(Dockerfile)` PR can touch `$PROJECT_ROOT/Dockerfile` and be PROD; a `feat(observability): BQ rate-limit telemetry` PR can include `$PROJECT_ROOT/bq_logging.py` and be PROD. Verified 2026-07-07: 32 PRs from title keywords → 17 had ≥1 file under `$PROJECT_ROOT/` or `testing_*/` after live `gh pr view --json files` re-classification. Verified 2026-07-09 01:05Z: 51 WA drafts title-keyword-classified → actual 37 PROD + 14 NON-PROD by file-path audit. The authoritative classifier is the project's `PROD_PATH_PREFIXES` tuple (e.g. `($PROJECT_ROOT/, testing_mcp/, testing_ui/, prompts/, $PROJECT_ROOT/frontend_v1/, $PROJECT_ROOT/frontend_v2/)` in `scripts/green_merge_nonprod.py`). The § B table MUST show post-classification numbers: "51 drafts from keywords → 14 strict-non-prod → 8 lite-green-ready at this moment." Honest framing surfaces the user's intuition-vs-policy divergence, not the misleading "we tried 51, all blocked." Companion reference: `references/draft-pr-tier-classification-recipe-2026-07-09.md` (the verified Python loop with pitfalls). The sibling skill `pr-triage-and-next-steps` carries the executable recipe; this skill enforces it must be run. Lesson: any § B candidate list MUST be re-checked against `gh pr view --json files` filtered by the project's tier rule BEFORE being presented to the user.
 - **`gh repo create` requires the workspace to exist.** If the target repo is missing, `gh repo create <owner>/<name> --public --confirm` creates it. Use HTTPS URL on first push (SSH key may not be configured for new repos).
 - **Slack `send_message` may fail for cross-channel posts** — fallback to direct `chat.postMessage` API with `thread_ts` + `mrkdwn=true`. **Verified misroute bypass (2026-06-26):** when the MCP helper returns `"Cross-channel Slack misroute prevented: no bot token configured for workspace 'T09FXQ4LCQP'"` but the token IS for T09FXQ4LCQP (`curl -X POST https://slack.com/api/auth.test -H "Authorization: Bearer $HERMES_SLACK_BOT_TOKEN"` returns `"team":"$USER AI","team_id":"T09FXQ4LCQP"`), use Python + urllib directly. Full recipe: `references/slack-post-mcp-bypass.md`.
 - **Slack gateway enforces ~4000-char split** — even though `chat.postMessage` accepts 40k, the gateway/MCP layer splits at ~4000 chars into 2 messages. Trim the reply or post as 2 deliberately-partitioned messages. Use plain `[text](url)` syntax (Slack native), NOT `<url|label>` (gets mangled into `___URL_PLACEHOLDER____`). `~` in file paths gets stripped (use `$HOME/.hermes` full path).
@@ -343,8 +393,18 @@ The launchd wrapper `scripts/roadmap-audit.sh` runs the cmux enumeration as part
 - **`find $HOME` without `-maxdepth` times out at 180s+** — scope with `-maxdepth 4` and a specific name pattern (e.g., `find ~ -maxdepth 4 -name "cave*"`). Verified 2026-06-26 19:19 PT.
 - **Hermes resolver paths are `~/.hermes`, `~/.hermes_prod`, `~/.claude`, `~/.agents`** — broken symlinks in `~/.qwen`, `~/.openclaw`, etc. are harmless and out of scope for cleanup tasks. Verified 2026-06-26 19:19 PT (7 dangling caveman symlinks in `~/.qwen/skills/` survived the commit `2e75634` cleanup and don't need touching).
 - **Iteration-budget three-field trap — DO NOT project a Hermes number onto AO.** When a report mentions "iteration budget" / "max iterations" / "agent loops", there are TWO real fields (`agent.max_turns=1000`, `delegation.max_iterations=500` in `~/.hermes_prod/config.yaml`) and ONE non-existent one (AO worker iteration cap — does not exist in `agent-orchestrator.yaml` or in `ao spawn --help`). Conflating them produces wrong numbers in the report. Verified 2026-06-27 02:35 PT — I wrote "AO worker iteration cap of 500" as a real field, mixing Hermes's delegation budget with AO's nonexistent one. Always grep before quoting: `grep -nE "max_turns|max_iterations" ~/.hermes_prod/config.yaml` (real) and `grep -nE "max_iter|max_loop|iter_cap" ~/.hermes_prod/agent-orchestrator.yaml` (should be empty). Full recipe + verbatim values + report-shape rules: `references/iteration-budget-three-field-trap-2026-06-27.md`.
+- **Prior Hermes reply in same thread may be wrong — supersede explicitly (added 2026-07-09 01:05Z).** Verified pattern: when a /roadmap invocation lands in a Slack thread that already has a Hermes reply from <5 min earlier (e.g. a sibling session, a sibling cron tick, or a `delegated_task` that finished seconds before the parent session reply), the prior reply may have stale counts (e.g. 11 drafts instead of 51), title-keyword-classified tiers, or a multi-option "Awaiting your pick on which PRs to drive" menu (forbidden by SOUL.md `no-pick-one-menus`). The Step 2.5.d STUCK alarm does not catch this because the prior reply is not a thread; it's a prior turn in the same thread. **Action:** the /roadmap report's § J must explicitly supersede the prior reply with a one-liner ("Supersedes the 01:04Z partial reply — that one had 11 drafts; correct is 51 after `gh api ...?per_page=100 --jq` pass") and the Slack reply must start with the corrected counts. Lesson: read the thread's last 3 replies via `mcp__slack__conversations_replies(channel_id, thread_ts, limit=5)` BEFORE running the audit; if any reply is from a Hermes sibling and is <10 min old, expect to supersede it.
+
 - **`ao spawn` enforces single-spawn-per-project serialization.** Verified 2026-07-05 02:50Z — when 4 parallel `ao spawn -p jleechanclaw --claim-pr <N>` calls are issued simultaneously, ALL but one return immediately with `✗ Another ao spawn is in progress for project "jleechanclaw" (PID <X>, started <ts>). Wait for it to finish.` and exit code 1. The daemon has a single in-flight spawn slot per project. Implication for Step 8.5 #1: do NOT fan out `ao spawn` calls in parallel within a subagent — sequence them with a brief wait + `ao session ls` verification between each. Verified spawn cadence: ~5–15 s for the child `ao` process to fork, create the session row, and claim the PR. Full recipe + worktree collision recovery: `references/ao-spawn-serialization-2026-07-05.md`.
 - **`ao spawn` bash parent shell hangs after child exits — kill the parent, not the child.** Verified 2026-07-05 02:50Z. After the child `ao` process forks the AO worker (tmux session + worktree + session row all created), the bash parent shell waits indefinitely on the tmux attach lifecycle — never returns to the prompt even though the child has long since exited. Symptom: `terminal(foreground)` times out at 30 s / 180 s / 600 s with empty `output_preview`, but `ao session ls` shows the session row already claimed. Recovery: `kill <bash-pid>` (NOT the tmux session — that's the worker's home); verify with `ao session ls` that the new session row is still present; spawn the next PR. The 600 s delegation budget in `delegate_task` is insufficient for the full § B + § E + § F pipeline when spawning 7+ AO workers — budget subagent calls by spawn-count, not by wall-time. See `references/ao-spawn-serialization-2026-07-05.md`.
+- **Bulk PR pull — prefer `gh api graphql search(...)` over per-PR `gh pr view --json` (added 2026-07-24 12:40Z).** When sweeping WA at scale (50–100 PRs) for Step 5, a loop of `gh pr view N --repo ... --json <fields>` returned empty bodies (`Expecting value: line 1 column 1 (char 0)`) for 8/8 PRs in a row, almost certainly an undeclared per-token rate limit on the `--json` endpoint. The single-shot `gh api graphql -f query='{ prs: search(query: "repo:<owner>/<repo> is:pr is:open", type: ISSUE, first: 50) { pageInfo { endCursor hasNextPage } nodes { ... on PullRequest { number title mergeable isDraft headRefName additions deletions changedFiles author { login } } } } }'` returned 50 PRs in ~3 s with no throttling. Page with `after: $cursor` (cursor string from `pageInfo.endCursor`) for the second page. For the full PR inventory step (Step 5), default to graphql `search()` first; fall back to per-PR `--json` only when you need fields the PullRequest fragment doesn't expose (`statusCheckRollup`, `labels`, `comments`, `reviewDecision`). Saves ~10× the wall-time vs sequential `--json` and avoids the empty-body failure mode.
+- **`~/roadmap` push sequence when local has uncommitted WIP + origin is ahead (added 2026-07-24 12:40Z).** Verified: `git push origin HEAD:main` was rejected with `Updates were rejected because the remote contains work that you do not have locally` because the local `~/roadmap` had (a) prior user's uncommitted edits + untracked WIP files (20 files, +173/-1821 vs origin/main) AND (b) origin/main had advanced 1 commit since the local fork. The clean sequence is: `git stash push -m 'pre-roadmap-<ts>' --include-untracked` → `git fetch origin` → `git rebase origin/main` → `git push origin HEAD:main` → `git stash pop` (resolves cleanly; leftover `UU` conflicts on user's own WIP like `.beads/issues.jsonl` are theirs to resolve, NOT ours). `git stash push --include-untracked -- <file1> <file2>` stashes ONLY named files — useful when you want to commit just the report while preserving user WIP. After push, always verify `git rev-parse HEAD origin/main` returns the same SHA — if they differ, the push didn't land (rare but happens on pre-receive hook rejections from `git secret guard`). The skill's Step 7 currently says only `git pull --rebase origin main` — the new lesson is the WIP-stash dance around the rebase, which is the more common real-world shape.
+
+- **Inline-session Slack MCP unavailable — silent partial audit trap (added 2026-07-28).** When the user types `/roadmap` in their operator DM, this session does NOT have `mcp__slack__conversations_history`/`conversations_replies`/`chat.postMessage` reachable (only the `mcp_agent_mail` identity is authed, cross-workspace-scoped). Steps 2-4 + 8 of the skill pipeline cannot run. The trap is that Steps 1, 5, 6, 7 CAN run (window resolve, `gh api graphql` PR inventory, report build, push to roadmap repo) — and the produced report looks authoritative because § A/B/D/E look like real audit output. **The fix is Step 0 above**: pre-check tool availability, then either (a) defer to the next cron tick with `CRON-NOW` trigger, OR (b) emit a `**Coverage caveat**` banner in § A that explicitly states which steps were skipped + carry-over source. **Verified anti-pattern**: producing a polished report without the banner is exactly the silent-partial-audit shape that Step 2.5 was supposed to prevent for thread classification. The Step 2.5 fixes address classification logic; this fix addresses tool availability. Both are required for a real /roadmap run. Full repro + diagnostic recipe at `references/inline-session-slack-mcp-meta-failure-2026-07-28.md`. **Also verified**: the report-push step itself DOES work in inline sessions (`git push` over `gh auth token` is independent of Slack bot identity), so the push-to-roadmap half of the pipeline is fine — only the thread-read and reply-post halves are blocked. The CRON-NOW trigger (`launchctl kickstart -k gui/501/ai.hermes.schedule.roadmap-audit`) is the recovery path because cron-launched runs have the Hermes-bot identity and CAN do Steps 2-4 + 8.
+
+- **`mergeStateStatus=UNSTABLE` vs `CLEAN` for `APPROVED + MERGEABLE` PRs (verified 2026-07-28 on dark-factory#252).** Verified live: `gh pr view 252 --repo jleechanorg/dark-factory --json mergeable,reviewDecision,mergeStateStatus` returned `{"mergeable":"MERGEABLE","reviewDecision":"APPROVED","mergeStateStatus":"UNSTABLE"}`. UNSTABLE means the GitHub UI merge button is disabled (e.g. required status checks still pending, branch protection requires admin, or merge commit config mismatch), but the **API merge endpoint accepts the request** via `curl -X PUT /repos/{owner}/{repo}/pulls/{N}/merge` with the bot token. Pattern verified in memory: `tests/scripts/test_*.sh` pre-existing flake was merged this way on `dark-factory` repo. **Implication for § B "MERGEABLE + APPROVED" candidates**: every entry MUST show `mergeStateStatus` explicitly. If UNSTABLE, the § B table MUST mark it `UNSTABLE (API merge required)` and the § E trigger must use the API path, not `gh pr merge`. If CLEAN, `gh pr merge --squash --delete-branch` is fine.
+
+- **Private roadmap repo blocks anonymous URL preview (verified 2026-07-28 on `jleechanorg/roadmap`).** After pushing a report commit to a private repo, anonymous `curl https://github.com/.../blob/main/<file>` and `curl https://raw.githubusercontent.com/.../raw/main/<file>` both return 404 even though `git ls-remote origin main` and `gh api repos/.../commits/main` (with the authed token) confirm the commit is on `refs/heads/main`. Verification recipe: (1) `git ls-remote origin main` must show the new SHA. (2) `gh api repos/<owner>/<repo>/commits/main --jq .sha` must match. (3) The 404 on `github.com/.../blob/...` is EXPECTED for private repos to anonymous viewers; the authed `gh api repos/<owner>/<repo>/contents/<path>?ref=<sha>` call returns the contents. Implication for the § I verification block: include BOTH `git ls-remote` AND `gh api repos/.../commits/main` output as proof of push; the github.com URL alone is NOT sufficient evidence when the repo is private.
 
 ## Deferred-decision advisor pattern (Codex advisor)
 
@@ -456,7 +516,50 @@ The report's § E exposes these for the user to ack:
 - `START-<Y>` — set up a sub-skill/infra
 - `MERGE APPROVED` — batch-merge all MERGEABLE PRs
 
-## How the cron calls this skill
+## Per-topic /roadmap push pattern (added 2026-07-13, verified)
+
+When the user asks for "an overall /roadmap doc + individual /roadmap MDs for each topic, push to origin main, link by github.com URL, report on background/context/proposals/refs/apply-to-setup" — this is a *family* of reports, not the standard Slack-audit. The verified pattern from the 2026-07-13 AIEWF run (commit `44f73a2` on `jleechanorg/roadmap`):
+
+**1. Decision: per-topic vs single report.** Always emit per-topic when the user says "for each topic." Pattern: `01-overview-parent.md` + `02-…11-<topic>.md` (one per top-N) + `99-personal-<synthesis>.md`.
+
+**2. Per-doc shape (every topic doc must have all five sections):**
+- Background — what was said / who said it
+- Context — why it matters in the field
+- What each person proposed — table or list of proposals, attributed
+- References — verified source URLs (always hyperlinked per `pr-hyperlink.mdc`)
+- How it can be better applied to Jeffrey's setup — concrete 1-week deltas
+
+**3. Branch hygiene before push.** Local `~/roadmap` often has uncommitted work + untracked files + a divergence from origin/main. Sequence:
+```bash
+cd ~/roadmap && git status --short
+# If uncommitted / untracked files unrelated to this push:
+git stash push -m "pre-<topic>-push-<DATE>" --include-untracked -- <files...>
+git add <the files I'm committing>
+git commit -m "..."
+# If origin/main is ahead (the common case):
+git fetch origin
+git rebase origin/main   # fast-forward clean; never --force
+git push origin HEAD:main
+# Verify:
+git rev-parse origin/main HEAD   # both same SHA
+```
+
+**4. Reply shape (post-push).** Post the GitHub URLs in-thread with:
+- Tree URL (`/tree/main/...`) + Commit SHA URL
+- One line per topic doc with its URL (always `github.com/jleechanorg/<repo>/blob/main/<path>.md` per `pr-hyperlink.mdc`)
+- The `99-` personal synthesis summary inline
+- Gaps / things that couldn't be fully verified (Granola 401, missing Google Docs, etc.)
+- One short list of "what I can do next" — usually `granola auth` + AO dispatch + LinkedIn draft
+
+**5. Granola synthesis caveat.** When the user asks "look at sessions I attended and check my granola and google docs notes for top-N personal learnings" but Granola MCP returns `401 Unauthorized`, do not stall. Acknowledge the gap, use the meeting *titles* (from `granola meetings` list, which usually works even when transcript fetch doesn't) + cross-corroborate against `learnings-2026-07.md` + workshop materials in `~/projects/`. State the gap explicitly in `99-` and the Slack reply.
+
+**6. Pitfalls verified:**
+- Granola CLI's `granola meeting <short-id>` returns `Invalid uuid` because `meetings` list shows 8-char prefixes but the underlying MCP needs full UUIDs (and there's no CLI to surface them). See `granola-cli` SKILL.md MEETING ID FORMAT patch.
+- `git stash push --include-untracked -- <file1> <file2>...` stashes ONLY those files, leaving other uncommitted work intact. Useful when you want to commit just your topic docs while preserving the user's local WIP.
+- `git push origin HEAD:main` after a rebase is the cleanest fast-forward. If the remote has been pushed to since your fork, the rebase will replay your commits on top — verify with `git log --oneline origin/main -3` after.
+- The reply must include the GitHub URLs as full `https://github.com/...` links, not bare `/path/to/file.md` or `#NNN` references (per `pr-hyperlink.mdc`).
+
+How the cron calls this skill
 
 The launchd job (`ai.hermes.schedule.roadmap-audit`) runs `scripts/roadmap-audit.sh` at 9am and 5pm PT (Mon–Fri). The script:
 
@@ -478,3 +581,6 @@ The launchd job (`ai.hermes.schedule.roadmap-audit`) runs `scripts/roadmap-audit
 - `references/advisor-surface-deprecation-2026-07-05.md` — cmux workspace:30 advisor-codex surface is broken on dev-fork cmux (Pattern B: local Codex exec substitute). Detected 2026-07-05 /roadmap run, report SHA `8dcb44f`.
 - `references/ao-spawn-serialization-2026-07-05.md` — `ao spawn` enforces single-spawn-per-project serialization + bash parent shell hangs after child exits. Detected 2026-07-05 /roadmap run, recovery recipes for both pitfalls.
 - `references/missing-critical-tasks-meta-incident-2026-06-27.md` — the prior meta-incident that introduced Step 2.5; same "find a meta-failure, fix the skill, document the fix" pattern as the 2026-07-05 lessons.
+- `references/draft-pr-tier-classification-recipe-2026-07-09.md` — verified Python loop for tier-classifying every open draft by file-path (n=51, runtime ~30s). The executable fix for the 2026-07-07 candidate-list tier classification trap. Use BEFORE writing any § B / § D draft-PR table.
+- `references/inline-session-slack-mcp-meta-failure-2026-07-28.md` — verified Step 0 tool-availability pre-check + inline-session degradation contract. Detected 2026-07-28 18:30Z inline `/roadmap` invocation in `C09GRLXF9GR`. Includes `auth.test` diagnostic transcripts, `mcp__slack__*` tool-list absence proof, and the 5-item canonical-checklist for "is this inline-session degraded or full audit?".
+- Sibling skill `pr-triage-and-next-steps` (in `github/` category) carries the same recipe in its `## Tier classification` section. Both skills share the recipe; this skill owns the recurring-sweep + report flow, the sibling skill owns on-demand cross-repo pulls.

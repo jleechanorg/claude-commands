@@ -3,6 +3,104 @@ name: cmux-find-workspace-by-topic
 description: "Find the cmux workspace hosting a given topic (e.g. \"agy\", \"bq\", \"lvl\"), AND any meta-question about cmux workspace finding/steering confusion. Trigger phrases: \"find the cmux workspace for X\", \"which cmux tab is doing X\", \"find the [topic] workspace\", \"locate the X cmux workspace\", \"what cmux surface is on X\", \"w:misc - X\", \"improve hermes confusion with cmux workspace finding\", \"skillify cmux workspace routing\", \"audit cmux workflow\", \"review cmux skills\", \"hermes doesn't find the right workspace\". Solves the recurring confusion where the cmux shim points at a stale dev CLI / wrong socket and Hermes doesn't find the workspace that's actually in a different live session. Always start with the multi-socket probe + keyword grep — do NOT trust `cmux list-workspaces` from the default shim. Load this skill BEFORE any 'find a workspace by topic' task AND before any meta audit of cmux workflows (load cmux parent + cmux-mcp-server-options in the same chain)."
 ---
 
+## ⚠️ Submit Discipline (MANDATORY — read this before every cmux steer)
+
+`cmux send` does **NOT** press Enter. This is the #1 recurring cmux failure mode
+(verified 2026-07-16: user explicitly flagged "you always forget to send" after the
+fable iOS pivot bootstrap). The **4-step ritual** below is a hard contract for every
+send to a cmux surface. Skip ANY step and the message sits in the input buffer
+without ever reaching the agent.
+
+### The 4-step ritual
+
+```bash
+# STEP 1 — Type the text. OK response only proves socket acceptance, NOT submission.
+cmux send --workspace workspace:N --surface surface:M "your message"
+
+# STEP 2 — Press Enter. send does NOT auto-press Enter.
+cmux send-key --workspace workspace:N --surface surface:M enter
+
+# STEP 3 — Wait 5-15 seconds for the agent to start processing.
+sleep 8
+
+# STEP 4 — Verify with churning label (THE ONLY definitive proof).
+cmux capture-pane --workspace workspace:N --surface surface:M --lines 25
+# Look for one of:
+#   - "Working (Xs • esc to interrupt)"
+#   - "Forming… (Xs · thinking)"
+#   - "Precipitating… (Xs · ↓ tokens)"
+#   - "Brewed / Churned / Cooked for Xm"
+# If you see ANY active churning label → SUBMITTED.
+# If the text is still sitting at the ❯ prompt → NOT submitted, repeat step 2.
+# If "Stopped" / "Done" / nothing → no churn, investigate.
+```
+
+### ⚠️ Output Contract — typed text + terminal response (MANDATORY)
+
+Every reply that reports a `cmux send` action MUST include, in the same reply:
+
+1. **The exact text that was typed** — verbatim copy of the string passed to `cmux send`.
+2. **The cmux terminal response** — verbatim transcript of what `cmux capture-pane` /
+   `cmux read-screen` returned AFTER the `cmux send-key enter` settle window
+   (typically 5-15s). Specifically, the agent's first action after absorption.
+3. **Submission status** — explicit verdict: "submitted (churning label X)",
+   "not submitted (text still at ❯ prompt)", or "blocked (no churn, retried N times)".
+
+**Treat as not working until we see a response.** A reply that does NOT include
+both the typed text AND a terminal response is invalid evidence that the
+steer landed. The operator cannot distinguish a successful send from a failed
+send that left text in the input buffer.
+
+Canonical contract + echo-back template: `~/.hermes/skills/cmux/references/output-contract-mandatory.md`.
+
+### ⚠️ LLM-Provenance Caveat (MANDATORY footer)
+
+Every reply that quotes cmux output, terminal text, or agent actions produced
+by another LLM (the worker agent OR the assistant's own synthesis of agent
+output) MUST end with this verbatim footer:
+
+> *This was generated from another LLM and not the actual user, so feel free
+> to push back if you disagree and we can discuss.*
+
+Full caveat rules + scope: `~/.hermes/skills/cmux/references/output-contract-mandatory.md` § "LLM-Provenance Caveat".
+
+### Echo-back proof (MANDATORY)
+
+Every cmux steering action MUST be followed by an **echo-back proof** in the same
+turn or the immediate next turn to your operator (Slack thread, terminal reply,
+or whichever channel triggered the steer). The proof MUST follow the template
+in `~/.hermes/skills/cmux/references/output-contract-mandatory.md` and include
+the typed text + terminal response + submission status, not just the
+churning label.
+
+> ◀ sent to surface:55 (LEFT/claudec) at <HH:MM:SS PT> — 4-step ritual complete;
+> churning label "Forming… 9s · ↓ 4.9k tokens" confirmed via capture-pane.
+
+**Banned** (these are the failure modes the user keeps flagging):
+- "I sent the message" (no Enter proof)
+- "The agent should have received it" (no churning label)
+- `cmux send` with no follow-up `cmux send-key enter`
+- Sending to a surface that hasn't been focused (the global focus may be on a
+  different workspace; use the raw RPC `surface.focus` if needed)
+
+### Worktree-pointer strategy for long briefs
+
+For task briefs >200 chars (e.g. orchestrating iOS app pivot, multi-PR review),
+do NOT paste the full text into the input. Write the brief to a file in the
+agent's cwd (e.g. `.cmux-<task>-brief.md`) and send a 1-2 line pointer. This
+avoids the autocompleter contamination pitfall where shell-style tokens inside
+long text trigger tab completion mid-stream.
+
+### Canonical reference
+
+Full recipe + edge cases + the 2026-06-25 worked example live at:
+`~/.hermes/skills/cmux/references/send-submit-proof-2026-06-25.md`
+
+This rule was added 2026-07-16 after the fable iOS pivot bootstrap surfaced
+"you always forget to send" / "make sure you press submit and the work starts
+on the cmux input" (Slack ts 1784185650.528089). Apply it uniformly to every
+cmux-touching skill.
+
 # Find the cmux Workspace for a Topic
 
 The single most common cmux task from the gateway: user names a topic (`agy`, `bq logging`, `cost`, `mobile load`, etc.) and you need to find the cmux workspace hosting it. This is harder than it looks because **multiple live cmux sessions can coexist** (prod + dev), the `~/.local/bin/cmux` shim points at **one** of them, and the workspace you want is often in the other one.
@@ -118,3 +216,7 @@ If the label/content doesn't match: the topic might be in **another workspace wh
 - `cmux` (parent) — Unix socket / CLI reference, including the "Two cmux sessions" multi-session pattern and "Reading a Non-Focused Surface" focus-then-read recipe.
 - `cmux-terminal-review` — bulk terminal inventory (Healthy/Risky/Blocked digest). Use that for "what are all the terminals doing," not this skill.
 - `find-slack-thread-pr-for-request` — when the user references a topic in Slack history ("remember that agy work we did last week"), cross-reference Slack before concluding the work is gone.
+
+## Reference files (this skill)
+
+- `references/stale-askuserquestion-menu-clear-and-steer-2026-07-28.md` — when the agent is sitting at a stale 4-option AskUserQuestion blocking menu from a *prior* mission (and the menu's referenced PR is already merged / closed / terminal), use the **5-step clear-and-steer ritual**: read-screen to confirm menu state → `cmux send-key escape` → 3s settle → re-read to confirm empty `❯` → then the standard send→enter→verify. Esc is canonical over Enter because Enter on unselected menu picks the default option (often "Stop here"), which may not match the user's intent. Verified 2026-07-28, $GITHUB_REPOSITORY PR #8489 (w4/s80) — operator's steer to `/green` + `/er` + `/advice` succeeded after Esc cleared the stale PR #8328 menu.

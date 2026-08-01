@@ -106,7 +106,7 @@ class OptimizedCommandOutputTrimmer:
         ),
         "cerebras": re.compile(r"(Cerebras|🚀 SPEED|Token generation)", re.IGNORECASE),
         "orchestrate": re.compile(
-            r"(orchestration|tmux|task-agent-|Redis coordination)", re.IGNORECASE
+            r"(orchestration|tmux|ta[REDACTED_OPENAI_KEY]|Redis coordination)", re.IGNORECASE
         ),
     }
     HOOK_TOOL_NAMES = {"Edit", "Write", "MultiEdit"}

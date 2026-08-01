@@ -237,7 +237,7 @@ line that proves the source failed.
 
 **No new PR was opened.** The user was told: "The fix is already on origin/main (PR #619). I deployed it; alerts will stop on the next 5-min cycle."
 
-**Follow-up NOT in scope:** `ai.agento.health-guardian` in `jleechanorg/agent-orchestrator` checks `/tmp/hermes-watchdog.log` (wrong path) — separate repo, separate fix. Flagged in the Slack reply as a follow-up rather than bundled into the same work, because the user's directive was specifically about jleechanclaw.
+**Follow-up NOT in scope:** `ai.agento.health-guardian` in `jleechanorg/agent-orchestrator-ts` checks `/tmp/hermes-watchdog.log` (wrong path) — separate repo, separate fix. Flagged in the Slack reply as a follow-up rather than bundled into the same work, because the user's directive was specifically about jleechanclaw.
 
 ---
 

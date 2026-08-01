@@ -55,14 +55,14 @@ class TestSecretRedaction(unittest.TestCase):
 
     def test_redact_api_keys(self):
         """Test redaction of common API key patterns"""
-        text = "export API_KEY=sk-1234567890123456789012345"
+        text = "export API_KEY=[REDACTED_OPENAI_KEY]"
         result = _redact(text)
         self.assertIn("[REDACTED]", result)
-        self.assertNotIn("sk-1234567890123456789012345", result)
+        self.assertNotIn("[REDACTED_OPENAI_KEY]", result)
 
     def test_redact_jwt_tokens(self):
         """Test redaction of JWT-like tokens"""
-        text = "token eyJhbGciOiJIUzI1NiIsInR5cCI.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFt.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        text = "token [REDACTED_JWT_TOKEN]"
         result = _redact(text)
         self.assertIn("[REDACTED]", result)
 

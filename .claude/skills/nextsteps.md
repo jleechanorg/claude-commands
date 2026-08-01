@@ -1,56 +1,46 @@
 ---
 name: nextsteps
-description: Situational assessment, beads + roadmap sync after a work block; optional brief from user.
+description: "Default: update beads and ~/roadmap. Use --full for full situational assessment with memory sync, learnings, nextsteps doc, and GitHub issues."
 ---
 
-# /nextsteps — Situational Assessment & Roadmap Update
+# /nextsteps — Beads & Roadmap Update
 
-## When invoked
+## Default mode (no flags)
 
-1. **Gather context in parallel**
-   - `git log --oneline -10`
-   - `br list --status open` (or `bd` if project uses bd)
-   - `ls roadmap/` (or list `roadmap/README.md` recent section)
-   - Use any user-provided line after `/nextsteps` as extra context.
+**Gather context, then make updates** — beads and `~/roadmap` only.
 
-2. **Assess**
-   - Match recent commits to open beads; close or update status.
-   - Note gaps → new `br create` issues.
-   - Update `roadmap/README.md` **Recent activity (rolling)** with date + bullets.
+### 1. Gather context (parallel)
 
-3. **Execute**
-   - Prefer parallel tasks (subagents) for: beads updates, new issues, roadmap edits.
+- `git log --oneline -10` — recent commits
+- `br list --status open --limit 0` — open beads
+- `ls ~/roadmap/` and read `~/roadmap/README.md` recent section
+- Use any user-provided line after `/nextsteps` as extra context.
 
-4. **Report**
-   - IDs, paths changed, recommended next actions.
+### 2. Update beads
 
-## If `~/.claude/skills/nextsteps.md` is missing
+- Match recent commits to open beads; close or update status.
+- Note gaps → create new beads with `br create`.
+  ```bash
+  br create "<title>" --type task --priority 2
+  br update <id> --status <new_status>
+  ```
 
-This file is the protocol; keep it in user scope so `/nextsteps` is reproducible across repos.
-reate (parallel subagents)
-For each identified update, dispatch in parallel:
+### 3. Update `~/roadmap`
 
-**Beads updates** (for each relevant open issue):
-```bash
-br update <id> --status <new_status>
-br show <id>  # verify before updating
-```
+- Append session bullet to **`~/roadmap/README.md`** under `## Recent activity` (create section if absent).
+- Create `mkdir -p "$HOME/roadmap"` first if the directory may not exist.
+- Keep appends concise — one or two bullets per session.
 
-**New beads issues** (for gaps not tracked):
-```bash
-br create "<title>" --type <task|bug|feature|chore> --priority <0-4> --description "<details>"
-```
+### 4. Report
 
-**Roadmap doc updates** (edit existing `roadmap/*.md`):
-- Add new decisions, findings, or status to relevant docs
-- Keep updates concise — append, don't rewrite
-
-**New roadmap docs** (for new initiatives):
-- Create `roadmap/<TOPIC>.md` following existing doc style
-- Include: Background, Current Status, Next Steps, Open Questions
-
-### Phase 3 — Report
-Summarize:
-- Issues updated/created (with IDs)
-- Docs updated/created (with paths)
+- Beads updated/created (IDs and titles)
+- `~/roadmap/README.md` changes made
 - Recommended next actions
+
+---
+
+## `--full` mode
+
+When invoked as `/nextsteps --full`, run the complete pipeline:
+
+→ Follow `~/.claude/skills/nextsteps/SKILL.md` exactly (nextsteps doc, learnings, Claude auto-memory, mem0, GitHub issues).

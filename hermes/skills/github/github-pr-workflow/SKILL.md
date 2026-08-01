@@ -114,7 +114,7 @@ git push -u origin HEAD
 **With gh:**
 
 ```bash
-gh pr create \
+~/.hermes/scripts/gh-safe-publish pr create \
   --title "feat: add JWT-based user authentication" \
   --body "## Summary
 - Adds login and register API endpoints

@@ -1,0 +1,139 @@
+name: beads-flush-on-main
+
+# Required post-merge reconcile-then-flush job for `.beads/issues.jsonl`.
+#
+# Background: `.beads/issues.jsonl` used to carry `merge=union` in
+# .gitattributes, which told git to keep BOTH sides of any diverging line
+# on a 3-way merge instead of understanding beads' "one row per id, keyed by
+# highest revision" semantics. Because every `br` flush rewrites large
+# stretches of the file, union merge concatenated instead of deduplicating,
+# producing ~1685 duplicate rows on at least 3 occasions (PRs #7886, #7946,
+# #8063). `merge=union` has been removed; future divergent edits now raise a
+# real `<<<<<<<` conflict marker on a git-level merge instead of silently
+# unioning.
+#
+# A git `post-merge` hook is NOT sufficient here because it is not invoked
+# by GitHub's own squash-merge UI (the hook only fires on local `git merge`).
+# This required CI job is the enforced equivalent: on every push to `main`
+# it reconciles the DB against the tracked JSONL and re-flushes a canonical,
+# deduped, id-sorted export, pushing the corrected file back if it differs
+# — the same "regenerate and push back if different" pattern used by
+# .github/workflows/wiki-html.yml for generated wiki HTML.
+#
+# Delivery: main carries a pull_request ruleset that rejects direct pushes
+# (GH013), so the corrected file is delivered via a bot branch
+# (`bot/beads-flush`) + auto-merged PR instead of pushing straight to main.
+# This preserves the original autonomous behavior (the flush lands without
+# human action — the ruleset requires 0 approvals and no status checks)
+# while complying with the changes-via-PR rule.
+#
+# Loop-safety: pushes caused by GITHUB_TOKEN (including this PR's squash
+# merge) do not trigger workflow runs at all, so the flush merge cannot
+# re-trigger this workflow. Even if it could (e.g. after a future switch
+# to an App token), the re-run would reconcile, find no diff, and exit.
+# The HEAD-message guard below is kept as defense-in-depth.
+#
+# Note: the bot PR is squash-merged immediately, without waiting for any
+# pull_request-triggered checks (GITHUB_TOKEN-created PRs hold their runs
+# in approval-required state anyway). This matches the original design,
+# which pushed to main with zero validation; the flushed file is the
+# canonical `br sync` export by construction.
+
+on:
+  # justification: Reconciles issues.jsonl on every push to main to prevent drift, with skip-ci loop protection
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false  # never cancel mid-flush; a cancelled push-back could leave main half-updated
+
+permissions:
+  contents: write
+  pull-requests: write  # flush is delivered via a bot PR, not a direct push
+
+env:
+  BR_VERSION: "0.2.16"
+  BR_ASSET: "br-0.2.16-linux_x86_64.tar.gz"
+  BR_ASSET_SHA256: "461efbc44cec9166e7c7334d6c9f9793bea4ab8cb998aa47fd5f50b632ceb1a6"
+
+jobs:
+  reconcile-and-flush:
+    name: Reconcile DB + flush canonical issues.jsonl
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Guard against re-triggering on our own bot commit
+        run: |
+          set -euo pipefail
+          MSG="$(git log -1 --pretty=%s 2>/dev/null || true)"
+          echo "HEAD commit message: $MSG"
+          if printf '%s' "$MSG" | grep -qF "[skip ci]"; then
+            echo "HEAD commit already carries [skip ci]; nothing to do."
+            echo "SKIP=true" >> "$GITHUB_ENV"
+          else
+            echo "SKIP=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install br (beads_rust) CLI
+        if: env.SKIP == 'false'
+        run: |
+          set -euo pipefail
+          curl -sL -o /tmp/br.tar.gz \
+            "https://github.com/Dicklesworthstone/beads_rust/releases/download/v${BR_VERSION}/${BR_ASSET}"
+          echo "${BR_ASSET_SHA256}  /tmp/br.tar.gz" | shasum -a 256 -c -
+          tar -xzf /tmp/br.tar.gz -C /tmp
+          sudo install -m 0755 /tmp/br /usr/local/bin/br
+          br --version
+
+      - name: Reconcile DB against tracked JSONL, then flush canonical export
+        if: env.SKIP == 'false'
+        run: |
+          set -euo pipefail
+          if [ ! -f .beads/issues.jsonl ]; then
+            echo "::notice::.beads/issues.jsonl not present; nothing to reconcile"
+            exit 0
+          fi
+          # Fresh checkout has no local DB, so --import-only rebuilds it from
+          # the tracked JSONL (already the source of truth for this push).
+          br sync --import-only
+          # Re-export from the DB: deterministic id-ascending sort, one row
+          # per id by construction (SQLite primary key), atomic write.
+          br sync --flush-only --force
+
+      - name: Open auto-merging flush PR if the canonical export differs
+        if: env.SKIP == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .beads/issues.jsonl; then
+            echo "issues.jsonl already canonical; nothing to flush."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B bot/beads-flush
+          git commit --no-verify \
+            -m "chore(beads): reconcile + flush canonical issues.jsonl" \
+            -- .beads/issues.jsonl
+          git push -f origin bot/beads-flush
+          PR=$(gh pr list --head bot/beads-flush --base main --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -z "$PR" ]; then
+            gh pr create --head bot/beads-flush --base main \
+              --title "chore(beads): reconcile + flush canonical issues.jsonl" \
+              --body "Automated post-merge beads flush: main's .beads/issues.jsonl differed from the canonical DB export. Opened by beads-flush-on-main.yml because the main ruleset rejects direct pushes (GH013)."
+            PR=$(gh pr list --head bot/beads-flush --base main --state open \
+              --json number --jq '.[0].number')
+          fi
+          # Ruleset requires 0 approvals and no status checks, so this merges
+          # immediately. (No --auto fallback: the repo has allow_auto_merge
+          # disabled, so it would always fail.)
+          gh pr merge "$PR" --squash || \
+            echo "::warning::flush PR #$PR could not be merged; left open"

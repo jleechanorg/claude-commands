@@ -162,7 +162,7 @@ After any `gh pr create`, immediately spawn an AO session for it:
 
 ```bash
 # 1. Create the PR (title MUST start with [agento])
-gh pr create --title "[agento] fix: ..." --body "..."
+~/.hermes/scripts/gh-safe-publish pr create --title "[agento] fix: ..." --body "..."
 
 # 2. Get the PR number
 PR_NUM=$(gh pr view --json number --jq .number)

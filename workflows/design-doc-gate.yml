@@ -12,6 +12,10 @@ permissions:
   pull-requests: write
   issues: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.inputs.pr_sha || github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
     inputs:
@@ -20,7 +24,7 @@ on:
         required: true
         type: string
   pull_request:
-    types: [opened, synchronize, edited, reopened]
+    types: [opened, ready_for_review, synchronize, reopened]
     paths:
       - "mvp_site/**/*.py"
       - "mvp_site/**/*.js"
@@ -32,15 +36,45 @@ jobs:
   design-doc-gate:
     name: Design Doc Grep Gates
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # GitHub-hosted by explicit user exception: checkout + bash/grep only, no
+    # setup-python/build tools, no secrets beyond the default GITHUB_TOKEN.
+    # Same convention as the ping-coderabbit and doc-size-check precedents.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        env:
+          GIT_CONFIG_GLOBAL: ${{ runner.temp }}/checkout-gitconfig
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.event.inputs.pr_sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.event.inputs.pr_sha || github.sha }}
           persist-credentials: false
+          filter: blob:none
 
+      - name: Materialize full workspace after checkout
+        run: |
+          git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+          git reset --hard HEAD
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            expected="${{ github.event.pull_request.head.sha }}"
+            actual="$(git rev-parse HEAD)"
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::Checked out $actual, expected PR head $expected"
+              exit 1
+            fi
+          fi
+          test -f scripts/test_github_output_multiline.py
+
+      - name: Verify checked-out PR head
+        if: github.event_name == 'pull_request'
+        run: |
+          expected="${{ github.event.pull_request.head.sha }}"
+          actual="$(git rev-parse HEAD)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Checked out $actual, expected PR head $expected"
+            exit 1
+          fi
 
       - name: Test GITHUB_OUTPUT multiline heredoc regression
         run: python3 scripts/test_github_output_multiline.py
@@ -64,8 +98,21 @@ jobs:
           echo "=== Gate 0: Design Decision Check ==="
           echo ""
 
-          # Fetch PR description
-          PR_BODY=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.body // ""' 2>/dev/null || echo "")
+          # Fetch PR description — use GraphQL to avoid REST body truncation
+          # (REST `pulls/N` can silently truncate long bodies; GraphQL returns the
+          # full body field in a single response). Falls back to REST if GraphQL
+          # is unavailable, with a warning.
+          OWNER_REPO="${{ github.repository }}"
+          OWNER="${OWNER_REPO%/*}"
+          REPO="${OWNER_REPO#*/}"
+          PR_BODY=$(gh api graphql \
+            -F query='query($owner: String!, $repo: String!, $num: Int!) { repository(owner: $owner, name: $repo) { pullRequest(number: $num) { body } } }' \
+            -F owner="$OWNER" -F repo="$REPO" -F num="$PR_NUM" \
+            --jq '.data.repository.pullRequest.body // ""' 2>/dev/null || echo "")
+          if [ -z "$PR_BODY" ]; then
+            echo "::warning::GraphQL body fetch returned empty; falling back to REST"
+            PR_BODY=$(gh api repos/${{ github.repository }}/pulls/"$PR_NUM" --jq '.body // ""' 2>/dev/null || echo "")
+          fi
 
           # Extract ## Design Decision section
           DESIGN_DECISION=$(printf '%s\n' "$PR_BODY" | awk '
@@ -330,10 +377,96 @@ jobs:
           # 2026-05-12: PR #6888 adds living_world_contract imports + cc-ui-gaia scenarios; wc -l ~9904. Bumped to 10000.
           # 2026-05-23: PR #6958 temporary exception while world_logic cleanup is tracked separately. Bumped to 11000.
           # 2026-06-12: Bumped to 11100 due to main branch merges.
+          # 2026-06-22: PR #7595 (level-up v2 M-B/M-D consolidation) added +283 net
+          # to world_logic.py (orphan level-up enforcement helper, target-level
+          # builder shims, close_review Inv-2 guard, the level_up_session reducer
+          # wiring). Actual on this branch is 11234; bump bound 11100→11300.
+          # 2026-06-23: merged origin/main into the PR branch; main had grown
+          # world_logic.py to 11031 (RAG-mode logging #7826 et al.), so the merged
+          # baseline is 11312. The feature's own net contribution is unchanged
+          # (+281); the overflow is entirely merged-main additions. Bump 11300→11400
+          # to accommodate the merged-main baseline, per the established pattern above.
           # Tighten by ~1000-1500 per subsequent cleanup PR toward target.
+          # 2026-06-28: PR #8021 (rewards box backend synthesis) adds +299 net
+          # lines to world_logic.py: _synthesize_rewards_box_from_state,
+          # _attach_rewards_box_to_response, postcondition wiring, and the
+          # idempotency sentinel rewards_synthesized_for_total_xp. The synthesis
+          # is a server-owned invariant that must live in world_logic.py (not a
+          # separate file) because it integrates with the existing
+          # _has_rewards_context and _synthesize_generic_rewards_box paths.
+          # Bump 11400→11700 to accommodate the merged-main baseline + PR #8021.
+          # 2026-07-08: PR #8225 (design-retro Finding 2 Stage 1, bead
+          # rev-gepeb) moves main.py's page-load reconciliation logic into
+          # world_logic.get_campaign_state_unified (avg_entry_size bloat log,
+          # story_pagination metadata, modal-finish-block sync-back) so the
+          # HTTP->MCP gateway boundary can be enforced with zero exceptions
+          # for this route. The added logic is a net move INTO world_logic.py
+          # per this repo's own "main.py is a pure gateway" contract, not new
+          # feature growth; it was already extracted into two helper
+          # functions (_fetch_campaign_state_for_page_load,
+          # _finalize_page_load_story_view) to satisfy the function-level LOC
+          # ratchet. Actual on this branch is 11812; bump 11700→11900 to
+          # accommodate. This module-size ratchet is explicitly tracked
+          # separately from Finding 1's larger world_logic.py-shrink effort
+          # (bead rev-0yt8m, target <=4000 lines) and is not meant to block
+          # legitimate architecture-boundary fixes that move code between
+          # files without net new functionality.
+          # 2026-07-08: PR #8060 adds campaign-read rewards_box recovery for
+          # persisted XP-only turns; current branch is 11958 lines after the
+          # merge-main update, so bump 11900→12000 while preserving the ratchet.
+          # 2026-07-19: PR #8403 (Visenya V8 clean replay, issue #8400) fixes
+          # finalize_streaming_state_before_persistence to preserve the
+          # level-up offer when XP has genuinely crossed the next-level
+          # threshold or level_up_complete is already set, so the stale-offer
+          # scrub doesn't re-arm/drop a valid ceremony. The added guard logic
+          # was extracted into a private helper
+          # (_scrub_stale_level_up_offer_unless_xp_pending) to satisfy the
+          # function-level LOC ratchet. This branch's mvp_site/world_logic.py
+          # is 11998 lines, within the existing 12000 ceiling — no bump
+          # needed.
           # Uses check_upper_bound: PASS if actual <= expected.
-          check_upper_bound "world_logic.py line count" "11100" \
+          check_upper_bound "world_logic.py line count" "12000" \
             "wc -l < mvp_site/world_logic.py"
+
+          # Gate 7: level-up flag mutation sites (Finding 6, design-retro-2026-06).
+          # Real defect: the same "clear the stale level_up_pending/
+          # level_up_in_progress flag" bug shipped independently in
+          # level_up_session.py, llm_parser.py, and world_logic.py across 9 days
+          # (5a58f6c6a1, 730e51dc6f, ecab3652e8, 93037163ad). There is currently
+          # NO canonical single-writer helper in rewards_engine.py for this —
+          # that absence is exactly the scattering this gate ratchets against.
+          # Baseline measured directly against origin/main HEAD (not the design-
+          # retro doc's possibly-stale "4"): 7 real code sites match
+          # `["level_up_pending"] = False` / `["level_up_in_progress"] = False`
+          # across mvp_site/*.py (level_up_session.py x2, llm_parser.py x3,
+          # world_logic.py x2). Comments/docstrings referencing the flag names
+          # (e.g. backend_adjustment_specs.py, rewards_engine.py) and the
+          # unrelated `sync_level_up_pending=False` keyword argument in
+          # llm_parser.py are deliberately excluded — only literal dict-key
+          # assignment mutations count. Grandfather today's 7; fail only on
+          # growth (a new file/site added without consolidating into
+          # rewards_engine.py).
+          count_level_up_mutation_sites() {
+            python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          pattern = re.compile(r'\[["\']level_up_(pending|in_progress)["\']\]\s*=\s*False')
+          count = 0
+          for path in sorted(Path("mvp_site").glob("*.py")):
+              for line in path.read_text(encoding="utf-8").splitlines():
+                  # codex adversarial review on PR #8211: count occurrences per
+                  # line (a single line can carry two mutations via ';'), and
+                  # skip whole-line comments so a commented-out example isn't
+                  # counted as a real mutation site.
+                  if line.strip().startswith("#"):
+                      continue
+                  count += len(pattern.findall(line))
+          print(count)
+          PY
+          }
+          check_upper_bound "level-up mutation sites at or below baseline" "7" \
+            "count_level_up_mutation_sites"
 
           echo ""
           echo "$REPORT"

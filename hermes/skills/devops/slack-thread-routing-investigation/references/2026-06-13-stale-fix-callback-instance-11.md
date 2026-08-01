@@ -40,7 +40,7 @@ This is the **first instance where the user explicitly invokes the prior fix as 
 Per the user's follow-up "Make a bead and gh issue for slack misroute":
 
 * **Bead** `$USER-88x` in a private project's `.beads` — `br create` with type=bug, priority=P2, labels=[gateway, slack, routing, slack-thread-routing-investigation].
-* **GH issue** https://github.com/jleechanorg/agent-orchestrator/issues/684 — filed against `jleechanorg/agent-orchestrator` (the gateway that owns the broken `send_message` path), labels=[bug, P2, fragility-fix].
+* **GH issue** https://github.com/jleechanorg/agent-orchestrator-ts/issues/684 — filed against `jleechanorg/agent-orchestrator-ts` (the gateway that owns the broken `send_message` path), labels=[bug, P2, fragility-fix].
 * **Cross-linked**: `br comments add $USER-88x <issue URL>`.
 * **Issue body** asks for 4 things: (1) honor `target=slack:CHAN:thread_ts` by forwarding `thread_ts` to `chat.postMessage`; (2) fail loud on partial honors, no silent fallback to home; (3) regression test asserting `outgoing.ts.thread_ts == incoming thread_ts`; (4) same test for the 2-part form (currently non-deterministic).
 
@@ -48,7 +48,7 @@ Per the user's follow-up "Make a bead and gh issue for slack misroute":
 
 ### `gh issue create --label` does NOT validate label existence — and the gateway repo does NOT have `gateway` or `slack` labels
 
-`gh issue create --label gateway` failed with `could not add label: 'gateway' not found`. The `jleechanorg/agent-orchestrator` repo only has: `bug`, `documentation`, `duplicate`, `enhancement`, `good first issue`, `help wanted`, `invalid`, `question`, `wontfix`, `P0`, `P1`, `P2`, `trigger-ci`, `fragility-fix`. **Always `gh label list --repo <owner/repo> --limit 100 --json name` before `--label` in `gh issue create`** — not just for this repo, but for any repo you don't own. The retry used `[bug, P2, fragility-fix]` and succeeded.
+`gh issue create --label gateway` failed with `could not add label: 'gateway' not found`. The `jleechanorg/agent-orchestrator-ts` repo only has: `bug`, `documentation`, `duplicate`, `enhancement`, `good first issue`, `help wanted`, `invalid`, `question`, `wontfix`, `P0`, `P1`, `P2`, `trigger-ci`, `fragility-fix`. **Always `gh label list --repo <owner/repo> --limit 100 --json name` before `--label` in `gh issue create`** — not just for this repo, but for any repo you don't own. The retry used `[bug, P2, fragility-fix]` and succeeded.
 
 ### The `br comments add` argument syntax is positional, not `--body`
 
@@ -58,7 +58,7 @@ Per the user's follow-up "Make a bead and gh issue for slack misroute":
 
 **When a user says "I thought we fixed this?" / "isn't this patched?" / "we should not be doing this anymore," the response is not another workaround — it is a bead + GH issue for the underlying bug.**
 
-The SOUL rule `slack-reply-inherit-thread-ts` (2026-06-09) was the right shape of fix **at the time**: it patched agent-side thread inheritance. But it was a workaround, and workarounds stop feeling like fixes the moment the user notices the bug recurring. The next time this comes up, the response should be: (a) confirm the prior SOUL rule is still loaded, (b) recover via Path B as usual, (c) **file a gateway-side bead+issue** (or check if `$USER-88x` is still open and re-ping it). The gateway patch in `jleechanorg/agent-orchestrator` issue #684 is the durable fix; until it lands, this skill is the workaround of record.
+The SOUL rule `slack-reply-inherit-thread-ts` (2026-06-09) was the right shape of fix **at the time**: it patched agent-side thread inheritance. But it was a workaround, and workarounds stop feeling like fixes the moment the user notices the bug recurring. The next time this comes up, the response should be: (a) confirm the prior SOUL rule is still loaded, (b) recover via Path B as usual, (c) **file a gateway-side bead+issue** (or check if `$USER-88x` is still open and re-ping it). The gateway patch in `jleechanorg/agent-orchestrator-ts` issue #684 is the durable fix; until it lands, this skill is the workaround of record.
 
 ## Timeline (TS values, in order)
 
@@ -70,4 +70,4 @@ The SOUL rule `slack-reply-inherit-thread-ts` (2026-06-09) was the right shape o
 - `1781384946.008329` — final Path B recovery post, `ok:true`, `ThreadTs=1781384270.728329` ✅
 - `1781384953.407009` — agent narration: "Posted at ts 1781384946.008329…"
 - `1781386037.067769` — second Path B post in same thread confirming bead+issue were filed
-- bead `$USER-88x` + issue https://github.com/jleechanorg/agent-orchestrator/issues/684 filed
+- bead `$USER-88x` + issue https://github.com/jleechanorg/agent-orchestrator-ts/issues/684 filed

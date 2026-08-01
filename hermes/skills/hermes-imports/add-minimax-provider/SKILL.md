@@ -65,7 +65,7 @@ https://platform.minimaxi.com/subscribe/coding-plan?code=2vNMQFJrZt&source=link
 | 项目 | 说明 |
 |------|------|
 | 国内MiniMax 账号 | 在 [platform.minimaxi.com](https://platform.minimaxi.com) 注册 |
-| API Key | 格式为 `sk-cp-...` 的密钥，在控制台 → API Keys 页面创建 |
+| API Key | 格式为 `[REDACTED_OPENAI_KEY]` 的密钥，在控制台 → API Keys 页面创建 |
 | 余额 | 确保账户有足够余额 |
 
 ### 方式二：OAuth 门户
@@ -188,7 +188,7 @@ curl -s --max-time 15 https://api.minimaxi.com/v1/chat/completions \
 |------|-------------------|------------------------|
 | `baseUrl` | `.../v1` | `.../anthropic` |
 | `api` | `openai-completions` | `anthropic-messages` |
-| `apiKey` | `sk-cp-...` (真实密钥) | `minimax-oauth` (OAuth 标记) |
+| `apiKey` | `[REDACTED_OPENAI_KEY]` (真实密钥) | `minimax-oauth` (OAuth 标记) |
 | `authHeader` | `true` | 默认 |
 | 计费 | 按量付费 | 平台侧处理 |
 | 模型 | M2.1 | M2.1 + Lightning |

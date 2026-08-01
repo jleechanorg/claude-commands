@@ -77,20 +77,41 @@ Invoke `/secondo` with the decision + artifact (same text as Reviewer A).
 
 ---
 
+**Reviewer D — Web Advice:**
+
+Invoke `/web-advice` (runs multi-model Web Chat review via `aside-mcp` across Gemini Web, ChatGPT, Grok, inspecting PR, evidence bundle, and video proof).
+
+---
+
 ## Step 3: Synthesize
 
 Present:
 
 ```
-| Reviewer  | Verdict              | Key concern         | Confidence |
-|-----------|----------------------|---------------------|------------|
-| A (source)| ...                  | ...                 | high/med/low |
-| Research  | [consensus finding]  | [main caveat]       | —          |
-| Secondo   | ...                  | ...                 | —          |
+| Reviewer    | Verdict              | Key concern         | Confidence |
+|-------------|----------------------|---------------------|------------|
+| A (source)  | ...                  | ...                 | high/med/low |
+| Research    | [consensus finding]  | [main caveat]       | —          |
+| Secondo     | ...                  | ...                 | —          |
+| Web Advice  | ...                  | ...                 | —          |
 ```
 
 - 2+ agree → state recommended path, proceed
 - All three diverge → surface disagreement, ask user which axis matters most (speed / safety / cost)
+
+## Final verdict format — binary, SHA-bound (mandatory)
+
+When `/advice` is being run as the gate in the `draft-first-pr` lifecycle (`~/.claude/skills/draft-first-pr/SKILL.md`), the synthesis MUST end with exactly one binary line, bound to the commit SHA reviewed:
+
+```
+VERDICT: APPROVED at <SHA>
+```
+or
+```
+VERDICT: NOT APPROVED at <SHA>
+```
+
+`<SHA>` is the PR's current HEAD SHA at the moment of review (`gh pr view <N> --json headRefOid --jq '.headRefOid'` if reviewing a PR; the working-tree commit SHA otherwise). This verdict is valid only for that exact SHA — per the SHA-binding rule in `draft-first-pr/SKILL.md`, a new commit invalidates it and `/advice` must be re-run at the new SHA before the PR can be marked ready. Do not emit a bare "APPROVED"/"looks good" without the SHA — an unbound verdict cannot be checked for staleness later.
 
 ## Token budget
 

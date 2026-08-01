@@ -1,8 +1,3 @@
----
-name: automation-audit
-description: Audit automation job runs, logs, PR processing metrics, and AI-authored remote commits.
----
-
 # Automation Audit Skill
 
 **Usage**: `/automation-audit [hours]`

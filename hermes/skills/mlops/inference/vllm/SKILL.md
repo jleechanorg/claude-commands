@@ -269,7 +269,7 @@ Test outputs match expected quality:
 
 ```python
 # Compare quantized vs non-quantized responses
-# Verify task-specific performance unchanged
+# Verify ta[REDACTED_OPENAI_KEY] performance unchanged
 ```
 
 ## When to use vs alternatives

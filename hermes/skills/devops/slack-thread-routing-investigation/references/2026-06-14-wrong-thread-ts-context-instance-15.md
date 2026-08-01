@@ -42,7 +42,7 @@ This is the **15th** instance of the gateway `send_message` Slack routing bug fa
 - `gh pr view 27 --repo jleechanorg/hermes-agent --json number,title,state,mergedAt,headRefName,url` → `{"mergedAt":"2026-06-12T05:54:22Z","state":"MERGED","headRefName":"fix/slack-thread-ts-injected-reply-leak",...}`
 - `grep -c "_status_thread_metadata" $HOME/projects_other/hermes-agent/gateway/run.py` → `13`
 - `git -C ~/projects_other/hermes-agent rev-parse HEAD` → `42aff5b47e5fe98becca8bfa8121a6cc64d7e893` (matches PR #27 merge commit)
-- `gh issue view 684 --repo jleechanorg/agent-orchestrator --json state` → `OPEN`
+- `gh issue view 684 --repo jleechanorg/agent-orchestrator-ts --json state` → `OPEN`
 - `br show $USER-k5z` → `Error: Issue not found` (bead does not exist)
 - `ps aux | grep "hermes gateway"` → PID 2802, started 4:03 PM
 - `bash -c 'source ~/.bashrc && [ -n "$HERMES_SLACK_BOT_TOKEN" ]'` → token present, 58 chars

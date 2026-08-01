@@ -160,7 +160,7 @@ async def collect_task_metadata(page: Page, index: int) -> Tuple[str, str]:
     task_card = page.locator(TASK_CARD_SELECTOR).nth(index)
     title_locator = task_card.locator(TASK_TITLE_SELECTOR)
     title = await title_locator.inner_text() if await title_locator.count() else f"Task #{index + 1}"
-    status_locator = task_card.locator("[data-testid='codex-task-status']")
+    status_locator = task_card.locator("[data-testid='codex-ta[REDACTED_OPENAI_KEY]']")
     status = await status_locator.inner_text() if await status_locator.count() else ""
     return title.strip(), status.strip()
 

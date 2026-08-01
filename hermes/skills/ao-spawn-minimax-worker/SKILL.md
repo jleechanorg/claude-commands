@@ -3,7 +3,7 @@ name: ao-spawn-minimax-worker
 description: "Spawn an Agent-Orchestrator (AO) worker that uses the minimax CLI with the M3 model (via the minimax Anthropic-compatible API). Use when: the task should be dispatched to a worker that uses minimax M3 specifically, when the user says 'use minimax', 'use the M3 model', 'use the minimax worker', 'ao spawn minimax', or 'minimax CLI for AO'. This skill verifies the env (MINIMAX_MODEL, MINIMAX_API_KEY, ANTHROPIC_BASE_URL) end-to-end, then runs `ao spawn --agent minimax`. Verified 2026-06-13 against session ao-6355 / PR #678."
 when_to_use: "Use when the user asks to spawn an AO worker on minimax M3, or any time `ao spawn` is needed and the model choice is minimax. Do NOT use for: direct `claude` CLI runs (use shell directly), or for AO workers that should use a different model (use the default `ao spawn` with no `--agent` flag). NOT for fixing 401 errors (use `minimax-401-diagnostic` instead)."
 allowed-tools: ["Bash", "Read", "Write", "Edit"]
-context: "Verified end-to-end on 2026-06-13 with session ao-6355 and PR https://github.com/jleechanorg/agent-orchestrator/pull/678. The agent-minimax plugin (packages/plugins/agent-minimax/src/index.ts) wraps the `claude` CLI with ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic and propagates MINIMAX_MODEL from the tmux env. modelByCli.minimax.model=MiniMax-M3 in ~/agent-orchestrator.yaml makes this the default. The skill is intentionally a thin pointer — the canonical implementation is the AO plugin source + the user's `~/agent-orchestrator.yaml`."
+context: "Verified end-to-end on 2026-06-13 with session ao-6355 and PR https://github.com/jleechanorg/agent-orchestrator-ts/pull/678. The agent-minimax plugin (packages/plugins/agent-minimax/src/index.ts) wraps the `claude` CLI with ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic and propagates MINIMAX_MODEL from the tmux env. modelByCli.minimax.model=MiniMax-M3 in ~/agent-orchestrator.yaml makes this the default. The skill is intentionally a thin pointer — the canonical implementation is the AO plugin source + the user's `~/agent-orchestrator.yaml`."
 ---
 
 # ao-spawn-minimax-worker
@@ -139,7 +139,7 @@ If the worker shows `/login · API Error: 401` in its tmux pane, the API key is 
 | `ao spawn --agent minimax` | Session `ao-6355` created | 2026-06-13 |
 | Plugin env in tmux | `ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic`, `ANTHROPIC_MODEL=MiniMax-M3`, key resolved | 2026-06-13 |
 | Worker model identity | `Cogitated for 7s` → `PONG_M3_FROM_MINIMAX_WORKER` | 2026-06-13 |
-| PR auto-created | https://github.com/jleechanorg/agent-orchestrator/pull/678 | 2026-06-13 |
+| PR auto-created | https://github.com/jleechanorg/agent-orchestrator-ts/pull/678 | 2026-06-13 |
 
 ## Canonical sources
 
