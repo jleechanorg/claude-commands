@@ -109,7 +109,7 @@ for i in json.load(sys.stdin)['items']:
 **With gh:**
 
 ```bash
-gh issue create \
+~/.hermes/scripts/gh-safe-publish issue create \
   --title "Login redirect ignores ?next= parameter" \
   --body "## Description
 After logging in, users always land on /dashboard.
@@ -235,7 +235,7 @@ curl -s -X POST \
 **With gh:**
 
 ```bash
-gh issue comment 42 --body "Investigated — root cause is in auth middleware. Working on a fix."
+~/.hermes/scripts/gh-safe-publish issue comment 42 --body "Investigated — root cause is in auth middleware. Working on a fix."
 ```
 
 **With curl:**

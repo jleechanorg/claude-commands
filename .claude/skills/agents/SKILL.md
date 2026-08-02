@@ -1,8 +1,3 @@
----
-name: agents
-description: Reference WorldArchitect agent routing priority and modal lock patterns.
----
-
 # Agent Routing & Modal Lock Patterns
 
 **COMPACTNESS RULE**: Keep this file under 200 lines. Link to code instead of duplicating implementation details.

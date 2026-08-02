@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""download_campaign.py — single + batch WA campaign download.
+"""download_campaign.py — single + batch + all-users WA campaign download.
 
 Modes:
-  --mode one   --campaign-id <id>            # pull a specific campaign
-  --mode batch [--min-entries N] [--days N] # pull all matching filters
+  --mode one   --campaign-id <id>                        # pull a specific campaign (one user)
+  --mode batch [--min-entries N] [--days N]             # one user ($USER by default)
+  --mode all-users [--min-entries N] [--exclude-$USER] # every real user (skip test fixtures)
 
 Required env:
   WORLDAI_DEV_MODE=true
@@ -44,6 +45,49 @@ from firebase_admin import auth, credentials, firestore  # noqa: E402
 import firestore_service  # noqa: E402
 import document_generator  # noqa: E402
 
+# ---- Multi-user test-email filter (mirrors wa-prod-data-query) ----
+# Tokens: test, anon, dev-runner, example.com, jleechantest
+# Per wa-prod-data-query SKILL.md (verified 2026-06-23): campaigns/conversations
+# collections contain zero real-user docs; real-user campaigns live at
+# users/{uid}/campaigns/{camp_id}/story/{entry_id}. Test-user emails here are
+# the only safe filter for batch --all-users mode.
+_TEST_EMAIL_TOKENS = ("test", "anon", "dev-runner", "example.com", "jleechantest")
+
+
+def is_test_email(email):
+    """True if email looks like a test fixture (case-insensitive substring match)."""
+    if not email:
+        return True
+    e = email.lower()
+    return any(token in e for token in _TEST_EMAIL_TOKENS)
+
+
+def list_real_users(exclude_jleechan=False):
+    """Paginate auth.list_users(), return [{uid, email}] for non-test users.
+
+    exclude_jleechan: pass True to skip $USER@gmail.com.
+    """
+    init_firebase()
+    jleechan_uid = None
+    if exclude_jleechan:
+        try:
+            jleechan_uid = auth.get_user_by_email("$USER@gmail.com").uid
+        except Exception:
+            pass
+
+    users = []
+    page = auth.list_users()
+    while page:
+        for u in page.users:
+            email = (u.email or "").lower()
+            if is_test_email(email):
+                continue
+            if exclude_jleechan and jleechan_uid and u.uid == jleechan_uid:
+                continue
+            users.append({"uid": u.uid, "email": email})
+        page = page.get_next_page()
+    return users
+
 
 def slugify(text: str) -> str:
     """Title to kebab-case, max 80 chars."""
@@ -62,9 +106,10 @@ def init_firebase():
 
 
 def download_one(uid: str, campaign_id: str, title: str, entry_count: int = 0,
-                 campaigns_dir: Path = None) -> dict:
+                 campaigns_dir: Path = None, user_email: str = "") -> dict:
     """Download a single campaign — returns manifest entry or raises."""
-    print(f"  Downloading [{entry_count or '?'}] {title} ({campaign_id[:8]})", flush=True)
+    print(f"  Downloading [{entry_count or '?'}] {title} ({campaign_id[:8]})"
+          + (f" [{user_email}]" if user_email else ""), flush=True)
 
     campaign_data, story_context = firestore_service.get_campaign_by_id(uid, campaign_id)
     if campaign_data is None or story_context is None:
@@ -100,6 +145,12 @@ def download_one(uid: str, campaign_id: str, title: str, entry_count: int = 0,
     base_slug = slugify(title)
     wiki_path = WIKI_SOURCES / f"{base_slug}-{campaign_id[:8]}.md"
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    user_lines = ""
+    if user_email:
+        user_lines = (
+            f"user_email: \"{user_email}\"\n"
+            f"user_uid: \"{uid}\"\n"
+        )
     frontmatter = (
         "---\n"
         f'title: "{title}"\n'
@@ -109,6 +160,7 @@ def download_one(uid: str, campaign_id: str, title: str, entry_count: int = 0,
         f"source_file: {raw_path}\n"
         f"campaign_id: {campaign_id}\n"
         f"entry_count: {entry_count}\n"
+        f"{user_lines}"
         "ingest_batch: download-campaign-skill\n"
         "---\n\n"
     )
@@ -120,6 +172,8 @@ def download_one(uid: str, campaign_id: str, title: str, entry_count: int = 0,
         "title": title,
         "campaign_id": campaign_id,
         "entry_count": entry_count,
+        "user_email": user_email,
+        "user_uid": uid,
         "wiki_path": str(wiki_path),
         "raw_path": str(raw_path),
         "story_chars": len(story_text),
@@ -172,49 +226,12 @@ def query_candidates(uid: str, min_entries: int = 0, days: int = 0) -> list[dict
     return results
 
 
-def main():
-    p = argparse.ArgumentParser(description="Your Project campaign downloader")
-    p.add_argument("--mode", choices=["one", "batch"], required=True)
-    p.add_argument("--campaign-id", help="for --mode one")
-    p.add_argument("--min-entries", type=int, default=0)
-    p.add_argument("--days", type=int, default=0, help="filter to last N days of activity")
-    p.add_argument("--skip-existing", action="store_true")
-    p.add_argument("--campaigns-dir", default=str(RAW_ROOT))
-    p.add_argument("--dry-run", action="store_true")
-    p.add_argument("--tag", default="download-campaign-skill")
-    args = p.parse_args()
-
-    campaigns_dir = Path(args.campaigns_dir)
-    campaigns_dir.mkdir(parents=True, exist_ok=True)
-
-    init_firebase()
-    user = auth.get_user_by_email(EMAIL)
-    uid = user.uid
-    print(f"UID: {uid}")
-
-    if args.mode == "one":
-        if not args.campaign_id:
-            print("--campaign-id required for --mode one", file=sys.stderr)
-            sys.exit(1)
-        result = download_one(uid, args.campaign_id, args.campaign_id, campaigns_dir=campaigns_dir)
-        with open(MANIFEST, "a") as f:
-            f.write(json.dumps(result) + "\n")
-        return
-
-    # batch
-    print(f"Scanning campaigns (min-entries={args.min_entries}, days={args.days})...")
-    t0 = time.time()
-    candidates = query_candidates(uid, args.min_entries, args.days)
-    print(f"Found {len(candidates)} candidates in {time.time()-t0:.1f}s")
-
-    if args.dry_run:
-        for c in candidates:
-            print(f"  {c['entry_count']:5d} | {c['title']} ({c['campaign_id'][:8]})")
-        return
-
+def _process_candidates(uid: str, user_email: str, candidates: list[dict],
+                        args, campaigns_dir: Path) -> tuple[list[dict], int, int]:
+    """Download candidates for a single user (shared logic for batch + all-users)."""
     results, errors, skipped = [], 0, 0
     for i, c in enumerate(candidates):
-        print(f"\n[{i+1}/{len(candidates)}]", flush=True)
+        print(f"\n[{i+1}/{len(candidates)}] [{user_email}]", flush=True)
 
         if args.skip_existing:
             slug = slugify(c["title"])
@@ -225,20 +242,121 @@ def main():
                 continue
 
         try:
-            r = download_one(uid, c["campaign_id"], c["title"], c["entry_count"], campaigns_dir)
+            r = download_one(uid, c["campaign_id"], c["title"], c["entry_count"],
+                            campaigns_dir, user_email=user_email)
             results.append(r)
         except Exception as e:
             print(f"  [ERROR] {c['campaign_id'][:8]}: {e}", flush=True)
             errors += 1
+    return results, errors, skipped
+
+
+def main():
+    p = argparse.ArgumentParser(description="Your Project campaign downloader")
+    p.add_argument("--mode", choices=["one", "batch", "all-users"], required=True)
+    p.add_argument("--campaign-id", help="for --mode one")
+    p.add_argument("--min-entries", type=int, default=0)
+    p.add_argument("--days", type=int, default=0, help="filter to last N days of activity")
+    p.add_argument("--skip-existing", action="store_true")
+    p.add_argument("--campaigns-dir", default=str(RAW_ROOT))
+    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--tag", default="download-campaign-skill")
+    p.add_argument("--exclude-$USER", action="store_true",
+                   help="(all-users) skip $USER@gmail.com")
+    args = p.parse_args()
+
+    campaigns_dir = Path(args.campaigns_dir)
+    campaigns_dir.mkdir(parents=True, exist_ok=True)
+
+    init_firebase()
+
+    if args.mode == "one":
+        user = auth.get_user_by_email(EMAIL)
+        uid = user.uid
+        print(f"UID: {uid}")
+        if not args.campaign_id:
+            print("--campaign-id required for --mode one", file=sys.stderr)
+            sys.exit(1)
+        result = download_one(uid, args.campaign_id, args.campaign_id,
+                              campaigns_dir=campaigns_dir, user_email=EMAIL)
+        with open(MANIFEST, "a") as f:
+            f.write(json.dumps(result) + "\n")
+        return
+
+    # batch — single user ($USER by default; --email override)
+    if args.mode == "batch":
+        user = auth.get_user_by_email(EMAIL)
+        uid = user.uid
+        user_email = user.email or EMAIL
+        print(f"UID: {uid}  email: {user_email}")
+
+        print(f"Scanning campaigns (min-entries={args.min_entries}, days={args.days})...")
+        t0 = time.time()
+        candidates = query_candidates(uid, args.min_entries, args.days)
+        print(f"Found {len(candidates)} candidates in {time.time()-t0:.1f}s")
+
+        if args.dry_run:
+            for c in candidates:
+                print(f"  {c['entry_count']:5d} | {c['title']} ({c['campaign_id'][:8]})")
+            return
+
+        results, errors, skipped = _process_candidates(uid, user_email, candidates,
+                                                      args, campaigns_dir)
+        with open(MANIFEST, "a") as f:
+            for r in results:
+                f.write(json.dumps(r) + "\n")
+
+        print(f"\n=== Done ({user_email}) ===")
+        print(f"Downloaded: {len(results)}")
+        print(f"Skipped:    {skipped}")
+        print(f"Errors:     {errors}")
+        print(f"Manifest:   {MANIFEST}")
+        return
+
+    # all-users — paginate auth.list_users(), skip test fixtures, iterate
+    print(f"Discovering real users (exclude_jleechan={args.exclude_jleechan})...")
+    t0 = time.time()
+    users = list_real_users(exclude_jleechan=args.exclude_jleechan)
+    print(f"Found {len(users)} real users in {time.time()-t0:.1f}s")
+
+    if args.dry_run:
+        for u in users:
+            print(f"  {u['email']}  uid={u['uid']}")
+        return
+
+    grand_results, grand_errors, grand_skipped = [], 0, 0
+    for u_idx, user in enumerate(users):
+        uid, email = user["uid"], user["email"]
+        print(f"\n========== [{u_idx+1}/{len(users)}] user: {email} (uid={uid}) ==========")
+        try:
+            candidates = query_candidates(uid, args.min_entries, args.days)
+            print(f"  Found {len(candidates)} candidates (>= {args.min_entries} scenes)")
+        except Exception as e:
+            print(f"  [ERROR] scan failed for {email}: {e}", flush=True)
+            grand_errors += 1
+            continue
+
+        if args.dry_run:
+            for c in candidates:
+                print(f"    {c['entry_count']:5d} | {c['title']} ({c['campaign_id'][:8]})")
+            continue
+
+        if not candidates:
+            continue
+
+        r, e, s = _process_candidates(uid, email, candidates, args, campaigns_dir)
+        grand_results.extend(r)
+        grand_errors += e
+        grand_skipped += s
 
     with open(MANIFEST, "a") as f:
-        for r in results:
+        for r in grand_results:
             f.write(json.dumps(r) + "\n")
 
-    print(f"\n=== Done ===")
-    print(f"Downloaded: {len(results)}")
-    print(f"Skipped:    {skipped}")
-    print(f"Errors:     {errors}")
+    print(f"\n=== Done (all-users, {len(users)} real users scanned) ===")
+    print(f"Downloaded: {len(grand_results)}")
+    print(f"Skipped:    {grand_skipped}")
+    print(f"Errors:     {grand_errors}")
     print(f"Manifest:   {MANIFEST}")
 
 

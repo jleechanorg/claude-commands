@@ -255,6 +255,26 @@ fi
 **Cause**: gh CLI not installed yet
 **Solution**: Run installation steps from "Installation (One-Time Setup)" section
 
+## REST ↔ GraphQL are separate quota buckets — fall back, don't give up
+
+GitHub's REST (core) API and GraphQL API are **separate 5000/hr quota buckets**, both keyed per-account. They drain independently — when one is exhausted, the other is almost always still live.
+
+- **GraphQL bucket**: `gh pr view N --json statusCheckRollup,reviewDecision,...`, `gh pr list --json ...`, `gh issue view N --json ...`
+- **REST (core) bucket**: `gh api repos/OWNER/REPO/pulls/N`, `gh api repos/OWNER/REPO/commits/<sha>/check-runs`, `gh api repos/OWNER/REPO/issues/N/comments`
+- **Quota-exempt** (never costs quota — use it to pick the live bucket): `gh api rate_limit`
+
+### Fallback procedure (one bucket rate-limited → use the other)
+1. Check both buckets with the exempt endpoint first:
+   ```bash
+   ~/.local/bin/gh api rate_limit --jq '{core: .resources.core.remaining, graphql: .resources.graphql.remaining}'
+   ```
+2. If GraphQL is drained, get the SAME data via REST instead of giving up. Example — replace `gh pr view N --json statusCheckRollup`:
+   ```bash
+   SHA=$(~/.local/bin/gh api repos/OWNER/REPO/pulls/N --jq '.head.sha')
+   ~/.local/bin/gh api repos/OWNER/REPO/commits/$SHA/check-runs --jq '.check_runs[] | {name: .name, conclusion: .conclusion}'
+   ```
+3. If REST is drained, fetch via GraphQL `gh pr view --json` instead. Only report "rate-limited" when `rate_limit` shows BOTH buckets at/near 0.
+
 ## Advanced Patterns
 
 ### Check if gh is installed

@@ -1,67 +1,68 @@
-# Anatomy of a Babysit Cron Task Prompt
+# Cron Prompt Anatomy — Babysit v1.3.0 Template
 
-A babysit cron prompt (the `hermes cron create "20m" ...` body that gets delivered on every tick) has a contract you must honor — every prompt that follows this pattern is a tick on an existing loop, even if it looks fresh.
+## Self-cancel contract reminder
 
-## Canonical prompt shape
+Every babysit cron prompt MUST end with the v1.2.0 executable self-cancel clause:
 
 ```
-You are babysitting AO worker wa-<id> working on PR <url> (issue #<n> — <short summary>).
+After posting the Phase 0 terminal closeout, immediately call:
+  cronjob action=remove job_id=$CRON_JOB_ID
 
-Worktree: <absolute path to worktree> (branch <branch_name>)
-Bead: <bead_id>
-Campaign evidence: <optional log path>
-
-Steps each tick:
-1. <observation step 1>
-2. <observation step 2>
-... (typically 6-7 steps)
-N. Post a concise status update to the Slack thread (channel <C...>, thread <ts>) every tick: <list of required post sections>
-
-If nothing changed since last tick AND no commits in 30 min, reply HEARTBEAT_OK instead of posting.
-
-Tools available: terminal, file, gh CLI, ao CLI. Do NOT modify code. Do NOT push. You only observe and report.
+Invoked as:
+  python3 ~/.hermes/skills/ao-babysit/scripts/babysit.py poll \
+      --session "$SESSION_ID" \
+      --slack-channel "$CHANNEL" \
+      --slack-thread-ts "$THREAD_TS" \
+      --ta[REDACTED_OPENAI_KEY] "$TASK_SUMMARY" \
+      --cron-job-id "$CRON_JOB_ID"
 ```
 
-## Required fields to extract (every tick, before doing anything)
+Without `--cron-job-id`, the script cannot self-cancel and the cron leaks past terminal-state.
 
-- `PR number` — from "PR <url>" or "PR #<n>"
-- `Repo` — `jleechanorg/<repo>` (default, check PR JSON)
-- `Worktree absolute path` — required for `git log ... --oneline`
-- `Branch` — required for `git log origin/<base>..HEAD`
-- `Base branch` — usually `main` or `master`; verify with `gh pr view <N> --json baseRefName`
-- `Worker session id` — `wa-<id>` or `<session_label>`; grep target for `ao session ls`
-- `Slack channel` — `C...` (10-char ID)
-- `Slack thread_ts` — `<ts>` (Unix timestamp `1234567890.123456`)
-- `Cron cadence hints` — "every tick" / "20m" / "5 min" — tells you the silence window
-- **`[SILENT]` vs `HEARTBEAT_OK` contract** — read the prompt's tail carefully; if it says "respond with exactly [SILENT]" you MUST use the literal token, not `HEARTBEAT_OK`, when nothing has changed
+## Gate-detection copy (v1.3.0 — replaces any "awaiting skeptic verdict" wording)
 
-## How to extract safely
+**Forbidden phrases** (will never resolve now that Skeptic is deleted):
+- ❌ "awaiting skeptic verdict"
+- ❌ "waiting for /skeptic"
+- ❌ "skeptic verdict (≤30 min cadence)"
+- ❌ "skeptic-cron contract"
 
-Do NOT regex-extract these from the prompt in a serial fashion. Run the four observation commands (see Phase 1 in SKILL.md) and verify the extracted fields against actual repo state — a stale prompt can have a wrong branch name, wrong thread_ts, or right thread with a different parent message.
+**Required phrasing** for the "still open, awaiting X" beat:
+
+```
+:hourglass: PR #<N> still open, awaiting:
+  • CI rollups: Green Gate + Smoke Gate Wait (Gate 8) — currently <red|green>
+  • Reviewers: CodeRabbit <state>, Bugbot <state>
+  • Operator: MERGE APPROVED for the gh pr merge step
+
+To stop or manage this job, send me a new message (e.g. "stop reminder PR<N> status (30m)").
+```
+
+## Full cron prompt template
 
 ```bash
-# Verify the prompt's PR number resolves to a real PR
-gh pr view <N> --repo jleechanorg/<repo> --json headRefName,baseRefName,state,mergedAt
+hermes cron create "<schedule>" \
+  --name 'PR<N> status (<interval>)' \
+  --prompt "$(cat <<'EOF'
+You are babysitting PR #<N> on jleechanorg/<repo>. Slack channel <CHANNEL>, thread_ts <THREAD_TS>.
 
-# Verify the thread_ts is still active (not orphaned by a channel rename)
-mcp__slack__conversations_replies --channel_id <chan> --thread_ts <ts> --limit 1
+On each tick, run the babysit-ao-pr-loop protocol. Specifically:
 
-# Verify the worktree path is reachable
-cd <worktree> && git rev-parse --abbrev-ref HEAD
+1. Phase 0 pre-flight: check `gh pr view <N> --json state,mergedAt` — if MERGED, post one closeout and self-cancel via `hermes cron remove $CRON_JOB_ID`. If CLOSED (not merged), post one escalation asking the operator.
+
+2. Phase 1 observe: `git log`, `git status`, `ao session ls`, `gh pr view <N>`, and — only if worker has pushed since last tick — `gh pr
+
+References:
+- ~/.hermes/skills/devops/babysit-ao-pr-loop/SKILL.md (canonical)
+- ~/.hermes/skills/devops/babysit-ao-pr-loop/references/post-skeptic-green-protocol.md (gate-detection recipe)
+EOF
+)" \
+  --deliver 'slack:<CHANNEL>'
 ```
 
-If any of the three fails:
-- PR doesn't exist → produce exactly `[SILENT]` and exit (the prompt is stale).
-- thread_ts returns empty → post `[SILENT]`, and also log a structured note that the cron prompt's thread_ts is stale and needs to be refreshed by the operator.
-- worktree path doesn't exist → post a one-liner asking the operator to re-baseline the cron; the loop cannot continue.
+## Pitfalls
 
-## Variations you may see
-
-- **One-time cron with `--delete-after-run`**: the prompt may explicitly say "this is a one-shot followup, deliver the result and the cron self-deletes". In that case there is no observe-loop, just one delivery — treat it as a `finish-the-job` micro-task instead.
-- **Multi-PR sweep**: the prompt may list multiple `(PR, worker, thread_ts)` triples. Run the phases per-triple, write one consolidated section in the message.
-- **`/skeptic` invocation request** baked into the prompt: that is a separate signal that the operator wants auto-skeptic. Honor it in Phase 2 only if the PR is green, reviewer-ready, and the current head SHA has no existing skeptic request (verified via `gh pr comments | grep -i skeptic`).
-
-## Anti-pattern
-
-- ❌ Treating the cron prompt as a fresh user task. The user did not write this prompt for you; the operator (cron itself) did, and the contract is "tick the loop", not "redesign the workflow".
-- ❌ Re-extracting PR number / branch / thread_ts from the prompt on every tick without verifying them against actual repo/thread state. A stale cron with a real recent failure is the most expensive miss (you'd post nothing while work has rotted).
+- **Re-using an old prompt verbatim.** v1.2.0 and earlier prompts template the "awaiting skeptic verdict" beat. Re-paste them as-is and the cron will quietly wait forever. Always rebuild from the template above when starting a new babysit.
+- **`conclusion` vs `state`.** GitHub Actions populate `.conclusion`; `.state` is null for Actions and silently returns 0 failures when CI is red. Source: `~/.cursor/rules/env-preferences.mdc`.
+- **Self-cancel requires `$CRON_JOB_ID`.** Inject it via `hermes cron create --prompt "...$CRON_JOB_ID..."` (or read it from `cronjob list` after creation) and forward to `babysit.py poll --cron-job-id "$CRON_JOB_ID"`. Without the flag, the script cannot issue `cronjob action=remove` on its own.
+- **Smoke Gate failure is not a babysit concern.** If Gate 8 stays `failure` for >1 tick, post one root-cause hint and escalate to `drive-pr-to-green` / `finish-the-job` — do not loop indefinitely.

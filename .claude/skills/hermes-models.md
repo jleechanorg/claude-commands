@@ -1,92 +1,47 @@
 ---
 name: hermes-models
-description: Hermes agent model configs — which work, which are broken/quota-limited, and how to switch
+description: Use when inspecting, selecting, changing, or diagnosing Claude wrapper and Hermes model configuration on either host.
 type: reference
 ---
 
-# Hermes Model Reference
+# Host-aware model configuration
 
-**Canonical config on this machine**: `~/.hermes_prod/config.yaml` (prod), `~/.hermes/config.yaml` (staging)
+Never copy a dated model map or assume both hosts match. Never store or retrieve secrets from `.env` files.
 
-**Auth profiles**: `~/.hermes_prod/.env` (secrets), `~/.hermes_prod/auth-profiles.json` if present
+## Canonical live owners
 
-## Current config on this machine (as of 2026-04-13)
+- Claude wrapper definitions and route enablement: live `~/.bashrc` (read-only unless the user explicitly authorizes edits).
+- Hermes model/provider: live `~/.hermes/config.yaml`.
+- Credentials: approved process environment or macOS Keychain; never `~/.hermes/.env`.
+- AO model shorthands: live `~/.hermes/agent-orchestrator.yaml`.
 
-```yaml
-model:
-  default: MiniMax-M2.7
-  provider: minimax
-```
+The current Mac snapshot on 2026-07-31 has OpenRouter shell routes explicitly disabled in `~/.bashrc` and Hermes configured for provider `minimax`, model `MiniMax-M3`. Treat this only as a dated observation; re-read the live owners before every claim or change.
 
-**Provider**: `minimax` with `MiniMax-M2.7` — API key auth via `MINIMAX_API_KEY` in `~/.hermes_prod/.env`
-
-## Provider status table
-
-| Model | Status | Auth | Notes |
-|---|---|---|---|
-| `MiniMax-M2.7` | ✅ **CURRENT** | `api_key` → `MINIMAX_API_KEY` | Live in `~/.hermes_prod/config.yaml` |
-| `MiniMax-M2.7-highspeed` | ❌ **PLAN NOT SUPPORTED** | `api_key` | HTTP 500 error 2061 — plan does not support this tier |
-| `gemini-3-flash-preview` | ✅ Available via AO | API key | Used by AO workers via `modelByCli.gemini` |
-
-## How to switch primary model
-
-### Step 0 — PROBE FIRST (mandatory)
-
-**Verify the model is available on the current plan before adding to config:**
+## Read-only discovery
 
 ```bash
-KEY=$(python3 -c "import os; print(os.environ.get('MINIMAX_API_KEY',''))")
-curl -s -o /dev/null -w "%{http_code}" \
-  https://api.minimax.io/anthropic/v1/messages \
-  -H "x-api-key: $KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"MiniMax-M2.7-highspeed","max_tokens":5,"messages":[{"role":"user","content":"hi"}]}'
+rg -n '^claude[a-z]*\\(\\)|OpenRouter|OR_PROXY_DISABLED' ~/.bashrc
+rg -n '^(model:|  default:|  provider:)' ~/.hermes/config.yaml
+rg -n 'modelByCli|provider' ~/.hermes/agent-orchestrator.yaml
+test -n "${MINIMAX_API_KEY:-}"
+security find-generic-password -s openrouter-pilot-api-key >/dev/null 2>&1
 ```
 
-- **200** → model available; proceed
-- **500 with error 2061** → plan does not support this model; do NOT add to config
-- **403/401** → auth issue; check `MINIMAX_API_KEY`
+Do not print secret values. An absent environment variable alone does not prove missing credentials; follow the global two-probe authentication rule before recommending login.
 
-### Step 1 — Update config (surgical)
+## Change protocol
 
-```bash
-HERMES_HOME=$HOME/.hermes_prod hermes config set model.default <model-name>
-```
+1. State the exact host, live owner, current provider/model, intended provider/model, and user-visible reason.
+2. Probe the target provider/model with a minimal non-UI request using an already-loaded credential; record HTTP/provider status without printing the credential.
+3. Ask before changing model, credential source, wrapper, path, or default configuration.
+4. Make the smallest owner-file change. Never edit `~/.bashrc` wrappers without explicit user authorization.
+5. On service start, stop, or restart, inspect the process table and prove every old instance is dead before launching a replacement.
+6. Never run prod and staging gateways concurrently when they share Slack credentials.
+7. Verify from the user layer: process identity, Hermes health/status, provider/model shown by live config, and one cheap real request.
 
-Or edit `~/.hermes_prod/config.yaml` directly.
+## Diagnosis
 
-### Step 2 — Restart gateway
-
-```bash
-launchctl bootout gui/$(id -u)/ai.hermes.prod
-sleep 2
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.hermes.prod.plist
-# or for non-launchd:
-HERMES_HOME=$HOME/.hermes_prod hermes gateway run --replace &
-```
-
-### Step 3 — Verify
-
-```bash
-HERMES_HOME=$HOME/.hermes_prod hermes gateway status
-HERMES_HOME=$HOME/.hermes_prod hermes status  # shows model + Slack connectivity
-```
-
-## Gateway health check
-
-```bash
-curl -fsS -m 8 http://127.0.0.1:18789/health   # only works if Hermes is on 18789
-HERMES_HOME=$HOME/.hermes_prod hermes gateway status
-```
-
-**Note**: Hermes prod gateway runs as `ai.hermes.prod` launchd service. Hermes STAGING runs as `ai.hermes-staging`. Only ONE should be active at a time — Slack token conflicts if both claim the same bot.
-
-## Known failure modes
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| HTTP 400 on Slack mention | Wrong model for context, or MiniMax rejecting the model | Check `config.yaml` model.default matches a plan-supported model |
-| Gateway not responding | Wrong HERMES_HOME or port conflict | Verify `HERMES_HOME=$HOME/.hermes_prod` and only one gateway running |
-| Slack bot not replying | Bot token mismatch or gateway not started | Check `hermes gateway status` and `hermes status` |
-| HTTP 529 overloaded | MiniMax API overloaded | Retry with backoff; reduce concurrency |
+- A TUI model/auth message is not enough to edit wrappers or recommend login.
+- For a previously working OpenRouter route, probe the Keychain entry and a cheap provider request before changing configuration.
+- For MiniMax plan errors, preserve the configured model and report the exact provider error; do not silently substitute another provider.
+- Treat `~/.bashrc` route-disable declarations as authoritative until the user explicitly changes them.

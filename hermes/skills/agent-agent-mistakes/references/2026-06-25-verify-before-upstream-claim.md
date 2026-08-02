@@ -10,7 +10,7 @@
 
 **What the agent said:** *"Compared to the Python agent-orchestrator you've been running locally (the `~/.hermes/agent-orchestrator/` we use)..."*
 
-**Reality:** `~/.hermes/agent-orchestrator/` does not exist. The Python AO under `~/.hermes/` is `~/.hermes/ao_runner/` (a thin runner shim — `cli.py`, `runner.py`, `config.py`, `launchd.py`). The real source of truth for the user is the TypeScript fork `jleechanorg/agent-orchestrator`, cloned at `~/projects/agent-orchestrator-684-thread-ts/`.
+**Reality:** `~/.hermes/agent-orchestrator/` does not exist. The Python AO under `~/.hermes/` is `~/.hermes/ao_runner/` (a thin runner shim — `cli.py`, `runner.py`, `config.py`, `launchd.py`). The real source of truth for the user is the TypeScript fork `jleechanorg/agent-orchestrator-ts`, cloned at `~/projects/agent-orchestrator-684-thread-ts/`.
 
 **Root cause:** Filled the gap from training-data memory of "Python `agent-orchestrator`" instead of running `ls -d ~/.hermes/agent-orchestrator/`.
 
@@ -18,7 +18,7 @@
 
 **What the agent said:** *"Upstream AgentWrapper/agent-orchestrator went TypeScript → Go... Your fork is still on the older TS architecture."*
 
-**Reality:** Upstream did go TS → Go. The user's fork (`jleechanorg/agent-orchestrator`) is indeed still TS — but the agent never asked or verified. It conflated "upstream changed" with "your fork matches the change," and then asserted the fork's state without checking. The user had to correct: *"mine shouldn't be python I have an older fork."*
+**Reality:** Upstream did go TS → Go. The user's fork (`jleechanorg/agent-orchestrator-ts`) is indeed still TS — but the agent never asked or verified. It conflated "upstream changed" with "your fork matches the change," and then asserted the fork's state without checking. The user had to correct: *"mine shouldn't be python I have an older fork."*
 
 **Root cause:** When the user has a fork of an upstream project, never assume the fork tracks upstream. Run `gh api repos/<owner>/<repo>/languages` (and `--json primaryLanguage`) for the fork, in the same turn as the claim.
 

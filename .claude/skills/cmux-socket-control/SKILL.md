@@ -3,16 +3,21 @@ name: cmux-socket-control
 description: Control cmux tabs, workspaces, and terminal panes via Unix socket. Use when reading terminal output, sending commands to another agent's pane, switching tabs, or monitoring coder progress.
 ---
 
-# cmux Socket Control
+## ⚠️ Submit Discipline (MANDATORY — read this before every cmux steer)
 
-> **REQUIRED (2026-06-09):** For any `cmux send` calls in this skill, use the canonical `send_and_submit()` wrapper at `~/.hermes_prod/skills/cmux/scripts/cmux_client.py` — the bare two-command pattern below has no proof of submission and burned us 3 times in 30 minutes on the cost-workspace agent. This skill is fine for socket discovery, read operations, and tree/walk ops; steering must go through the wrapper. See `~/.hermes_prod/skills/cmux-send-submit/SKILL.md`.
+`cmux send` does **NOT** press Enter. This is the #1 recurring cmux failure mode
+(verified 2026-07-16: user explicitly flagged "you always forget to send" after the
+fable iOS pivot bootstrap). The **4-step ritual** below is a hard contract for every
+send to a cmux surface. Skip ANY step and the message sits in the input buffer
+without ever reaching the agent.
 
-## ⚠️ SUPERSEDED — Use `cmux` CLI, not raw socket protocol
+## ⚠️ SUPERSEDED — Use `cmux` CLI, not raw socket protocol (for name → surface resolution)
 
-The raw `nc -U $SOCK` examples below still work for low-level access, but they
-have a **name → surface resolution gap** that has caused repeated failures
-("why do you always get confused when I name a surface"). The canonical recipe
-is the `cmux` CLI, which exposes workspace/surface/tab refs directly.
+The raw `nc -U $SOCK` examples further down still work for low-level access,
+but they have a **name → surface resolution gap** that has caused repeated
+failures ("why do you always get confused when I name a surface"). The
+canonical recipe is the `cmux` CLI, which exposes workspace/surface/tab refs
+directly.
 
 **Always start here when the user names a surface, tab, or workspace:**
 
@@ -20,8 +25,7 @@ is the `cmux` CLI, which exposes workspace/surface/tab refs directly.
 # 1. MY workspace = caller.workspace_ref, falling back to focused.
 #    `caller` is populated only when this command runs inside cmux itself;
 #    from a standalone terminal (and from most skill invocations) it is null,
-#    and a naive `["caller"]["workspace_ref"]` lookup will KeyError. The
-#    defensive form below silently falls back to the focused workspace.
+#    so the defensive form below falls back to the focused workspace.
 WS=$(cmux identify --json | python3 -c '
 import sys, json
 d = json.load(sys.stdin)
@@ -33,19 +37,12 @@ print(c.get("workspace_ref") or d.get("focused", {}).get("workspace_ref"))
 #    Do NOT filter the output — sibling tabs and the ◀ markers are the signal.
 cmux tree --all --workspace "$WS"
 
-# 3. Read the target surface. ⚠ Cross-workspace `cmux read-screen
-#    --workspace X --surface Y` is NOT reliable in current cmux (verified
-#    bug — see ~/.hermes/skills/cmux/references/surface-read-routing-bug.md):
-#    it can silently return the currently-focused surface's content even
-#    when the `result` echoes the requested refs. The reliable recipe for
-#    reading a non-focused surface is **focus-then-read**:
-#      a. `cmux focus-surface --workspace "$WS" --surface surface:N` (or the
-#         JSON-RPC `surface.focus` equivalent) to make surface:N the focused
-#         surface, then
-#      b. `cmux read-screen --lines 80` (no --workspace / --surface args —
-#         the bare invocation reads the focused surface).
-#    For an already-focused surface, the bare `cmux read-screen --lines N`
-#    is sufficient and matches what you see on screen.
+# 3. Read the target. ⚠ Cross-workspace `cmux read-screen --workspace X
+#    --surface Y` is NOT reliable in current cmux (see
+#    ~/.hermes/skills/cmux/references/surface-read-routing-bug.md): it can
+#    silently return the focused surface's content. For non-focused surfaces,
+#    use focus-then-read: `cmux focus-surface --workspace "$WS" --surface
+#    surface:N` then `cmux read-screen --lines 80` (no --workspace/--surface).
 ```
 
 ### Three anti-patterns this skill now warns against
@@ -57,54 +54,113 @@ cmux tree --all --workspace "$WS"
 - **`list-pane-surfaces` defaults** — defaults to ONE pane and omits tabs in
   other panes; use `cmux tree --all --workspace "$WS"` for the full picture.
 
-### What this skill still does well
-
 The raw `nc -U $SOCK` blocks below remain useful for low-level debugging
-(`system.tree`, `system.identify`, custom JSON-RPC methods) and for
-environments where the `cmux` CLI binary is not on PATH. The CLI recipes
-above are the **default**; fall back to the raw socket blocks only when the
-CLI fails or is unavailable.
+(`system.tree`, `system.identify`, custom JSON-RPC methods).
 
-### Known cmux CLI bugs (verified)
+### The 4-step ritual
 
-- **`cmux read-screen --workspace <ws> --surface <surface>`** can silently
-  return the focused surface's content instead of the named one (see
-  `~/.hermes/skills/cmux/references/surface-read-routing-bug.md`). Use the
-  focus-then-read recipe above for any non-focused surface.
-- **`surface.read_text` with `workspace_ref`/`surface_ref`** ignores the ref
-  params and returns the focused surface's text. Same focus-then-read fix.
+```bash
+# STEP 1 — Type the text. OK response only proves socket acceptance, NOT submission.
+cmux send --workspace workspace:N --surface surface:M "your message"
 
----
+# STEP 2 — Press Enter. send does NOT auto-press Enter.
+cmux send-key --workspace workspace:N --surface surface:M enter
+
+# STEP 3 — Wait 5-15 seconds for the agent to start processing.
+sleep 8
+
+# STEP 4 — Verify with churning label (THE ONLY definitive proof).
+cmux capture-pane --workspace workspace:N --surface surface:M --lines 25
+# Look for one of:
+#   - "Working (Xs • esc to interrupt)"
+#   - "Forming… (Xs · thinking)"
+#   - "Precipitating… (Xs · ↓ tokens)"
+#   - "Brewed / Churned / Cooked for Xm"
+# If you see ANY active churning label → SUBMITTED.
+# If the text is still sitting at the ❯ prompt → NOT submitted, repeat step 2.
+# If "Stopped" / "Done" / nothing → no churn, investigate.
+```
+
+### ⚠️ Output Contract — typed text + terminal response (MANDATORY)
+
+Every reply that reports a `cmux send` action MUST include, in the same reply:
+
+1. **The exact text that was typed** — verbatim copy of the string passed to `cmux send`.
+2. **The cmux terminal response** — verbatim transcript of what `cmux capture-pane` /
+   `cmux read-screen` returned AFTER the `cmux send-key enter` settle window
+   (typically 5-15s). Specifically, the agent's first action after absorption.
+3. **Submission status** — explicit verdict: "submitted (churning label X)",
+   "not submitted (text still at ❯ prompt)", or "blocked (no churn, retried N times)".
+
+**Treat as not working until we see a response.** A reply that does NOT include
+both the typed text AND a terminal response is invalid evidence that the
+steer landed. The operator cannot distinguish a successful send from a failed
+send that left text in the input buffer.
+
+Canonical contract + echo-back template: `~/.hermes/skills/cmux/references/output-contract-mandatory.md`.
+
+### ⚠️ LLM-Provenance Caveat (MANDATORY footer)
+
+Every reply that quotes cmux output, terminal text, or agent actions produced
+by another LLM (the worker agent OR the assistant's own synthesis of agent
+output) MUST end with this verbatim footer:
+
+> *This was generated from another LLM and not the actual user, so feel free
+> to push back if you disagree and we can discuss.*
+
+Full caveat rules + scope: `~/.hermes/skills/cmux/references/output-contract-mandatory.md` § "LLM-Provenance Caveat".
+
+### Echo-back proof (MANDATORY)
+
+Every cmux steering action MUST be followed by an **echo-back proof** in the same
+turn or the immediate next turn to your operator (Slack thread, terminal reply,
+or whichever channel triggered the steer). The proof MUST follow the template
+in `~/.hermes/skills/cmux/references/output-contract-mandatory.md` and include
+the typed text + terminal response + submission status, not just the
+churning label.
+
+> ◀ sent to surface:55 (LEFT/claudec) at <HH:MM:SS PT> — typed: "<first 80 chars>";
+> response: "<first 80 chars of the churning label or first agent line>"; status:
+> submitted (churning label "Forming… 9s · ↓ 4.9k tokens").
+
+**Banned** (these are the failure modes the user keeps flagging):
+- "I sent the message" (no Enter proof)
+- "The agent should have received it" (no churning label)
+- `cmux send` with no follow-up `cmux send-key enter`
+- Sending to a surface that hasn't been focused (the global focus may be on a
+  different workspace; use the raw RPC `surface.focus` if needed)
+
+### Worktree-pointer strategy for long briefs
+
+For task briefs >200 chars (e.g. orchestrating iOS app pivot, multi-PR review),
+do NOT paste the full text into the input. Write the brief to a file in the
+agent's cwd (e.g. `.cmux-<task>-brief.md`) and send a 1-2 line pointer. This
+avoids the autocompleter contamination pitfall where shell-style tokens inside
+long text trigger tab completion mid-stream.
+
+### Canonical reference
+
+Full recipe + edge cases + the 2026-06-25 worked example live at:
+`~/.hermes/skills/cmux/references/send-submit-proof-2026-06-25.md`
+
+This rule was added 2026-07-16 after the fable iOS pivot bootstrap surfaced
+"you always forget to send" / "make sure you press submit and the work starts
+on the cmux input" (Slack ts 1784185650.528089). Apply it uniformly to every
+cmux-touching skill.
+
+# cmux Socket Control
 
 ## Find the socket
 
 ```bash
-# Release build (main cmux.app)
-SOCK="$HOME/Library/Application Support/cmux/cmux.sock"
-
-# Dev builds — each has its own socket, discoverable two ways:
-# 1. From the saved last-socket-path files:
-ls ~/Library/Application\ Support/cmux/dev-*-last-socket-path
-cat ~/Library/Application\ Support/cmux/dev-may-18-last-socket-path
-# → /tmp/cmux-debug-may-18.sock
-
-# 2. From the running process:
-lsof -p $(pgrep -f "cmux DEV may-18") | grep -E "\.sock"
-# → /tmp/cmux-debug-may-18.sock
+SOCK=$(ls /tmp/cmux-debug-*.sock /tmp/cmux-debug.sock /tmp/cmux.sock 2>/dev/null | head -1)
+echo "Using: $SOCK"
 ```
 
 Common paths:
-- Release: `~/Library/Application Support/cmux/cmux.sock`
-- Tagged debug build: `/tmp/cmux-debug-<tag>.sock` (e.g. `/tmp/cmux-debug-may-18.sock`)
+- Tagged debug build: `/tmp/cmux-debug-<tag>.sock`
 - Untagged debug: `/tmp/cmux-debug.sock`
-
-## Routing CLI commands to a specific build
-
-```bash
-# Use CMUX_SOCKET_PATH to target any build
-CMUX_SOCKET_PATH=/tmp/cmux-debug-may-18.sock cmux list-workspaces
-CMUX_SOCKET_PATH=/tmp/cmux-debug-may-18.sock cmux tree
-```
+- Release: `/tmp/cmux.sock`
 
 ---
 
@@ -272,54 +328,6 @@ Run: `python scripts/cmux_mcp_server.py --socket /tmp/cmux-debug-appclick.sock`
 non-loopback HTTP binding (mjs:865). Do not expose HTTP port on non-loopback hosts.
 
 ---
-
-## Workspace actions (pin, rename, color, reorder)
-
-Use `workspace-action` — **not** `tab-action` — for workspace-level operations.
-
-```bash
-# Pin a workspace in the sidebar
-cmux workspace-action --action pin --workspace workspace:4
-CMUX_SOCKET_PATH=/tmp/cmux-debug-may-18.sock cmux workspace-action --action pin --workspace workspace:4
-
-# Unpin
-cmux workspace-action --action unpin --workspace workspace:4
-
-# Bulk pin (loop over multiple workspaces)
-for ws in workspace:4 workspace:6 workspace:7; do
-    CMUX_SOCKET_PATH=/tmp/cmux-debug-may-18.sock cmux workspace-action --action pin --workspace $ws
-done
-
-# Rename
-cmux workspace-action --action rename --workspace workspace:4 --title "new name"
-
-# Set color
-cmux workspace-action --action set-color --workspace workspace:4 --color Blue
-
-# Reorder
-cmux workspace-action --action move-top --workspace workspace:4
-```
-
-**⚠ `tab-action --action pin` is WRONG for workspace pinning** — it pins a surface tab
-within a pane's horizontal tab bar, not the workspace in the sidebar. These are different.
-
-| Command | What it pins |
-|---|---|
-| `workspace-action --action pin` | Workspace row in the sidebar ✅ |
-| `tab-action --action pin` | Surface tab in a pane's horizontal tab bar ❌ (not workspaces) |
-
-## Surface (tab) actions within a pane
-
-```bash
-# Pin a surface tab in the horizontal tab bar of a pane
-cmux tab-action --action pin --surface surface:7 --workspace workspace:2
-
-# Rename a tab
-cmux tab-action --action rename --surface surface:7 --title "my label"
-
-# Close other tabs
-cmux tab-action --action close-others --surface surface:7
-```
 
 ## Rules (non-negotiable)
 

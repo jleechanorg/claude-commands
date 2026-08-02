@@ -48,7 +48,7 @@ When reviewing or producing evidence, identify the **claim class** before issuin
 | **Integration test** | Test log with real I/O, API calls shown, timing | "Real GitHub API call to PR #300" |
 | **Pipeline E2E** | Session spawn proof, event routing proof, outcome recording proof | "AO session jc-421 routed RetryAction" |
 | **PR-lifecycle E2E** | PR creation (URL+timestamp+actor), transition proof (CI/review timeline), merge outcome, cleanup proof | "PR created → CI green → CR approved → merged → branch deleted" |
-| **Merge-gate green** | All conditions checked with evidence per condition | "CI SUCCESS, MERGEABLE, CR APPROVED, ..., SKEPTIC PASS" |
+| **`/green`** | Current-head CI passes and PR is mergeable | "CI SUCCESS at HEAD; mergeable=MERGEABLE" |
 
 ### Fail-closed verdict rules
 

@@ -47,3 +47,37 @@ for i, line in enumerate(lines):
 ## Pattern: God-mode correction detection
 
 Search for "**Correction Applied:**" or "GOD MODE DIRECTIVE:" markers in story text to find where corrections were applied and whether violations recurred afterward.
+
+## Pattern: NPC status persistence divergence (sister bug class)
+
+The narrative-only state change class — LLM emits a status outcome
+(`captured`, `killed`, `defected`, `moved`) in the `narrative` block but never
+writes the corresponding `state_updates.npc_data[NPC].status` field. Pattern
+for proving it from an exported campaign:
+
+```python
+import json
+with open("<export_dir>/<campaign>_game_state.json") as f:
+    gs = json.load(f)
+state = gs.get("state", gs)
+npc_data = state.get("npc_data") or state.get("custom_campaign_state", {}).get("npc_data") or {}
+core_memories = (state.get("custom_campaign_state", {}) or {}).get("core_memories", [])
+
+# 1. Find every core_memory that mentions the NPC
+for m in core_memories:
+    s = str(m)
+    if "<NPC_NAME>" in s and any(kw in s.lower() for kw in ("captured", "killed", "defected", "moved", "broken", "yielded")):
+        print("NARRATIVE-EVIDENCE:", s[:200])
+
+# 2. Check canonical npc_data for the same NPC
+status = npc_data.get("<NPC_NAME>", {}).get("status", [])
+print(f"CANONICAL-STATUS: {status}")
+# If NARRATIVE-EVIDENCE present and CANONICAL-STATUS absent/contradictory → bug class confirmed
+```
+
+Full investigation recipe (GCP log filter + Firestore direct read + repro
+template) lives in `references/npc-status-persistence-bug.md`. Adjacent to
+god-mode directive violations structurally: both are "narrative diverges
+from canonical state." Different fix surface — directive violations are
+advisory-only enforcement; NPC-status persistence is a missing write that
+canonicalizer (PR #8120) cannot fix.

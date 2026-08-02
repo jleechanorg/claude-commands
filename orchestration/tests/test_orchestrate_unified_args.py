@@ -230,7 +230,7 @@ class TestLiveModeDispatcherWrapPrompt(unittest.TestCase):
         ):
             dispatcher = mock_dispatcher_cls.return_value
             dispatcher.analyze_task_and_create_agents.return_value = [
-                {"name": "task-agent-1", "cli": "claude"}
+                {"name": "ta[REDACTED_OPENAI_KEY]", "cli": "claude"}
             ]
 
             rc = live_mode.main()
@@ -250,7 +250,7 @@ class TestLiveModeDispatcherWrapPrompt(unittest.TestCase):
         ):
             dispatcher = mock_dispatcher_cls.return_value
             dispatcher.analyze_task_and_create_agents.return_value = [
-                {"name": "task-agent-1", "cli": "claude"}
+                {"name": "ta[REDACTED_OPENAI_KEY]", "cli": "claude"}
             ]
             dispatcher.create_dynamic_agent.return_value = True
 
@@ -463,7 +463,7 @@ class TestGhCommandMocking(unittest.TestCase):
             stderr="",
         )
 
-        branch_pattern = "task-agent-test-work"
+        branch_pattern = "ta[REDACTED_OPENAI_KEY]"
         result = subprocess.run(
             [
                 "gh",
@@ -710,7 +710,7 @@ class TestLiveModeCLIHelpAndWorktreeFlags(unittest.TestCase):
             patch("orchestration.live_mode.TaskDispatcher") as mock_dispatcher_cls,
         ):
             dispatcher = mock_dispatcher_cls.return_value
-            dispatcher.analyze_task_and_create_agents.return_value = [{"name": "task-agent-1", "cli": "claude"}]
+            dispatcher.analyze_task_and_create_agents.return_value = [{"name": "ta[REDACTED_OPENAI_KEY]", "cli": "claude"}]
             rc = live_mode.main()
 
         self.assertEqual(rc, 0)

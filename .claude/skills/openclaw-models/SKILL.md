@@ -39,7 +39,7 @@ type: reference
 "minimax:default": {
   "type": "api_key",
   "provider": "minimax",
-  "key": "sk-cp-..."
+  "key": "[REDACTED_OPENAI_KEY]"
 }
 ```
 

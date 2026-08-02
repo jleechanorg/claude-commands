@@ -220,13 +220,50 @@ inspected and what each showed.
 
 ---
 
+## Phase 3.6: Breadth Envelope Reconciliation (scope-word claims)
+
+When the claim uses a **breadth scope word** — "all", "per", "each", "every", or
+"across N <variants|agents|modes|classes>" — the bundle MUST reconcile the
+*requested set* against the *reachable set*:
+
+1. Find the scope word in the claim (e.g. "real evidence **per agent**", "**all 14**
+   agents", "**each** mode").
+2. Confirm the bundle states the **requested set** (enumerated from source of truth)
+   AND the **reachable set** actually evidenced, with the **structural reason** for any
+   gap (the exact production gate, e.g. the `not tool_requests` shadow gate).
+3. Confirm breadth was NOT manufactured via a non-production path (direct-SDK script,
+   mock, reconstructed input). A complete matrix produced off the production path is a
+   fabrication, not evidence.
+
+4. Confirm the delivery does **not silently pass off a partial as complete**: the bundle/PR
+   must state the shortfall up front ("DELIVERED X of N; DID NOT DELIVER N−X"), and must
+   separate **gate-excluded** (true impossibility, gate named) from **not-yet-driven**
+   (reachable, no scenario built). A real subset presented as if it were the whole — or a
+   summary that leads with "✓" and buries the unmet count — is a silent partial failure.
+5. Confirm a **per-item ledger** exists with one row per requested element (`item | status |
+   reason`). Every requested element MUST have a row (no silent drops), and any row marked
+   `GATE-EXCLUDED`/impossible MUST name a gate that is **intrinsic to the item**, not a
+   per-turn/per-run property (e.g. "agent X is impossible" is wrong when the gate excludes
+   *turns that emit tool_requests*, not the agent — that item is `NOT-YET-DRIVEN`).
+
+**FAIL / INSUFFICIENT** if: the claim's scope word is not reconciled with a reachable-set
+statement (claims "all N" but evidences a silent subset); OR breadth is manufactured off
+the production path; OR a partial is presented as complete with no up-front shortfall
+statement; OR "not-yet-driven" reachable items are mislabeled as "impossible". Name the
+scope word, the requested count, and the evidenced count.
+
+---
+
 ## Phase 4: Verdict and Report
 
 ### Verdict Logic
 
 ```
 FAIL if ANY of: Phase 1.3 (symlink), Phase 2.1 (self-reference), Phase 2.3 (empty log),
-               Phase 3.4 (cross-category Nx), Phase 3.1 (stat N<10)
+               Phase 3.4 (cross-category Nx), Phase 3.1 (stat N<10),
+               Phase 3.6 (unreconciled breadth scope word OR off-path manufactured breadth
+                          OR silent partial presented as complete OR undriven-mislabeled-impossible
+                          OR missing per-item ledger / requested element with no ledger row)
 
 WARN if ANY of: Phase 1.1 (missing optional files), Phase 2.4 (inferential language),
                Phase 3.1 (N<30), Phase 3.2 (methodology gaps), Phase 3.3 (asymmetric evidence)

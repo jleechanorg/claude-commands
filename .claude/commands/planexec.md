@@ -124,7 +124,7 @@ fi
 11. **Sequential Tasks**: For complex workflows requiring coordination >5 minutes
   12. Method: Step-by-step with context monitoring
   13. Best for: Feature implementation, architectural changes, complex integrations
-14. **Reference**: See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for full decision criteria
+14. **Parallel ceiling (mandatory for any fan-out):** Load `/parallel` → `~/.claude/skills/parallelize-to-ceiling/SKILL.md` before sizing workers, shards, or agent lanes. **LLM vs tool parallelism:** see [parallel-vs-subagents.md](./parallel-vs-subagents.md) for when to use subagents vs batched tool calls.
 
 **🚀 Execution Sequence** (Context-Optimized):
 15. **Quick Discovery**: Use Serena MCP for targeted analysis
