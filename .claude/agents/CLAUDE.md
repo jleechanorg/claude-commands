@@ -87,32 +87,31 @@ Task({
 - **Analysis**: Correctness, architecture, security, performance, PR goal alignment
 - **When to Use**: User explicitly requests Gemini opinion, technical decision validation
 
-### **9. `wafer-pair-coder.md` - Wafer Pair Programming Coder**
-- **Focus**: Delegates implementation to Claude CLI with Wafer API backend (GLM-5.1 via pass.wafer.ai)
-- **Pattern**: Mirrors minimax-pair-coder — same protocol, different backend
-- **CLI**: Uses `claudew()` env vars (CLAUDEW_MODE, WAFER_API_KEY, ANTHROPIC_BASE_URL=https://pass.wafer.ai)
-- **When to Use**: Pair programming with Wafer as the implementation engine
+### **9. `opencode-pair-coder.md` - OpenCode CLI Coder (Wafer)**
+- **Focus**: Delegates implementation to OpenCode CLI via `opencodew()` wrapper
+- **Backend**: Wafer API (`https://pass.wafer.ai/v1`), model `wafer.ai/GLM-5.1`
+- **CLI Routing**: Mirrors `opencodew()` case statement — subcommands pass through, `run` mode uses `--dangerously-skip-permissions`, flags use interactive mode
+- **Requires**: `WAFER_API_KEY` env var, `opencode` binary at `~/.opencode/bin/`
+- **When to Use**: Pair programming with Wafer-powered OpenCode as coder teammate
 
-### **10. `wafer-pair-verifier.md` - Wafer Pair Programming Verifier**
-- **Focus**: Delegates verification to Claude CLI with Wafer API backend (GLM-5.1 via pass.wafer.ai)
-- **Pattern**: Mirrors minimax-pair-verifier — same protocol, different backend
-- **CLI**: Uses `claudew()` env vars (CLAUDEW_MODE, WAFER_API_KEY, ANTHROPIC_BASE_URL=https://pass.wafer.ai)
-- **Fallback**: Falls back to native verification if Wafer CLI unavailable
-- **When to Use**: Independent verification with Wafer as the verification engine
+### **10. `opencode-pair-verifier.md` - OpenCode CLI Verifier (Wafer)**
+- **Focus**: Delegates verification to OpenCode CLI via `opencodew()` wrapper
+- **Backend**: Same Wafer API as coder, runs independently
+- **Fallback**: Falls back to native verification if CLI unavailable
+- **When to Use**: Pair programming with Wafer-powered OpenCode as verifier teammate
 
-### **11. `anti-gravity-pair-coder.md` - Anti Gravity Pair Programming Coder**
-- **Focus**: Delegates implementation to Anti Gravity through `agy --dangerously-skip-permissions`
-- **Pattern**: Pair coder protocol with fail-closed CLI delegation
-- **CLI**: Uses `agy --dangerously-skip-permissions --print`
-- **Fallback**: No fallback engine; reports failure if agy is unavailable or errors
-- **When to Use**: Pair programming where Anti Gravity must perform the implementation work
+### **11. `openw-pair-coder.md` - OpenCode CLI Coder via openw()**
+- **Focus**: Delegates implementation to OpenCode CLI via `openw()` / `opencodew()` wrapper
+- **Backend**: Wafer API (`https://pass.wafer.ai/v1`), model `wafer.ai/GLM-5.1`
+- **CLI Routing**: Mirrors `openw()` / `opencodew()` case statement from `~/.bashrc` exactly
+- **Requires**: `WAFER_API_KEY` env var, `opencode` binary at `~/.opencode/bin/`
+- **When to Use**: Pair programming with Wafer-powered OpenCode — prefer this over `opencode-pair-coder` for bashrc-native routing
 
-### **12. `anti-gravity-pair-verifier.md` - Anti Gravity Pair Programming Verifier**
-- **Focus**: Delegates verification to Anti Gravity through `agy --dangerously-skip-permissions`
-- **Pattern**: Pair verifier protocol with fail-closed CLI delegation
-- **CLI**: Uses `agy --dangerously-skip-permissions --print`
-- **Fallback**: No fallback engine; reports VERIFICATION_FAILED on agy failure
-- **When to Use**: Independent verification where Anti Gravity must perform the review/test judgment
+### **12. `openw-pair-verifier.md` - OpenCode CLI Verifier via openw()**
+- **Focus**: Delegates verification to OpenCode CLI via `openw()` / `opencodew()` wrapper
+- **Backend**: Same Wafer API as coder, runs independently
+- **Fallback**: Falls back to native verification if CLI unavailable
+- **When to Use**: Pair programming verification with Wafer-powered OpenCode — prefer this over `opencode-pair-verifier` for bashrc-native routing
 
 ## 🔄 Agent Coordination Patterns
 
@@ -187,6 +186,10 @@ Task({
 | Test Evidence | testexecutor | Systematic evidence collection without judgment |
 | Test Validation | testvalidator | Independent assessment with fresh context |
 | Alternative Analysis | codex/gemini-consultant | External AI perspective when needed |
+| Wafer Pair Coder | opencode-pair-coder | OpenCode CLI + Wafer API for implementation |
+| Wafer Pair Verifier | opencode-pair-verifier | OpenCode CLI + Wafer API for independent verification |
+| openw Pair Coder | openw-pair-coder | OpenCode CLI via openw() + Wafer API (mirrors bashrc) |
+| openw Pair Verifier | openw-pair-verifier | OpenCode CLI via openw() + Wafer API (mirrors bashrc) |
 
 ### **When NOT to Use Agents**
 - **Simple Tasks**: Direct execution often more efficient than agent overhead

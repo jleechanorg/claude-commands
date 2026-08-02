@@ -1,107 +1,84 @@
 ---
-description: Check PR green status for a PR, including lite-green for docs/tests-only changes and full 7-green for runtime changes
+description: Check PR green status — CI green + no merge conflicts, both verified at current PR HEAD SHA. Quality gates (evidence, review, comments) belong to the draft phase, not /green.
 type: verification
 execution_mode: immediate
 ---
 
+# /green — PR Green Status Check (2-Gate)
+
+**Canonical definition (2026-07-28):** `/green` = exactly two gates, both at the PR's current HEAD SHA. Full rationale and stale-data caveats: `~/.claude/skills/pr-green-definition/SKILL.md`.
+
+| Gate | Check |
+|------|-------|
+| 1 | CI green — every check at HEAD passes |
+| 2 | No merge conflicts — `mergeable == MERGEABLE` |
+
+Nothing else gates `/green`. Comment-thread resolution and evidence-link/PR-description gates are draft-phase quality checks (`~/.claude/skills/draft-first-pr/SKILL.md`), not `/green` gates. **CodeRabbit/Bugbot: optional advisory reviewers** — read their feedback, take what's useful; never a gate, never a wait, at any phase. Reaching `/green` is NOT merge authorization — merging still requires literal `MERGE APPROVED` from the human in the most recent live message.
+
+**SHA-binding:** `/green`'s two gates, like every gate in the full lifecycle (`/es` → `/er` → `/advice` → mark ready → `/green` → merge authorization), are only valid at the exact HEAD SHA they were checked against — a new commit invalidates a prior `/green` verdict. Full lifecycle and the SHA-binding rule: `~/.claude/skills/draft-first-pr/SKILL.md`.
+
 ## EXECUTION INSTRUCTIONS
 
-When invoked as `/green <PR#>` or `/green` (auto-detect from current branch), execute the verification procedure from `~/.claude/skills/pr-green-definition.md`.
+When invoked as `/green <PR#>` or `/green` (auto-detect from current branch):
 
-First classify the PR:
+### Step 1 — Resolve PR + verify not merged/closed
 
-- **lite-green** if the diff is docs-only or tests-only
-- **7-green** otherwise
-
-**"Docs-only" is by EFFECT, not file extension.** A `.md` file is NOT automatically docs.
-A change that alters production runtime behavior is **7-green**, even if every changed file
-ends in `.md`. In particular, these are **NEVER docs-only** (they require full 7-green +
-real-LLM before/after evidence per `## Real LLM Evidence`):
-
-- `$PROJECT_ROOT/prompts/**` — prompt files are production LLM behavior, not documentation
-- any system-instruction / prompt-template / agent-instruction file fed to the model at runtime
-- schema/config/workflow files that change CI, deploy, or merge-safety behavior
-
-Genuinely docs-only = `docs/`, `roadmap/`, `README*`, `AGENTS.md`, `CLAUDE.md`, `.claude/`,
-`.codex/`, `.cursor/` — files no running code reads. When in doubt, classify **7-green**.
-
-**Skill reference**: `~/.claude/skills/pr-green-definition.md` — "Verification Procedure (Mandatory)" section.
-
-### Step 1 — Resolve PR number
-
-If no PR number given, detect from current branch:
 ```bash
-gh pr list --head "$(git branch --show-current)" --json number --jq '.[0].number'
+PR=<N or auto-detected via: gh pr list --head "$(git branch --show-current)" --json number --jq '.[0].number'>
+gh pr view "$PR" --json number,headRefName,headRefOid --jq '.'
+gh api repos/OWNER/REPO/pulls/"$PR" --jq '{state, merged}'
 ```
 
-Resolve OWNER/REPO from the git remote.
+If `merged:true` or `state:"closed"` → report and STOP. Do not evaluate Gates 1/2.
 
-### Step 2 — Determine green mode
+### Step 2 — Gate 1: CI green
 
-Inspect changed files and choose one mode:
+```bash
+gh pr view "$PR" --json statusCheckRollup --jq '[.statusCheckRollup[] | select((.__typename == "StatusContext" and (((.state // "") | ascii_upcase) != "SUCCESS")) or (.__typename == "CheckRun" and .name != "Green Gate" and .name != "Cursor Bugbot" and ((((.status // "") | ascii_upcase) != "COMPLETED") or (((.conclusion // "") | ascii_upcase) != "SUCCESS"))))] | length'
+```
 
-- **Lite-green**: docs-only or tests-only PR — docs-only by EFFECT (no running code reads the file). `$PROJECT_ROOT/prompts/**` and any model-fed prompt/instruction file are **NOT** docs even though `.md` → classify 7-green.
-- **7-green**: any runtime / production / workflow-safety affecting PR
+`0`, with no checks still `PENDING`/`IN_PROGRESS` → Gate 1 PASS. Any non-zero, or checks still running → Gate 1 FAIL/PENDING.
 
-### Step 3 — Run gate-by-gate verification
+If a check has been pending/running **>10 min past its normal runtime**: run the equivalent test locally now, post "local run — CI still pending/rerunning" proof (command + output + timestamp + SHA) to the PR, and keep Gate 1 as PENDING (not PASS) until CI itself resolves.
 
-Execute ALL of these in parallel where possible:
+Never use `gh pr checks | grep` — it can show stale "pass" during GraphQL rate-limit exhaustion. Never trust `.state` for GitHub Actions `CheckRun` rows (use `.conclusion`).
 
-1. **Get branch name**: `gh pr view N --json headRefName --jq '.headRefName'`
-2. **Get PR state**: `gh pr view N --json state,merged --jq '{state,merged}'`
-   - If merged or closed: report status and stop
-3. **Green Gate log**: `gh run list --workflow green-gate.yml --branch BRANCH -L 1` → read gate-by-gate PASS/FAIL lines
-4. **Skeptic Gate log**: `gh run list --workflow skeptic-gate.yml --branch BRANCH -L 1` → read VERDICT line
-5. **CR review state**: `gh pr view N --json reviews` — find latest non-COMMENTED review from coderabbitai
-6. **Mergeability**: `gh pr view N --json mergeable --jq '.mergeable'`
+### Step 3 — Gate 2: no merge conflicts
 
-For **lite-green** PRs, verify only:
+```bash
+gh pr view "$PR" --json headRefOid,mergeable,mergeStateStatus --jq '.'
+```
 
-1. **CI green**
-2. **Mergeable**
-3. **CodeRabbit APPROVED**
+- `mergeable == "MERGEABLE"` → Gate 2 PASS. Report `mergeStateStatus` as context only; non-`CLEAN` states can reflect CI rather than conflicts.
+- `mergeable == "UNKNOWN"` → re-poll (GitHub still computing), do not report FAIL yet
+- `mergeable == "CONFLICTING"` → Gate 2 FAIL. Resolve it yourself (rebase, correct side of a mechanical collision, reapply changes) — do not stop and ask unless the conflict is genuinely ambiguous business logic.
 
-Skip skeptic/evidence/bugbot/comment-resolution gates for lite-green PRs.
+**Re-run this check immediately before every verdict you state** — mergeability is recomputed asynchronously and can flip hours later with zero action on this branch.
 
-### Step 4 — Report
-
-Output one of these tables.
+### Step 4 — Report verdict
 
 ```
-## Lite-Green Status: PR #N
+## /green Status: PR #N (HEAD <sha>)
 
 | Gate | Status | Detail |
 |------|--------|--------|
-| 1. CI green | PASS/FAIL | CI=success / CI=pending |
-| 2. No conflicts | PASS/FAIL | mergeable=true / mergeable=false |
-| 3. CR APPROVED | PASS/FAIL | CR=APPROVED / CR=none |
+| 1. CI green | PASS/FAIL/PENDING | <checks summary> |
+| 2. No conflicts | PASS/FAIL | mergeable=<value> mergeStateStatus=<value> |
 
-**Verdict**: LITE-GREEN / NOT LITE-GREEN (Gates X, Y failing)
+**Verdict: GREEN / NOT-GREEN** (as of <SHA> @ <UTC timestamp>)
 ```
 
-or
+- **GREEN** only when both gates show direct PASS evidence pulled just now — never from memory of an earlier check.
+- **NOT-GREEN** — state which gate(s) failed and why, plus the fix-it action taken (or needed).
 
-```
-## 7-Green Status: PR #N
+GREEN is not merge authorization. Report readiness and stop; merging requires literal `MERGE APPROVED` from the human.
 
-| Gate | Status | Detail |
-|------|--------|--------|
-| 1. CI green | PASS/FAIL | CI=success / CI=pending |
-| 2. No conflicts | PASS/FAIL | mergeable=true / mergeable=false |
-| 3. CR APPROVED | PASS/FAIL | CR=APPROVED / CR=none |
-| 4. Bugbot clean | PASS/FAIL | conclusion=success / none |
-| 5. Comments resolved | PASS/FAIL | 0 unresolved / N unresolved |
-| 6. Evidence review | PASS/FAIL | evidence-gate passed / missing |
-| 7. Skeptic PASS | PASS/FAIL | VERDICT: PASS / no verdict |
+### Where the quality gates went
 
-**Verdict**: 7-GREEN / NOT 7-GREEN (Gates X, Y failing)
-```
+Evidence (`/es`), review (`/er`), and second-opinion (`/advice`) checks now run in the **draft phase**, before a PR flips from draft to ready-for-review. See `~/.claude/skills/draft-first-pr/SKILL.md`. `/green` no longer waits on or reports these.
 
-### Critical Rules
+## Where this rule lives
 
-- **NEVER** use `gh pr checks` output to determine gate status
-- **ALWAYS** report which mode you used: lite-green or 7-green
-- **ALWAYS** read the Green Gate workflow log for actual gate results when the PR requires 7-green
-- **DO NOT** require Green Gate or Skeptic verification for a valid lite-green PR
-- "Green Gate: pass" in `gh pr checks` means the workflow ran, NOT that gates passed
-- "CodeRabbit: pass" means the webhook responded, NOT an APPROVED review
+- `~/.claude/skills/pr-green-definition/SKILL.md` — canonical 2-gate definition, stale-data mechanics
+- `~/.claude/skills/draft-first-pr/SKILL.md` — draft-phase quality gates (`/es`, `/er`, `/advice`)
+- `~/.claude/skills/github-cli-reference.md` — REST ↔ GraphQL dual-bucket procedure

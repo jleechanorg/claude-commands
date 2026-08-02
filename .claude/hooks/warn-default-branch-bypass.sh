@@ -3,7 +3,8 @@
 #
 # PreToolUse hook for `Bash` tool. Warns (does NOT block) when the model
 # is about to push to or merge into a default branch (main/master) on
-# $GITHUB_REPOSITORY without first showing a 7-green verdict.
+# $GITHUB_REPOSITORY without first showing a /green verdict (CI green
+# + no merge conflicts — see .claude/skills/pr-green-definition.md).
 #
 # The user has final authority — this hook exists to surface the bypass,
 # not prevent it. The session Stop hook checks the goal condition; this

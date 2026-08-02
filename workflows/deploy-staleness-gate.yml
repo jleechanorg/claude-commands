@@ -48,7 +48,7 @@ jobs:
       - name: Checkout origin/main
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
         with:
-          ref: origin/main
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
           fetch-depth: 1
 
       - name: Compute main auth.js MD5

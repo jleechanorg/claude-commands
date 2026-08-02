@@ -349,7 +349,7 @@ def main():
     coordinator = RecoveryCoordinator()
 
     # Check for the specific failure
-    agent_name = "task-agent-5030"
+    agent_name = "ta[REDACTED_OPENAI_KEY]"
     result = coordinator.recover_agent(agent_name)
 
     print("\nRecovery Result:")

@@ -71,7 +71,7 @@ When an inbound message arrives wrapped with prefixes like:
 **Real diagnosis (not a leak, an operational alert):**
 - PR [#632](https://github.com/jleechanorg/jleechanclaw/pull/632) "fix(deploy): retry Stage 5 canary once after 30s" had 4 failing Green Gate runs since 2026-06-19 11:40Z.
 - Latest Green Gate verdict (PR comment `id=4751360032`): all gates PASS except Gate 3 = `state=none` because CodeRabbit has only posted 19 PR-level comments, never a review submission with `state=APPROVED`.
-- Two sibling PRs in the same pattern: [#638](https://github.com/jleechanorg/jleechanclaw/pull/638) and [#708](https://github.com/jleechanorg/agent-orchestrator/pull/708).
+- Two sibling PRs in the same pattern: [#638](https://github.com/jleechanorg/jleechanclaw/pull/638) and [#708](https://github.com/jleechanorg/agent-orchestrator-ts/pull/708).
 
 **Recovery turn actions (12 tool calls, 1 user-facing reply):**
 1. `skill_view(name='dropped-messages')` — context-loading (the skill itself was the one being patched)

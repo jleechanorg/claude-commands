@@ -98,7 +98,7 @@ WARNING Persisted transcript lagged live cached history for session agent:main:s
  disk=N, memory=N3 preserving live conversation context possible FTS write corruption
 ```
 
-Means the FTS write path detected disk-vs-memory drift and skipped a write to avoid corruption. Symptom: a fresh session won't have prior thread context. Frequency: ≥5 in a 1h window = real problem, worth a brief note. Verified pattern in jleechanclaw 2026-07-04 codexbar investigation.
+Means the FTS write path detected di[REDACTED_OPENAI_KEY] drift and skipped a write to avoid corruption. Symptom: a fresh session won't have prior thread context. Frequency: ≥5 in a 1h window = real problem, worth a brief note. Verified pattern in jleechanclaw 2026-07-04 codexbar investigation.
 
 ## Quick probe-all-in-one
 

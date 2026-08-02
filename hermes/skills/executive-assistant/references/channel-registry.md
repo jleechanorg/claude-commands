@@ -19,7 +19,7 @@ Verified live 2026-07-05 via `mcp_slack__channels_list`. Use these IDs directly 
 
 | Channel | ID | Trigger |
 |---|---|---|
-| #disk-usage-alerts | `C0AKNDEARS5` | Only include if last message <12h AND mentions Jeffrey |
+| #di[REDACTED_OPENAI_KEY] | `C0AKNDEARS5` | Only include if last message <12h AND mentions Jeffrey |
 | #openclaw-health | `C0AKYEY48GM` | Only include if process state changed since last brief |
 | #ralph-status | `C0AGX2Q0EA3` | ralph PR backlog overflow |
 

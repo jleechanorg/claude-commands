@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # cleanup-ao-sessions.sh — Age-based GC for ~/.ao-sessions/<id> directories.
 #
-# Companion to ~/Library/LaunchAgents/com.jleechan.cleanup-ao-sessions.plist
+# Companion to ~/Library/LaunchAgents/com.$USER.cleanup-ao-sessions.plist
 # which already schedules this script at 04:23 daily with `--clean --days 1`.
 # Without this script body the launchd plist silently fails — the work it
 # was meant to do is exactly what this file does.
@@ -19,7 +19,7 @@
 # 1. Dry-run by default. Pass --clean to actually rename session dirs to .bak.<ts>.
 # 2. Existing *.bak.* dirs are NEVER re-renamed (pre-2026-07-11 versions
 #    re-swept them daily, compounding suffixes like
-#    ao-X.bak.<ts1>.bak.<ts2>.bak.<ts3> forever — bead jleechan-6poe).
+#    ao-X.bak.<ts1>.bak.<ts2>.bak.<ts3> forever — bead $USER-6poe).
 #    Backups age out via retention instead: --clean auto-drops .bak.<ts>
 #    dirs older than AO_SESSIONS_BAK_RETENTION_DAYS (default 14; set 0 to
 #    disable auto-drop and restore the old never-delete behavior).
@@ -56,7 +56,7 @@ MIN_AGE_MINUTES=30
 LOG_FILE="${CLEANUP_AO_SESSIONS_LOG:-/tmp/cleanup-ao-sessions.log}"
 
 # Orchestrator session-id prefixes that MUST NOT be auto-cleaned.
-# - wa-*  : worldarchitect.ai workers and orchestrators
+# - wa-*  : your-project.com workers and orchestrators
 # - jc-*  : jleechanclaw orchestrators
 # These are long-running control planes; their on-disk state must outlive the
 # short-lived wa-*/ao-* workers they spawn.
@@ -220,7 +220,7 @@ for session_dir in "${AO_SESSIONS_DIR}"/*/; do
   sid=$(basename "$session_dir")
 
   # Existing backups are never re-renamed (compounding-suffix bug,
-  # bead jleechan-6poe) — the retention pass below owns their lifecycle.
+  # bead $USER-6poe) — the retention pass below owns their lifecycle.
   if [[ "$sid" == *.bak.* ]]; then
     continue
   fi

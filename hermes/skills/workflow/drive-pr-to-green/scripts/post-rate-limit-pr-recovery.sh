@@ -75,7 +75,7 @@ fi
 
 # 3. Ping CodeRabbit for fresh re-review
 echo "[3/6] Posting @coderabbitai re-review ping..."
-gh pr comment "$PR" --repo "$FULL" --body "@coderabbitai all good? Head is now \`$(git rev-parse --short origin/"$BRANCH" 2>/dev/null || echo 'latest')\` — addressed the still-valid reviewer threads. Please re-review against the new head and confirm APPROVED."
+"$HOME/.hermes/scripts/gh-safe-publish" pr comment "$PR" --repo "$FULL" --body "@coderabbitai all good? Head is now \`$(git rev-parse --short origin/"$BRANCH" 2>/dev/null || echo 'latest')\` — addressed the still-valid reviewer threads. Please re-review against the new head and confirm APPROVED."
 
 # 4. Trigger Skeptic Self-Verify
 echo "[4/6] Triggering Skeptic Self-Verify..."

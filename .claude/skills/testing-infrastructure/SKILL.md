@@ -139,6 +139,33 @@ MCP_SERVER_URL="https://..." MCP_TEST_MODE=real node scripts/mcp-smoke-tests.mjs
 - Hard-fails on any non-200 response
 - Results saved to `/tmp/repo/branch/smoke_tests/`
 
+## Local-run command contract (your-project.com repo)
+
+Moved here from `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` on 2026-07-25 — it is repo-specific, so it does not belong in the user-global "applies to all repos" files.
+
+When CI is stalled and you fall back to local tests, use this exact invocation contract to avoid three recurring footguns:
+
+1. **Run via `python -m unittest`, NOT `python $PROJECT_ROOT/tests/<file>.py` directly.** Direct-file execution causes module-level `from mvp_site.rewards_engine import (_private_func_a, _private_func_b, ...)` (line 19 of `$PROJECT_ROOT/tests/test_rewards_engine.py` and similar files) to bind local names. Subsequent tests do `setattr(rewards_engine, "_private_func_a", mock)`, which updates the module attribute but NOT the test module's local binding, producing spurious `TypeError: ... got an unexpected keyword argument 'cc_finish_authorized'` failures on tests that reference the private helpers indirectly. `python -m unittest mvp_site.tests.<file>` runs each test method in isolation and avoids this pollution. Observed: PR #7888 session 2026-07-05.
+
+   ```bash
+   # CORRECT — reliable
+   TESTING_AUTH_BYPASS=true vpython -m unittest mvp_site.tests.test_rewards_engine
+
+   # WRONG — produces 14 spurious TypeError failures in TestLevelMutationGuards
+   TESTING_AUTH_BYPASS=true vpython $PROJECT_ROOT/tests/test_rewards_engine.py
+   ```
+
+2. **`vpython` is a bash function, not on `$PATH`** — it lives at `~/.bashrc:677` and activates `~/projects/your-project.com/venv/`. When wrapping with `timeout` or `bash -c` the function is invisible, so use the venv python directly:
+
+   ```bash
+   PY="$HOME/projects/your-project.com/venv/bin/python"
+   TESTING_AUTH_BYPASS=true timeout 90 $PY -m unittest mvp_site.tests.test_end2end.test_xxx
+   ```
+
+   The `timeout` external binary cannot see bash functions, and the embedded PATH has spaces in cmux-cli-shim directories that break `export PATH=...` inside `bash -c`.
+
+3. **Module-level `def test_xxx` (not class methods) needs explicit discovery** — `$PROJECT_ROOT/tests/test_conclude_signal_detection.py` defines top-level `def test_*` functions instead of `class TestXxx(unittest.TestCase)`. `python -m unittest mvp_site.tests.test_conclude_signal_detection` runs 0 tests (rc=5). Use `python -m unittest -t . discover -p 'test_*.py'` to pick these up, or restructure to a class.
+
 ## Related Skills
-- `evidence-standards.md` - Evidence capture standards
-- `end2end-testing.md` - E2E test patterns
+- `evidence-standards/SKILL.md` - Evidence capture standards
+- `end2end-testing/SKILL.md` - E2E test patterns

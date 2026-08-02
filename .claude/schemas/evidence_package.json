@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://worldarchitect.ai/schemas/evidence_package.json",
+  "$id": "https://your-project.com/schemas/evidence_package.json",
   "title": "Test Evidence Package",
   "description": "Standardized evidence package for TestExecutor to TestValidator handoff",
   "type": "object",

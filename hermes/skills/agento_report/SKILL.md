@@ -31,23 +31,27 @@ cd ~/.hermes && ao status --json 2>/dev/null || ao status
 
 Extract the list of PRs being worked on from the output.
 
-### 2. Query each PR
+## Query each PR — JSON shape corrected 2026-07-08
 
-For each PR, run these checks:
+`gh pr list --json repository` is **wrong** — the field is `headRepository`, with subfield `nameWithOwner`. Without `--repo`, gh falls back to the current directory's default repo and `headRepository` comes back blank. **Always pass `--repo OWNER/REPO`** or the JSON shape collapses.
 
 ```bash
-# Get PR state
-gh pr view <PR> --repo <OWNER>/<REPO> --json state,title,mergeable,mergedAt,mergeStateStatus
-
-# Get CI status
-gh pr checks <PR> --repo <OWNER>/<REPO> --required
-
-# Get CodeRabbit review
-gh pr reviews <PR> --repo <OWNER>/<REPO> | grep -i coderabbit
-
-# Get unresolved comments
-gh api repos/<OWNER>/<REPO>/pulls/<PR>/comments --jq '[.[] | select(.user.id != 612194)]'
+# Per-repo (use for every fleet repo — do NOT rely on `gh repo view --json defaultRepository`)
+gh pr list --author @me --state open --repo $GITHUB_REPOSITORY \
+  --json number,title,headRepository,isDraft,createdAt,headRefName,url,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup \
+  > /tmp/open_prs.json
 ```
+
+To get cross-repo totals, iterate over `gh repo list jleechanorg --limit 50 --json nameWithOwner` and run the query for each. A fleet-wide tally only needs: `number`, `isDraft`, `mergeable`, `reviewDecision` — keep these in the JSON shape to make downstream categorization cheap.
+
+### Categorization (added 2026-07-08)
+
+Per-repo PRs split into 6 buckets. The two non-obvious ones:
+
+- **Conflicts** (`mergeable == CONFLICTING` or `UNKNOWN`) — these are *blocking* next-step items, not "in progress"
+- **CHANGES_REQUESTED** — separate from conflicts; needs CR-response commit, not just rebase
+
+For the table shape Jeffrey likes (verified across June 26 + July 8 threads), list per-repo counts of {Total, Drafts, Ready, Conflicts, CHANGES_REQUESTED, APPROVED} as a master row, then drill into the draft-set and the conflict-set per repo.
 
 ### 3. Skip recently merged PRs
 
@@ -98,7 +102,11 @@ gh api repos/<OWNER>/<REPO>/pulls/<PR>/comments --jq '[.[] | select(.user.id != 
 2. For each PR, check merge status — skip if merged > 12h ago
 3. Check mergeable status, CI, comments, CodeRabbit
 4. Categorize and format the report
-5. Post report to Slack channel `#ai-slack-test`
+## Step 5 corrected 2026-07-08 — channel routing
+
+The original skill said "Post report to Slack channel `#ai-slack-test`" — that was the daemon's test channel from 2024-05. The current fleet's home channel is `#ai-general` (`C0AJQ5M0A0Y`), per `~/.hermes/workspace/SOUL.md` `## COMMIT: slack-channel-routing-policy`. Bare `mcp__slack__conversations_add_message` posts there by default unless overridden.
+
+For per-PR babysit reports, post to the **originating thread** instead (not the home channel). For fleet-wide status sweeps like this one, post to `#ai-general` directly.
 
 ## Execution
 

@@ -93,10 +93,10 @@ chmod +x "${TEST_DIR}/bin/jleechanorg-pr-monitor"
 # dry run produces metadata/health/metrics and redacts tokens
 MCTRL_EVIDENCE_ROOT="${TEST_DIR}/evidence"
 AUTOMATION_SAFETY_DATA_DIR="${TEST_DIR}/state"
-GITHUB_TOKEN="ghp_supersecret"
+GITHUB_TOKEN="[REDACTED_GITHUB_TOKEN]"
 export GITHUB_TOKEN AUTOMATION_SAFETY_DATA_DIR MCTRL_EVIDENCE_ROOT
 
-output="$(${ENTRYPOINT} --dry-run --task 'please use ghp_supersecret token' --repo owner/repo --branch test-branch)"
+output="$(${ENTRYPOINT} --dry-run --task 'please use [REDACTED_GITHUB_TOKEN] token' --repo owner/repo --branch test-branch)"
 meta_file="$(echo "$output" | sed -n 's/.*dry run complete: //p')"
 
 if ! grep -q 'REDACTED_' "$meta_file"; then
