@@ -1,0 +1,18 @@
+# ~/.codex/<wrapper>.config.toml
+# Layered via `codex --profile <wrapper>` so ChatGPT-account config +
+# trusted projects in the user's main ~/.codex/config.toml stay untouched.
+#
+# Template: copy to ~/.codex/<wrapper>.config.toml, edit MODEL / BASE_URL /
+# provider_short / display_name.
+
+# Base values — overridden by the user's ~/.codex/config.toml above this layer.
+model = "<MODEL>"
+model_reasoning_effort = "high"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+[model_providers.<provider_short>]
+name = "<Provider Display Name>"
+base_url = "<BASE_URL>"
+
+model_provider = "<provider_short>"

@@ -29,31 +29,25 @@ Check Claude API usage and rate limits along with git status.
 
 ## Description
 
-Shows current Claude API usage including:
-- Requests remaining vs monthly limit (out of 50)
-- Usage percentage with visual indicators
-- Rate limit reset times
-- Automatic alerts at 75%, 50%, and 25% remaining
-- Git branch and PR status for context
+Shows git branch and PR status for context. (API usage reporting was never
+implemented — see note below.)
 
 ## Implementation
 
-**Single Command**: `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh --with-api`
+**Single Command**: `~/.claude/hooks/git-header.sh`
 
-This provides the same output as `/header` - combining both git status and API usage in one convenient command.
+Falls back to the canonical `~/.claude/hooks/git-header.sh` path when the cwd
+is not a git repo (`git rev-parse --show-toplevel` fails outside a repo).
+
+**Note (verified 2026-07-14):** `git-header.sh` has NO `--with-api` or
+`--monitor` flags and contains no API-usage logic (grep for `with-api`, `API`,
+`usage`, `remaining` returns zero matches). The previously documented
+`[API: <remaining>/50 requests ...]` output line, reset times, and threshold
+alerts do not exist. For real usage/rate-limit data, use the built-in Claude
+Code `/usage` TUI screen or `npx ccusage`.
 
 ## Output Format
 
 ```
 [Local: <branch> | Remote: <upstream> | PR: <number> <url>]
-[API: <remaining>/50 requests (<percentage>% remaining) | Reset: <time>]
 ```
-
-## Alerts
-
-- 🟢 **Above 75%**: Silent operation
-- 🟡 **50-75%**: Balloon notification on Windows
-- 🔴 **25-50%**: Warning balloon notification
-- ⚠️ **Below 25%**: Critical popup alert
-
-Use `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh --monitor` for proactive monitoring with alerts.

@@ -4,18 +4,19 @@ type: llm-orchestration
 execution_mode: immediate
 ---
 
-# /learn
+# /learn [optional: specific learning or context]
 
-Execute the `learn` skill immediately.
+Capture a durable learning from failures, corrections, repeated mistakes,
+successful recovery patterns, or a direct request.
 
-Resolution order:
+Read `~/.claude/skills/learn/SKILL.md` and execute the full workflow with the
+provided context (or, if none was given, the most actionable failure/correction
+from the recent conversation).
 
-1. User skill: `~/.claude/skills/learn/SKILL.md`
-2. Repo skill: `.claude/skills/learn/SKILL.md`
-3. Codex mirror: `.codex/skills/learn/SKILL.md`
+## Examples
 
-The skill is the source of truth. It must capture the learning and persist it to
-Claude auto-memory, optional mem0, `~/roadmap`, beads, and wiki ingest.
-
-Do not treat wiki ingest as optional. If `~/llm_wiki` is unavailable, report the
-blocker explicitly after completing the other persistence steps.
+```
+/learn
+/learn always use source venv/bin/activate
+/learn playwright is installed, stop saying it isn't
+```

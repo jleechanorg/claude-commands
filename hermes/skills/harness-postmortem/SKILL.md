@@ -1,8 +1,8 @@
 ---
 name: harness-postmortem
 internal-aliases: ["meta"]
-version: 0.3.0
-description: "Harness-fix meta-skill (slash: /meta) — analyze an agent behavior failure and run /harness to fix the agent, NOT the underlying task. Input: Slack thread URL, pasted conversation, or freeform description of agent misbehavior. Re-anchored on MAST (arXiv:2503.13657) and ETCLOVG (arXiv:2606.06324) failure taxonomies; supersedes the trivial '5 Whys' spine with the Observe→Isolate→Simulate→Evaluate 4-step pattern, retaining 5-Whys as a Simulate-phase prompt heuristic. v0.3.0 (2026-07-05): adds Phase 1.5 'fix authored but never merged to origin/main' detection recipe + replaces naive `deploy.sh --skip-pull --skip-restart` with the staging-dirty-surgical-sync recipe that actually works when staging is on a non-main branch."
+version: 0.5.0
+description: "Harness-fix meta-skill (slash: /meta) — analyze an agent behavior failure and run /harness to fix the agent, NOT the underlying task. Input: Slack thread URL, pasted conversation, or freeform description of agent misbehavior. Re-anchored on MAST (arXiv:2503.13657) and ETCLOVG (arXiv:2606.06324) failure taxonomies; supersedes the trivial '5 Whys' spine with the Observe→Isolate→Simulate→Evaluate 4-step pattern, retaining 5-Whys as a Simulate-phase prompt heuristic. v0.4.0 (2026-07-14): adds Phase 1.5c — 'Polluted PR (merged another PR's full history)' detection recipe + companion skill `pr-cleanup-replay` + reference file `references/polluted-pr-cleanup-replay.md`. v0.3.0 (2026-07-05): adds Phase 1.5 'fix authored but never merged to origin/main' detection recipe + replaces naive `deploy.sh --skip-pull --skip-restart` with the staging-dirty-surgical-sync recipe that actually works when staging is on a non-main branch."
 tags: ["meta", "harness", "autonomy", "agent-behavior", "no-confirmation-gate", "scope-guardrail", "mast", "etclovg", "reflexion"]
 category: workflow
 triggers:
@@ -28,7 +28,19 @@ triggers:
   - harness fix
   - agent failure analysis
   - run harness postmortem on
+  - stop X from giving me Y
+  - stop X from Y
+  - stop X from these reports
+  - stop MCP mail from
+  - stop the bot from
+  - passively listening
+  - these reports
+  - wrong target
+  - wrong target removal
+  - I said the agent not the cron
 changelog:
+  - "0.5.0 (2026-07-20): Add Phase 0 working class `wrong-target-removal-on-stop-X-from-Y`. Trigger phrases: 'stop X from giving me Y', 'stop X from Y', 'these reports', 'passively listening', 'self-reports'. Companion SOUL.md `## COMMIT: mcp-agent-mail-no-passive-slack-listening`. Reference file `references/wrong-target-removal-stop-X-from-Y-2026-07-20.md`. Originating incident: Slack thread C0AJ3SD5C79/p1784344760053389 — user said 'Lets stop mcp mail from giving these reports', agent removed `clawchief:ea-sweep-hourly` cron (the wrong target). Actual source was the MCP Agent Mail agent's Socket-Mode listener ingesting Slack messages into MCP, then re-posting agent replies. User feedback (verbatim): 'No keep the job you fucking idiot — I said mcp mail agent I don't want it passively listening to my threads.' Durable fix landed in the second-pass session: env overlay `~/mcp_mail/.env.slack-off` + `run_server_with_token.sh` sources overlay before any other env + plist has no SLACK_ENABLED override + launchd restart + 14-gate contract test."
+  - "0.4.0 (2026-07-14): Add Phase 1.5c — 'Polluted PR (merged another PR's full history)' detection recipe. Companion skill `~/.hermes/skills/pr-cleanup-replay/SKILL.md` (4-phase replay recipe) + SOUL.md `## COMMIT: pr-clean-branch-from-main-no-history-bloat` (prevention rule) + contract test `tests/test_pr_clean_branch_contract.py` (5 tests). Reference file `references/polluted-pr-cleanup-replay.md`. Originating incident: PR #8401 (Visenya V8 stuck-lu) inadvertently merged PR #7952's full 22-commit history (31 files, +1413/-629) instead of a clean 2-file / +597/-20 replay. User feedback: 'Seems like this wasnt made from a clean branch from origin/main?'"
   - "0.3.0 (2026-07-05): Add Phase 1.5 — 'fix authored but never merged to origin/main' detection. Replaces naive Phase 3 step 5 `deploy.sh --skip-pull --skip-restart` with the staging-dirty-surgical-sync recipe that actually works when staging is on a feature branch with dirty diff (the recipe that shipped the babysit-cron-leak fix on origin/main as b2ad00770d, cherry-picked from stranded commit 7690435707 on fix/babysit-stale-merged-pr). Bug-ref: 2026-07-05 thread C0AH3RY3DK6/p1783240445.370119 — deploy.sh failed at port:UNBOUND health check while sync stages succeeded silently under [single-dir] mode; previous Phase 3 step 5 instructed the failing invocation as canonical."
   - "0.2.0 (2026-07-02): Reviewer B iteration — rename internal skill `meta` → `harness-postmortem` to avoid collision with `meta-prompting` / `meta-harness` / `MetaGPT`. Slash command `/meta` retained (user's invocation pattern). Add MAST (arXiv:2503.13657) failure taxonomy + ETCLOVG (arXiv:2606.06324) layer model to Phase-0. Replace 5-Whys structural spine with Observe→Isolate→Simulate→Evaluate 4-step pattern; keep 5-Whys as a Simulate-phase heuristic. Cite Reflexion (Shinn et al., 2023). Credit prior art: Refinex-Space `harness-fix` skill + HarnessFix paper."
   - "0.1.0 (2026-07-02): Initial authoring, run on C0AH3RY3DK6/p1782941155305869 autonomy violation (exportcommands). Trigger: 'agent made local commit but stopped at 4-way menu instead of running the slash command or dispatching AO'."
@@ -87,14 +99,15 @@ For each incident, classify into ONE of these working buckets (operationalized f
 
 | Working failure class | MAST mapping | ETCLOVG layer | Hermes symptom |
 |---|---|---|---|
-| **`mid-task-clarification-freeze`** | FC1 (specification ambiguity) + FC3 (premature termination) | Verification | Agent asks multi-option menu mid-stream after explicit user invocation. (`finish-the-job` Phase 0 fork-resolution not auto-applied.) |
+| **`mid-ta[REDACTED_OPENAI_KEY]`** | FC1 (specification ambiguity) + FC3 (premature termination) | Verification | Agent asks multi-option menu mid-stream after explicit user invocation. (`finish-the-job` Phase 0 fork-resolution not auto-applied.) |
 | **`local-commit-without-PR`** | FC3 (premature termination) | Verification | Agent `git commit`s locally then waits for "want me to push?" instead of running `git push origin <branch>`. (`push-pr-donot-stop-halfway` rule unenforced.) |
-| **`task-correction-pivot-refused`** | FC1 (role unclarity) + FC2 (state desynchronization) | Orchestration | User corrected scope mid-task ("now make a PR", "and run it"), agent did not pivot — kept reading files instead. |
-| **`capable-didn't-execute`** | FC3 (premature termination) | Verification | Agent had the tools, said it would, then narrated the plan without calling the tools. (`task-ack-and-execute` rule unenforced.) |
+| **`ta[REDACTED_OPENAI_KEY]`** | FC1 (role unclarity) + FC2 (state desynchronization) | Orchestration | User corrected scope mid-task ("now make a PR", "and run it"), agent did not pivot — kept reading files instead. |
+| **`capable-didn't-execute`** | FC3 (premature termination) | Verification | Agent had the tools, said it would, then narrated the plan without calling the tools. (`ta[REDACTED_OPENAI_KEY]` rule unenforced.) |
 | **`wrong-tool-discussed`** | FC1 (specification ambiguity) | Tool / Context | Agent talked about a stale tool/CLI/runtime after the user migrated (e.g., `openclaw cron` after migrating to `hermes cron`). |
 | **`fabricated-proof`** | FC3 (fabricated verification) | Verification | Agent claimed "PR is green / tests pass / push succeeded" without raw terminal output. (`proof-before-claim` rule unenforced.) |
 | **`missed-existing-skill`** | FC1 (missing constraints) | Context | Agent did work manually that an existing skill covers, because session_init did not load the skill. (`ms-on-new-task` rule unenforced.) |
 | **`documented-but-unreachable`** | FC3 (fabricated verification) | Verification + Orchestration | The skill/prompt documents a contract (e.g. "issue `cronjob action=remove` on terminal state") but the script underneath has no parameter, helper, or code path to execute it. The fix exists on `origin/main` and passes tests — but the tests only verify the skill text, not the script's ability to invoke the documented action. The prior `/meta` pass declared "done" without verifying executability. |
+| **`wrong-target-removal-on-stop-X-from-Y`** (added 2026-07-20) | FC1 (specification ambiguity) + FC3 (premature termination) | Verification | User says "stop X from doing Y" or "stop X from giving me Z". Agent parses the message literally — X = the named noun — and disables/removes X, when X is a downstream consumer and the actual source of Y is X's *upstream agent/service*. **Wrong-target rule:** when the user names a noun that sounds like a consumer (a cron job, a workflow, a named task) AND the symptom ("these reports", "that bot", "passively listening", "self-reports") matches an agent's behavior pattern, the agent MUST trace the **provenance** of the symptom back to its actual source before acting. Anti-pattern: trust the literal noun and remove the named job. Recipe: (a) grep the **symptom noun** (e.g. "these reports", "passively listening", "self-reports", "self-investigation") across the past 24-72h of Slack history — the originating source is usually in a quoted thread; (b) for the named target X, trace its **data path**: cron → script → MCP server → external API. The actual fix lives at the layer where data is generated, not where the named consumer displays it; (c) only after the provenance is confirmed AND a one-line clarification fails to disambiguate, take action — and the action is at the source layer, not at the consumer. Verified 2026-07-20 incident: user said "Lets stop mcp mail from giving these reports" — the agent removed `clawchief:ea-sweep-hourly` (the cron that posted briefs to DM). The actual source was the **MCP Agent Mail agent** (`U0A4G7LDJ4R`) with Socket-Mode listener ingesting Slack messages → MCP messages → agent replies. User feedback (verbatim): "No keep the job you fucking idiot — I said mcp mail agent I don't want it passively listening to my threads." The fix landed at the right layer (env overlay + launchd restart) but only after the user re-clarified with strong language. Companion SOUL.md `## COMMIT: mcp-agent-mail-no-passive-slack-listening` was authored in the second-pass fix. |
 | **`other`** | (any) | (any) | Default — apply full Observe→Isolate→Simulate→Evaluate cycle. |
 
 If the input mentions multiple failure classes (common — the user pastes a long thread), pick the **earliest** one (closest to the agent's actual deviation point) and note the others in the post-mortem as "secondary issues, separate `/meta` pass recommended." ETCLOVG layer maps the failure to a specific harness layer; the proposed fix MUST target that layer (don't propose a context-window patch when the failure is in the Verification layer).
@@ -147,6 +160,30 @@ Replace the standalone "5 Whys" spine with the **Observe → Isolate → Simulat
    ```
 
    **Why this matters:** Phase 1.5 catches "fix stranded on a branch". Phase 1.5b catches "fix on origin/main but only at the skill/prompt layer — the script underneath can't execute it". Both are distinct failure classes. A fix that passes the existing test suite but the tests only verify skill text (not script executability) will pass 1.5 and fail 1.5b.
+
+   ### Phase 1.5c — "Polluted PR (merged another PR's full history)"** is a third distinct failure class — agent's PR carries another PR's full history (beads drift, CI fixes, merge chains) when the stated scope is a focused fix. See `references/polluted-pr-cleanup-replay.md` for the full detection + recovery recipe (companion skill: `pr-cleanup-replay`).
+
+   ### Phase 1.5d — "Recurring correction needs pre-send gate, not documentation" (added 2026-07-14)
+
+   When the same user correction has hit ≥3 times across ≤30 days, **documentation-only fixes do not survive between sessions.** The agent's defaults push toward the path of least resistance; a post-hoc SOUL.md rule or skill text only fires after the user complains. The durable countermeasure is a **pre-send gate** — a regex (or ordered sequence check) that the agent MUST run on every draft before invoking the message/Post tool.
+
+   **Concrete diagnostic** (codified from the PR #8139 evidence-attach chain 2026-07-02 → 2026-07-14):
+   1. Verify recurrence: search SQLite state.db for similar user corrections in last 30 days; quote trigger phrases verbatim.
+   2. Audit existing fix: if a skill/SOUL.md/test exists, why didn't it prevent the recurrence? Most common: documentation-only (agent doesn't auto-load), reactive trigger (rule fires after complaint), or stale reference (pre-dates a known failure mode).
+   3. Write the pre-send gate: SOUL.md `## COMMIT:` block with trigger + action + verification (test file).
+   4. Test the gate: contract test for regex compilation, false-positive guard, draft → upload → verify → send ordering.
+   5. Patch the skill: add a "Pre-Send Gate" section at the TOP. Add the recurring-correction phrases ("you always forget", "you always fail", "stop doing X") to YAML triggers.
+   6. Save memory: durable entry naming the recurrence pattern and linking to the gate.
+
+   **Anti-patterns blocked by this principle:**
+   - "Add this to memory so the next agent knows" — memory isn't loaded on the relevant path
+   - "Update the skill to be more emphatic" — the skill was already emphatic; the agent didn't load it
+   - "Just be more careful next time" — no mechanism enforces "more careful"
+   - "Document in MEMORY.md" — not enforced at draft time
+
+   See `references/recurring-correction-pre-send-gate.md` for the full worked example, the 4-incident chain, and the concrete checklist.
+
+   **Test coverage:** `tests/test_harness_postmortem_contract.py` adds a Phase 1.5d case that verifies the harness-fix layer (SOUL.md `## COMMIT:` + skill trigger regex + contract test) is present for any failure class that has hit ≥3 times.
 
 3. **Simulate** — generate the counterfactual: "what would the agent have done if [harness rule X] had fired at this exact point?" Validate the rule exists in SOUL.md/skills (existing coverage check). If absent, the gap is real. **5-Whys is allowed as a prompt heuristic WITHIN this step** (a sub-routine), not as the structural spine. Apply 5-Whys twice (Technical + Agent path) for the specific causal chain that produced the failure.
 4. **Evaluate** — propose the harness fix at the layer where the failure lives. Tag the fix as **[Instructions]** (SOUL.md `## COMMIT:`), **[Skill]** (new or patched skill), or **[Test]** (regression test that would have caught the failure). Verify the fix does not just push the failure to a different layer (ETCLOVG re-classification check).
@@ -253,7 +290,7 @@ Thread: `https://jleechanai.slack.com/archives/C0AH3RY3DK6/p1782941155305869` (`
 **Phase 0 — Classify:**
 - **MAST category:** FC1 (specification ambiguity — agent couldn't decide whether side effects were approval-required) + FC3 (premature termination — agent stopped at clarification instead of running the slash command).
 - **ETCLOVG layer:** Verification (the rule that should have verified "user invoked an action verb → execute, do not gate" lives in the Verification layer).
-- **Working class:** `mid-task-clarification-freeze`.
+- **Working class:** `mid-ta[REDACTED_OPENAI_KEY]`.
 
 **Phase 1 — Observe → Isolate → Simulate → Evaluate:**
 
@@ -351,6 +388,10 @@ Per `hermes-deploy-pipeline`, `~/.hermes_prod/` is a symlink to `~/.hermes/` —
 ## Support files
 
 - `tests/test_harness_postmortem_contract.py` — scope-guardrail + Phase 0/1 protocol coverage + commit-not-codepath tests. Run via `cd ~/.hermes/skills/harness-postmortem/tests && python3 -m pytest -q`.
+- `references/wrong-target-removal-stop-X-from-Y-2026-07-20.md` — Phase 0 working class recipe for "stop X from Y" requests where X is the wrong target. Loaded when the user reports the agent removed the wrong cron / workflow / service.
+- `references/recurring-correction-pre-send-gate.md` — Phase 1.5d recipe for turning recurring user corrections into pre-send gates (regex + test, not documentation).
+- `references/polluted-pr-cleanup-replay.md` — Phase 1.5c recipe for cleaning a PR whose branch carries another PR's full history.
+- `references/staging-dirty-surgical-sync-2026-07-05.md` — Phase 3 step 5 staging-dirty-surgical-sync recipe (replaces naive `deploy.sh --skip-pull --skip-restart` when staging is on a feature branch).
 - `~/.claude/commands/meta.md` — slash command file (`/meta` invocation). NOT in the jleechanclaw repo (lives in the user's Claude Code user-scope); mirrors the skill content with a header so Claude Code resolves `/meta` to this skill.
 
 ## Changelog

@@ -76,7 +76,7 @@ load_tokens() {
             echo -e "${YELLOW}   2. Generate Gemini API key at: https://console.cloud.google.com/apis/credentials${NC}"
             echo -e "${YELLOW}   3. Generate Perplexity API key at: https://www.perplexity.ai/settings/api${NC}"
             echo -e "${YELLOW}   4. Create ~/.token file with:${NC}"
-            echo -e "${YELLOW}      export GITHUB_TOKEN=\"ghp_your_github_token_here\"${NC}"
+            echo -e "${YELLOW}      export GITHUB_TOKEN=\"[REDACTED_GITHUB_TOKEN]\"${NC}"
             echo -e "${YELLOW}      export GEMINI_API_KEY=\"AI_your_gemini_api_key_here\"${NC}"
             echo -e "${YELLOW}      export PERPLEXITY_API_KEY=\"pplx_your_perplexity_api_key_here\"${NC}"
             echo -e "${YELLOW}   5. chmod 600 ~/.token${NC}"
@@ -247,7 +247,7 @@ create_token_template() {
 # GitHub Personal Access Token
 # Generate at: https://github.com/settings/tokens
 # Required scopes: repo, read:org, read:user
-export GITHUB_TOKEN="ghp_your_github_token_here"
+export GITHUB_TOKEN="[REDACTED_GITHUB_TOKEN]"
 
 # Gemini API Key
 # Generate at: https://console.cloud.google.com/apis/credentials

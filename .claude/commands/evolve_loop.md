@@ -1,20 +1,27 @@
 ---
-name: evolve_loop
-aliases:
-  - eloop
 description: Autonomous evolution loop — observe AO ecosystem, measure zero-touch rate, diagnose friction, dispatch fixes. Adaptive — skips phases when system is healthy.
-type: git
+aliases: [eloop]
+type: skill
+execution_mode: immediate
 ---
 
-## EXECUTION INSTRUCTIONS FOR CLAUDE
+# /evolve_loop
 
-Load and execute the skill at `~/.claude/skills/evolve_loop.md`.
+Generic autonomous improvement loop — observe, measure, diagnose, fix, repeat. System-agnostic framework; default profile targets AO + Antigravity.
 
-**Key behavior**: This is an ADAPTIVE loop. Not every phase runs every cycle:
-- If all workers are alive and PRs are progressing → just report status and wait
-- If zero-touch rate hasn't changed and no new friction → skip diagnose/fix phases
+Read `~/.claude/skills/evolve-loop/SKILL.md` and execute the full workflow.
+
+## Adaptive behavior
+
+Not every phase runs every cycle:
+- All workers alive and PRs progressing → just report status and wait
+- Zero-touch rate unchanged and no new friction → skip diagnose/fix phases
 - Only run /harness, /nextsteps, /claw when there's a NEW problem to solve
 - Always measure (Phase 2) and always recap (Phase 7)
 
-**To start the loop**: `/loop 10m /eloop` (runs every 10min, max 12h)
-**Single cycle**: `/eloop`
+## Usage
+
+| Mode | Command |
+|------|---------|
+| Start recurring loop | `/loop 10m /eloop` (every 10min, max 12h) |
+| Single cycle | `/eloop` |

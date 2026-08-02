@@ -4,9 +4,14 @@ permissions:
   contents: read
   pull-requests: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - "mvp_site/frontend_v1/**"
       - "testing_ui/test_smoke_light.py"
@@ -15,7 +20,9 @@ on:
       - "testing_ui/visual_gate/**"
       - ".github/workflows/styleguide-compliance-gate.yml"
   push:
-    branches: [main, dev]
+    # Keep post-push validation for unprotected dev while still dropping the
+    # duplicate main push run; PR validation covers protected main before merge.
+    branches: [dev]
     paths:
       - "mvp_site/frontend_v1/**"
       - "testing_ui/test_smoke_light.py"
@@ -28,8 +35,8 @@ jobs:
   styleguide-gate:
     name: Light/Fantasy Compliance Gate
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    timeout-minutes: 40
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 20
     env:
       TESTING: "true"
       TESTING_AUTH_BYPASS: "true"
@@ -39,11 +46,16 @@ jobs:
       PYTHONUNBUFFERED: "1"
       GEMINI_API_KEY: "test-ci-key-only"
       GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
+      # Avoid retaining pip's download cache on di[REDACTED_OPENAI_KEY] self-hosted runners.
+      PIP_NO_CACHE_DIR: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        env:
+          GIT_CONFIG_GLOBAL: ${{ runner.temp }}/checkout-gitconfig
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -51,6 +63,53 @@ jobs:
         run: |
           chmod +x scripts/ci/setup-runner-tool-cache.sh
           ./scripts/ci/setup-runner-tool-cache.sh
+
+      - name: Disk preflight + cleanup
+        # Self-hosted runners in the shared pool occasionally run low on disk
+        # (Errno 28 / "No space left on device" during pip install) which
+        # cascades into ModuleNotFoundError on the smoke step and a misleading
+        # "No manifest found" from the compliance scorer. Free up space before
+        # pip install and fail loudly with a clear cause if we still don't have
+        # enough room.
+        run: |
+          set -euo pipefail
+          AVAIL_KB="$(df -Pk . | awk 'NR==2 {print $4}')"
+          AVAIL_GB=$((AVAIL_KB / 1024 / 1024))
+          echo "Disk free before cleanup: ${AVAIL_GB} GB"
+
+          # Always: purge any stale pip cache and prior gate evidence so we
+          # don't inherit state from earlier failed runs on the same runner.
+          rm -rf /tmp/worldarchitectai 2>/dev/null || true
+          python3 -m pip cache purge >/dev/null 2>&1 || true
+          rm -rf "$HOME/.cache/pip" 2>/dev/null || true
+
+          # Aggressive cleanup only when low.
+          if [ "${AVAIL_KB:-0}" -lt 2097152 ]; then
+            echo "Disk below 2 GB — running aggressive cleanup"
+            if [ "$(uname)" = "Darwin" ] && command -v brew >/dev/null 2>&1; then
+              brew cleanup -s >/dev/null 2>&1 || true
+            fi
+            # Drop apt cache on Linux self-hosted images.
+            if [ -d /var/cache/apt ]; then
+              sudo rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || \
+                rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+            fi
+            # Trim Actions runner workspace of any prior job workspaces.
+            rm -rf /home/runner/_work/*/_temp 2>/dev/null || \
+              rm -rf "$HOME/actions-runner/_work"/*/_temp 2>/dev/null || true
+            # Clean up old test artifacts from previous gates.
+            rm -rf /tmp/playwright* /tmp/.org.chromium.Chromium* 2>/dev/null || true
+          fi
+
+          AVAIL_KB_AFTER="$(df -Pk . | awk 'NR==2 {print $4}')"
+          AVAIL_GB_AFTER=$((AVAIL_KB_AFTER / 1024 / 1024))
+          echo "Disk free after cleanup: ${AVAIL_GB_AFTER} GB"
+
+          if [ "${AVAIL_KB_AFTER:-0}" -lt 1048576 ]; then
+            echo "::error::low_disk_space_after_cleanup: ${AVAIL_GB_AFTER} GB free, need at least 1 GB for pip install + Playwright Chromium"
+            df -h
+            exit 1
+          fi
 
       - name: Resolve Python interpreter
         id: python_resolve
@@ -69,24 +128,85 @@ jobs:
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install --upgrade pip
-          venv/bin/pip install -r mvp_site/requirements.txt
-          venv/bin/pip install playwright pillow
-          echo "$PWD/venv/bin" >> "$GITHUB_PATH"
-          echo "VIRTUAL_ENV=$PWD/venv" >> "$GITHUB_ENV"
+        uses: ./.github/actions/setup-ci-venv
+        with:
+          python-bin: 'command -v python3'
+          extra-packages: 'playwright pillow'
+          no-cache-dir: 'true'
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          ${{ steps.python_resolve.outputs.python_bin }} -m pip install --break-system-packages -r mvp_site/requirements.txt
-          ${{ steps.python_resolve.outputs.python_bin }} -m pip install --break-system-packages playwright pillow
+          # playwright and pillow are both already in mvp_site/requirements.txt
+          # (playwright is a direct dep; pillow is transitive). A second
+          # pip install pass was duplicating work and was the trigger for
+          # Errno 28 "No space left on device" on di[REDACTED_OPENAI_KEY] runners.
+          ${{ steps.python_resolve.outputs.python_bin }} -m pip install --break-system-packages --no-cache-dir -r mvp_site/requirements.txt
 
       - name: Install Playwright system dependencies
         if: runner.os == 'Linux'
         run: |
-          venv/bin/python -m playwright install-deps chromium
+          set -euo pipefail
+          if [ "$(id -u)" -eq 0 ]; then
+            venv/bin/python -m playwright install-deps chromium || {
+              echo "::warning::Playwright Chromium system dependency install failed; continuing to browser install and launch probe"
+            }
+          elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+            venv/bin/python -m playwright install-deps chromium || {
+              echo "::warning::Playwright Chromium system dependency install failed; continuing to browser install and launch probe"
+            }
+          elif command -v apt-get >/dev/null 2>&1 && command -v dpkg-deb >/dev/null 2>&1; then
+            mkdir -p .playwright-system-libs/debs .playwright-system-libs/root
+            packages=(
+              libnspr4
+              libnss3
+              libatk-bridge2.0-0
+              libatk1.0-0
+              libatspi2.0-0
+              libcups2
+              libdrm2
+              libxkbcommon0
+              libxcomposite1
+              libxdamage1
+              libxfixes3
+              libxrandr2
+              libgbm1
+              libpango-1.0-0
+              libcairo2
+              libasound2
+              libasound2t64
+            )
+            (
+              cd .playwright-system-libs/debs
+              for package in "${packages[@]}"; do
+                apt-get download "$package" || true
+              done
+            )
+            shopt -s nullglob
+            debs=(.playwright-system-libs/debs/*.deb)
+            if [ "${#debs[@]}" -eq 0 ]; then
+              echo "::warning::No fallback Playwright system dependency packages could be downloaded"
+            else
+              for deb in "${debs[@]}"; do
+                dpkg-deb -x "$deb" .playwright-system-libs/root
+              done
+              multiarch=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || true)
+              if [ -z "$multiarch" ]; then
+                multiarch=$(find .playwright-system-libs/root/usr/lib -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | head -n 1)
+              fi
+              if [ -n "$multiarch" ]; then
+                {
+                  echo "LD_LIBRARY_PATH=$PWD/.playwright-system-libs/root/usr/lib/$multiarch:$PWD/.playwright-system-libs/root/lib/$multiarch:${LD_LIBRARY_PATH:-}"
+                  echo "GI_TYPELIB_PATH=$PWD/.playwright-system-libs/root/usr/lib/$multiarch/girepository-1.0:${GI_TYPELIB_PATH:-}"
+                } >> "$GITHUB_ENV"
+              else
+                echo "::warning::Could not determine Debian multiarch lib directory for fallback Playwright dependencies"
+              fi
+            fi
+          else
+            echo "Skipping Playwright Chromium system dependency install: non-root runner has no passwordless sudo."
+            echo "Self-hosted runner images must provide Chromium system libraries."
+          fi
 
       - name: Install Playwright browsers
         run: |

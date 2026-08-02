@@ -4,6 +4,72 @@ description: Run or maintain the cmux approval worker that scans cmux terminal s
 user-invocable: true
 ---
 
+## ⚠️ Submit Discipline (MANDATORY — read this before every cmux steer)
+
+`cmux send` does **NOT** press Enter. This is the #1 recurring cmux failure mode
+(verified 2026-07-16: user explicitly flagged "you always forget to send" after the
+fable iOS pivot bootstrap). The **4-step ritual** below is a hard contract for every
+send to a cmux surface. Skip ANY step and the message sits in the input buffer
+without ever reaching the agent.
+
+### The 4-step ritual
+
+```bash
+# STEP 1 — Type the text. OK response only proves socket acceptance, NOT submission.
+cmux send --workspace workspace:N --surface surface:M "your message"
+
+# STEP 2 — Press Enter. send does NOT auto-press Enter.
+cmux send-key --workspace workspace:N --surface surface:M enter
+
+# STEP 3 — Wait 5-15 seconds for the agent to start processing.
+sleep 8
+
+# STEP 4 — Verify with churning label (THE ONLY definitive proof).
+cmux capture-pane --workspace workspace:N --surface surface:M --lines 25
+# Look for one of:
+#   - "Working (Xs • esc to interrupt)"
+#   - "Forming… (Xs · thinking)"
+#   - "Precipitating… (Xs · ↓ tokens)"
+#   - "Brewed / Churned / Cooked for Xm"
+# If you see ANY active churning label → SUBMITTED.
+# If the text is still sitting at the ❯ prompt → NOT submitted, repeat step 2.
+# If "Stopped" / "Done" / nothing → no churn, investigate.
+```
+
+### Echo-back proof (MANDATORY)
+
+Every cmux steering action MUST be followed by an **echo-back proof** in the same
+turn or the immediate next turn to your operator (Slack thread, terminal reply,
+or whichever channel triggered the steer):
+
+> ◀ sent to surface:55 (LEFT/claudec) at <HH:MM:SS PT> — 4-step ritual complete;
+> churning label "Forming… 9s · ↓ 4.9k tokens" confirmed via capture-pane.
+
+**Banned** (these are the failure modes the user keeps flagging):
+- "I sent the message" (no Enter proof)
+- "The agent should have received it" (no churning label)
+- `cmux send` with no follow-up `cmux send-key enter`
+- Sending to a surface that hasn't been focused (the global focus may be on a
+  different workspace; use the raw RPC `surface.focus` if needed)
+
+### Worktree-pointer strategy for long briefs
+
+For task briefs >200 chars (e.g. orchestrating iOS app pivot, multi-PR review),
+do NOT paste the full text into the input. Write the brief to a file in the
+agent's cwd (e.g. `.cmux-<task>-brief.md`) and send a 1-2 line pointer. This
+avoids the autocompleter contamination pitfall where shell-style tokens inside
+long text trigger tab completion mid-stream.
+
+### Canonical reference
+
+Full recipe + edge cases + the 2026-06-25 worked example live at:
+`~/.hermes/skills/cmux/references/send-submit-proof-2026-06-25.md`
+
+This rule was added 2026-07-16 after the fable iOS pivot bootstrap surfaced
+"you always forget to send" / "make sure you press submit and the work starts
+on the cmux input" (Slack ts 1784185650.528089). Apply it uniformly to every
+cmux-touching skill.
+
 # cmux Codex Autoapprove
 
 Canonical files:
@@ -76,14 +142,6 @@ Edit the worker script when:
 - a non-approval surface is being auto-approved
 - `launchd` can detect candidates but hangs or times out during classification
 - prompt wording changes and the regexes need to expand
-
-**Pattern wiring rule (mandatory):** Detection regexes in this worker are checked at
-**two call sites** — `is_approval_candidate()` (the gate) and `heuristic_decision()`
-(the action). A pattern added to `heuristic_decision()` but not `is_approval_candidate()`
-will silently fail because the gate drops it first. When adding a detection regex or
-phrase, you MUST add test strings to **both** functions. The test file at
-`scripts/test_approval_patterns.py` enforces this by running every dialog through both
-functions — it will fail if a pattern is only wired into one.
 
 Check these first when debugging:
 - `$HOME/.claude/supervisor/cmux-codex-launchd.log`

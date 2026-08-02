@@ -1,6 +1,6 @@
 ---
 name: harness-engineering
-description: Diagnose recurring failures as harness gaps and produce durable guardrail fixes.
+description: Use when auditing or optimizing CLAUDE.md, AGENTS.md, GEMINI.md, slash commands, skills, or other coding-agent harness surfaces, or when recurring agent failures suggest instruction, policy, memory, test, or automation gaps.
 ---
 
 # Harness Engineering Skill
@@ -151,6 +151,46 @@ After user approval (or if invoked with `--fix`):
 - **5 Whys are mandatory**: Never skip them. Short-circuit analysis produces shallow fixes.
 - **Agent path is mandatory**: Never analyze only the technical dimension. Always ask why the agent failed too.
 
+## Quick examples (compact form)
+
+**User says "don't mock the database in these tests"**:
+→ Failure class: wrong approach
+→ 5 Whys technical: mock used → no instructions prohibiting it → testing philosophy not documented → ...
+→ 5 Whys agent: agent defaulted to mock → common pattern in training data → no skill redirecting to real tests → ...
+→ Add instruction to CLAUDE.md, save feedback memory
+
+**Test labeled "e2e" but only does unit-level work**:
+→ Failure class: mislabeled artifact
+→ 5 Whys technical: E2E criteria not met → criteria not checked → no checklist for E2E → ...
+→ 5 Whys agent: agent named it e2e without verifying → no skill mandating verification → ...
+→ Add/update test classification rules in CLAUDE.md + AGENTS.md, update /validate-e2e skill
+
+**Same code review comment given 3 conversations in a row**:
+→ Failure class: repeated manual fix → mandatory harness fix, no exceptions
+→ Add instruction to CLAUDE.md, save memory, consider lint rule
+
+**Automation cleanup silently fails every cycle**:
+→ Failure class: silent degradation (harness layer present but broken)
+→ 5 Whys technical: cleanup fn uses wrong grep key → porcelain format not verified → no test for cleanup path → ...
+→ 5 Whys agent: agent said "cleanup present" without running it → assumed present = working → skill doesn't mandate verifying harness script correctness → ...
+→ Fix script, add verification step to skill, add integration test for cleanup path
+
+**AO worker spawned on original PR branch instead of isolated clone**:
+→ Failure class: LLM path error — wrong abstraction level (agent acted at "spawn worker" level without verifying branch isolation)
+→ 5 Whys technical: `ao spawn` reuses existing worktrees → `--claim-pr` only adds dashboard tracking → no clone created → worker lands on original branch → pushes commits directly to live PR
+→ 5 Whys agent: request said "spawn for PR 6198" → agent assumed `ao spawn` would create isolation → flag name implies PR association but not branch isolation → no skill/instruction to redirect to clone-before-spawn → harness had no rule for this failure class
+→ Fix: add clone-before-spawn rule to jleechanclaw CLAUDE.md, add verification to team-mini.md, add failure class to harness.md, save feedback memory
+
+**General principle — tool semantic mismatch**: many tool names imply
+capabilities they don't actually provide (`ao spawn --claim-pr` implies PR
+isolation but provides only dashboard tracking; `git checkout -b` implies a new
+branch but can be from HEAD, not an isolated PR clone; `gh pr checkout` checks
+out the PR branch directly, not a clone). When a tool's name semantically
+promises isolation or safety guarantees, verify those guarantees exist in the
+implementation before relying on them — if the name over-promises relative to
+behavior, the harness gap is the misleading name, fixed in docs/skill rather
+than expecting agents to discover the gap on their own.
+
 ## Example failure pattern: CLI redacts secrets but scripts still export them
 
 **Observable:** Gateway returns `unauthorized` / embedded fallback; logs show token value `__OPENCLAW_REDACTED__` or similar.
@@ -168,9 +208,11 @@ After user approval (or if invoked with `--fix`):
 
 **Verification:** Run the command path and confirm the exported string is not a known redaction sentinel and gateway returns `status: ok` without “falling back to embedded”.
 
-## Example failure pattern: Green Gate job success ≠ Gate 7 pass (silent CI success)
+## Historical failure pattern: retired Gate 7 trusted aggregate workflow status
 
-**Observable:** PR shows Green Gate `completed/success` in `gh pr checks` but skeptic VERDICT was never posted. Agent reports PR as 7-green.
+**Historical observable:** before the 2026-07-28 policy change, an agent trusted
+Green Gate `completed/success` while a separate Skeptic verdict was missing.
+This mechanism is retired; current policy is the canonical two-gate `/green`.
 
 **Failure class:** **Silent CI success** — a workflow can exit 0 at the job level while an inner step fails. The harness layer (Green Gate) is present and running, but it reports the wrong thing at the job level.
 
@@ -196,7 +238,102 @@ After user approval (or if invoked with `--fix`):
 3. **Command** — `/green.md`: Already exists but relied on workflow logs only; updated to mandate REST check for Gate 7
 4. **Memory** — `feedback_2026_04_21_silent_ci_success.md`: Document the specific PRs where this was observed
 
-**Verification:** For any PR where Green Gate shows `completed/success`, independently run the REST API VERDICT check and confirm the VERDICT comment exists before reporting 7-green.
+**Current verification:** follow
+`~/.claude/skills/pr-green-definition/SKILL.md`; independently verify
+current-head CI conclusions and mergeability rather than trusting the Green Gate
+display status.
+
+## Audit mode (`/harness --audit`)
+
+In addition to single-failure analysis, this skill supports a full sweep of all
+harness files for accumulated drift. Scan `~/.claude/CLAUDE.md`, repo-local
+`CLAUDE.md`, `~/.codex/AGENTS.md`, workspace `.claude/commands/`, and
+`~/.claude/skills/*/` for:
+
+- **Stale rules** — instructions that reference files/tools/patterns that no
+  longer exist
+- **Contradictions** — rules in different files that conflict
+- **Gaps** — known failure patterns (from memory) without corresponding
+  instructions
+- **Duplication** — the same rule stated in multiple places (consolidate to the
+  most durable layer per the Decision Rules above)
+
+Report findings as a table:
+
+```
+| Issue | File | Line | Recommendation |
+|-------|------|------|----------------|
+| Stale | ~/.claude/CLAUDE.md | 42 | Remove reference to deprecated tool X |
+| Gap | repo CLAUDE.md | - | Add rule about Y (corrected 3x in memory) |
+```
+
+## Optimization mode (`/harness --optimize`)
+
+Use this mode to review active coding-agent harness files and suggest useful,
+small improvements. In scope: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, skills,
+agents, slash commands, and their discovery metadata.
+
+### Scope guard
+
+The product is the instruction harness itself. Start from the named harness
+files and keep proposed edits inside those surfaces. Do not turn this task into
+an AO, beads, evaluation-corpus, notification, or general process project.
+
+If most planned work does not directly inspect, test, or change instruction
+surfaces, stop: the task has drifted.
+
+### Review posture
+
+1. Batch cheap discovery with `rg`, metadata parsing, broken-link checks, and
+   word counts.
+2. Consult recent `/history` and `/ms` evidence for repeated corrections and
+   concrete friction.
+3. Read focused evidence for the highest-value findings; do not recursively
+   expand context without a concrete question.
+4. Rank ideas by expected agent-quality benefit, confidence, and change risk.
+5. Prefer an existing canonical file over creating another skill or command.
+6. Prefer small, reviewable change groups over broad prompt rewrites.
+7. If evidence is weak or no improvement is worthwhile, report `no change`.
+
+For a proposed or implemented change, record enough before/after evidence to
+explain the decision. A frozen corpus, new gate, or organization-wide cleanup
+campaign is not required.
+
+### Weekly job contract
+
+A weekly job may automate this mode. Keep it thin:
+
+- inspect the authorized harness roots read-only;
+- produce a short ranked list of optimization ideas with exact file evidence;
+- open small, focused harness-only PRs when changes are high-confidence and can
+  be validated with existing checks;
+- otherwise publish the ideas or an explicit `no change` result;
+- deliver the report and PR links through the already configured weekly
+  Slack/email notification path;
+- never make direct user-scope edits from the scheduled run;
+- never require beads, `/nextsteps`, a frozen evaluation corpus, AO workers, or
+  unrelated process changes as prerequisites.
+
+The scheduler and delivery mechanism belong to the owning repository. They are
+implementation details of this one weekly job, not a new harness workflow.
+
+### Source principles
+
+- [Dropbox: optimizing Dash's relevance judge with DSPy](https://dropbox.tech/machine-learning/optimizing-dropbox-dash-relevance-judge-with-dspy) — use measured evidence, make model-specific improvements, and constrain high-blast-radius prompt changes.
+- [GitHub: better tools made Copilot code review worse](https://github.blog/ai-and-ml/github-copilot/better-tools-made-copilot-code-review-worse-heres-how-we-actually-improved-it/) — job-specific tool instructions matter; start from a narrow question; batch discovery; read focused evidence; use traces to diagnose context-expansion loops.
+- [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model) — favor lean prompts, state instructions once, expose only relevant tools, remove one instruction group at a time, and rerun representative evals before accepting the change.
+
+### Output contract
+
+Return:
+
+1. a short ranked idea list with exact file evidence;
+2. the recommended minimal change, if any;
+3. validation evidence for any implemented change;
+4. PR URLs when the weekly job opened any, or `no change`.
+
+Unless invoked with `--fix`, do not edit the harness. Audit, create the durable
+recommendation, and stop.
 
 ## Anti-patterns
 

@@ -1,9 +1,10 @@
 ---
-description: Cancel an active Ralph Wiggum loop
-type: execution
-execution_mode: immediate
+description: "Cancel active Ralph Wiggum loop"
+allowed-tools: ["Bash(test -f .claude/ralph-loop.local.md:*)", "Bash(rm .claude/ralph-loop.local.md)", "Read(.claude/ralph-loop.local.md)"]
+hide-from-slash-command-tool: "true"
 ---
-# /cancel-ralph — Cancel active Ralph Wiggum loop
+
+# Cancel Ralph
 
 To cancel the Ralph loop:
 

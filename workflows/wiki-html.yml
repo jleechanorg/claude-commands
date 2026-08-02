@@ -1,5 +1,11 @@
 name: Generate Wiki HTML
 
+
+# Cancel in-progress runs on the same ref — supersedes are wasted runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 on:
   push:
     branches:
@@ -8,12 +14,26 @@ on:
       - 'wiki/**'
   workflow_dispatch:
 
+# Regenerated HTML is delivered via a bot branch + squash-merged PR because
+# the main ruleset rejects direct pushes (GH013). Same pattern as
+# beads-flush-on-main.yml. Loop-safety is double-covered: pushes caused by
+# GITHUB_TOKEN (including the bot PR's merge) do not trigger workflow runs,
+# and the merged commit only touches docs/wiki/**, which misses the
+# `wiki/**` trigger filter anyway.
 permissions:
   contents: write
+  pull-requests: write  # regenerated HTML is delivered via a bot PR
 
 jobs:
   generate:
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # Main-only: the bot PR always targets main, so regenerating from any
+    # other ref (possible via workflow_dispatch) would merge HTML built from
+    # non-main wiki sources. The push trigger is already main-scoped; this
+    # guard closes the manual-dispatch path.
+    if: github.ref_name == 'main'
+    # ubuntu-latest ($USER-oud/LANE-D): pure Python script + git
+    # auto-commit, zero self-hosted-only dependency.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
@@ -23,11 +43,30 @@ jobs:
       - name: Generate HTML
         run: python3 scripts/generate_wiki_html.py
 
-      - name: Create commit
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          branch: ${{ github.ref_name }}
-          commit_message: "docs: auto-regenerate wiki HTML [skip ci]"
-          commit_options: "--no-verify"
-          skip_dirty_check: false
-          file_pattern: 'docs/wiki/**/*.html'
+      - name: Open auto-merging PR if regenerated HTML differs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git add -A -- docs/wiki
+          if git diff --cached --quiet; then
+            echo "wiki HTML already current; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B bot/wiki-html
+          git commit --no-verify -m "docs: auto-regenerate wiki HTML"
+          git push -f origin bot/wiki-html
+          PR=$(gh pr list --head bot/wiki-html --base main --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -z "$PR" ]; then
+            gh pr create --head bot/wiki-html --base main \
+              --title "docs: auto-regenerate wiki HTML" \
+              --body "Automated wiki HTML regeneration. Opened by wiki-html.yml because the main ruleset rejects direct pushes (GH013)."
+            PR=$(gh pr list --head bot/wiki-html --base main --state open \
+              --json number --jq '.[0].number')
+          fi
+          # No --auto fallback: repo has allow_auto_merge disabled.
+          gh pr merge "$PR" --squash || \
+            echo "::warning::wiki HTML PR #$PR could not be merged; left open"

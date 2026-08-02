@@ -70,7 +70,7 @@ class TestSanitizeLogContent(unittest.TestCase):
     def test_actual_jwt_tokens_are_redacted(self):
         """Real JWT tokens SHOULD be redacted."""
         # Real JWT example (expired test token)
-        jwt_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        jwt_token = "[REDACTED_JWT_TOKEN]"
         
         test_cases = [
             f"Authorization: Bearer {jwt_token}",
@@ -88,9 +88,9 @@ class TestSanitizeLogContent(unittest.TestCase):
     def test_api_keys_are_redacted(self):
         """API keys and secrets SHOULD be redacted."""
         test_cases = [
-            "api_key=sk-1234567890abcdefghijklmnopqrstuvwxyz",
-            "GITHUB_TOKEN=ghp_1234567890abcdefghijklmnopqrstuvwxyz123456",
-            "Authorization: Bearer sk-proj-abcdefghijklmnopqrstuvwxyz123456789",
+            "api_key=[REDACTED_OPENAI_KEY]",
+            "GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]",
+            "Authorization: Bearer [REDACTED_OPENAI_KEY]",
             "password=SuperSecretPassword123!@#$%^&*()",
             "github_pat_11ABCDEFG1234567890abcdefghijklmnopqrstuvwxyz"
         ]
@@ -104,7 +104,7 @@ class TestSanitizeLogContent(unittest.TestCase):
         """Only sensitive parts should be redacted in mixed content."""
         content = """
         Connecting to api.github.com using version 2.1.0
-        Authentication token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+        Authentication token: [REDACTED_JWT_TOKEN]
         Loading module utils.auth.validator
         """
         

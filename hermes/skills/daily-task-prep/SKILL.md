@@ -77,7 +77,9 @@ Check these calendars when visible:
 - `cindilashley@gmail.com` — direct query returns a JSON parse error; detect shared events via the primary's `attendees` array
 - Family calendar only as a conflict source, not as a source of Jeffrey tasks
 
-Only add calendar items that Jeffrey himself is expected to attend.
+Only add calendar items that {{OWNER_NAME}} himself is expected to attend.
+
+**Calendar "task:" block detection (added 2026-07-18):** Self-created calendar events whose summary starts with `task:` (e.g. `task: taxes`, `task: reminder backup cli convos`) are *task blocks*, not meetings — they have `attendees[].self == true` but no real participants. Add them to `## Today` in time order using the same format as recurring reminders: `- [ ] task: <summary after the prefix> — YYYY-MM-DD HH:MM–HH:MM TZ`. Do NOT exclude them as "calendar artifacts" or treat them as duplicates of existing backlog entries. Do NOT exclude multi-day travel holds (`Trip to <place>` with attendees=family) — these are travel context, not tasks, so leave them off `## Today`.
 
 Useful shell pattern (verified 2026-07-07):
 
@@ -88,6 +90,33 @@ gog calendar events --all -a $USER@gmail.com --days=1 --max=100 --json --results
 # Or the human-readable table view (catches the 7-day window)
 gog calendar list
 ```
+
+### Identifying which events belong to Jeffrey
+
+After pulling events with `gog calendar events --all …`, walk the list and exclude the following patterns before adding anything to `## Today`:
+
+- **Empty-summary + `visibility=private` events** → these are personal time blocks (pomodoro / focus / guard holds), not meetings. Skip. They have no `organizer`, no attendees, and `iCalUID` ending in `@google.com` (not `@group.calendar.google.com`) — that fingerprint is reliable. Real meetings always have an organizer or a non-empty summary.
+- **`organizer.email` belongs to another household member** (spouse, partner, parent) and Jeffrey is only a guest → skip unless explicitly requested.
+- **`transparency: transparent`** → out-of-office / "Trip to X" / travel blocks; skip. (E.g. "Trip to Dublin" surfaced as a transparent travel block — not a task.)
+- **iCalUID on `@group.calendar.google.com`** → secondary / shared / family / work calendars. Decide per-calendar: family calendars are conflict-only; work calendars (Snap, reclaim) only if Jeffrey is the organizer.
+- **Recurring reminder or recurring event whose source is owned by someone else** (e.g. "Therapy Cindil — Cindil-owned" line in `## Recurring reminders`) → skip even if Jeffrey is an attendee on the calendar. The source line stays in `## Recurring reminders` so the schedule is still visible, but do not add a `## Today` instance — that would make it look like Jeffrey's task and clutter his morning list.
+
+### Calendar-ID cheat sheet
+
+| Calendar ID | Role | Treat as |
+|---|---|---|
+| `$USER@gmail.com` (primary) | owner | Jeffrey — primary source |
+| `$USER@snapchat.com` | freeBusyReader | work context only |
+| `jleechanreclaim@gmail.com` | owner | personal task system — keep events (e.g. 🎯 Focus time) only if Jeffrey-relevant |
+| `4ogrrv9qf2m96pg0kk27v2okeg@group.calendar.google.com` (jeff PA Scheduling) | owner | source of Jeffrey-owned scheduling |
+| `family04573895333712838899@group.calendar.google.com` | owner | conflict source only, never a source of tasks |
+| `e65edb9d870582951ac40c72f35daff30e9c33b3321ffee4dc9e06509c35c0c3@group.calendar.google.com` (AIGen) | owner | work calendar — judge each event |
+
+Refresh with `gog calendar calendars --json` if any ID appears unfamiliar.
+
+For the full deterministic decision tree + field-fingerprint table (how to tell personal blocks from real meetings, recurring-source ownership rules, cross-timezone pitfalls), see [references/calendar-event-filtering.md](references/calendar-event-filtering.md).
+
+> **Maintenance note (2026-07-16):** A stale duplicate lives at `~/.hermes/skills/hermes-imports/daily-task-prep/SKILL.md` (still uses `{{OWNER_NAME}}` / `{{ASSISTANT_EMAIL}}` placeholders, never resolved). It causes `skill_view(name='daily-task-prep')` to fail with "Ambiguous skill name: 2 skills match" — workaround is to load with `skill_view(name='hermes-imports/daily-task-prep')`. Curator should consider deleting or merging the duplicate so future `skill_view` lookups don't have to guess.
 
 Filter JSON to Jeffrey-owned events with a small Python check (see `scripts/today-stale-check.py` for the reusable helper).
 

@@ -1,6 +1,6 @@
 ---
 name: plan
-description: "Plan mode: write an actionable markdown plan to .hermes/plans/, no execution. Bite-sized tasks, exact paths, complete code."
+description: Write a markdown plan to .hermes/plans/; no execution.
 version: 2.0.0
 author: Hermes Agent (writing-craft adapted from obra/superpowers)
 license: MIT
@@ -121,7 +121,7 @@ Every plan MUST start with:
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
+> **For Hermes:** Use subagent-driven-development skill to implement this plan ta[REDACTED_OPENAI_KEY]
 
 **Goal:** [One sentence describing what this builds]
 

@@ -47,6 +47,21 @@ context: hermes
 - Starting Chrome headed on macOS because DISPLAY is available
 - Using visible Chrome for Luma scrape / cookie injection without explicit approval
 - `mcp__claude-in-chrome__*` for localhost testing (use Playwright MCP)
+- **Calling `tell application "Google Chrome" to activate`** from any agent session — this steals keyboard focus from whatever the user is currently working in (verified 2026-07-18, user response: "work headless stop stealing my screen focus"). To add a tab to the user's existing Chrome without focus steal, use AppleScript `make new tab at end of tabs of front window with properties {URL:"..."}` — verified safe (front app stayed `cmux DEV` throughout the tab creation).
+- **Driving the user's existing visible Chrome via CDP at all** — even without `activate`, CDP-driven navigation can scroll / push the user's cursor off their work. Default to a freshly-spawned headless browser (Aside CLI / Aside MCP / Playwright MCP) for any automation that needs Chrome behavior; only attach to the user's existing Chrome when the user explicitly says so in the current thread.
+- **Stopping at "this page requires authentication, I can't read it"** — when the user asks you to read content behind a Google / Microsoft / vendor auth gate (Gemini share link, ChatGPT shared conversation, Google Doc with restricted access, Notion shared page, etc.), the wrong move is to declare the task blocked and ask the user to paste the content. The right move is `browserclaw cookies decrypt` (Chrome Default cookies for the target domain) + `browserclaw cookies inject` against headless Chromium to read the page *as the user*. This is exactly what "use /browser or /browserclaw headless next time without asking" means — reach for the auth-aware recipe on the first refusal, not after being told. Verified 2026-07-20 on Gemini share `Td7fA4pzuvMs`: 79 Google cookies decrypted from Chrome Default, injected into headless Chromium, full 169KB page text extracted in one shot. See `~/.hermes/skills/browserclaw/references/gemini-share-link-as-user.md` for the full recipe.
+
+## Automatic-auth default (added 2026-07-30, browserclaw v2 design review)
+
+The headless default extends one level deeper: **the operator should not have to open a browser at all for routine web work**. Login, session recovery, MFA, passkey, SSO, and device-confirmation must all be driven autonomously by Aside (or the equivalent browser runtime). Manual fallback — asking the operator to log in, paste a credential, or complete a CAPTCHA — is the exception, not the default, and only fires after bounded autonomous recovery is exhausted.
+
+This applies regardless of which tool is driving the browser:
+
+- For browserclaw: the v2 design `references/browserclaw-v2-design-2026-07-30.md` supersedes the prior "manual auth only" / "no auth bypass" ceiling.
+- For ad-hoc Playwright / Aside work: do not propose "please open the browser and log in" as a first move — drive the login flow via Aside's password autofill + SSO + MFA handlers, and only escalate to the operator if the autonomous path genuinely cannot complete.
+- Forcron / babysit jobs that need auth: route through the headless Aside CLI with the operator's existing profile (`aside account list` to confirm profile is wired) instead of scheduling an interactive browser session.
+
+Operator verbatim (2026-07-30, Slack browserclaw design review): *"I want automatic auth and never wanna use my browser unless forced."*
 
 ## Verification
 

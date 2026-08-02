@@ -5,6 +5,50 @@ description: "Generate the daily executive digest — a single WhatsApp summary 
 # Daily Executive Digest
 
 ## Config — read before starting
+
+### 0. PREFLIGHT GATE (machine check, NOT just config read) — added 2026-07-24
+
+Before reading any config or executing any step, verify this skill is being run in the **correct operator environment**. The digest is hard-coded to one operator (Gonto, WhatsApp delivery, `gog`/`mcporter`/`todoist-cli` tooling) and will silently produce garbage — or worse, leak data — if triggered on the wrong machine.
+
+Run these checks FIRST, in order. If ANY fails → STOP, do NOT continue into §1+.
+
+```bash
+# 1. Operator workspace exists
+test -f "$HOME/executive-assistant-skills/config/user.json" \
+  || { echo "ABORT: ~/executive-assistant-skills/config/user.json not found"; \
+       exit 11; }
+
+# 2. Required CLIs are installed
+for cmd in gog mcporter todoist-cli; do
+  command -v "$cmd" >/dev/null 2>&1 \
+    || { echo "ABORT: $cmd not on PATH"; exit 12; }
+done
+
+# 3. Style + state dirs exist
+WORKSPACE=$(python3 -c "import json;print(json.load(open('$HOME/executive-assistant-skills/config/user.json'))['workspace'])")
+test -d "$WORKSPACE" || { echo "ABORT: workspace $WORKSPACE missing"; exit 13; }
+test -f "$WORKSPACE/style/DIGEST_RULES.md" || { echo "ABORT: DIGEST_RULES.md missing"; exit 14; }
+```
+
+**Why this gate matters.** A cron / launchd job requesting "executive-assistant sweep" or "exec digest" can fire on any machine the agent has access to. Without this gate, the agent reads `user.json` (if it exists at all), assumes the env is Gonto's, and starts fabricating calendar/email output — or sending a "digest" to a WhatsApp number that isn't Gonto's. Real incident: 2026-07-24 16:01 PT, cron invoked `executive-assistant` on a Hermes host with no Gonto workspace; without the gate, the agent would have either (a) errored partway with a fake report, or (b) sent a fabricated digest to whatever WhatsApp number the user.json could be tricked into pointing at.
+
+### Wrong-machine abort path (mandatory when gate fails)
+
+If preflight fails (`exit 11/12/13/14`):
+
+1. **Do NOT** attempt to read `user.json` or fall back to a generic Hermes-side sweep.
+2. **Do NOT** post a fabricated "nothing to report today" digest.
+3. **Post a status-only abort notice** to the configured fallback channel (default: `slack:#ai-general` per SOUL.md `slack-channel-routing-policy`). Body MUST contain:
+   - Trigger phrase that fired the cron
+   - Each failed preflight check (verbatim `exit N: <reason>`)
+   - Two remediation paths: (a) install operator workspace + config; (b) rescope the cron to use generic Hermes tools (memory-search, Slack history, Todoist CLI without operator coupling).
+4. Honor the SILENT-suppression rule only if the cron explicitly says "suppress on no-op" — and even then, log the abort to local state for ops visibility.
+5. Update `{workspace}/state/digest-state.json` `lastRun` so the same machine-mismatch doesn't loop-storm the cron.
+
+> See `references/wrong-machine-abort.md` for the full incident writeup (2026-07-24 cron-fire on non-Gonto Hermes) and the general "operator-scoped skill preflight" pattern.
+
+### 1. Config — read after preflight passes
+
 Read `~/executive-assistant-skills/config/user.json`.
 Extract and use throughout:
 - `primary_email`, `work_email` — both Gmail accounts to check

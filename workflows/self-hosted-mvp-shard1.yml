@@ -1,9 +1,23 @@
 name: Self-Hosted MVP Shards
 
 on:
-  push:
-    branches: [main, dev]
+  # push trigger removed ($USER-huy): main/dev only receive squash-merge
+  # commits whose tree is byte-identical to the PR head SHA already validated
+  # by the pull_request trigger below (verified via `git log --format=%P` on
+  # the last 30 main commits -- all single-parent squash commits). A push
+  # re-run of these jobs was therefore pure duplication of a run that already
+  # passed on the PR, up to ~30 min per job x 4 jobs. The push trigger's
+  # `paths:` filter (removed with it) previously mirrored pull_request.paths
+  # VERBATIM per FIXPLAN §3.1/§5 risk #4
+  # (docs/FIXPLAN-gh-actions-systemic-20260707.md, ez-gh-actions repo); that
+  # filter already eliminated docs-only/unrelated-path push runs. This change
+  # eliminates the REMAINING push runs -- the ones that DO touch
+  # test-relevant paths -- because they duplicate an already-passed PR run,
+  # not because path-filtering was insufficient. See PR body for the
+  # push-vs-PR coverage-gap analysis (merge-strategy check, non-Actions
+  # consumers of push-run results).
   pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - "mvp_site/**"
       - "tests/**"
@@ -17,7 +31,13 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: self-hosted-mvp-shards-${{ github.ref }}
+  # Per-PR SHA keying so a re-push to the SAME PR supersedes its own stale
+  # run, but doesn't kill unrelated PRs' runs that happen to share a branch
+  # name (push events from the same contributor, release/* branches reused
+  # by multiple PRs, etc). Falls back to github.ref for push events where
+  # head_sha is not available. Lane B REC #3 from the round-3 CI trim skip
+  # breakdown (5.5 runs/PR avg on the current key-on-ref pattern).
+  group: self-hosted-mvp-shards-${{ github.event.pull_request.head.sha || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -27,23 +47,97 @@ permissions:
   packages: read
 
 env:
+  PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
   # Keep end2end tests in PR CI coverage for all mvp shards.
   # Opt into Node.js 24 for actions to avoid Node.js 20 deprecation failures on self-hosted runners
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  # Detects which job-relevant path groups changed so downstream jobs can
+  # skip themselves on PRs that don't touch their inputs. Shards 1-3 only
+  # run `./run_tests.sh --test-dirs=mvp_site` (mvp_site-scope); the
+  # harness-autonomy job only runs pytest on tests/scripts/* plus a few
+  # scripts/*.py files (harness-scope). Splitting the gates this way means
+  # a PR that only touches one scope skips the other scope's jobs, saving
+  # up to 30min x 3 jobs (matrix) on cross-scope-only PRs.
+  # Always runs (cheap) so its outputs are available to every gated job.
+  # Companion to PR #8366 (sha-keyed concurrency): that PR prevents the
+  # matrix from racing across pushes; this PR prevents the matrix from
+  # running at all on out-of-scope PRs.
+  detect-changes:
+    name: Detect Changed Paths
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 3
+    outputs:
+      mvp-changes: ${{ steps.filter.outputs.mvp-changes }}
+      harness-changes: ${{ steps.filter.outputs.harness-changes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.event.pull_request.head.ref) || github.sha }}
+          persist-credentials: false
+      - name: Filter changed paths
+        id: filter
+        # dorny/paths-filter v3.0.3, pinned by full commit SHA. Lane D's
+        # presubmit.yml uses the same pin (verified via `git ls-remote
+        # --tags https://github.com/dorny/paths-filter refs/tags/v3.0.3`).
+        uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
+        with:
+          filters: |
+            mvp-changes:
+              - 'mvp_site/**'
+              - 'run_tests.sh'
+              - 'scripts/venv_utils.sh'
+              - '.github/workflows/self-hosted-mvp-shard1.yml'
+            harness-changes:
+              - 'tests/scripts/**'
+              - 'scripts/pr_autonomy_metrics.py'
+              - 'scripts/trace_to_eval_case.py'
+              - 'scripts/validate_prompt_tool_contracts.py'
+              - 'scripts/venv_utils.sh'
+              - '.github/workflows/self-hosted-mvp-shard1.yml'
+
   harness-autonomy-self-hosted:
     name: Harness autonomy checks (self hosted)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    timeout-minutes: 30
+    # Draft PRs skip this heavy self-hosted shard (CI capacity hardening).
+    # Also gated on detect-changes.harness-changes so PRs that only touch
+    # mvp_site/ (no harness-relevant diff) skip this job entirely.
+    needs: detect-changes
+    if: |
+      (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+      && (needs.detect-changes.outputs.harness-changes == 'true' || github.event_name != 'pull_request')
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 15
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      env:
+        GIT_CONFIG_GLOBAL: ${{ runner.temp }}/checkout-gitconfig
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
         fetch-depth: 1
+
+    - name: Materialize full workspace after checkout
+      run: |
+        git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          while read -r key; do
+            git config --global --unset-all "$key" || true
+          done < <(git config --global --name-only --get-regexp '^url\\..*\\.insteadOf$' 2>/dev/null || true)
+          git remote set-url origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+          git check-ref-format --branch "$PR_HEAD_REF"
+          git fetch origin "+refs/heads/${PR_HEAD_REF}:refs/remotes/origin/${PR_HEAD_REF}" --depth=1
+          git checkout --force "$PR_HEAD_SHA"
+          git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+          git reset --hard "$PR_HEAD_SHA"
+        fi
+        test -f scripts/ci/runner_preflight.sh
+        test -f scripts/runner_health_score.py
 
     - name: Runner Preflight & Health Score check
       id: preflight
@@ -65,7 +159,9 @@ jobs:
         python -m pytest \
           tests/scripts/test_pr_autonomy_metrics.py \
           tests/scripts/test_trace_to_eval_case.py \
-          tests/scripts/test_validate_prompt_tool_contracts.py
+          tests/scripts/test_validate_prompt_tool_contracts.py \
+          tests/scripts/test_exportcommands.py \
+          tests/scripts/test_check_function_loc_ratchet.py
 
         python scripts/validate_prompt_tool_contracts.py
 
@@ -94,16 +190,44 @@ jobs:
 
   mvp-shard-1:
     name: Directory tests (core-mvp-1(self hosted))
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    timeout-minutes: 30
+    # Draft PRs skip this heavy self-hosted shard (CI capacity hardening).
+    # Also gated on detect-changes.mvp-changes so PRs that only touch
+    # tests/scripts/ (no mvp_site-relevant diff) skip the entire matrix.
+    needs: detect-changes
+    if: |
+      (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+      && (needs.detect-changes.outputs.mvp-changes == 'true' || github.event_name != 'pull_request')
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    # E4 EXCEPTION: 30-minute internal MVP shard budget plus about 5 minutes overhead.
+    timeout-minutes: 35
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      env:
+        GIT_CONFIG_GLOBAL: ${{ runner.temp }}/checkout-gitconfig
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
         fetch-depth: 1
+
+    - name: Materialize full workspace after checkout
+      run: |
+        git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          while read -r key; do
+            git config --global --unset-all "$key" || true
+          done < <(git config --global --name-only --get-regexp '^url\\..*\\.insteadOf$' 2>/dev/null || true)
+          git remote set-url origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+          git check-ref-format --branch "$PR_HEAD_REF"
+          git fetch origin "+refs/heads/${PR_HEAD_REF}:refs/remotes/origin/${PR_HEAD_REF}" --depth=1
+          git checkout --force "$PR_HEAD_SHA"
+          git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+          git reset --hard "$PR_HEAD_SHA"
+        fi
+        test -f scripts/ci/runner_preflight.sh
+        test -f scripts/runner_health_score.py
 
     - name: Runner Preflight & Health Score check
       id: preflight
@@ -111,6 +235,11 @@ jobs:
         bash scripts/ci/runner_preflight.sh
         # Check runner health score; fail if quarantined
         python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 check
+
+    - name: Set up Node.js 20
+      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
+      with:
+        node-version: '20'
 
     - name: Run core-mvp-1 tests (self-hosted)
       run: |
@@ -123,6 +252,17 @@ jobs:
         echo "🧩 Running Shard ${SHARD_DISPLAY} of 3 (core-mvp-1)"
         chmod +x run_tests.sh
         ./run_tests.sh --test-dirs=mvp_site --parallel --exclude-integration --exclude-mcp --include-end2end
+        echo "🧪 Running frontend_v1 JS unit tests"
+        # Source the shared ladder — kept in sync with mvp_site/tests/_node_path.py
+        # so the workflow surface and the pytest surface resolve Node the same way.
+        source scripts/node_utils.sh
+        resolve_node_bin
+        if [ -z "$NODE_BIN" ]; then
+          echo "::warning::Node not found; skipping JS unit tests on this runner"
+        else
+          echo "Using node: $NODE_BIN ($($NODE_BIN --version))"
+          "$NODE_BIN" --test mvp_site/frontend_v1/tests/*.test.js
+        fi
       env:
         TESTING: "true"
         TESTING_AUTH_BYPASS: "true"
@@ -140,6 +280,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
+        TEST_SUITE_TIMEOUT: "1800"
         TEST_MAX_WORKERS: 1
         TEST_SHARD_TOTAL: "3"
         TEST_SHARD_INDEX: "0"
@@ -160,16 +301,44 @@ jobs:
         python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 update --delta 1 --reason "Infra failure in job: ${{ github.job }}"
   mvp-shard-2:
     name: Directory tests (core-mvp-2(self hosted))
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    timeout-minutes: 30
+    # Draft PRs skip this heavy self-hosted shard (CI capacity hardening).
+    # Also gated on detect-changes.mvp-changes so PRs that only touch
+    # tests/scripts/ (no mvp_site-relevant diff) skip the entire matrix.
+    needs: detect-changes
+    if: |
+      (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+      && (needs.detect-changes.outputs.mvp-changes == 'true' || github.event_name != 'pull_request')
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    # E4 EXCEPTION: 30-minute internal MVP shard budget plus about 5 minutes overhead.
+    timeout-minutes: 35
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      env:
+        GIT_CONFIG_GLOBAL: ${{ runner.temp }}/checkout-gitconfig
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
         fetch-depth: 1
+
+    - name: Materialize full workspace after checkout
+      run: |
+        git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          while read -r key; do
+            git config --global --unset-all "$key" || true
+          done < <(git config --global --name-only --get-regexp '^url\\..*\\.insteadOf$' 2>/dev/null || true)
+          git remote set-url origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+          git check-ref-format --branch "$PR_HEAD_REF"
+          git fetch origin "+refs/heads/${PR_HEAD_REF}:refs/remotes/origin/${PR_HEAD_REF}" --depth=1
+          git checkout --force "$PR_HEAD_SHA"
+          git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+          git reset --hard "$PR_HEAD_SHA"
+        fi
+        test -f scripts/ci/runner_preflight.sh
+        test -f scripts/runner_health_score.py
 
     - name: Runner Preflight & Health Score check
       id: preflight
@@ -177,6 +346,11 @@ jobs:
         bash scripts/ci/runner_preflight.sh
         # Check runner health score; fail if quarantined
         python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 check
+
+    - name: Set up Node.js 20
+      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
+      with:
+        node-version: '20'
 
     - name: Run core-mvp-2 tests (self-hosted)
       run: |
@@ -206,6 +380,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
+        TEST_SUITE_TIMEOUT: "1800"
         TEST_MAX_WORKERS: 1
         TEST_SHARD_TOTAL: "3"
         TEST_SHARD_INDEX: "1"
@@ -227,16 +402,44 @@ jobs:
 
   mvp-shard-3:
     name: Directory tests (core-mvp-3(self hosted))
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
-    timeout-minutes: 30
+    # Draft PRs skip this heavy self-hosted shard (CI capacity hardening).
+    # Also gated on detect-changes.mvp-changes so PRs that only touch
+    # tests/scripts/ (no mvp_site-relevant diff) skip the entire matrix.
+    needs: detect-changes
+    if: |
+      (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+      && (needs.detect-changes.outputs.mvp-changes == 'true' || github.event_name != 'pull_request')
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    # E4 EXCEPTION: 30-minute internal MVP shard budget plus about 5 minutes overhead.
+    timeout-minutes: 35
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      env:
+        GIT_CONFIG_GLOBAL: ${{ runner.temp }}/checkout-gitconfig
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.sha }}
         fetch-depth: 1
+
+    - name: Materialize full workspace after checkout
+      run: |
+        git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          while read -r key; do
+            git config --global --unset-all "$key" || true
+          done < <(git config --global --name-only --get-regexp '^url\\..*\\.insteadOf$' 2>/dev/null || true)
+          git remote set-url origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+          git check-ref-format --branch "$PR_HEAD_REF"
+          git fetch origin "+refs/heads/${PR_HEAD_REF}:refs/remotes/origin/${PR_HEAD_REF}" --depth=1
+          git checkout --force "$PR_HEAD_SHA"
+          git sparse-checkout disable 2>/dev/null || true
+          git config --unset core.sparseCheckout 2>/dev/null || true
+          git reset --hard "$PR_HEAD_SHA"
+        fi
+        test -f scripts/ci/runner_preflight.sh
+        test -f scripts/runner_health_score.py
 
     - name: Runner Preflight & Health Score check
       id: preflight
@@ -244,6 +447,11 @@ jobs:
         bash scripts/ci/runner_preflight.sh
         # Check runner health score; fail if quarantined
         python3 scripts/runner_health_score.py --runner "${{ runner.name }}" --threshold 10 check
+
+    - name: Set up Node.js 20
+      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
+      with:
+        node-version: '20'
 
     - name: Run core-mvp-3 tests (self-hosted)
       run: |
@@ -273,6 +481,7 @@ jobs:
         ENABLE_BUILD_TESTS: "0"
         ENABLE_NETWORK_TESTS: "0"
         GITHUB_ACTIONS: "true"
+        TEST_SUITE_TIMEOUT: "1800"
         TEST_MAX_WORKERS: 1
         TEST_SHARD_TOTAL: "3"
         TEST_SHARD_INDEX: "2"
