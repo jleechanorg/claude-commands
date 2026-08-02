@@ -642,10 +642,10 @@ class TestTaskDispatcherFix(unittest.TestCase):
             patch.object(self.dispatcher, "_is_agent_actively_working", return_value=True),
             patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
         ):
-            mock_run.return_value = MagicMock(returncode=0, stdout="task-agent-a\n", stderr="")
+            mock_run.return_value = MagicMock(returncode=0, stdout="ta[REDACTED_OPENAI_KEY]\n", stderr="")
             active = self.dispatcher._get_active_tmux_agents()
 
-        self.assertEqual(active, {"task-agent-a"})
+        self.assertEqual(active, {"ta[REDACTED_OPENAI_KEY]"})
         self.assertEqual(
             mock_run.call_args_list[0][0][0],
             ["tmux", "-L", "sockA", "list-sessions", "-F", "#{session_name}"],
@@ -658,11 +658,11 @@ class TestTaskDispatcherFix(unittest.TestCase):
             patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
         ):
             mock_run.return_value = MagicMock(returncode=0, stdout="still working", stderr="")
-            self.assertTrue(self.dispatcher._is_agent_actively_working("task-agent-a"))
+            self.assertTrue(self.dispatcher._is_agent_actively_working("ta[REDACTED_OPENAI_KEY]"))
 
         self.assertEqual(
             mock_run.call_args_list[0][0][0],
-            ["tmux", "-L", "sockA", "capture-pane", "-t", "task-agent-a", "-p"],
+            ["tmux", "-L", "sockA", "capture-pane", "-t", "ta[REDACTED_OPENAI_KEY]", "-p"],
         )
 
     def test_check_existing_agents_uses_dispatcher_socket(self):
@@ -673,10 +673,10 @@ class TestTaskDispatcherFix(unittest.TestCase):
             patch("orchestration.task_dispatcher.subprocess.run") as mock_run,
             patch("orchestration.task_dispatcher.glob.glob", return_value=[]),
         ):
-            mock_run.return_value = MagicMock(returncode=0, stdout="task-agent-a\n", stderr="")
+            mock_run.return_value = MagicMock(returncode=0, stdout="ta[REDACTED_OPENAI_KEY]\n", stderr="")
             existing = self.dispatcher._check_existing_agents()
 
-        self.assertIn("task-agent-a", existing)
+        self.assertIn("ta[REDACTED_OPENAI_KEY]", existing)
         self.assertEqual(
             mock_run.call_args_list[0][0][0],
             ["tmux", "-L", "sockA", "list-sessions", "-F", "#{session_name}"],

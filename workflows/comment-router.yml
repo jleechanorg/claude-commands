@@ -1,0 +1,170 @@
+# PR Comment Router
+#
+# Single fan-in listener for /smoke /auth-test /dice /levelup PR comments.
+# Replaces the 4 separate `issue_comment: created` triggers in
+# mcp-smoke-tests.yml, auth-browser-tests.yml, dice-tests.yml, levelup-tests.yml.
+#
+# Why this exists: GitHub Actions fires a workflow on EVERY issue_comment event
+# before evaluating any job-level `if:` filter. With 4 workflows each listening,
+# one /smoke PR comment triggered 4 workflow_runs (3 immediately skipped, 1 did
+# work). Across 48h that produced ~6,000 skipped runs (~73% of all GH Actions
+# noise on $GITHUB_REPOSITORY).
+#
+# This router collapses fan-out to ONE workflow per comment. Non-matching
+# comments are skipped at the job level (`if:` short-circuits before any
+# `gh workflow run` is attempted, so the workflow_run still shows `skipped`
+# but no downstream fan-out runs are created).
+#
+# Concurrency group keys off `github.event.comment.id` so simultaneous
+# commands on the same PR dedupe; cancel-in-progress: false so a /smoke and
+# /dice on the same comment don't kill each other.
+#
+# Auth gating mirrors the original filters (OWNER/MEMBER/COLLABORATOR only)
+# so an outside contributor typing /smoke still gets skipped, not silently
+# triggered.
+
+name: PR Comment Router
+
+permissions:
+  contents: read
+  # Empirically required for the ack step: a live run (2026-07-18, run
+  # 29660949799 and the 21:05Z probe) 403'd on createComment with
+  # issues:write granted and pull-requests pinned to read; the response's
+  # accepted-permissions header names issues=write and pull_requests=write.
+  # Granting both write scopes is monotonic; post-merge /smoke probe is the
+  # proof either way.
+  pull-requests: write
+  actions: write  # needed to invoke `gh workflow run`
+  issues: write  # ack step posts a PR comment via the Issues API
+
+concurrency:
+  group: comment-router-${{ github.event.comment.id }}
+  cancel-in-progress: false
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  route:
+    name: Route PR comment to test workflow
+    # Only act on comments that (a) are on a PR, (b) start with one of our
+    # recognized prefixes, and (c) come from a trusted author. Everything
+    # else falls through to SKIPPED without spawning downstream runs.
+    if: |
+      github.event.issue.pull_request != null &&
+      (
+        startsWith(github.event.comment.body, '/smoke') ||
+        startsWith(github.event.comment.body, '/auth-test') ||
+        startsWith(github.event.comment.body, '/dice') ||
+        startsWith(github.event.comment.body, '/levelup')
+      ) &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    # Self-hosted (was ubuntu-latest): this job's own `if:` above job-level-skips
+    # ~98.5% of invocations (12,291 runs/7d vs 185 real dispatches) at $0 either
+    # way -- GitHub never assigns a runner to a job-level-skipped job. For the
+    # ~1.5% that DO dispatch, the work is a single fast `gh api` call (no Docker,
+    # no self-hosted-only dependency), so moving it here has negligible fleet-slot
+    # impact even on a saturated fleet, unlike green_gate_precheck/bugbot_gate_wait
+    # (see green-gate.yml -- those stay ubuntu-latest, deliberately, for documented
+    # fleet-capacity reasons).
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    timeout-minutes: 2
+    outputs:
+      target_workflow: ${{ steps.dispatch.outputs.target_workflow }}
+      pr_number: ${{ steps.dispatch.outputs.pr_number }}
+    steps:
+      - name: Detect prefix and dispatch to target workflow (with PR ack)
+        id: dispatch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          BODY: ${{ github.event.comment.body }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Use gh api directly (not `gh workflow run` shorthand) so we don't
+          # need a git working tree — the ubuntu-latest runner here has no
+          # checkout step. gh workflow run requires .git context.
+          # Reference: PR #8355 post-merge verification — first attempt
+          # failed with "fatal: not a git repository" on the dispatch step.
+          TARGET_WF=""
+          DISPATCH_ARGS=(-f ref="main" -f "inputs[pr_number]=${PR_NUMBER}")
+          case "$BODY" in
+            /smoke*)    TARGET_WF="mcp-smoke-tests.yml" ;;
+            /auth-test*) TARGET_WF="auth-browser-tests.yml" ;;
+            /dice*)     TARGET_WF="dice-tests.yml" ;;
+            /levelup*)  TARGET_WF="levelup-tests.yml" ;;
+            *)
+              echo "No matching prefix in: $BODY"
+              exit 0
+              ;;
+          esac
+
+          if [ "$TARGET_WF" != "mcp-smoke-tests.yml" ]; then
+            echo "Dispatching ${TARGET_WF} for PR #${PR_NUMBER}"
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${REPO}/actions/workflows/${TARGET_WF}/dispatches" \
+              "${DISPATCH_ARGS[@]}"
+          fi
+
+          echo "target_workflow=${TARGET_WF}" >> "$GITHUB_OUTPUT"
+          echo "pr_number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "target_workflow=${TARGET_WF}" >&2
+
+      - name: Acknowledge dispatch on the PR
+        if: steps.dispatch.outputs.target_workflow != ''
+        continue-on-error: true
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            // Restore UX parity: before PR #8354 the 4 target workflows each
+            // posted a "🔥 Started" comment when triggered. The router now
+            // dispatches silently otherwise, leaving users to guess whether
+            // their /smoke /auth-test /dice /levelup comment was received.
+            // Restores the immediate-feedback comment without coupling each
+            // target workflow back to issue_comment logic.
+            const targetWorkflow = '${{ steps.dispatch.outputs.target_workflow }}'.replace(/\.yml$/, '');
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const labelMap = {
+              'mcp-smoke-tests': '🔥 MCP Smoke Tests',
+              'auth-browser-tests': '🔐 Auth Browser Tests',
+              'dice-tests': '🎲 Dice Audit',
+              'levelup-tests': '⬆️ Level-up Tests',
+            };
+            const label = labelMap[targetWorkflow] || `\`${targetWorkflow}\``;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `${label} dispatched.\n\n[View workflow run →](${runUrl})`,
+            });
+
+  smoke:
+    name: Run MCP smoke tests
+    needs: route
+    if: needs.route.outputs.target_workflow == 'mcp-smoke-tests.yml'
+    uses: ./.github/workflows/mcp-smoke-tests.yml
+    with:
+      pr_number: ${{ needs.route.outputs.pr_number }}
+      # De-escalated 2026-07-22 (bead rev-frtef): was hardcoded `real`,
+      # meaning every trusted /smoke comment unconditionally billed the real
+      # Gemini API (PR previews can never use agy — deploy.sh always forces
+      # WORLDAI_PROD=true). This was the single largest confirmed bot-driven
+      # cost mechanism (~42% of audited spend; see
+      # docs/plans/2026-07-22-gemini-human-vs-bot-attribution-audit.md).
+      # Default is now mock (free); an operator who needs real-service
+      # coverage opts in explicitly with `/smoke real`. Green Gate 8 no
+      # longer hard-requires real mode either (see green-gate.yml
+      # REQUIRE_REAL_SMOKE_GATE), so mock coverage is sufficient to merge.
+      test_mode: ${{ contains(github.event.comment.body, '/smoke real') && 'real' || 'mock' }}
+    # secrets: inherit was flagged by zizmor (secrets-inherit): this workflow
+    # dispatches on PR-triggered /smoke comments, which checks out the PR head
+    # and runs repo-local actions, so `inherit` would expose the caller's full
+    # secret set to PR-controlled code. Pass only the two secrets
+    # mcp-smoke-tests.yml actually declares under workflow_call.secrets.
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}

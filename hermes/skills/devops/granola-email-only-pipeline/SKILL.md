@@ -118,7 +118,7 @@ plutil -lint launchd/ai.hermes.schedule.granola-to-drive.plist  # plist sanity
 python3 -c "import ast; ast.parse(open('scripts/granola-to-drive.py').read())"  # py syntax
 python3 scripts/granola-to-drive.py --preview  # smoke test
 git commit -am "..." && git push -u origin HEAD
-gh pr create --base main --title "..." --body "..."
+~/.hermes/scripts/gh-safe-publish pr create --base main --title "..." --body "..."
 # After PR merged (or for self-deploy):
 cp scripts/granola-to-drive.py $HOME/.hermes/scripts/granola-to-drive.py
 launchctl bootout gui/$(id -u)/ai.hermes.schedule.granola-to-drive 2>&1 | head

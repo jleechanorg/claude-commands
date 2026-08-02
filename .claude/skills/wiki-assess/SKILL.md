@@ -40,9 +40,9 @@ fi
 
 ### Phase 2: Count pages
 ```bash
-SOURCES=$(ls $WIKI/sources/*.md 2>/dev/null | wc -l)
-ENTITIES=$(ls $WIKI/entities/*.md 2>/dev/null | wc -l)
-CONCEPTS=$(ls $WIKI/concepts/*.md 2>/dev/null | wc -l)
+SOURCES=$(find "$WIKI/sources" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+ENTITIES=$(find "$WIKI/entities" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+CONCEPTS=$(find "$WIKI/concepts" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
 ```
 
 ### Phase 3: Calculate ratios
@@ -57,8 +57,11 @@ CONCEPTS=$(ls $WIKI/concepts/*.md 2>/dev/null | wc -l)
 ### Phase 5: Check oracle backlink density
 ```bash
 ORACLE="$WIKI/syntheses/jeffrey-oracle.md"
-OUTBOUND=$(grep -oE '\[\[[^]]+\]\]' "$ORACLE" 2>/dev/null | grep -v '|' | sort -u | wc -l)
-INBOUND=$(grep -l 'jeffrey-oracle' "$WIKI"/**/*.md 2>/dev/null | wc -l)
+# Count outbound links (both [[wikilink]] and markdown link [Name](../concepts/Name.md) formats)
+OUTBOUND_WIKI=$(grep -oE '\[\[[^]]+\]\]' "$ORACLE" 2>/dev/null | grep -v '|' | sort -u | wc -l | tr -d ' ')
+OUTBOUND_MD=$(grep -oE '\[[^]]+\]\(\.\./(concepts|entities)/[^)]+\)' "$ORACLE" 2>/dev/null | sort -u | wc -l | tr -d ' ')
+OUTBOUND=$((OUTBOUND_WIKI + OUTBOUND_MD))
+INBOUND=$(grep -rn 'jeffrey-oracle' "$WIKI"/ 2>/dev/null | cut -d: -f1 | sort -u | wc -l | tr -d ' ')
 ```
 Target: outbound ≥15, inbound ≥10.
 

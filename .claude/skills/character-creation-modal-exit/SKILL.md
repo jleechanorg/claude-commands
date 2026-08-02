@@ -1,8 +1,3 @@
----
-name: character-creation-modal-exit
-description: Enforce CharacterCreationAgent modal exit choices and state transition rules.
----
-
 # Character Creation Modal Exit Protocol
 
 ## Overview

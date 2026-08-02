@@ -8,6 +8,14 @@ description: Delegate coding change tasks to Agent-Orchestrator (AO). Triggered 
 
 Use this skill by default for coding change requests.
 
+## Spawn-time model preflight (MANDATORY — see `references/spawn-model-preflight.md`)
+
+An `ao spawn` worker boots, the harness prints the chosen model, and only after the prompt is sent does the worker hit a provider-side rate/usage limit. Verified 2026-07-20 in `C0AH3RY3DK6/1782336926.897789` — both a Codex worker and a parallel `codex exec` died with `You've hit your usage limit`. Run the preflight BEFORE every spawn: probe tier, send a low-timeout heartbeat, downgrade to a cheaper available tier if rate-limited, kill + respawn on a different harness if the worker stays `idle > 90s`.
+
+## Spec-soundness gate before PR-N+1 (MANDATORY)
+
+When a fix-PR lands the **reducer / contract layer** and a follow-on PR will consume a richer spec from the design doc, run an `/advice` source-accuracy review (or delegate it as Reviewer A) BEFORE the follow-on PR is dispatched. If the implementation contract diverges from the design, fix the implementation in the fix-PR — do not let the follow-on PR inherit ambiguity. Verified 2026-07-20 on the auto-level-up train: PR 8476 shipped `apply_character_adjustment()` gated on `auto_applied AND review_open` (selection-key amendment only), while merged design PR 7927 §2.1 Change 3 mandated an always-on reducer with `fields_locked=["level","experience.current"]`. That ambiguity is what turns a 3-PR plan into a 5-PR recovery.
+
 ## When to use
 
 Route coding change requests through Agent-Orchestrator unless the user explicitly asks for mctrl.
@@ -81,7 +89,7 @@ cd ~/.hermes
 
 ## Available projects (from canonical config `~/.hermes_prod/agent-orchestrator.yaml`)
 
-- `agent-orchestrator` — jleechanorg/agent-orchestrator fork
+- `agent-orchestrator` — jleechanorg/agent-orchestrator-ts fork
 - `browserclaw` — jleechanorg/browserclaw
 - `claude-commands` — jleechanorg/claude-commands
 - `hermes-agent` — jleechanorg/hermes-agent
@@ -239,7 +247,9 @@ grep -E "max_(concurrent|workers|spawn)" ~/.hermes_prod/agent-orchestrator.yaml 
 ao spawn --help 2>&1 | grep -E -- "--max-(workers|concurrent|count|cap|sessions)" && echo "FOUND WORKER CAP (unexpected)" || echo "no worker cap flag (expected)"
 ```
 
-**Bug-ref (2026-06-26, thread C0AH3RY3DK6 / 1782316685.397699, "root cause why AO is down"):** prior agents diagnosed the hang as "AO lifecycle down, start a new orchestrator" and triggered a 60s+120s spawn probe that left a zombie `next-server` and a corrupt `running.json` (the bash heredoc wrote `"pid": ,` because `$PID` was unset). Actual diagnosis (3-state ladder in `ao-spawn-hang-diagnose` skill): orchestrator was up the entire time in **in-process / unix-socket mode** (`--no-dashboard`), no TCP listener on 3020. The "lifecycle polling is inactive" error was a **stale running.json** problem, not a daemon-down problem. Starting a new `ao start` while one was already running caused port-bind race + 120s hang. Fix: replace the `pgrep -fl "ao start"` discovery check with `ps ... | awk '/[a]o start [a-z]/'`, and rewrite running.json in state B instead of starting a new orchestrator.
+**Bug-ref (2026-07-06, thread C0AH3RY3DK6 / 1782316685.397699, "root cause why AO is down"):** prior agents diagnosed the hang as "AO lifecycle down, start a new orchestrator" and triggered a 60s+120s spawn probe that left a zombie `next-server` and a corrupt `running.json` (the bash heredoc wrote `"pid": ,` because `$PID` was unset). Actual diagnosis (3-state ladder in `ao-spawn-hang-diagnose` skill): orchestrator was up the entire time in **in-process / unix-socket mode** (`--no-dashboard`), no TCP listener on 3020. The "lifecycle polling is inactive" error was a **stale running.json** problem, not a daemon-down problem. Starting a new `ao start` while one was already running caused port-bind race + 120s hang. Fix: replace the `pgrep -fl "ao start"` discovery check with `ps ... | awk '/[a]o start [a-z]/'`, and rewrite running.json in state B instead of starting a new orchestrator.
+
+**Bug-ref (added 2026-07-12, "Internal server error" from a healthy daemon):** `ao spawn --project <p> --prompt "..."` returns `Internal server error [request <host>/<req-id>]` immediately, but `ao doctor` reports `daemon: ready pid=... port=3001` and `ao session ls` shows N active workers. Verified sequence: spawn returns INTERNAL_ERROR within 60s; retry × 3 within 5s = same result; the project has 4 active workers so it's NOT a session-cap wedge. Root cause is on the daemon side (orchestrator API endpoint misbehaving while the daemon process itself is healthy). **Do NOT** keep retrying `ao spawn` — that's the same wall as the 2026-06-20 auth outage (cleared the prior worktree + brief). Pivot to the `pr-green-dispatch` SOUL rule's inline-fallback: if the task is small enough to be self-executable in a single agent session (≤3 producer files, ≤20 lines, no PR-required work that needs full CI sweep), do it inline; otherwise load `finish-the-job` and surface "PR not yet dispatched — AO API INTERNAL_ERROR; user must pick inline / wait / different dispatcher" as a Phase 0 single-question blocker. Diagnostic recipe: `ao doctor` + `ao session ls | wc -l` + `tail -n 30 ~/.ao/data/ao.db-errors.log 2>/dev/null || echo "no error log"` to confirm the wall before pivoting.
 
 ## ⚠️ `~/bin/ao` RE-POINTING BUG — `ao-go` (DAEMON-ONLY) SWALLOWS ALL CLI OUTPUT
 
@@ -347,7 +357,7 @@ This rule applies to **all** trigger phrases, including the hands-off aliases `/
 - Wrong: "Want me to spawn both now? Default: yes, in parallel, using MiniMax-M2.7." (text-only confirmation gate — BANNED)
 - Wrong: "Acknowledged — routing through AO..." (text-only — BANNED)
 - Right: immediately call exec(`cd ~/.hermes && ao spawn -p <project> --claim-pr <pr> "..."`) with NO preceding text
-- Right (when task is long/multi-step and an ack is required by the `task-ack-and-execute` SOUL.md rule): in the SAME turn as the first tool call, post: "On it — [≤8 word summary]. Back shortly." — but the turn MUST contain a tool call alongside the ack.
+- Right (when task is long/multi-step and an ack is required by the `ta[REDACTED_OPENAI_KEY]` SOUL.md rule): in the SAME turn as the first tool call, post: "On it — [≤8 word summary]. Back shortly." — but the turn MUST contain a tool call alongside the ack.
 
 **If you catch yourself about to say "I'll..." or "Want me to..." or "Routing..." or "Should I..." — STOP. Call the exec tool instead. The next turn's text opens with the spawn result, not with another preamble.**
 
@@ -443,15 +453,29 @@ Full recipe + historical ARG_MAX failures: `references/arg-max-spawn-failure.md`
 
 ## ⚠️ `INVALID STATUS TRANSITION: spawning → pr_open` IS NOISE, NOT FAILURE
 
-**Verified 2026-06-17, session `wa-2371`:** `[metadata] Invalid status transition: spawning → pr_open: transition spawning → pr_open is not valid. Allowing write but logging for diagnostics.` prints to stderr on a successful spawn. The very next line is `✔ Session wa-XXXX created and claimed PR` with the worktree path and tmux name. The session is fine; this is a diagnostic log line, not an error. Do NOT interpret it as a spawn failure and do not re-spawn.
+## ⚠️ EXECUTION RULE — TOOL FIRST, TEXT NEVER
 
-**Heuristic:** if the spawn output ends with `✔ Session <id> created and claimed PR` (or just `✔ Session <id> created`), the spawn succeeded regardless of any "Invalid status transition" lines earlier in stderr.
+**NEVER reply with text saying you will do something. DO IT FIRST with a tool call.**
 
 - Wrong: "I'll route this to Agento now..." (text response — BANNED)
 - Wrong: "Acknowledged — routing through AO..." (text response — BANNED)
-- Right: immediately call exec(`cd ~/.hermes && ao spawn -p <project> --claim-pr <pr>`) with NO preceding text
+- Right: immediately call exec(`cd ~/.hermes && ao spawn <project> --claim-pr <pr>`) with NO preceding text
 
+If you catch yourself about to say "I'll..." or "Routing..." — STOP. Call the exec tool instead.
 
+### Inline implementation for small daemon PRs (added 2026-07-09)
+
+**AO is not always the answer.** For a single-file or two-file daemon edit of ≤ ~200 LOC where the operator already knows the change (e.g. "add `HERMES_SLACK_BOT_TOKEN` to this plist," "prepend `/goal` to this prompt," "rename this launchd label"), **implement inline in the operator session** instead of spawning an AO worker. The inline path is faster (sub-minute), preserves the operator's review window, and avoids the 600s AO-spawn-timeout trap (which burns context even when the spawn lands).
+
+**Heuristic:** if you can hold the full diff in your head as ≤ 5 `patch` tool calls on a fresh worktree branch from `origin/main`, it is inline. If it requires multi-step recon, multi-file refactor, or operator-context that the worker does not have, dispatch.
+
+**Pitfall — `ao spawn` 600s timeout is paid up-front, not at the end (verified 2026-07-09, dark-factory /af wiring).** A single `ao spawn` from a Slack-gateway session routinely hits the 600s tool-timeout while the underlying tmux session IS being created (orchestrator handshake is slow). The subagent ALSO times out at 600s with no useful output. Two failed dispatches = 2400s of context burn before you even start the fix. If the change fits the inline heuristic, skip AO entirely — do not "try AO first, fall back to inline."
+
+**Inline PR still goes through `gh pr create`** — the `push-pr-donot-stop-halfway` rule applies regardless of dispatch vs inline. Local commits + stop = process violation. The inline path is `git worktree add` → `patch` × N → `bash -n` + `shellcheck` → `git push` → `gh pr create`.
+
+**Full inline heuristic + worked example:** see `dispatch-task` skill → "When to skip AO and implement inline."
+
+### When you DO spawn (default for AO-sized work)
 **If you catch yourself about to say "I'll..." or "Want me to..." or "Routing..." or "Should I..." — STOP. Call the exec tool instead. The next turn's text opens with the spawn result, not with another preamble.**
 
 **Bug-ref (2026-06-20, thread C0AH3RY3DK6 / 1782005406.736949, "Why did you ask for a confirmation when I said /a and fullrun?"):** the user said `/a fullrun = execute to 7-green with retries. No confirmation gate.` Hermes then posted `Want me to spawn both now? Default: yes, in parallel, using MiniMax-M2.7 per agento skill default not Sonnet.` — a confirmation gate the user explicitly forbade. The user caught it: *"Why did you ask for a confirmation when I said /a and fullrun?"* The fix is this rule. Do not regress.
@@ -542,7 +566,7 @@ After any `gh pr create`, immediately spawn an AO session for it:
 
 ```bash
 # 1. Create the PR (title MUST start with [agento])
-gh pr create --title "[agento] fix: ..." --body "..."
+~/.hermes/scripts/gh-safe-publish pr create --title "[agento] fix: ..." --body "..."
 
 # 2. Get the PR number
 PR_NUM=$(gh pr view --json number --jq .number)
@@ -582,7 +606,7 @@ These aliases all mean the same thing: **"execute to completion, do not stop hal
 **When ANY of these trigger phrases is present in the user's message, the skill's response shape is:**
 
 1. **First turn contains a tool call** — `ao spawn` (or equivalent dispatch). NOT a text reply. NOT a clarification. NOT a confirmation.
-2. **If the task is multi-turn / >5 min**, the first turn may ALSO contain an ack line per the SOUL.md `task-ack-and-execute` COMMIT rule: `On it — [≤8 word summary]. Back shortly.` — but the same turn MUST contain the actual tool call. The ack is a *companion*, never a *replacement*.
+2. **If the task is multi-turn / >5 min**, the first turn may ALSO contain an ack line per the SOUL.md `ta[REDACTED_OPENAI_KEY]` COMMIT rule: `On it — [≤8 word summary]. Back shortly.` — but the same turn MUST contain the actual tool call. The ack is a *companion*, never a *replacement*.
 3. **Post the in-thread `Spawned <session-id> for ...` one-liner** only after the spawn returns. This is the report, not a confirmation gate — the spawn already happened.
 4. **Drive to completion.** Do not pause for additional confirmation at any subsequent checkpoint (CI green, CR review, fix iteration, merge readiness). The user already said "all the way."
 
@@ -590,7 +614,7 @@ These aliases all mean the same thing: **"execute to completion, do not stop hal
 
 **The fix is not "ask less." The fix is "ask never under these triggers."** The bug-ref below is the proof: the user did ask for `/a fullrun`, the agent did ask for confirmation anyway, and the user had to spend another turn calling out the violation.
 
-**Bug-ref:** thread [C0AH3RY3DK6 / 1782005406.736949](https://jleechanai.slack.com/archives/C0AH3RY3DK6/p1782005406736949), 2026-06-20. User: *"Look at this and lets also confirm we have proper gcp logs and BQ logs for request latency. ... we need backend request/response latency and LLM call request/response with very detailed/comphrenive metrics and latency measurements for each component in the whole flow. ... For both lets use parallel AO workers and tell them to use claude team or subagents as needed."* Hermes replied with a long plan and ended: *"Want me to spawn both now? Default: yes, in parallel, using MiniMax-M2.7 per agento skill default not Sonnet. Both workers will post status updates to this thread every 5 min per the dispatched-task-progress-5min commitment."* User immediately: *"Why did you ask for a confirmation when I said /a and fullrun?"* Hermes: *"Youre right thats on me. /a fullrun = execute to 7-green with retries. No confirmation gate. Fixing now: spawning both AO workers in parallel and pushing to green."* — but the fix landed mid-stream, not at the SKILL.md level. This section is the durable SKILL.md fix.
+**Bug-ref:** thread [C0AH3RY3DK6 / 1782005406.736949](https://jleechanai.slack.com/archives/C0AH3RY3DK6/p1782005406736949), 2026-06-20. User: *"Look at this and lets also confirm we have proper gcp logs and BQ logs for request latency. ... we need backend request/response latency and LLM call request/response with very detailed/comphrenive metrics and latency measurements for each component in the whole flow. ... For both lets use parallel AO workers and tell them to use claude team or subagents as needed."* Hermes replied with a long plan and ended: *"Want me to spawn both now? Default: yes, in parallel, using MiniMax-M2.7 per agento skill default not Sonnet. Both workers will post status updates to this thread every 5 min per the dispatched-ta[REDACTED_OPENAI_KEY] commitment."* User immediately: *"Why did you ask for a confirmation when I said /a and fullrun?"* Hermes: *"Youre right thats on me. /a fullrun = execute to 7-green with retries. No confirmation gate. Fixing now: spawning both AO workers in parallel and pushing to green."* — but the fix landed mid-stream, not at the SKILL.md level. This section is the durable SKILL.md fix.
 
 **Cross-reference:** `finish-the-job` skill (the engine behind `/a` / `/finish` / `/f`) — its §BA1 also explicitly maps `/a` and `/fullrun` to no-confirmation hands-off behavior; this section aligns `agento` with that contract.
 
@@ -640,6 +664,118 @@ session `wa-2346` on PR #7524, 2026-06-13.
 - AO-native remediation is already in AO itself (`review-check` + lifecycle `reactions` for `ci-failed`, `changes-requested`, `bugbot-comments`). Do not build a parallel custom remediation engine in this repo.
 
 **Rate-Limit Handling:** When GitHub is rate-limited, `github-intake.sh` will NOT fall back to unclaimed spawns. Instead, it skips the PR and logs: `RATE LIMIT: --claim-pr failed for PR #N, NOT spawning (will retry next cycle)`. AO lifecycle workers handle spawn/cleanup natively.
+
+---
+
+## Pitfalls — verified 2026-07-08 `/af` cross-repo drive burst
+
+These are durable pitfalls discovered while driving 49 non-draft PRs across 7 repos in one burst. Future batches will hit the same walls unless encoded.
+
+### 1. `env -i` MUST unset `GITHUB_TOKEN` (not just `GH_TOKEN`)
+
+`env -i HOME=... PATH=... GH_TOKEN=... ao spawn ...` looks correct but **fails** with `✗ GitHub CLI is not authenticated. Run: gh auth login`.
+
+Root cause: `~/.bashrc` sets `GITHUB_TOKEN` to the AO bot token. `gh` prefers `GH_TOKEN` and `GITHUB_TOKEN` env vars over `~/.config/gh/hosts.yml`. With both env vars set to bot tokens, `gh` rejects auth.
+
+**Fix:** In every shell script that spawns via `env -i`, always:
+```bash
+unset GH_TOKEN GITHUB_TOKEN AO_BOT_GH_TOKEN
+```
+Let `gh` fall through to `~/.config/gh/hosts.yml`. Without the unset, sequential scripts fail silently with `gh auth status` reporting failure, then `ao spawn` returns `rc=0` (the spawn is rejected but the script moves on, looking successful).
+
+### 2. `ao spawn --claim-pr <N>` is REQUIRED for PR-bound workers
+
+Without `--claim-pr`, the spawn creates a generic session bound to the project (e.g., `df-107`, `auf-4`) but with NO `pulls/N` URL link. The session can do useful project-level work but won't auto-attach to any specific PR. CodeRabbit + Bugbot never see the comment-tracker link.
+
+**Always use `--claim-pr <N>` when the goal is driving a specific PR.** The auto-factory tick (`factory-af-tick.sh`) does this automatically; direct dispatches must include the flag.
+
+### 3. Per-project spawn lock — only ONE `ao spawn` per project at a time
+
+`ao spawn` has a per-project mutex. While one spawn is running, others return:
+```
+✗ Another ao spawn is in progress for project "<project>" (PID <pid>, started ...). Wait for it to finish.
+```
+
+For multi-PR fanouts within one project, you must either:
+- Spawn sequentially in a shell script (`for pr in $PRS; do ao spawn -p <proj> --claim-pr $pr ...; done`) — slow (~5-8 min/PR), but reliable
+- Spawn across **different projects** in parallel (no cross-project lock)
+
+### 4. Killed sessions leave **locked** worktrees — `git worktree remove` can't unlock them
+
+When you `ao session kill <id>`, the worktree at `~/.worktrees/<project>/<session-id>/` is locked with reason "AO session active". A subsequent `ao spawn --claim-pr <same-pr>` fails with:
+```
+✗ Found existing worktree for orchestrator branch "<branch>" at "<path>", but it is outside AO-managed worktree directories. Reuse it manually or remove it and try again.
+```
+
+**Fix:** The locked worktree dir MUST be removed manually. `git worktree remove -f` from inside it does NOT override the lock. Use `rm -rf` on the directory itself:
+```bash
+WT=~/.worktrees/<project>/<session-id>
+if [ -d "$WT" ]; then rm -rf "$WT"; fi
+```
+Then retry the spawn. The branch is preserved on the remote; `ao spawn` will recreate the worktree cleanly.
+
+### 5. Project config schema is `name`, `path`, `repo`, `defaultBranch`, `agentRules`
+
+`agent-orchestrator.yaml` projects require exactly:
+```yaml
+projects:
+  my-project:
+    name: my-project
+    path: ~/projects/my-project
+    repo: jleechanorg/my-project
+    defaultBranch: main
+    agentRules: "..."
+```
+
+**Pitfall:** `path` is REQUIRED (Zod validation fails otherwise). A new project entry missing `path` will reject ALL spawns with:
+```
+ZodError: [
+  { "code": "invalid_type", "expected": "string", "received": "undefined",
+    "path": ["projects", "<id>", "path"], "message": "Required" }
+]
+```
+
+**For `.github` repo:** the AO project ID cannot be `.github` (Zod keys can't start with `.`). Use `github-org` as the project ID, with `repo: jleechanorg/.github`.
+
+**Path must exist on disk with `.git/`** — if you `mkdir` a fresh dir, you must `git init && git remote add origin <url> && git fetch && git checkout main` BEFORE spawning, or ao will fail.
+
+### 6. Project additions require `ao stop && ao start` to load
+
+The AO daemon loads the project list once at startup. Adding a new project to `agent-orchestrator.yaml` while ao is running **does not appear** until you:
+```bash
+ao stop  # kills daemon + dashboard
+cd <project-path> && ao start <project> --no-dashboard --no-open
+```
+Existing in-flight sessions from the old config will be orphaned. Best to do this BEFORE the fanout, not during.
+
+### 7. `AO_MAX_CONCURRENT_SESSIONS` defaults to 20
+
+`ao spawn` rejects new sessions when `active >= cap`:
+```
+✗ Spawn rejected: 26 active sessions >= cap (20). Set AO_MAX_CONCURRENT_SESSIONS env var to increase. Wait for sessions to complete.
+```
+
+**For burst fanouts, raise the cap:** pass `AO_MAX_CONCURRENT_SESSIONS=80` (or whatever you need) in `env -i`. Set it both in the spawn wrapper AND in the `ao start` command, or workers will reject mid-burst.
+
+### 8. Project gets `paused` by LLM rate limit, not `cancelled`
+
+When a project hits a model-provider rate limit, AO pauses the entire project:
+```
+✗ Project is paused due to model rate limit until 2026-07-09T07:48:41Z
+  (Model rate limit detected from <session>; source: <session>)
+```
+
+The fix has to come from the **LLM provider's quota reset** (often hours), not from killing sessions. Don't burn cycles retrying spawns against a paused project — they all fail with the same error.
+
+### 9. `ao session ls` times out at ~48 sessions
+
+With 40+ active sessions, `ao session ls` takes 10-30s. Don't grep the live output — read it via `re.findall` in `execute_code` for batch processing.
+
+### 10. The auto-factory `target_repo = $GITHUB_REPOSITORY` is hardcoded
+
+`$HOME/projects/dark-factory/daemon/factory-overlay.sh` only dispatches PRs to the `--project worldarchitect` worker. For cross-repo fanouts, bypass the overlay and use direct `ao spawn -p <project> --claim-pr <N>`.
+
+See `references/cross-repo-af-drive.md` for a complete cross-project fanout cookbook and a script template. See `scripts/spawn_safe.sh` for a ready-to-use safe-spawn wrapper (handles `env -i` + `unset GH_TOKEN/GITHUB_TOKEN` correctly).
 
 ## When the AO worker spawn succeeds but the agent is quota-blocked (the "dead-on-arrival" pattern)
 
@@ -700,7 +836,9 @@ git checkout -B feat/<descriptive-name> origin/main
 
 The `<descriptive-name>` should match the PR title keyword (e.g. `feat/gemini-mojibake-recovery` for a `[agento] test: add hermes streaming UTF-8 regression tests + Gemini mojibake investigation` PR). Resetting after the worker has committed is messy because the `feat/<name>` becomes the PR's head ref and the GitHub PR URL embeds it.
 
-**Pitfall — pre-existing stub-commit PR head + `--claim-pr` produces a side branch, not a rebase.** Verified 2026-06-19 (PR #7711, issue #7710): when the gateway creates a draft PR with a stub commit on a specific branch (e.g. `fix/dUfl4-character-creation-empty-planning-block`) and then dispatches `ao spawn --claim-pr 7711`, the worker does NOT check out the PR's existing head branch. Instead, `ao spawn` auto-derives a *new* branch from the task text (e.g. `feat/tdd-task-for-issue-7710-pr-7711-campaign-symptom-in-dufl4adb`) in a parallel worktree. The PR head remains on the gateway's stub-commit branch, while the worker commits on its own derived side branch. The worker's eventual fix has to be merged into the PR head via rebase or fast-forward — the worker cannot push to the PR head directly because the worktree paths differ.
+**Pitfall — pre-existing stub-commit PR head + `--claim-pr` produces a side branch, not a rebase.** Verified 2026-06-19 (PR #7711, issue #7710): when the gateway creates a draft PR with a stub commit on a specific branch (e.g. `fix/dUfl4-character-creation-empty-planning-block`) and then dispatches `ao spawn --claim-pr 7711`, the worker does NOT check out the PR's existing head branch. Instead, `ao spawn` auto-derives a *new* branch from the task text (e.g. `feat/tdd-ta[REDACTED_OPENAI_KEY]`) in a parallel worktree. The PR head remains on the gateway's stub-commit branch, while the worker commits on its own derived side branch. The worker's eventual fix has to be merged into the PR head via rebase or fast-forward — the worker cannot push to the PR head directly because the worktree paths differ.
+
+**Pitfall — worker races the gateway's branch reset when the brief says "create draft PR first as gate 2" (added 2026-07-14, PR #8385 / campaign-difficulty /repro).** The canonical Step 4 ("reset branch BEFORE the worker commits") assumes the gateway can `git checkout -B <clean-name>` between spawn and the worker's first commit. With `/repro` — or any task whose brief says "create the draft PR immediately" — the worker reads the brief, runs `gh issue create` + `gh pr create --draft` + first commit + push within the same minute as spawn. By the time the gateway's 60-120s `terminal` call returns and runs the reset, the PR head already lives on the auto-derived branch. The gateway's clean local branch ends up divergent from the PR head. Full detection + recovery recipe + pre-spawn mitigation (slug-prefix task text) in `dispatch-task/references/worker-races-branch-reset.md`.
 
 **Pattern when you have a pre-existing PR head branch you want the worker to commit on:**
 1. **Option A (preferred for `/repro` and similar):** skip the pre-existing stub-commit. Create the worktree + branch locally, then `ao spawn -p <project>` (no `--claim-pr`) with the task text. The worker will use the worktree's current branch. Then `gh pr create --draft --head <branch>` after the worker pushes.
@@ -715,13 +853,13 @@ The cleanest approach for `/repro` is Option A: create the issue + bead + branch
 
 **Pattern (used for the 2026-06-07 faction-ranking cluster dispatch):**
 
-1. Write the full TDD task brief to `/tmp/<project>-<phenotype>-cluster/ao-task-brief.md`
+1. Write the full TDD task brief to `/tmp/<project>-<phenotype>-cluster/ao-ta[REDACTED_OPENAI_KEY]`
 2. Write the root-cause evidence bundle to the same dir: `/tmp/<project>-<phenotype>-cluster/root-cause-evidence.md`
-3. `ao spawn -p <project> "Short summary: <one-line scope>. Full task brief at /tmp/<path>/ao-task-brief.md (READ FIRST). TDD red-green-refactor, N tests, M files changed, [agento] PR title required. Bead IDs: <id1>, <id2>, ..."`
+3. `ao spawn -p <project> "Short summary: <one-line scope>. Full task brief at /tmp/<path>/ao-ta[REDACTED_OPENAI_KEY] (READ FIRST). TDD red-green-refactor, N tests, M files changed, [agento] PR title required. Bead IDs: <id1>, <id2>, ..."`
 4. After spawn prints the worktree path, **copy the brief + evidence into the worktree root** so the worker finds them:
    ```bash
    cd ~/.worktrees/<project>/<N>
-   cp /tmp/<path>/ao-task-brief.md ./AO-TASK-BRIEF.md
+   cp /tmp/<path>/ao-ta[REDACTED_OPENAI_KEY] ./AO-TASK-BRIEF.md
    cp /tmp/<path>/root-cause-evidence.md ./root-cause-evidence.md
    ```
 5. Reset the branch name (above) so the PR head ref is clean
@@ -736,21 +874,21 @@ The four steps above are correct but spread across this skill; consolidated cano
 ```bash
 # 0. (Pre-spawn) Write the brief
 mkdir -p /tmp/<project>-<phenotype>/
-write_file /tmp/<project>-<phenotype>/ao-task-brief.md "<TDD recipe, TDD red-green, PR title, branch name, evidence recipe, definition of done, what's NOT to do>"
+write_file /tmp/<project>-<phenotype>/ao-ta[REDACTED_OPENAI_KEY] "<TDD recipe, TDD red-green, PR title, branch name, evidence recipe, definition of done, what's NOT to do>"
 
 # 1. Spawn (always env -i wrapper, tokens pre-resolved)
 GH_TOKEN_VAL="$(gh auth token)"; AO_TOKEN_VAL="$(gh auth token)"
 cd ~/.hermes && env -i HOME="$HOME" \
     PATH="$HOME/.local/bin:$HOME/.bun/bin:/opt/homebrew/bin:/usr/bin:/bin" \
     GH_TOKEN="$GH_TOKEN_VAL" AO_BOT_GH_TOKEN="$AO_TOKEN_VAL" \
-    bash -c "~/bin/ao spawn -p <project> 'Short summary: <one line>. Full task brief at /tmp/<path>/ao-task-brief.md'"
+    bash -c "~/bin/ao spawn -p <project> 'Short summary: <one line>. Full task brief at /tmp/<path>/ao-ta[REDACTED_OPENAI_KEY]'"
 
 # 2. The spawn will return within 5-15s with the session ID, worktree path, and branch
 #    (the gateway's 120s terminal timeout may fire after that — that's fine, the tmux subprocess lives)
 #    Capture: SESSION_ID=wa-XXXX, WORKTREE=~/.worktrees/<project>/<N>, BRANCH=feat/<auto-derived>
 
 # 3. Copy the brief into the worktree root
-cp /tmp/<project>-<phenotype>/ao-task-brief.md "$WORKTREE/AO-TASK-BRIEF.md"
+cp /tmp/<project>-<phenotype>/ao-ta[REDACTED_OPENAI_KEY] "$WORKTREE/AO-TASK-BRIEF.md"
 
 # 4. Reset the branch to a clean name off origin/main
 cd "$WORKTREE"
@@ -860,7 +998,7 @@ Antigravity CLI requires permission to read, edit, and execute files here.
   No, exit
 ```
 
-`tmux capture-pane` shows the menu with "Gemini 3.5 Flash (High)" at the bottom and the worker is **not progressing**. This is the same root cause as `jleechanorg/agent-orchestrator#657` ("fix(agent-antigravity): auto-dismiss agy workspace trust TUI") — the TUI is not being auto-dismissed on first spawn, the worker waits forever, and the cron-tick babysit reports a hung session.
+`tmux capture-pane` shows the menu with "Gemini 3.5 Flash (High)" at the bottom and the worker is **not progressing**. This is the same root cause as `jleechanorg/agent-orchestrator-ts#657` ("fix(agent-antigravity): auto-dismiss agy workspace trust TUI") — the TUI is not being auto-dismissed on first spawn, the worker waits forever, and the cron-tick babysit reports a hung session.
 
 **Fix (one shell call, no AO involvement):**
 
@@ -1062,4 +1200,3 @@ These are the recurring failure shapes the bring-to-green AO worker must recogni
 If a previous orchestrator instance crashed or stalled, a stale `running.json` file is left behind, causing `ao spawn` to fail with `"lifecycle polling is inactive"`.
 - **Mitigation**: Follow the 3-state recovery ladder defined in [3a-quinquies-spawn-recovery-ladder.md](file://$HOME/.hermes_prod/references/3a-quinquies-spawn-recovery-ladder.md) to detect and recover from stalled or dead daemon states.
 - **Validation**: Use `scripts/validate-state.sh` (or `~/.hermes_prod/scripts/validate-state.sh`) to query the running state of the orchestrator and get a direct IDLE/STALLED/HEALTHY verdict.
-

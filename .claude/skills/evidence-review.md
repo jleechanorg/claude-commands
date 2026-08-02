@@ -118,6 +118,27 @@ A PASS verdict requires the PR to meet the "clean computer" standard from `evide
 
 **Failure mode**: if the only instructions are "see the repo" or "run the tests" without exact commands → PARTIAL.
 
+### 7. RED PROOF CHECK (mandatory gate)
+
+For any PR that fixes a bug (`bug` type or `PROD_BEHAVIOR_CHANGE` class), verify that
+red proof is present and meets the `evidence-standards` rubric:
+
+- [ ] **A fresh, real failing test ran before the fix.** Cite the failing-test invocation
+      output (test name, exit code, assertion message) and the pre-fix commit SHA.
+- [ ] **The same test was rerun after the fix and now passes.** Cite the passing-test
+      invocation output and the post-fix commit SHA.
+- [ ] **A past bug report does NOT replace red proof.** Slack thread, GH issue, BQ row,
+      or production log showing the bug is NOT red proof on its own. It may be the
+      inspiration for the test, but the failing-test invocation output is mandatory.
+- [ ] **For LLM-behavior bugs:** the red proof must be either (a) a `testing_mcp/`
+      test that ran against a real local server + real LLM and failed, OR (b) a
+      prompt-contract unit test that asserts the fix strings exist in the prompt
+      and was confirmed failing pre-fix. Other forms (offline replay script,
+      copy-campaign "showed the bug", narrative description) → **FAIL** red-proof check.
+
+A PR with **no valid red proof** for a bug fix cannot receive PASS. It is at best
+PARTIAL (with the missing-red-proof warning) and at worst FAIL.
+
 ---
 
 ## Review Procedure
@@ -144,12 +165,24 @@ Run all six checks in the "Mandatory Pre-PASS Checks" section above. Record the 
 
 ### Phase 4 — Verdict Table
 
-Produce output in this format:
+Produce output in this format. The `ER-VERDICT:` line is a **machine-parsed
+marker line, not prose** — `scripts/green_merge_nonprod.py`'s `G6_evidence`
+gate tokenizes it by exact whitespace splitting (no regex, no prose
+matching). You MUST replace both placeholders with real values before
+posting: never leave the literal `<PASS|PARTIAL|FAIL|INCONCLUSIVE>` or
+`<full-40-hex-sha>` text in the posted comment — an unfilled marker line
+fails the exact-tokenization parse and the gate reports `no exact-head
+ER-VERDICT marker line found`, not a false PASS. Emit **exactly one**
+`ER-VERDICT:` line per comment; two conflicting `ER-VERDICT:` lines in the
+same comment are rejected as an unresolved conflict (fail closed).
 
 ```
 ## Evidence Review Verdict
 
+ER-VERDICT: <PASS|PARTIAL|FAIL|INCONCLUSIVE> HEAD=<full-40-hex-sha>
+
 **Subject**: <what was reviewed>
+**Head**: <full 40-char commit SHA under review>
 **Bundle**: <path>
 **Overall**: PASS | PARTIAL | FAIL | INCONCLUSIVE
 **Confidence**: HIGH | MEDIUM | LOW
@@ -184,6 +217,13 @@ Produce output in this format:
 ### Recommendations
 1. <non-blocking suggestions for future bundles>
 ```
+
+`scripts/green_merge_nonprod.py`'s `G6_evidence` gate only accepts a verdict
+comment when it is posted by an authorized `/er` author (see
+`EVIDENCE_VERDICT_AUTHORS`) and its `ER-VERDICT:` marker line's `HEAD=`
+token is a full-length, exact 40-hex-char match for the PR's current head —
+a short/truncated SHA, a missing/malformed marker line, or a comment from an
+unlisted author is fail-closed and ignored.
 
 ---
 

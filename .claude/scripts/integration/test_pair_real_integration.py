@@ -450,7 +450,7 @@ class TestPairRealIntegration(unittest.TestCase):
                     )
                     self.assertIsNotNone(
                         work_match,
-                        f"Coder agent must show task-execution evidence, not just launch ({orch_log})",
+                        f"Coder agent must show ta[REDACTED_OPENAI_KEY] evidence, not just launch ({orch_log})",
                     )
 
                 if verifier_agent:

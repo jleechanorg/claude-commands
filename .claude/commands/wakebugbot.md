@@ -1,5 +1,5 @@
 ---
-description: Deterministically trigger a Bugbot CI run to unblock Green Gate workflows.
+description: Deterministically trigger a Bugbot CI run for its optional advisory feedback.
 type: action
 scope: project
 ---
@@ -7,11 +7,15 @@ scope: project
 # Wake Bugbot (/wakebugbot)
 
 ## Purpose
-Green Gate CI workflows will stall and fail if Bugbot does not trigger (reporting `Bugbot=none status=none`). This command explicitly forces Bugbot to run by injecting an empty trigger commit.
+Bugbot is an **optional advisory reviewer** — it never gates or blocks `/green`
+or merge (see `.claude/skills/pr-green-definition.md`). This command is a
+convenience for getting Bugbot's feedback when it hasn't triggered on its own
+(reporting `Bugbot=none status=none`), by injecting an empty trigger commit.
+Use it when you want Bugbot's input, not because anything is stalled on it.
 
 ## Execution Requirements
 1. The current branch MUST be a PR branch.
-2. The PR MUST be out of draft state and the Green Gate workflow must be waiting for Bugbot.
+2. The PR MUST be out of draft state.
 3. The branch MUST have no unpushed commits before running the trigger.
 
 ## Action Steps

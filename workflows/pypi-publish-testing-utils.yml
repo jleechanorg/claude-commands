@@ -1,5 +1,11 @@
 name: Publish testing-utils to PyPI
 
+
+# Cancel in-progress runs on the same ref — supersedes are wasted runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 on:
   release:
     types: [published]
@@ -17,7 +23,10 @@ permissions:
 jobs:
   build:
     name: Build package
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # ubuntu-latest ($USER-oud/LANE-D): pure pip/python -m build, no local
+    # integration or self-hosted-only dependency.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
       with:
@@ -48,7 +57,22 @@ jobs:
   publish:
     name: Publish to PyPI
     needs: build
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    # Manual-only: no publish attempt has ever succeeded (0 in history,
+    # including the era when release/push events triggered this job).
+    # The package version was pinned at 0.1.0 while PyPI already had 0.1.0
+    # published, and PyPI rejects re-uploads of an existing version — a
+    # guaranteed failure for any run building that version (NOT a credential
+    # failure as previously assumed here). Keep publishes deliberate: bump
+    # version in testing_utils/pyproject.toml AND both tracked
+    # testing_utils __init__.py __version__ fields, then dispatch this
+    # workflow. The build job still runs on every trigger as a packaging check.
+    if: github.event_name == 'workflow_dispatch'
+    # ubuntu-latest ($USER-oud/LANE-D): pure twine upload, no local
+    # integration or self-hosted-only dependency. OIDC trusted publishing
+    # (id-token: write) works identically on GitHub-hosted runners.
+    runs-on: ubuntu-latest
+    # Keep the PyPI token exposure window bounded during upload.
+    timeout-minutes: 5
     environment: pypi
     steps:
     - name: Set up Python

@@ -4,39 +4,19 @@ type: llm-orchestration
 execution_mode: immediate
 ---
 
-This command points to:
+# /bashrc
 
-- `~/.claude/skills/bashrc.md`
+Safe editing playbook for `~/.bashrc` wrapper functions and Claude CLI model/provider routing.
 
-Use this when editing `~/.bashrc` or changing any Claude CLI model/provider routing.
+Read `~/.claude/skills/bashrc/SKILL.md` and execute the full workflow.
 
-## What to do
+## Quick reference
 
-### 1) Start with history checks
+| Step | Action |
+|------|--------|
+| 1 | `/history` + `/ms` checks for prior unresolved confusion |
+| 2 | Safe edit protocol: read current values, decide variable ownership, scoped edits only |
+| 3 | Validate with env/declare -f check matrix in a fresh shell |
+| 4 | Record files changed + validation results in final summary |
 
-- Run `/history "bashrc minimax minimax_M3 claude settings.json" --recent 14` to confirm recent context.
-- Run `/ms "claude ANTHROPIC_BASE_URL MINIMAX_API_KEY"` to check if there is prior recovery notes.
-- If either output shows unresolved confusion, pause and resolve before editing.
-
-### 2) Apply the Bashrc maintenance playbook
-
-- Follow the protocol in `~/.claude/skills/bashrc.md`.
-- Keep wrapper intent explicit:
-  - `claude` = base client behavior.
-  - `claudem` = MiniMax wrapper.
-- Never set MiniMax env at the wrong layer for the requested target.
-
-### 3) Validate after edit
-
-- Confirm env values by source-loading a clean shell once.
-- Declare functions `claude` and `claudem` and verify `claudem` includes Minimax settings.
-- Verify plain `claude` is not unintentionally inheriting wrapper-level routing.
-
-### 4) Record change summary
-
-- In your final note include:
-  - files changed,
-  - expected model path per command,
-  - exact validation commands + results.
-
-If this command is run without edit intent, treat it as a checklist and stop before mutating files.
+Use this whenever editing `~/.bashrc` or changing any Claude CLI model/provider routing.

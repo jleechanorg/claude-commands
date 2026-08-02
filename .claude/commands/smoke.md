@@ -15,16 +15,49 @@ User types `/smoke` or explicitly requests MCP smoke tests to be run.
 ## Usage Modes
 
 ### 1. Against Preview Server (Real APIs)
-When a PR has a deployed preview server on GCP, trigger smoke tests via GitHub comment:
+
+**CORRECTION (2026-07-18): an earlier version of this doc wrongly claimed the
+`/smoke` PR-comment trigger was removed. It was not — it was moved to a
+central router, `.github/workflows/comment-router.yml`, which listens for
+`/smoke`, `/dice`, `/levelup` etc. and dispatches the matching workflow via
+`workflow_dispatch`.** Verify the dispatch actually fired (`gh run list
+--workflow mcp-smoke-tests.yml`, filter `event=workflow_dispatch` +
+`actor=github-actions[bot]`) before assuming a `/smoke` comment was a no-op —
+as of 2026-07-18 the router's own ack-comment step was failing with `403
+Resource not accessible by integration` (missing `issues: write` — fixed in
+[PR #8434](https://github.com/$GITHUB_REPOSITORY/pull/8434)), so a
+`/smoke` comment could dispatch the real run successfully while LOOKING like
+nothing happened (no confirmation comment posted). **Do not re-dispatch via
+`workflow_dispatch` just because no ack comment appeared** — check for an
+existing `mcp-smoke-tests.yml` run for the PR's head SHA first; a duplicate
+dispatch burns a second real-Gemini-API smoke run for no reason (confirmed
+real incident: 3 duplicate real-mode runs, PRs #8265/#8292/#8328, same day).
+
+There is also no `manual-mcp-smoke-tests.yml` file; the real workflow is
+`.github/workflows/mcp-smoke-tests.yml`.
+
+Direct `workflow_dispatch` remains available as a fallback/explicit path when
+you specifically want `test_mode=real` and don't want to wait on the comment
+router, or need to target a `pr_number` a comment can't cleanly express.
+`gh workflow run` needs a working GraphQL bucket to resolve the default
+branch — if GraphQL is rate-limited, dispatch via REST directly instead:
+
 ```bash
-# User comments on PR:
-/smoke
+# Preferred (needs GraphQL headroom):
+gh workflow run mcp-smoke-tests.yml --repo $GITHUB_REPOSITORY \
+  -f pr_number=<PR_NUMBER> -f test_mode=real
+
+# REST fallback (works even when GraphQL is exhausted):
+gh api repos/$GITHUB_REPOSITORY/actions/workflows/mcp-smoke-tests.yml/dispatches \
+  -X POST -f ref=main -f "inputs[pr_number]=<PR_NUMBER>" -f "inputs[test_mode]=real"
 ```
 
-This triggers the `.github/workflows/manual-mcp-smoke-tests.yml` workflow which:
+This:
 - Detects the deployed preview service for the PR
-- Runs MCP smoke tests against live APIs (Gemini + Firebase)
+- Runs MCP smoke tests against live APIs (Gemini + Firebase) when `test_mode=real`
 - Posts results back to the PR
+
+Real-mode smoke tests run against live APIs (Gemini + Firebase) to provide advisory evidence and preview verification during the draft phase. Note that real-mode execution is an advisory evidence/review signal and not a deterministic `/green` gate (which requires only Gate 1: CI green and Gate 2: no merge conflicts per `~/.claude/commands/green.md`). When live preview verification is needed, dispatch a real-mode run per above and check the workflow output or PR comment once complete.
 
 ### 2. Against Local Server (Mock Mode)
 Run smoke tests locally against a mock MCP server:

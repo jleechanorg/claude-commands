@@ -10,7 +10,7 @@ name = "jleechanorg-orchestration"
 version = "0.1.96"
 description = "AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system"
 authors = [
-    { name = "jleechan", email = "jlee@jleechan.org" },
+    { name = "$USER", email = "jlee@$USER.org" },
 ]
 readme = "README.md"
 classifiers = [
@@ -52,10 +52,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jleechanorg/worldarchitect.ai"
-Repository = "https://github.com/jleechanorg/worldarchitect.ai"
-Issues = "https://github.com/jleechanorg/worldarchitect.ai/issues"
-Documentation = "https://github.com/jleechanorg/worldarchitect.ai/tree/main/orchestration"
+Homepage = "https://github.com/$GITHUB_REPOSITORY"
+Repository = "https://github.com/$GITHUB_REPOSITORY"
+Issues = "https://github.com/$GITHUB_REPOSITORY/issues"
+Documentation = "https://github.com/$GITHUB_REPOSITORY/tree/main/orchestration"
 
 [project.scripts]
 ai_orch = "orchestration.runner:main"

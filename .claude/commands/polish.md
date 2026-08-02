@@ -14,20 +14,21 @@ execution_mode: immediate
 - `N` = max iterations (default: 5)
 - `PR_NUMBER` = target PR (default: auto-detect from current branch)
 
-**Goal:** Drive the PR to all 6 green conditions, looping up to N times.
+**Goal:** Keep the PR draft through `/es`, `/er`, and `/advice`, then drive the
+ready PR through the canonical two-gate `/green`, looping up to N times.
 
-**CRITICAL — DO NOT MERGE:** This command evaluates and fixes PR readiness. It NEVER executes merge commands (`gh pr merge`, `gh api .../merge`). Merging requires explicit human "MERGE APPROVED" in the conversation. Reporting "6-green" is the terminal state — not merging. This rule is enforced by PreToolUse hook `block-merge-worldarchitect.sh` for your-project.com.
+**CRITICAL — DO NOT MERGE:** This command evaluates and fixes PR readiness. It NEVER executes merge commands (`gh pr merge`, `gh api .../merge`). Merging requires explicit human "MERGE APPROVED" in the conversation. Reporting draft-readiness + `/green` is the terminal state — not merging.
 
 ---
 
-### 6 Green Conditions (all must hold to stop)
+### Stop conditions
 
-1. **CI passing** — all statusCheckRollup checks show SUCCESS/NEUTRAL/SKIPPED (no FAILURE, ERROR, TIMED_OUT, CANCELLED, ACTION_REQUIRED). If any check has `status: IN_PROGRESS` → not pass — poll/retry until all are COMPLETED, then verify conclusions.
-2. **No merge conflicts** — `mergeable: MERGEABLE` (handle UNKNOWN by retrying/poll)
-3. **CodeRabbit APPROVED** — latest review by "coderabbitai[bot]" has state `APPROVED`
-4. **Cursor Bugbot finished** — if Bugbot is absent from `statusCheckRollup` → acceptable (not configured). If present: conclusion `SUCCESS`/`NEUTRAL`/`SKIPPED` → pass. If present with `conclusion: null` and `status: IN_PROGRESS` → poll/retry until complete. Treat `FAILURE`, `ERROR`, `TIMED_OUT`, `CANCELLED`, `ACTION_REQUIRED` as red, consistent with condition 1.
-5. **All inline comments resolved** — Major/Critical from any bot/human are blockers
-6. **Evidence review passed** — `/er` returns PASS (skip if no evidence bundle)
+1. While draft, `/es`, `/er`, and `/advice` pass at the current head per
+   `~/.claude/skills/draft-first-pr/SKILL.md`.
+2. After marking ready, `/green` passes at the current head per
+   `~/.claude/skills/pr-green-definition/SKILL.md`.
+3. CodeRabbit and Bugbot feedback has been triaged as advisory; neither is a
+   required verdict.
 
 ---
 
@@ -46,7 +47,7 @@ for iteration in 1..N:
   3. Run /er                    # check evidence bundle (skip if none present)
   4. If changes made → commit + push with /pushl
   5. Wait for CI to settle (gh run watch or poll statusCheckRollup)
-  6. Evaluate 6 green conditions:
+  6. Evaluate the canonical draft-readiness and `/green` conditions:
      # Fetch CI status and mergeability
      gh pr view <PR_NUMBER> --json statusCheckRollup,mergeable,mergeStateStatus
      # Use GraphQL to get bot-specific reviews and thread resolution.
@@ -80,13 +81,11 @@ for iteration in 1..N:
          }
        ' \
        -f owner="$OWNER" -f name="$NAME" -F pr="$PR"
-     - Check CI: statusCheckRollup shows no FAILURE/ERROR/TIMED_OUT/CANCELLED/ACTION_REQUIRED
+     - Check CI: statusCheckRollup evaluates to 0 via canonical jq filter ([.statusCheckRollup[] | select((.__typename == "StatusContext" and (((.state // "") | ascii_upcase) != "SUCCESS")) or (.__typename == "CheckRun" and .name != "Green Gate" and .name != "Cursor Bugbot" and ((((.status // "") | ascii_upcase) != "COMPLETED") or (((.conclusion // "") | ascii_upcase) != "SUCCESS"))))] | length)
      - Check mergeable: MERGEABLE (handle UNKNOWN state by polling)
-     - Filter reviews by author.login matching "coderabbitai" (GitHub GraphQL may return bot logins with or without the `[bot]` suffix — test both `coderabbitai` and `coderabbitai[bot]`) → sort chronologically using `submittedAt`, find most recent APPROVED. If the most recent CR review is NOT APPROVED, fail. Additionally: if the most recent APPROVED has a more recent CHANGES_REQUESTED or COMMENTED after it, the APPROVED is stale — fail in that case too. Only pass when the latest CR review IS APPROVED and no newer CHANGES_REQUESTED/COMMENTED exists after it.
-     - Filter statusCheckRollup by name containing "Bugbot" → if absent from statusCheckRollup entirely → acceptable (Bugbot not configured for this repo). If present with conclusion SUCCESS/NEUTRAL/SKIPPED → pass. If present with conclusion null AND status IN_PROGRESS → poll/retry (not pass). Treat FAILURE, ERROR, TIMED_OUT, CANCELLED, ACTION_REQUIRED as red.
-     - Check reviewThreads: verify no unresolved Major/Critical comments
-     - Check evidence: /er PASS or no bundle
-  7. If ALL 6 green → STOP, report success
+     - Surface CodeRabbit/Bugbot comments for triage, but do not require their verdicts.
+     - Check draft readiness: `/es`, `/er`, and `/advice` PASS at this head.
+  7. If draft readiness and both `/green` gates pass → STOP, report success
   8. Continue to next iteration
 ```
 
@@ -123,5 +122,4 @@ Report final status:
 - What was fixed across iterations
 - Whether PR is ready to merge
 
-Print a final status table with all 6 conditions and their current state.
-
+Print a final status table with draft readiness and /green conditions and their current state.

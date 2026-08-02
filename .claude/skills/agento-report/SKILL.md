@@ -1,12 +1,14 @@
 ---
 name: agento_report
-description: Generate a full agento PR status report — 6-point green checks, zero-touch rate, display inline, and post to Slack #ai-slack-test.
+description: Generate a full agento PR status report — draft readiness, canonical /green, zero-touch rate, inline display, and Slack summary.
 type: skill
 ---
 
 ## Purpose
 
-Produce a comprehensive status report for all PRs agento is handling in `jleechanorg/agent-orchestrator`. Includes per-PR 6-green checks AND zero-touch-by-operator rate analysis. Display inline and post summary to Slack.
+Produce a comprehensive status report for all PRs agento is handling in
+`jleechanorg/agent-orchestrator-ts`. Use the canonical draft-first, `/green`,
+and zero-touch skills; display inline and post the summary to Slack.
 
 ---
 
@@ -17,13 +19,13 @@ Produce a comprehensive status report for all PRs agento is handling in `jleecha
 Use REST (not GraphQL — GraphQL is frequently exhausted):
 
 ```bash
-gh api "repos/jleechanorg/agent-orchestrator/pulls?state=open&per_page=30&sort=updated" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls?state=open&per_page=30&sort=updated" \
   --jq '.[] | "\(.number)\t\(.head.ref)\t\(.title[:60])"'
 ```
 
 Also collect recently merged (last 24h):
 ```bash
-gh api "repos/jleechanorg/agent-orchestrator/pulls?state=closed&per_page=30&sort=updated&direction=desc" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls?state=closed&per_page=30&sort=updated&direction=desc" \
   --jq '.[] | select(.merged_at != null) | "\(.number)\t\(.head.ref)\t\(.title[:70])\t\(.merged_at)"'
 ```
 Filter merged ones to last 24h by comparing `.merged_at` timestamp.
@@ -34,45 +36,33 @@ For each open PR number NUM, fetch mergeability, CI, and reviews via REST:
 
 ```bash
 # Mergeability (REST returns boolean mergeable + string mergeable_state)
-gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls/NUM" \
   --jq '{mergeable, mergeable_state}'
 
-# CI checks
-SHA=$(gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM" --jq '.head.sha')
-gh api "repos/jleechanorg/agent-orchestrator/commits/$SHA/check-runs" \
-  --jq '.check_runs[] | {name, status, conclusion}'
+# CI checks (canonical statusCheckRollup contract at current HEAD)
+gh pr view NUM --json statusCheckRollup \
+  --jq '[.statusCheckRollup[] | select(.name != "Green Gate" and .name != "Cursor Bugbot") | {name, status, conclusion, state, typename: .__typename}]'
 
 # Reviews
-gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM/reviews" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls/NUM/reviews" \
   --jq '.[] | {user: .user.login, state}'
 
 # Inline comments (check for High Severity / Critical / Major blockers)
-gh api "repos/jleechanorg/agent-orchestrator/pulls/NUM/comments" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls/NUM/comments" \
   --jq '[.[] | select(.body | test("High Severity|Critical|Major"))] | length'
 ```
 
-### Step 3 — 6-point green check per open PR
+### Step 3 — Draft readiness + `/green` per open PR
 
-Apply all 6 conditions:
-
-| # | Condition | Pass criteria |
-|---|-----------|---------------|
-| 1 | CI passing | All check-runs completed with SUCCESS, NEUTRAL, or SKIPPED — no FAILURE |
-| 2 | No conflict | `mergeable_state` is `clean` (not `dirty` or `unstable`) |
-| 3 | CodeRabbit APPROVED | Last `coderabbitai[bot]` review state is `APPROVED` |
-| 4 | Bugbot OK | Last `cursor[bot]` check conclusion is `neutral` or `success` |
-| 5 | No blocking comments | Zero inline comments with "High Severity", "Critical", or "Major" |
-| 6 | Evidence PASS | `/er` comment with PASS exists (skip if no evidence bundle) |
+Use `~/.claude/skills/draft-first-pr/SKILL.md` and
+`~/.claude/skills/pr-green-definition/SKILL.md`. Advisory checks (`Green Gate` and `Cursor Bugbot`) are excluded from gating.
 
 **Status label** (pick worst failing condition):
-- `GREEN` — all 6 pass
+- `GREEN` — draft readiness and both `/green` gates pass
 - `CONFLICT` — mergeable_state is `dirty`
-- `CI_FAILED` — any check has FAILURE conclusion
-- `CI_PENDING` — checks still in_progress
-- `NO_CR` — CodeRabbit hasn't APPROVED
-- `CR_CHANGES_REQUESTED` — CodeRabbit posted CHANGES_REQUESTED
-- `COMMENTS` — unresolved High/Critical/Major comments
-- `NO_EVIDENCE` — evidence check failed (skip if N/A)
+- `CI_FAILED` — any non-advisory check has non-`SUCCESS` conclusion (`FAILURE`, `CANCELLED`, `SKIPPED`, `NEUTRAL`, `TIMED_OUT`, `ACTION_REQUIRED`, null) or `StatusContext` state != `SUCCESS`
+- `CI_PENDING` — any non-advisory check has status != `COMPLETED` (`in_progress`, `queued`, `waiting`, null)
+- `DRAFT_NOT_READY` — `/es`, `/er`, or `/advice` is missing at current head
 
 ### Step 4 — Zero-touch rate analysis (KEY ADDITION)
 
@@ -81,7 +71,7 @@ Apply all 6 conditions:
 For each merged PR in the window:
 
 ```bash
-gh api "repos/jleechanorg/agent-orchestrator/pulls?state=closed&per_page=30&sort=updated&direction=desc" \
+gh api "repos/jleechanorg/agent-orchestrator-ts/pulls?state=closed&per_page=30&sort=updated&direction=desc" \
   --jq '.[] | select(.merged_at != null) | {
     number,
     title: .title[:70],
@@ -109,7 +99,7 @@ For each non-[agento] PR, note WHY it wasn't zero-touch — common reasons:
 ## Agento Status Report — YYYY-MM-DD HH:MM
 
 ### Summary
-- Repo: jleechanorg/agent-orchestrator
+- Repo: jleechanorg/agent-orchestrator-ts
 - Open PRs: N
 - GREEN (ready to merge): N
 - Not green: N
@@ -145,7 +135,7 @@ Post to `#ai-slack-test` (channel ID: `C0AKALZ4CKW`):
 ```
 mcp__slack__conversations_add_message(
   channel_id="C0AKALZ4CKW",
-  text="*Agento Status Report — YYYY-MM-DD HH:MM*\n\nRepo: jleechanorg/agent-orchestrator\nOpen: N PRs | GREEN: N | Not green: N\nMerged (24h): N | Zero-touch rate: X%\n\n<per-PR details>"
+  text="*Agento Status Report — YYYY-MM-DD HH:MM*\n\nRepo: jleechanorg/agent-orchestrator-ts\nOpen: N PRs | GREEN: N | Not green: N\nMerged (24h): N | Zero-touch rate: X%\n\n<per-PR details>"
 )
 ```
 
@@ -153,7 +143,7 @@ mcp__slack__conversations_add_message(
 
 ## Notes
 
-- Scope: `jleechanorg/agent-orchestrator` (not jleechanclaw — that repo is deprecated for AO work).
+- Scope: `jleechanorg/agent-orchestrator-ts` (not jleechanclaw — that repo is deprecated for AO work).
 - Use REST API (`gh api`) not GraphQL (`gh pr view --json`) — GraphQL is frequently exhausted.
 - `mergeable_state` from REST: `clean`, `dirty`, `unstable`, `unknown`.
 - Zero-touch convention: `[agento]` prefix in PR title (from `~/.openclaw/SOUL.md`).

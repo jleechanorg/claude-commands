@@ -58,7 +58,7 @@ class XoxpFallbackTests(unittest.TestCase):
 
     def test_builds_correct_body_with_token_from_env(self) -> None:
         """SLACK_USER_TOKEN set → body has channel + thread_ts + identity-disclosed text."""
-        os.environ["SLACK_USER_TOKEN"] = "xoxp-test-token-1234"
+        os.environ["SLACK_USER_TOKEN"] = "[REDACTED_SLACK_TOKEN]"
         captured = {}
         def fake_urlopen(req, timeout):
             captured["url"] = req.full_url
@@ -70,7 +70,7 @@ class XoxpFallbackTests(unittest.TestCase):
                 "C0AH3RY3DK6", "1782265612.317549", "test reply body"
             )
         self.assertEqual(captured["url"], "https://slack.com/api/chat.postMessage")
-        self.assertEqual(captured["headers"]["Authorization"], "Bearer xoxp-test-token-1234")
+        self.assertEqual(captured["headers"]["Authorization"], "Bearer [REDACTED_SLACK_TOKEN]")
         self.assertEqual(captured["body"]["channel"], "C0AH3RY3DK6")
         self.assertEqual(captured["body"]["thread_ts"], "1782265612.317549")
         self.assertIn("cross-workspace bot-token hard-block", captured["body"]["text"])
@@ -79,7 +79,7 @@ class XoxpFallbackTests(unittest.TestCase):
 
     def test_identity_disclosure_off(self) -> None:
         """identity_disclosure=False → no (posted via ...) prefix in text."""
-        os.environ["SLACK_USER_TOKEN"] = "xoxp-test-token-1234"
+        os.environ["SLACK_USER_TOKEN"] = "[REDACTED_SLACK_TOKEN]"
         captured = {}
         def fake_urlopen(req, timeout):
             captured["body"] = json.loads(req.data.decode())
@@ -94,7 +94,7 @@ class XoxpFallbackTests(unittest.TestCase):
 
     def test_top_level_post_omits_thread_ts(self) -> None:
         """thread_ts=None → no thread_ts in body (top-level channel post)."""
-        os.environ["SLACK_USER_TOKEN"] = "xoxp-test-token-1234"
+        os.environ["SLACK_USER_TOKEN"] = "[REDACTED_SLACK_TOKEN]"
         captured = {}
         def fake_urlopen(req, timeout):
             captured["body"] = json.loads(req.data.decode())
@@ -105,7 +105,7 @@ class XoxpFallbackTests(unittest.TestCase):
 
     def test_text_plain_sets_mrkdwn_false(self) -> None:
         """content_type=text/plain → mrkdwn=False in body."""
-        os.environ["SLACK_USER_TOKEN"] = "xoxp-test-token-1234"
+        os.environ["SLACK_USER_TOKEN"] = "[REDACTED_SLACK_TOKEN]"
         captured = {}
         def fake_urlopen(req, timeout):
             captured["body"] = json.loads(req.data.decode())
@@ -122,7 +122,7 @@ class XoxpFallbackTests(unittest.TestCase):
         # Don't set env
         captured = {}
         profile_content = (
-            "# some stuff\nexport SLACK_USER_TOKEN=\"xoxp-from-profile-9999\"\n"
+            "# some stuff\nexport SLACK_USER_TOKEN=\"[REDACTED_SLACK_TOKEN]\"\n"
         )
         def fake_urlopen(req, timeout):
             captured["headers"] = dict(req.headers)
@@ -132,7 +132,7 @@ class XoxpFallbackTests(unittest.TestCase):
              patch("builtins.open", unittest.mock.mock_open(read_data=profile_content)), \
              patch("urllib.request.urlopen", side_effect=fake_urlopen):
             smp.post_via_xoxp("C0AH3RY3DK6", "1782265612.317549", "test")
-        self.assertEqual(captured["headers"]["Authorization"], "Bearer xoxp-from-profile-9999")
+        self.assertEqual(captured["headers"]["Authorization"], "Bearer [REDACTED_SLACK_TOKEN]")
 
     def test_cli_accepts_xoxp_fallback_arg(self) -> None:
         """Verify --fallback xoxp is accepted by the production parser, not a
@@ -159,7 +159,7 @@ class XoxpFallbackTests(unittest.TestCase):
             "# auto-sourced guard\n"
             "if [ -z \"$PS1\" ]; then return; fi\n"
             "export PATH=/usr/local/bin:$PATH\n"
-            "export SLACK_USER_TOKEN=\"xoxp-bashrc-7777\"\n"
+            "export SLACK_USER_TOKEN=\"[REDACTED_SLACK_TOKEN]\"\n"
         )
         captured = {}
         def fake_urlopen(req, timeout):
@@ -173,11 +173,11 @@ class XoxpFallbackTests(unittest.TestCase):
              patch("urllib.request.urlopen", side_effect=fake_urlopen):
             smp.post_via_xoxp("C0AH3RY3DK6", "1782265612.317549", "test from bashrc")
         self.assertEqual(captured["headers"]["Authorization"],
-                         "Bearer xoxp-bashrc-7777")
+                         "Bearer [REDACTED_SLACK_TOKEN]")
 
     def test_bashrc_single_quotes_stripped(self) -> None:
         """bashrc export SLACK_USER_TOKEN='xoxp-...' (single quotes) → token unquoted."""
-        bashrc_content = "export SLACK_USER_TOKEN='xoxp-single-quote-8888'\n"
+        bashrc_content = "export SLACK_USER_TOKEN='[REDACTED_SLACK_TOKEN]'\n"
         captured = {}
         def fake_urlopen(req, timeout):
             captured["headers"] = dict(req.headers)
@@ -189,15 +189,15 @@ class XoxpFallbackTests(unittest.TestCase):
              patch("urllib.request.urlopen", side_effect=fake_urlopen):
             smp.post_via_xoxp("C0AH3RY3DK6", "1782265612.317549", "test")
         self.assertEqual(captured["headers"]["Authorization"],
-                         "Bearer xoxp-single-quote-8888")
+                         "Bearer [REDACTED_SLACK_TOKEN]")
 
     def test_bashrc_wins_over_profile_when_both_present(self) -> None:
         """Both ~/.bashrc and ~/.profile have SLACK_USER_TOKEN → .bashrc wins
         (mirrors launchd-env-wrapper.sh:_extract_bashrc_var preferring the live
         shell value, preventing stale-profile shadow after token rotation).
         """
-        bashrc_content = 'export SLACK_USER_TOKEN="xoxp-bashrc-NEW-1111"\n'
-        profile_content = 'export SLACK_USER_TOKEN="xoxp-profile-OLD-2222"\n'
+        bashrc_content = 'export SLACK_USER_TOKEN="[REDACTED_SLACK_TOKEN]"\n'
+        profile_content = 'export SLACK_USER_TOKEN="[REDACTED_SLACK_TOKEN]"\n'
         captured = {}
         def fake_urlopen(req, timeout):
             captured["headers"] = dict(req.headers)
@@ -215,7 +215,7 @@ class XoxpFallbackTests(unittest.TestCase):
              patch("urllib.request.urlopen", side_effect=fake_urlopen):
             smp.post_via_xoxp("C0AH3RY3DK6", "1782265612.317549", "test")
         self.assertEqual(captured["headers"]["Authorization"],
-                         "Bearer xoxp-bashrc-NEW-1111",
+                         "Bearer [REDACTED_SLACK_TOKEN]",
                          "Must prefer ~/.bashrc over ~/.profile (live over stale)")
 
     def test_auto_fallback_does_not_fire_on_non_cross_workspace_error(self) -> None:
@@ -225,8 +225,8 @@ class XoxpFallbackTests(unittest.TestCase):
         (not_in_channel, channel_not_found, restricted_action, team_access_not_granted,
         missing_scope). A token rotation gap or wrong-channel typo should surface.
         """
-        BOT_TOKEN = "xoxb-bot-fake-bbbb"
-        XOXP_TOKEN = "xoxp-should-not-be-used-3333"
+        BOT_TOKEN = "[REDACTED_SLACK_TOKEN]"
+        XOXP_TOKEN = "[REDACTED_SLACK_TOKEN]"
         def fake_urlopen(req, timeout):
             auth = req.headers.get("Authorization", "")
             if auth == f"Bearer {BOT_TOKEN}":
@@ -268,8 +268,8 @@ class XoxpFallbackTests(unittest.TestCase):
         # Count by Authorization header to disambiguate from MCP probe calls (no auth)
         call_count = {"slack_api": 0, "xoxp": 0}
         captured = {"xoxp_headers": None, "xoxp_body": None}
-        BOT_TOKEN = "xoxb-bot-fake-aaaa"
-        XOXP_TOKEN = "xoxp-auto-fallback-5555"
+        BOT_TOKEN = "[REDACTED_SLACK_TOKEN]"
+        XOXP_TOKEN = "[REDACTED_SLACK_TOKEN]"
         def fake_urlopen(req, timeout):
             auth = req.headers.get("Authorization", "")
             body = json.loads(req.data.decode()) if req.data else {}

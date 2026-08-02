@@ -1,5 +1,16 @@
 name: Deploy Dev
 
+
+# Cancel in-progress runs on the same ref — supersedes are wasted runner slots.
+# The group name must be a literal, NOT ${{ github.workflow }}: this workflow is
+# reusable (workflow_call), and inside a called workflow github.workflow resolves
+# to the CALLER's name. That made this group identical to auto-deploy-dev.yml's
+# concurrency group, so the nested run cancelled/failed its own parent — the
+# deploy job never started on any Auto-Deploy Dev run.
+concurrency:
+  group: deploy-dev-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -24,7 +35,21 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted","self-hosted-mikey"]') }}
+    runs-on: ${{ fromJson(vars.SELF_HOSTED_RUNNER_LABELS || '["self-hosted"]') }}
+    # E4 EXCEPTION: Cloud Build + Cloud Run deploy. A mid-deploy timeout kill
+    # is a worse failure mode than the job simply running long (partial /
+    # inconsistent Cloud Run revision state), so this cap is deliberately
+    # conservative. Historical run data is not clean evidence for tightening
+    # it: the last 15 workflow_call (auto-deploy-dev) invocations all
+    # self-cancelled instantly (run_started_at == updated_at — the reusable-
+    # workflow concurrency-group collision documented for PR #8175/#8198,
+    # bead rev-j9so3), so there is no recent real-deploy timing sample. The
+    # only clean completions are stale manual workflow_dispatch runs
+    # (Feb 2026 / Nov 2025, 3m39s-7m46s) that predate the current deploy.sh
+    # sizing (8Gi/4vCPU/maxScale 40 from PR #7984) and precompute-deps step,
+    # so they're not representative either. Restoring the original 45min
+    # rather than the 30min this PR proposed until real post-fix timing data
+    # exists for the current deploy.sh path.
     timeout-minutes: 45
     environment: dev
     permissions:
@@ -39,9 +64,11 @@ jobs:
       REF_NAME: ${{ inputs.ref_name || github.ref_name }}
       # Memory/CPU/autoscaling come from the shared defaults in
       # scripts/shared_config.sh + deploy.sh (8Gi, 4 vCPU, maxScale 40,
-      # containerConcurrency 40, GUNICORN_THREADS 16 — the validated 10-50 QPS
-      # streaming config). Dev and prod (mvp-site-app-stable) deploy through the
-      # same deploy.sh path with no per-env sizing override, so per-request
+      # containerConcurrency 16, GUNICORN_WORKERS 1, GUNICORN_THREADS 16 — the
+      # post-#7961 Cloud Run pattern from PR #7984). With 1 worker × 16 threads,
+      # single-instance capacity is 16 concurrent requests; >16 triggers
+      # Cloud Run autoscale. Dev and prod (mvp-site-app-stable) deploy through
+      # the same deploy.sh path with no per-env sizing override, so per-request
       # capacity is identical. The one intentional difference: deploy.sh pins
       # min-instances=1 only for stable (warm for real users) and scales dev to
       # zero when idle. The dev daily level-up test's ~450K-char instruction
@@ -50,6 +77,25 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
+        with:
+          persist-credentials: false
+          filter: blob:none
+
+      # Same drift guard as pr-preview.yml — `uses: ./.github/actions/deploy-mvp-site`
+      # resolves against the checked-out ref, so a stale ref missing the
+      # composite action fails with an opaque "Can't find action.yml" error
+      # that looks like a runner problem. See rev-wq0d7/rev-2yhds.
+      - name: Verify deploy-mvp-site composite action is present (workflow drift guard)
+        run: |
+          set -euo pipefail
+          ACTION_DIR=".github/actions/deploy-mvp-site"
+          if [ ! -f "$ACTION_DIR/action.yml" ] && [ ! -f "$ACTION_DIR/action.yaml" ]; then
+            echo "::error::Composite action missing at $ACTION_DIR/action.yml on this ref's checkout."
+            echo "::error::This is WORKFLOW-DEFINITION DRIFT, NOT a runner/deploy failure. Do not retrigger blindly."
+            echo "::error::Fix: ensure the ref being deployed includes $ACTION_DIR/action.yml (merge/rebase main)."
+            exit 1
+          fi
+          echo "✅ $ACTION_DIR/action.yml present — composite action reference is valid for this ref."
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
@@ -61,16 +107,22 @@ jobs:
         with:
           project_id: ${{ env.GCP_PROJECT }}
 
-      - name: Configure gcloud CLI defaults
-        run: |
-          gcloud config set project ${{ env.GCP_PROJECT }}
-          gcloud config set run/region ${{ env.GCP_REGION }}
-
       - name: Deploy to Cloud Run
-        run: |
-          chmod +x deploy.sh
-          ./deploy.sh mvp_site
-        timeout-minutes: 30
+        timeout-minutes: 45
+        uses: ./.github/actions/deploy-mvp-site
+        with:
+          environment: dev
+          gcp_project: ${{ env.GCP_PROJECT }}
+          gcp_region: ${{ env.GCP_REGION }}
+          # Forward SMOKE_TOKEN so the dev service accepts the auto-deploy-dev.yml
+          # smoke-tests job's X-MCP-Smoke-Token header. The secret arrives via
+          # `secrets: inherit` on the calling reusable-workflow invocation
+          # (composite-action `with:` DOES allow `secrets.*`; reusable-workflow
+          # `with:` does NOT — that's why we forward via secrets, not inputs).
+          # Commit 67ba354db6 closed the X-Test-Bypass-Auth bypass; bead rev-alf5x.
+          # Empty/missing secret is fine: deploy.sh treats unset as "no token,
+          # gate stays fail-closed" (matches preview's fail-closed semantics).
+          smoke_token: ${{ secrets.SMOKE_TOKEN }}
 
       - name: Get deployment URL
         id: get-url

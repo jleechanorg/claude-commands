@@ -8,6 +8,31 @@ description: "Run matched A/B reviewer calibration for /f: compare factory revie
 Use this skill when `/f`, `/factory`, or a PR/work-item review needs to prove
 whether delegated reviewers miss blockers that raw `codex exec` catches.
 
+## Controller-owned contract (current)
+
+The default reviewer for every real run is the controller-owned cold review.
+The controller v1 supports exactly one backend:
+
+- **Codex only** — `codex exec --json --ephemeral --skip-git-repo-check` with
+  the `--sandbox read-only` flag. The full prompt is sent on stdin (`-`).
+  The reviewer cannot write the target; `--yolo`,
+  `--dangerously-bypass-approvals-and-sandbox`, and any write-capable mode
+  are explicitly rejected.
+- Exit semantics: `0 = valid pass`, `2 = valid fail`, `1 = invalid / infra`.
+  A valid fail must propagate as `2` and must NOT create panic artifacts.
+- Inputs: `--base-sha` and `--head-sha` are required; `--workdir` must
+  resolve to a non-symlink directory under the reviewed repo and must NOT
+  point into the sealed holdout repo (`$DARK_FACTORY_HOLDOUTS`).
+- `1 MiB` ceiling on `--task-file` and `--diff-file`.
+- The Base64 envelope inside the prompt is **delimiter safety**, not prompt-
+  injection isolation. The model still owns evidence sufficiency; the
+  controller owns shape and digest invariants only.
+
+Do not advertise a backend the controller cannot run. If a calibration lane
+needs a different backend, route it through the raw terminal command
+(`codex exec --yolo -m gpt-5.3-codex-spark …`) — it is the raw baseline,
+not the controller contract.
+
 ## Rule
 
 Calibration is default-on for real `/f` runs. Treat
