@@ -6,6 +6,8 @@ execution_mode: immediate
 
 # Claude Commands
 
+<!-- AO worker smoke test 2026-07-24 mac -->
+
 A comprehensive collection of workflow automation commands for Claude Code that transform your development process through intelligent command composition and orchestration.
 
 The YAML frontmatter at the top of this template provides command metadata and should remain intact for downstream tooling.
