@@ -2,7 +2,7 @@ name: WorldArchitect Tests (Directory-Based)
 
 # Cancel in-progress runs when new commits are pushed to same branch
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 # Security permissions for directory-based testing
@@ -248,8 +248,8 @@ jobs:
         run: bash scripts/tests/test_disk_cleanup_scratch_root_protection.sh
       - name: Run scripts/tests/test_local_sh_agy_no_optout.sh
         run: bash scripts/tests/test_local_sh_agy_no_optout.sh
-      - name: Run tests/scripts/test_dep_major_version_audit.sh
-        run: bash tests/scripts/test_dep_major_version_audit.sh
+      - name: Run scripts/tests/test_coder_silent_false_park_probe.sh
+        run: bash scripts/tests/test_coder_silent_false_park_probe.sh
 
   # Merge-commit correctness gate (REV-q4cmy)
   # The testmon test jobs checkout PR head SHA for cache stability,
@@ -1392,3 +1392,57 @@ jobs:
           else
             echo "No coverage data available for this PR." >> $GITHUB_STEP_SUMMARY
           fi
+
+  # Stable-named fail-closed aggregator for the dynamic `test` matrix (rev-lbyz9).
+  #
+  # `test` (line ~453) expands into per-path matrix legs named
+  # "Directory tests (${{ matrix.test-group }})" — a job name that is NOT
+  # stable across PRs, because `detect-changes` computes the matrix from
+  # changed paths. Classic branch-protection required-status-checks matches
+  # by exact job name; a PR whose changed paths don't produce a given
+  # matrix entry means that named check never appears in the run at all,
+  # which permanently blocks merge under classic required checks. This job
+  # exists solely to give branch protection one stable name to depend on.
+  #
+  # `coverage-report` (line ~1100) is NOT a safe proxy either: its own
+  # `if` runs it even when `needs.test.result == 'failure'` (guarded only
+  # against `cancelled`), so a green "PR Coverage Report" does not mean the
+  # test matrix passed.
+  #
+  # This job has no draft/fork condition of its own: `test`'s own `if`
+  # (line 457) already skips it for draft PRs, fork PRs, and no-changes
+  # runs, which surfaces as `needs.test.result == 'skipped'` here — treated
+  # as pass below. Using `if: always()` (no extra condition) guarantees
+  # this job's stable name appears in every run of this workflow, so it is
+  # always safe to add as a required check once proven stable.
+  tests-required-gate:
+    name: Tests Required Gate
+    needs: [detect-changes, test]
+    if: always()
+    # No checkout, no secrets, no repo tooling — a pure string comparison on
+    # upstream job results. Runs on ubuntu-latest so it never queues behind
+    # the self-hosted fleet (this job is the thing a future required-status-
+    # check depends on, so it must never be capacity-starved itself).
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if detect-changes or the test matrix failed or was cancelled
+        run: |
+          DC_RESULT="${{ needs.detect-changes.result }}"
+          TEST_RESULT="${{ needs.test.result }}"
+          echo "detect-changes result: ${DC_RESULT}"
+          echo "test job result: ${TEST_RESULT}"
+          # detect-changes' own `if:` legitimately skips it for fork PRs, so
+          # 'skipped' is an acceptable result there. A 'failure'/'cancelled'
+          # result means the change-detection script itself broke, which
+          # silently skips the downstream `test` job (GitHub Actions' default
+          # implicit needs-success gate) — that must NOT read as a pass.
+          if [ "${DC_RESULT}" != "success" ] && [ "${DC_RESULT}" != "skipped" ]; then
+            echo "::error::Tests Required Gate: FAIL (detect-changes result=${DC_RESULT})"
+            exit 1
+          fi
+          if [ "${TEST_RESULT}" != "success" ] && [ "${TEST_RESULT}" != "skipped" ]; then
+            echo "::error::Tests Required Gate: FAIL (test matrix result=${TEST_RESULT})"
+            exit 1
+          fi
+          echo "Tests Required Gate: PASS (detect-changes=${DC_RESULT}, test=${TEST_RESULT})"

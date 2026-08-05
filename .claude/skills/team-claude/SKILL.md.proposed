@@ -1,0 +1,184 @@
+# /team-claude — real Claude Code team
+
+> **DRAFT — proposed rewrite.** Not deployed. Original lives at
+> `~/.claude/skills/team-claude/SKILL.md`. Diff vs original is summarized at
+> the bottom. To activate, run `/advice` on this draft, address all
+> CONFIRMED findings, then `mv` over the original.
+
+`/team-claude <prompt>` decomposes `<prompt>` into independent lanes and starts
+REAL Claude Code teammates. **DEFAULT (user directive 2026-07-11): use the
+official Agent Teams feature IN THE CURRENT SESSION** — per claude-code
+CHANGELOG v2.1.178: "every session now has one implicit team — spawn
+teammates directly with the Agent tool's name parameter". Teammates spawned
+via the Agent tool with `name:` are real Claude Code agents, visible in the
+user's team panel, SendMessage-addressable, and registered on disk in
+`~/.claude/teams/session-<id>/config.json` with per-teammate inboxes.
+
+## Hard pre-flight gates (REQUIRED before spawning any lane)
+
+1. **`CLAUDE_CONFIG_DIR` must be exported and valid.** Verified with
+   `[[ -n "$CLAUDE_CONFIG_DIR" ]] && [[ -d "$CLAUDE_CONFIG_DIR" ]]`. Failure
+   (2026-07-11): bashrc wrapper `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` fell
+   back to default account which had no auth.
+
+2. **Auth reachability.** `claude -p "echo TEAM_AUTH_OK"` returns 0 within
+   5s. If not, surface the failure and STOP.
+
+3. **Each lane must show `isActive: true` AND a non-empty inbox within 30s
+   of registration** *(isActive is an internal field observed in
+   `~/.claude*/teams/session-*/config.json` — undocumented, may change
+   without notice; the 30s threshold is a local convention from 2026-07-11
+   repro timings — not an Anthropic SLA)*. Failure (2026-07-11,
+   anthropics/claude-code#24108 — closed as duplicate, verified 2026-07-11
+   via `gh api`): lane registered with prompt in config.json but never read
+   its mailbox. If the gate fails, surface the bug and DO NOT silently retry
+   via tmux.
+
+4. **TUI lanes require on-disk registry entry.** If the TUI shows `◯ <lane>`
+   but `~/.claude/teams/<session>/config.json` does NOT list `<lane>` as a
+   member, the lane is a phantom (anthropics/claude-code#24771 — closed as
+   duplicate, verified 2026-07-11 via `gh api`). Phantom lanes are
+   unrecoverable for this session — surface to user.
+
+   Copy-paste detector (compare TUI roster against on-disk `members[]`):
+
+   ```bash
+   CONFIG=$(ls -t ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/teams/session-*/config.json 2>/dev/null | head -1)
+   python3 -c "import json;print([m.get('name') for m in json.load(open('$CONFIG')).get('members',[])])"
+   ```
+
+   Any TUI lane missing from the printed list is a phantom.
+
+5. **One team per session — hard limit.** Cross-session team join does not
+   exist (anthropics/claude-code#24294 is a feature request, not
+   implemented). If the user asks to add a teammate to a different session's
+   team, refuse and explain.
+
+## Hard contract — DEFAULT mode (in-session Agent Teams)
+
+- **Primitive:** every teammate is spawned via the Agent tool with an explicit
+  `name: lane-<n>-<topic>` and `model: sonnet`. These are NOT pseudo agents —
+  they register in the session team config with inboxes and colors.
+- **Sonnet-only:** every lane uses `model: sonnet`; the orchestrating session
+  is the team lead.
+- **Post-spawn proof (REQUIRED):** after launch, verify the registry on
+  disk — `ls ~/.claude*/teams/session-*/inboxes/` shows one inbox per named
+  lane, and the config.json `members[]` lists them. Then verify
+  `isActive: true` for each lane within 30s *(local convention from
+  2026-07-11 repro timings — not an Anthropic SLA; isActive is an
+  internal field of `~/.claude*/teams/session-*/config.json` —
+  undocumented, may change without notice)*. **Do NOT report success
+  until all three checks pass.** Failure (2026-07-11, #24108 — closed as
+  duplicate, verified 2026-07-11 via `gh api`): verification skipped and a
+  lane that never executed its mission was reported as "running".
+- **User-facing visibility:** the user SEES the teammates in their panel;
+  teammate messages render with team colors.
+- **Isolation:** each lane gets a clear lane name and either a dedicated
+  worktree or an explicit read-only role. Two lanes never write the same file.
+- **Collection:** lanes go `idle_notification` WITHOUT auto-delivering — the
+  lead must SendMessage-nudge each idle lane for its report. Failure
+  (2026-07-11): 4 nudges sent over 5+ min, zero replies — diagnosed as the
+  same #24108 class bug.
+- **Crash recovery:** write lane prompts + a mission STATE.md under
+  `/tmp/team-claude-<slug>/` so a later session can inspect or respawn.
+  Lanes die with the parent CLI — durable state lives on disk, per the
+  sidekick skill's STATE.md pattern.
+- **Verification lanes** are teammates too (refute-by-default prompts). Do not
+  mark work ready without verifier output.
+
+## FALLBACK mode — external tmux lanes (USE ONLY WITH DISCLOSURE)
+
+Use ONLY when the mission must survive this session exiting, or Agent Teams
+is unavailable. All five pre-flight gates must pass. Disclose to the user up
+front: "these lanes will NOT appear in your panel; watch with
+`tmux attach -t team-<slug>-lane-<n>` (detach: ctrl+b d)."
+
+```bash
+# MANDATORY: pre-flight gate #1 — verify CLAUDE_CONFIG_DIR is set
+if [ -z "${CLAUDE_CONFIG_DIR:-}" ]; then
+  echo "ABORT: CLAUDE_CONFIG_DIR is not exported. Refusing to spawn tmux lane." >&2
+  exit 1
+fi
+
+SESSION="team-${SLUG}-lane-1"
+PROMPT_FILE="$BASE/lane-1.prompt.md"
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+  tmux capture-pane -t "$SESSION" -p -S -20 | tail -20   # never kill a live lane blind
+fi
+tmux new-session -d -s "$SESSION" -x 160 -y 48 \
+  "cd '$PWD' && CLAUDE_CONFIG_DIR='$CLAUDE_CONFIG_DIR' claude --model sonnet --teammate-mode tmux --dangerously-skip-permissions -p \"\$(cat '$PROMPT_FILE')\"; rc=\$?; printf '\n[team-claude lane done exit=%s]\n' \"\$rc\"; exec bash"
+```
+
+Verify with `tmux ls | grep "team-${SLUG}"`, `pgrep -fl -- "--teammate-mode tmux"`
+(match the flag — ps may show a full binary path), and capture-pane. Blank pane
+in `-p` mode is normal while working. Poll/aggregate with capture-pane loops.
+
+Inline `CLAUDE_CONFIG_DIR` always — the tmux server strips it (wrong-account
+session-limit failures otherwise). The variable MUST be exported in the
+parent shell BEFORE this command runs.
+
+## Known bug class (the model cannot fix these)
+
+All four Anthropic issues are now closed upstream (verified 2026-07-11
+via `gh api`): **#24108 closed/duplicate, #24771 closed/duplicate,
+#46691 closed/not_planned, #24292 closed/duplicate**. Reproduction still
+happens locally because the upstream fixes have not yet landed in the
+installed `claude` binary.
+
+| Issue | Status (verified 2026-07-11 via `gh api`) | Symptom | Reproduced 2026-07-11 |
+|---|---|---|---|
+| [anthropics/claude-code#24108](https://github.com/anthropics/claude-code/issues/24108) | closed as duplicate | Mailbox never polled; no `--prompt` flag passed to spawned teammate. The lane registers but never executes its mission. | ✅ |
+| [anthropics/claude-code#46691](https://github.com/anthropics/claude-code/issues/46691) | closed not_planned | Lead stalls after teammates report back; needs keystroke to unblock. | ✅ |
+| [anthropics/claude-code#24771](https://github.com/anthropics/claude-code/issues/24771) | closed as duplicate | Teammate pane creation works but routing to pane broken. TUI visual lane without on-disk registry entry. | ✅ |
+| [anthropics/claude-code#24292](https://github.com/anthropics/claude-code/issues/24292) | closed as duplicate | tmux silent fallback to in-process (silent degradation when env is wrong). | ✅ |
+
+When a symptom matches, surface the failure to the user, recommend
+`/advice` for diagnosis, and DO NOT silently fall back to an alternative
+execution path.
+
+## Failure modes (skill-loadable)
+
+- **"I don't see the team":** you used tmux mode without disclosure, or
+  spawned unnamed agents. Switch to DEFAULT mode — named in-session
+  teammates — immediately. This exact complaint recurred 5× across 3 sessions
+  on 2026-07-10/11 before the default was flipped.
+- **No inbox file for a lane:** the spawn was not a named teammate; respawn
+  with `name:`. Pre-flight gate #4 catches this.
+- **Idle lanes, no reports:** you forgot the SendMessage nudge — OR the lane
+  is hitting bug #24108 (mailbox never polled). Distinguish by checking
+  `isActive` in the team config; if `false`, it's the bug.
+- **Two lanes edit the same files:** stop one lane and serialize the work.
+- **TUI shows lane but config.json does not:** phantom lane
+  (anthropics/claude-code#24771 — closed as duplicate, verified 2026-07-11
+  via `gh api`). Surface to user; not recoverable this session. Diagnose
+  with:
+
+  ```bash
+  CONFIG=$(ls -t ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/teams/session-*/config.json 2>/dev/null | head -1)
+  python3 -c "import json;print([m.get('name') for m in json.load(open('$CONFIG')).get('members',[])])"
+  ```
+
+  Any TUI lane missing from the printed list is a phantom.
+- **(fallback) Pane is only a shell:** Claude exited immediately; capture
+  the pane and fix prompt/auth before claiming the lane is active.
+
+## Usage
+
+```text
+/team-claude <prompt>
+```
+
+The current Claude session is the orchestrator/team lead. Related: the
+sidekick skill (durability layer, STATE.md pattern) and /swarm (which
+composes this team primitive with adversarial verification).
+
+## Diff vs original SKILL.md (summary)
+
+| Section | Change |
+|---|---|
+| Top of file | Added "Hard pre-flight gates (REQUIRED before spawning any lane)" section enumerating 5 hard gates |
+| DEFAULT mode contract | Added `isActive: true` + non-empty inbox verification within 30s of registration, before reporting success *(30s is a local convention from 2026-07-11 repro timings — not an Anthropic SLA; isActive is an internal field of `~/.claude*/teams/session-*/config.json` — undocumented, may change without notice)* |
+| FALLBACK mode | Added pre-flight `[[ -n "${CLAUDE_CONFIG_DIR:-}" ]]` check that aborts the spawn if unset; removed `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` substitution pattern |
+| After "Failure modes" | Added "Known bug class" table mapping today's reproduction to upstream Anthropic issues |
+| Failure modes list | Added "TUI shows lane but config.json does not" entry for phantom-lane detection |
+| Usage | Unchanged |

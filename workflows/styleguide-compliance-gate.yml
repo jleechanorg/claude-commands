@@ -46,7 +46,7 @@ jobs:
       PYTHONUNBUFFERED: "1"
       GEMINI_API_KEY: "test-ci-key-only"
       GOOGLE_APPLICATION_CREDENTIALS: "/dev/null"
-      # Avoid retaining pip's download cache on di[REDACTED_OPENAI_KEY] self-hosted runners.
+      # Avoid retaining pip's download cache on disk-constrained self-hosted runners.
       PIP_NO_CACHE_DIR: "1"
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
     steps:
@@ -140,7 +140,7 @@ jobs:
           # playwright and pillow are both already in mvp_site/requirements.txt
           # (playwright is a direct dep; pillow is transitive). A second
           # pip install pass was duplicating work and was the trigger for
-          # Errno 28 "No space left on device" on di[REDACTED_OPENAI_KEY] runners.
+          # Errno 28 "No space left on device" on disk-constrained runners.
           ${{ steps.python_resolve.outputs.python_bin }} -m pip install --break-system-packages --no-cache-dir -r mvp_site/requirements.txt
 
       - name: Install Playwright system dependencies

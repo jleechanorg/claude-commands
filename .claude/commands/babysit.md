@@ -48,9 +48,10 @@ Each agent must:
 
 ### Step 5: Fix YELLOW PRs Inline
 
-- Gate 5: Resolve review threads via GitHub API
-- Gate 6: Add evidence or N/A justification to PR body
-- Gates 3-4 (CR/Bugbot): read feedback if useful, fix any real code issues it surfaces — never required to unblock
+- Draft comments: Resolve actionable review threads via GitHub API
+- Draft evidence: Add evidence or N/A justification to PR body
+- Advisory signals (CR/Bugbot): read feedback if useful and fix any real code
+  issues it surfaces — never required to unblock
 
 ### Step 6: Trigger Smoke on GREEN PRs
 
@@ -68,7 +69,7 @@ Print a table for ALL open PRs:
 
 ```
 PR #<N> — <title> — status: <RED|YELLOW|GREEN>
-  Gates: 1=✓ 2=✓ 3=✗ 4=✓ 5=✓ 6=✓
+  Blocking gates: 1=✓ 2=✓ | Draft: Comments=✓ Evidence=✓ | Advisory: CR=✗ Bugbot=✓
   Action: <what was done or what's pending>
 ```
 

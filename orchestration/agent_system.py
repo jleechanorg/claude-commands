@@ -178,7 +178,7 @@ class OpusAgent(AgentBase):
     """Opus coordinator agent."""
 
     def __init__(self, broker: MessageBroker):
-        super().__init__("ta[REDACTED_OPENAI_KEY]", "opus", broker)
+        super().__init__("task-coordinator", "opus", broker)
         self.capabilities = ["coordination", "task_breakdown", "management"]
         self.subordinates = []
 

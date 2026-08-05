@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# host-di[REDACTED_OPENAI_KEY] — alert on low HOST free disk, auto-clean at critical threshold
+# host-disk-guardian.sh — alert on low HOST free disk, auto-clean at critical threshold
 #
 # Provenance: 2026-07-03 incident (bead rev-g5bwl) — host disk hit 100% (285MB
 # free/926GB) mid runner-fleet recovery, corrupting colima's containerd content
-# store (blob I/O errors) and nearly re-crashing the fleet. mac-runner-di[REDACTED_OPENAI_KEY]
+# store (blob I/O errors) and nearly re-crashing the fleet. mac-runner-disk-cleanup.sh
 # (retired along with self-hosted-oss) only ever watched CONTAINER overlay space,
 # never true HOST free space — this script closes that specific gap.
 #
@@ -14,21 +14,21 @@
 # worktrees) — the actual root cause of the 2026-07-03 incident.
 #
 # Usage:
-#   bash host-di[REDACTED_OPENAI_KEY]                  # check + clean if critical
-#   bash host-di[REDACTED_OPENAI_KEY] --dry-run         # report only, never delete
-#   bash host-di[REDACTED_OPENAI_KEY] --check-only      # alias for --dry-run
+#   bash host-disk-guardian.sh                  # check + clean if critical
+#   bash host-disk-guardian.sh --dry-run         # report only, never delete
+#   bash host-disk-guardian.sh --check-only      # alias for --dry-run
 #
 # Exit codes:
 #   0 = free space at or above WARN_THRESHOLD_GB (healthy)
 #   1 = free space below WARN_THRESHOLD_GB (alert logged)
 #   2 = free space below CRITICAL_THRESHOLD_GB (auto-clean ran)
 #
-# Logs to: /tmp/host-di[REDACTED_OPENAI_KEY]
+# Logs to: /tmp/host-disk-guardian.log
 
 set -uo pipefail
 
 TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-LOG="/tmp/host-di[REDACTED_OPENAI_KEY]"
+LOG="/tmp/host-disk-guardian.log"
 DRY_RUN=0
 
 # Bead rev-g5bwl's stated thresholds.
@@ -80,7 +80,7 @@ log() { echo "[$TS] $*" | tee -a "$LOG"; }
 # issues from the same host) -- read it at runtime, never hardcode or commit
 # it. Missing config/field/curl failure all degrade to a log line, never a
 # hard failure: a broken alert channel must not block the (successful, tested
-# independently) di[REDACTED_OPENAI_KEY] logic.
+# independently) disk-monitoring logic.
 EZGHA_CONFIG="${HOST_DISK_GUARDIAN_EZGHA_CONFIG:-$HOME/.config/ezgha/config.toml}"
 send_slack_alert() {
   local message="$1"
@@ -142,12 +142,12 @@ fi
 
 if (( FREE_GB >= CRITICAL_THRESHOLD_GB )); then
   log "ALERT: ${FREE_GB}GB free, below warn threshold (${WARN_THRESHOLD_GB}GB) but above critical (${CRITICAL_THRESHOLD_GB}GB). No auto-clean at this tier -- monitor only."
-  send_slack_alert "host-di[REDACTED_OPENAI_KEY] WARN: ${FREE_GB}GB free on $(hostname) (threshold ${WARN_THRESHOLD_GB}GB). No auto-clean yet -- intervene before it drops below ${CRITICAL_THRESHOLD_GB}GB."
+  send_slack_alert "host-disk-guardian WARN: ${FREE_GB}GB free on $(hostname) (threshold ${WARN_THRESHOLD_GB}GB). No auto-clean yet -- intervene before it drops below ${CRITICAL_THRESHOLD_GB}GB."
   exit 1
 fi
 
 log "CRITICAL: ${FREE_GB}GB free, below critical threshold (${CRITICAL_THRESHOLD_GB}GB). Running auto-clean."
-send_slack_alert "host-di[REDACTED_OPENAI_KEY] CRITICAL: ${FREE_GB}GB free on $(hostname) (threshold ${CRITICAL_THRESHOLD_GB}GB). Running auto-clean now (evidence bundles, scratchpads, merged-PR worktrees)."
+send_slack_alert "host-disk-guardian CRITICAL: ${FREE_GB}GB free on $(hostname) (threshold ${CRITICAL_THRESHOLD_GB}GB). Running auto-clean now (evidence bundles, scratchpads, merged-PR worktrees)."
 
 clean_evidence_bundles() {
   [[ -d "$EVIDENCE_DIR" ]] || { log "  evidence dir $EVIDENCE_DIR does not exist, skipping"; return; }

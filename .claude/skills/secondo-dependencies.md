@@ -157,8 +157,8 @@ echo $FIREBASE_AUTH_DOMAIN  # Should output your domain
 echo $FIREBASE_PROJECT_ID  # Should output your project ID
 ```
 
-## See Also
+## See also
 
-- [ai-universe-auth.md](ai-universe-auth.md) - Authentication setup guide
-- [ai-universe-httpie.md](ai-universe-httpie.md) - HTTPie usage examples
-- [second_opinion.md](../commands/second_opinion.md) - Command documentation
+- `ai-universe-auth` — authentication setup
+- `ai-universe-httpie` — HTTPie usage examples
+- `/secondo` — command documentation

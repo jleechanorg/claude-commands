@@ -22,7 +22,7 @@ except Exception:
     np = None  # type: ignore[assignment]
     _NUMPY_AVAILABLE = False
 
-_USER_SCOPE = "$HOME/projects_other/user_scope/scripts"
+_USER_SCOPE = "$HOME/projects/user_scope/scripts"
 try:
     import sys as _sys
     if _USER_SCOPE not in _sys.path:
@@ -82,6 +82,12 @@ CANDIDATE_RE = re.compile(
     r"|written up a plan and is ready"
     r"|Are you sure\b|Proceed with this action\b|Do you want to delete\b"
     r"|Do you want to create\b|Do you want to run\b"
+    r"|Token Plan usage limit reached|RESOURCE_EXHAUSTED"
+    r"|Stop and wait for limit to reset|Connection closed mid-response"
+    r"|cluster load.{0,30}2064|402.*credits?|insufficient_quota"
+    r"|429.*Token Plan|too many concurrent requests"
+    r"|hit your (?:weekly|session|usage|message) limit|overloaded|You've hit your",
+    re.IGNORECASE,
 )
 BOTTOM_APPROVAL_RE = re.compile(
     r"Do you want to\b|Would you like to run the following command\?"
@@ -295,6 +301,21 @@ def find_cli(name: str) -> str | None:
 
 
 def cmux_tree() -> list[dict[str, str]]:
+    try:
+        from cmux_surface_utils import iter_terminal_surfaces
+        surfaces = [
+            {
+                "workspace": ws_ref,
+                "title": title,
+                "surface": surface_ref,
+                "surface_title": title,
+            }
+            for ws_ref, surface_ref, title in iter_terminal_surfaces()
+        ]
+        if surfaces:
+            return surfaces
+    except Exception:
+        pass
     proc = run(["cmux", "--json", "tree", "--all"], check=True, timeout=5)
     data = json.loads(proc.stdout)
     rows: list[dict[str, str]] = []

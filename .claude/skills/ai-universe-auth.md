@@ -211,7 +211,7 @@ cp ~/projects/ai_universe/scripts/auth-cli.mjs .claude/scripts/
 cp ~/projects/ai_universe/scripts/auth-cli.mjs ~/.claude/scripts/
 ```
 
-## Related Skills
+## Related skills
 
-- [ai-universe-httpie.md](ai-universe-httpie.md) - HTTPie usage examples
-- [secondo-dependencies.md](secondo-dependencies.md) - /secondo command dependencies
+- `ai-universe-httpie` — HTTPie usage examples
+- `secondo-dependencies` — `/secondo` dependencies

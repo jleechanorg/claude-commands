@@ -33,7 +33,7 @@ class TestMinimaxPreflightEnvFix(unittest.TestCase):
         mock_validate.return_value = MagicMock(success=True, output_file=None)
 
         # Set MINIMAX_API_KEY in environment
-        test_api_key = "[REDACTED_OPENAI_KEY]"
+        test_api_key = "sk-test-minimax-key-12345"
         with patch.dict(os.environ, {"MINIMAX_API_KEY": test_api_key}, clear=False):
             # Call the validation method
             result = self.monitor._run_two_phase_cli_validation(

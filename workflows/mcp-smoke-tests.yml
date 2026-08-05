@@ -210,6 +210,10 @@ jobs:
 
       - name: Resolve signing secret from GCP (single source of truth)
         if: steps.service_url.outputs.deployed == 'true'
+        # Bounded so an auth/network hang on gcloud can't silently burn the
+        # job's 30-minute budget before the 25-minute smoke-test step even
+        # starts (CodeRabbit review, PR #8292).
+        timeout-minutes: 2
         # ROOT-CAUSE FIX (signed streaming digest parity): the preview server signs
         # streaming done-events with the GCP Secret Manager secret
         # `stream-response-signing-secret:latest` (mounted server-side by deploy.sh).
@@ -342,10 +346,49 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Post success comment
+        id: post_success_comment
         if: steps.pr_ref.outputs.pr_number && steps.service_url.outputs.deployed == 'true' && steps.smoke_tests.outcome == 'success'
         # Non-blocking: a transient GitHub comment-API failure must not flip the
         # job conclusion to failure and strand Gate 8 (PR #8461 F1). The step is
-        # still marked failed in the UI, so failures stay visible.
+        # still marked failed in the UI, so failures stay visible. The retry
+        # step immediately below is the actual compensating mechanism that
+        # keeps Gate 8 fed — see its comment for why continue-on-error alone
+        # was insufficient (PR #8461 hotfix F2).
+        continue-on-error: true
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const body = ${{ toJson(steps.smoke_comment_body.outputs.body) }};
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.pr_ref.outputs.pr_number }},
+              body: body
+            });
+
+      - name: Retry success comment on transient failure
+        # PR #8461 F2: the primary "Post success comment" step above uses
+        # continue-on-error so a transient GitHub Issues-API error (e.g. a
+        # 503) doesn't flip the JOB conclusion to failure. But that means
+        # the underlying smoke tests can succeed with NO comment ever
+        # posted — and Gate 8 in green-gate.yml only matches success via a
+        # posted "MCP Smoke Tests Passed" / "mcp-smoke-mode: real" comment.
+        # With nothing to match, Gate 8 silently polls its ~15-min budget
+        # and fails by timeout, even though smoke tests actually passed.
+        # This step retries the exact same comment body once so Gate 8 has
+        # something to match. It is itself continue-on-error so a second
+        # consecutive failure doesn't flip the job to failure either — that
+        # residual double-failure window still leaves Gate 8 to time out
+        # silently (Gate 8 only polls PR comments, never step-level status),
+        # same as before this fix, just requiring two consecutive transient
+        # API failures instead of one. This step's own red X in the Actions
+        # UI is a human-debugging aid for that rare case, not something
+        # Gate 8 itself observes.
+        if: >-
+          steps.pr_ref.outputs.pr_number &&
+          steps.service_url.outputs.deployed == 'true' &&
+          steps.smoke_tests.outcome == 'success' &&
+          steps.post_success_comment.outcome == 'failure'
         continue-on-error: true
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:

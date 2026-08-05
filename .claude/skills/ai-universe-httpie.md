@@ -309,8 +309,8 @@ curl -X POST "$URL" \
   -d @request.json
 ```
 
-## See Also
+## See also
 
-- [ai-universe-auth.md](ai-universe-auth.md) - Authentication setup
-- [second_opinion.md](../commands/second_opinion.md) - Second opinion command docs
+- `ai-universe-auth` — authentication setup
+- `/secondo` — second-opinion command
 - `~/.claude/scripts/secondo-cli.sh` - Implementation reference

@@ -42,7 +42,7 @@ This command will verify the Ralph repo exists before executing. If you want to 
 Ralph is an autonomous task agent that:
 1. **Uses Codex CLI by default** - larger context windows (200K tokens) via OpenRouter
 2. **Reads goal files** in markdown format with clear success criteria
-3. **Creates ta[REDACTED_OPENAI_KEY] agents** in tmux sessions for parallel work
+3. **Creates task-specific agents** in tmux sessions for parallel work
 4. **Iterates continuously** until goal completion or max iterations reached
 5. **Self-corrects errors** by analyzing failures and adjusting approach
 6. **Commits progress** regularly to track incremental changes

@@ -127,10 +127,10 @@ show_status() {
     echo "├── Claude Agents:"
 
     # Check for dynamic agents
-    dynamic_agents=$(tmux list-sessions 2>/dev/null | grep -E "(ta[REDACTED_OPENAI_KEY])" | wc -l || echo "0")
+    dynamic_agents=$(tmux list-sessions 2>/dev/null | grep -E "(task-agent-)" | wc -l || echo "0")
     if [ "$dynamic_agents" -gt 0 ]; then
         echo "│   Dynamic Agents: $dynamic_agents active"
-        tmux list-sessions 2>/dev/null | grep -E "(ta[REDACTED_OPENAI_KEY])" | while read session; do
+        tmux list-sessions 2>/dev/null | grep -E "(task-agent-)" | while read session; do
             session_name=$(echo "$session" | cut -d: -f1)
             echo "│     - $session_name"
         done
@@ -154,9 +154,9 @@ show_status() {
     echo "└── Quick Commands:"
     echo "    /orch 'task description'                             # Create dynamic agents"
     echo "    tmux list-sessions | grep task-agent                 # List active agents"
-    echo "    tmux attach -t [ta[REDACTED_OPENAI_KEY]]                     # Connect to agent"
+    echo "    tmux attach -t [task-agent-name]                     # Connect to agent"
     echo "    tail -f /tmp/orchestration_logs/agent_monitor.log     # Monitor system"
-    echo "    cd agent_workspace_[ta[REDACTED_OPENAI_KEY]] && claude       # Manual agent session"
+    echo "    cd agent_workspace_[task-agent-name] && claude       # Manual agent session"
     echo "    ls /tmp/orchestration_results/                       # View agent results"
     echo
 
@@ -182,7 +182,7 @@ show_usage() {
     echo "Interactive usage after start:"
     echo "  /orch 'task description'    # Create task agents"
     echo "  tmux list-sessions          # List all agent sessions"
-    echo "  tmux attach -t ta[REDACTED_OPENAI_KEY] # Connect to specific agent"
+    echo "  tmux attach -t task-agent-X # Connect to specific agent"
 }
 
 # Stop all agents
@@ -190,7 +190,7 @@ stop_system() {
     log_info "Stopping orchestration system..."
 
     # Kill all agent tmux sessions (task agents only)
-    tmux list-sessions -f "#{session_name}" 2>/dev/null | grep -E "(ta[REDACTED_OPENAI_KEY])" | while read session; do
+    tmux list-sessions -f "#{session_name}" 2>/dev/null | grep -E "(task-agent-)" | while read session; do
         tmux kill-session -t "$session" 2>/dev/null || true
         log_info "Stopped session: $session"
     done

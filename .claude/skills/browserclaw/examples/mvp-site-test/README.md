@@ -27,7 +27,7 @@ The app is a **Firebase-backed SPA**:
 
 ```javascript
 {
-  apiKey: '[REDACTED_GCP_KEY]',
+  apiKey: '<TEST_FIREBASE_KEY>',
   authDomain: 'worldarchitecture-ai.firebaseapp.com',
   projectId: 'worldarchitecture-ai',
   storageBucket: 'worldarchitecture-ai.firebasestorage.app',

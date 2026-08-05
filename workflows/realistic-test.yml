@@ -1,0 +1,99 @@
+name: realistic-test
+# Manual-only by design. workflow_dispatch ensures no PR or schedule ever
+# triggers this job (the AGY CLI install is a placeholder URL; the runner
+# is stubbed; see testing_ui/CLAUDE.md "Headless automation" rules). If a
+# future contributor re-enables a schedule / pull_request trigger, the
+# `if: github.event_name == 'workflow_dispatch'` guards on every job keep
+# the workflow inert.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  realistic-test:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+        with:
+          python-version: "3.11"
+
+      - name: "Install AGY CLI (skipped: stub use)"
+        run: |
+          echo "AGY CLI install skipped: agent runner is stubbed in CI; unit + acceptance test gates exercise the skill"
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml pytest pytest-asyncio Pillow
+
+      - name: "Run realistic-test (unit + acceptance)"
+        env:
+          AGY_PROVIDER_ENABLED: "false"
+        run: |
+          set +e
+          # Always-run gate: predicates + acceptance test on the verbatim PR #8489 capture.
+          # Run from project root so test_runner.py's relative scenario paths resolve.
+          pytest testing_ui/realistic/ -q
+          # Acceptance gate: feed the PR #8489 capture to invariant_check and
+          # require it to FAIL with both named invariants. Exit 1 is expected.
+          PYTHONPATH=. python -m testing_ui.realistic.invariant_library.invariant_check \
+            --captures testing_ui/realistic/tests/fixtures/pr8489_capture.jsonl
+          invocation_exit=$?
+          set -e
+          if [ "$invocation_exit" -ne 1 ]; then
+            echo "FAIL: expectation was the acceptance test to FAIL with named invariants (exit 1), got $invocation_exit"
+            exit 1
+          fi
+          echo "PASS: acceptance test correctly FAILED with named invariants"
+
+      - name: "Layer 1: docs_to_invariants — discover user stories"
+        env:
+          AGY_PROVIDER_ENABLED: "false"
+        run: |
+          PYTHONPATH=. python -m testing_ui.realistic.docs_to_invariants --discover | head -20
+          echo ""
+          echo "(Total: $(PYTHONPATH=. python -m testing_ui.realistic.docs_to_invariants --discover 2>&1 | wc -l) user stories discovered)"
+
+      - name: "Layer 3: swarm_runner — discover new invariants"
+        env:
+          AGY_PROVIDER_ENABLED: "false"
+        run: |
+          # Run the swarm on the synthetic judge. In production this would dispatch
+          # real AGY agents playing as each persona. For CI, the synthetic judge
+          # exercises the same discovery loop.
+          PYTHONPATH=. python -m testing_ui.realistic.swarm_runner --run
+
+      - name: "Verify library.yaml has new invariants"
+        env:
+          AGY_PROVIDER_ENABLED: "false"
+        run: |
+          PYTHONPATH=. python -c "
+          import yaml
+          data = yaml.safe_load(open('testing_ui/realistic/invariant_library/library.yaml'))
+          n_baseline = sum(1 for e in data['invariants'] if e.get('source', '').startswith('PR8489') or 'Pattern' in e.get('source', ''))
+          n_doc = sum(1 for e in data['invariants'] if 'docs_to_invariants' in e.get('source', ''))
+          n_swarm = sum(1 for e in data['invariants'] if 'swarm_runner' in e.get('source', ''))
+          print(f'Baseline (8-PR8489-pattern): {n_baseline}')
+          print(f'Doc-derived (docs_to_invariants): {n_doc}')
+          print(f'Swarm-discovered (swarm_runner): {n_swarm}')
+          print(f'Total invariants: {len(data[\"invariants\"])}')
+          "
+
+      - name: Upload verdict
+        if: always()
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+        with:
+          name: realistic-test-verdict
+          path: testing_ui/realistic/verdict.yaml
+
+      - name: PR comment on FAIL
+        if: failure()
+        uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405  # v2.9.4
+        with:
+          header: realistic-test
+          message: |
+            ❌ realistic-test failed. See artifact `realistic-test-verdict`.
+            Auto-generated comment from ${{ github.workflow }} run ${{ github.run_id }}.

@@ -13,8 +13,10 @@ execution_mode: immediate
    feature/blocker argument.
 3. Run it with the real-services env (`TESTING_AUTH_BYPASS=true`,
    `GOOGLE_APPLICATION_CREDENTIALS=$HOME/serviceAccountKey.json`) against a real local
-   server, or `--preview-url <url>` for a remote GCP preview. `testing_mcp/` runs with `vpython`
-   **directly, never pytest**; `testing_ui/` runs via `python3 $PROJECT_ROOT/main.py testui`.
+   server, or `--preview-url <url>` for a remote GCP preview. Run `testing_mcp/`
+   **directly with the exact `python3` + `PYTHONPATH` invocation in
+   `testing_mcp/CLAUDE.md`, never pytest**; `testing_ui/` runs via
+   `python3 $PROJECT_ROOT/main.py testui`.
 4. Print the full absolute evidence bundle path
    (`/tmp/your-project.com/<branch>/<test_name>/latest/`) and confirm streaming artifacts exist.
 5. Review the complete rules at `.claude/skills/llm-testing.md`.
@@ -35,7 +37,7 @@ See the full authoritative skill at: `.claude/skills/llm-testing.md`
 ```
 
 ## Quick Directory Map
-- **MCP API (Layer 3)**: `testing_mcp/` — `vpython testing_mcp/<domain>/test_*.py` (direct, not pytest)
+- **MCP API (Layer 3)**: `testing_mcp/` — direct `python3` runner from repo root; see `testing_mcp/CLAUDE.md`
 - **Browser/UI (Layer 5)**: `testing_ui/` — `python3 $PROJECT_ROOT/main.py testui` (`TESTING_AUTH_BYPASS=true`)
 
 ## Zero-Mock Contract (a run is VOID if any are set)

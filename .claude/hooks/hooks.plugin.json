@@ -1,5 +1,5 @@
 {
-  "description": "Plugin-packaged enforcement hooks for the Your Project workflow.",
+  "description": "Plugin-packaged enforcement hooks for the WorldArchitect.AI workflow.",
   "hooks": {
     "PreToolUse": [
       {

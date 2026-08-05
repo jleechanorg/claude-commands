@@ -29,13 +29,13 @@ class TestGetTmuxSessions:
     def test_get_tmux_sessions_success_returns_session_list(self, mock_run):
         """Test successful tmux session listing returns parsed session names."""
         # Arrange
-        mock_run.return_value = Mock(stdout="ta[REDACTED_OPENAI_KEY]\ngh-comment-monitor-456\ncopilot-analysis\n", returncode=0)
+        mock_run.return_value = Mock(stdout="task-agent-123\ngh-comment-monitor-456\ncopilot-analysis\n", returncode=0)
 
         # Act
         result = get_tmux_sessions()
 
         # Assert
-        assert result == ["ta[REDACTED_OPENAI_KEY]", "gh-comment-monitor-456", "copilot-analysis"]
+        assert result == ["task-agent-123", "gh-comment-monitor-456", "copilot-analysis"]
         mock_run.assert_called_once_with(
             ["tmux", "list-sessions", "-F", "#{session_name}"],
             shell=False,
@@ -85,13 +85,13 @@ class TestGetTmuxSessions:
     def test_get_tmux_sessions_strips_whitespace_from_names(self, mock_run):
         """Test session names have whitespace stripped."""
         # Arrange
-        mock_run.return_value = Mock(stdout="  ta[REDACTED_OPENAI_KEY]  \n  copilot-test  \n", returncode=0)
+        mock_run.return_value = Mock(stdout="  task-agent-123  \n  copilot-test  \n", returncode=0)
 
         # Act
         result = get_tmux_sessions()
 
         # Assert
-        assert result == ["ta[REDACTED_OPENAI_KEY]", "copilot-test"]
+        assert result == ["task-agent-123", "copilot-test"]
 
 
 class TestGetAllMonitoringSessions:
@@ -99,9 +99,9 @@ class TestGetAllMonitoringSessions:
 
     @patch("orchestration.cleanup_completed_agents.get_tmux_sessions")
     def test_get_all_monitoring_sessions_task_agent_pattern_matches(self, mock_get_sessions):
-        """Test ta[REDACTED_OPENAI_KEY]* pattern is included in monitoring sessions."""
+        """Test task-agent-* pattern is included in monitoring sessions."""
         # Arrange
-        mock_get_sessions.return_value = ["ta[REDACTED_OPENAI_KEY]", "regular-session", "ta[REDACTED_OPENAI_KEY]"]
+        mock_get_sessions.return_value = ["task-agent-123", "regular-session", "task-agent-456"]
 
         # Act
         result = get_all_monitoring_sessions()
@@ -109,8 +109,8 @@ class TestGetAllMonitoringSessions:
         # Debug: Check what we actually got
 
         # Assert
-        assert "ta[REDACTED_OPENAI_KEY]" in result
-        assert "ta[REDACTED_OPENAI_KEY]" in result
+        assert "task-agent-123" in result
+        assert "task-agent-456" in result
         assert "regular-session" not in result
 
     @patch("orchestration.cleanup_completed_agents.get_tmux_sessions")
@@ -164,7 +164,7 @@ class TestGetAllMonitoringSessions:
         """Test all monitoring patterns are matched in mixed session list."""
         # Arrange
         mock_get_sessions.return_value = [
-            "ta[REDACTED_OPENAI_KEY]",
+            "task-agent-123",
             "gh-comment-monitor-pr456",
             "copilot-analysis",
             "agent-worker",
@@ -176,7 +176,7 @@ class TestGetAllMonitoringSessions:
         result = get_all_monitoring_sessions()
 
         # Assert
-        expected_monitoring = ["ta[REDACTED_OPENAI_KEY]", "gh-comment-monitor-pr456", "copilot-analysis", "agent-worker"]
+        expected_monitoring = ["task-agent-123", "gh-comment-monitor-pr456", "copilot-analysis", "agent-worker"]
         assert all(session in result for session in expected_monitoring)
         assert "random-session" not in result
         assert "another-session" not in result
@@ -199,10 +199,10 @@ class TestGetSessionTimeout:
     """Test pattern-based timeout logic functionality."""
 
     def test_get_session_timeout_task_agent_returns_one_hour(self):
-        """Test ta[REDACTED_OPENAI_KEY]* sessions return 1 hour timeout."""
+        """Test task-agent-* sessions return 1 hour timeout."""
         # Act & Assert
-        assert get_session_timeout("ta[REDACTED_OPENAI_KEY]") == 3600  # 1 hour
-        assert get_session_timeout("ta[REDACTED_OPENAI_KEY]") == 3600
+        assert get_session_timeout("task-agent-123") == 3600  # 1 hour
+        assert get_session_timeout("task-agent-worker-456") == 3600
 
     def test_get_session_timeout_gh_comment_monitor_returns_four_hours(self):
         """Test gh-comment-monitor-* sessions return 4 hour timeout."""
@@ -232,8 +232,8 @@ class TestGetSessionTimeout:
     def test_get_session_timeout_partial_match_uses_default(self):
         """Test partial pattern matches use default timeout."""
         # Act & Assert
-        assert get_session_timeout("ta[REDACTED_OPENAI_KEY]") == 86400  # Doesn't match "ta[REDACTED_OPENAI_KEY]"
-        assert get_session_timeout("ata[REDACTED_OPENAI_KEY]") == 86400  # Doesn't start with pattern
+        assert get_session_timeout("task-agentfoo") == 86400  # Doesn't match "task-agent-"
+        assert get_session_timeout("atask-agent-123") == 86400  # Doesn't start with pattern
 
 
 class TestCheckSessionTimeout:
@@ -250,7 +250,7 @@ class TestCheckSessionTimeout:
         mock_run.return_value = Mock(stdout=str(session_activity), returncode=0)
 
         # Act
-        result = check_session_timeout("ta[REDACTED_OPENAI_KEY]")  # 1 hour timeout
+        result = check_session_timeout("task-agent-test")  # 1 hour timeout
 
         # Assert
         assert result["timeout"] is True
@@ -269,7 +269,7 @@ class TestCheckSessionTimeout:
         mock_run.return_value = Mock(stdout=str(session_activity), returncode=0)
 
         # Act
-        result = check_session_timeout("ta[REDACTED_OPENAI_KEY]")  # 1 hour timeout
+        result = check_session_timeout("task-agent-test")  # 1 hour timeout
 
         # Assert
         assert result["timeout"] is False
@@ -518,9 +518,9 @@ class TestCleanupCompletedAgents:
     ):
         """Test mixed session types are processed with correct logic."""
         # Arrange
-        mock_get_sessions.return_value = ["ta[REDACTED_OPENAI_KEY]", "copilot-analysis", "agent-worker"]
+        mock_get_sessions.return_value = ["task-agent-123", "copilot-analysis", "agent-worker"]
 
-        # ta[REDACTED_OPENAI_KEY]: completed by markers
+        # task-agent-123: completed by markers
         mock_completion.side_effect = [
             {"completed": True, "reason": "found_marker: Claude exit code: 0"},
             {"completed": False, "reason": "no_log_file"},  # copilot (no logs)
@@ -542,7 +542,7 @@ class TestCleanupCompletedAgents:
 
         # Assert
         assert result["total_sessions"] == 3
-        assert result["completed"] == 1  # ta[REDACTED_OPENAI_KEY]
+        assert result["completed"] == 1  # task-agent-123
         assert result["timeout"] == 1  # copilot-analysis
         assert result["active"] == 1  # agent-worker
         assert result["cleaned_up"] == 2  # Both completed and timeout cleaned
@@ -573,7 +573,7 @@ class TestCleanupCompletedAgents:
     ):
         """Test dry run mode counts sessions but does not cleanup."""
         # Arrange
-        mock_get_sessions.return_value = ["ta[REDACTED_OPENAI_KEY]"]
+        mock_get_sessions.return_value = ["task-agent-123"]
         mock_completion.return_value = {"completed": True, "reason": "found_marker"}
         mock_cleanup.return_value = True
 
@@ -583,7 +583,7 @@ class TestCleanupCompletedAgents:
         # Assert
         assert result["completed"] == 1
         assert result["cleaned_up"] == 0  # Dry run doesn't increment cleanup count
-        mock_cleanup.assert_called_once_with("ta[REDACTED_OPENAI_KEY]", True)
+        mock_cleanup.assert_called_once_with("task-agent-123", True)
 
     @patch("orchestration.cleanup_completed_agents.get_all_monitoring_sessions")
     @patch("orchestration.cleanup_completed_agents.check_agent_completion")
@@ -594,7 +594,7 @@ class TestCleanupCompletedAgents:
     ):
         """Test cleanup failures are counted correctly."""
         # Arrange
-        mock_get_sessions.return_value = ["ta[REDACTED_OPENAI_KEY]", "ta[REDACTED_OPENAI_KEY]"]
+        mock_get_sessions.return_value = ["task-agent-123", "task-agent-456"]
         mock_completion.side_effect = [
             {"completed": True, "reason": "found_marker"},
             {"completed": True, "reason": "found_marker"},
@@ -614,7 +614,7 @@ class TestCleanupCompletedAgents:
     def test_cleanup_completed_agents_only_task_agents_check_completion_logs(self, mock_timeout, mock_get_sessions):
         """Test only task-agent sessions check completion via logs."""
         # Arrange
-        mock_get_sessions.return_value = ["ta[REDACTED_OPENAI_KEY]", "copilot-analysis", "gh-comment-monitor-test"]
+        mock_get_sessions.return_value = ["task-agent-123", "copilot-analysis", "gh-comment-monitor-test"]
         mock_timeout.return_value = {"timeout": False, "reason": "within_timeout"}
 
         # Act
@@ -623,14 +623,14 @@ class TestCleanupCompletedAgents:
             result = cleanup_completed_agents(dry_run=True)
 
             # Assert
-            mock_completion.assert_called_once_with("ta[REDACTED_OPENAI_KEY]")  # Only task-agent checked
+            mock_completion.assert_called_once_with("task-agent-123")  # Only task-agent checked
 
     @patch("orchestration.cleanup_completed_agents.get_all_monitoring_sessions")
     @patch("orchestration.cleanup_completed_agents.check_session_timeout")
     def test_cleanup_completed_agents_all_sessions_check_timeout(self, mock_timeout, mock_get_sessions):
         """Test all session types check timeout regardless of pattern."""
         # Arrange
-        sessions = ["ta[REDACTED_OPENAI_KEY]", "copilot-analysis", "gh-comment-monitor-test", "agent-worker"]
+        sessions = ["task-agent-123", "copilot-analysis", "gh-comment-monitor-test", "agent-worker"]
         mock_get_sessions.return_value = sessions
         mock_timeout.return_value = {"timeout": False, "reason": "within_timeout"}
 
@@ -685,8 +685,8 @@ class TestCleanupIntegration:
         """Test realistic cleanup scenario with mixed session states."""
         # Arrange
         mock_get_sessions.return_value = [
-            "ta[REDACTED_OPENAI_KEY]",
-            "ta[REDACTED_OPENAI_KEY]",
+            "task-agent-completed",
+            "task-agent-active",
             "gh-comment-monitor-timeout",
             "copilot-active",
             "regular-session",  # Should be ignored
@@ -700,7 +700,7 @@ class TestCleanupIntegration:
             if "tail" in cmd:
                 # Check if the log path contains the session name
                 log_path = " ".join(cmd) if isinstance(cmd, list) else cmd
-                if "ta[REDACTED_OPENAI_KEY]" in log_path:
+                if "task-agent-completed.log" in log_path:
                     return Mock(stdout="Claude exit code: 0")
                 else:
                     return Mock(stdout="Still running...")
@@ -735,7 +735,7 @@ class TestCleanupIntegration:
 
         # Assert
         assert result["total_sessions"] == 4  # Excludes regular-session
-        assert result["completed"] >= 1  # ta[REDACTED_OPENAI_KEY]
+        assert result["completed"] >= 1  # task-agent-completed
         assert result["timeout"] >= 1  # gh-comment-monitor-timeout
         assert result["cleaned_up"] >= 2  # At least both completed and timeout
 

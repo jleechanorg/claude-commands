@@ -43,7 +43,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
     def test_is_converge_agent_with_converge_state_marker(self):
         """Test converge agent detection with converge_state.json marker"""
         # Create workspace with converge marker
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-test-1"
         workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
 
@@ -57,7 +57,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
     def test_is_converge_agent_with_progress_log_marker(self):
         """Test converge agent detection with convergence_progress.log marker"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-test-2"
         workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
 
@@ -71,7 +71,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
     def test_is_converge_agent_with_converge_marker(self):
         """Test converge agent detection with .converge_marker"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-test-3"
         workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
 
@@ -85,7 +85,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
     def test_is_converge_agent_without_markers(self):
         """Test non-converge agent detection (no markers present)"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-regular"
         workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
 
@@ -94,7 +94,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
     def test_detect_stuck_agent_non_converge_agent(self):
         """Test that non-converge agents are never considered stuck"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-regular"
         status = {"workspace_info": {"last_modified": datetime.now()}}
 
         # Should return False for non-converge agents
@@ -102,7 +102,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
     def test_detect_stuck_agent_recent_activity(self):
         """Test that agents with recent activity are not considered stuck"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-converge"
         workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
 
@@ -121,7 +121,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
     def test_detect_stuck_agent_old_activity_but_progress_indicators(self):
         """Test that agents with progress indicators in output are not stuck"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-converge"
 
         # Old activity but progress indicators in output
         old_time = datetime.now() - timedelta(minutes=15)
@@ -136,7 +136,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
     def test_detect_stuck_agent_truly_stuck(self):
         """Test detection of genuinely stuck converge agent"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-stuck"
 
         # Old activity and no progress indicators
         old_time = datetime.now() - timedelta(minutes=15)
@@ -152,7 +152,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
     def test_get_original_command_from_file(self):
         """Test extracting original command from workspace file"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-test"
         workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
 
@@ -167,7 +167,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
     def test_get_original_command_fallback_converge(self):
         """Test fallback command generation for converge agents"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-converge-test"
 
         # No command file exists
         result = self.restarter.get_original_command(agent_name)
@@ -175,7 +175,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
 
     def test_get_original_command_fallback_generic(self):
         """Test fallback command generation for generic agents"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-generic"
 
         # No command file exists
         result = self.restarter.get_original_command(agent_name)
@@ -184,7 +184,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
     @patch("subprocess.run")
     def test_restart_converge_agent_success(self, mock_subprocess):
         """Test successful agent restart"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-test"
 
         # Mock successful subprocess calls
         mock_subprocess.return_value = Mock(returncode=0)
@@ -199,7 +199,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
     @patch("subprocess.run")
     def test_restart_converge_agent_max_attempts_exceeded(self, mock_subprocess):
         """Test restart rejection when max attempts exceeded"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-test"
 
         # Set restart attempts to max
         self.restarter.restart_attempts[agent_name] = self.restarter.max_restart_attempts
@@ -213,7 +213,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
     @patch("subprocess.run")
     def test_restart_converge_agent_subprocess_failure(self, mock_subprocess):
         """Test restart failure due to subprocess error"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-test"
 
         # Mock subprocess failure
         mock_subprocess.side_effect = Exception("Subprocess failed")
@@ -257,7 +257,7 @@ class TestAgentMonitorIntegration(unittest.TestCase):
     def test_ping_all_agents_triggers_restart_for_stuck_agent(self, mock_subprocess):
         """Test that ping_all_agents triggers restart for stuck converge agents"""
         # Mock tmux list-sessions to return a test agent
-        mock_subprocess.return_value = Mock(returncode=0, stdout="ta[REDACTED_OPENAI_KEY]")
+        mock_subprocess.return_value = Mock(returncode=0, stdout="task-agent-stuck-converge")
 
         monitor = AgentMonitor()
 
@@ -268,7 +268,7 @@ class TestAgentMonitorIntegration(unittest.TestCase):
         # Mock other AgentMonitor methods
         monitor.ping_agent = Mock(
             return_value={
-                "agent_name": "ta[REDACTED_OPENAI_KEY]",
+                "agent_name": "task-agent-stuck-converge",
                 "tmux_active": True,
                 "workspace_info": {},
                 "result_info": {},
@@ -281,7 +281,7 @@ class TestAgentMonitorIntegration(unittest.TestCase):
 
         # Should attempt restart
         monitor.restarter.detect_stuck_agent.assert_called_once()
-        monitor.restarter.restart_converge_agent.assert_called_once_with("ta[REDACTED_OPENAI_KEY]")
+        monitor.restarter.restart_converge_agent.assert_called_once_with("task-agent-stuck-converge")
 
 
 class TestEndToEndIntegration(unittest.TestCase):
@@ -301,7 +301,7 @@ class TestEndToEndIntegration(unittest.TestCase):
     @patch("subprocess.run")
     def test_full_restart_workflow(self, mock_subprocess):
         """Test complete workflow from detection to restart"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-converge-e2e"
 
         # Create converge agent workspace (matching agent_monitor.py path structure)
         workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")

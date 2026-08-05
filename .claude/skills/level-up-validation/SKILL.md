@@ -1,6 +1,6 @@
 ---
 name: level-up-validation
-description: Validate that level-up flows are complete, auto-selected, editable, and evidenced with real LevelUpAgent output.
+description: Use when validating WorldArchitect level-up flows or evidence with real LevelUpAgent output.
 scope: your-project.com level-up evidence
 ---
 
@@ -155,7 +155,8 @@ from persisted Firestore state:
 1. Run the canonical real test when real LLM proof is requested:
 
    ```bash
-   cd testing_mcp && ../vpython core/test_level_up_organic.py --server http://127.0.0.1:8001
+   PYTHONPATH="$(pwd):$(pwd)/mvp_site" \
+     python3 testing_mcp/core/test_level_up_organic.py --server http://127.0.0.1:8001
    ```
 
 2. Do not use pytest collection for `testing_mcp/` script suites.

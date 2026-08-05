@@ -91,8 +91,17 @@ jobs:
         # dorny/paths-filter usage existed elsewhere in this repo to copy
         # a pin from; SHA verified via `git ls-remote --tags
         # https://github.com/dorny/paths-filter refs/tags/v3.0.3`).
+        # On pull_request events we pass the GITHUB_TOKEN so dorny uses the
+        # GitHub REST API to enumerate changed files; the API path is O(files
+        # in PR) and finishes in seconds, whereas the git-diff fallback (used
+        # when no token is provided) requires `actions/checkout` to materialize
+        # the PR head via `git fetch --depth=1`, which on a cold self-hosted
+        # runner cache regularly exceeds the 3-minute job timeout (verified
+        # via runs #30616303366/job/91110177115 and #30616303357/job/91110177131
+        # on 2026-07-31, both cancelled by the 3-minute checkout ceiling).
         uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           filters: |
             python:
               - 'mvp_site/**/*.py'

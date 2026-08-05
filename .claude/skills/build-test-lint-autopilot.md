@@ -21,7 +21,7 @@ Provide Claude with a turnkey workflow for orchestrating the project's automated
 | Integration focus | `./run_tests.sh --integration` |
 | Coverage report | `./run_tests_with_coverage.sh` |
 | UI/browser suite | `./run_ui_tests.sh` |
-| Lint & format | `./run_lint.sh` or `pre-commit run -a` |
+| Lint & format | Run the relevant hook/formatter on the files changed in this task |
 
 ## Automation helper
 Use the bundled script to run tests followed by linting in one step:
@@ -40,7 +40,7 @@ The script executes from repo root, forwards any `run_tests.sh` options (e.g., `
 ## Failure triage tips
 - **Unit failures**: Inspect stack traces in `latest_ci_logs.txt` or re-run specific modules via `./run_tests.sh path/to/test.py -k name`.
 - **Integration issues**: Confirm `TEST_MODE` environment and check service credentials in `.env`.
-- **Lint errors**: Run `pre-commit run -a` for auto-fixes; review Ruff output for rule IDs.
+- **Lint errors**: Re-run the failing hook or Ruff rule on the touched files only; review Ruff output for rule IDs.
 - **UI flakes**: Re-run with `./run_ui_tests.sh --headed` when available to capture screenshots.
 
 ## Reporting expectations

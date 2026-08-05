@@ -212,7 +212,7 @@ class AgentHealthMonitor:
             # Wait a moment
             time.sleep(2)
 
-            # Restart dynamic agents (ta[REDACTED_OPENAI_KEY]*)
+            # Restart dynamic agents (task-agent-*)
             # Start Claude agent with portable path discovery
             try:
                 project_root = subprocess.run(

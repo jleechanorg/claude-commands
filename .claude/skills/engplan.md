@@ -191,7 +191,7 @@ Add entry to `~/.claude/projects/<project>/memory/` describing the plan and add 
 |---|---|---|---|
 | **PR-A: <name>** | `path/a.py`, `path/b.py` | `path/c.py` | <bug class / bead> |
 | **PR-B: <name>** | `path/d.py` | `path/a.py` (read) | <bug class / bead> |
-| **PR-C: Evidence** | `tests/test_*.py` | none modify | Gate-6 evidence |
+| **PR-C: Evidence** | `tests/test_*.py` | none modify | draft-phase `/es` evidence |
 
 ### Per-PR Commit Plan (template)
 **PR-A: <name>**

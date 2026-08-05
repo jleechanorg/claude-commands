@@ -1,3 +1,8 @@
+---
+name: testing-layers
+description: Use when choosing test placement or judging whether WorldArchitect evidence exercises a sufficient layer.
+---
+
 # Testing Layers — When to Use Each Layer and How to Decide
 
 ## Purpose
@@ -11,9 +16,9 @@ This skill defines the **concrete test directory structure** for Your Project, t
 | **1. Unit** | `$PROJECT_ROOT/tests/` | `./vpython -m pytest $PROJECT_ROOT/tests/test_*.py` | ~295 files | Mock (no `/es` credit) |
 | **1b. Unit (top-level)** | `tests/` | `./vpython -m pytest tests/test_*.py` | ~4 files | Mock (no `/es` credit) |
 | **2. End-to-End**| `$PROJECT_ROOT/tests/test_end2end/` | `./vpython -m pytest $PROJECT_ROOT/tests/test_end2end/` | ~30 files | Mock (no `/es` credit) — see `/end2end-testing` skill |
-| **3. MCP API** | `testing_mcp/` | `./vpython testing_mcp/test_*.py --server http://127.0.0.1:8001` | ~139 files | Server + LLM (full `/es`) — see `/llm-testing` skill |
+| **3. MCP API** | `testing_mcp/` | Direct `python3` runner with explicit `PYTHONPATH`; see `testing_mcp/CLAUDE.md` | ~139 files | Server + LLM (full `/es`) — see `/llm-testing` skill |
 | **4. HTTP API** | `testing_http/` | `./vpython testing_http/test_*.py` | ~25 files | Server (partial `/es`) |
-| **5. Browser** | `testing_ui/` | `./vpython testing_ui/test_*.py` | ~40 files | Server + LLM + Browser (full `/es` + video) — see `/llm-testing` skill |
+| **5. Browser** | `testing_ui/` | Use the headless entrypoint in `testing_ui/CLAUDE.md` | ~40 files | Server + LLM + Browser (full `/es` + video) — see `/llm-testing` skill |
 
 ### Shared Libraries
 

@@ -83,8 +83,8 @@ class TestExportCommandsMatrix(unittest.TestCase):
         ) as f:
             f.write("""# Test Command
 
-This command uses $PROJECT_ROOT/ paths and references $USER.
-Also mentions your-project.com and TESTING=true python.
+This command uses mvp_site/ paths and references jleechan.
+Also mentions worldarchitect.ai and TESTING=true vpython.
 """)
 
         # Create files that should be skipped according to COMMANDS_SKIP_LIST
@@ -108,10 +108,10 @@ Contains orchestration/testing content specific to original project.
         # Test hook with project-specific content
         hook_content = """#!/bin/bash
 # Test hook
-export PROJECT_PATH="$PROJECT_ROOT/"
-export OWNER="$USER"
-export DOMAIN="your-project.com"
-TESTING=true python test.py
+export PROJECT_PATH="mvp_site/"
+export OWNER="jleechan"
+export DOMAIN="worldarchitect.ai"
+TESTING=true vpython test.py
 """
         os.makedirs(os.path.join(self.project_root, ".claude", "hooks"), exist_ok=True)
         with open(
@@ -126,8 +126,8 @@ TESTING=true python test.py
         with open(os.path.join(self.project_root, "claude_start.sh"), "w") as f:
             f.write("""#!/bin/bash
 # Claude startup script
-export DOMAIN="your-project.com"
-export USER="$USER"
+export DOMAIN="worldarchitect.ai"
+export USER="jleechan"
 """)
 
         # Test orchestration files with excluded directories
@@ -181,7 +181,7 @@ export USER="$USER"
                 if case["state"] != "empty":
                     for i in range(case["file_count"]):
                         with open(os.path.join(commands_dir, f"cmd_{i}.md"), "w") as f:
-                            f.write(f"# Command {i}\nContent with $PROJECT_ROOT/ references")
+                            f.write(f"# Command {i}\nContent with mvp_site/ references")
 
                 # Create staging directory
                 staging_dir = os.path.join(self.export_dir, "staging")
@@ -206,7 +206,7 @@ export USER="$USER"
                             with open(test_file, "r") as f:
                                 content = f.read()
                                 # Project-specific content should be filtered
-                                self.assertNotIn("$PROJECT_ROOT/", content)
+                                self.assertNotIn("mvp_site/", content)
                                 self.assertIn("$PROJECT_ROOT/", content)
 
     @unittest.skipIf(
@@ -352,11 +352,11 @@ export USER="$USER"
 
                 with open(test_hook, "w") as f:
                     if case["type"] == "shell":
-                        f.write("#!/bin/bash\necho 'test with $PROJECT_ROOT/ path'")
+                        f.write("#!/bin/bash\necho 'test with mvp_site/ path'")
                     elif case["type"] == "python":
-                        f.write("#!/usr/bin/env python3\nprint('test with $USER')")
+                        f.write("#!/usr/bin/env python3\nprint('test with jleechan')")
                     else:
-                        f.write("# Test markdown\nContent with your-project.com")
+                        f.write("# Test markdown\nContent with worldarchitect.ai")
 
                 if case["expect_executable"]:
                     os.chmod(test_hook, 0o755)
@@ -382,11 +382,11 @@ export USER="$USER"
     def test_content_filtering_matrix(self):
         """Test content filtering across different transformation patterns."""
         test_cases = [
-            {"input": "$PROJECT_ROOT/test.py", "expected": "$PROJECT_ROOT/test.py"},
-            {"input": "your-project.com", "expected": "your-project.com"},
-            {"input": "$USER", "expected": "$USER"},
-            {"input": "TESTING=true python", "expected": "TESTING=true python"},
-            {"input": "Your Project", "expected": "Your Project"},
+            {"input": "mvp_site/test.py", "expected": "$PROJECT_ROOT/test.py"},
+            {"input": "worldarchitect.ai", "expected": "your-project.com"},
+            {"input": "jleechan", "expected": "$USER"},
+            {"input": "TESTING=true vpython", "expected": "TESTING=true python"},
+            {"input": "WorldArchitect.AI", "expected": "Your Project"},
         ]
 
         for case in test_cases:
@@ -413,7 +413,7 @@ export USER="$USER"
 
         repo_root_test = os.path.join(self.temp_dir, "test_mobile_campaigns.py")
         tests_dir_test = os.path.join(tests_dir, "test_literal_paths.py")
-        literal_content = "your-project.com\njleechan\n"
+        literal_content = "worldarchitect.ai\njleechan\n"
 
         with open(repo_root_test, "w", encoding="utf-8") as f:
             f.write(literal_content)
@@ -661,10 +661,10 @@ class TestExportCommandsIntegration(unittest.TestCase):
                 os.path.join(self.project_root, ".claude/commands", cmd), "w"
             ) as f:
                 f.write(f"""# {cmd}
-Test command with $PROJECT_ROOT/ references
-User: $USER
-Domain: your-project.com
-TESTING=true python test.py
+Test command with mvp_site/ references
+User: jleechan
+Domain: worldarchitect.ai
+TESTING=true vpython test.py
 """)
 
         # Create test hooks
@@ -675,14 +675,14 @@ TESTING=true python test.py
                 if hook.endswith(".sh"):
                     f.write(f"""#!/bin/bash
 # {hook} - Essential Claude Code hook
-export PROJECT_ROOT="$PROJECT_ROOT/"
-export USER="$USER"
+export PROJECT_ROOT="mvp_site/"
+export USER="jleechan"
 """)
                 else:
                     f.write(f"""#!/usr/bin/env python3
 # {hook} - Essential Claude Code hook
-PROJECT_ROOT = "$PROJECT_ROOT/"
-USER = "$USER"
+PROJECT_ROOT = "mvp_site/"
+USER = "jleechan"
 """)
             os.chmod(hook_path, 0o755)
 
@@ -692,7 +692,7 @@ USER = "$USER"
             with open(os.path.join(self.project_root, script), "w") as f:
                 f.write(f"""#!/bin/bash
 # {script} infrastructure
-export DOMAIN="your-project.com"
+export DOMAIN="worldarchitect.ai"
 """)
 
         # Create orchestration files (some to exclude, some to keep)
@@ -780,9 +780,9 @@ export DOMAIN="your-project.com"
                         with open(os.path.join(commands_dir, cmd_file), "r") as f:
                             content = f.read()
                             # Project-specific content should be filtered
-                            self.assertNotIn("$PROJECT_ROOT/", content)
-                            self.assertNotIn("$USER", content)
-                            self.assertNotIn("your-project.com", content)
+                            self.assertNotIn("mvp_site/", content)
+                            self.assertNotIn("jleechan", content)
+                            self.assertNotIn("worldarchitect.ai", content)
                             # Should contain generic replacements
                             self.assertIn("$PROJECT_ROOT/", content)
                             self.assertIn("$USER", content)

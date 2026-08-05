@@ -2,16 +2,12 @@ name: Coverage Report
 
 # Cancel in-progress runs when new commits are pushed to same branch
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Run on main pushes to update coverage baseline and badge, and on all PRs
-# to show coverage delta and catch regressions before merge.
-#
-# The full test suite takes ~1.5 min (down from 47 min after the pytest
-# migration). It runs in parallel with test.yml so wall-clock impact is zero.
-# test.yml uses testmon (incremental) for speed; this workflow runs the full
-# suite for accurate project-wide coverage.
+# Run on main pushes to update coverage baseline and badge, and on manual
+# dispatch. PR coverage artifacts and reporting are handled by test.yml
+# (rev-ks6xy), preventing duplicate full-suite execution on PRs.
 #
 # NOTE: 'coverage.sh' was intentionally removed from the push path filter
 # (2026-07 CI trim audit). The job below no longer shells out to that script
@@ -24,11 +20,6 @@ concurrency:
 on:
   push:
     branches: [main]
-    paths:
-      - 'mvp_site/**/*.py'
-      - '.github/workflows/coverage.yml'
-  pull_request:
-    types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - 'mvp_site/**/*.py'
       - '.github/workflows/coverage.yml'

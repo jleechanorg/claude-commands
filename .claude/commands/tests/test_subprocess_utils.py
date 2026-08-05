@@ -70,7 +70,7 @@ class TestSanitizeLogContent(unittest.TestCase):
     def test_actual_jwt_tokens_are_redacted(self):
         """Real JWT tokens SHOULD be redacted."""
         # Real JWT example (expired test token)
-        jwt_token = "[REDACTED_JWT_TOKEN]"
+        jwt_token = "<TEST_JWT>"
         
         test_cases = [
             f"Authorization: Bearer {jwt_token}",
@@ -88,11 +88,11 @@ class TestSanitizeLogContent(unittest.TestCase):
     def test_api_keys_are_redacted(self):
         """API keys and secrets SHOULD be redacted."""
         test_cases = [
-            "api_key=[REDACTED_OPENAI_KEY]",
-            "GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]",
-            "Authorization: Bearer [REDACTED_OPENAI_KEY]",
-            "password=SuperSecretPassword123!@#$%^&*()",
-            "github_pat_11ABCDEFG1234567890abcdefghijklmnopqrstuvwxyz"
+            "api_key=<TEST_KEY>",
+            "GITHUB_TOKEN=<TEST_TOKEN>",
+            "Authorization: Bearer sk-proj-abcdefghijklmnopqrstuvwxyz123456789",
+            "password=<TEST_PASSWORD>",
+            "<TEST_GITHUB_PAT>"
         ]
         
         for content in test_cases:
@@ -104,7 +104,7 @@ class TestSanitizeLogContent(unittest.TestCase):
         """Only sensitive parts should be redacted in mixed content."""
         content = """
         Connecting to api.github.com using version 2.1.0
-        Authentication token: [REDACTED_JWT_TOKEN]
+        Authentication token: <TEST_JWT>
         Loading module utils.auth.validator
         """
         
@@ -117,7 +117,7 @@ class TestSanitizeLogContent(unittest.TestCase):
         
         # JWT should be redacted
         self.assertIn("[REDACTED_CREDENTIAL]", result)
-        self.assertNotIn("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", result)
+        self.assertNotIn("<TEST_JWT>", result)
 
 
 class TestRunCmdSafe(unittest.TestCase):

@@ -10,7 +10,7 @@ name = "jleechanorg-pr-automation"
 version = "0.2.179"
 description = "GitHub PR automation system with safety limits and actionable counting"
 authors = [
-    { name = "$USER", email = "jlee@$USER.org" },
+    { name = "jleechan", email = "jlee@jleechan.org" },
 ]
 readme = "README.md"
 license = "MIT"
@@ -55,9 +55,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/$GITHUB_REPOSITORY"
-Repository = "https://github.com/$GITHUB_REPOSITORY"
-Issues = "https://github.com/$GITHUB_REPOSITORY/issues"
+Homepage = "https://github.com/jleechanorg/worldarchitect.ai"
+Repository = "https://github.com/jleechanorg/worldarchitect.ai"
+Issues = "https://github.com/jleechanorg/worldarchitect.ai/issues"
 
 [project.scripts]
 jleechanorg-pr-monitor = "jleechanorg_pr_automation.jleechanorg_pr_monitor:main"

@@ -56,7 +56,7 @@ scripts/check_design_retro_publishability.sh <doc1.md> [doc2.md ...]
 
 | # | Check | What it does | Exit signal |
 |---|-------|---------------|--------------|
-| 3 | **Redaction sweep** | Greps every doc for machine-path and token-shape patterns (`/Users/<name>`, `ghp_`/`gho_`/`github_pat_`, `x-access-token`, `serviceAccountKey.json`, AWS/`sk-` key shapes). Fixed pattern list, not a semantic classifier. | FAIL line + matched line numbers |
+| 3 | **Redaction sweep** | Greps every doc for machine-path and token-shape patterns (`/Users/<name>`, `ghp` / `gho` / `github_pat`, `x-access-token`, `serviceAccountKey.json`, AWS / `sk-` key shapes). Fixed pattern list, not a semantic classifier. | FAIL line + matched line numbers |
 | 5 | **Copyable command syntax validity** | Extracts every fenced ` ```bash `/` ```sh `/` ```shell ` block and runs `bash -n` (syntax-only, no execution) | FAIL line + parser error |
 | 6 | **Mechanical hygiene** | `git diff --check <base> -- <files>` — trailing whitespace, conflict markers | FAIL line + diff |
 

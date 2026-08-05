@@ -1,6 +1,6 @@
 ---
 name: cmux-goal
-description: Set Claude Code's builtin /goal for yourself (the running session) via the cmux socket CLI — types the /goal command into your own composer so the Stop hook + purple UI indicator activate. Use when the user asks you to set your own goal, when /ironclad step 3 needs the builtin set, or when a mission should be Stop-hook-enforced without asking the user to type it.
+description: Set the running session's goal yourself. Prefer the cmux composer so the builtin Stop hook and purple indicator activate; recover the active socket automatically, then fall back to a runtime-native goal tool or a durable goal bead. Never ask the user to type or submit it.
 ---
 
 ## ⚠️ Submit Discipline (MANDATORY — read this before every cmux steer)
@@ -113,17 +113,47 @@ cmux-touching skill.
    - `/history <goal keywords>` — prior attempts, their failure modes, and what's already in flight.
    This applies EVERY time `/cmux-goal` is invoked, even standalone with no other context — the whole point is that invoking this skill alone is enough to ground the goal in real prior work. Do not skip this because you believe you already "have context" from the current conversation; other sessions/machines may hold relevant state this one doesn't.
 
-1. **Confirm cmux hosting:** `cmux identify` — must return a `caller` block with `surface_ref`. If the command is missing or there's no caller block, you are not in cmux: give the user the exact `/goal ...` line to paste instead (do NOT claim it's impossible — that was the original mistake). This is also the expected outcome on machines with no `cmux` binary at all (e.g. jeff-ubuntu as of 2026-07-21) — the skill still exists there so `/cmux-goal` triggers the same Step 0 context pass before falling back to the paste-this-line output.
-2. **Compose the condition.** ALWAYS invoke the `ironclad` skill to harden exit criteria — binary, executable, externally anchored (prefer an EXISTING checker/script/gate as the anchor when one exists), anti-gaming, iterate-until; the bead carries the full criteria superset — the builtin gets the short literal condition. Fold in anything concrete Step 0 surfaced (prior traps, measured contracts, in-flight work on other machines). Keep it short (the UI truncates); avoid shell-hostile characters; single-quote it.
+1. **Resolve the current session yourself; never delegate submission to the user.** First run `cmux identify` with the inherited environment. If it has no `caller.surface_ref`, retry with `CMUX_SOCKET_PATH` explicitly preserved. Then perform bounded socket discovery: inspect at most the first 8 existing `cmux*.sock` candidates under `/tmp` and `/private/tmp`, call `CMUX_SOCKET_PATH="$candidate" cmux identify` for each, and accept only a response with `caller.surface_ref`. Prefer a candidate whose caller environment or returned workspace matches the current session; never use merely the globally focused surface. Stop after one bounded pass rather than looping.
+   - Save both the successful socket path and caller `surface_ref`; use that same explicit `CMUX_SOCKET_PATH` for every `send`, `send-key`, and verification call.
+   - If no caller is found, inspect the current runtime's available tools. If a native `create_goal`/goal-setting tool exists, call it yourself and verify with the corresponding goal-status tool.
+   - If neither cmux nor a native goal tool is available, persist the hardened criteria as an in-progress goal bead yourself, continue the work, and report the exact limitation. **Never tell the user to copy, paste, type, press Enter, or otherwise set the goal for you.**
+2. **Compose the condition — two artifacts, not one.** ALWAYS invoke the
+   `ironclad` skill to harden exit criteria — binary, executable, externally
+   anchored (prefer an EXISTING checker/script/gate as the anchor when one
+   exists), anti-gaming, iterate-until. Produce BOTH:
+   - **The full northstar** (mandatory, no exceptions): a **minimum 200-word**
+     detailed exit-criteria statement, drafted BY ironclad FROM THE CURRENT
+     CONVERSATION'S OWN CONTEXT — every distinct workstream/PR/file-scope the
+     user actually asked for in this conversation, every constraint they
+     stated (timebox, scope limits, "don't touch X", explicit approvals
+     still required), every trap/prior-failure Step 0 surfaced, and an
+     **explicit LLM-drift warning section** naming the concrete ways this
+     exact session could drift (e.g. "declaring success on partial scope,"
+     "silently dropping one of the N requested PRs/files," "treating a
+     paraphrase as the literal approval phrase," "polling CI forever instead
+     of applying the local-proof policy," "wandering into unrelated
+     cleanup"). Persist this full northstar as the resumption bead's
+     description/notes (or a linked STATE.md) — this is the artifact that
+     actually prevents drift across a multi-hour session, and it is NOT
+     optional scaffolding; a goal set without it is under-specified by this
+     skill's own standard.
+   - **The short literal condition** sent to the `/goal` builtin — the UI
+     truncates, so this is necessarily a compressed pointer, not a
+     substitute for the full northstar. It must still name every distinct
+     workstream (don't collapse "PR 401 + PR 403 + architecture audit" into
+     a single vague phrase that could be satisfied by finishing only one).
+   Fold in anything concrete Step 0 surfaced (prior traps, measured
+   contracts, in-flight work on other machines). Avoid shell-hostile
+   characters in the short condition; single-quote it.
    - **CI-check criteria must not silently mean "poll forever."** If any criterion depends on a remote CI system ("zero failing checks", "N-green", "gate passes"), state in the condition (or the bead) that a slow/backlogged/flaky CI run does NOT block progress by itself: per `~/.claude/CLAUDE.md` § "Slow/backlogged CI runners — run locally + post proof, don't just wait", when a check is stuck 10min+ past its normal runtime, run the equivalent test locally instead of re-polling, and treat a real local pass (with command + output + timestamp + git SHA, explicitly labeled "local run — CI still pending") as satisfying that sub-criterion until CI catches up. Repo-specific local-run invocation contracts live in `~/.claude/skills/testing-infrastructure/SKILL.md` — read it for the exact command shape (don't guess). This prevents the goal from trapping the session in an unbounded retry/poll loop against a shared, externally-contended resource (see `~/.claude/skills/ironclad/SKILL.md` § "Verify the structural precondition BEFORE the first grind" — CI capacity is exactly this class of external producer/blocker).
-3. **Type + submit into your own composer:**
+3. **Type + submit into your own composer using the resolved caller and socket:**
    ```bash
-   REF=$(cmux identify | python3 -c "import json,sys; print(json.load(sys.stdin)['caller']['surface_ref'])")
-   cmux send --surface "$REF" '/goal <condition text>'
+   REF=$(CMUX_SOCKET_PATH="$GOAL_SOCKET" cmux identify | python3 -c "import json,sys; print(json.load(sys.stdin)['caller']['surface_ref'])")
+   CMUX_SOCKET_PATH="$GOAL_SOCKET" cmux send --surface "$REF" '/goal <condition text>'
    sleep 1
-   cmux send-key --surface "$REF" enter
+   CMUX_SOCKET_PATH="$GOAL_SOCKET" cmux send-key --surface "$REF" enter
    ```
-4. **Verify end-state, not tool-layer:** the next turn must contain the harness confirmation ("Goal set: ..." / "A session-scoped Stop hook is now active"). `OK surface:N` from cmux is only the tool layer. If no confirmation arrives, check whether another prompt was mid-flight (your text may have appended to it) and retry once.
+4. **Verify end-state, not tool-layer:** capture the same caller surface through the same socket. The next turn must contain the harness confirmation ("Goal set: ..." / "A session-scoped Stop hook is now active") or an active goal indicator. `OK surface:N` from cmux is only the tool layer. If no confirmation arrives, check whether another prompt was mid-flight (your text may have appended to it) and retry submission once. After that bounded retry, use the native-goal or goal-bead fallback from Step 1 yourself.
 5. Acknowledge briefly and keep working — the goal-exit-criteria UserPromptSubmit hook (if installed) auto-injects ironclad hardening on top.
 
 ## Cautions

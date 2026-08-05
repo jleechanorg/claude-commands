@@ -1,0 +1,89 @@
+Skip to content
+Navigation Menu
+jleechanorg
+worldarchitect.ai
+
+Type / to search
+Code
+Issues
+5
+Pull requests
+53
+Actions
+Projects
+Security
+Insights
+Settings
+fix: Universal command composition hook with JSON stdin parsing and comprehensive tests #1290
+ Open
+jleechan2015 wants to merge 6 commits into main from compose-test  
++413 −15 
+ Conversation 29
+ Commits 6
+ Checks 3
+ Files changed 7
+Conversation
+jleechan2015
+jleechan2015 commented 35 minutes ago • 
+Summary
+This PR fixes the compose-commands.sh hook to properly read user input from Claude Code's UserPromptSubmit hook interface, which passes data via stdin as JSON (not command-line arguments).
+
+Problem
+The hook was trying to read from $1 (CLI argument) instead of stdin
+Claude Code passes hook input as JSON via stdin with a prompt field
+Hook was executing but receiving empty input
+Solution
+Updated compose-commands.sh to read JSON from stdin
+Extract the prompt field using jq (with sed fallback)
+Process slash commands from the actual user input
+Testing
+Implemented full red-green-refactor TDD approach
+Created 8 comprehensive test cases covering all scenarios
+Added test runner for all Claude Code hooks
+Integrated hook tests into main run_tests.sh
+Features
+✅ Detects multiple slash commands in user messages
+✅ Composes them into meta-prompts for Claude's NLP
+✅ Single commands pass through unchanged
+✅ Handles empty/missing prompt fields gracefully
+✅ Works with 3+ commands
+
+Example
+When user types: /investigate /paranoid /diligent check the system
+
+Hook transforms to:
+
+🔍 Detected slash commands:/investigate /paranoid /diligent
+
+Use these approaches in combination:/investigate /paranoid /diligent. Apply this to: check the system
+
+📋 Automatically tell the user: "I detected these commands:/investigate /paranoid /diligent and will combine them intelligently."
+Test Results
+Testing compose-commands.sh hook...
+=================================
+✓ Single command passes through
+✓ Multiple commands detected  
+✓ Composition instruction added
+✓ No commands passes through
+✓ Complex text preserved
+✓ Empty prompt handled
+✓ Missing prompt field
+✓ Three+ commands composed
+=================================
+Tests run: 8
+Tests passed: 8
+Tests failed: 0
+ALL TESTS PASSED
+🤖 Generated with Claude Code
+
+Summary by CodeRabbit
+New Features
+
+Enhanced prompt handling: automatically detects and combines multiple slash commands, cleans input text, and provides clear feedback to users.
+Improved reliability with timestamped logging of inputs/outputs.
+Universal prompt submission now routes through a command composer for consistent behavior.
+Added post-commit auto-sync and a universal stop hook to display git status.
+Introduced safeguards to prevent recursive hook execution and added self-reflection checks.
+Tests
+
+Added comprehensive hook test suites and a unified test runner; integrated into the main test script with pass/fail reporting.

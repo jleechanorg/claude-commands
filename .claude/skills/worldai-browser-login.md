@@ -194,8 +194,8 @@ The API endpoint requires Firebase authentication.
 
 **Solution**: Ensure you've completed the OAuth flow and the session is active. Check the header for your email address.
 
-## Related Skills
+## Related skills
 
-- [browser-testing-ocr-validation.md](browser-testing-ocr-validation.md) - OCR validation for browser tests
-- [chrome-superpowers-reference.md](chrome-superpowers-reference.md) - Chrome Superpowers MCP reference
-- [playwright-mcp-manual-interaction.md](playwright-mcp-manual-interaction.md) - Playwright MCP manual interaction
+- `browser-testing-ocr-validation` — OCR validation for browser tests
+- `chrome-superpowers-reference` — browser tooling reference
+- `playwright-mcp-manual-interaction` — Playwright manual interaction

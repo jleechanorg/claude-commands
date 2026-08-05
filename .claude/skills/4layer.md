@@ -34,7 +34,7 @@ Run tests in this order and stop at the first layer that conclusively reproduces
 3. MCP/HTTP API tests (`testing_mcp/`)
 
 ```bash
-./vpython testing_mcp/[domain]/test_[feature]_real.py
+PYTHONPATH="$(pwd):$(pwd)/mvp_site" python3 testing_mcp/[domain]/test_[feature]_real.py
 ```
 
 4. Browser tests (`testing_ui/`)

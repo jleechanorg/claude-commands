@@ -1,40 +1,45 @@
 ---
 name: nextsteps
-description: "Default: update beads and ~/roadmap. Use --full for full situational assessment with memory sync, learnings, nextsteps doc, and GitHub issues."
+description: "Default: update beads and ~/roadmap (parallel). Use --full for full situational assessment with memory sync, learnings, nextsteps doc, and GitHub issues."
 ---
 
 # /nextsteps — Beads & Roadmap Update
 
 ## Default mode (no flags)
 
-**Gather context, then make updates** — beads and `~/roadmap` only.
+Gather context, then **write updates** — beads and `~/roadmap`. Run in parallel; agent/subagent tool use is explicitly allowed and encouraged.
 
-### 1. Gather context (parallel)
+### Step 1 — Gather context (parallel)
+
+Run all of these concurrently:
 
 - `git log --oneline -10` — recent commits
 - `br list --status open --limit 0` — open beads
-- `ls ~/roadmap/` and read `~/roadmap/README.md` recent section
-- Use any user-provided line after `/nextsteps` as extra context.
+- `ls ~/roadmap/` — roadmap files
+- Read `~/roadmap/README.md` recent activity section (if it exists)
+- Use any user-provided text after `/nextsteps` as extra context.
 
-### 2. Update beads
+### Step 2 — Update beads (parallel, use Agent tool)
 
-- Match recent commits to open beads; close or update status.
-- Note gaps → create new beads with `br create`.
-  ```bash
-  br create "<title>" --type task --priority 2
-  br update <id> --status <new_status>
-  ```
+Match recent commits to open beads:
 
-### 3. Update `~/roadmap`
+- **Close or update** resolved beads: `br update <id> --status done`
+- **Create** new beads for gaps not yet tracked: `br create "<title>" --type task --priority 2`
 
-- Append session bullet to **`~/roadmap/README.md`** under `## Recent activity` (create section if absent).
-- Create `mkdir -p "$HOME/roadmap"` first if the directory may not exist.
-- Keep appends concise — one or two bullets per session.
+Run bead updates in parallel via subagents when multiple updates are needed.
 
-### 4. Report
+### Step 3 — Update `~/roadmap` (parallel with beads)
+
+Run concurrently with Step 2:
+
+- `mkdir -p "$HOME/roadmap"` first
+- Append a dated session bullet to **`~/roadmap/README.md`** under `## Recent activity` (create file/section if absent).
+- Format: `- YYYY-MM-DD: <one-line summary of what was done>`
+
+### Step 4 — Report
 
 - Beads updated/created (IDs and titles)
-- `~/roadmap/README.md` changes made
+- `~/roadmap/README.md` path and line appended
 - Recommended next actions
 
 ---

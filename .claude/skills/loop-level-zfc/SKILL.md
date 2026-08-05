@@ -7,7 +7,7 @@ description: Use when supervising the level-up ZFC migration loop in this repo, 
 
 ## Overview
 
-This is the ta[REDACTED_OPENAI_KEY] evolve loop for the level-up ZFC migration in this repo.
+This is the task-specific evolve loop for the level-up ZFC migration in this repo.
 It is not a generic observer. It must drive the cleanup-first roadmap, steer AO workers, record interventions, and keep the PR stack aligned with the canonical design.
 Run this loop on a 30-minute cadence by default unless the roadmap or operator explicitly requires a shorter interval.
 When `#6420` or `#6404` is active and not yet demonstrably on-track, treat them as fast-watch lanes and re-check their worker tmux panes and PR state every 5 minutes until they are either truly on-track or explicitly escalated out of AO.
@@ -89,7 +89,7 @@ For this project, parallel support work is allowed when it is independent and ma
 Finish bars by lane type:
 - production merge lane: true `/green` plus draft-phase quality gates, or explicit justified-wait when only non-branch-owned blockers remain
 - production support PR: green enough to unblock the active merge lane, then explicit stop/park
-- non-production PR: CodeRabbit approval plus the repo-appropriate evidence bar
+- non-production PR: the repo-appropriate evidence bar; CodeRabbit is advisory
 - planning/support artifact lane: promised artifact or PR/body/note delivered, then stop
 
 Execution order within a production lane:
@@ -197,7 +197,7 @@ For each related PR:
 - does current-head evidence actually exist as a posted gist/comment/video, not just as local temp files?
 - do current-head issue comments show fresh `/smoke`, `/er`, or bot-reported failures that still need action?
 - what is the exact next step for this PR?
-- what is the shortest path from the current state to either true `/green` plus draft-phase quality gates, or for non-production lanes, CodeRabbit-approved with the proper evidence bar?
+- what is the shortest path from the current state to true `/green` plus the applicable evidence bar?
 
 For each active worker:
 - is the worker truly executing or just sitting in repeated `Continue working...` prompts?
@@ -303,7 +303,7 @@ Special case: `#6420` / `#6404` AO fallback
 - `#6420` and `#6404` are not allowed to sit in repeated nominal-ownership states without real execution
 - if either PR still lacks a truly on-track AO worker after one full loop cycle of direct steering or respawn, the next cycle must stop waiting on AO quality
 - for `#6420`, spawn parallel subagents to directly drive the branch to true `/green`
-- for `#6404`, spawn parallel subagents to directly drive the branch to the non-production finish bar: current-head CI green, CodeRabbit approved, proper evidence
+- for `#6404`, spawn parallel subagents to drive the branch to the non-production finish bar: current-head CI green and proper evidence
 - record the failed AO attempt, the specific reason AO was judged insufficient, and the subagent takeover decision in both roadmap logs and the cycle bead
 
 Special case: long-lived upstream claims
@@ -384,7 +384,7 @@ Roadmap execution split for the current queue:
 - every worker instruction must include its finish bar explicitly:
   - production lane: true `/green` plus draft-phase quality gates if branch-owned work remains, otherwise explicit justified-wait
   - support PR: keep going until the PR is actually unblocked or proven external-only
-  - non-production PR: CodeRabbit approval and required evidence state
+  - non-production PR: required evidence state; CodeRabbit is advisory
   - planning lane: promised artifact, PR body update, or PR note delivered
 - if the same G6/G7 gap is affecting multiple ZFC PRs, repurpose or spawn one worker to own that shared gate problem rather than letting every PR stall on the same missing automation/evidence condition
 - if a worker reports an upstream-owned blocker, the loop must either:
@@ -499,7 +499,7 @@ Each cycle record must also include:
 - a worker-by-worker evaluation grounded in tmux conversation plus sparse codex/Claude history
 - a PR-by-PR status block for all active or roadmap-related open PRs
 - a PR-by-PR next-step block
-- a PR-by-PR finish path to either true `/green` plus draft-phase quality gates, or for non-production lanes, CodeRabbit-approved plus proper evidence
+- a PR-by-PR finish path to true `/green` plus the applicable draft-phase evidence
 - the chosen next work item
 - whether the next state is `execute` or `wait`
 - the owning worker/session if any

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PreToolUse hook: prevent `*` from breaking GitHub URLs in Slack messages.
-# Triggered by SOUL.md COMMIT no-trailing-asteri[REDACTED_OPENAI_KEY]
+# Triggered by SOUL.md COMMIT no-trailing-asterisk-pr-urls.
 #
 # Behavior: when a tool call is `mcp__slack__conversations_add_message` with a
 # text payload containing `https://github.com/...` adjacent to `*`, strip
@@ -40,7 +40,7 @@ print(text, end='')
 ")
 
 if [ "$CLEANED" != "$TEXT" ]; then
-  echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"permissionDecisionReason\":\"stripped trailing * from PR URL per SOUL.md no-trailing-asteri[REDACTED_OPENAI_KEY]\"},\"updated_input\":{\"text\":\"$CLEANED\"}}"
+  echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"permissionDecisionReason\":\"stripped trailing * from PR URL per SOUL.md no-trailing-asterisk-pr-urls\"},\"updated_input\":{\"text\":\"$CLEANED\"}}"
 else
   exit 0
 fi

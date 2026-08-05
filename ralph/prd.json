@@ -45,7 +45,7 @@
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Scope: $PROJECT_ROOT/frontend_v1/index.html, $PROJECT_ROOT/streaming_orchestrator.py, related tests only"
+      "notes": "Scope: mvp_site/frontend_v1/index.html, mvp_site/streaming_orchestrator.py, related tests only"
     },
     {
       "id": "R4-CI-VERIFY",
