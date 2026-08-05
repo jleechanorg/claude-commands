@@ -747,7 +747,7 @@ automation-safety-cli check-pr 123 --repo ${PROJECT_DOMAIN:-your-project}.com
 ### Required
 
 ```bash
-export GITHUB_TOKEN="[REDACTED_GITHUB_TOKEN]"
+export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
 ```
 
 ### Optional

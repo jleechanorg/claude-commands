@@ -14,7 +14,7 @@ These guardrails are derived from recent bug classes and regressions in the Worl
 
 - **Opaque handles are not semantic contracts:** Choice IDs and other transport handles are for lookup, persistence, and migration compatibility only. Legacy IDs such as `level_up_now`, `finish_level_up_return_to_game`, and `custom_action` may remain exact compatibility handles, but new code MUST NOT infer domain, modal ownership, stage, allowed/scrubbed status, or execution behavior from ID names, prefixes, labels, CSS classes, or enum strings. Resolve a submitted handle against the persisted structured choice, then use explicit schema-owned fields such as `intent.domain`, `intent.operation`, or `execution.freeze_time`. If those fields are missing, fix the model prompt/schema or fail closed; do not expand allowlists as the primary repair.
 
-- **Playwright UI Testing & Pre-Push Validation:** When introducing any new browser, selenium, or Playwright tests for Gate 6 evidence:
+- **Playwright UI Testing & Pre-Push Validation:** When introducing browser, Selenium, or Playwright tests for draft-phase evidence:
   1. *Pytest Integration:* Never use standalone `.py` scripts with `sys.exit()`. Always wrap browser checks in standard pytest classes/methods (`test_*`).
   2. *Dynamic Path Resolution:* Always resolve local files using absolute paths via `os.path.dirname(os.path.abspath(__file__))`. Never use relative `../` or `file://./` URLs which fail on CI runners.
   3. *Error visibility and skip paths:* Import-skip when Playwright is unavailable using `pytest.importorskip("playwright.sync_api")`. Do not use broad exception suppressions that hide actual navigation timeouts or setup errors.

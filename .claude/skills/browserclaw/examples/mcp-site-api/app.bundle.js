@@ -3418,7 +3418,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyText = getFormattedStoryText();
     const storyTitle =
       document.getElementById('game-title').innerText ||
-      'My Your Project Story';
+      'My WorldArchitect.AI Story';
     if (!storyText) {
       alert('The story is empty. Nothing to share.');
       return;
@@ -3433,7 +3433,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Truncate and add continuation message
       shareText =
         storyText.substring(0, maxShareSize) +
-        '...\n\n[Story continues - full version available at Your Project]';
+        '...\n\n[Story continues - full version available at WorldArchitect.AI]';
 
       // Ask user if they want to share truncated version
       const userChoice = confirm(

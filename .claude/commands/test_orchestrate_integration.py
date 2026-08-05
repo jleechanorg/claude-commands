@@ -225,11 +225,11 @@ IMPORTANT: This is a test - work quickly and efficiently."""
         # Extract agent name from output
         lines = output.split("\n")
         for line in lines:
-            if "Agent:" in line and "ta[REDACTED_OPENAI_KEY]" in line:
+            if "Agent:" in line and "task-agent-" in line:
                 # Extract agent name
                 parts = line.split()
                 for part in parts:
-                    if "ta[REDACTED_OPENAI_KEY]" in part:
+                    if "task-agent-" in part:
                         self.agent_name = part
                         break
 

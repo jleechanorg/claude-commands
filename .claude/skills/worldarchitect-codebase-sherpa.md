@@ -35,7 +35,7 @@ Equip Claude with a quick-start orientation for the WorldArchitect.ai repository
 
 ## Frequently referenced commands
 - Tests: `./run_tests.sh`, `./run_tests.sh --integration`, `./run_tests_with_coverage.sh`
-- Linting: `./run_lint.sh`, `pre-commit run -a`
+- Linting: run hooks/formatters only on files changed in the task; never use whole-repo `pre-commit run -a` during feature work.
 - UI checks: `./run_ui_tests.sh`
 - Deployment helpers: `./deploy.sh`, `./deploy_mcp.sh`
 - Oracle CLI: `source scripts/oracle_helpers.sh` then use helpers like `oracle_arch_preview` (dry-run bundle), `oracle_arch` (architecture review), `oracle_ai_debug` (AI pipeline bug with optional report path), `oracle_diff_review` (reviews `git diff`), `oracle_ui_debug` (frontend triage). Playbook at `docs/oracle_playbook.md`.

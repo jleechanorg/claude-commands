@@ -40,7 +40,7 @@ class TestSecurityValidation(unittest.TestCase):
 
     def test_validate_agent_name_valid_names(self):
         """Test that valid agent names are accepted"""
-        valid_names = ["ta[REDACTED_OPENAI_KEY]", "task_agent_test_2", "agent123", "test-agent", "a", "A1B2C3"]
+        valid_names = ["task-agent-test-1", "task_agent_test_2", "agent123", "test-agent", "a", "A1B2C3"]
 
         for name in valid_names:
             with self.subTest(name=name):
@@ -130,7 +130,7 @@ class TestSecurityValidation(unittest.TestCase):
 
     def test_get_original_command_injection_content_protection(self):
         """Test protection against command injection in file content"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-test"
         workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
 
@@ -165,7 +165,7 @@ class TestSecurityValidation(unittest.TestCase):
 
     def test_get_original_command_safe_content_allowed(self):
         """Test that safe command content is allowed through"""
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-safe"
         workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
 
@@ -181,7 +181,7 @@ class TestSecurityValidation(unittest.TestCase):
     def test_get_original_command_absolute_path_validation(self):
         """Test that absolute path validation works correctly"""
         # This test ensures the path traversal protection at the filesystem level
-        agent_name = "ta[REDACTED_OPENAI_KEY]"
+        agent_name = "task-agent-valid"
         workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
 
@@ -197,8 +197,8 @@ class TestSecurityValidation(unittest.TestCase):
     def test_fallback_commands_are_safe(self):
         """Test that fallback commands are always safe"""
         test_cases = [
-            ("ta[REDACTED_OPENAI_KEY]", "/converge Resume previous convergence task"),
-            ("ta[REDACTED_OPENAI_KEY]", "/orch Resume task execution"),
+            ("task-agent-converge-test", "/converge Resume previous convergence task"),
+            ("task-agent-regular", "/orch Resume task execution"),
             ("converge-agent-123", "/converge Resume previous convergence task"),
             ("regular-agent-456", "/orch Resume task execution"),
         ]

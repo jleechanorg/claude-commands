@@ -1,0 +1,6 @@
+#!/bin/bash
+# /commentreply command - invokes commentreply.md directly
+# No Python needed - Claude reads the .md file and executes
+
+echo "Running /commentreply - Claude will read commentreply.md for instructions"
+echo "This command works directly through the .md file - no Python middleman!"

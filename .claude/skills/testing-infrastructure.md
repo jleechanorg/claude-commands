@@ -115,10 +115,8 @@ print(f"Debug: {result}")
 
 ### `testing_mcp` suites
 - Treat many `testing_mcp/*.py` files as **script entrypoints**, not pytest-collected test modules.
-- Prefer direct execution:
-  - `cd testing_mcp && ../vpython test_<name>.py --server http://127.0.0.1:8001`
-  - `cd testing_mcp && ../vpython test_<name>.py --start-local`
-  - Schema scripts: `./vpython testing_mcp/schema/test_schema_<name>.py`
+- Prefer direct execution from repository root with `python3` and explicit
+  `PYTHONPATH`, exactly as specified by `testing_mcp/CLAUDE.md`.
 - Avoid `pytest testing_mcp/...` for script-style files that parse CLI args or expect script runtime setup.
 
 ### `testing_ui` browser auth bypass

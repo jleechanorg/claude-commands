@@ -98,7 +98,7 @@ def resolve_minimax_api_key() -> str:
 
     Only considers sources that are explicitly MiniMax keys. Anthropic API keys
     (ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN) are intentionally excluded: the
-    MINIMAX_KEY_PATTERN matches Anthropic's [REDACTED_OPENAI_KEY] format, which would cause
+    MINIMAX_KEY_PATTERN matches Anthropic's sk-ant-... format, which would cause
     Anthropic credentials to be sent to MiniMax's API endpoint.
     """
     candidates = [
@@ -135,7 +135,7 @@ def resolve_wafer_api_key() -> str:
 
     Only considers sources that are explicitly Wafer keys. Anthropic API keys
     (ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN) are intentionally excluded: the
-    WAFER_KEY_PATTERN would match Anthropic's [REDACTED_OPENAI_KEY] format, which would
+    WAFER_KEY_PATTERN would match Anthropic's sk-ant-... format, which would
     cause Anthropic credentials to be sent to Wafer's API endpoint.
     """
     candidates = [
@@ -810,8 +810,8 @@ class TaskDispatcher:
                 return set()
 
             sessions = result.stdout.strip().split("\n")
-            # Get all ta[REDACTED_OPENAI_KEY]* sessions
-            all_agent_sessions = {s for s in sessions if s.startswith("ta[REDACTED_OPENAI_KEY]")}
+            # Get all task-agent-* sessions
+            all_agent_sessions = {s for s in sessions if s.startswith("task-agent-")}
 
             # Filter to only actively working agents (not idle)
             active_agents = set()

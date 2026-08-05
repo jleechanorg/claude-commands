@@ -63,10 +63,13 @@ Key settings (uncomment to activate):
 
 ```yaml
 issue-prefix: "REV"      # prefix for all issue IDs
-sync-branch: "beads-sync" # git branch for beads commits
 # no-db: false           # keep false to use SQLite (recommended)
 # no-daemon: false       # keep false to use daemon for speed
 ```
+
+Feature worktrees use `br --no-auto-flush`; canonical JSONL export happens on
+`main` through `.github/workflows/beads-flush-on-main.yml`. The retired
+`beads-sync` branch is not an active target.
 
 ## Daemon Management
 

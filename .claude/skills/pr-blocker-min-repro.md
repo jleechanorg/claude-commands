@@ -45,7 +45,7 @@ jq -r 'select(.labels // [] | index("pr-blocker")) | [.id, .title, .status, .pri
 
 ### 3) MCP / HTTP Local Server
 ```bash
-./vpython testing_mcp/faction/test_faction_settings_real.py \
+PYTHONPATH="$(pwd):$(pwd)/mvp_site" python3 testing_mcp/faction/test_faction_settings_real.py \
   --byok-providers gemini,openrouter,cerebras \
   --byok-parallel-workers 1
 ```
@@ -81,4 +81,3 @@ Use this pattern in bead notes:
 - `Classification:` backend, mcp, ui, or external-provider.
 - `Evidence:` absolute path(s) + key log line(s).
 - `Decision:` keep open, close, or downgrade priority.
-

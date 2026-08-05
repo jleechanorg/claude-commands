@@ -31,7 +31,7 @@ externals, that is `/end2end-testing` (Layer 2), not `/llm-testing`.
 
 | Layer | Directory | Runner | What it proves |
 |-------|-----------|--------|----------------|
-| **3. MCP API** | `testing_mcp/` | `vpython testing_mcp/<domain>/test_*.py` (**direct, NOT pytest**) | Real server + real LLM over the MCP/HTTP API; game-state, rewards, level-up, routing |
+| **3. MCP API** | `testing_mcp/` | `python3 testing_mcp/<domain>/test_*.py` with explicit `PYTHONPATH` (**direct, NOT pytest**) | Real server + real LLM over the MCP/HTTP API; game-state, rewards, level-up, routing |
 | **5. Browser/UI** | `testing_ui/` | `python3 $PROJECT_ROOT/main.py testui` with `TESTING_AUTH_BYPASS=true` | Real browser + real server + real LLM; user-visible/interactive behavior |
 
 `testing_mcp/` tests subclass `MCPTestBase` (`testing_mcp/lib/base_test.py`) which auto-starts a
@@ -43,21 +43,13 @@ real local server on the worktree port and health-checks before running.
 export TESTING_AUTH_BYPASS=true
 export GOOGLE_APPLICATION_CREDENTIALS=$HOME/serviceAccountKey.json
 # DO NOT set any mock flag (see "Core principle" above)
-# DO NOT set AGY_PROVIDER_ENABLED=false by habit (see "AGY is the cost-saving default" below)
+# Do not set AGY_PROVIDER_ENABLED=false; testing_mcp/CLAUDE.md owns provider policy.
 ```
 
-- **AGY is the cost-saving default real-LLM provider.** Since PR #7971 (2026-06-29,
-  `008c55aaaa`), `is_agy_provider_mode()` (`$PROJECT_ROOT/llm_providers/provider_gateway.py`)
-  makes the `agy` CLI (flat-rate Google Antigravity backend) the default LLM for
-  local/test real-LLM runs — precedence `explicit opt-out > WORLDAI_PROD >
-  GAE_ENV=standard > default-on > opt-in`. **Do not pass `AGY_PROVIDER_ENABLED=false`
-  reflexively** — there are exactly TWO narrow reasons to opt out: (1) validating the
-  production Gemini-SDK streaming/tool-calling path, or (2) a flow that depends on strict
-  JSON-mode output and hits agy's known JSON-reliability gap (agy lists "JSON-only response
-  grammar" as a non-goal — forced via prompt preamble only; the worldai-claw RNW harness
-  saw agy return invalid gameplay JSON killing every stream, 2026-07-07). Check whether your
-  flow parses strict JSON before assuming this applies. If you do opt out, state the reason
-  in the evidence bundle rather than opting out silently.
+- **AGY is the required real-LLM provider for this harness.** Since PR #7971,
+  `is_agy_provider_mode()` selects the `agy` CLI for local real-LLM runs.
+  `testing_mcp/CLAUDE.md` is the single source of truth: do not set
+  `AGY_PROVIDER_ENABLED=false`.
   The "agy needs interactive TTY auth" belief is stale — `$PROJECT_ROOT/install.sh` provisions a
   persisted OAuth token under `AGY_RUNTIME_HOME` (default `/tmp/agy-clean-home-v1`) and
   writes `$AGY_RUNTIME_HOME/worldai-agy.env`; source that file before the run. The shared
@@ -71,18 +63,10 @@ export GOOGLE_APPLICATION_CREDENTIALS=$HOME/serviceAccountKey.json
 - **Streaming is PRIMARY**: any test exercising an LLM response must use streaming mode; evidence
   must show `/interaction/stream` captures + the streaming done payload (see
   `.claude/skills/streaming-evidence-standards`). **This transport requirement is unaffected by
-  provider choice** — every real-LLM test still hits `/interaction/stream`, whether agy or the
-  Gemini SDK serves the request behind it; neither opt-out reason below is a license to skip
-  `/interaction/stream` and use a non-streaming request path instead.
-  - **Transport vs. provider streaming**: an agy-backed run exercises the real
-    `/interaction/stream` transport/SSE plumbing, but agy itself does NOT provide token-by-token
-    *provider-level* streaming (`generate_content_stream` returns one completed response, not
-    incremental chunks) or native tool-call grammar. A claim specifically about model-level
-    streaming behavior or tool-calling needs an explicit Gemini SDK run
-    (`AGY_PROVIDER_ENABLED=false`), stated as the reason in the evidence bundle — that run still
-    goes through `/interaction/stream`; only the backend behind it changes.
-  - The strict-JSON-mode opt-out reason (agy's known JSON-reliability gap) is the same: it
-    changes which backend serves `/interaction/stream`, not whether the test uses it.
+  provider choice** — every real-LLM test hits `/interaction/stream`.
+  An AGY-backed run proves the real transport/SSE plumbing but not provider-native
+  token streaming. State that boundary explicitly; do not change providers inside
+  the `testing_mcp/` evidence workflow.
 
 ## When to use /llm-testing (vs lower layers)
 
@@ -102,10 +86,10 @@ mocked tests, pasted pytest output, or mock-mode CI. Those are supporting checks
 # Layer 3 — MCP API, real LLM, local server (direct runner, never pytest):
 cd $PROJECT_ROOT
 TESTING_AUTH_BYPASS=true GOOGLE_APPLICATION_CREDENTIALS=$HOME/serviceAccountKey.json \
-  vpython testing_mcp/core/test_level_up_organic.py --level-up-scenario single-organic --class-name paladin
+  PYTHONPATH="$(pwd):$(pwd)/mvp_site" python3 testing_mcp/core/test_level_up_organic.py --level-up-scenario single-organic --class-name paladin
 
 # Layer 3 — against a remote GCP preview server:
-vpython testing_mcp/core/test_<feature>.py --preview-url <preview_url>
+PYTHONPATH="$(pwd):$(pwd)/mvp_site" python3 testing_mcp/core/test_<feature>.py --preview-url <preview_url>
 
 # Layer 5 — Browser/UI, real LLM:
 TESTING_AUTH_BYPASS=true python3 $PROJECT_ROOT/main.py testui

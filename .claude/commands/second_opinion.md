@@ -153,7 +153,7 @@ fi
 export VITE_AI_UNIVERSE_FIREBASE_PROJECT_ID="${VITE_AI_UNIVERSE_FIREBASE_PROJECT_ID:-ai-universe-b3551}"
 export VITE_AI_UNIVERSE_FIREBASE_AUTH_DOMAIN="${VITE_AI_UNIVERSE_FIREBASE_AUTH_DOMAIN:-ai-universe-b3551.firebaseapp.com}"
 # API key - hardcoded default for AI Universe shared service (safe to expose per Firebase security model)
-export VITE_AI_UNIVERSE_FIREBASE_API_KEY="${VITE_AI_UNIVERSE_FIREBASE_API_KEY:-[REDACTED_GCP_KEY]}"
+export VITE_AI_UNIVERSE_FIREBASE_API_KEY="${VITE_AI_UNIVERSE_FIREBASE_API_KEY:-AIzaSy<TEST_KEY>}"
 
 # Get token (auto-refreshes if expired using refresh token)
 # This is silent - only prompts for login if refresh token is invalid/missing
@@ -164,7 +164,7 @@ if [ $? -ne 0 ]; then
   echo "❌ Authentication failed. Please run:"
   echo "   VITE_AI_UNIVERSE_FIREBASE_PROJECT_ID=ai-universe-b3551 \\"
   echo "   VITE_AI_UNIVERSE_FIREBASE_AUTH_DOMAIN=ai-universe-b3551.firebaseapp.com \\"
-  echo "   VITE_AI_UNIVERSE_FIREBASE_API_KEY=[REDACTED_GCP_KEY] \\"
+  echo "   VITE_AI_UNIVERSE_FIREBASE_API_KEY=AIzaSy<TEST_KEY> \\"
   echo "   node ~/.claude/scripts/auth-cli.mjs login"
   exit 1
 fi

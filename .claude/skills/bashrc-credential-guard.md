@@ -42,9 +42,9 @@ Guide Claude to always check `~/.bashrc` for any credentials, API keys, password
 ### 1. API Keys and Credentials
 ```bash
 # Read ~/.bashrc to find:
-export GEMINI_API_KEY="AIzaSy..."
-export ANTHROPIC_API_KEY="[REDACTED_OPENAI_KEY]"
-export GITHUB_TOKEN="ghp_..."
+export GEMINI_API_KEY="AIza..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+export GITHUB_TOKEN="<GITHUB_TOKEN>"
 ```
 
 ### 2. Email Configuration
@@ -132,7 +132,7 @@ export REDIS_URL="redis://..."
 ```bash
 # API Keys
 export GEMINI_API_KEY="AIzaSy..."
-export ANTHROPIC_API_KEY="[REDACTED_OPENAI_KEY]"
+export ANTHROPIC_API_KEY="sk-ant-..."
 export OPENAI_API_KEY="sk-..."
 
 # Email/SMTP
@@ -144,7 +144,7 @@ export GCP_PROJECT="worldai"
 export AWS_REGION="us-east-1"
 
 # GitHub
-export GITHUB_TOKEN="ghp_..."
+export GITHUB_TOKEN="<GITHUB_TOKEN>"
 export GITHUB_USER="username"
 
 # Database

@@ -407,7 +407,7 @@ TESTING=true python3 -m pytest $PROJECT_ROOT/tests/test_code_execution_dice_roll
   - `$PROJECT_ROOT/tests/...`
   - `tests/test_end2end/...`
   - Regular unit/integration modules designed for pytest collection
-- Use direct script execution (`vpython <file>.py`) for:
+- Use direct `python3` script execution with explicit `PYTHONPATH` for:
   - `testing_mcp/test_*_real_*.py`
   - `testing_mcp/schema/test_schema_*.py`
   - Other `testing_mcp` files that implement CLI `argparse` + `main()`
@@ -416,12 +416,13 @@ Examples:
 
 ```bash
 # MCP script-style suite (correct)
-cd testing_mcp
-../vpython test_social_encounter_real_api.py --start-local
+PYTHONPATH="$(pwd):$(pwd)/mvp_site" \
+  python3 testing_mcp/test_social_encounter_real_api.py --start-local
 
 # Schema script-style suite (correct)
 cd $PROJECT_ROOT
-./vpython testing_mcp/schema/test_schema_enforcement_journey_real_api.py --work-name schema_enforcement_run
+PYTHONPATH="$(pwd):$(pwd)/mvp_site" \
+  python3 testing_mcp/schema/test_schema_enforcement_journey_real_api.py --work-name schema_enforcement_run
 ```
 
 ## Flask API End2End Test Pattern (MANDATORY)

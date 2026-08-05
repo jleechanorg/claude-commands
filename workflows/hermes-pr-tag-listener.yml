@@ -11,7 +11,7 @@
 #
 # Behavioral change: Slack notifications on @hermes PR/comment mentions
 # no longer fire automatically. The AO worker can still dispatch via
-# `repository_dispatch: hermes-ta[REDACTED_OPENAI_KEY]` to post a notification,
+# `repository_dispatch: hermes-task-completed` to post a notification,
 # which is the documented "work done" signal.
 #
 # Required repo secret:
@@ -21,7 +21,7 @@ name: hermes-pr-tag-listener
 
 on:
   repository_dispatch:
-    types: [hermes-ta[REDACTED_OPENAI_KEY]]
+    types: [hermes-task-completed]
 
 permissions:
   contents: read

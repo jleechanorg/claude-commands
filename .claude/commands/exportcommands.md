@@ -347,7 +347,7 @@ All agents work in parallel → Create individual PRs → Integration verificati
 ```bash
 /orch monitor agents    # Check agent status
 /orch "What's running?" # Current task overview
-tmux attach-session -t ta[REDACTED_OPENAI_KEY]  # Direct agent access
+tmux attach-session -t task-agent-frontend  # Direct agent access
 ```
 
 ## 🚨 EXPORT PROTOCOL

@@ -1,5 +1,6 @@
 name: Evidence Bundle Validation
 # Validates structural evidence bundle requirements on PRs touching testing_mcp/testing_ui.
+# (comment-only touch to force a fresh synchronize event re-reading the current PR body)
 
 permissions:
   contents: read
@@ -32,7 +33,7 @@ jobs:
   validate-evidence-bundles:
     name: Evidence Gate
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, self-hosted-mikey]
     # 15min (was 5min): Check 7 (evidence freshness) needs full git history to
     # diff an evidence bundle's captured SHA against HEAD, so checkout below
     # uses fetch-depth: 0 — a full clone of this repo's history takes longer

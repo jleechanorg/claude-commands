@@ -1,6 +1,6 @@
 ---
 name: pr-babysit
-description: Drive all open PRs toward /green (CI green + no merge conflicts) by fixing CI failures, and toward draft-phase quality readiness by resolving comments and running the smoke gate. CodeRabbit/Bugbot are optional advisory reviewers — surfaced for information, never a gate or a wait. Use when the user wants to nurse PRs to merge-readiness.
+description: Use when the user wants one or more open PRs actively nursed to merge-readiness.
 ---
 
 # /babysit — PR Green-Gate Babysitter
@@ -10,9 +10,9 @@ description: Drive all open PRs toward /green (CI green + no merge conflicts) by
 Systematically drive all open PRs toward `/green` (CI green + no merge conflicts,
 see `.claude/skills/pr-green-definition.md`) plus draft-phase quality readiness
 (`/es`, `/er`, `/advice`, evidence, comment resolution). For each PR:
-1. Audit `/green` (gates 1-2 below) and the draft-phase quality checks (gates 5-6 below)
+1. Audit `/green` (gates 1-2 below) and the draft-phase quality checks
 2. Fix any blocking failures
-3. Optionally surface CodeRabbit/Bugbot feedback (gates 3-4) for information — never wait on or require them
+3. Optionally surface CodeRabbit/Bugbot advisory signals for information — never wait on or require them
 4. Once all blocking checks pass, run `/smoke` and report ready for human merge approval
 
 **Note (2026-07-07):** the former Gate 7 (Skeptic PASS, an external bot VERDICT poll
@@ -24,22 +24,22 @@ human "MERGE APPROVED" authorization per this repo's merge-safety policy — bab
 job stops at reporting readiness, not auto-merging.
 
 **Note (2026-07-28):** `/green` itself is now ONLY gates 1-2 below (CI green + no
-merge conflicts). Gates 5-6 (comment resolution, evidence) are draft-phase
+merge conflicts). Comment resolution and evidence are draft-phase
 quality gates that gate leaving DRAFT status, not `/green` — see
-`.claude/skills/pr-green-definition.md`. Gates 3-4 (CodeRabbit, Bugbot) are
+`.claude/skills/pr-green-definition.md`. CodeRabbit and Bugbot are
 **optional advisory reviewers** — babysit may surface their feedback for
 information, but never waits on or requires them to consider a PR ready.
 
 ## Draft-Phase + `/green` Criteria
 
-| # | Gate | Check | Counts toward `/green`? |
+| ID | Kind | Check | Counts toward `/green`? |
 |---|------|-------|--------------------------|
 | 1 | CI green | All GitHub Actions checks pass (no FAILURE conclusions) | Yes |
 | 2 | No conflicts | `mergeable == "MERGEABLE"` | Yes |
-| 3 | CR feedback | CodeRabbit latest review state | No — optional advisory, informational only |
-| 4 | Bugbot feedback | cursor[bot] error-severity comments | No — optional advisory, informational only |
-| 5 | Comments resolved | Zero unresolved non-nit inline review comments | No — draft-phase |
-| 6 | Evidence pass | Evidence bundle exists or N/A justified | No — draft-phase |
+| CR | Advisory signal | CodeRabbit latest review state | No — informational only |
+| Bugbot | Advisory signal | cursor[bot] error-severity comments | No — informational only |
+| Comments | Draft-phase quality | Zero unresolved non-nit inline review comments | No — draft-phase |
+| Evidence | Draft-phase quality | Evidence bundle exists or N/A justified | No — draft-phase |
 
 ## Execution Protocol
 
@@ -52,7 +52,8 @@ gh pr list --state open --json number,title,headRefName,headRefOid,mergeable \
 
 ### Phase 2: Audit Each PR (`/green` + Draft-Phase Check)
 
-For each open PR, check all 6 gates:
+For each open PR, check both `/green` gates, both draft-phase checks, and the
+optional advisory signals:
 
 ```bash
 # Gate 1: CI status
@@ -62,15 +63,15 @@ gh pr view <NUM> --json statusCheckRollup \
 # Gate 2: Mergeable
 gh pr view <NUM> --json mergeable --jq '.mergeable'
 
-# Gate 3: CodeRabbit review
+# Advisory signal: CodeRabbit review
 gh api repos/$GITHUB_REPOSITORY/pulls/<NUM>/reviews \
   --jq '[.[] | select(.user.login=="coderabbitai[bot]")] | last | .state'
 
-# Gate 4: Bugbot errors
+# Advisory signal: Bugbot errors
 gh api repos/$GITHUB_REPOSITORY/pulls/<NUM>/comments \
   --jq '[.[] | select(.user.login=="cursor[bot]" and (.body | test("error";"i")))] | length'
 
-# Gate 5: Unresolved comments
+# Draft-phase unresolved comments
 gh api graphql -f query='
   query($owner:String!, $name:String!, $pr:Int!) {
     repository(owner:$owner, name:$name) {
@@ -84,18 +85,18 @@ gh api graphql -f query='
 ' -f owner=jleechanorg -f name=your-project.com -F pr=<NUM> \
   --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false)] | length'
 
-# Gate 6: Evidence in PR body
+# Draft-phase evidence in PR body
 gh pr view <NUM> --json body --jq '.body' | grep -i -E "evidence|gist|video|mp4|N/A"
 ```
 
 ### Phase 3: Categorize PRs
 
-Group PRs by the four blocking gates (1, 2, 5, 6) — gates 3-4 (CodeRabbit,
-Bugbot) are informational only and never affect a PR's category:
-- **RED** (2+ blocking gates failing): needs code fixes
-- **YELLOW** (1 blocking gate failing): needs comment resolution or evidence
-- **GREEN** (all 4 blocking checks passing — `/green` gates 1-2 plus draft-phase
-  quality gates 5-6): run `/smoke`, then report ready for human merge approval
+Group PRs by the two `/green` gates and separate draft-phase comment/evidence
+checks. CodeRabbit/Bugbot are informational only:
+- **RED**: CI or mergeability fails.
+- **YELLOW**: `/green` passes but a draft-phase check remains.
+- **GREEN**: `/green` and draft-phase quality checks pass; run `/smoke`, then
+  report ready for human merge approval.
 
 ### Phase 4: Fix RED PRs
 
@@ -112,19 +113,19 @@ Common fixes:
 - Missing evidence → create evidence bundle or add N/A justification
 - Stale review threads → resolve via GitHub API
 
-CodeRabbit/Bugbot feedback (gates 3-4) can be read for useful signal, but
+CodeRabbit/Bugbot feedback can be read for useful signal, but
 triggering or waiting on a re-review is never required to unblock a RED PR.
 
 ### Phase 5: Fix YELLOW PRs
 
 For each YELLOW PR:
-1. **Gate 5 (unresolved comments)**: Resolve review threads
-2. **Gate 6 (no evidence)**: Add evidence or N/A to PR body
+1. **Unresolved draft comments**: Resolve actionable review threads
+2. **Missing draft evidence**: Add evidence or N/A to PR body
 3. Optionally comment `@coderabbitai all good?` to refresh CR feedback — informational only, not required
 
 ### Phase 6: Run Smoke on GREEN PRs
 
-For PRs at all 4 blocking checks (`/green` gates 1-2 plus draft-phase quality gates 5-6):
+For PRs with `/green` plus the draft-phase comment/evidence checks:
 
 ```bash
 # Trigger Green Gate workflow if no recent run
@@ -145,7 +146,7 @@ Print a summary table:
 
 ```
 PR #<N> — age: <Xh Ym> — status: <red|yellow|green|/green>
-  Blocking gates: 1=✓ 2=✓ 5=✓ 6=✓ | Advisory (informational only): CR=✓ Bugbot=✓
+  Blocking gates: 1=✓ 2=✓ | Draft: Comments=✓ Evidence=✓ | Advisory: CR=✓ Bugbot=✓
   Action: /green, ready for human MERGE APPROVED
 ```
 

@@ -8,7 +8,7 @@
     "Firebase project: <your-firebase-project-id> (Google Cloud Firestore + Identity Toolkit)"
   ],
   "firebase_config": {
-    "apiKey": "<your-firebase-api-key>",
+    "apiKey": "<TEST_FIREBASE_API_KEY>",
     "authDomain": "<your-project>.firebaseapp.com",
     "projectId": "<your-firebase-project-id>"
   },

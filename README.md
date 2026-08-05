@@ -53,6 +53,13 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## Changelog
 
+### v1.8.0 (2026-08-05)
+- New commands: claudem.md, claudeminimax.md, commentfetch/, commentreply/, copilotsuper.md, document-standards.md, fixpr/, history-resume.md, p.md, superpowers-brainstorm.md, superpowers-execute-plan.md, superpowers-write-plan.md, test-realistic.md
+- New hooks: set-stand-down.sh, stand-down-guard.sh
+- Updated: 4layer.md, babysit.md, consensus.md, disk-root-cause.md, disk_magician.md, es.md, exportcommands.md/.sh, guidelines.md, llm-testing.md, loop_level_zfc.md, orchestrate.md, ralph_custom.md, roadmap.md, second_opinion.md, web-advice.md, zfclevel.md, and many more
+- Skills expansions: beads-issue-tracking, cmux-goal, disk-root-cause, evidence-standards (major consolidation), harness-engineering, hermes-models, host-disk-guardian, ironclad, level-up-validation, nextsteps, pr-babysit, runtime-mirror-sync, testing-layers, web-advice
+- Workflow updates: coverage.yml, design-doc-gate.yml, evidence-gate.yml, green-gate.yml, hermes-pr-tag-listener.yml, mcp-smoke-tests.yml, presubmit.yml, self-hosted-mvp-shard1.yml, styleguide-compliance-gate.yml, test.yml
+
 ### v1.7.0 (2026-07-07)
 - New commands: bashrc.md, callpath.md, crash.md, mac.md, meta.md, repro_developer.md, soak.md, social.md
 - New hooks: warn-default-branch-bypass.sh
@@ -95,23 +102,23 @@ See [INSTALL.md](INSTALL.md) for detailed setup, troubleshooting, and platform-s
 
 ## 🎯 What's Included
 
-**290 Commands** including powerful workflow orchestrators and cognitive tools:
-- **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch`, `/f-pr`, `/factory-evolve`, `/hermes` - Complete multi-step automation
-- **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn`, `/aar`, `/accept-adapt-reject` - Analysis and planning
+**308 Commands** including powerful workflow orchestrators and cognitive tools:
+- **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch`, `/f-pr`, `/factory-evolve`, `/hermes`, `/copilotsuper`, `/fixpr` - Complete multi-step automation
+- **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn`, `/aar`, `/accept-adapt-reject`, `/superpowers-brainstorm`, `/superpowers-execute-plan`, `/superpowers-write-plan` - Analysis and planning
 - **Infrastructure**: `/scaffold`, `/launchd`, `/linux` - Repository setup and development environment
-- **Testing**: `/test`, `/tdd`, `/testuif`, `/end2end-testing`, `/llm-testing` - Comprehensive testing workflows
-- **Code Quality**: `/code-standards`, `/cs`, `/thermo`, `/archreview`, `/code-quality`, `/cq` - Standards enforcement and deep review
-- **Session Management**: `/cmux-backup`, `/cmux-restore`, `/factory`, `/goal_harness`, `/h` - Workflow tooling
-- **Evidence & Review**: `/es`, `/er`, `/er-node`, `/green` - Evidence standards and PR review
+- **Testing**: `/test`, `/tdd`, `/testuif`, `/end2end-testing`, `/llm-testing`, `/test-realistic` - Comprehensive testing workflows
+- **Code Quality**: `/code-standards`, `/cs`, `/thermo`, `/archreview`, `/code-quality`, `/cq`, `/document-standards` - Standards enforcement and deep review
+- **Session Management**: `/cmux-backup`, `/cmux-restore`, `/factory`, `/goal_harness`, `/h`, `/history-resume` - Workflow tooling
+- **Evidence & Review**: `/es`, `/er`, `/er-node`, `/green`, `/commentfetch`, `/commentreply` - Evidence standards and PR review
 - **Issue Tracking**: `/beads` - Bead-based issue tracking integration
 - **Wiki Tools**: `/wiki-assess`, `/wiki-bfs`, `/wiki-ingest`, `/wiki-evolve`, `/wiki-search` - Knowledge base ingestion and assessment
-- **Utilities**: `/disk-audit`, `/disk_magician`, `/diskm`, `/gmail`, `/slack-audit`, `/bq`, `/keychain_kill`, `/spicy_remove`, `/fable`, `/f`, `/fs`, `/factory-spec`, `/history_resume`, `/team-claude`, `/zfc-adjuster`, `/think-level-up-validation`, `/bashrc`, `/callpath`, `/crash`, `/mac`, `/meta`, `/repro_developer`, `/soak`, `/social` - System, inbox, and misc workflow tools
+- **Utilities**: `/disk-audit`, `/disk_magician`, `/diskm`, `/gmail`, `/slack-audit`, `/bq`, `/keychain_kill`, `/spicy_remove`, `/fable`, `/f`, `/fs`, `/factory-spec`, `/history_resume`, `/team-claude`, `/zfc-adjuster`, `/think-level-up-validation`, `/bashrc`, `/callpath`, `/crash`, `/mac`, `/meta`, `/repro_developer`, `/soak`, `/social`, `/claudem`, `/claudeminimax`, `/p` - System, inbox, and misc workflow tools
 
 **60 Hooks** for Claude Code automation and workflow optimization
 
 **22 Scripts** for development tools including git workflow, code analysis, testing, and CI/CD
 
-**915 Skills** providing shared knowledge references and capabilities
+**1298 Skills** providing shared knowledge references and capabilities
 
 ## 🔍 Key Commands
 

@@ -569,7 +569,7 @@ from orchestration.cli_validation import (
 
 ```bash
 # GitHub
-export GITHUB_TOKEN="ghp_..."
+export GITHUB_TOKEN="<GITHUB_TOKEN>"
 export GITHUB_ACTOR="automation-bot"
 
 # Models

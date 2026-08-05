@@ -38,7 +38,7 @@ jobs:
   green_gate:
     name: Green Gate
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, self-hosted-mikey]
     timeout-minutes: 6
     permissions:
       contents: read

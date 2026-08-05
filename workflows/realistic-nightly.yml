@@ -1,0 +1,48 @@
+name: realistic-nightly
+on:
+  workflow_dispatch:
+
+jobs:
+  realistic-nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Run against origin/main
+        env:
+          AGY_PROVIDER_ENABLED: "true"
+        run: |
+          git fetch origin main
+          git checkout origin/main
+          cd testing_ui/realistic
+          python -m agent_pool.runner --pool agent_pool/pool.yaml --mode headless
+          python -m invariant_library.invariant_check --captures /tmp/realistic-nightly-* || EXIT=$?
+          python -m verdict.aggregate --per-agent-json /tmp/per_agent.json --output verdict-nightly.yaml || true
+          exit ${EXIT:-0}
+
+      - name: Upload verdict
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+        with:
+          name: realistic-nightly-verdict
+          path: testing_ui/realistic/verdict-nightly.yaml
+
+      - name: Open issue on FAIL
+        if: failure()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
+        with:
+          script: |
+            const fs = require('fs');
+            const verdict = fs.readFileSync('testing_ui/realistic/verdict-nightly.yaml', 'utf8');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `realistic-nightly FAIL on main @ ${new Date().toISOString().slice(0,10)}`,
+              body: `realistic-test failed nightly against origin/main.\n\n\`\`\`yaml\n${verdict}\n\`\`\``,
+              labels: ['realistic-test', 'bug'],
+            });
