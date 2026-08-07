@@ -1,5 +1,5 @@
 ---
-description: /history — sparse conversation history search (Claude, Codex, Hermes) with quota guard
+description: /history — sparse conversation history search (Claude, Codex, Hermes, agy CLI, Cursor) with quota guard
 type: llm-orchestration
 execution_mode: immediate
 ---
@@ -29,18 +29,20 @@ If duplicate in-flight thread exists, steer existing thread instead of spawning 
 
 Read `~/.claude/skills/conversation-history-sparse/SKILL.md` and execute the sparse workflow.
 
-Sources (3 only by default):
+Sources (5 only by default — keep the budget tight):
 
 | Source | Data |
 |--------|------|
 | Claude Code | `~/.claude/projects/*/*.jsonl` |
 | Codex | `~/.codex/state_5.sqlite` threads |
 | Hermes | `~/.hermes/state.db` messages (FTS5) |
+| agy CLI | `~/.gemini/antigravity-cli/conversation_summaries.db` |
+| Cursor | `~/.cursor/prompt_history.json` + `~/.cursor/chats/` |
 
 ## Flags
 
 - `--recent N` — last N days only
-- `--source claude|codex|hermes` — single source (cheapest: pick one)
+- `--source claude|codex|hermes|agy|cursor` — single source (cheapest: pick one)
 - `--limit N` — results per source (default 5, sparse max 20)
 - `--date YYYY-MM` — filter by month
 - `--deep` — escape hatch: run the full `~/.claude/skills/history-search/SKILL.md`
@@ -52,6 +54,7 @@ Sources (3 only by default):
 /history "skeptic gate"
 /history "load gate" --recent 7
 /history "auth" --source hermes
+/history "agy conversation" --source agy
 /history "merge conflict" --limit 5
 /history "PR 353" --deep   ← full search, use sparingly
 ```
