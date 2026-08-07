@@ -1,5 +1,5 @@
 ---
-description: Sparse conversation history triage across Claude Code, Codex, and Hermes with strict context budgets. Default for `/history`; covers all three canonical sources.
+description: Sparse conversation history triage across Claude Code, Codex, Hermes, agy CLI, and Cursor with strict context budgets. Default for `/history`; covers all five canonical sources.
 type: analysis
 scope: project
 ---
@@ -12,6 +12,8 @@ Infer what the current directory/worktree/branch has been doing by sampling only
 - `~/.claude/projects`  (Claude Code JSONL)
 - `~/.codex/sessions`   (Codex rollout JSONL) + `~/.codex/state_5.sqlite` threads
 - `~/.hermes/state.db`  (Hermes messages, FTS5)
+- `~/.gemini/antigravity-cli/conversation_summaries.db`  (agy CLI SQLite) + `~/.gemini/history.jsonl`
+- `~/.cursor/prompt_history.json`  (Cursor prompts) + `~/.cursor/chats/` (Cursor conversations)
 
 Use this skill whenever `/history` runs without `--deep`, when you need orientation
 without loading full transcripts, or when you want a quick multi-source sweep.
@@ -48,6 +50,8 @@ ANSI = {
     "claude": "\033[34m",      # blue
     "codex":  "\033[36m",      # cyan
     "hermes": "\033[35m",      # magenta
+    "agy":    "\033[33m",      # yellow
+    "cursor": "\033[32m",      # green
     "head":   "\033[1;37m",    # bold white
     "match":  "\033[1;33m",    # bold yellow (substring highlight)
     "dim":    "\033[2m",
@@ -76,8 +80,9 @@ def head(text: str) -> str:
     return color("head", text)
 ```
 
-Use `ansify("claude", "...", query)`, `ansify("codex", "...", query)`, and
-`ansify("hermes", "...", query)` for each result line. Wrap section headers in
+Use `ansify("claude", "...", query)`, `ansify("codex", "...", query)`,
+`ansify("hermes", "...", query)`, `ansify("agy", "...", query)`, and
+`ansify("cursor", "...", query)` for each result line. Wrap section headers in
 `head(...)`. The Query itself is **always** a literal substring highlight (display
 only); it never drives routing or intent — the workflow above decides.
 
@@ -271,13 +276,141 @@ con.close()
 > hits require the `LIKE` fallback. FTS5 syntax: `"exact phrase"`, `word1 AND word2`,
 > `word*` prefix.
 
-### 6) Synthesize result
+### 6) Sample agy CLI conversations (sparse SQLite)
+
+agy CLI (Antigravity CLI wrapper at `~/.local/bin/agy`) stores conversation
+metadata in a SQLite summaries DB. Read-only, capped at ≤5 rows. Per-snippet
+200-char cap. Wrap every result line with `ansify("agy", ..., query)` so the
+label is yellow and matched substrings are yellow-highlighted.
+
+```python
+import sqlite3, os
+
+query = "<QUERY>"  # injected by /history
+db = os.path.expanduser("~/.gemini/antigravity-cli/conversation_summaries.db")
+if not os.path.exists(db):
+    print("[Agy] conversation_summaries.db not found")
+else:
+    con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    cur = con.cursor()
+
+    q   = os.environ.get("HIST_QUERY", "")
+    cwd_basename = os.path.basename(os.getcwd())
+    like_q = f"%{q}%" if q else f"%{cwd_basename}%"
+
+    LIMIT = 5
+    try:
+        rows = cur.execute("""
+            SELECT conversation_id, title, substr(preview, 1, 200),
+                   step_count, last_modified_time, workspace_uris, agent_name
+            FROM conversation_summaries
+            WHERE (title LIKE ? OR preview LIKE ? OR workspace_uris LIKE ?)
+              AND killed = 0
+            ORDER BY last_modified_time DESC
+            LIMIT ?
+        """, (like_q, like_q, like_q, LIMIT)).fetchall()
+    except sqlite3.OperationalError:
+        # Fallback: most-recent N conversations matching the basename heuristic
+        rows = cur.execute("""
+            SELECT conversation_id, title, substr(preview, 1, 200),
+                   step_count, last_modified_time, workspace_uris, agent_name
+            FROM conversation_summaries
+            WHERE workspace_uris LIKE ?
+              AND killed = 0
+            ORDER BY last_modified_time DESC
+            LIMIT ?
+        """, (f"%{cwd_basename}%", LIMIT)).fetchall()
+
+    for cid, title, preview, steps, mtime, ws, agent in rows:
+        snippet = (preview or "").replace("\n", " ")[:200]
+        ws_short = (ws or "")[:60]
+        body = f"{(mtime or '')[:10]} | {(title or '?')[:40]} | {agent or 'agy'} | steps={steps} | {snippet}"
+        print(ansify("agy", body, q))
+    con.close()
+```
+
+When the DB is missing entirely (agy CLI not installed), print a single
+`[Agy] conversation_summaries.db not found` line and continue.
+
+### 7) Sample Cursor conversations (sparse JSON + chats)
+
+Cursor stores a flat prompt history file plus per-conversation chat blobs.
+Read-only. Per-snippet 200-char cap. ≤3 prompt hits total. Wrap every line with
+`ansify("cursor", ..., query)` so the label is green and matched substrings
+are yellow.
+
+```python
+import json, os, glob
+
+query = "<QUERY>"  # injected by /history
+q   = os.environ.get("HIST_QUERY", "")
+hist_path = os.path.expanduser("~/.cursor/prompt_history.json")
+LIMIT = 3
+hits = 0
+
+if os.path.exists(hist_path):
+    try:
+        with open(hist_path, encoding="utf-8", errors="ignore") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            for entry in data:
+                text = ""
+                if isinstance(entry, dict):
+                    text = entry.get("prompt") or entry.get("text") or entry.get("content") or ""
+                elif isinstance(entry, str):
+                    text = entry
+                if not text:
+                    continue
+                if q and q.lower() not in text.lower():
+                    continue
+                snippet = text[:200].replace("\n", " ")
+                ts = ""
+                if isinstance(entry, dict):
+                    ts = (entry.get("timestamp") or entry.get("ts") or "")[:16]
+                print(ansify("cursor", f"prompt_history {ts} | {snippet}", q))
+                hits += 1
+                if hits >= LIMIT:
+                    break
+    except Exception:
+        pass
+
+# Then sample the most-recent 1-2 chat files (avoid full reads — first 1KB each).
+chats_dir = os.path.expanduser("~/.cursor/chats")
+if os.path.isdir(chats_dir):
+    chat_files = sorted(glob.glob(f"{chats_dir}/**/*.json*", recursive=True),
+                        key=lambda p: os.path.getmtime(p), reverse=True)[:2]
+    for path in chat_files:
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                chunk = f.read(2048)
+            snippet = chunk[:200].replace("\n", " ")
+            if q and q.lower() not in snippet.lower():
+                continue
+            label = os.path.basename(path)[:50]
+            print(ansify("cursor", f"chat {label} | {snippet}", q))
+            hits += 1
+            if hits >= LIMIT:
+                break
+        except Exception:
+            pass
+
+if hits == 0:
+    print(ansify("cursor", "no matches in prompt_history or chats/", q))
+```
+
+> Note: `prompt_history.json` may be very large (>150 KB). The snippet is read
+> as parsed JSON then sliced — never `cat` the raw file. Chat JSON files are
+> sampled via `f.read(2048)` so we never pull a full conversation into context.
+
+### 8) Synthesize result
 
 Return:
 - Current branch/PR intent from git.
 - Recent request themes from Claude history.
 - Recent request themes from Codex history.
 - Recent Hermes hits (per-snippet 200 chars only).
+- Recent agy conversations (preview/title only).
+- Recent Cursor prompts (one-liner each).
 - One concise statement: "This worktree appears focused on X because Y+Z evidence."
 
 ## Output Template
@@ -301,6 +434,16 @@ Branch/PR:
                                   ↑ magenta label
                                   "Reviewer" highlighted yellow (if it was the query)
 
+🌐 agy CLI (N matches)           ← head() — bold white
+  [Agy] 2026-08-01 | Fix CR lint error | agy | steps=42 | ...
+                                  ↑ yellow label
+                                  matched substring highlighted yellow
+
+🖥️  Cursor (N matches)           ← head() — bold white
+  [Cursor] prompt_history 2026-08-01 | How do I scaffold a new feature?
+                                  ↑ green label
+                                  "scaffold" highlighted yellow
+
 Inference:
 - ...
 ```
@@ -308,8 +451,10 @@ Inference:
 ## Safety
 
 - Read-only operations only.
-- Open Hermes DB with `mode=ro` URI — never write to `~/.hermes/state.db`.
-- Do not modify `~/.claude/projects` or `~/.codex/sessions`.
+- Open Hermes DB **and agy conversation_summaries.db** with `mode=ro` URI —
+  never write to `~/.hermes/state.db` or `~/.gemini/antigravity-cli/`.
+- Do not modify `~/.claude/projects`, `~/.codex/sessions`, `~/.cursor/chats/`,
+  or `~/.gemini/history.jsonl`.
 - Keep excerpts short to avoid pulling excessive context into the session.
 - ANSI highlighting is **display-only** — never let it influence search/routing.
 - When the user types `/history --deep`, escalate to
