@@ -147,9 +147,13 @@ def open_trusted_tree(root: Path, path: Path) -> DirectoryHandle:
                     and component in {"var", "tmp"}
                     and exc.errno in (errno.ELOOP, errno.ENOTDIR)
                 ):
-                    alias_root = os.open("private", _flags(directory=True), dir_fd=current)
+                    alias_root = os.open(
+                        "private", _flags(directory=True), dir_fd=current
+                    )
                     try:
-                        nxt = os.open(component, _flags(directory=True), dir_fd=alias_root)
+                        nxt = os.open(
+                            component, _flags(directory=True), dir_fd=alias_root
+                        )
                     finally:
                         os.close(alias_root)
                 else:
@@ -163,6 +167,27 @@ def open_trusted_tree(root: Path, path: Path) -> DirectoryHandle:
         if current >= 0:
             os.close(current)
         root_handle.fd = -1
+        raise
+
+
+def open_descendant(root: DirectoryHandle, path: Path) -> DirectoryHandle:
+    """Open a path beneath a retained root descriptor component by component."""
+
+    root.verify_identity()
+    path = Path(path)
+    root_parts = _parts(root.display_path)
+    path_parts = _parts(path)
+    if len(path_parts) < len(root_parts) or path_parts[: len(root_parts)] != root_parts:
+        raise FsafetyError("path escapes retained trusted root")
+    current = os.dup(root.fd)
+    try:
+        for component in path_parts[len(root_parts) :]:
+            nxt = os.open(component, _flags(directory=True), dir_fd=current)
+            os.close(current)
+            current = nxt
+        return DirectoryHandle.from_fd(current, path)
+    except BaseException:
+        os.close(current)
         raise
 
 
@@ -197,7 +222,14 @@ class VerifiedExecutable:
 
 def open_verified_executable(binding: object) -> VerifiedExecutable:
     path = Path(getattr(binding, "path"))
-    fd = os.open(os.fspath(path), _flags())
+    try:
+        _parts(path)
+    except FsafetyError:
+        raise
+    parent = path.parent
+    name = path.name
+    with open_trusted_tree(Path("/"), parent) as parent_handle:
+        fd = os.open(name, _flags(), dir_fd=parent_handle.fd)
     try:
         info = os.fstat(fd)
         if not stat.S_ISREG(info.st_mode) or not (info.st_mode & 0o111):
@@ -286,7 +318,10 @@ def run_verified(
             os.fspath(Path(getattr(executable.binding, "path"))),
             follow_symlinks=False,
         )
-        if (path_info.st_dev, path_info.st_ino) != (executable.device, executable.inode):
+        if (path_info.st_dev, path_info.st_ino) != (
+            executable.device,
+            executable.inode,
+        ):
             raise FsafetyError("executable pathname was replaced")
     except OSError as exc:
         raise FsafetyError("executable pathname is unavailable") from exc
@@ -379,7 +414,10 @@ def run_verified(
             os.fspath(Path(getattr(executable.binding, "path"))),
             follow_symlinks=False,
         )
-        if (path_info.st_dev, path_info.st_ino) != (executable.device, executable.inode):
+        if (path_info.st_dev, path_info.st_ino) != (
+            executable.device,
+            executable.inode,
+        ):
             raise FsafetyError("executable pathname was replaced")
     except OSError as exc:
         raise FsafetyError("executable pathname is unavailable") from exc
@@ -391,20 +429,50 @@ def run_verified(
 def fixed_control_root() -> Path:
     import pwd
 
-    return Path(pwd.getpwuid(os.geteuid()).pw_dir) / ".local/state/beads-convergence/control"
+    home = pwd.getpwuid(os.geteuid()).pw_dir
+    return Path(home) / ".local/state/beads-convergence/control"
 
 
-def validate_fixed_control_root(path: Path | None = None) -> DirectoryHandle:
-    path = fixed_control_root() if path is None else Path(path)
-    handle = _open_absolute(path)
+def validate_fixed_control_root() -> DirectoryHandle:
+    """Open the compiled per-user control root after validating every part."""
+
+    path = fixed_control_root()
+    parts = _parts(path)
+    home_parts = _parts(Path(path).parents[3])
+    current = os.open(os.sep, _flags(directory=True))
     try:
-        for component in (path,):
-            info = os.fstat(handle.fd)
-            if info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o700:
-                raise FsafetyError(f"unsafe fixed control root: {component}")
-        return handle
+        for index, component in enumerate(parts):
+            try:
+                nxt = os.open(component, _flags(directory=True), dir_fd=current)
+            except OSError as exc:
+                if (
+                    sys.platform == "darwin"
+                    and component in {"var", "tmp"}
+                    and exc.errno in (errno.ELOOP, errno.ENOTDIR)
+                ):
+                    alias_root = os.open(
+                        "private", _flags(directory=True), dir_fd=current
+                    )
+                    try:
+                        nxt = os.open(
+                            component, _flags(directory=True), dir_fd=alias_root
+                        )
+                    finally:
+                        os.close(alias_root)
+                else:
+                    raise
+            info = os.fstat(nxt)
+            if index + 1 >= len(home_parts) and (
+                info.st_uid != os.geteuid()
+                or stat.S_IMODE(info.st_mode) != 0o700
+            ):
+                os.close(nxt)
+                raise FsafetyError(f"unsafe fixed control root component: {component}")
+            os.close(current)
+            current = nxt
+        return DirectoryHandle.from_fd(current, path)
     except BaseException:
-        handle.close()
+        os.close(current)
         raise
 
 

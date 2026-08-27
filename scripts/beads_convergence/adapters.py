@@ -62,6 +62,40 @@ class SourceMember:
 @dataclass(frozen=True)
 class SourceSnapshot:
     sources: tuple[SourceMember, ...]
+    quiescent: bool = False
+    plan_only: bool = True
+    lease_proven: bool = False
+    reason: str = "writer exclusion is unavailable"
+
+
+class _DuplicateField(ValueError):
+    pass
+
+
+def _pairs_without_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise _DuplicateField(key)
+        result[key] = value
+    return result
+
+
+def _strict_object(
+    raw: bytes, allowed: set[str], label: str
+) -> dict[str, object]:
+    try:
+        value = json.loads(
+            raw, object_pairs_hook=_pairs_without_duplicates
+        )
+    except (json.JSONDecodeError, UnicodeDecodeError, _DuplicateField) as exc:
+        raise ValueError(f"{label} output is not strict JSON") from exc
+    if type(value) is not dict:
+        raise ValueError(f"{label} output must be an object")
+    unknown = set(value) - allowed
+    if unknown:
+        raise ValueError(f"{label} output has unknown field")
+    return value
 
 
 class TrackerAdapter(Protocol):
@@ -105,23 +139,66 @@ class BrSqliteV1Adapter:
                 result = run_verified(executable, ("version", "--json"), root)
             if result.returncode != 0:
                 raise AdapterError("tracker version probe failed")
-            payload = json.loads(result.stdout)
-            if payload.get("version") != getattr(binding, "version"):
+            payload = _strict_object(
+                result.stdout,
+                {
+                    "version",
+                    "build",
+                    "commit",
+                    "branch",
+                    "rust_version",
+                    "target",
+                    "features",
+                },
+                "version",
+            )
+            if payload["version"] != getattr(binding, "version"):
                 raise AdapterError("tracker version does not match binding")
-        except UnsupportedCapability:
-            # The macOS host has no descriptor execution primitive. Digest
-            # validation remains useful; actual probing and apply are blocked.
-            pass
+        except UnsupportedCapability as exc:
+            executable.close()
+            raise AdapterError(
+                "descriptor execution is unsupported; tracker is unverified"
+            ) from exc
         except AdapterError:
             executable.close()
             raise
-        except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        except (ValueError, TypeError, json.JSONDecodeError, KeyError) as exc:
             executable.close()
             raise AdapterError("tracker version output is malformed") from exc
         except (FsafetyError, OSError) as exc:
             executable.close()
             raise AdapterError(str(exc)) from exc
         return executable
+
+    def verify_git_binary(self, binding: object) -> VerifiedExecutable:
+        """Verify and probe a pinned Git executable through its descriptor."""
+
+        executable: VerifiedExecutable | None = None
+        try:
+            executable = open_verified_executable(binding)
+            from .fsafety import open_trusted_tree
+
+            with open_trusted_tree(Path("/"), Path("/")) as root:
+                result = run_verified(executable, ("--version",), root)
+            if result.returncode != 0:
+                raise AdapterError("Git version probe failed")
+            line = result.stdout.decode("utf-8").strip()
+            expected = f"git version {getattr(binding, 'version')}"
+            if line != expected:
+                raise AdapterError("Git version does not match binding")
+            return executable
+        except UnsupportedCapability as exc:
+            if executable is not None:
+                executable.close()
+            raise AdapterError(
+                "descriptor execution is unsupported; Git is unverified"
+            ) from exc
+        except (AdapterError, FsafetyError, OSError, UnicodeError) as exc:
+            if executable is not None:
+                executable.close()
+            if isinstance(exc, AdapterError):
+                raise
+            raise AdapterError(str(exc)) from exc
 
     def attest_backend(self, beads_dir: DirectoryHandle) -> BackendAttestation:
         beads_dir.verify_identity()
@@ -158,7 +235,11 @@ class BrSqliteV1Adapter:
         # Explicit metadata markers used by known legacy stores.
         for name in ("metadata.json", "backend.json"):
             if name in names:
-                fd = os.open(name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=beads_dir.fd)
+                fd = os.open(
+                    name,
+                    os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                    dir_fd=beads_dir.fd,
+                )
                 try:
                     if b"dolt" in os.read(fd, 256).lower():
                         raise AdapterError("metadata declares Dolt backend")
@@ -190,7 +271,24 @@ class BrSqliteV1Adapter:
         if result.returncode != 0:
             raise AdapterError("tracker health probe failed")
         try:
-            payload = json.loads(result.stdout)
+            payload = _strict_object(
+                result.stdout,
+                {
+                    "dirty_count",
+                    "last_export_time",
+                    "last_import_time",
+                    "jsonl_content_hash",
+                    "jsonl_exists",
+                    "jsonl_newer",
+                    "db_newer",
+                    "workspace_health",
+                    "reliability_audit",
+                    "coverage",
+                    "coverage_drift",
+                    "git_export",
+                },
+                "health",
+            )
             dirty = payload["dirty_count"]
             db_newer = payload["db_newer"]
             jsonl_newer = payload["jsonl_newer"]
@@ -221,6 +319,7 @@ class BrSqliteV1Adapter:
 
     def fingerprint_sources(self, beads_dir: DirectoryHandle) -> SourceSnapshot:
         beads_dir.verify_identity()
+        initial_names = set(os.listdir(beads_dir.fd))
         members: list[SourceMember] = []
         for name in self.source_names:
             try:
@@ -243,12 +342,23 @@ class BrSqliteV1Adapter:
                     digest.update(chunk)
                     size += len(chunk)
                 after = os.fstat(fd)
-                if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
+                path_info = os.stat(
+                    name, dir_fd=beads_dir.fd, follow_symlinks=False
+                )
+                if (
+                    before.st_dev,
+                    before.st_ino,
+                    before.st_size,
+                    before.st_mtime_ns,
+                ) != (
                     after.st_dev,
                     after.st_ino,
                     after.st_size,
                     after.st_mtime_ns,
-                ) or size != before.st_size:
+                ) or size != before.st_size or (
+                    path_info.st_dev,
+                    path_info.st_ino,
+                ) != (before.st_dev, before.st_ino):
                     raise AdapterError(f"source changed during fingerprint: {name}")
                 members.append(
                     SourceMember(
@@ -257,6 +367,13 @@ class BrSqliteV1Adapter:
                 )
             finally:
                 os.close(fd)
+        beads_dir.verify_identity()
+        final_names = set(os.listdir(beads_dir.fd))
+        if any(
+            (name in initial_names) != (name in final_names)
+            for name in self.source_names
+        ):
+            raise AdapterError("source family changed during fingerprint")
         return SourceSnapshot(tuple(members))
 
     def resolve_authority(

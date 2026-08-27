@@ -1,12 +1,24 @@
 """Focused read-only tests for the br-sqlite-v1 adapter."""
 
+import hashlib
 import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
-from scripts.beads_convergence.adapters import AdapterError, BrSqliteV1Adapter
-from scripts.beads_convergence.fsafety import open_trusted_tree
+from scripts.beads_convergence.adapters import (
+    AdapterError,
+    BrSqliteV1Adapter,
+)
+from scripts.beads_convergence.fsafety import (
+    ExecutionResult,
+    FsafetyError,
+    UnsupportedCapability,
+    VerifiedExecutable,
+    open_trusted_tree,
+)
+from scripts.beads_convergence.models import BinaryBinding
 
 
 class AdapterTest(unittest.TestCase):
@@ -29,6 +41,8 @@ class AdapterTest(unittest.TestCase):
                     [source.name for source in snapshot.sources],
                     ["beads.db", "issues.jsonl"],
                 )
+                self.assertTrue(snapshot.plan_only)
+                self.assertFalse(snapshot.quiescent)
 
     def test_hot_journal_and_unknown_sidecar_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -56,6 +70,33 @@ class AdapterTest(unittest.TestCase):
                 lease = BrSqliteV1Adapter().acquire_writer_exclusion(handle, object())
                 self.assertTrue(lease.plan_only)
                 self.assertFalse(lease.available)
+
+    def test_tracker_version_probe_unsupported_fails_closed(self) -> None:
+        path = Path("/bin/echo")
+        binding = BinaryBinding(
+            path, "0.4.0", hashlib.sha256(path.read_bytes()).hexdigest()
+        )
+        with mock.patch(
+            "scripts.beads_convergence.adapters.run_verified",
+            side_effect=UnsupportedCapability("descriptor execution is unavailable"),
+        ):
+            with self.assertRaisesRegex(AdapterError, "unverified"):
+                BrSqliteV1Adapter().verify_binary(binding)
+
+    def test_health_rejects_duplicate_and_unknown_fields(self) -> None:
+        adapter = BrSqliteV1Adapter()
+        fake = VerifiedExecutable(0, object(), 0, 0, "")
+        with tempfile.TemporaryDirectory() as temp:
+            with open_trusted_tree(Path(temp), Path(temp)) as worktree:
+                result = ExecutionResult(
+                    b'{"dirty_count":0,"dirty_count":0}', b"", 0
+                )
+                with mock.patch(
+                    "scripts.beads_convergence.adapters.run_verified",
+                    return_value=result,
+                ):
+                    with self.assertRaises(AdapterError):
+                        adapter.verify_health(worktree, fake)
 
 
 if __name__ == "__main__":

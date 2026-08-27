@@ -9,7 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .codec import ContractError, decode_registry
-from .fsafety import DirectoryHandle, FsafetyError, open_trusted_tree
+from .fsafety import (
+    DirectoryHandle,
+    FsafetyError,
+    open_descendant,
+    open_trusted_tree,
+)
 from .models import Registry, RepositoryConfig
 
 
@@ -28,6 +33,7 @@ class ValidatedRepository:
     seed: DirectoryHandle
     canonical: DirectoryHandle
     evidence: DirectoryHandle
+    allowed_roots: tuple[DirectoryHandle, ...]
 
     @property
     def physical_identity(self) -> tuple[int, int]:
@@ -37,6 +43,8 @@ class ValidatedRepository:
         self.seed.close()
         self.canonical.close()
         self.evidence.close()
+        for root in self.allowed_roots:
+            root.close()
 
     def __enter__(self) -> "ValidatedRepository":
         return self
@@ -153,43 +161,89 @@ def validate_repository(config: RepositoryConfig) -> ValidatedRepository:
         value = Path(value)
         if not value.is_absolute() or any(part in (".", "..") for part in value.parts):
             raise RegistryError(f"{label} must be an absolute, traversal-free path")
+    roots: list[DirectoryHandle] = []
+    seed: DirectoryHandle | None = None
+    canonical: DirectoryHandle | None = None
+    evidence: DirectoryHandle | None = None
     try:
-        seed = _open_any(config.repository_seed)
-        canonical = _open_any(config.canonical_beads)
+        roots = [_open_any(root) for root in config.allowed_worktree_roots]
+        if not roots:
+            raise RegistryError("at least one allowed worktree root is required")
+        seed_root = next(
+            (
+                root
+                for root in roots
+                if _under(root.display_path, config.repository_seed)
+            ),
+            None,
+        )
+        if seed_root is None:
+            raise RegistryError("repository seed is outside allowed worktree roots")
+        seed = open_descendant(seed_root, config.repository_seed)
+        canonical_root = next(
+            (
+                root
+                for root in roots
+                if _under(root.display_path, config.canonical_beads)
+            ),
+            None,
+        )
+        if canonical_root is None:
+            canonical_root = seed_root
+        canonical = open_descendant(canonical_root, config.canonical_beads)
         evidence = _open_any(config.evidence_root)
     except (FsafetyError, OSError) as exc:
+        for root in roots:
+            root.close()
         raise RegistryError(str(exc)) from exc
+    except RegistryError:
+        for root in roots:
+            root.close()
+        raise
     try:
         if not _under(config.repository_seed, config.canonical_beads) and not any(
-            _under(root, config.canonical_beads) for root in config.allowed_worktree_roots
+            _under(root.display_path, config.canonical_beads) for root in roots
         ):
             raise RegistryError("canonical directory is outside declared roots")
         if _under(config.repository_seed, config.evidence_root) or _under(
             config.canonical_beads, config.evidence_root
         ):
-            raise RegistryError("evidence root is inside a worktree or canonical directory")
+            raise RegistryError(
+                "evidence root is inside a worktree or canonical directory"
+            )
         # Physical equality catches spelling aliases without using string prefixes.
         for protected in (seed, canonical):
-            if evidence.device == protected.device and evidence.inode == protected.inode:
+            if (
+                evidence.device == protected.device
+                and evidence.inode == protected.inode
+            ):
                 raise RegistryError("evidence root overlaps authority")
-        for root in config.allowed_worktree_roots:
-            if not _under(root, config.repository_seed):
-                raise RegistryError("repository seed is outside allowed worktree roots")
         for worktree in config.additional_worktrees:
-            if not any(_under(root, worktree) for root in config.allowed_worktree_roots):
+            worktree_root = next(
+                (root for root in roots if _under(root.display_path, worktree)),
+                None,
+            )
+            if worktree_root is None:
                 raise RegistryError("additional worktree is outside allowed roots")
-            worktree_handle = _open_any(worktree)
+            worktree_handle = open_descendant(worktree_root, worktree)
             try:
                 if _under(worktree, config.evidence_root) or (
                     evidence.device == worktree_handle.device
                     and evidence.inode == worktree_handle.inode
                 ):
-                    raise RegistryError("evidence root is inside an additional worktree")
+                    raise RegistryError(
+                        "evidence root is inside an additional worktree"
+                    )
             finally:
                 worktree_handle.close()
-        return ValidatedRepository(config, seed, canonical, evidence)
+        return ValidatedRepository(config, seed, canonical, evidence, tuple(roots))
     except BaseException:
-        seed.close()
-        canonical.close()
-        evidence.close()
+        if seed is not None:
+            seed.close()
+        if canonical is not None:
+            canonical.close()
+        if evidence is not None:
+            evidence.close()
+        for root in roots:
+            root.close()
         raise

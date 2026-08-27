@@ -6,11 +6,22 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 from scripts.beads_convergence.codec import canonical_json_bytes
 from scripts.beads_convergence.models import BinaryBinding, Registry, RepositoryConfig
-from scripts.beads_convergence.registry import RegistryError, load_registry, validate_registry
-from scripts.beads_convergence.fsafety import FsafetyError, open_trusted_tree
+from scripts.beads_convergence.registry import (
+    RegistryError,
+    load_registry,
+    validate_registry,
+)
+from scripts.beads_convergence.fsafety import (
+    FsafetyError,
+    open_descendant,
+    open_trusted_tree,
+    validate_fixed_control_root,
+)
 
 
 def _config(root: Path, repo_id: str = "repo-one") -> RepositoryConfig:
@@ -84,11 +95,46 @@ class RegistryTest(unittest.TestCase):
             root = Path(temp)
             (root / "safe").mkdir()
             (root / "outside").mkdir()
-            (root / "safe" / "link").symlink_to(root / "outside", target_is_directory=True)
+            (root / "safe" / "link").symlink_to(
+                root / "outside", target_is_directory=True
+            )
             with self.assertRaises((FsafetyError, OSError)):
                 open_trusted_tree(root, root / "safe" / "link")
             with self.assertRaises(FsafetyError):
                 open_trusted_tree(root, root / "safe" / ".." / "outside")
+
+    def test_membership_stays_descriptor_anchored_after_root_rename(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            parent = Path(temp)
+            root = parent / "root"
+            target = root / "target"
+            target.mkdir(parents=True)
+            with open_trusted_tree(parent, root) as retained:
+                root.rename(parent / "replaced")
+                with open_descendant(retained, target) as child:
+                    self.assertEqual(child.display_path, target)
+
+    def test_fixed_control_root_has_no_caller_path_override(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            control = home / ".local/state/beads-convergence/control"
+            control.mkdir(parents=True)
+            for path in (
+                home,
+                home / ".local",
+                home / ".local/state",
+                control.parent,
+                control,
+            ):
+                path.chmod(0o700)
+            fake_pwd = SimpleNamespace(pw_dir=str(home))
+            with mock.patch("pwd.getpwuid", return_value=fake_pwd):
+                with validate_fixed_control_root() as handle:
+                    self.assertEqual(handle.display_path, control)
+            (home / ".local/state").chmod(0o755)
+            with mock.patch("pwd.getpwuid", return_value=fake_pwd):
+                with self.assertRaisesRegex(FsafetyError, "unsafe fixed"):
+                    validate_fixed_control_root()
 
 
 if __name__ == "__main__":
