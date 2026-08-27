@@ -398,6 +398,12 @@ def _list(value: object, field: str) -> list[object]:
 
 
 def _nonnegative_int(value: object, field: str) -> int:
-    if type(value) is not int or value < 0:
+    if type(value) is int:
+        result = value
+    elif type(value) is float and math.isfinite(value) and value.is_integer():
+        result = int(value)
+    else:
         raise ContractError(f"{field} must be a non-negative integer")
-    return value
+    if result < 0:
+        raise ContractError(f"{field} must be a non-negative integer")
+    return result

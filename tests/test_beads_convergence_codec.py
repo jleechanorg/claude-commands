@@ -140,12 +140,16 @@ class CodecTest(unittest.TestCase):
             decode_manifest(bad)
 
     def test_only_sqlite_v1_adapter_is_accepted(self) -> None:
-        for payload, decoder in (
-            (valid_registry_dict(), decode_registry),
-            (valid_manifest_dict(), decode_manifest),
-            (valid_plan_dict(), decode_plan),
+        for payload, decoder, adapter_path in (
+            (valid_registry_dict(), decode_registry, ("repositories", 0)),
+            (valid_manifest_dict(), decode_manifest, ()),
+            (valid_plan_dict(), decode_plan, ()),
         ):
-            payload["adapter"] = "unknown-adapter"
+            if adapter_path:
+                repository = payload["repositories"][0]  # type: ignore[index]
+                repository["adapter"] = "unknown-adapter"  # type: ignore[index]
+            else:
+                payload["adapter"] = "unknown-adapter"
             with self.assertRaisesRegex(ContractError, "adapter"):
                 decoder(payload)
 
@@ -174,14 +178,40 @@ class CodecTest(unittest.TestCase):
         for definition in ("source", "redirect", "worktree"):
             properties = manifest_schema["$defs"][definition]["properties"]
             for name, property_schema in properties.items():
-                if name in {"device", "inode", "size", "mode", "parent_device",
-                            "parent_inode", "directory_device", "directory_inode"}:
+                if name in {
+                    "device",
+                    "inode",
+                    "size",
+                    "mode",
+                    "parent_device",
+                    "parent_inode",
+                    "directory_device",
+                    "directory_inode",
+                }:
                     if isinstance(property_schema["type"], list):
                         self.assertIn("integer", property_schema["type"])
                     else:
                         self.assertEqual(property_schema["type"], "integer")
                     self.assertGreaterEqual(property_schema["minimum"], 0)
-                    self.assertIn("x-python-exact-type", property_schema)
+
+    def test_integer_decoder_accepts_integral_numbers_and_normalizes_them(self) -> None:
+        payload = valid_manifest_dict()
+        worktree = payload["worktrees"][0]  # type: ignore[index]
+        worktree["directory_device"] = 1.0  # type: ignore[index]
+        worktree["directory_inode"] = 2.0  # type: ignore[index]
+        manifest = decode_manifest(payload)
+        self.assertEqual(manifest.worktrees[0].directory_device, 1)
+        self.assertIs(type(manifest.worktrees[0].directory_device), int)
+
+        worktree["directory_device"] = 1.5  # type: ignore[index]
+        with self.assertRaisesRegex(ContractError, "non-negative integer"):
+            decode_manifest(payload)
+        worktree["directory_device"] = True  # type: ignore[index]
+        with self.assertRaisesRegex(ContractError, "non-negative integer"):
+            decode_manifest(payload)
+        worktree["directory_device"] = -1.0  # type: ignore[index]
+        with self.assertRaisesRegex(ContractError, "non-negative integer"):
+            decode_manifest(payload)
 
     def test_canonical_json_is_sorted_compact_utf8_and_hashable(self) -> None:
         self.assertEqual(canonical_json_bytes({"b": 2, "a": 1}), b'{"a":1,"b":2}')

@@ -37,9 +37,9 @@
       "required": ["name", "device", "inode", "size", "sha256"],
       "properties": {
         "name": { "type": "string", "minLength": 1 },
-        "device": { "type": "integer", "minimum": 0, "x-python-exact-type": "int" },
-        "inode": { "type": "integer", "minimum": 0, "x-python-exact-type": "int" },
-        "size": { "type": "integer", "minimum": 0, "x-python-exact-type": "int" },
+        "device": { "type": "integer", "minimum": 0 },
+        "inode": { "type": "integer", "minimum": 0 },
+        "size": { "type": "integer", "minimum": 0 },
         "sha256": { "$ref": "#/$defs/sha256" }
       }
     },
@@ -54,15 +54,14 @@
         "present": { "type": "boolean" },
         "mode": {
           "type": ["integer", "null"],
-          "minimum": 0,
-          "x-python-exact-type": "int-or-null"
+          "minimum": 0
         },
         "bytes": { "type": ["string", "null"] },
         "parent_device": {
-          "type": "integer", "minimum": 0, "x-python-exact-type": "int"
+          "type": "integer", "minimum": 0
         },
         "parent_inode": {
-          "type": "integer", "minimum": 0, "x-python-exact-type": "int"
+          "type": "integer", "minimum": 0
         },
         "codec": { "type": ["string", "null"] },
         "intended_bytes": { "type": ["string", "null"] }
@@ -84,10 +83,10 @@
           ]
         },
         "directory_device": {
-          "type": "integer", "minimum": 0, "x-python-exact-type": "int"
+          "type": "integer", "minimum": 0
         },
         "directory_inode": {
-          "type": "integer", "minimum": 0, "x-python-exact-type": "int"
+          "type": "integer", "minimum": 0
         },
         "sources": { "type": "array", "items": { "$ref": "#/$defs/source" } },
         "redirect": { "anyOf": [{ "$ref": "#/$defs/redirect" }, { "type": "null" }] }
