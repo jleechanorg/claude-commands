@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "beads.redirect-convergence.manifest.v1",
+  "title": "Beads redirect-convergence topology manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "registry_sha256", "repo_id", "adapter", "canonical_beads",
+    "tracker_binary", "git_binary", "worktrees"
+  ],
+  "properties": {
+    "schema": { "const": "beads.redirect-convergence.manifest.v1" },
+    "registry_sha256": { "$ref": "#/$defs/sha256" },
+    "repo_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "adapter": { "type": "string", "minLength": 1 },
+    "canonical_beads": { "$ref": "#/$defs/absolutePath" },
+    "tracker_binary": { "$ref": "#/$defs/binary" },
+    "git_binary": { "$ref": "#/$defs/binary" },
+    "worktrees": { "type": "array", "items": { "$ref": "#/$defs/worktree" } }
+  },
+  "$defs": {
+    "absolutePath": { "type": "string", "pattern": "^/[^\\u0000]*$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "binary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/absolutePath" },
+        "version": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "device", "inode", "size", "sha256"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "device": { "type": "integer", "minimum": 0 },
+        "inode": { "type": "integer", "minimum": 0 },
+        "size": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "redirect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "present", "mode", "bytes", "parent_device", "parent_inode",
+        "codec", "intended_bytes"
+      ],
+      "properties": {
+        "present": { "type": "boolean" },
+        "mode": { "type": ["integer", "null"], "minimum": 0 },
+        "bytes": { "type": ["string", "null"] },
+        "parent_device": { "type": "integer", "minimum": 0 },
+        "parent_inode": { "type": "integer", "minimum": 0 },
+        "codec": { "type": ["string", "null"] },
+        "intended_bytes": { "type": ["string", "null"] }
+      }
+    },
+    "worktree": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path", "classification", "directory_device", "directory_inode",
+        "sources", "redirect"
+      ],
+      "properties": {
+        "path": { "$ref": "#/$defs/absolutePath" },
+        "classification": {
+          "enum": [
+            "canonical", "redirected_canonical", "noncanonical",
+            "unresolved_noncanonical", "missing", "unsupported"
+          ]
+        },
+        "directory_device": { "type": "integer", "minimum": 0 },
+        "directory_inode": { "type": "integer", "minimum": 0 },
+        "sources": { "type": "array", "items": { "$ref": "#/$defs/source" } },
+        "redirect": { "anyOf": [{ "$ref": "#/$defs/redirect" }, { "type": "null" }] }
+      }
+    }
+  }
+}

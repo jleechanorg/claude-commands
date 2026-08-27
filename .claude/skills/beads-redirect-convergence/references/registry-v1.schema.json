@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "beads.redirect-convergence.registry.v1",
+  "title": "Beads redirect-convergence host registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "host_id", "repositories"],
+  "properties": {
+    "schema": { "const": "beads.redirect-convergence.registry.v1" },
+    "host_id": { "type": "string", "minLength": 1 },
+    "repositories": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/repository" }
+    }
+  },
+  "$defs": {
+    "absolutePath": { "type": "string", "pattern": "^/[^\\u0000]*$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "binary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/absolutePath" },
+        "version": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_id", "adapter", "repository_seed", "canonical_beads",
+        "allowed_worktree_roots", "additional_worktrees", "tracker_binary",
+        "git_binary", "evidence_root"
+      ],
+      "properties": {
+        "repo_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+        "adapter": { "type": "string", "minLength": 1 },
+        "repository_seed": { "$ref": "#/$defs/absolutePath" },
+        "canonical_beads": { "$ref": "#/$defs/absolutePath" },
+        "allowed_worktree_roots": {
+          "type": "array", "items": { "$ref": "#/$defs/absolutePath" }
+        },
+        "additional_worktrees": {
+          "type": "array", "items": { "$ref": "#/$defs/absolutePath" }
+        },
+        "tracker_binary": { "$ref": "#/$defs/binary" },
+        "git_binary": { "$ref": "#/$defs/binary" },
+        "evidence_root": { "$ref": "#/$defs/absolutePath" }
+      }
+    }
+  }
+}
