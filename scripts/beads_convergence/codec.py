@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 from dataclasses import fields, is_dataclass
 from pathlib import Path
 
@@ -84,7 +85,7 @@ def decode_manifest(value: object) -> Manifest:
     _schema(payload["schema"], "beads.redirect-convergence.manifest.v1")
     registry_sha = _hash(payload["registry_sha256"], "registry_sha256")
     repo_id = _repo_id(payload["repo_id"])
-    adapter = _string(payload["adapter"], "adapter", nonempty=True)
+    adapter = _adapter(payload["adapter"])
     canonical = _path(payload["canonical_beads"], "canonical_beads")
     tracker = _decode_binary(payload["tracker_binary"], "tracker_binary")
     git = _decode_binary(payload["git_binary"], "git_binary")
@@ -120,7 +121,7 @@ def decode_plan(value: object) -> Plan:
     _schema(payload["schema"], "beads.redirect-convergence.plan.v1")
     manifest_sha = _hash(payload["manifest_sha256"], "manifest_sha256")
     repo_id = _repo_id(payload["repo_id"])
-    adapter = _string(payload["adapter"], "adapter", nonempty=True)
+    adapter = _adapter(payload["adapter"])
     canonical = _path(payload["canonical_beads"], "canonical_beads")
     actions = payload["actions"]
     _list(actions, "actions")
@@ -154,7 +155,7 @@ def _decode_repository(value: object) -> RepositoryConfig:
     _list(extras, "additional_worktrees")
     return RepositoryConfig(
         _repo_id(payload["repo_id"]),
-        _string(payload["adapter"], "adapter", nonempty=True),
+        _adapter(payload["adapter"]),
         _path(payload["repository_seed"], "repository_seed"),
         _path(payload["canonical_beads"], "canonical_beads"),
         tuple(_path(item, "allowed_worktree_roots item") for item in roots),
@@ -272,19 +273,54 @@ def _object(value: object, field: str = "payload") -> dict[str, object]:
         try:
             value = json.loads(
                 bytes(value) if not isinstance(value, str) else value,
+                parse_constant=_reject_constant,
                 object_pairs_hook=_pairs_without_duplicates,
             )
-        except (json.JSONDecodeError, UnicodeDecodeError, _DuplicateField) as exc:
+        except (
+            json.JSONDecodeError,
+            UnicodeDecodeError,
+            _DuplicateField,
+            _NonStandardJson,
+        ) as exc:
             if isinstance(exc, _DuplicateField):
                 raise ContractError(f"{field} has duplicate field {exc}") from exc
+            if isinstance(exc, _NonStandardJson):
+                message = f"{field} contains non-standard JSON constant"
+                raise ContractError(message) from exc
             raise ContractError(f"{field} is not valid JSON") from exc
     if type(value) is not dict:
         raise ContractError(f"{field} must be an object")
+    _strict_json_members(value, field)
     return value
 
 
 class _DuplicateField(ValueError):
     pass
+
+
+class _NonStandardJson(ValueError):
+    pass
+
+
+def _reject_constant(value: str) -> None:
+    raise _NonStandardJson(value)
+
+
+def _strict_json_members(value: dict[str, object], field: str) -> None:
+    for key, item in value.items():
+        if type(key) is not str:
+            raise ContractError(f"{field} must use string keys")
+        _strict_json_value(item, field)
+
+
+def _strict_json_value(value: object, field: str) -> None:
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ContractError(f"{field} contains non-standard JSON number")
+    if type(value) is dict:
+        _strict_json_members(value, field)
+    elif type(value) is list:
+        for item in value:
+            _strict_json_value(item, field)
 
 
 def _pairs_without_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -310,6 +346,13 @@ def _schema(value: object, expected: str) -> None:
         raise ContractError(f"schema must be exactly {expected!r}")
 
 
+def _adapter(value: object) -> str:
+    value = _string(value, "adapter", nonempty=True)
+    if value != "br-sqlite-v1":
+        raise ContractError("adapter must be exactly 'br-sqlite-v1'")
+    return value
+
+
 def _string(value: object, field: str, *, nonempty: bool = False) -> str:
     if type(value) is not str or (nonempty and not value):
         raise ContractError(f"{field} must be a string")
@@ -321,7 +364,10 @@ def _repo_id(value: object) -> str:
     if (
         len(value) > 64
         or not ("a" <= value[0] <= "z" or "0" <= value[0] <= "9")
-        or any(char not in "abcdefghijklmnopqrstuvwxyz0123456789._-" for char in value[1:])
+        or any(
+            char not in "abcdefghijklmnopqrstuvwxyz0123456789._-"
+            for char in value[1:]
+        )
     ):
         raise ContractError("repo_id has invalid format")
     return value

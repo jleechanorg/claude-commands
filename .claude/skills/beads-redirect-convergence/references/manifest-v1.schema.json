@@ -12,7 +12,7 @@
     "schema": { "const": "beads.redirect-convergence.manifest.v1" },
     "registry_sha256": { "$ref": "#/$defs/sha256" },
     "repo_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
-    "adapter": { "type": "string", "minLength": 1 },
+    "adapter": { "const": "br-sqlite-v1" },
     "canonical_beads": { "$ref": "#/$defs/absolutePath" },
     "tracker_binary": { "$ref": "#/$defs/binary" },
     "git_binary": { "$ref": "#/$defs/binary" },
@@ -37,9 +37,9 @@
       "required": ["name", "device", "inode", "size", "sha256"],
       "properties": {
         "name": { "type": "string", "minLength": 1 },
-        "device": { "type": "integer", "minimum": 0 },
-        "inode": { "type": "integer", "minimum": 0 },
-        "size": { "type": "integer", "minimum": 0 },
+        "device": { "type": "integer", "minimum": 0, "x-python-exact-type": "int" },
+        "inode": { "type": "integer", "minimum": 0, "x-python-exact-type": "int" },
+        "size": { "type": "integer", "minimum": 0, "x-python-exact-type": "int" },
         "sha256": { "$ref": "#/$defs/sha256" }
       }
     },
@@ -52,10 +52,18 @@
       ],
       "properties": {
         "present": { "type": "boolean" },
-        "mode": { "type": ["integer", "null"], "minimum": 0 },
+        "mode": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "x-python-exact-type": "int-or-null"
+        },
         "bytes": { "type": ["string", "null"] },
-        "parent_device": { "type": "integer", "minimum": 0 },
-        "parent_inode": { "type": "integer", "minimum": 0 },
+        "parent_device": {
+          "type": "integer", "minimum": 0, "x-python-exact-type": "int"
+        },
+        "parent_inode": {
+          "type": "integer", "minimum": 0, "x-python-exact-type": "int"
+        },
         "codec": { "type": ["string", "null"] },
         "intended_bytes": { "type": ["string", "null"] }
       }
@@ -75,8 +83,12 @@
             "unresolved_noncanonical", "missing", "unsupported"
           ]
         },
-        "directory_device": { "type": "integer", "minimum": 0 },
-        "directory_inode": { "type": "integer", "minimum": 0 },
+        "directory_device": {
+          "type": "integer", "minimum": 0, "x-python-exact-type": "int"
+        },
+        "directory_inode": {
+          "type": "integer", "minimum": 0, "x-python-exact-type": "int"
+        },
         "sources": { "type": "array", "items": { "$ref": "#/$defs/source" } },
         "redirect": { "anyOf": [{ "$ref": "#/$defs/redirect" }, { "type": "null" }] }
       }

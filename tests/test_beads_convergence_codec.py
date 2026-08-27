@@ -139,6 +139,50 @@ class CodecTest(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "unknown field"):
             decode_manifest(bad)
 
+    def test_only_sqlite_v1_adapter_is_accepted(self) -> None:
+        for payload, decoder in (
+            (valid_registry_dict(), decode_registry),
+            (valid_manifest_dict(), decode_manifest),
+            (valid_plan_dict(), decode_plan),
+        ):
+            payload["adapter"] = "unknown-adapter"
+            with self.assertRaisesRegex(ContractError, "adapter"):
+                decoder(payload)
+
+    def test_plan_rejects_nonstandard_nan_in_raw_json(self) -> None:
+        payload = valid_plan_dict()
+        payload["actions"] = [{"cost": "NaN"}]
+        raw = json.dumps(payload).replace('"NaN"', "NaN")
+        with self.assertRaisesRegex(ContractError, "non-standard"):
+            decode_plan(raw)
+
+    def test_plan_rejects_non_string_action_keys_from_mapping(self) -> None:
+        payload = valid_plan_dict()
+        payload["actions"] = [{1: "invalid key"}]
+        with self.assertRaisesRegex(ContractError, "string keys"):
+            decode_plan(payload)
+
+    def test_schema_integer_fields_are_nonnegative_integers(self) -> None:
+        schema_path = (
+            Path(__file__).parents[1]
+            / ".claude/skills/beads-redirect-convergence/references"
+            / "manifest-v1.schema.json"
+        )
+        manifest_schema = json.loads(
+            schema_path.read_text()
+        )
+        for definition in ("source", "redirect", "worktree"):
+            properties = manifest_schema["$defs"][definition]["properties"]
+            for name, property_schema in properties.items():
+                if name in {"device", "inode", "size", "mode", "parent_device",
+                            "parent_inode", "directory_device", "directory_inode"}:
+                    if isinstance(property_schema["type"], list):
+                        self.assertIn("integer", property_schema["type"])
+                    else:
+                        self.assertEqual(property_schema["type"], "integer")
+                    self.assertGreaterEqual(property_schema["minimum"], 0)
+                    self.assertIn("x-python-exact-type", property_schema)
+
     def test_canonical_json_is_sorted_compact_utf8_and_hashable(self) -> None:
         self.assertEqual(canonical_json_bytes({"b": 2, "a": 1}), b'{"a":1,"b":2}')
         self.assertEqual(

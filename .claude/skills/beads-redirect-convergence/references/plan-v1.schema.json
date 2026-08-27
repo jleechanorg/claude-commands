@@ -11,7 +11,7 @@
     "schema": { "const": "beads.redirect-convergence.plan.v1" },
     "manifest_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "repo_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
-    "adapter": { "type": "string", "minLength": 1 },
+    "adapter": { "const": "br-sqlite-v1" },
     "canonical_beads": { "type": "string", "pattern": "^/[^\\u0000]*$" },
     "actions": { "type": "array", "items": { "type": "object" } }
   }
