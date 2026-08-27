@@ -86,3 +86,40 @@ git diff --check
   and compare the expected plan digest.
 - The pre-existing untracked `tests/test_beads_convergence_inventory.py` and
   `docs/superpowers/` tree were preserved and not staged.
+
+## Review fix round 1
+
+The first review identified that the initial aggregate test mocked the
+per-repository planner, that redirect pre-state combinations were not
+validated, and that source/physical bindings were too permissive. The planner
+now rejects present redirects without both bytes and mode, absent redirects
+with either value, duplicate source physical identities, unknown source names,
+invalid source digests, and relative worktree paths before emitting actions.
+
+The planner test now exercises a real non-empty `plan_all` call through the
+Task 3 inventory module without mocking `_plan_repository`. It uses actual
+temporary registry/worktree fixtures and only patches platform-bound binary
+execution and Git discovery seams. The same test covers a healthy action-bearing
+repository alongside an unhealthy hot-journal repository, and verifies their
+plans remain separate with distinct hashes. Additional assertions cover
+redirect and directory identity hash binding plus newly appeared and vanished
+classification filtering.
+
+Review-fix verification:
+
+```text
+python3 -m unittest -v tests.test_beads_convergence_planner
+# 8 tests, OK
+
+python3 -m py_compile scripts/beads_convergence/planner.py \
+  tests/test_beads_convergence_planner.py
+# OK
+
+awk 'length($0)>88 {print FNR ":" length($0)}' \
+  scripts/beads_convergence/planner.py \
+  tests/test_beads_convergence_planner.py
+# no output
+
+git diff --check
+# clean
+```

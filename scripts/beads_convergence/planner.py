@@ -15,6 +15,7 @@ _REQUIRED_SOURCES = frozenset({"beads.db", "issues.jsonl"})
 _KNOWN_SOURCES = frozenset(
     {"beads.db", "beads.db-wal", "beads.db-shm", "issues.jsonl"}
 )
+_HEX_DIGITS = frozenset("0123456789abcdef")
 
 
 class DeterministicPlan(Plan):
@@ -110,22 +111,37 @@ def _complete_noncanonical(worktree: object) -> bool:
         or not set(names).issubset(_KNOWN_SOURCES)
     ):
         return False
+    source_identities: set[tuple[int, int]] = set()
     for source in worktree.sources:
         if (
             source.device < 0
             or source.inode < 0
             or source.size < 0
             or len(source.sha256) != 64
+            or not set(source.sha256).issubset(_HEX_DIGITS)
+            or (source.device, source.inode) in source_identities
         ):
             return False
+        source_identities.add((source.device, source.inode))
     redirect = worktree.redirect
-    return (
-        redirect is not None
-        and redirect.codec is not None
-        and redirect.intended_bytes is not None
-        and redirect.parent_device >= 0
-        and redirect.parent_inode >= 0
-    )
+    if redirect is None:
+        return False
+    if (
+        redirect.codec is None
+        or not redirect.codec
+        or redirect.intended_bytes is None
+        or not redirect.intended_bytes
+        or redirect.parent_device < 0
+        or redirect.parent_inode < 0
+    ):
+        return False
+    if redirect.present:
+        return (
+            redirect.bytes is not None
+            and bool(redirect.bytes)
+            and redirect.mode is not None
+        )
+    return redirect.bytes is None and redirect.mode is None
 
 
 def _action(worktree: object) -> dict[str, object]:
