@@ -8,6 +8,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILL = REPO_ROOT / ".claude/skills/beads-redirect-convergence/SKILL.md"
+COMMAND = REPO_ROOT / ".claude/commands/beads-converge.md"
+README = REPO_ROOT / "README.md"
 SKILLS_ROOT = REPO_ROOT / ".claude/skills"
 
 
@@ -40,6 +42,7 @@ class BeadsRedirectConvergenceSkillTest(unittest.TestCase):
         required_bindings = (
             "--repo",
             "--expected-registry-sha256",
+            "--manifest",
             "--expected-manifest-sha256",
             "--expected-plan-sha256",
             "--expected-canonical",
@@ -105,6 +108,25 @@ class BeadsRedirectConvergenceSkillTest(unittest.TestCase):
         self.assertIn("beads-redirect-convergence", result["proper"])
         self.assertNotIn("beads-redirect-convergence", result["orphan"])
         self.assertNotIn("beads-redirect-convergence", result["duplicate"])
+
+    def test_command_is_a_thin_pointer_to_the_skill(self):
+        command = COMMAND.read_text(encoding="utf-8")
+        self.assertIn("description:", command[:512])
+        self.assertIn("beads-redirect-convergence/SKILL.md", command)
+        self.assertIn("$ARGUMENTS", command)
+        self.assertNotIn("beads-converge apply ", command)
+        self.assertNotIn("beads-converge recover ", command)
+
+    def test_readme_catalogs_the_command_and_canonical_skill(self):
+        readme = README.read_text(encoding="utf-8")
+        self.assertIn(
+            "`/beads-converge`",
+            readme,
+        )
+        self.assertIn(
+            "(.claude/skills/beads-redirect-convergence/SKILL.md)",
+            readme,
+        )
 
 
 if __name__ == "__main__":

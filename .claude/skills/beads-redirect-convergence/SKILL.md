@@ -121,8 +121,8 @@ operator arguments to the fresh operation:
 
 - Repository: exactly one `repo_id`; never a list or wildcard.
 - Registry: captured bytes and `--expected-registry-sha256`.
-- Manifest and plan: `--expected-manifest-sha256` and
-  `--expected-plan-sha256`.
+- Manifest and plan: apply requires `--manifest`,
+  `--expected-manifest-sha256`, and `--expected-plan-sha256`.
 - Canonical authority: `--expected-canonical`, plus physical path and
   device/inode identity.
 - Adapter: `--expected-adapter br-sqlite-v1`, codec, and oracle receipt.
@@ -181,7 +181,10 @@ automatic rollback claim based only on process output.
 ## One-repository recovery boundary
 
 Recovery is a separate operation, not an automatic continuation of apply. It
-names exactly one repository and one run. It requires a new signed recovery
+names exactly one repository and one run. The parser exposes optional
+`--manifest`, `--expected-manifest-sha256`, and `--expected-plan-sha256` for
+recovery, but those optional arguments do not grant capability or authority. It
+requires a new signed recovery
 approval plus `--expected-registry-sha256`, `--run-id`, and
 `--expected-journal-sha256`, plus canonical path, adapter, and tracker/Git
 bindings, and literal `--recover`. The recovery binding includes the run ID and
