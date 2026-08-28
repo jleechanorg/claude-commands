@@ -8,6 +8,12 @@ from pathlib import Path
 
 from .codec import canonical_json_bytes, sha256_hex
 from .models import Manifest, Plan, RedirectState, Registry, RepositoryConfig
+from .registry import (
+    PhysicalIdentityClaims,
+    ValidatedRepository,
+    validate_registry,
+    validate_repository,
+)
 
 
 _PLAN_SCHEMA = "beads.redirect-convergence.plan.v1"
@@ -212,22 +218,28 @@ def build_plan(manifest: Manifest) -> Plan:
     )
 
 
-def _plan_repository(
-    config: RepositoryConfig, registry_sha256: str | None = None
-) -> Plan:
-    """Validate, inventory, and plan one repository without a mutation path."""
+def _plan_validated_repository(repository: ValidatedRepository) -> Plan:
+    """Build a plan from retained validation authority without reopening it."""
 
     from .adapters import BrSqliteV1Adapter
     from .inventory import build_manifest
-    from .registry import validate_repository
 
-    repository = validate_repository(config)
-    if registry_sha256 is not None:
-        repository.registry_sha256 = registry_sha256
+    adapter = BrSqliteV1Adapter()
+    manifest = build_manifest(repository, adapter)
+    return build_plan(manifest)
+
+
+def _plan_repository(
+    config: RepositoryConfig,
+    registry_sha256: str,
+    identity_guard: PhysicalIdentityClaims | None = None,
+) -> Plan:
+    """Validate, inventory, and plan one repository without a mutation path."""
+
+    repository = validate_repository(config, _identity_guard=identity_guard)
+    repository.registry_sha256 = registry_sha256
     try:
-        adapter = BrSqliteV1Adapter()
-        manifest = build_manifest(repository, adapter)
-        return build_plan(manifest)
+        return _plan_validated_repository(repository)
     finally:
         repository.close()
 
@@ -241,22 +253,38 @@ def plan_all(registry: Registry) -> PlanAllReceipt:
 
     results: list[PlanResult] = []
     registry_sha256 = sha256_hex(canonical_json_bytes(registry))
-    from .registry import validate_registry
 
     try:
         validated = validate_registry(registry)
-        for repository in validated:
-            repository.close()
     except Exception as exc:
         del exc
-    for config in sorted(registry.repositories, key=lambda item: item.repo_id):
-        try:
-            results.append(
-                PlanResult(
-                    config.repo_id, _plan_repository(config, registry_sha256)
+        identity_guard = PhysicalIdentityClaims()
+        for config in sorted(registry.repositories, key=lambda item: item.repo_id):
+            try:
+                results.append(
+                    PlanResult(
+                        config.repo_id,
+                        _plan_repository(
+                            config, registry_sha256, identity_guard
+                        ),
+                    )
                 )
-            )
-        except Exception as exc:  # isolate one repository's failure
-            results.append(PlanResult(config.repo_id, error=str(exc)))
+            except Exception as exc:  # isolate one repository's failure
+                results.append(PlanResult(config.repo_id, error=str(exc)))
+    else:
+        for repository in sorted(validated, key=lambda item: item.config.repo_id):
+            try:
+                results.append(
+                    PlanResult(
+                        repository.config.repo_id,
+                        _plan_validated_repository(repository),
+                    )
+                )
+            except Exception as exc:  # isolate one repository's failure
+                results.append(
+                    PlanResult(repository.config.repo_id, error=str(exc))
+                )
+            finally:
+                repository.close()
     status = 0 if all(result.ok for result in results) else 1
     return PlanAllReceipt(tuple(results), status)

@@ -460,6 +460,87 @@ class PlannerTest(unittest.TestCase):
                 expected_registry_sha,
             )
 
+    def test_shared_git_discovered_store_cannot_produce_two_successful_plans(
+        self,
+    ) -> None:
+        from scripts.beads_convergence import inventory
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            shared = root / "shared-worktree"
+            shared_beads = shared / ".beads"
+            shared_beads.mkdir(parents=True)
+            (shared_beads / "beads.db").write_bytes(
+                b"SQLite format 3\x00" + b"x" * 32
+            )
+            (shared_beads / "issues.jsonl").write_bytes(b"{}\n")
+            configs = []
+            for repo_id in ("repo-a", "repo-b"):
+                base = _real_config(root, repo_id)
+                configs.append(
+                    RepositoryConfig(
+                        base.repo_id,
+                        base.adapter,
+                        base.repository_seed,
+                        base.canonical_beads,
+                        (root,),
+                        (),
+                        base.tracker_binary,
+                        base.git_binary,
+                        base.evidence_root,
+                    )
+                )
+            registry = Registry(
+                "beads.redirect-convergence.registry.v1",
+                "h",
+                tuple(configs),
+            )
+            git_results = [
+                SimpleNamespace(
+                    stdout=(
+                        f"worktree {config.repository_seed}\n\n"
+                        f"worktree {shared}\n\n"
+                    ).encode(),
+                    stderr=b"",
+                    returncode=0,
+                )
+                for config in configs
+            ]
+            with patch.object(
+                inventory,
+                "run_verified",
+                side_effect=git_results,
+            ), patch.object(
+                inventory,
+                "_codec_metadata",
+                return_value=(
+                    "br-sqlite-v1-redirect-v1",
+                    "/canonical/.beads",
+                    "d" * 64,
+                ),
+            ), patch.object(
+                inventory,
+                "_common_dir_identity",
+                return_value=(1, 1),
+            ), patch.object(
+                BrSqliteV1Adapter,
+                "verify_binary",
+                return_value=SimpleNamespace(close=lambda: None),
+            ), patch.object(
+                BrSqliteV1Adapter,
+                "verify_git_binary",
+                return_value=SimpleNamespace(close=lambda: None),
+            ), patch.object(
+                BrSqliteV1Adapter,
+                "verify_health",
+                return_value=HealthAttestation(0, False, False, "healthy", {}),
+            ):
+                receipt = plan_all(registry)
+
+            self.assertEqual(receipt.status, 1)
+            self.assertEqual(sum(result.ok for result in receipt.results), 1)
+            self.assertTrue(receipt.results[0].ok or receipt.results[1].ok)
+
 
 if __name__ == "__main__":
     unittest.main()
