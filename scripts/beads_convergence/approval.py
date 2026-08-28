@@ -8,6 +8,7 @@ independent control; readable registry/plan files never authorize an apply.
 
 from __future__ import annotations
 
+import base64
 import datetime as dt
 import os
 import stat
@@ -19,7 +20,8 @@ from pathlib import Path
 from typing import Protocol
 
 from .codec import canonical_json_bytes
-from .models import ApprovalEnvelope
+from .fsafety import CHILD_ENV, open_trusted_tree, open_verified_executable
+from .models import ApprovalEnvelope, BinaryBinding
 
 SSH_NAMESPACE = "beads-redirect-convergence-v1@jleechan.org"
 APPROVAL_SCHEMA = "beads.redirect-convergence.approval.v1"
@@ -57,6 +59,26 @@ def envelope_bytes(envelope: ApprovalEnvelope) -> bytes:
     return canonical_json_bytes(asdict(envelope))
 
 
+def tool_tree_sha256() -> str:
+    """Bind the exact shipped transaction contract, never a caller-supplied path."""
+
+    import hashlib
+
+    root = Path(__file__).resolve().parents[2]
+    files = (
+        root / "scripts/beads_convergence/approval.py",
+        root / "scripts/beads_convergence/transaction.py",
+        root / ".claude/skills/beads-redirect-convergence/references/approval-v1.schema.json",
+        root / ".claude/skills/beads-redirect-convergence/references/journal-v1.schema.json",
+        root / ".claude/skills/beads-redirect-convergence/references/receipt-v1.schema.json",
+    )
+    digest = hashlib.sha256()
+    for path in files:
+        digest.update(os.fspath(path.relative_to(root)).encode() + b"\0")
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
 def _parse_time(value: str) -> dt.datetime:
     if not isinstance(value, str) or not value.endswith("Z"):
         raise ApprovalError("approval timestamps must be UTC RFC3339")
@@ -80,6 +102,9 @@ def verify_signed_approval(
     adapter: str,
     tracker_binary: object,
     git_binary: object,
+    canonical_identity: tuple[int, int],
+    run_id: str | None,
+    journal_sha256: str | None,
 ) -> str:
     """Verify all semantic bindings before reserving an approval nonce."""
 
@@ -101,10 +126,16 @@ def verify_signed_approval(
         ("adapter", adapter),
         ("tracker_binary", tracker_binary),
         ("git_binary", git_binary),
+        ("canonical_device", canonical_identity[0]),
+        ("canonical_inode", canonical_identity[1]),
+        ("run_id", run_id),
+        ("journal_sha256", journal_sha256),
     )
     for name, value in expected:
         if getattr(envelope, name) != value:
             raise ApprovalError(f"approval {name} does not match")
+    if envelope.tool_tree_sha256 != tool_tree_sha256():
+        raise ApprovalError("approval tool tree does not match")
     issued, expires, current = map(_parse_time, (envelope.issued_at, envelope.expires_at, now))
     if issued > current or expires <= current:
         raise ApprovalError("approval is expired or not yet valid")
@@ -153,8 +184,24 @@ def _verify_root_owned_tree(root: Path) -> None:
 class SshApprovalVerifier:
     """Production SSH verifier with fixed signer identity, namespace and root."""
 
-    def __init__(self, fingerprint: str) -> None:
-        self.fingerprint = fingerprint
+    def __init__(self, verifier_binary: BinaryBinding) -> None:
+        self._binding = verifier_binary
+        self.fingerprint = ""
+
+    @staticmethod
+    def _fingerprint(allowed_fd: int, principal: str) -> str:
+        os.lseek(allowed_fd, 0, os.SEEK_SET)
+        raw = os.read(allowed_fd, 1024 * 1024).decode("utf-8")
+        keys: list[bytes] = []
+        for line in raw.splitlines():
+            fields = line.split()
+            if len(fields) >= 3 and fields[0] == principal and fields[1].startswith("ssh-"):
+                keys.append(base64.b64decode(fields[2], validate=True))
+        if len(keys) != 1:
+            raise ApprovalError("allowed signers must admit exactly one key for principal")
+        import hashlib
+
+        return "SHA256:" + base64.b64encode(hashlib.sha256(keys[0]).digest()).decode().rstrip("=")
 
     def verify(self, envelope: bytes, signature: bytes, **bindings: object) -> bool:
         root = bindings.get("trust_root")
@@ -166,22 +213,30 @@ class SshApprovalVerifier:
             return False
         try:
             _verify_root_owned_tree(compiled_trust_root())
-            allowed = compiled_trust_root() / "allowed_signers"
-            info = os.stat(allowed, follow_symlinks=False)
-            if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or stat.S_IMODE(info.st_mode) & 0o022:
-                raise ApprovalError("allowed signers file is unsafe")
+            with open_trusted_tree(Path("/"), compiled_trust_root()) as trust:
+                allowed_fd = os.open("allowed_signers", os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=trust.fd)
+                info = os.fstat(allowed_fd)
+                if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or stat.S_IMODE(info.st_mode) & 0o022:
+                    os.close(allowed_fd)
+                    raise ApprovalError("allowed signers file is unsafe")
+                self.fingerprint = self._fingerprint(allowed_fd, principal)
             with tempfile.NamedTemporaryFile(prefix="beads-signature-", delete=False) as handle:
                 handle.write(signature)
                 signature_path = Path(handle.name)
             try:
-                result = subprocess.run(
-                    ("ssh-keygen", "-Y", "verify", "-n", SSH_NAMESPACE, "-I", principal,
-                     "-f", os.fspath(allowed), "-s", os.fspath(signature_path)),
-                    input=envelope, capture_output=True,
-                    check=False, timeout=30,
-                )
-                return result.returncode == 0
+                executable = open_verified_executable(self._binding)
+                try:
+                    result = subprocess.run(
+                        (f"/dev/fd/{executable.fd}", "-Y", "verify", "-n", SSH_NAMESPACE, "-I", principal,
+                         "-f", f"/dev/fd/{allowed_fd}", "-s", os.fspath(signature_path)),
+                        input=envelope, capture_output=True, check=False, timeout=30,
+                        env=CHILD_ENV, pass_fds=(executable.fd, allowed_fd),
+                    )
+                    return result.returncode == 0
+                finally:
+                    executable.close()
             finally:
                 signature_path.unlink(missing_ok=True)
+                os.close(allowed_fd)
         except (ApprovalError, OSError, subprocess.SubprocessError):
             return False

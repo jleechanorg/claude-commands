@@ -46,6 +46,11 @@ class ApprovalEnvelope:
     adapter: str
     tracker_binary: BinaryBinding
     git_binary: BinaryBinding
+    canonical_device: int
+    canonical_inode: int
+    tool_tree_sha256: str
+    run_id: str | None
+    journal_sha256: str | None
     signer_principal: str
     signer_fingerprint: str
 

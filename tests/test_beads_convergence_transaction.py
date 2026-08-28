@@ -9,11 +9,13 @@ from __future__ import annotations
 import hashlib
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from scripts.beads_convergence.approval import (
     ApprovalError,
     SignedApproval,
+    tool_tree_sha256,
 )
 from scripts.beads_convergence.codec import canonical_json_bytes, sha256_hex
 from scripts.beads_convergence.models import (
@@ -31,6 +33,8 @@ from scripts.beads_convergence.planner import build_plan
 from scripts.beads_convergence.transaction import (
     ApplyRequest,
     FixtureControlStore,
+    RecoveryRequest,
+    TransactionCrash,
     TransactionError,
     apply_plan,
 )
@@ -57,12 +61,21 @@ class FixtureAdapter:
     adapter_id = "br-sqlite-v1"
     fixture_only = True
 
-    def __init__(self) -> None:
+    def __init__(self, canonical: Path | None = None) -> None:
         self.lease_available = True
+        self.canonical = canonical
 
     def acquire_writer_exclusion(self, canonical: Path) -> object:
-        del canonical
+        self.canonical = canonical
         return type("Lease", (), {"available": self.lease_available})()
+
+    def attest_transaction(self, manifest: Manifest) -> bool:
+        return self.canonical == manifest.canonical_beads
+
+    def resolve_authority(self, worktree: Path) -> Path:
+        del worktree
+        assert self.canonical is not None
+        return self.canonical
 
 
 def _digest(path: Path) -> str:
@@ -114,7 +127,9 @@ def make_request(root: Path, *, apply: bool = True) -> ApplyRequest:
         "beads.redirect-convergence.approval.v1", "apply", "repo-a", "nonce-1",
         "2026-08-27T00:00:00Z", "2026-08-28T00:00:00Z",
         sha256_hex(canonical_json_bytes(registry)), sha256_hex(canonical_json_bytes(manifest)),
-        plan.sha256, canonical, "br-sqlite-v1", binding, binding, "ops@example.test",
+        plan.sha256, canonical, "br-sqlite-v1", binding, binding,
+        canonical.stat().st_dev, canonical.stat().st_ino, tool_tree_sha256(), None, None,
+        "ops@example.test",
         "SHA256:fixture-external-key",
     )
     return ApplyRequest(
@@ -122,6 +137,26 @@ def make_request(root: Path, *, apply: bool = True) -> ApplyRequest:
         adapter=FixtureAdapter(), approval=SignedApproval(approval, b"fixture-external-signature"),
         verifier=FixtureVerifier(), control=FixtureControlStore(root / "control"),
         now="2026-08-27T12:00:00Z", run_id="fixture-run",
+    )
+
+
+def make_recovery_request(request: ApplyRequest, *, nonce: str = "recover-nonce") -> RecoveryRequest:
+    """Create a separate fixture-only recovery capability from durable journal bytes."""
+
+    journal = request.control.load_journal(str(request.run_id))
+    approval = request.approval
+    assert approval is not None
+    envelope = replace(
+        approval.envelope,
+        operation="recover",
+        nonce=nonce,
+        run_id=request.run_id,
+        journal_sha256=sha256_hex(canonical_json_bytes(journal)),
+    )
+    return RecoveryRequest(
+        request.control, request.adapter, str(request.run_id), True, request.registry,
+        request.manifest, request.plan, SignedApproval(envelope, approval.signature),
+        request.verifier, request.now, sha256_hex(canonical_json_bytes(journal)),
     )
 
 
@@ -164,6 +199,23 @@ class TransactionTest(unittest.TestCase):
             self.assertEqual(receipt.signer_fingerprint, "SHA256:fixture-external-key")
             with self.assertRaisesRegex(ApprovalError, "already used"):
                 apply_plan(request)
+
+    def test_unfinished_canonical_journal_refuses_new_apply_before_nonce(self) -> None:
+        """A crashed run owns its canonical key until separately recovered."""
+
+        with tempfile.TemporaryDirectory() as temp:
+            request = make_request(Path(temp))
+            crashed = replace(request, fault_at="after-prepared")
+            with self.assertRaises(TransactionCrash):
+                apply_plan(crashed)
+            assert request.approval is not None
+            second_approval = SignedApproval(
+                replace(request.approval.envelope, nonce="nonce-2"),
+                request.approval.signature,
+            )
+            second = replace(request, run_id="second-run", approval=second_approval)
+            with self.assertRaisesRegex(TransactionError, "unfinished journal"):
+                apply_plan(second)
 
     def test_source_drift_before_redirect_leaves_target_untouched(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
