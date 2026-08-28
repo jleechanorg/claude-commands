@@ -35,9 +35,10 @@ class _Trap:
 class ProductionBoundaryTest(unittest.TestCase):
     def test_launcher_and_runtime_are_sealed_to_scripts_package(self) -> None:
         launcher = (ROOT / "scripts/beads-converge").read_text()
-        self.assertIn('"-I"', launcher)
+        self.assertTrue(launcher.startswith("#!/usr/bin/env -S python3 -I -S\n"))
         self.assertIn("from beads_convergence.cli import main", launcher)
         for forbidden in (
+            "os.execve",
             "parents[1]",
             "from scripts.beads_convergence",
         ):

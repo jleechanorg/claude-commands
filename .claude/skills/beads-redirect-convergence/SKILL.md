@@ -49,10 +49,17 @@ is clean.
 
 ## Public read-only CLI
 
-Use the installed `beads-converge` executable supplied by the package. The
-following are copy-paste templates: replace angle-bracket placeholders with
-values obtained and independently checked by the operator. Registry paths and
-all artifact paths must be absolute; registry data itself does not expand
+Execute the installed `beads-converge` launcher directly. Its shebang starts
+Python in isolated, no-site mode before runtime imports. Invocations such as
+`python beads-converge` and `python -I beads-converge` are unsupported and fail
+before importing the runtime package because they do not provide both required
+flags. A caller-selected Python may already have run startup hooks before the
+launcher's first line, so this boundary does not claim to undo or prevent those
+hooks; direct executable invocation is the supported security boundary.
+
+The following are copy-paste templates: replace angle-bracket placeholders
+with values obtained and independently checked by the operator. Registry paths
+and all artifact paths must be absolute; registry data itself does not expand
 environment variables, `~`, shell syntax, or command substitution.
 
 Set review inputs in the shell only for the read-only commands:

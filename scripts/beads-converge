@@ -1,26 +1,16 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S python3 -I -S
 """Isolated executable entry point for the convergence CLI."""
 
 import os
 import sys
 
-_LAUNCHER = os.path.realpath(__file__)
-_SCRIPTS_DIR = os.path.dirname(_LAUNCHER)
-_ISOLATED_ENV = {"LANG": "C", "LC_ALL": "C", "TZ": "UTC"}
-
-
 if not (sys.flags.isolated and sys.flags.no_site):
-    if not os.path.isabs(sys.executable) or not os.path.isabs(_LAUNCHER):
-        raise SystemExit("beads-converge: isolated Python executable is unavailable")
-    try:
-        os.execve(
-            sys.executable,
-            (sys.executable, "-I", "-S", _LAUNCHER, *sys.argv[1:]),
-            _ISOLATED_ENV,
-        )
-    except OSError as exc:
-        raise SystemExit("beads-converge: isolated Python re-exec failed") from exc
+    raise SystemExit(
+        "beads-converge: unsupported interpreter invocation; "
+        "execute the launcher directly"
+    )
 
+_SCRIPTS_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, _SCRIPTS_DIR)
 
 
