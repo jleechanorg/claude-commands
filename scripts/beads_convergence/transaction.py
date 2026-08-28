@@ -22,8 +22,16 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from .adapters import (
+    AdapterError,
+    BackendAttestation,
+    HealthAttestation,
+    SourceSnapshot,
+    WriterLease,
+)
 from .approval import ApprovalError, SignedApproval, verify_signed_approval
 from .codec import canonical_json_bytes, sha256_hex
+from .fsafety import open_descendant, open_trusted_tree
 from .models import Manifest, Plan, Registry
 from .planner import build_plan
 
@@ -296,16 +304,17 @@ def _verify_target(action: dict[str, Any]) -> Path:
     return worktree
 
 
-def _verify_authority(adapter: object, worktree: Path, canonical: Path) -> None:
+def _verify_authority(adapter: object, worktree: Path, canonical: Path, executable: object) -> None:
     resolve = getattr(adapter, "resolve_authority", None)
     if not callable(resolve):
         raise TransactionError("adapter cannot verify redirect authority")
-    resolved = resolve(worktree)
+    with open_trusted_tree(Path("/"), worktree) as handle:
+        resolved = resolve(handle, executable)
     if not isinstance(resolved, Path) or _canonical_identity(resolved) != _canonical_identity(canonical):
         raise TransactionError("redirect does not resolve one hop to canonical authority")
 
 
-def _write_redirect(beads: Path, pre: dict[str, Any], intended: str, fault_at: str | None, *, adapter: object, worktree: Path, canonical: Path) -> None:
+def _write_redirect(beads: Path, pre: dict[str, Any], intended: str, fault_at: str | None, *, adapter: object, worktree: Path, canonical: Path, executable: object) -> None:
     info = os.stat(beads, follow_symlinks=False)
     if (info.st_dev, info.st_ino) != (pre["parent_device"], pre["parent_inode"]):
         raise TransactionError("redirect parent identity changed")
@@ -337,7 +346,7 @@ def _write_redirect(beads: Path, pre: dict[str, Any], intended: str, fault_at: s
             raise TransactionCrash()
     if _redirect_state(beads)["bytes"] != intended:
         raise TransactionError("redirect verification failed")
-    _verify_authority(adapter, worktree, canonical)
+    _verify_authority(adapter, worktree, canonical, executable)
 
 
 def _journal_action(action: dict[str, Any]) -> dict[str, Any]:
@@ -355,14 +364,45 @@ def _assert_manifest_sources(manifest: Manifest) -> None:
             _assert_sources(record.path / ".beads", [asdict(item) for item in record.sources])
 
 
-def _reattest(adapter: object, manifest: Manifest) -> None:
-    attest = getattr(adapter, "attest_transaction", None)
-    if not callable(attest) or attest(manifest) is not True:
-        raise TransactionError("adapter cannot re-attest topology, backend, and health")
+def _reattest(adapter: object, manifest: Manifest) -> tuple[object, WriterLease]:
+    """Run the typed adapter contract against retained directory descriptors."""
+
+    try:
+        executable = adapter.verify_binary(manifest.tracker_binary)
+        with open_trusted_tree(Path("/"), manifest.canonical_beads) as canonical:
+            backend = adapter.attest_backend(canonical)
+            if not isinstance(backend, BackendAttestation) or backend.backend != "sqlite":
+                raise TransactionError("canonical backend is not positively attested")
+            lease = adapter.acquire_writer_exclusion(canonical, executable)
+            if not isinstance(lease, WriterLease) or not lease.available:
+                raise TransactionError("adapter cannot prove writer exclusion")
+            snapshots: list[tuple[tuple[object, ...], ...]] = []
+            for _ in range(2):
+                current: list[tuple[object, ...]] = []
+                for record in manifest.worktrees:
+                    if not record.sources:
+                        continue
+                    with open_trusted_tree(Path("/"), record.path) as worktree:
+                        health = adapter.verify_health(worktree, executable)
+                        if not isinstance(health, HealthAttestation) or health.workspace_health != "healthy" or health.dirty_count or health.db_newer or health.jsonl_newer:
+                            raise TransactionError("worktree health is not attested healthy")
+                        with open_descendant(worktree, record.path / ".beads") as beads:
+                            source = adapter.fingerprint_sources(beads)
+                            if not isinstance(source, SourceSnapshot) or not source.quiescent or not source.lease_proven:
+                                raise TransactionError("source snapshot is not lease-proven")
+                            current.append((record.path, source.sources))
+                snapshots.append(tuple(current))
+            if snapshots[0] != snapshots[1]:
+                raise TransactionError("source family changed during coherent snapshot")
+            return executable, lease
+    except (AdapterError, OSError, ValueError) as exc:
+        raise TransactionError("typed adapter re-attestation failed") from exc
 
 
 def _restore_redirect(beads: Path, pre: dict[str, Any], intended: str, *, adapter: object, worktree: Path, canonical: Path) -> None:
     """Reverse only an exactly-recorded intended redirect; preserve other bytes."""
+
+    del adapter, worktree, canonical
 
     actual = _redirect_state(beads)
     if _matches_pre(actual, pre):
@@ -373,7 +413,6 @@ def _restore_redirect(beads: Path, pre: dict[str, Any], intended: str, *, adapte
         with _open_directory(beads) as directory_fd:
             os.unlink("redirect", dir_fd=directory_fd)
             _durable_fsync(directory_fd)
-        _verify_authority(adapter, worktree, canonical)
         return
     fd, temp = tempfile_name(beads, "redirect")
     try:
@@ -387,7 +426,6 @@ def _restore_redirect(beads: Path, pre: dict[str, Any], intended: str, *, adapte
         _durable_fsync(directory_fd)
     if not _matches_pre(_redirect_state(beads), pre):
         raise TransactionError("rollback redirect verification failed")
-    _verify_authority(adapter, worktree, canonical)
 
 
 def _rollback(journal: dict[str, Any], control: FileControlStore, adapter: object) -> bool:
@@ -485,11 +523,9 @@ def apply_plan(request: ApplyRequest) -> ApplyReceipt:
         if request.control.unfinished_journal(key) is not None:
             raise TransactionError("unfinished journal already owns canonical authority")
         request.control.reserve_nonce(key, request.approval.envelope.nonce)
-        lease = _lease(request.adapter, request.manifest.canonical_beads)
+        executable, lease = _reattest(request.adapter, request.manifest)
         if lease is None:
             raise TransactionError("writer exclusion lease disappeared")
-        _reattest(request.adapter, request.manifest)
-        _assert_manifest_sources(request.manifest)
         actions = [_journal_action(dict(action)) for action in request.plan.actions]
         for action in actions:
             _assert_sources(Path(action["worktree_path"]) / ".beads", action["sources"])
@@ -511,7 +547,7 @@ def apply_plan(request: ApplyRequest) -> ApplyReceipt:
                 worktree = _verify_target(action)
                 beads = worktree / ".beads"
                 _assert_sources(beads, action["sources"])
-                _write_redirect(beads, action["pre"], str(action["intended"]), request.fault_at, adapter=request.adapter, worktree=worktree, canonical=request.manifest.canonical_beads)
+                _write_redirect(beads, action["pre"], str(action["intended"]), request.fault_at, adapter=request.adapter, worktree=worktree, canonical=request.manifest.canonical_beads, executable=executable)
                 action["state"] = "APPLIED"
                 request.control.save_journal(journal)
                 if request.fault_at == "after-progress":
@@ -578,11 +614,14 @@ def recover_run(request: RecoveryRequest) -> RecoveryReceipt:
         request.control.reserve_nonce(key, request.approval.envelope.nonce)
         if journal["status"] == "NEEDS_OPERATOR":
             return RecoveryReceipt(request.run_id, "NEEDS_OPERATOR", sha256_hex(canonical_json_bytes(journal)))
-        lease = _lease(request.adapter, Path(str(journal["canonical_beads"])))
+        try:
+            _executable, lease = _reattest(request.adapter, request.manifest)
+        except TransactionError:
+            journal["status"] = "NEEDS_OPERATOR"
+            request.control.save_journal(journal)
+            return RecoveryReceipt(request.run_id, "NEEDS_OPERATOR", sha256_hex(canonical_json_bytes(journal)))
         if lease is None:
             raise TransactionError("writer exclusion lease disappeared")
-        _reattest(request.adapter, request.manifest)
-        _assert_manifest_sources(request.manifest)
         if journal["status"] == "COMMITTED":
             _save_receipt(request.control, journal)
             return RecoveryReceipt(request.run_id, "COMMITTED", sha256_hex(canonical_json_bytes(journal)))

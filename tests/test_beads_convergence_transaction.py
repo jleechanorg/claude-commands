@@ -12,12 +12,20 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
+from scripts.beads_convergence.adapters import (
+    BackendAttestation,
+    HealthAttestation,
+    SourceMember,
+    SourceSnapshot,
+    WriterLease,
+)
 from scripts.beads_convergence.approval import (
     ApprovalError,
     SignedApproval,
     tool_tree_sha256,
 )
 from scripts.beads_convergence.codec import canonical_json_bytes, sha256_hex
+from scripts.beads_convergence.fsafety import DirectoryHandle
 from scripts.beads_convergence.models import (
     ApprovalEnvelope,
     BinaryBinding,
@@ -64,18 +72,44 @@ class FixtureAdapter:
     def __init__(self, canonical: Path | None = None) -> None:
         self.lease_available = True
         self.canonical = canonical
+        self.backend = "sqlite"
+        self.healthy = True
+        self.source_proven = True
+        self.authority_calls: list[tuple[object, object, bytes]] = []
 
-    def acquire_writer_exclusion(self, canonical: Path) -> object:
-        self.canonical = canonical
-        return type("Lease", (), {"available": self.lease_available})()
+    def verify_binary(self, binding: BinaryBinding) -> object:
+        del binding
+        return object()
 
-    def attest_transaction(self, manifest: Manifest) -> bool:
-        return self.canonical == manifest.canonical_beads
+    def attest_backend(self, beads: object) -> BackendAttestation:
+        del beads
+        return BackendAttestation(self.backend, ("beads.db", "issues.jsonl"))
 
-    def resolve_authority(self, worktree: Path) -> Path:
-        del worktree
+    def verify_health(self, worktree: object, executable: object) -> HealthAttestation:
+        del worktree, executable
+        return HealthAttestation(0 if self.healthy else 1, False, False, "healthy", {})
+
+    def acquire_writer_exclusion(self, canonical: object, executable: object) -> WriterLease:
+        self.canonical = Path(canonical.display_path)
+        del executable
+        return WriterLease(self.lease_available, "fixture", "fixture")
+
+    def fingerprint_sources(self, beads: object) -> SourceSnapshot:
+        path = Path(beads.display_path)
+        members = tuple(
+            SourceMember(item.name, item.device, item.inode, item.size, item.sha256)
+            for item in (_source(path, "beads.db"), _source(path, "issues.jsonl"))
+        )
+        return SourceSnapshot(members, True, False, self.source_proven, "fixture lease")
+
+    def resolve_authority(self, worktree: object, executable: object) -> Path:
+        path = Path(worktree.display_path)
         assert self.canonical is not None
-        return self.canonical
+        redirect = path / ".beads" / "redirect"
+        self.authority_calls.append((worktree, executable, redirect.read_bytes()))
+        if redirect.is_file() and redirect.read_text() == str(self.canonical) + "\n":
+            return self.canonical
+        return path / ".beads"
 
 
 def _digest(path: Path) -> str:
@@ -88,7 +122,7 @@ def _source(path: Path, name: str) -> SourceFingerprint:
     return SourceFingerprint(name, info.st_dev, info.st_ino, info.st_size, _digest(member))
 
 
-def make_request(root: Path, *, apply: bool = True) -> ApplyRequest:
+def make_request(root: Path, *, apply: bool = True, pre_redirect: str | None = None) -> ApplyRequest:
     canonical = root / "canonical" / ".beads"
     target = root / "target"
     evidence = root / "evidence"
@@ -104,10 +138,12 @@ def make_request(root: Path, *, apply: bool = True) -> ApplyRequest:
     )
     registry = Registry("beads.redirect-convergence.registry.v1", "fixture", (config,))
     target_beads = target / ".beads"
+    if pre_redirect is not None:
+        (target_beads / "redirect").write_text(pre_redirect)
     parent = target_beads.stat()
     target_info = target.stat()
     redirect = RedirectState(
-        False, None, None, parent.st_dev, parent.st_ino,
+        pre_redirect is not None, 0o644 if pre_redirect is not None else None, pre_redirect, parent.st_dev, parent.st_ino,
         "fixture-redirect-v1", str(canonical) + "\n", "b" * 64,
     )
     health = HealthFingerprint(0, False, False, "healthy", "c" * 64)
@@ -235,6 +271,31 @@ class TransactionTest(unittest.TestCase):
             with self.assertRaisesRegex(TransactionError, "redirect is not a regular file"):
                 apply_plan(request)
             self.assertTrue(redirect.is_symlink())
+
+    def test_unavailable_real_style_lease_fails_before_redirect_write(self) -> None:
+        """A non-fixture adapter never reaches a redirect mutation without a lease."""
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            request = make_request(root)
+            request.adapter.fixture_only = False
+            with self.assertRaisesRegex(TransactionError, "real Beads apply"):
+                apply_plan(request)
+            self.assertFalse((root / "target" / ".beads" / "redirect").exists())
+
+    def test_post_apply_authority_uses_retained_handle_and_redirect_bytes(self) -> None:
+        """The authority oracle sees the renamed bytes through a DirectoryHandle."""
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            request = make_request(root)
+            apply_plan(request)
+            adapter = request.adapter
+            assert isinstance(adapter, FixtureAdapter)
+            handle, executable, bytes_seen = adapter.authority_calls[-1]
+            self.assertIsInstance(handle, DirectoryHandle)
+            self.assertIsNotNone(executable)
+            self.assertEqual(bytes_seen, (str(root / "canonical" / ".beads") + "\n").encode())
 
 
 if __name__ == "__main__":
