@@ -31,9 +31,11 @@ from .adapters import (
 )
 from .approval import ApprovalError, SignedApproval, verify_signed_approval
 from .codec import canonical_json_bytes, sha256_hex
-from .fsafety import FsafetyError, open_descendant, open_trusted_tree
+from .fsafety import DirectoryHandle, FsafetyError, open_descendant, open_trusted_tree
+from .inventory import InventoryError, build_manifest
 from .models import Manifest, Plan, Registry
 from .planner import build_plan
+from .registry import RegistryError, validate_registry
 
 
 class TransactionError(RuntimeError):
@@ -92,71 +94,206 @@ class RecoveryRequest:
     expected_journal_sha256: str | None = None
 
 
+@dataclass
+class RetainedTopology:
+    """Directory descriptors held from re-attestation through mutation."""
+
+    canonical: DirectoryHandle
+    targets: dict[tuple[int, int], tuple[DirectoryHandle, DirectoryHandle]]
+
+    def action_target(self, action: dict[str, Any]) -> tuple[DirectoryHandle, DirectoryHandle]:
+        key = (int(action["directory_device"]), int(action["directory_inode"]))
+        target = self.targets.get(key)
+        if target is None:
+            raise TransactionError("retained worktree is unavailable")
+        worktree, beads = target
+        worktree.verify_identity()
+        beads.verify_identity()
+        return target
+
+    def close(self) -> None:
+        for worktree, beads in self.targets.values():
+            beads.close()
+            worktree.close()
+        self.targets.clear()
+        self.canonical.close()
+
+
 class FileControlStore:
     """Fixed-namespace journal/nonce storage; fixtures opt in explicitly."""
 
     fixture_only = False
+    _CHILDREN = ("journals", "receipts", "nonces", "locks")
 
     def __init__(self, root: Path) -> None:
         self.root = Path(root)
+        self._root_fd = -1
+        self._root_identity: tuple[int, int] | None = None
+        self._directories: dict[str, tuple[int, int, int]] = {}
+
+    @staticmethod
+    def _token(value: str, label: str) -> str:
+        if not isinstance(value, str) or not value or any(
+            item in value for item in ("/", "\\", "\x00", "..")
+        ):
+            raise TransactionError(f"{label} is unsafe")
+        return value
+
+    @staticmethod
+    def _directory_info(fd: int) -> os.stat_result:
+        info = os.fstat(fd)
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.geteuid()
+            or stat.S_IMODE(info.st_mode) != 0o700
+        ):
+            raise TransactionError("unsafe control directory")
+        return info
+
+    @staticmethod
+    def _artifact_info(fd: int) -> os.stat_result:
+        info = os.fstat(fd)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_nlink != 1
+            or info.st_uid != os.geteuid()
+            or stat.S_IMODE(info.st_mode) != 0o600
+        ):
+            raise TransactionError("unsafe control artifact")
+        return info
 
     def _ensure(self) -> None:
-        self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        for child in ("journals", "receipts", "nonces", "locks"):
-            (self.root / child).mkdir(mode=0o700, exist_ok=True)
+        if self._root_fd < 0:
+            try:
+                with open_trusted_tree(Path("/"), self.root.parent) as parent:
+                    try:
+                        os.mkdir(self.root.name, 0o700, dir_fd=parent.fd)
+                        _durable_fsync(parent.fd)
+                    except FileExistsError:
+                        pass
+                    self._root_fd = os.open(
+                        self.root.name,
+                        os.O_RDONLY
+                        | getattr(os, "O_DIRECTORY", 0)
+                        | getattr(os, "O_CLOEXEC", 0)
+                        | getattr(os, "O_NOFOLLOW", 0),
+                        dir_fd=parent.fd,
+                    )
+            except (FsafetyError, OSError) as exc:
+                raise TransactionError("control hierarchy is unavailable") from exc
+            root = self._directory_info(self._root_fd)
+            self._root_identity = (root.st_dev, root.st_ino)
+        root_info = self._directory_info(self._root_fd)
+        if self._root_identity != (root_info.st_dev, root_info.st_ino):
+            raise TransactionError("retained control directory changed")
+        for child in self._CHILDREN:
+            retained = self._directories.get(child)
+            if retained is None:
+                try:
+                    os.mkdir(child, 0o700, dir_fd=self._root_fd)
+                    _durable_fsync(self._root_fd)
+                except FileExistsError:
+                    pass
+                try:
+                    fd = os.open(
+                        child,
+                        os.O_RDONLY
+                        | getattr(os, "O_DIRECTORY", 0)
+                        | getattr(os, "O_CLOEXEC", 0)
+                        | getattr(os, "O_NOFOLLOW", 0),
+                        dir_fd=self._root_fd,
+                    )
+                except OSError as exc:
+                    raise TransactionError("control hierarchy is unavailable") from exc
+                info = self._directory_info(fd)
+                self._directories[child] = (fd, info.st_dev, info.st_ino)
+            else:
+                fd, device, inode = retained
+                info = self._directory_info(fd)
+                if (info.st_dev, info.st_ino) != (device, inode):
+                    raise TransactionError("retained control directory changed")
+
+    def _directory(self, name: str) -> int:
+        self._ensure()
+        return self._directories[name][0]
+
+    def _open_artifact(self, directory: str, name: str, flags: int) -> int:
+        name = self._token(name, "control artifact name")
+        try:
+            fd = os.open(
+                name,
+                flags | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                0o600,
+                dir_fd=self._directory(directory),
+            )
+        except FileExistsError:
+            raise
+        except OSError as exc:
+            raise TransactionError("control artifact is unavailable") from exc
+        try:
+            self._artifact_info(fd)
+            return fd
+        except BaseException:
+            os.close(fd)
+            raise
 
     def journal_path(self, run_id: str) -> Path:
-        if not run_id or any(item in run_id for item in ("/", "\\", "\x00", "..")):
-            raise TransactionError("run ID is unsafe")
+        self._token(run_id, "run ID")
         return self.root / "journals" / f"{run_id}.json"
 
     def receipt_path(self, run_id: str) -> Path:
+        self._token(run_id, "run ID")
         return self.root / "receipts" / f"{run_id}.json"
 
-    def _atomic_json(self, path: Path, value: dict[str, Any]) -> None:
-        self._ensure()
+    def _atomic_json(self, directory: str, name: str, value: dict[str, Any]) -> None:
         data = canonical_json_bytes(value)
-        directory = path.parent
-        fd, name = tempfile_name(directory, path.name)
+        directory_fd = self._directory(directory)
+        temporary = f".{name}.beads-convergence-{uuid.uuid4().hex}.tmp"
+        fd = self._open_artifact(
+            directory,
+            temporary,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+        )
         try:
             os.write(fd, data)
             _durable_fsync(fd)
             os.close(fd)
             fd = -1
-            with _open_directory(directory) as directory_fd:
-                os.replace(name, path.name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
-                _durable_fsync(directory_fd)
+            os.replace(temporary, name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+            _durable_fsync(directory_fd)
         finally:
             if fd >= 0:
                 os.close(fd)
             try:
-                with _open_directory(directory) as directory_fd:
-                    os.unlink(name, dir_fd=directory_fd)
+                os.unlink(temporary, dir_fd=directory_fd)
             except FileNotFoundError:
                 pass
 
     def load_journal(self, run_id: str) -> dict[str, Any]:
-        path = self.journal_path(run_id)
+        name = f"{self._token(run_id, 'run ID')}.json"
         try:
-            raw = path.read_bytes()
+            fd = self._open_artifact("journals", name, os.O_RDONLY)
+            try:
+                raw = _read_control_fd(fd)
+            finally:
+                os.close(fd)
             value = json.loads(raw)
-        except (OSError, json.JSONDecodeError) as exc:
+        except (OSError, json.JSONDecodeError, TransactionError) as exc:
             raise TransactionError("journal is unavailable or malformed") from exc
         if type(value) is not dict:
             raise TransactionError("journal is malformed")
         return value
 
     def save_journal(self, journal: dict[str, Any]) -> None:
-        self._atomic_json(self.journal_path(str(journal["run_id"])), journal)
+        self._atomic_json("journals", f"{self._token(str(journal['run_id']), 'run ID')}.json", journal)
 
     def save_receipt(self, receipt: dict[str, Any]) -> None:
-        self._atomic_json(self.receipt_path(str(receipt["run_id"])), receipt)
+        self._atomic_json("receipts", f"{self._token(str(receipt['run_id']), 'run ID')}.json", receipt)
 
     def reserve_nonce(self, key: str, nonce: str) -> None:
-        self._ensure()
-        path = self.root / "nonces" / f"{key}-{nonce}"
+        name = f"{self._token(key, 'canonical key')}-{self._token(nonce, 'approval nonce')}"
         try:
-            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+            fd = self._open_artifact("nonces", name, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
         except FileExistsError as exc:
             raise ApprovalError("approval nonce already used") from exc
         try:
@@ -164,18 +301,22 @@ class FileControlStore:
             _durable_fsync(fd)
         finally:
             os.close(fd)
-        with _open_directory(path.parent) as directory_fd:
-            _durable_fsync(directory_fd)
+        _durable_fsync(self._directory("nonces"))
 
     def unfinished_journal(self, key: str) -> str | None:
         """Find an unfinished run by canonical identity before consuming a nonce."""
 
-        self._ensure()
-        journals = self.root / "journals"
-        for path in sorted(journals.glob("*.json")):
+        journals = self._directory("journals")
+        for name in sorted(os.listdir(journals)):
+            if not name.endswith(".json"):
+                raise TransactionError("journal index is malformed")
             try:
-                journal = json.loads(path.read_bytes())
-            except (OSError, json.JSONDecodeError):
+                fd = self._open_artifact("journals", name, os.O_RDONLY)
+                try:
+                    journal = json.loads(_read_control_fd(fd))
+                finally:
+                    os.close(fd)
+            except (OSError, json.JSONDecodeError, TransactionError):
                 raise TransactionError("journal index is malformed") from None
             if (
                 type(journal) is dict
@@ -190,9 +331,9 @@ class FileControlStore:
 
     @contextmanager
     def lock(self, key: str) -> Iterator[None]:
-        self._ensure()
-        path = self.root / "locks" / f"{key}.lock"
-        fd = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
+        fd = self._open_artifact(
+            "locks", f"{self._token(key, 'canonical key')}.lock", os.O_RDWR | os.O_CREAT
+        )
         try:
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -247,6 +388,21 @@ def _durable_fsync(fd: int) -> None:
         raise TransactionError("durability sync failed") from exc
 
 
+def _read_control_fd(fd: int, limit: int = 64 * 1024 * 1024) -> bytes:
+    """Read one retained regular control artifact under a finite cap."""
+
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = os.read(fd, 1024 * 1024)
+        if not chunk:
+            return b"".join(chunks)
+        total += len(chunk)
+        if total > limit:
+            raise TransactionError("control artifact exceeds size limit")
+        chunks.append(chunk)
+
+
 def _canonical_key(path: Path) -> str:
     info = os.stat(path, follow_symlinks=False)
     if not stat.S_ISDIR(info.st_mode):
@@ -254,38 +410,46 @@ def _canonical_key(path: Path) -> str:
     return f"{info.st_dev}-{info.st_ino}"
 
 
-def _sources(path: Path, expected: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _sources(beads: DirectoryHandle, expected: list[dict[str, Any]]) -> list[dict[str, Any]]:
     measured: list[dict[str, Any]] = []
     for source in sorted(expected, key=lambda item: str(item["name"])):
         name = source["name"]
         if not isinstance(name, str) or "/" in name or name in ("", ".", ".."):
             raise TransactionError("source name is unsafe")
-        member = path / name
         try:
-            info = os.stat(member, follow_symlinks=False)
+            fd = os.open(name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=beads.fd)
         except OSError as exc:
             raise TransactionError("source family changed") from exc
-        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-            raise TransactionError("source family changed")
-        measured.append({"name": name, "device": info.st_dev, "inode": info.st_ino,
-                         "size": info.st_size, "sha256": hashlib.sha256(member.read_bytes()).hexdigest()})
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                raise TransactionError("source family changed")
+            measured.append({"name": name, "device": info.st_dev, "inode": info.st_ino,
+                             "size": info.st_size, "sha256": hashlib.sha256(_read_control_fd(fd)).hexdigest()})
+        finally:
+            os.close(fd)
     return measured
 
 
-def _assert_sources(path: Path, expected: list[dict[str, Any]]) -> None:
-    if _sources(path, expected) != sorted(expected, key=lambda item: str(item["name"])):
+def _assert_sources(beads: DirectoryHandle, expected: list[dict[str, Any]]) -> None:
+    if _sources(beads, expected) != sorted(expected, key=lambda item: str(item["name"])):
         raise TransactionError("source family changed")
 
 
-def _redirect_state(beads: Path) -> dict[str, Any]:
-    redirect = beads / "redirect"
+def _redirect_state(beads: DirectoryHandle) -> dict[str, Any]:
     try:
-        info = os.lstat(redirect)
+        fd = os.open("redirect", os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=beads.fd)
     except FileNotFoundError:
         return {"present": False, "mode": None, "bytes": None}
-    if not stat.S_ISREG(info.st_mode):
-        raise TransactionError("redirect is not a regular file")
-    return {"present": True, "mode": stat.S_IMODE(info.st_mode), "bytes": redirect.read_bytes().decode("utf-8")}
+    except OSError as exc:
+        raise TransactionError("redirect is not a regular file") from exc
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise TransactionError("redirect is not a regular file")
+        return {"present": True, "mode": stat.S_IMODE(info.st_mode), "bytes": _read_control_fd(fd).decode("utf-8")}
+    finally:
+        os.close(fd)
 
 
 def _matches_pre(actual: dict[str, Any], pre: dict[str, Any]) -> bool:
@@ -296,28 +460,19 @@ def _matches_intended(actual: dict[str, Any], intended: str) -> bool:
     return actual["present"] and actual["bytes"] == intended
 
 
-def _verify_target(action: dict[str, Any]) -> Path:
-    worktree = Path(action["worktree_path"])
-    info = os.stat(worktree, follow_symlinks=False)
-    if (info.st_dev, info.st_ino) != (action["directory_device"], action["directory_inode"]):
-        raise TransactionError("worktree identity changed")
-    return worktree
-
-
-def _verify_authority(adapter: object, worktree: Path, canonical: Path, executable: object, expected: tuple[int, int]) -> None:
+def _verify_authority(adapter: object, worktree: DirectoryHandle, canonical: DirectoryHandle, executable: object, expected: tuple[int, int]) -> None:
     resolve = getattr(adapter, "resolve_authority", None)
     if not callable(resolve):
         raise TransactionError("adapter cannot verify redirect authority")
-    with open_trusted_tree(Path("/"), worktree) as handle:
-        if (handle.device, handle.inode) != expected:
-            raise TransactionError("retained worktree identity changed")
-        resolved = resolve(handle, executable)
-    if not isinstance(resolved, Path) or _canonical_identity(resolved) != _canonical_identity(canonical):
+    if (worktree.device, worktree.inode) != expected:
+        raise TransactionError("retained worktree identity changed")
+    resolved = resolve(worktree, executable)
+    if not isinstance(resolved, Path) or resolved != canonical.display_path:
         raise TransactionError("redirect does not resolve one hop to canonical authority")
 
 
-def _write_redirect(beads: Path, pre: dict[str, Any], intended: str, fault_at: str | None, *, adapter: object, worktree: Path, canonical: Path, executable: object, expected: tuple[int, int]) -> None:
-    info = os.stat(beads, follow_symlinks=False)
+def _write_redirect(beads: DirectoryHandle, pre: dict[str, Any], intended: str, fault_at: str | None, *, adapter: object, worktree: DirectoryHandle, canonical: DirectoryHandle, executable: object, expected: tuple[int, int]) -> None:
+    info = os.fstat(beads.fd)
     if (info.st_dev, info.st_ino) != (pre["parent_device"], pre["parent_inode"]):
         raise TransactionError("redirect parent identity changed")
     actual = _redirect_state(beads)
@@ -326,7 +481,8 @@ def _write_redirect(beads: Path, pre: dict[str, Any], intended: str, fault_at: s
     if not _matches_pre(actual, pre):
         raise TransactionError("redirect bytes changed by a third party")
     mode = int(pre["mode"]) if pre["present"] else 0o600
-    fd, temp = tempfile_name(beads, "redirect")
+    temp = f".redirect.beads-convergence-{uuid.uuid4().hex}.tmp"
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600, dir_fd=beads.fd)
     try:
         os.write(fd, intended.encode("utf-8"))
         os.fchmod(fd, mode)
@@ -337,15 +493,14 @@ def _write_redirect(beads: Path, pre: dict[str, Any], intended: str, fault_at: s
             raise TransactionCrash()
     finally:
         os.close(fd)
-    with _open_directory(beads) as directory_fd:
-        if fault_at == "before-rename":
-            raise TransactionCrash()
-        os.replace(temp, "redirect", src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
-        if fault_at == "after-rename":
-            raise TransactionCrash()
-        _durable_fsync(directory_fd)
-        if fault_at == "after-target-fsync":
-            raise TransactionCrash()
+    if fault_at == "before-rename":
+        raise TransactionCrash()
+    os.replace(temp, "redirect", src_dir_fd=beads.fd, dst_dir_fd=beads.fd)
+    if fault_at == "after-rename":
+        raise TransactionCrash()
+    _durable_fsync(beads.fd)
+    if fault_at == "after-target-fsync":
+        raise TransactionCrash()
     if _redirect_state(beads)["bytes"] != intended:
         raise TransactionError("redirect verification failed")
     _verify_authority(adapter, worktree, canonical, executable, expected)
@@ -357,21 +512,24 @@ def _journal_action(action: dict[str, Any]) -> dict[str, Any]:
             "pre": redirect, "intended": redirect["intended_bytes"], "state": "PENDING"}
 
 
-def _assert_manifest_sources(manifest: Manifest) -> None:
+def _assert_manifest_sources(manifest: Manifest, topology: RetainedTopology) -> None:
     """A coherent pair of fixture snapshots includes canonical and targets."""
 
     records = [record for record in manifest.worktrees if record.sources]
     for _ in range(2):
         for record in records:
-            _assert_sources(record.path / ".beads", [asdict(item) for item in record.sources])
+            _worktree, beads = topology.targets[(record.directory_device, record.directory_inode)]
+            _assert_sources(beads, [asdict(item) for item in record.sources])
 
 
-def _reattest(adapter: object, manifest: Manifest) -> tuple[object, WriterLease]:
+def _reattest(adapter: object, manifest: Manifest) -> tuple[object, WriterLease, RetainedTopology]:
     """Run the typed adapter contract against retained directory descriptors."""
 
     try:
         executable = adapter.verify_binary(manifest.tracker_binary)
-        with open_trusted_tree(Path("/"), manifest.canonical_beads) as canonical:
+        canonical = open_trusted_tree(Path("/"), manifest.canonical_beads)
+        topology = RetainedTopology(canonical, {})
+        try:
             backend = adapter.attest_backend(canonical)
             if not isinstance(backend, BackendAttestation) or backend.backend != "sqlite":
                 raise TransactionError("canonical backend is not positively attested")
@@ -384,34 +542,45 @@ def _reattest(adapter: object, manifest: Manifest) -> tuple[object, WriterLease]
                 for record in manifest.worktrees:
                     if not record.sources:
                         continue
-                    with open_trusted_tree(Path("/"), record.path) as worktree:
+                    target = topology.targets.get((record.directory_device, record.directory_inode))
+                    if target is None:
+                        worktree = open_trusted_tree(Path("/"), record.path)
+                        beads = open_descendant(worktree, record.path / ".beads")
+                        topology.targets[(record.directory_device, record.directory_inode)] = (worktree, beads)
+                    else:
+                        worktree, beads = target
                         health = adapter.verify_health(worktree, executable)
                         if not isinstance(health, HealthAttestation) or health.workspace_health != "healthy" or health.dirty_count or health.db_newer or health.jsonl_newer:
                             raise TransactionError("worktree health is not attested healthy")
-                        with open_descendant(worktree, record.path / ".beads") as beads:
-                            source = adapter.fingerprint_sources(beads)
-                            if not isinstance(source, SourceSnapshot) or not source.quiescent or not source.lease_proven:
-                                raise TransactionError("source snapshot is not lease-proven")
-                            expected = tuple(
+                    health = adapter.verify_health(worktree, executable)
+                    if not isinstance(health, HealthAttestation) or health.workspace_health != "healthy" or health.dirty_count or health.db_newer or health.jsonl_newer:
+                        raise TransactionError("worktree health is not attested healthy")
+                    source = adapter.fingerprint_sources(beads)
+                    if not isinstance(source, SourceSnapshot) or not source.quiescent or not source.lease_proven:
+                        raise TransactionError("source snapshot is not lease-proven")
+                    expected = tuple(
                                 (item.name, item.device, item.inode, item.size, item.sha256)
                                 for item in record.sources
                             )
-                            measured = tuple(
+                    measured = tuple(
                                 (item.name, item.device, item.inode, item.size, item.sha256)
                                 for item in source.sources
                             )
-                            if measured != expected:
-                                raise TransactionError("source family changed from manifest")
-                            current.append((record.path, measured))
+                    if measured != expected:
+                        raise TransactionError("source family changed from manifest")
+                    current.append((record.path, measured))
                 snapshots.append(tuple(current))
             if snapshots[0] != snapshots[1]:
                 raise TransactionError("source family changed during coherent snapshot")
-            return executable, lease
+            return executable, lease, topology
+        except BaseException:
+            topology.close()
+            raise
     except (AdapterError, FsafetyError, OSError, ValueError) as exc:
         raise TransactionError("typed adapter re-attestation failed") from exc
 
 
-def _restore_redirect(beads: Path, pre: dict[str, Any], intended: str, *, adapter: object, worktree: Path, canonical: Path) -> None:
+def _restore_redirect(beads: DirectoryHandle, pre: dict[str, Any], intended: str, *, adapter: object, worktree: DirectoryHandle, canonical: DirectoryHandle) -> None:
     """Reverse only an exactly-recorded intended redirect; preserve other bytes."""
 
     del adapter, worktree, canonical
@@ -422,32 +591,30 @@ def _restore_redirect(beads: Path, pre: dict[str, Any], intended: str, *, adapte
     if not _matches_intended(actual, intended):
         raise TransactionError("redirect bytes changed by a third party")
     if not pre["present"]:
-        with _open_directory(beads) as directory_fd:
-            os.unlink("redirect", dir_fd=directory_fd)
-            _durable_fsync(directory_fd)
+        os.unlink("redirect", dir_fd=beads.fd)
+        _durable_fsync(beads.fd)
         return
-    fd, temp = tempfile_name(beads, "redirect")
+    temp = f".redirect.beads-convergence-{uuid.uuid4().hex}.tmp"
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600, dir_fd=beads.fd)
     try:
         os.write(fd, str(pre["bytes"]).encode("utf-8"))
         os.fchmod(fd, int(pre["mode"]))
         _durable_fsync(fd)
     finally:
         os.close(fd)
-    with _open_directory(beads) as directory_fd:
-        os.replace(temp, "redirect", src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
-        _durable_fsync(directory_fd)
+    os.replace(temp, "redirect", src_dir_fd=beads.fd, dst_dir_fd=beads.fd)
+    _durable_fsync(beads.fd)
     if not _matches_pre(_redirect_state(beads), pre):
         raise TransactionError("rollback redirect verification failed")
 
 
-def _rollback(journal: dict[str, Any], control: FileControlStore, adapter: object) -> bool:
+def _rollback(journal: dict[str, Any], control: FileControlStore, adapter: object, topology: RetainedTopology) -> bool:
     """Restore all recorded pre-states in reverse order, restarting safely."""
 
     try:
         for action in reversed(journal["actions"]):
-            worktree = _verify_target(action)
-            beads = worktree / ".beads"
-            _restore_redirect(beads, action["pre"], str(action["intended"]), adapter=adapter, worktree=worktree, canonical=Path(journal["canonical_beads"]))
+            worktree, beads = topology.action_target(action)
+            _restore_redirect(beads, action["pre"], str(action["intended"]), adapter=adapter, worktree=worktree, canonical=topology.canonical)
             action["state"] = "ROLLED_BACK"
             control.save_journal(journal)
         journal["status"] = "ROLLED_BACK"
@@ -494,6 +661,30 @@ def _validate_request(request: ApplyRequest) -> tuple[str, str]:
     return _canonical_key(manifest.canonical_beads), fingerprint
 
 
+def _fresh_manifest(request: ApplyRequest) -> None:
+    """Re-inventory a bounded registry before consuming an apply capability."""
+
+    # Fixture adapters model the transaction boundary directly.  Production
+    # adapters must rediscover through retained registry handles and Git.
+    if isinstance(request.control, FixtureControlStore):
+        return
+    repositories = validate_registry(request.registry)
+    selected = [item for item in repositories if item.config.repo_id == request.manifest.repo_id]
+    try:
+        if len(selected) != 1:
+            raise TransactionError("registry does not uniquely bind repository")
+        fresh = build_manifest(selected[0], request.adapter)
+        if canonical_json_bytes(fresh) != canonical_json_bytes(request.manifest):
+            raise TransactionError("fresh topology does not match signed manifest")
+        if build_plan(fresh).sha256 != request.plan.sha256:
+            raise TransactionError("fresh topology does not match signed plan")
+    except (RegistryError, InventoryError, AdapterError, FsafetyError, OSError, ValueError) as exc:
+        raise TransactionError("fresh topology re-discovery failed") from exc
+    finally:
+        for repository in repositories:
+            repository.close()
+
+
 def _canonical_identity(path: Path) -> tuple[int, int]:
     info = os.stat(path, follow_symlinks=False)
     return info.st_dev, info.st_ino
@@ -526,6 +717,7 @@ def _save_receipt(control: FileControlStore, journal: dict[str, Any]) -> None:
 def apply_plan(request: ApplyRequest) -> ApplyReceipt:
     """Apply exactly one recomputed plan, journaling every redirect transition."""
 
+    _fresh_manifest(request)
     key, fingerprint = _validate_request(request)
     assert request.approval is not None
     run_id = request.run_id or uuid.uuid4().hex
@@ -534,13 +726,14 @@ def apply_plan(request: ApplyRequest) -> ApplyReceipt:
             raise TransactionCrash()
         if request.control.unfinished_journal(key) is not None:
             raise TransactionError("unfinished journal already owns canonical authority")
-        request.control.reserve_nonce(key, request.approval.envelope.nonce)
-        executable, lease = _reattest(request.adapter, request.manifest)
+        executable, lease, topology = _reattest(request.adapter, request.manifest)
         if lease is None:
             raise TransactionError("writer exclusion lease disappeared")
+        request.control.reserve_nonce(key, request.approval.envelope.nonce)
         actions = [_journal_action(dict(action)) for action in request.plan.actions]
         for action in actions:
-            _assert_sources(Path(action["worktree_path"]) / ".beads", action["sources"])
+            _worktree, beads = topology.action_target(action)
+            _assert_sources(beads, action["sources"])
         journal = {"schema": "beads.redirect-convergence.journal.v1", "run_id": run_id,
                    "status": "PREPARED", "repo_id": request.manifest.repo_id, "canonical_key": key,
                    "canonical_beads": str(request.manifest.canonical_beads), "signer_principal": request.approval.envelope.signer_principal,
@@ -556,10 +749,9 @@ def apply_plan(request: ApplyRequest) -> ApplyReceipt:
         request.control.save_journal(journal)
         try:
             for action in journal["actions"]:
-                worktree = _verify_target(action)
-                beads = worktree / ".beads"
+                worktree, beads = topology.action_target(action)
                 _assert_sources(beads, action["sources"])
-                _write_redirect(beads, action["pre"], str(action["intended"]), request.fault_at, adapter=request.adapter, worktree=worktree, canonical=request.manifest.canonical_beads, executable=executable, expected=(action["directory_device"], action["directory_inode"]))
+                _write_redirect(beads, action["pre"], str(action["intended"]), request.fault_at, adapter=request.adapter, worktree=worktree, canonical=topology.canonical, executable=executable, expected=(action["directory_device"], action["directory_inode"]))
                 action["state"] = "APPLIED"
                 request.control.save_journal(journal)
                 if request.fault_at == "after-progress":
@@ -567,7 +759,7 @@ def apply_plan(request: ApplyRequest) -> ApplyReceipt:
             if request.fault_at == "before-commit":
                 raise TransactionCrash()
             journal["status"] = "COMMITTED"
-            _assert_manifest_sources(request.manifest)
+            _assert_manifest_sources(request.manifest, topology)
             request.control.save_journal(journal)
             if request.fault_at == "after-commit":
                 raise TransactionCrash()
@@ -577,8 +769,10 @@ def apply_plan(request: ApplyRequest) -> ApplyReceipt:
         except TransactionCrash:
             raise
         except (KeyError, OSError, TransactionError, TypeError, UnicodeError, ValueError):
-            _rollback(journal, request.control, request.adapter)
+            _rollback(journal, request.control, request.adapter, topology)
             raise
+        finally:
+            topology.close()
     return ApplyReceipt(run_id, "COMMITTED", request.manifest.repo_id, key, request.approval.envelope.signer_principal,
                         fingerprint, sha256_hex(canonical_json_bytes(journal)))
 
@@ -596,6 +790,19 @@ def recover_run(request: RecoveryRequest) -> RecoveryReceipt:
         raise TransactionError("journal hash does not match")
     if request.registry is None or request.manifest is None or request.plan is None or request.now is None:
         raise TransactionError("recovery bindings are required")
+    _fresh_manifest(
+        ApplyRequest(
+            True,
+            request.registry,
+            request.manifest,
+            request.plan,
+            request.adapter,
+            request.approval,
+            request.verifier,
+            request.control,
+            request.now,
+        )
+    )
     key = str(journal.get("canonical_key", ""))
     if not key:
         raise TransactionError("journal lacks canonical key")
@@ -623,28 +830,28 @@ def recover_run(request: RecoveryRequest) -> RecoveryReceipt:
         )
         if fingerprint != journal.get("signer_fingerprint"):
             raise TransactionError("recovery signer does not match journal")
-        request.control.reserve_nonce(key, request.approval.envelope.nonce)
         if journal["status"] == "NEEDS_OPERATOR":
             return RecoveryReceipt(request.run_id, "NEEDS_OPERATOR", sha256_hex(canonical_json_bytes(journal)))
         try:
-            _executable, lease = _reattest(request.adapter, request.manifest)
+            _executable, lease, topology = _reattest(request.adapter, request.manifest)
         except TransactionError:
             journal["status"] = "NEEDS_OPERATOR"
             request.control.save_journal(journal)
             return RecoveryReceipt(request.run_id, "NEEDS_OPERATOR", sha256_hex(canonical_json_bytes(journal)))
         if lease is None:
             raise TransactionError("writer exclusion lease disappeared")
+        request.control.reserve_nonce(key, request.approval.envelope.nonce)
         if journal["status"] == "COMMITTED":
             _save_receipt(request.control, journal)
+            topology.close()
             return RecoveryReceipt(request.run_id, "COMMITTED", sha256_hex(canonical_json_bytes(journal)))
         if journal["status"] not in ("PREPARED", "APPLYING"):
             raise TransactionError("journal has unknown terminal state")
         try:
             for action in reversed(journal["actions"]):
-                worktree = _verify_target(action)
-                beads = worktree / ".beads"
+                worktree, beads = topology.action_target(action)
                 _assert_sources(beads, action["sources"])
-                _restore_redirect(beads, action["pre"], str(action["intended"]), adapter=request.adapter, worktree=worktree, canonical=request.manifest.canonical_beads)
+                _restore_redirect(beads, action["pre"], str(action["intended"]), adapter=request.adapter, worktree=worktree, canonical=topology.canonical)
                 action["state"] = "ROLLED_BACK"
                 request.control.save_journal(journal)
             journal["status"] = "ROLLED_BACK"
@@ -654,4 +861,6 @@ def recover_run(request: RecoveryRequest) -> RecoveryReceipt:
             journal["status"] = "NEEDS_OPERATOR"
             request.control.save_journal(journal)
             return RecoveryReceipt(request.run_id, "NEEDS_OPERATOR", sha256_hex(canonical_json_bytes(journal)))
+        finally:
+            topology.close()
     return RecoveryReceipt(request.run_id, "ROLLED_BACK", sha256_hex(canonical_json_bytes(journal)))

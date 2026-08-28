@@ -25,6 +25,7 @@ from .models import ApprovalEnvelope, BinaryBinding
 
 SSH_NAMESPACE = "beads-redirect-convergence-v1@jleechan.org"
 APPROVAL_SCHEMA = "beads.redirect-convergence.approval.v1"
+_ALLOWED_SIGNERS_MAX_BYTES = 1024 * 1024
 
 
 class ApprovalError(RuntimeError):
@@ -191,12 +192,31 @@ class SshApprovalVerifier:
     @staticmethod
     def _fingerprint(allowed_fd: int, principal: str) -> str:
         os.lseek(allowed_fd, 0, os.SEEK_SET)
-        raw = os.read(allowed_fd, 1024 * 1024).decode("utf-8")
+        info = os.fstat(allowed_fd)
+        if info.st_size > _ALLOWED_SIGNERS_MAX_BYTES:
+            raise ApprovalError("allowed signers exceeds size limit")
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = os.read(allowed_fd, 64 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > _ALLOWED_SIGNERS_MAX_BYTES:
+                raise ApprovalError("allowed signers exceeds size limit")
+            chunks.append(chunk)
+        try:
+            raw = b"".join(chunks).decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ApprovalError("allowed signers is not UTF-8") from exc
         keys: list[bytes] = []
         for line in raw.splitlines():
             fields = line.split()
             if len(fields) >= 3 and fields[0] == principal and fields[1].startswith("ssh-"):
-                keys.append(base64.b64decode(fields[2], validate=True))
+                try:
+                    keys.append(base64.b64decode(fields[2], validate=True))
+                except ValueError as exc:
+                    raise ApprovalError("allowed signers key is malformed") from exc
         if len(keys) != 1:
             raise ApprovalError("allowed signers must admit exactly one key for principal")
         import hashlib
