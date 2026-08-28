@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from dataclasses import replace
@@ -40,24 +41,57 @@ APPLY_FAULT_BOUNDARIES = (
 )
 
 
-class RecoveryInterruptingControlStore(FixtureControlStore):
-    """Inject one crash after a recovery journal transition is durable."""
+class RecoveryProcessDeathControlStore(FixtureControlStore):
+    """Exit the child after one recovery journal transition is durable."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, exit_code: int) -> None:
         super().__init__(root)
-        self.interrupt_recovery = False
+        self.exit_code = exit_code
+        self.die_after_rollback = False
 
     def save_journal(self, journal: dict[str, object]) -> None:
         super().save_journal(journal)
         if (
-            self.interrupt_recovery
+            self.die_after_rollback
             and journal.get("status") == "APPLYING"
             and any(
                 action.get("state") == "ROLLED_BACK" for action in journal["actions"]
             )
         ):
-            self.interrupt_recovery = False
-            raise TransactionCrash()
+            os._exit(self.exit_code)
+
+
+def _fork_apply(request: ApplyRequest, exit_code: int) -> int:
+    """Run an injected apply crash in a child with no Python unwinding."""
+
+    child_pid = os.fork()
+    if child_pid == 0:
+        from scripts.beads_convergence import transaction as transaction_module
+
+        class ProcessCrash(BaseException):
+            def __init__(self) -> None:
+                os._exit(exit_code)
+
+        transaction_module.TransactionCrash = ProcessCrash
+        apply_plan(request)
+        os._exit(250)
+    _, status = os.waitpid(child_pid, 0)
+    if not os.WIFEXITED(status):
+        return -1
+    return os.WEXITSTATUS(status)
+
+
+def _fork_recovery(request: RecoveryRequest) -> int:
+    """Run a recovery interruption in a child that exits from its test seam."""
+
+    child_pid = os.fork()
+    if child_pid == 0:
+        recover_run(request)
+        os._exit(250)
+    _, status = os.waitpid(child_pid, 0)
+    if not os.WIFEXITED(status):
+        return -1
+    return os.WEXITSTATUS(status)
 
 
 def _multi_target_request(root: Path) -> ApplyRequest:
@@ -147,8 +181,9 @@ class CrashRecoveryTest(unittest.TestCase):
                     for path in pre_redirects
                 }
                 crashed = replace(request, fault_at=fault_at)
-                with self.assertRaises(TransactionCrash):
-                    apply_plan(crashed)
+                exit_code = 101 + APPLY_FAULT_BOUNDARIES.index(fault_at)
+                self.assertEqual(_fork_apply(crashed, exit_code), exit_code)
+                request = replace(request, control=FixtureControlStore(root / "control"))
                 self.assertEqual(_source_bytes(request), source_before)
 
                 if fault_at == "before-prepared":
@@ -222,23 +257,31 @@ class CrashRecoveryTest(unittest.TestCase):
             root = Path(temp)
             request = _multi_target_request(root)
             source_before = _source_bytes(request)
-            control = RecoveryInterruptingControlStore(root / "control")
+            control = RecoveryProcessDeathControlStore(root / "control", 190)
             request = replace(request, control=control, fault_at="after-progress")
-            with self.assertRaises(TransactionCrash):
-                apply_plan(request)
+            self.assertEqual(_fork_apply(request, 180), 180)
+            request = replace(request, control=FixtureControlStore(root / "control"))
             self.assertEqual(_source_bytes(request), source_before)
-            control.interrupt_recovery = True
-            with self.assertRaises(TransactionCrash):
-                recover_run(make_recovery_request(request, nonce="recover-interrupted"))
-            interrupted = control.load_journal("fixture-run")
+            interrupted_control = RecoveryProcessDeathControlStore(root / "control", 190)
+            interrupted_control.die_after_rollback = True
+            interrupted_request = replace(request, control=interrupted_control)
+            self.assertEqual(
+                _fork_recovery(
+                    make_recovery_request(interrupted_request, nonce="recover-interrupted")
+                ),
+                190,
+            )
+            reopened = FixtureControlStore(root / "control")
+            interrupted = reopened.load_journal("fixture-run")
             self.assertEqual(interrupted["status"], "APPLYING")
             self.assertEqual(
                 sum(action["state"] == "ROLLED_BACK" for action in interrupted["actions"]),
                 1,
             )
+            request = replace(request, control=reopened)
             retry = recover_run(make_recovery_request(request, nonce="recover-retry"))
             self.assertEqual(retry.status, "ROLLED_BACK")
-            self.assertEqual(control.load_journal("fixture-run")["status"], "ROLLED_BACK")
+            self.assertEqual(reopened.load_journal("fixture-run")["status"], "ROLLED_BACK")
             self.assertEqual(
                 _redirect_bytes(request),
                 {
