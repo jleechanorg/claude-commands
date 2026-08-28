@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "beads.redirect-convergence.receipt.v1",
+  "title": "Redirect transaction receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "run_id", "status", "repo_id", "canonical_key", "signer_principal", "signer_fingerprint", "journal_sha256"],
+  "properties": {
+    "schema": {"const": "beads.redirect-convergence.receipt.v1"},
+    "run_id": {"type": "string", "minLength": 1},
+    "status": {"enum": ["COMMITTED", "ROLLED_BACK", "NEEDS_OPERATOR"]},
+    "repo_id": {"type": "string", "minLength": 1},
+    "canonical_key": {"type": "string", "pattern": "^[0-9]+-[0-9]+$"},
+    "signer_principal": {"type": "string", "minLength": 1},
+    "signer_fingerprint": {"type": "string", "minLength": 1},
+    "journal_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

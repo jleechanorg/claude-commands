@@ -247,6 +247,14 @@ class CodecTest(unittest.TestCase):
             self.assertTrue(dataclasses.is_dataclass(model))
             self.assertTrue(model.__dataclass_params__.frozen)
 
+    def test_approval_envelope_binds_signer_fingerprint(self) -> None:
+        """A principal alone is ambiguous across rotated or delegated keys."""
+
+        self.assertIn(
+            "signer_fingerprint",
+            [field.name for field in dataclasses.fields(ApprovalEnvelope)],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

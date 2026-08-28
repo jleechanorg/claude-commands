@@ -47,6 +47,7 @@ class ApprovalEnvelope:
     tracker_binary: BinaryBinding
     git_binary: BinaryBinding
     signer_principal: str
+    signer_fingerprint: str
 
 
 @dataclass(frozen=True)
