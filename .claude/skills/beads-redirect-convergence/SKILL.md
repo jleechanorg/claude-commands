@@ -28,10 +28,13 @@ JSON receipt contains partial results.
 - `plan-all` is read-only and is structurally incapable of applying. There is
   no `apply-all` command, cross-repository apply, automatic recovery, or
   wildcard repository target.
-- The portable engine owns schemas, validation, descriptor-bound execution,
-  planning, journaling, and transaction invariants. The application repository
-  owns its canonical Beads authority, exporter, health policy, and evidence
-  interpretation. A registry entry never transfers or merges that authority.
+- The portable engine owns schemas, registry validation, descriptor-bound
+  inventory, and planning in v1. Journaling and transaction invariants exist
+  only in the tests-only fixture harness and describe a future production
+  implementation; v1 production apply/recovery remains disabled.
+  The application repository owns its canonical Beads authority, exporter,
+  health policy, and evidence interpretation. A registry entry never transfers
+  or merges that authority.
 - The only application-repository mutation permitted by the transaction is the
   regular `.beads/redirect` basename. Database, WAL, SHM, JSONL, tracker
   journals, and Git state are never mutation targets.

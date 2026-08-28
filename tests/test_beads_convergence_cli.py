@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -58,6 +61,62 @@ def all_hash_args() -> tuple[str, ...]:
 
 
 class CliContractTest(unittest.TestCase):
+    def test_launcher_ignores_root_cwd_and_pythonpath_shadows(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            release = root / "release"
+            scripts = release / "scripts"
+            shutil.copytree(ROOT / "scripts", scripts)
+            cwd = root / "cwd"
+            shadow = root / "pythonpath-shadow"
+            cwd.mkdir()
+            (shadow / "beads_convergence").mkdir(parents=True)
+            markers = {
+                "root": root / "root-json-imported",
+                "cwd": root / "cwd-json-imported",
+                "pythonpath": root / "pythonpath-package-imported",
+            }
+            (release / "json.py").write_text(
+                f"from pathlib import Path\nPath({str(markers['root'])!r}).touch()\n"
+                "raise RuntimeError('root json shadow imported')\n"
+            )
+            (cwd / "json.py").write_text(
+                f"from pathlib import Path\nPath({str(markers['cwd'])!r}).touch()\n"
+                "raise RuntimeError('cwd json shadow imported')\n"
+            )
+            (shadow / "beads_convergence" / "__init__.py").write_text("")
+            (shadow / "beads_convergence" / "cli.py").write_text(
+                "from pathlib import Path\n"
+                f"Path({str(markers['pythonpath'])!r}).touch()\n"
+                "raise RuntimeError('PYTHONPATH package shadow imported')\n"
+            )
+            environment = dict(os.environ)
+            environment["PYTHONPATH"] = os.pathsep.join(
+                (str(shadow), str(release), str(cwd))
+            )
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(scripts / "beads-converge"),
+                    "apply",
+                    "--repo",
+                    "repo-a",
+                    *all_hash_args(),
+                    "--apply",
+                ),
+                cwd=cwd,
+                env=environment,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertIn("production writer lease is unavailable", result.stderr)
+            self.assertFalse(any(path.exists() for path in markers.values()))
+            self.assertFalse(json.loads(result.stdout)["ok"])
+
     def test_plan_all_parser_has_no_apply_flag(self) -> None:
         result = run_cli(
             "plan-all",

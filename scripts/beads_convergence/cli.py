@@ -1,29 +1,22 @@
 """Fail-closed command line boundary for Beads redirect convergence.
 
-The CLI is intentionally a thin adapter around the public engine functions.
-It owns argument validation, captured artifact decoding, and machine-readable
-receipts; it does not provide an approval bypass or a multi-repository write
-operation.
+The CLI owns argument validation, read-only registry/inventory/planning
+dispatch, and machine-readable results. Production apply and recovery remain
+unavailable before any registry, artifact, or control-state access.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
-import os
-import pwd
-import stat
 import sys
 from collections.abc import Sequence
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 
 from .adapters import BrSqliteV1Adapter
-from .approval import SignedApproval, SshApprovalVerifier
-from .codec import canonical_json_bytes, decode_manifest, sha256_hex
+from .codec import canonical_json_bytes, sha256_hex
 from .inventory import build_manifest
-from .models import ApprovalEnvelope, BinaryBinding, Manifest, Registry
+from .models import Registry
 from .planner import Plan, build_plan, plan_all
 from .registry import ValidatedRepository, load_registry, validate_registry
 from .transaction import TransactionError
@@ -33,8 +26,6 @@ EXIT_FAILURE = 1
 EXIT_USAGE = 2
 TOOL_VERSION = "beads-convergence-cli-v1"
 REGISTRY_SCHEMA = "beads.redirect-convergence.registry.v1"
-MANIFEST_SCHEMA = "beads.redirect-convergence.manifest.v1"
-PLAN_SCHEMA = "beads.redirect-convergence.plan.v1"
 
 
 class CliUsageError(ValueError):
@@ -135,154 +126,6 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _capture(path: Path) -> bytes:
-    """Read one regular artifact through a no-follow descriptor."""
-
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-    try:
-        fd = os.open(os.fspath(path), flags)
-    except OSError as exc:
-        raise ValueError(f"cannot open artifact: {path}") from exc
-    try:
-        info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode):
-            raise ValueError(f"artifact is not a regular file: {path}")
-        chunks: list[bytes] = []
-        while chunk := os.read(fd, 1024 * 1024):
-            chunks.append(chunk)
-        after = os.fstat(fd)
-        if (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns) != (
-            after.st_dev,
-            after.st_ino,
-            after.st_size,
-            after.st_mtime_ns,
-        ):
-            raise ValueError(f"artifact changed while being read: {path}")
-        return b"".join(chunks)
-    finally:
-        os.close(fd)
-
-
-def _load_manifest(path: Path, expected_sha256: str) -> Manifest:
-    raw = _capture(path)
-    measured = hashlib.sha256(raw).hexdigest()
-    if measured != expected_sha256:
-        raise ValueError("manifest SHA-256 does not match expected digest")
-    try:
-        return decode_manifest(raw)
-    except ValueError as exc:
-        raise ValueError(str(exc)) from exc
-
-
-def _load_json(path: Path) -> object:
-    try:
-        return json.loads(
-            _capture(path),
-            object_pairs_hook=_unique_pairs,
-            parse_constant=_reject_constant,
-        )
-    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as exc:
-        raise ValueError(f"malformed JSON artifact: {path}") from exc
-
-
-def _unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
-    result: dict[str, object] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate JSON field: {key}")
-        result[key] = value
-    return result
-
-
-def _reject_constant(value: str) -> None:
-    raise ValueError(f"non-standard JSON constant: {value}")
-
-
-def _approval(path: Path, signature_path: Path) -> SignedApproval:
-    value = _load_json(path)
-    if type(value) is not dict:
-        raise ValueError("approval must be a JSON object")
-    fields = {
-        "schema",
-        "operation",
-        "repo_id",
-        "nonce",
-        "issued_at",
-        "expires_at",
-        "registry_sha256",
-        "manifest_sha256",
-        "plan_sha256",
-        "canonical_beads",
-        "adapter",
-        "tracker_binary",
-        "git_binary",
-        "canonical_device",
-        "canonical_inode",
-        "tool_tree_sha256",
-        "run_id",
-        "journal_sha256",
-        "signer_principal",
-        "signer_fingerprint",
-    }
-    if set(value) != fields:
-        raise ValueError("approval has missing or unknown fields")
-    tracker = _approval_binary(value["tracker_binary"], "tracker_binary")
-    git = _approval_binary(value["git_binary"], "git_binary")
-    envelope = ApprovalEnvelope(
-        value["schema"],
-        value["operation"],
-        value["repo_id"],
-        value["nonce"],
-        value["issued_at"],
-        value["expires_at"],
-        value["registry_sha256"],
-        value["manifest_sha256"],
-        value["plan_sha256"],
-        Path(value["canonical_beads"]),
-        value["adapter"],
-        tracker,
-        git,
-        value["canonical_device"],
-        value["canonical_inode"],
-        value["tool_tree_sha256"],
-        value["run_id"],
-        value["journal_sha256"],
-        value["signer_principal"],
-        value["signer_fingerprint"],
-    )
-    signature = _capture(signature_path)
-    if not signature:
-        raise ValueError("approval signature is empty")
-    return SignedApproval(envelope, signature)
-
-
-def _approval_binary(value: object, field: str) -> BinaryBinding:
-    if type(value) is not dict or set(value) != {"path", "version", "sha256"}:
-        raise ValueError(f"approval {field} is malformed")
-    if (
-        not isinstance(value["path"], str)
-        or not Path(value["path"]).is_absolute()
-        or any(part in (".", "..") for part in Path(value["path"]).parts)
-    ):
-        raise ValueError(f"approval {field}.path must be absolute")
-    if not isinstance(value["version"], str) or not value["version"]:
-        raise ValueError(f"approval {field}.version must be a nonempty string")
-    if (
-        not isinstance(value["sha256"], str)
-        or len(value["sha256"]) != 64
-        or any(char not in "0123456789abcdef" for char in value["sha256"])
-    ):
-        raise ValueError(f"approval {field}.sha256 must be lowercase 64-hex")
-    return BinaryBinding(Path(value["path"]), value["version"], value["sha256"])
-
-
-def _repo(registry: Registry, repo_id: str) -> object:
-    matches = [item for item in registry.repositories if item.repo_id == repo_id]
-    if len(matches) != 1:
-        raise ValueError(f"unknown repo ID: {repo_id}")
-    return matches[0]
-
-
 def _validated_repo(registry: Registry, repo_id: str) -> tuple[ValidatedRepository, tuple[ValidatedRepository, ...]]:
     repositories = validate_registry(registry)
     selected = [item for item in repositories if item.config.repo_id == repo_id]
@@ -291,68 +134,6 @@ def _validated_repo(registry: Registry, repo_id: str) -> tuple[ValidatedReposito
             item.close()
         raise ValueError(f"unknown repo ID: {repo_id}")
     return selected[0], repositories
-
-
-def _binding_args_match(args: argparse.Namespace, config: object, manifest: Manifest) -> None:
-    expected_tracker = BinaryBinding(
-        args.expected_tracker_path,
-        args.expected_tracker_version,
-        args.expected_tracker_sha256,
-    )
-    expected_git = BinaryBinding(
-        args.expected_git_path,
-        args.expected_git_version,
-        args.expected_git_sha256,
-    )
-    if args.expected_adapter != manifest.adapter:
-        raise ValueError("expected adapter binding does not match manifest")
-    if args.expected_canonical != manifest.canonical_beads:
-        raise ValueError("expected canonical binding does not match manifest")
-    if expected_tracker != manifest.tracker_binary or expected_git != manifest.git_binary:
-        raise ValueError("expected executable binding does not match manifest")
-    _config_binding_args_match(args, config, expected_tracker, expected_git)
-
-
-def _config_binding_args_match(
-    args: argparse.Namespace,
-    config: object,
-    expected_tracker: BinaryBinding | None = None,
-    expected_git: BinaryBinding | None = None,
-) -> None:
-    if expected_tracker is None:
-        expected_tracker = BinaryBinding(
-            args.expected_tracker_path,
-            args.expected_tracker_version,
-            args.expected_tracker_sha256,
-        )
-    if expected_git is None:
-        expected_git = BinaryBinding(
-            args.expected_git_path,
-            args.expected_git_version,
-            args.expected_git_sha256,
-        )
-    if (
-        config.adapter != args.expected_adapter
-        or config.canonical_beads != args.expected_canonical
-        or config.tracker_binary != expected_tracker
-        or config.git_binary != expected_git
-    ):
-        raise ValueError("expected binding does not match registry")
-
-
-def _control_root() -> Path:
-    """Derive the non-overridable control namespace from the effective user."""
-
-    home = Path(pwd.getpwuid(os.geteuid()).pw_dir)
-    return home / ".local" / "state" / "beads-convergence" / "control"
-
-
-def _pinned_verifier() -> SshApprovalVerifier:
-    """Construct the verifier from the fixed host executable, never approval data."""
-
-    path = Path("/usr/bin/ssh-keygen")
-    digest = sha256_hex(_capture(path))
-    return SshApprovalVerifier(BinaryBinding(path, "system", digest))
 
 
 def _transaction_context(args: argparse.Namespace) -> dict[str, object]:
@@ -394,49 +175,6 @@ def _transaction_failure(args: argparse.Namespace, error: str) -> dict[str, obje
     if args.command == "recover":
         fields["recovered"] = False
     return fields
-
-
-def _transaction_success(
-    args: argparse.Namespace,
-    receipt: object,
-    *,
-    status: str,
-    signer: tuple[str, str] | None = None,
-) -> int:
-    fields = _transaction_context(args)
-    fields.update(
-        {
-            "schema": "beads.redirect-convergence.cli.v1",
-            "tool_version": TOOL_VERSION,
-            "operation": args.command,
-            "ok": status in ("COMMITTED", "ROLLED_BACK"),
-            "status": status,
-            "run_id": receipt.run_id,
-            "journal_sha256": receipt.journal_sha256,
-        }
-    )
-    if args.command == "apply":
-        fields.update(
-            {
-                "canonical_key": receipt.canonical_key,
-                "signer_principal": receipt.signer_principal,
-                "signer_fingerprint": receipt.signer_fingerprint,
-            }
-        )
-        fields["applied"] = status == "COMMITTED"
-    if args.command == "recover":
-        # Recovery is successful both when it restores pre-state (ROLLED_BACK)
-        # and when it regenerates a receipt for a previously committed run.
-        fields["recovered"] = status in ("COMMITTED", "ROLLED_BACK")
-        if signer is not None:
-            fields.update(
-                {
-                    "signer_principal": signer[0],
-                    "signer_fingerprint": signer[1],
-                }
-            )
-    _emit(fields)
-    return EXIT_OK if fields["ok"] else EXIT_FAILURE
 
 
 def _plan_payload(plan: Plan) -> dict[str, object]:
