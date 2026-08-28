@@ -57,6 +57,34 @@ class CrashRecoveryTest(unittest.TestCase):
             self.assertEqual(first.status, "COMMITTED")
             self.assertEqual(second.status, "COMMITTED")
 
+    def test_recovery_backend_mismatch_durably_needs_operator(self) -> None:
+        """Typed recovery preconditions fail closed before restoring a redirect."""
+
+        with tempfile.TemporaryDirectory() as temp:
+            request = make_request(Path(temp))
+            request = ApplyRequest(**{**request.__dict__, "fault_at": "after-rename"})
+            with self.assertRaises(TransactionCrash):
+                apply_plan(request)
+            request.adapter.backend = "dolt"
+            recovery = recover_run(make_recovery_request(request))
+            self.assertEqual(recovery.status, "NEEDS_OPERATOR")
+            self.assertEqual(request.control.load_journal("fixture-run")["status"], "NEEDS_OPERATOR")
+
+    def test_rollback_restores_noncanonical_prior_redirect_without_oracle(self) -> None:
+        """Rollback restores journaled bytes even when prior authority is noncanonical."""
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            request = make_request(root, pre_redirect="local-authority\n")
+            request = ApplyRequest(**{**request.__dict__, "fault_at": "after-rename"})
+            with self.assertRaises(TransactionCrash):
+                apply_plan(request)
+            calls_before = len(request.adapter.authority_calls)
+            recovery = recover_run(make_recovery_request(request))
+            self.assertEqual(recovery.status, "ROLLED_BACK")
+            self.assertEqual((root / "target" / ".beads" / "redirect").read_text(), "local-authority\n")
+            self.assertEqual(len(request.adapter.authority_calls), calls_before)
+
 
 if __name__ == "__main__":
     unittest.main()
