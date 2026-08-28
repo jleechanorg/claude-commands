@@ -21,6 +21,13 @@ _KNOWN_SOURCES = frozenset(
     {"beads.db", "beads.db-wal", "beads.db-shm", "issues.jsonl"}
 )
 _HEX_DIGITS = frozenset("0123456789abcdef")
+_UNPLANNABLE_CLASSIFICATIONS = frozenset(
+    {"missing", "unsupported", "unresolved_noncanonical"}
+)
+
+
+class PlanError(RuntimeError):
+    """A live manifest lacks the evidence required for safe planning."""
 
 
 class DeterministicPlan(Plan):
@@ -186,9 +193,21 @@ def build_plan(manifest: Manifest) -> Plan:
 
     Eligibility is deliberately derived from the manifest's positive
     classification and complete source/redirect attestations.  Missing,
-    unsupported, unresolved, canonical, and vanished entries are represented
-    by the manifest but never become actions.
+    unsupported, and unresolved live entries reject the plan; canonical and
+    vanished entries remain represented without becoming actions.
     """
+
+    unplannable = sorted(
+        {
+            worktree.classification
+            for worktree in manifest.worktrees
+            if worktree.classification in _UNPLANNABLE_CLASSIFICATIONS
+        }
+    )
+    if unplannable:
+        raise PlanError(
+            "cannot plan manifest with live state: " + ", ".join(unplannable)
+        )
 
     manifest_attested = (
         manifest.redirect_codec is not None

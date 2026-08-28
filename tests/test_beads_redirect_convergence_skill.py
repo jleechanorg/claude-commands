@@ -25,13 +25,17 @@ class BeadsRedirectConvergenceSkillTest(unittest.TestCase):
 
     def test_read_only_cli_surface_is_complete(self):
         for command in (
-            "beads-converge registry validate",
-            "beads-converge inventory",
-            "beads-converge plan \\",
-            "beads-converge plan-all",
+            '"$BEADS_CONVERGE" registry validate',
+            '"$BEADS_CONVERGE" inventory',
+            '"$BEADS_CONVERGE" plan \\',
+            '"$BEADS_CONVERGE" plan-all',
         ):
             with self.subTest(command=command):
                 self.assertIn(command, self.text)
+        self.assertIn(
+            'BEADS_CONVERGE="${CLAUDE_HOME:-$HOME/.claude}/scripts/beads-converge"',
+            self.text,
+        )
         self.assertIn("--expected-registry-sha256", self.text)
         self.assertIn("no `--apply` option", self.text)
         self.assertIn("no `apply-all` command", self.text)

@@ -33,10 +33,13 @@ SRC_AGENTS_DIR="$PLUGIN_SRC_DIR/.claude/agents"
 SRC_COMMANDS_DIR="$PLUGIN_SRC_DIR/.claude/commands"
 SRC_SCRIPTS_DIR="$PLUGIN_SRC_DIR/.claude/scripts"
 SRC_SKILLS_DIR="$PLUGIN_SRC_DIR/.claude/skills"
+SRC_BEADS_LAUNCHER="$PLUGIN_SRC_DIR/scripts/beads-converge"
+SRC_BEADS_RUNTIME_DIR="$PLUGIN_SRC_DIR/scripts/beads_convergence"
 INSTALL_MODE="refuse"
 INSTALL_ROOT="$CLAUDE_HOME"
 STAGING_DIR=""
 BACKUP_PATH=""
+ACTIVATION_BACKUP_PATH=""
 
 show_usage() {
     cat <<EOF
@@ -64,6 +67,14 @@ directory_is_nonempty() {
     [ -d "$1" ] && [ -n "$(find "$1" -mindepth 1 -maxdepth 1 -print -quit)" ]
 }
 
+directory_mode() {
+    if stat -c '%a' "$1" >/dev/null 2>&1; then
+        stat -c '%a' "$1"
+    else
+        stat -f '%Lp' "$1"
+    fi
+}
+
 prepare_target() {
     if [ -e "$CLAUDE_HOME" ] && [ ! -d "$CLAUDE_HOME" ]; then
         log_error "Target exists but is not a directory: $CLAUDE_HOME"
@@ -83,20 +94,33 @@ prepare_target() {
                 ;;
         esac
     fi
-    if [ "$INSTALL_MODE" = "backup" ]; then
-        mkdir -p "$(dirname "$CLAUDE_HOME")"
-        STAGING_DIR="$(mktemp -d "${CLAUDE_HOME}.staging.XXXXXX")"
-        INSTALL_ROOT="$STAGING_DIR"
-        log_info "Staging backup installation in $STAGING_DIR"
+    mkdir -p "$(dirname "$CLAUDE_HOME")"
+    STAGING_DIR="$(mktemp -d "${CLAUDE_HOME}.staging.XXXXXX")"
+    INSTALL_ROOT="$STAGING_DIR"
+    if [ -e "$CLAUDE_HOME" ] && [ "$INSTALL_MODE" != "backup" ]; then
+        cp -a "$CLAUDE_HOME/." "$STAGING_DIR/"
+        chmod "$(directory_mode "$CLAUDE_HOME")" "$STAGING_DIR"
+        log_info "Seeded staged installation from existing target"
     else
-        mkdir -p "$CLAUDE_HOME"
+        log_info "Staging installation in $STAGING_DIR"
     fi
 }
 
-finalize_backup_install() {
-    [ "$INSTALL_MODE" = "backup" ] || return 0
+next_activation_backup_path() {
+    local candidate
+    candidate="${CLAUDE_HOME}.activation-$(date +%Y%m%d%H%M%S)-$$"
+    local suffix=0
+    while [ -e "$candidate" ]; do
+        suffix=$((suffix + 1))
+        candidate="${CLAUDE_HOME}.activation-$(date +%Y%m%d%H%M%S)-$$-$suffix"
+    done
+    printf '%s' "$candidate"
+}
 
-    if [ -e "$CLAUDE_HOME" ]; then
+activate_staged_install() {
+    [ -n "$STAGING_DIR" ] || return 0
+
+    if [ "$INSTALL_MODE" = "backup" ] && [ -e "$CLAUDE_HOME" ]; then
         BACKUP_PATH="${CLAUDE_HOME}.backup-$(date +%Y%m%d%H%M%S)"
         if [ -e "$BACKUP_PATH" ]; then
             log_error "Backup path already exists: $BACKUP_PATH"
@@ -109,10 +133,32 @@ finalize_backup_install() {
             return 1
         fi
         log_info "Moved existing target to $BACKUP_PATH"
-    else
-        mv "$STAGING_DIR" "$CLAUDE_HOME"
+        STAGING_DIR=""
+        return 0
+    fi
+
+    if [ -e "$CLAUDE_HOME" ]; then
+        ACTIVATION_BACKUP_PATH="$(next_activation_backup_path)"
+        if ! mv "$CLAUDE_HOME" "$ACTIVATION_BACKUP_PATH"; then
+            log_error "Failed to reserve original target for activation."
+            return 1
+        fi
+    fi
+    if ! mv "$STAGING_DIR" "$CLAUDE_HOME"; then
+        log_error "Failed to activate staged installation; restoring original target."
+        if [ -n "$ACTIVATION_BACKUP_PATH" ]; then
+            mv "$ACTIVATION_BACKUP_PATH" "$CLAUDE_HOME" || log_error "Original target remains at $ACTIVATION_BACKUP_PATH"
+        fi
+        return 1
     fi
     STAGING_DIR=""
+    if [ -n "$ACTIVATION_BACKUP_PATH" ]; then
+        if rm -rf "$ACTIVATION_BACKUP_PATH"; then
+            ACTIVATION_BACKUP_PATH=""
+        else
+            log_warning "Installation activated; retained recoverable previous target at $ACTIVATION_BACKUP_PATH"
+        fi
+    fi
 }
 
 list_installable_files() {
@@ -131,6 +177,20 @@ list_installable_files() {
     fi
 }
 
+validate_beads_convergence_inputs() {
+    local runtime_file
+    if [ ! -f "$SRC_BEADS_LAUNCHER" ] || [ ! -d "$SRC_BEADS_RUNTIME_DIR" ]; then
+        log_error "Required beads convergence release input is missing"
+        log_error "Expected $SRC_BEADS_LAUNCHER and $SRC_BEADS_RUNTIME_DIR"
+        return 1
+    fi
+    runtime_file="$(find "$SRC_BEADS_RUNTIME_DIR" -type f ! -name '*.py[co]' ! -name '.DS_Store' ! -path '*/__pycache__/*' ! -path '*/.pytest_cache/*' -print -quit)"
+    if [ -z "$runtime_file" ]; then
+        log_error "Required beads convergence runtime package is empty: $SRC_BEADS_RUNTIME_DIR"
+        return 1
+    fi
+}
+
 # Shared recursive install function
 install_component() {
     local src_dir="$1"
@@ -138,7 +198,11 @@ install_component() {
     local component_name="$3"
     local relative
 
-    if [ -d "$src_dir" ]; then
+    if [ -f "$src_dir" ]; then
+        mkdir -p "$dest_dir"
+        cp -a "$src_dir" "$dest_dir/$(basename "$src_dir")"
+        log_success "Installed $component_name"
+    elif [ -d "$src_dir" ]; then
         mkdir -p "$dest_dir"
         while IFS= read -r -d '' relative; do
             relative="${relative#./}"
@@ -169,6 +233,13 @@ install_scripts() {
     install_component "$SRC_SCRIPTS_DIR" "$INSTALL_ROOT/scripts" "scripts"
 }
 
+# The convergence launcher and its sibling package are installed together so
+# the isolated launcher can import the runtime from CLAUDE_HOME/scripts.
+install_beads_convergence() {
+    install_component "$SRC_BEADS_RUNTIME_DIR" "$INSTALL_ROOT/scripts/beads_convergence" "scripts"
+    install_component "$SRC_BEADS_LAUNCHER" "$INSTALL_ROOT/scripts" "beads convergence launcher"
+}
+
 # Copy skills to ~/.claude/skills/
 install_skills() {
     install_component "$SRC_SKILLS_DIR" "$INSTALL_ROOT/skills" "skills"
@@ -193,6 +264,28 @@ validate_installation() {
             list_installable_files "$component"
         )
     done
+    if [ -f "$SRC_BEADS_LAUNCHER" ]; then
+        destination_file="$INSTALL_ROOT/scripts/beads-converge"
+        if [ ! -f "$destination_file" ] || ! cmp -s "$SRC_BEADS_LAUNCHER" "$destination_file"; then
+            log_error "Manifest validation failed for scripts/beads-converge"
+            return 1
+        fi
+        files_checked=$((files_checked + 1))
+    fi
+    if [ -d "$SRC_BEADS_RUNTIME_DIR" ]; then
+        while IFS= read -r -d '' relative; do
+            relative="${relative#./}"
+            destination_file="$INSTALL_ROOT/scripts/beads_convergence/$relative"
+            if [ ! -f "$destination_file" ] || ! cmp -s "$SRC_BEADS_RUNTIME_DIR/$relative" "$destination_file"; then
+                log_error "Manifest validation failed for scripts/beads_convergence/$relative"
+                return 1
+            fi
+            files_checked=$((files_checked + 1))
+        done < <(
+            cd "$SRC_BEADS_RUNTIME_DIR"
+            list_installable_files "scripts"
+        )
+    fi
     log_success "Source-derived manifest validation passed ($files_checked files)"
 }
 
@@ -212,13 +305,15 @@ main() {
     log_info "Target: $CLAUDE_HOME"
     echo
 
+    validate_beads_convergence_inputs
     prepare_target
     install_agents
     install_commands
     install_scripts
+    install_beads_convergence
     install_skills
     validate_installation
-    finalize_backup_install
+    activate_staged_install
 
     echo
     show_next_steps
@@ -227,14 +322,36 @@ main() {
 }
 
 cleanup_failed_install() {
-    if [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ]; then
-        rm -rf "$STAGING_DIR"
+    local status=$?
+    if [ "$status" -eq 0 ]; then
+        return "$status"
     fi
-    log_error "Installation failed at line $LINENO. Check the output above for details."
-    exit 1
+    if [ -n "$ACTIVATION_BACKUP_PATH" ] && [ ! -e "$CLAUDE_HOME" ] && [ -e "$ACTIVATION_BACKUP_PATH" ]; then
+        if mv "$ACTIVATION_BACKUP_PATH" "$CLAUDE_HOME"; then
+            ACTIVATION_BACKUP_PATH=""
+        else
+            log_error "Original target remains at $ACTIVATION_BACKUP_PATH"
+        fi
+    fi
+    if [ -n "$BACKUP_PATH" ] && [ ! -e "$CLAUDE_HOME" ] && [ -e "$BACKUP_PATH" ]; then
+        if mv "$BACKUP_PATH" "$CLAUDE_HOME"; then
+            BACKUP_PATH=""
+        else
+            log_error "Original target remains at $BACKUP_PATH"
+        fi
+    fi
+    if [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ]; then
+        if rm -rf "$STAGING_DIR"; then
+            STAGING_DIR=""
+        else
+            log_error "Cleanup failed; staged installation retained at $STAGING_DIR"
+        fi
+    fi
+    log_error "Installation failed. Check the output above for details."
+    return "$status"
 }
 
-trap cleanup_failed_install ERR
+trap cleanup_failed_install EXIT
 
 # Run main installation if script is executed directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

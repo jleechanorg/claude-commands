@@ -12,6 +12,7 @@ import stat
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Self
 
@@ -221,6 +222,106 @@ class VerifiedExecutable:
             self.fd = -1
 
 
+def _fd_sha256(fd: int, *, limit: int = 64 * 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    offset = 0
+    while True:
+        chunk = os.pread(fd, 1024 * 1024, offset)
+        if not chunk:
+            return digest.hexdigest()
+        offset += len(chunk)
+        if offset > limit:
+            raise FsafetyError("captured file exceeds size limit")
+        digest.update(chunk)
+
+
+def _verify_executable_identity(executable: VerifiedExecutable) -> None:
+    info = os.fstat(executable.fd)
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or (info.st_dev, info.st_ino) != (executable.device, executable.inode)
+    ):
+        raise FsafetyError("retained executable identity changed")
+    try:
+        path_info = os.stat(
+            os.fspath(Path(executable.binding.path)),
+            follow_symlinks=False,
+        )
+    except OSError as exc:
+        raise FsafetyError("executable pathname is unavailable") from exc
+    if (path_info.st_dev, path_info.st_ino) != (
+        executable.device,
+        executable.inode,
+    ):
+        raise FsafetyError("executable pathname was replaced")
+    if _fd_sha256(executable.fd) != executable.measured_sha256:
+        raise FsafetyError("retained executable digest changed")
+
+
+@dataclass
+class _DarwinRootControlledExecutable:
+    """A verified executable whose full namespace is root-controlled."""
+
+    executable: VerifiedExecutable
+
+    @property
+    def path(self) -> Path:
+        return Path(self.executable.binding.path)
+
+    def verify_identity(self) -> None:
+        _verify_executable_identity(self.executable)
+        if not _darwin_path_is_root_controlled(self.path):
+            raise FsafetyError("Darwin root-controlled executable path changed")
+
+
+def _darwin_path_is_root_controlled(path: Path) -> bool:
+    """Return whether this UID cannot replace or modify the executable path."""
+
+    if os.geteuid() == 0:
+        return False
+    current = os.open(os.sep, _flags(directory=True))
+    try:
+        root_info = os.fstat(current)
+        if (
+            root_info.st_uid != 0
+            or stat.S_IMODE(root_info.st_mode) & 0o022
+            or os.access(
+                ".", os.W_OK, dir_fd=current, effective_ids=True
+            )
+        ):
+            return False
+        parts = _parts(path)
+        for component in parts[:-1]:
+            nxt = os.open(component, _flags(directory=True), dir_fd=current)
+            os.close(current)
+            current = nxt
+            info = os.fstat(current)
+            if (
+                info.st_uid != 0
+                or stat.S_IMODE(info.st_mode) & 0o022
+                or os.access(
+                    ".", os.W_OK, dir_fd=current, effective_ids=True
+                )
+            ):
+                return False
+        info = os.stat(parts[-1], dir_fd=current, follow_symlinks=False)
+        return (
+            info.st_uid == 0
+            and not stat.S_IMODE(info.st_mode) & 0o022
+            and not os.access(
+                parts[-1],
+                os.W_OK,
+                dir_fd=current,
+                effective_ids=True,
+                follow_symlinks=False,
+            )
+        )
+    except OSError:
+        return False
+    finally:
+        os.close(current)
+
+
 def open_verified_executable(binding: object) -> VerifiedExecutable:
     path = Path(binding.path)
     _parts(path)
@@ -293,36 +394,23 @@ class ExecutionResult:
     returncode: int
 
 
-def run_verified(
+def _run_verified_argv(
     executable: VerifiedExecutable,
     argv: Sequence[str],
     cwd: DirectoryHandle,
     timeout: float = 30.0,
     *,
     max_output: int = 4 * 1024 * 1024,
+    darwin_strategy: _DarwinRootControlledExecutable | None = None,
 ) -> ExecutionResult:
-    """Execute only the retained executable from the retained directory."""
+    """Supervise an already-certified executable strategy."""
 
     if timeout <= 0:
         raise ValueError("timeout must be positive")
-    if not descriptor_exec_supported():
-        raise UnsupportedCapability("descriptor execution is unavailable on this host")
     cwd.verify_identity()
-    before = os.fstat(executable.fd)
-    if (before.st_dev, before.st_ino) != (executable.device, executable.inode):
-        raise FsafetyError("retained executable identity changed")
-    try:
-        path_info = os.stat(
-            os.fspath(Path(executable.binding.path)),
-            follow_symlinks=False,
-        )
-        if (path_info.st_dev, path_info.st_ino) != (
-            executable.device,
-            executable.inode,
-        ):
-            raise FsafetyError("executable pathname was replaced")
-    except OSError as exc:
-        raise FsafetyError("executable pathname is unavailable") from exc
+    _verify_executable_identity(executable)
+    if darwin_strategy is not None:
+        darwin_strategy.verify_identity()
     out_read, out_write = os.pipe()
     err_read, err_write = os.pipe()
     pid = os.fork()
@@ -336,9 +424,13 @@ def run_verified(
             os.close(err_write)
             cwd.verify_identity()
             os.fchdir(cwd.fd)
-            os.set_inheritable(executable.fd, True)
             command = [Path(executable.binding.path).name, *map(str, argv)]
-            _exec_fd(executable.fd, command, dict(CHILD_ENV))
+            if darwin_strategy is None:
+                os.set_inheritable(executable.fd, True)
+                _exec_fd(executable.fd, command, dict(CHILD_ENV))
+            else:
+                darwin_strategy.verify_identity()
+                os.execve(os.fspath(darwin_strategy.path), command, dict(CHILD_ENV))
         # The child must report every pre-exec failure and exit fail-closed;
         # narrowing this catch could strand descriptors or skip the 127 exit.
         except BaseException as exc:  # noqa: BLE001
@@ -401,29 +493,62 @@ def run_verified(
         returncode = os.WEXITSTATUS(status)
     else:
         returncode = -os.WTERMSIG(status)
-    after = os.fstat(executable.fd)
-    if (after.st_dev, after.st_ino) != (executable.device, executable.inode):
-        raise FsafetyError("retained executable identity changed after execution")
-    os.lseek(executable.fd, 0, os.SEEK_SET)
-    digest = hashlib.sha256(_read_fd(executable.fd)).hexdigest()
-    os.lseek(executable.fd, 0, os.SEEK_SET)
-    if digest != executable.measured_sha256:
-        raise FsafetyError("retained executable digest changed after execution")
-    try:
-        path_info = os.stat(
-            os.fspath(Path(executable.binding.path)),
-            follow_symlinks=False,
-        )
-        if (path_info.st_dev, path_info.st_ino) != (
-            executable.device,
-            executable.inode,
-        ):
-            raise FsafetyError("executable pathname was replaced")
-    except OSError as exc:
-        raise FsafetyError("executable pathname is unavailable") from exc
+    _verify_executable_identity(executable)
+    if darwin_strategy is not None:
+        darwin_strategy.verify_identity()
     if timed_out:
         raise TimeoutError("verified executable timed out")
     return ExecutionResult(bytes(buffers["out"]), bytes(buffers["err"]), returncode)
+
+
+class GitProbe(Enum):
+    """The complete fixed read-only Git command surface."""
+
+    VERSION = "version"
+    WORKTREE_LIST = "worktree-list"
+    COMMON_DIR = "common-dir"
+
+
+def _git_probe_argv(probe: GitProbe) -> tuple[str, ...]:
+    if type(probe) is not GitProbe:
+        raise ValueError("unsupported Git probe")
+    if probe is GitProbe.VERSION:
+        return ("--version",)
+    if probe is GitProbe.WORKTREE_LIST:
+        return ("worktree", "list", "--porcelain")
+    return ("rev-parse", "--git-common-dir")
+
+
+def run_verified_git_probe(
+    executable: VerifiedExecutable,
+    probe: GitProbe,
+    cwd: DirectoryHandle,
+) -> ExecutionResult:
+    """Run one fixed Git probe from a verified executable and directory.
+
+    Darwin has no ``fexecve``/``execveat`` and rejects executable ``/dev/fd``
+    paths.  Only a root-owned path that the effective UID cannot write is safe
+    enough for its finite pathname execution surface.  User-owned Git binaries
+    remain unsupported.
+    """
+
+    strategy: _DarwinRootControlledExecutable | None = None
+    if sys.platform == "darwin":
+        _verify_executable_identity(executable)
+        if not _darwin_path_is_root_controlled(Path(executable.binding.path)):
+            raise UnsupportedCapability(
+                "Darwin read-only execution requires a root-controlled path"
+            )
+        strategy = _DarwinRootControlledExecutable(executable)
+    elif not descriptor_exec_supported():
+        raise UnsupportedCapability("descriptor execution is unavailable on this host")
+    return _run_verified_argv(
+        executable,
+        _git_probe_argv(probe),
+        cwd,
+        timeout=30,
+        darwin_strategy=strategy,
+    )
 
 
 def fixed_control_root() -> Path:

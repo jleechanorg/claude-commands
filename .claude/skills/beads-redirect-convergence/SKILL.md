@@ -1,19 +1,18 @@
 ---
 name: beads-redirect-convergence
 description: >-
-  Safely inventory and plan repository-local Beads redirect convergence; v1
-  real apply and recovery remain hard-disabled until the adapter proves a
-  production writer lease.
+  Safely validate registries and inventory repository-local Beads sources; v1
+  real planning, apply, and recovery fail closed until snapshot-backed tracker
+  attestation and a production writer lease exist.
 ---
 
 # Beads redirect convergence
 
-Use this skill when an operator needs to discover, inventory, plan, certify, or
-explicitly authorize a redirect-only convergence operation for a repository's
-own canonical Beads store. The portable engine is shared; data authority is
-not. Each application repository keeps its own canonical database and JSONL
-export, while a host registry only describes where those stores and their
-evidence live.
+Use this skill when an operator needs to validate a host registry or capture a
+source-only inventory for a repository's own canonical Beads store. The
+portable engine is shared; data authority is not. Each application repository
+keeps its own canonical database and JSONL export, while a host registry only
+describes where those stores and their evidence live.
 
 This skill is an operator contract, not an authorization. Read it before every
 operation and keep the registry, manifest, plan, approval, and receipt for the
@@ -23,15 +22,17 @@ JSON receipt contains partial results.
 
 ## Safe operating posture
 
-- Start read-only. Validate the registry, inventory one repository, and plan
-  one repository before considering any mutation.
+- Start read-only. Validate the registry, then inventory one repository. The
+  current real adapter deliberately refuses planning because no safe
+  snapshot-backed tracker health, authority, or redirect-codec oracle exists.
 - `plan-all` is read-only and is structurally incapable of applying. There is
   no `apply-all` command, cross-repository apply, automatic recovery, or
   wildcard repository target.
 - The portable engine owns schemas, registry validation, descriptor-bound
-  inventory, and planning in v1. Journaling and transaction invariants exist
-  only in the tests-only fixture harness and describe a future production
-  implementation; v1 production apply/recovery remains disabled.
+  source inventory, and fail-closed planning boundaries in v1. Journaling and
+  transaction invariants exist only in the tests-only fixture harness and
+  describe a future production implementation; v1 real planning,
+  apply/recovery remains disabled.
   The application repository owns its canonical Beads authority, exporter,
   health policy, and evidence interpretation. A registry entry never transfers
   or merges that authority.
@@ -42,14 +43,19 @@ JSON receipt contains partial results.
   command. Hash output is review evidence only; the human-facing operator must
   independently supply every literal binding to an authorized operation.
 
-The initial adapter is exactly `br-sqlite-v1`. Legacy `bd`, Dolt, mixed, or
-unknown backends are unsupported and fail closed. A real repository without a
-version-specific writer-exclusion capability is plan-only, even if its health
-is clean.
+The initial adapter is exactly `br-sqlite-v1`. It never executes `br` against a
+live store: an earlier probe demonstrated that an apparently read-only command
+can apply SQLite migration repairs. It descriptor-reads and hashes the bounded
+DB/WAL/SHM/JSONL family, records the live entry as `unsupported`, and refuses
+planning until an isolated snapshot adapter proves health, authority, and the
+redirect codec. Legacy `bd`, Dolt, mixed, or unknown backends also fail closed.
 
 ## Public read-only CLI
 
-Execute the installed `beads-converge` launcher directly. Its shebang starts
+The installer places the launcher at
+`${CLAUDE_HOME:-$HOME/.claude}/scripts/beads-converge`. Execute that launcher
+directly; add its directory to `PATH` only through separately reviewed shell
+configuration. Its shebang starts
 Python in isolated, no-site mode before runtime imports. Invocations such as
 `python beads-converge` and `python -I beads-converge` are unsupported and fail
 before importing the runtime package because they do not provide both required
@@ -65,6 +71,7 @@ environment variables, `~`, shell syntax, or command substitution.
 Set review inputs in the shell only for the read-only commands:
 
 ```bash
+BEADS_CONVERGE="${CLAUDE_HOME:-$HOME/.claude}/scripts/beads-converge"
 REGISTRY="/absolute/path/to/registry.json"
 REGISTRY_SHA256="<64-lowercase-hex-registry-sha256>"
 REPO_ID="<one-registry-repo-id>"
@@ -73,30 +80,34 @@ REPO_ID="<one-registry-repo-id>"
 Validate the captured registry before using it:
 
 ```bash
-beads-converge registry validate \
+"$BEADS_CONVERGE" registry validate \
   --registry "$REGISTRY" \
   --expected-registry-sha256 "$REGISTRY_SHA256"
 ```
 
-Produce a bounded inventory for exactly one repository. Inventory performs
-Git worktree discovery through the pinned descriptor and inspects only the
-declared roots, worktrees, `.beads` directory, redirect basename, and adapter
-source family. It does not sync, import, export, repair, or mutate a tracker:
+Produce a bounded source-only inventory for exactly one repository. Inventory
+performs only fixed typed Git probes through a pinned executable, then inspects
+the declared roots, worktrees, `.beads` directory, redirect basename, and
+adapter source family through descriptors. It executes no `br` command and
+does not sync, import, export, repair, or mutate a tracker. Real entries remain
+`unsupported` until snapshot-backed attestation exists:
 
 ```bash
-beads-converge inventory \
+"$BEADS_CONVERGE" inventory \
   --repo "$REPO_ID" \
   --registry "$REGISTRY" \
   --expected-registry-sha256 "$REGISTRY_SHA256"
 ```
 
-Build a deterministic one-repository plan. V1 emits the manifest and plan on
-stdout and does not write a repository source, redirect, or evidence artifact.
-The validated registry `evidence_root` field is reserved for a future evidence
-writer and is otherwise unused by v1:
+The plan surface is retained as a fail-closed future boundary. With the current
+real `br-sqlite-v1` adapter it exits nonzero when source inventory contains an
+`unsupported`, `missing`, or `unresolved_noncanonical` entry; it does not emit
+an apparently successful empty plan. Complete disposable fixture manifests can
+still certify deterministic planning. The validated registry `evidence_root`
+field is reserved for a future evidence writer and is otherwise unused by v1:
 
 ```bash
-beads-converge plan \
+"$BEADS_CONVERGE" plan \
   --repo "$REPO_ID" \
   --registry "$REGISTRY" \
   --expected-registry-sha256 "$REGISTRY_SHA256"
@@ -108,16 +119,14 @@ healthy results. The command exits nonzero if any entry cannot be safely
 planned, and it has no `--apply` option:
 
 ```bash
-beads-converge plan-all \
+"$BEADS_CONVERGE" plan-all \
   --registry "$REGISTRY" \
   --expected-registry-sha256 "$REGISTRY_SHA256"
 ```
 
-Do not infer readiness from a successful registry validation alone. Before
-certification, inspect the JSON inventory/plan and verify that the intended
-repository is present, the canonical target is physical, every source family
-is stable, and the adapter reports supported SQLite-v1, healthy canonical
-state, and its redirect codec/oracle attestation.
+Do not infer readiness from successful validation or inventory. V1 is expected
+to refuse a real plan because it cannot yet prove healthy canonical state or a
+redirect codec/oracle without executing a mutation-capable live tracker.
 
 ## Binding and authority model
 

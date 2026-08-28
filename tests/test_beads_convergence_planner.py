@@ -21,7 +21,7 @@ from scripts.beads_convergence.models import (
     SourceFingerprint,
     WorktreeRecord,
 )
-from scripts.beads_convergence.planner import build_plan, plan_all
+from scripts.beads_convergence.planner import PlanError, build_plan, plan_all
 
 
 def _manifest(
@@ -246,16 +246,27 @@ class PlannerTest(unittest.TestCase):
             worktrees=(
                 _worktree("/fixtures/zeta"),
                 _worktree("/fixtures/canonical", "canonical"),
-                _worktree("/fixtures/missing", "missing"),
-                _worktree("/fixtures/unsupported", "unsupported"),
-                _worktree("/fixtures/incomplete", "unresolved_noncanonical"),
-                _worktree("/fixtures/vanished", "missing"),
                 _worktree("/fixtures/new", "newly_appeared"),
             )
         )
         plan = build_plan(manifest)
         self.assertEqual(len(plan.actions), 1)
         self.assertEqual(plan.actions[0]["worktree_path"], "/fixtures/zeta")
+
+    def test_plan_refuses_unsupported_missing_or_unresolved_live_manifest(
+        self,
+    ) -> None:
+        for classification in ("unsupported", "missing", "unresolved_noncanonical"):
+            with self.subTest(classification=classification), self.assertRaisesRegex(
+                PlanError, "cannot plan"
+            ):
+                build_plan(
+                    _manifest(
+                        worktrees=(
+                            _worktree(f"/fixtures/{classification}", classification),
+                        )
+                    )
+                )
 
     def test_actions_are_sorted_by_resolved_worktree_path(self) -> None:
         plan = build_plan(
@@ -335,7 +346,7 @@ class PlannerTest(unittest.TestCase):
             ]
             with patch.object(
                 inventory,
-                "run_verified",
+                "run_verified_git_probe",
                 side_effect=git_results,
             ), patch.object(
                 inventory,
@@ -363,16 +374,15 @@ class PlannerTest(unittest.TestCase):
                 return_value=HealthAttestation(0, False, False, "healthy", {}),
             ):
                 receipt = plan_all(registry)
-            self.assertEqual(receipt.status, 0, receipt.errors)
+            self.assertEqual(receipt.status, 1)
             self.assertEqual(len(receipt.results), 2)
-            self.assertTrue(all(result.ok for result in receipt.results))
-            self.assertEqual(len(receipt.plans), 2)
-            self.assertEqual(len(receipt.results[0].plan.actions), 1)
-            self.assertEqual(len(receipt.results[1].plan.actions), 0)
-            self.assertNotEqual(
-                receipt.results[0].plan.sha256,
-                receipt.results[1].plan.sha256,
+            self.assertTrue(receipt.results[0].ok)
+            self.assertEqual(
+                receipt.results[1].error,
+                "cannot plan manifest with live state: unsupported",
             )
+            self.assertEqual(len(receipt.plans), 1)
+            self.assertEqual(len(receipt.results[0].plan.actions), 1)
 
     def test_fallback_after_registry_validation_failure_keeps_full_registry_sha(
         self,
@@ -417,7 +427,7 @@ class PlannerTest(unittest.TestCase):
 
             with patch.object(
                 inventory,
-                "run_verified",
+                "run_verified_git_probe",
                 return_value=git_result,
             ), patch.object(
                 inventory,
@@ -548,7 +558,7 @@ class PlannerTest(unittest.TestCase):
             ]
             with patch.object(
                 inventory,
-                "run_verified",
+                "run_verified_git_probe",
                 side_effect=git_results,
             ), patch.object(
                 inventory,

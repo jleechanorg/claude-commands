@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,6 +11,7 @@ from unittest.mock import patch
 
 from scripts.beads_convergence.adapters import (
     BackendAttestation,
+    BrSqliteV1Adapter,
     RedirectOracle,
     SourceMember,
     SourceSnapshot,
@@ -62,7 +64,12 @@ class FakeAdapter:
         return Path("/canonical/.beads")
 
 
-def _repository(root: Path, *, extras: tuple[Path, ...] = ()) -> object:
+def _repository(
+    root: Path,
+    *,
+    extras: tuple[Path, ...] = (),
+    tracker_binary: BinaryBinding | None = None,
+) -> object:
     seed = root / "seed"
     canonical = seed / ".beads"
     evidence = root / "evidence"
@@ -76,7 +83,8 @@ def _repository(root: Path, *, extras: tuple[Path, ...] = ()) -> object:
         canonical,
         (root,),
         extras,
-        BinaryBinding(Path("/bin/br"), "0.4.0", "a" * 64),
+        tracker_binary
+        or BinaryBinding(Path("/bin/br"), "0.4.0", "a" * 64),
         BinaryBinding(Path("/bin/git"), "2.0", "b" * 64),
         evidence,
     )
@@ -130,7 +138,7 @@ class InventoryTest(unittest.TestCase):
                     for config in configs
                 ]
                 with patch(
-                    "scripts.beads_convergence.inventory.run_verified",
+                    "scripts.beads_convergence.inventory.run_verified_git_probe",
                     side_effect=results,
                 ), patch(
                     "scripts.beads_convergence.inventory._common_dir_identity",
@@ -163,7 +171,7 @@ class InventoryTest(unittest.TestCase):
                 ).encode()
                 result = SimpleNamespace(stdout=porcelain, stderr=b"", returncode=0)
                 with patch(
-                    "scripts.beads_convergence.inventory.run_verified",
+                    "scripts.beads_convergence.inventory.run_verified_git_probe",
                     return_value=result,
                 ), patch(
                     "scripts.beads_convergence.inventory._common_dir_identity",
@@ -206,7 +214,7 @@ class InventoryTest(unittest.TestCase):
                     returncode=0,
                 )
                 with patch(
-                    "scripts.beads_convergence.inventory.run_verified",
+                    "scripts.beads_convergence.inventory.run_verified_git_probe",
                     return_value=result,
                 ), patch(
                     "scripts.beads_convergence.inventory._common_dir_identity",
@@ -230,7 +238,7 @@ class InventoryTest(unittest.TestCase):
                     stdout=b"HEAD missing-worktree\n", returncode=0
                 )
                 with patch(
-                    "scripts.beads_convergence.inventory.run_verified",
+                    "scripts.beads_convergence.inventory.run_verified_git_probe",
                     return_value=result,
                 ), patch(
                     "scripts.beads_convergence.inventory._common_dir_identity",
@@ -243,6 +251,74 @@ class InventoryTest(unittest.TestCase):
 
                     with self.assertRaisesRegex(InventoryError, "malformed Git"):
                         discover_worktrees(repository, _adapter=FakeAdapter())
+
+    def test_source_only_manifest_preserves_live_evidence_without_tracker_exec(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            tracker_path = Path("/bin/echo")
+            tracker = BinaryBinding(
+                tracker_path,
+                "0.4.0",
+                hashlib.sha256(tracker_path.read_bytes()).hexdigest(),
+            )
+            with _repository(root, tracker_binary=tracker) as repository:
+                beads = repository.config.canonical_beads
+                payloads = {
+                    "beads.db": b"SQLite format 3\x00" + b"\0" * 32,
+                    "beads.db-wal": b"wal",
+                    "beads.db-shm": b"shm",
+                    "issues.jsonl": b"{}\n",
+                }
+                for name, content in payloads.items():
+                    (beads / name).write_bytes(content)
+                (beads / "redirect").write_text(
+                    "/unattested/.beads\n", encoding="utf-8"
+                )
+                monitored = tuple(beads / name for name in payloads)
+                before = tuple(
+                    (path.stat().st_ino, path.stat().st_mtime_ns, path.read_bytes())
+                    for path in monitored
+                )
+                git_result = SimpleNamespace(
+                    stdout=(
+                        f"worktree {repository.config.repository_seed}\n"
+                        "HEAD 0123456789abcdef0123456789abcdef01234567\n\n"
+                    ).encode(),
+                    stderr=b"",
+                    returncode=0,
+                )
+                adapter = BrSqliteV1Adapter()
+                with patch.object(
+                    adapter,
+                    "verify_git_binary",
+                    return_value=SimpleNamespace(close=lambda: None),
+                ), patch(
+                    "scripts.beads_convergence.inventory.run_verified_git_probe",
+                    return_value=git_result,
+                ), patch(
+                    "scripts.beads_convergence.inventory._common_dir_identity",
+                    return_value=(repository.seed.device, repository.seed.inode),
+                ), patch(
+                    "scripts.beads_convergence.fsafety.os.fork",
+                    side_effect=AssertionError("tracker execution is forbidden"),
+                ):
+                    manifest = build_manifest(repository, adapter)
+                after = tuple(
+                    (path.stat().st_ino, path.stat().st_mtime_ns, path.read_bytes())
+                    for path in monitored
+                )
+            self.assertEqual(before, after)
+            self.assertIsNone(manifest.redirect_codec)
+            self.assertEqual(len(manifest.worktrees), 1)
+            record = manifest.worktrees[0]
+            self.assertEqual(record.classification, "unsupported")
+            self.assertEqual(record.backend, "sqlite")
+            self.assertIsNone(record.health)
+            self.assertEqual(tuple(item.name for item in record.sources), tuple(sorted(payloads)))
+            self.assertIsNotNone(record.redirect)
+            self.assertEqual(record.redirect.bytes, "/unattested/.beads\n")
 
 
 if __name__ == "__main__":

@@ -17,6 +17,20 @@ documents enforced by strict Python parsers, POSIX `fcntl`,
 directory-descriptor filesystem operations, and descriptor-bound pinned `git`,
 `br`, and `ssh-keygen` subprocesses on macOS/Linux.
 
+## Implementation outcome and safety ruling — 2026-08-27
+
+The plan's transaction and real-plan milestones are certified only through
+disposable fixtures. V1 production code executes no `br` subprocess: a live
+probe showed that an apparently read-only command can apply SQLite migration
+repairs. The shipped tool validates registries and captures source-only
+descriptor inventory, then refuses real planning while health, authority, and
+redirect-codec attestation lack a private non-aliasing snapshot implementation.
+It also hard-disables production apply/recovery before registry or artifact
+access because no universal writer-exclusion lease exists. Fixed typed Git
+probes remain: descriptor-executed on Linux and restricted to root-controlled,
+non-writable paths on macOS. These fail-closed outcomes supersede any task text
+below that assumes live tracker probes or production transaction activation.
+
 ## Global Constraints
 
 - Centralize portable code only; never centralize repository databases.

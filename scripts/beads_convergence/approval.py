@@ -46,12 +46,12 @@ TOOL_TREE_RELEASE_FILES = (
     "scripts/beads_convergence/planner.py",
     "scripts/beads_convergence/registry.py",
     "scripts/beads_convergence/transaction.py",
-    ".claude/skills/beads-redirect-convergence/references/approval-v1.schema.json",
-    ".claude/skills/beads-redirect-convergence/references/journal-v1.schema.json",
-    ".claude/skills/beads-redirect-convergence/references/manifest-v1.schema.json",
-    ".claude/skills/beads-redirect-convergence/references/plan-v1.schema.json",
-    ".claude/skills/beads-redirect-convergence/references/receipt-v1.schema.json",
-    ".claude/skills/beads-redirect-convergence/references/registry-v1.schema.json",
+    "skills/beads-redirect-convergence/references/approval-v1.schema.json",
+    "skills/beads-redirect-convergence/references/journal-v1.schema.json",
+    "skills/beads-redirect-convergence/references/manifest-v1.schema.json",
+    "skills/beads-redirect-convergence/references/plan-v1.schema.json",
+    "skills/beads-redirect-convergence/references/receipt-v1.schema.json",
+    "skills/beads-redirect-convergence/references/registry-v1.schema.json",
 )
 
 
@@ -93,7 +93,7 @@ def tool_tree_sha256() -> str:
         for relative in TOOL_TREE_RELEASE_FILES
         if relative.startswith(runtime_prefix) and relative.endswith(".py")
     }
-    schema_prefix = ".claude/skills/beads-redirect-convergence/references/"
+    schema_prefix = "skills/beads-redirect-convergence/references/"
     expected_schemas = {
         Path(relative).name
         for relative in TOOL_TREE_RELEASE_FILES
@@ -102,19 +102,37 @@ def tool_tree_sha256() -> str:
     _assert_release_directory(
         root / "scripts/beads_convergence", expected_runtime, ".py"
     )
-    _assert_release_directory(
-        root / schema_prefix, expected_schemas, ".schema.json"
-    )
+    schema_directory = _resolve_schema_directory(root)
+    _assert_release_directory(schema_directory, expected_schemas, ".schema.json")
     digest = hashlib.sha256()
     digest.update(b"beads-convergence-tool-tree-v2\0")
     for relative in TOOL_TREE_RELEASE_FILES:
         path_bytes = relative.encode("utf-8")
-        payload = _read_release_file(root / relative)
+        if relative.startswith(schema_prefix):
+            physical = schema_directory / relative[len(schema_prefix) :]
+        else:
+            physical = root / relative
+        payload = _read_release_file(physical)
         digest.update(len(path_bytes).to_bytes(8, "big"))
         digest.update(path_bytes)
         digest.update(len(payload).to_bytes(8, "big"))
         digest.update(payload)
     return digest.hexdigest()
+
+
+def _resolve_schema_directory(root: Path) -> Path:
+    """Resolve exactly one source or installed schema tree."""
+
+    source = root / ".claude/skills/beads-redirect-convergence/references"
+    installed = root / "skills/beads-redirect-convergence/references"
+    candidates = tuple(
+        path for path in (source, installed) if path.exists() or path.is_symlink()
+    )
+    if len(candidates) != 1:
+        if len(candidates) > 1:
+            raise ApprovalError("tool tree schema layout is ambiguous")
+        raise ApprovalError("tool tree schema layout is unavailable")
+    return candidates[0]
 
 
 def _assert_release_directory(

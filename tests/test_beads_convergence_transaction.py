@@ -37,7 +37,7 @@ from scripts.beads_convergence.models import (
     SourceFingerprint,
     WorktreeRecord,
 )
-from scripts.beads_convergence.planner import build_plan
+from scripts.beads_convergence.planner import PlanError, build_plan
 from tests.beads_convergence_fixture_harness import (
     ApplyRequest,
     FixtureControlStore,
@@ -199,11 +199,30 @@ def make_recovery_request(request: ApplyRequest, *, nonce: str = "recover-nonce"
 
 class TransactionTest(unittest.TestCase):
     def test_incomplete_topology_fails_before_nonce_journal_or_redirect(self) -> None:
-        rejected = (
+        planner_rejected = (
             "missing",
             "unsupported",
-            "unresolved",
             "unresolved_noncanonical",
+        )
+        for classification in planner_rejected:
+            with self.subTest(
+                classification=classification
+            ), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                request = make_request(root)
+                records = list(request.manifest.worktrees)
+                records[1] = replace(records[1], classification=classification)
+                manifest = replace(request.manifest, worktrees=tuple(records))
+
+                with self.assertRaisesRegex(PlanError, "cannot plan"):
+                    build_plan(manifest)
+
+                self.assertFalse((root / "target" / ".beads" / "redirect").exists())
+                self.assertFalse((root / "control" / "nonces").exists())
+                self.assertFalse((root / "control" / "journals").exists())
+
+        rejected = (
+            "unresolved",
             "skipped",
             "unexpected",
             "new",
@@ -243,11 +262,30 @@ class TransactionTest(unittest.TestCase):
                 self.assertFalse((root / "control" / "journals").exists())
 
     def test_recovery_rejects_incomplete_topology_without_durable_mutation(self) -> None:
-        rejected = (
+        planner_rejected = (
             "missing",
             "unsupported",
-            "unresolved",
             "unresolved_noncanonical",
+        )
+        for classification in planner_rejected:
+            with self.subTest(
+                classification=classification
+            ), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                request = make_request(root)
+                records = list(request.manifest.worktrees)
+                records[1] = replace(records[1], classification=classification)
+                manifest = replace(request.manifest, worktrees=tuple(records))
+
+                with self.assertRaisesRegex(PlanError, "cannot plan"):
+                    build_plan(manifest)
+
+                self.assertFalse((root / "target" / ".beads" / "redirect").exists())
+                self.assertFalse((root / "control" / "nonces").exists())
+                self.assertFalse((root / "control" / "journals").exists())
+
+        rejected = (
+            "unresolved",
             "skipped",
             "unexpected",
             "new",

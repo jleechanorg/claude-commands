@@ -12,9 +12,10 @@ from .codec import canonical_json_bytes, sha256_hex
 from .fsafety import (
     DirectoryHandle,
     FsafetyError,
+    GitProbe,
     UnsupportedCapability,
     open_descendant,
-    run_verified,
+    run_verified_git_probe,
 )
 from .models import (
     HealthFingerprint,
@@ -29,7 +30,6 @@ class InventoryError(RuntimeError):
     """The bounded topology cannot be safely represented."""
 
 
-_GIT_WORKTREE_COMMAND = ("worktree", "list", "--porcelain")
 _REDIRECT_NAME = "redirect"
 _GIT_RECORD_FIELDS = ("HEAD ", "branch ", "detached", "locked", "prunable ")
 
@@ -87,9 +87,7 @@ def _parse_git_porcelain(raw: bytes) -> tuple[Path, ...]:
 def _common_dir_identity(
     repository: Any, executable: object, path: Path, worktree: DirectoryHandle
 ) -> tuple[int, int]:
-    result = run_verified(
-        executable, ("rev-parse", "--git-common-dir"), worktree, timeout=30
-    )
+    result = run_verified_git_probe(executable, GitProbe.COMMON_DIR, worktree)
     if result.returncode != 0:
         raise InventoryError("Git common-dir query failed")
     try:
@@ -122,7 +120,9 @@ def _git_worktrees(
         if verifier is None:
             verifier = BrSqliteV1Adapter()
         executable = verifier.verify_git_binary(repository.config.git_binary)
-        result = run_verified(executable, _GIT_WORKTREE_COMMAND, repository.seed)
+        result = run_verified_git_probe(
+            executable, GitProbe.WORKTREE_LIST, repository.seed
+        )
         if result.returncode != 0:
             raise InventoryError("Git worktree discovery failed")
         discovered = _parse_git_porcelain(result.stdout)
@@ -411,9 +411,24 @@ def build_manifest(repository: Any, adapter: TrackerAdapter) -> Manifest:
     records: list[WorktreeRecord] = []
     seen_beads: set[tuple[int, int]] = set()
     try:
-        codec, intended, oracle_receipt = _codec_metadata(
-            adapter, repository.config.canonical_beads, repository.seed, executable
-        )
+        codec: str | None = None
+        intended: str | None = None
+        oracle_receipt: str | None = None
+        try:
+            codec, intended, oracle_receipt = _codec_metadata(
+                adapter,
+                repository.config.canonical_beads,
+                repository.seed,
+                executable,
+            )
+        except (
+            AdapterError,
+            FsafetyError,
+            UnsupportedCapability,
+            OSError,
+            TimeoutError,
+        ):
+            pass
         for path in discover_worktrees(repository, _adapter=adapter):
             root = _root_for(repository, path)
             if root is None:
@@ -453,11 +468,27 @@ def build_manifest(repository: Any, adapter: TrackerAdapter) -> Manifest:
                         )
                     except ValueError as exc:
                         raise InventoryError(str(exc)) from exc
+                    classification = "unsupported"
+                    backend_name: str | None = None
+                    health_record: HealthFingerprint | None = None
+                    sources: tuple[SourceFingerprint, ...] = ()
+                    redirect: RedirectState | None = None
                     try:
                         backend = adapter.attest_backend(beads)
                         if backend.backend != "sqlite":
                             raise AdapterError("unsupported backend attestation")
                         backend_name = backend.backend
+                    except (AdapterError, FsafetyError, OSError):
+                        pass
+                    try:
+                        sources = _source_fingerprints(adapter, beads)
+                    except (AdapterError, FsafetyError, InventoryError, OSError):
+                        pass
+                    try:
+                        redirect = _read_redirect(beads)
+                    except (FsafetyError, InventoryError, OSError):
+                        pass
+                    try:
                         health = adapter.verify_health(worktree, executable)
                         if (
                             health.dirty_count != 0
@@ -473,23 +504,43 @@ def build_manifest(repository: Any, adapter: TrackerAdapter) -> Manifest:
                             health.workspace_health,
                             sha256_hex(canonical_json_bytes(health.raw)),
                         )
-                        sources = _source_fingerprints(adapter, beads)
-                        redirect = _read_redirect(beads)
-                        classification, redirect = _classify(
-                            repository,
-                            adapter,
-                            worktree,
-                            beads,
-                            executable,
-                            redirect,
-                            codec,
-                            intended,
-                            oracle_receipt,
-                        )
-                    except (AdapterError, FsafetyError, OSError) as exc:
-                        classification, sources, redirect = "unsupported", (), None
-                        backend_name, health_record = None, None
-                        del exc
+                    except (
+                        AdapterError,
+                        FsafetyError,
+                        UnsupportedCapability,
+                        OSError,
+                        TimeoutError,
+                    ):
+                        pass
+                    if (
+                        backend_name == "sqlite"
+                        and health_record is not None
+                        and sources
+                        and redirect is not None
+                        and codec is not None
+                        and intended is not None
+                        and oracle_receipt is not None
+                    ):
+                        try:
+                            classification, redirect = _classify(
+                                repository,
+                                adapter,
+                                worktree,
+                                beads,
+                                executable,
+                                redirect,
+                                codec,
+                                intended,
+                                oracle_receipt,
+                            )
+                        except (
+                            AdapterError,
+                            FsafetyError,
+                            UnsupportedCapability,
+                            OSError,
+                            TimeoutError,
+                        ):
+                            classification = "unsupported"
                     records.append(
                         WorktreeRecord(
                             path,

@@ -11,6 +11,25 @@ The portable engine belongs in `jleechanorg/jleechan-skills`. Host-specific
 registry data belongs in `jleechanorg/user_scope`. Application repositories
 retain their own canonical Beads store, exporter, health policy, and evidence.
 
+### Implementation safety amendment — 2026-08-27
+
+The implemented v1 intentionally stops before real planning. A live
+`br 0.4.0` probe that appeared read-only reported that it applied SQLite
+migration repairs, so command-line flags are not accepted as a no-mutation
+boundary. Production code therefore executes no `br` command against a live
+store. It can validate registries and produce descriptor-read source-only
+inventory; those records are classified `unsupported`, and `plan`/`plan-all`
+fail closed until a private snapshot adapter can prove health, authority, and
+redirect-codec semantics without aliasing live DB/WAL/SHM/JSONL files.
+
+On macOS, only the finite Git version/worktree/common-dir probes may use a
+pathname, and only when every component is root-owned and non-writable by the
+effective user. Linux retains descriptor execution for the same finite Git
+probe surface. Production apply and recovery are non-injectable unavailable
+boundaries; their transaction behavior exists only in disposable fixtures.
+Later aspirational sections describe the requirements for enabling those
+deferred surfaces, not capabilities shipped by v1.
+
 ## Problem
 
 The recovered tool in
