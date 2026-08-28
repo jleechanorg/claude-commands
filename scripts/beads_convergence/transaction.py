@@ -139,7 +139,7 @@ class FileControlStore:
             self.root = home / ".local/state/beads-convergence/control"
             if root is not None and Path(root) != self.root:
                 raise TransactionError("control root is fixed by the effective user")
-            self._protected_start = len(home.parts) - 1
+            self._protected_start = len(home.parts) - 2
             self._create_start = len(home.parts) - 1
         self._root_fd = -1
         self._root_identity: tuple[int, int] | None = None
