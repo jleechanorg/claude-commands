@@ -4,19 +4,269 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
+from scripts.beads_convergence.approval import SignedApproval
+from scripts.beads_convergence.codec import canonical_json_bytes, sha256_hex
+from scripts.beads_convergence.models import RedirectState, WorktreeRecord
+from scripts.beads_convergence.planner import build_plan
 from scripts.beads_convergence.transaction import (
     ApplyRequest,
+    FixtureControlStore,
     RecoveryRequest,
     TransactionCrash,
     apply_plan,
     recover_run,
 )
-from tests.test_beads_convergence_transaction import make_recovery_request, make_request
+from tests.test_beads_convergence_transaction import (
+    _source,
+    make_recovery_request,
+    make_request,
+)
+
+APPLY_FAULT_BOUNDARIES = (
+    "before-prepared",
+    "after-prepared",
+    "before-temp-fsync",
+    "after-temp-fsync",
+    "before-rename",
+    "after-rename",
+    "after-target-fsync",
+    "after-progress",
+    "before-commit",
+    "after-commit",
+    "after-receipt",
+)
+
+
+class RecoveryInterruptingControlStore(FixtureControlStore):
+    """Inject one crash after a recovery journal transition is durable."""
+
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.interrupt_recovery = False
+
+    def save_journal(self, journal: dict[str, object]) -> None:
+        super().save_journal(journal)
+        if (
+            self.interrupt_recovery
+            and journal.get("status") == "APPLYING"
+            and any(
+                action.get("state") == "ROLLED_BACK" for action in journal["actions"]
+            )
+        ):
+            self.interrupt_recovery = False
+            raise TransactionCrash()
+
+
+def _multi_target_request(root: Path) -> ApplyRequest:
+    """Extend the shared fixture to two eligible targets with distinct pre-bytes."""
+
+    request = make_request(root, pre_redirect="local-authority-a\n")
+    target = root / "target-2"
+    beads = target / ".beads"
+    beads.mkdir(parents=True)
+    (beads / "beads.db").write_bytes(b"SQLite format 3\x00fixture-target-2")
+    (beads / "issues.jsonl").write_bytes(b'{"id":"fixture-target-2"}\n')
+    (beads / "redirect").write_bytes(b"local-authority-b\n")
+    target_info = target.stat()
+    parent = beads.stat()
+    template = request.manifest.worktrees[1]
+    health = template.health
+    assert health is not None
+    redirect = RedirectState(
+        True,
+        0o644,
+        "local-authority-b\n",
+        parent.st_dev,
+        parent.st_ino,
+        "fixture-redirect-v1",
+        str(root / "canonical" / ".beads") + "\n",
+        "b" * 64,
+    )
+    extra = WorktreeRecord(
+        target,
+        "noncanonical",
+        target_info.st_dev,
+        target_info.st_ino,
+        (_source(beads, "beads.db"), _source(beads, "issues.jsonl")),
+        redirect,
+        "sqlite",
+        health,
+    )
+    manifest = replace(request.manifest, worktrees=(*request.manifest.worktrees, extra))
+    plan = build_plan(manifest)
+    assert request.approval is not None
+    envelope = replace(
+        request.approval.envelope,
+        manifest_sha256=sha256_hex(canonical_json_bytes(manifest)),
+        plan_sha256=plan.sha256,
+    )
+    return replace(
+        request,
+        manifest=manifest,
+        plan=plan,
+        approval=SignedApproval(envelope, request.approval.signature),
+    )
+
+
+def _source_bytes(request: ApplyRequest) -> dict[Path, bytes]:
+    root = request.manifest.canonical_beads.parents[1]
+    snapshot: dict[Path, bytes] = {}
+    for record in request.manifest.worktrees:
+        beads = record.path / ".beads"
+        for source in record.sources:
+            snapshot[beads.relative_to(root) / source.name] = (beads / source.name).read_bytes()
+    return snapshot
+
+
+def _redirect_bytes(request: ApplyRequest) -> dict[Path, bytes]:
+    root = request.manifest.canonical_beads.parents[1]
+    snapshot: dict[Path, bytes] = {}
+    for record in request.manifest.worktrees:
+        if record.classification != "noncanonical":
+            continue
+        redirect = record.path / ".beads" / "redirect"
+        snapshot[redirect.relative_to(root)] = redirect.read_bytes()
+    return snapshot
 
 
 class CrashRecoveryTest(unittest.TestCase):
+    def test_apply_fault_matrix_recovers_exact_bytes_across_two_targets(self) -> None:
+        """Every declared apply crash point leaves a durable recovery decision."""
+
+        for fault_at in APPLY_FAULT_BOUNDARIES:
+            with self.subTest(fault_at=fault_at), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                request = _multi_target_request(root)
+                source_before = _source_bytes(request)
+                pre_redirects = _redirect_bytes(request)
+                intended = {
+                    path: (str(root / "canonical" / ".beads") + "\n").encode()
+                    for path in pre_redirects
+                }
+                crashed = replace(request, fault_at=fault_at)
+                with self.assertRaises(TransactionCrash):
+                    apply_plan(crashed)
+                self.assertEqual(_source_bytes(request), source_before)
+
+                if fault_at == "before-prepared":
+                    self.assertFalse(request.control.journal_path("fixture-run").exists())
+                    self.assertEqual(_redirect_bytes(request), pre_redirects)
+                    receipt = apply_plan(replace(request, fault_at=None))
+                    self.assertEqual(receipt.status, "COMMITTED")
+                    self.assertEqual(_redirect_bytes(request), intended)
+                    self.assertEqual(
+                        request.control.load_journal("fixture-run")["status"], "COMMITTED"
+                    )
+                    continue
+
+                journal = request.control.load_journal("fixture-run")
+                self.assertEqual(
+                    journal["status"],
+                    "COMMITTED"
+                    if fault_at in ("after-commit", "after-receipt")
+                    else "PREPARED"
+                    if fault_at == "after-prepared"
+                    else "APPLYING",
+                )
+                redirects_after_crash = (
+                    intended
+                    if fault_at in (
+                        "before-commit",
+                        "after-commit",
+                        "after-receipt",
+                    )
+                    else pre_redirects
+                )
+                if fault_at in (
+                    "after-rename",
+                    "after-target-fsync",
+                    "after-progress",
+                ):
+                    first_target = min(pre_redirects)
+                    redirects_after_crash = {
+                        **pre_redirects,
+                        first_target: intended[first_target],
+                    }
+                self.assertEqual(_redirect_bytes(request), redirects_after_crash)
+                if fault_at == "after-commit":
+                    self.assertFalse(request.control.receipt_path("fixture-run").exists())
+                elif fault_at == "after-receipt":
+                    self.assertTrue(request.control.receipt_path("fixture-run").exists())
+
+                if fault_at == "after-prepared":
+                    with self.assertRaisesRegex(Exception, "unfinished journal"):
+                        apply_plan(replace(request, fault_at=None))
+                recovery = recover_run(make_recovery_request(request))
+                expected_status = (
+                    "COMMITTED"
+                    if fault_at in ("after-commit", "after-receipt")
+                    else "ROLLED_BACK"
+                )
+                self.assertEqual(recovery.status, expected_status)
+                self.assertEqual(
+                    request.control.load_journal("fixture-run")["status"], expected_status
+                )
+                self.assertEqual(
+                    _redirect_bytes(request),
+                    intended if expected_status == "COMMITTED" else pre_redirects,
+                )
+                self.assertEqual(_source_bytes(request), source_before)
+
+    def test_recovery_interruption_restarts_from_durable_mid_recovery_journal(self) -> None:
+        """A crash between rollback actions retries idempotently from its journal."""
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            request = _multi_target_request(root)
+            source_before = _source_bytes(request)
+            control = RecoveryInterruptingControlStore(root / "control")
+            request = replace(request, control=control, fault_at="after-progress")
+            with self.assertRaises(TransactionCrash):
+                apply_plan(request)
+            self.assertEqual(_source_bytes(request), source_before)
+            control.interrupt_recovery = True
+            with self.assertRaises(TransactionCrash):
+                recover_run(make_recovery_request(request, nonce="recover-interrupted"))
+            interrupted = control.load_journal("fixture-run")
+            self.assertEqual(interrupted["status"], "APPLYING")
+            self.assertEqual(
+                sum(action["state"] == "ROLLED_BACK" for action in interrupted["actions"]),
+                1,
+            )
+            retry = recover_run(make_recovery_request(request, nonce="recover-retry"))
+            self.assertEqual(retry.status, "ROLLED_BACK")
+            self.assertEqual(control.load_journal("fixture-run")["status"], "ROLLED_BACK")
+            self.assertEqual(
+                _redirect_bytes(request),
+                {
+                    path: value
+                    for path, value in {
+                        Path("target/.beads/redirect"): b"local-authority-a\n",
+                        Path("target-2/.beads/redirect"): b"local-authority-b\n",
+                    }.items()
+                },
+            )
+
+    def test_third_party_redirect_durably_needs_operator_without_source_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            request = _multi_target_request(root)
+            source_before = _source_bytes(request)
+            with self.assertRaises(TransactionCrash):
+                apply_plan(replace(request, fault_at="after-rename"))
+            changed = root / "target" / ".beads" / "redirect"
+            changed.write_bytes(b"third-party\n")
+            recovery = recover_run(make_recovery_request(request))
+            self.assertEqual(recovery.status, "NEEDS_OPERATOR")
+            self.assertEqual(
+                request.control.load_journal("fixture-run")["status"], "NEEDS_OPERATOR"
+            )
+            self.assertEqual(changed.read_bytes(), b"third-party\n")
+            self.assertEqual(_source_bytes(request), source_before)
+
     def test_recovery_without_literal_authorization_cannot_commit_crashed_apply(self) -> None:
         """Recovery is a separately-authorized rollback, never an apply resume."""
 
