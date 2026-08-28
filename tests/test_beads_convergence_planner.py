@@ -460,6 +460,46 @@ class PlannerTest(unittest.TestCase):
                 expected_registry_sha,
             )
 
+    def test_fallback_rejects_declared_cross_repo_store_duplicate(self) -> None:
+        from scripts.beads_convergence import planner
+        from scripts.beads_convergence.registry import validate_registry
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            shared = root / "shared-extra"
+            (shared / ".beads").mkdir(parents=True)
+            first = _real_config(root, "repo-first")
+            second = _real_config(root, "repo-second")
+            configs = tuple(
+                RepositoryConfig(
+                    config.repo_id,
+                    config.adapter,
+                    config.repository_seed,
+                    config.canonical_beads,
+                    (root,),
+                    (shared,),
+                    config.tracker_binary,
+                    config.git_binary,
+                    config.evidence_root,
+                )
+                for config in (first, second)
+            )
+            registry = Registry(
+                "beads.redirect-convergence.registry.v1", "h", configs
+            )
+            with self.assertRaisesRegex(
+                ValueError, r"duplicate managed \.beads identity"
+            ):
+                validate_registry(registry)
+            with patch.object(
+                planner,
+                "_plan_validated_repository",
+                return_value=build_plan(_manifest()),
+            ):
+                receipt = plan_all(registry)
+            self.assertEqual(receipt.status, 1)
+            self.assertEqual(sum(result.ok for result in receipt.results), 1)
+
     def test_shared_git_discovered_store_cannot_produce_two_successful_plans(
         self,
     ) -> None:

@@ -30,18 +30,29 @@ class PhysicalIdentityClaims:
     """Track physical Beads stores claimed by registry repository identities."""
 
     _claims: dict[tuple[int, int], tuple[str, str]]
+    _canonical_claims: set[tuple[int, int]]
 
     def __init__(self) -> None:
         self._claims = {}
+        self._canonical_claims = set()
 
     def claim(
-        self, repo_id: str, path: Path, identity: tuple[int, int]
+        self,
+        repo_id: str,
+        path: Path,
+        identity: tuple[int, int],
+        *,
+        canonical: bool = False,
     ) -> None:
         owner = (repo_id, os.path.normpath(os.fspath(path)))
         previous = self._claims.get(identity)
         if previous is not None and previous != owner:
+            if canonical and identity in self._canonical_claims:
+                raise RegistryError("duplicate canonical authority")
             raise RegistryError("duplicate managed .beads identity")
         self._claims[identity] = owner
+        if canonical:
+            self._canonical_claims.add(identity)
 
 
 @dataclass
@@ -221,7 +232,12 @@ def _claim_managed_beads(
     repository: ValidatedRepository, identity_guard: PhysicalIdentityClaims
 ) -> None:
     for path, identity in _managed_beads_identities(repository):
-        identity_guard.claim(repository.config.repo_id, path, identity)
+        identity_guard.claim(
+            repository.config.repo_id,
+            path,
+            identity,
+            canonical=path == repository.config.canonical_beads,
+        )
 
 
 def validate_repository(
@@ -329,8 +345,7 @@ def validate_repository(
             tuple(roots),
             identity_guard=identity_guard,
         )
-        if _identity_guard is None:
-            _claim_managed_beads(validated, identity_guard)
+        _claim_managed_beads(validated, identity_guard)
         return validated
     except BaseException:
         if seed is not None:
