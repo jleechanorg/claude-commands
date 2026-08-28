@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import inspect
-import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from scripts.beads_convergence.adapters import BrSqliteV1Adapter, HealthAttestation
+from scripts.beads_convergence.codec import canonical_json_bytes, sha256_hex
 from scripts.beads_convergence.models import (
     BinaryBinding,
     HealthFingerprint,
@@ -83,6 +83,39 @@ def _config(root: Path, repo_id: str) -> RepositoryConfig:
         (),
         BinaryBinding(Path("/bin/br"), "0.4.0", "a" * 64),
         BinaryBinding(Path("/bin/git"), "2.0", "c" * 64),
+        evidence,
+    )
+
+
+def _real_config(
+    root: Path, repo_id: str, *, unhealthy: bool = False
+) -> RepositoryConfig:
+    seed = root / repo_id / "seed"
+    canonical = seed / ".beads"
+    extra = root / repo_id / "extra"
+    evidence = root / repo_id / "evidence"
+    for beads in (canonical, extra / ".beads"):
+        beads.mkdir(parents=True)
+        (beads / "beads.db").write_bytes(b"SQLite format 3\x00" + b"x" * 32)
+        (beads / "issues.jsonl").write_bytes(b"{}\n")
+    if unhealthy:
+        (extra / ".beads" / "beads.db-journal").write_bytes(b"hot")
+    evidence.mkdir()
+
+    def digest(path: Path) -> str:
+        return sha256_hex(path.read_bytes())
+
+    return RepositoryConfig(
+        repo_id,
+        "br-sqlite-v1",
+        seed,
+        canonical,
+        (root / repo_id,),
+        (extra,),
+        BinaryBinding(Path("/bin/echo"), "0.4.0", digest(Path("/bin/echo"))),
+        BinaryBinding(
+            Path("/usr/bin/git"), "2.0", digest(Path("/usr/bin/git"))
+        ),
         evidence,
     )
 
@@ -282,41 +315,11 @@ class PlannerTest(unittest.TestCase):
     ) -> None:
         from scripts.beads_convergence import inventory
 
-        def make_config(
-            root: Path, repo_id: str, *, unhealthy: bool = False
-        ) -> RepositoryConfig:
-            seed = root / repo_id / "seed"
-            canonical = seed / ".beads"
-            extra = root / repo_id / "extra"
-            evidence = root / repo_id / "evidence"
-            for beads in (canonical, extra / ".beads"):
-                beads.mkdir(parents=True)
-                (beads / "beads.db").write_bytes(b"SQLite format 3\x00" + b"x" * 32)
-                (beads / "issues.jsonl").write_bytes(b"{}\n")
-            if unhealthy:
-                (extra / ".beads" / "beads.db-journal").write_bytes(b"hot")
-            evidence.mkdir()
-            def digest(path: Path) -> str:
-                return hashlib.sha256(path.read_bytes()).hexdigest()
-            return RepositoryConfig(
-                repo_id,
-                "br-sqlite-v1",
-                seed,
-                canonical,
-                (root / repo_id,),
-                (extra,),
-                BinaryBinding(Path("/bin/echo"), "0.4.0", digest(Path("/bin/echo"))),
-                BinaryBinding(
-                    Path("/usr/bin/git"), "2.0", digest(Path("/usr/bin/git"))
-                ),
-                evidence,
-            )
-
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             configs = (
-                make_config(root, "repo-a"),
-                make_config(root, "repo-b", unhealthy=True),
+                _real_config(root, "repo-a"),
+                _real_config(root, "repo-b", unhealthy=True),
             )
             registry = Registry("beads.redirect-convergence.registry.v1", "h", configs)
             git_results = [
@@ -369,6 +372,92 @@ class PlannerTest(unittest.TestCase):
             self.assertNotEqual(
                 receipt.results[0].plan.sha256,
                 receipt.results[1].plan.sha256,
+            )
+
+    def test_fallback_after_registry_validation_failure_keeps_full_registry_sha(
+        self,
+    ) -> None:
+        from scripts.beads_convergence import inventory
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            good = _real_config(root, "repo-good")
+            bad = RepositoryConfig(
+                "repo-bad",
+                "unknown-adapter",
+                good.repository_seed,
+                good.canonical_beads,
+                good.allowed_worktree_roots,
+                good.additional_worktrees,
+                good.tracker_binary,
+                good.git_binary,
+                good.evidence_root,
+            )
+            registry = Registry(
+                "beads.redirect-convergence.registry.v1",
+                "h",
+                (good, bad),
+            )
+            expected_registry_sha = sha256_hex(canonical_json_bytes(registry))
+            git_result = SimpleNamespace(
+                stdout=(
+                    f"worktree {good.repository_seed}\n\n"
+                    f"worktree {good.additional_worktrees[0]}\n\n"
+                ).encode(),
+                stderr=b"",
+                returncode=0,
+            )
+            captured_manifests: list[Manifest] = []
+            real_build_manifest = inventory.build_manifest
+
+            def capture_manifest(repository: object, adapter: object) -> Manifest:
+                manifest = real_build_manifest(repository, adapter)
+                captured_manifests.append(manifest)
+                return manifest
+
+            with patch.object(
+                inventory,
+                "run_verified",
+                return_value=git_result,
+            ), patch.object(
+                inventory,
+                "_codec_metadata",
+                return_value=(
+                    "br-sqlite-v1-redirect-v1",
+                    "/canonical/.beads",
+                    "d" * 64,
+                ),
+            ), patch.object(
+                inventory,
+                "_common_dir_identity",
+                return_value=(1, 1),
+            ), patch.object(
+                inventory,
+                "build_manifest",
+                side_effect=capture_manifest,
+            ), patch.object(
+                BrSqliteV1Adapter,
+                "verify_binary",
+                return_value=SimpleNamespace(close=lambda: None),
+            ), patch.object(
+                BrSqliteV1Adapter,
+                "verify_git_binary",
+                return_value=SimpleNamespace(close=lambda: None),
+            ), patch.object(
+                BrSqliteV1Adapter,
+                "verify_health",
+                return_value=HealthAttestation(0, False, False, "healthy", {}),
+            ):
+                receipt = plan_all(registry)
+
+            self.assertEqual(receipt.status, 1)
+            self.assertEqual(receipt.results[0].repo_id, "repo-bad")
+            self.assertEqual(receipt.results[1].repo_id, "repo-good")
+            self.assertTrue(receipt.results[1].ok, receipt.errors)
+            self.assertEqual(len(captured_manifests), 1)
+            self.assertEqual(
+                captured_manifests[0].registry_sha256,
+                expected_registry_sha,
             )
 
 

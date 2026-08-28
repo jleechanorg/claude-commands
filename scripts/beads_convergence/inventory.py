@@ -445,6 +445,17 @@ def build_manifest(repository: Any, adapter: TrackerAdapter) -> Manifest:
                     if identity in seen_beads:
                         raise InventoryError("duplicate physical .beads identity")
                     seen_beads.add(identity)
+                    guard = repository.identity_guard
+                    if guard is None:
+                        raise InventoryError(
+                            "validated repository has no identity guard"
+                        )
+                    try:
+                        guard.claim(
+                            repository.config.repo_id, path / ".beads", identity
+                        )
+                    except ValueError as exc:
+                        raise InventoryError(str(exc)) from exc
                     try:
                         backend = adapter.attest_backend(beads)
                         if backend.backend != "sqlite":

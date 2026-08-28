@@ -26,6 +26,25 @@ KNOWN_ADAPTERS = frozenset({"br-sqlite-v1"})
 
 
 @dataclass
+class PhysicalIdentityClaims:
+    """Track physical Beads stores claimed by registry repository identities."""
+
+    _claims: dict[tuple[int, int], tuple[str, str]]
+
+    def __init__(self) -> None:
+        self._claims = {}
+
+    def claim(
+        self, repo_id: str, path: Path, identity: tuple[int, int]
+    ) -> None:
+        owner = (repo_id, os.path.normpath(os.fspath(path)))
+        previous = self._claims.get(identity)
+        if previous is not None and previous != owner:
+            raise RegistryError("duplicate managed .beads identity")
+        self._claims[identity] = owner
+
+
+@dataclass
 class ValidatedRepository:
     """A repository config accompanied by retained authority-bearing handles."""
 
@@ -35,6 +54,7 @@ class ValidatedRepository:
     evidence: DirectoryHandle
     allowed_roots: tuple[DirectoryHandle, ...]
     registry_sha256: str | None = None
+    identity_guard: PhysicalIdentityClaims | None = None
 
     @property
     def physical_identity(self) -> tuple[int, int]:
@@ -121,7 +141,7 @@ def validate_registry(registry: Registry) -> tuple[ValidatedRepository, ...]:
         raise RegistryError("unsupported registry schema")
     seen_ids: set[str] = set()
     seen_authorities: set[tuple[int, int]] = set()
-    seen_managed: set[tuple[int, int]] = set()
+    identity_guard = PhysicalIdentityClaims()
     registry_sha256 = sha256_hex(canonical_json_bytes(registry))
     validated: list[ValidatedRepository] = []
     try:
@@ -131,14 +151,16 @@ def validate_registry(registry: Registry) -> tuple[ValidatedRepository, ...]:
             seen_ids.add(config.repo_id)
             if config.adapter not in KNOWN_ADAPTERS:
                 raise RegistryError(f"unknown adapter ID: {config.adapter}")
-            item = validate_repository(config)
+            item = validate_repository(config, _identity_guard=identity_guard)
             if item.physical_identity in seen_authorities:
+                item.close()
                 raise RegistryError("duplicate canonical authority")
             seen_authorities.add(item.physical_identity)
-            for identity in _managed_beads_identities(item):
-                if identity in seen_managed:
-                    raise RegistryError("duplicate managed .beads identity")
-                seen_managed.add(identity)
+            try:
+                _claim_managed_beads(item, identity_guard)
+            except BaseException:
+                item.close()
+                raise
             item.registry_sha256 = registry_sha256
             validated.append(item)
         return tuple(validated)
@@ -154,12 +176,12 @@ def validate_registry(registry: Registry) -> tuple[ValidatedRepository, ...]:
 
 def _managed_beads_identities(
     repository: ValidatedRepository,
-) -> set[tuple[int, int]]:
+) -> tuple[tuple[Path, tuple[int, int]], ...]:
     """Collect declared seed/extra stores through retained root descriptors."""
 
     config = repository.config
     paths = (config.repository_seed, *config.additional_worktrees)
-    identities: set[tuple[int, int]] = set()
+    identities: list[tuple[Path, tuple[int, int]]] = []
     for path in paths:
         root = next(
             (
@@ -181,16 +203,32 @@ def _managed_beads_identities(
             except FileNotFoundError:
                 continue
             try:
-                identities.add((beads.device, beads.inode))
+                identities.append((path / ".beads", (beads.device, beads.inode)))
             finally:
                 beads.close()
         finally:
             worktree.close()
-    identities.add((repository.canonical.device, repository.canonical.inode))
-    return identities
+    identities.append(
+        (
+            config.canonical_beads,
+            (repository.canonical.device, repository.canonical.inode),
+        )
+    )
+    return tuple(identities)
 
 
-def validate_repository(config: RepositoryConfig) -> ValidatedRepository:
+def _claim_managed_beads(
+    repository: ValidatedRepository, identity_guard: PhysicalIdentityClaims
+) -> None:
+    for path, identity in _managed_beads_identities(repository):
+        identity_guard.claim(repository.config.repo_id, path, identity)
+
+
+def validate_repository(
+    config: RepositoryConfig,
+    *,
+    _identity_guard: PhysicalIdentityClaims | None = None,
+) -> ValidatedRepository:
     """Retain and validate seed, canonical Beads, and external evidence dirs."""
 
     if config.adapter not in KNOWN_ADAPTERS:
@@ -282,7 +320,18 @@ def validate_repository(config: RepositoryConfig) -> ValidatedRepository:
                     )
             finally:
                 worktree_handle.close()
-        return ValidatedRepository(config, seed, canonical, evidence, tuple(roots))
+        identity_guard = _identity_guard or PhysicalIdentityClaims()
+        validated = ValidatedRepository(
+            config,
+            seed,
+            canonical,
+            evidence,
+            tuple(roots),
+            identity_guard=identity_guard,
+        )
+        if _identity_guard is None:
+            _claim_managed_beads(validated, identity_guard)
+        return validated
     except BaseException:
         if seed is not None:
             seed.close()

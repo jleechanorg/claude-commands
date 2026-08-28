@@ -240,30 +240,22 @@ def plan_all(registry: Registry) -> PlanAllReceipt:
     """
 
     results: list[PlanResult] = []
-    registry_sha256: str | None = None
-    registry_error: Exception | None = None
+    registry_sha256 = sha256_hex(canonical_json_bytes(registry))
     from .registry import validate_registry
 
     try:
         validated = validate_registry(registry)
-        try:
-            if validated:
-                registry_sha256 = validated[0].registry_sha256
-        finally:
-            for repository in validated:
-                repository.close()
+        for repository in validated:
+            repository.close()
     except Exception as exc:
-        registry_error = exc
+        del exc
     for config in sorted(registry.repositories, key=lambda item: item.repo_id):
         try:
-            if registry_error is not None:
-                results.append(PlanResult(config.repo_id, _plan_repository(config)))
-            else:
-                results.append(
-                    PlanResult(
-                        config.repo_id, _plan_repository(config, registry_sha256)
-                    )
+            results.append(
+                PlanResult(
+                    config.repo_id, _plan_repository(config, registry_sha256)
                 )
+            )
         except Exception as exc:  # isolate one repository's failure
             results.append(PlanResult(config.repo_id, error=str(exc)))
     status = 0 if all(result.ok for result in results) else 1
