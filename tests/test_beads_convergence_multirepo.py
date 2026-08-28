@@ -39,6 +39,8 @@ from scripts.beads_convergence.transaction import (
     apply_plan,
 )
 
+_SOURCE_NAMES = ("beads.db", "beads.db-wal", "beads.db-shm", "issues.jsonl")
+
 
 class _FixtureExecutable:
     def close(self) -> None:
@@ -64,7 +66,7 @@ class _MultiRepoFixtureAdapter:
 
     adapter_id = "br-sqlite-v1"
     fixture_only = True
-    source_names = ("beads.db", "beads.db-wal", "beads.db-shm", "issues.jsonl")
+    source_names = _SOURCE_NAMES
 
     def __init__(self, canonical: Path) -> None:
         self.canonical = canonical
@@ -114,7 +116,13 @@ class _MultiRepoFixtureAdapter:
                 )
             finally:
                 os.close(fd)
-        return SourceSnapshot(tuple(members), True, False, True, "fixture lease")
+        return SourceSnapshot(
+            tuple(sorted(members, key=lambda item: item.name)),
+            True,
+            False,
+            True,
+            "fixture lease",
+        )
 
     def redirect_oracle(
         self, canonical: Path, worktree: object, executable: object
@@ -154,6 +162,8 @@ def _write_store(path: Path, marker: str) -> None:
     beads = path / ".beads"
     beads.mkdir(parents=True)
     (beads / "beads.db").write_bytes(b"SQLite format 3\x00" + marker.encode())
+    (beads / "beads.db-wal").write_bytes((marker + "-wal").encode())
+    (beads / "beads.db-shm").write_bytes((marker + "-shm").encode())
     (beads / "issues.jsonl").write_bytes(
         ("{\"fixture\":\"" + marker + "\"}\n").encode()
     )
@@ -203,7 +213,7 @@ def _monitored_bytes(repositories: tuple[_FixtureRepository, ...]) -> dict[str, 
     for repository in repositories:
         for worktree in (repository.canonical.parent, *repository.targets):
             beads = worktree / ".beads"
-            paths.extend(beads / name for name in ("beads.db", "issues.jsonl"))
+            paths.extend(beads / name for name in _SOURCE_NAMES)
             redirect = beads / "redirect"
             if redirect.exists():
                 paths.append(redirect)
@@ -301,7 +311,9 @@ class MultiRepoFixtureTest(unittest.TestCase):
             registry = _registry(repositories)
             before = _monitored_bytes(repositories)
             first, first_manifests = _run_plan_all(registry, repositories)
+            self.assertEqual(before, _monitored_bytes(repositories))
             second, second_manifests = _run_plan_all(registry, repositories)
+            self.assertEqual(before, _monitored_bytes(repositories))
 
             self.assertEqual(first.status, 0, first.errors)
             self.assertEqual(second.status, 0, second.errors)
@@ -310,8 +322,28 @@ class MultiRepoFixtureTest(unittest.TestCase):
             )
             self.assertEqual([len(plan.actions) for plan in first.plans], [2, 1])
             self.assertEqual(
+                len(first_manifests["repo-a"].worktrees[0].sources), 4
+            )
+            self.assertEqual(
                 [plan.sha256 for plan in first.plans],
                 [plan.sha256 for plan in second.plans],
+            )
+            self.assertEqual(
+                [
+                    Path(action["worktree_path"])
+                    for action in first.results[0].plan.actions
+                ],
+                [
+                    Path(os.path.realpath(target))
+                    for target in repositories[0].targets[:2]
+                ],
+            )
+            self.assertEqual(
+                [
+                    Path(action["worktree_path"])
+                    for action in first.results[1].plan.actions
+                ],
+                [Path(os.path.realpath(repositories[1].targets[0]))],
             )
             classes = {
                 record.path.name: record.classification
@@ -331,10 +363,12 @@ class MultiRepoFixtureTest(unittest.TestCase):
                 _fixture_repository(root, "repo-a", 3),
                 _fixture_repository(root, "repo-b", 1),
             )
+            (root / "control").mkdir()
+            (root / "control").chmod(0o700)
             registry = _registry(repositories)
             receipt, manifests = _run_plan_all(registry, repositories)
             plans = {result.repo_id: result.plan for result in receipt.results}
-            neighbor_before = _monitored_bytes((repositories[1],))
+            b_before_a_apply = _monitored_bytes((repositories[1],))
 
             first_apply = repositories[0]
             first_plan = plans[first_apply.repo_id]
@@ -349,7 +383,8 @@ class MultiRepoFixtureTest(unittest.TestCase):
                 )
             )
             self.assertEqual(first_receipt.status, "COMMITTED")
-            self.assertEqual(neighbor_before, _monitored_bytes((repositories[1],)))
+            self.assertEqual(b_before_a_apply, _monitored_bytes((repositories[1],)))
+            a_before_b_apply = _monitored_bytes((repositories[0],))
 
             second_apply = repositories[1]
             second_plan = plans[second_apply.repo_id]
@@ -364,6 +399,7 @@ class MultiRepoFixtureTest(unittest.TestCase):
                 )
             )
             self.assertEqual(second_receipt.status, "COMMITTED")
+            self.assertEqual(a_before_b_apply, _monitored_bytes((repositories[0],)))
 
             for repository in repositories:
                 targets = (
@@ -380,7 +416,10 @@ class MultiRepoFixtureTest(unittest.TestCase):
     def test_hostile_cross_registration_is_rejected_by_membership_identity_guard(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            repositories = (_fixture_repository(root, "repo-a", 3), _fixture_repository(root, "repo-b", 1))
+            repositories = (
+                _fixture_repository(root, "repo-a", 3),
+                _fixture_repository(root, "repo-b", 1),
+            )
             hostile_b = replace(
                 repositories[1].config,
                 allowed_worktree_roots=(root,),
