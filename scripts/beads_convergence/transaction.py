@@ -31,7 +31,7 @@ from .adapters import (
 )
 from .approval import ApprovalError, SignedApproval, verify_signed_approval
 from .codec import canonical_json_bytes, sha256_hex
-from .fsafety import open_descendant, open_trusted_tree
+from .fsafety import FsafetyError, open_descendant, open_trusted_tree
 from .models import Manifest, Plan, Registry
 from .planner import build_plan
 
@@ -304,17 +304,19 @@ def _verify_target(action: dict[str, Any]) -> Path:
     return worktree
 
 
-def _verify_authority(adapter: object, worktree: Path, canonical: Path, executable: object) -> None:
+def _verify_authority(adapter: object, worktree: Path, canonical: Path, executable: object, expected: tuple[int, int]) -> None:
     resolve = getattr(adapter, "resolve_authority", None)
     if not callable(resolve):
         raise TransactionError("adapter cannot verify redirect authority")
     with open_trusted_tree(Path("/"), worktree) as handle:
+        if (handle.device, handle.inode) != expected:
+            raise TransactionError("retained worktree identity changed")
         resolved = resolve(handle, executable)
     if not isinstance(resolved, Path) or _canonical_identity(resolved) != _canonical_identity(canonical):
         raise TransactionError("redirect does not resolve one hop to canonical authority")
 
 
-def _write_redirect(beads: Path, pre: dict[str, Any], intended: str, fault_at: str | None, *, adapter: object, worktree: Path, canonical: Path, executable: object) -> None:
+def _write_redirect(beads: Path, pre: dict[str, Any], intended: str, fault_at: str | None, *, adapter: object, worktree: Path, canonical: Path, executable: object, expected: tuple[int, int]) -> None:
     info = os.stat(beads, follow_symlinks=False)
     if (info.st_dev, info.st_ino) != (pre["parent_device"], pre["parent_inode"]):
         raise TransactionError("redirect parent identity changed")
@@ -346,7 +348,7 @@ def _write_redirect(beads: Path, pre: dict[str, Any], intended: str, fault_at: s
             raise TransactionCrash()
     if _redirect_state(beads)["bytes"] != intended:
         raise TransactionError("redirect verification failed")
-    _verify_authority(adapter, worktree, canonical, executable)
+    _verify_authority(adapter, worktree, canonical, executable, expected)
 
 
 def _journal_action(action: dict[str, Any]) -> dict[str, Any]:
@@ -390,12 +392,22 @@ def _reattest(adapter: object, manifest: Manifest) -> tuple[object, WriterLease]
                             source = adapter.fingerprint_sources(beads)
                             if not isinstance(source, SourceSnapshot) or not source.quiescent or not source.lease_proven:
                                 raise TransactionError("source snapshot is not lease-proven")
-                            current.append((record.path, source.sources))
+                            expected = tuple(
+                                (item.name, item.device, item.inode, item.size, item.sha256)
+                                for item in record.sources
+                            )
+                            measured = tuple(
+                                (item.name, item.device, item.inode, item.size, item.sha256)
+                                for item in source.sources
+                            )
+                            if measured != expected:
+                                raise TransactionError("source family changed from manifest")
+                            current.append((record.path, measured))
                 snapshots.append(tuple(current))
             if snapshots[0] != snapshots[1]:
                 raise TransactionError("source family changed during coherent snapshot")
             return executable, lease
-    except (AdapterError, OSError, ValueError) as exc:
+    except (AdapterError, FsafetyError, OSError, ValueError) as exc:
         raise TransactionError("typed adapter re-attestation failed") from exc
 
 
@@ -547,7 +559,7 @@ def apply_plan(request: ApplyRequest) -> ApplyReceipt:
                 worktree = _verify_target(action)
                 beads = worktree / ".beads"
                 _assert_sources(beads, action["sources"])
-                _write_redirect(beads, action["pre"], str(action["intended"]), request.fault_at, adapter=request.adapter, worktree=worktree, canonical=request.manifest.canonical_beads, executable=executable)
+                _write_redirect(beads, action["pre"], str(action["intended"]), request.fault_at, adapter=request.adapter, worktree=worktree, canonical=request.manifest.canonical_beads, executable=executable, expected=(action["directory_device"], action["directory_inode"]))
                 action["state"] = "APPLIED"
                 request.control.save_journal(journal)
                 if request.fault_at == "after-progress":
