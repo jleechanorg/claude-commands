@@ -87,15 +87,15 @@ def _add_transaction_args(parser: argparse.ArgumentParser, *, recover: bool) -> 
     _add_repo_args(parser)
     parser.add_argument(
         "--manifest",
-        required=not recover,
+        required=True,
         type=_absolute,
     )
     parser.add_argument(
         "--expected-manifest-sha256",
-        required=not recover,
+        required=True,
         type=_hash,
     )
-    parser.add_argument("--expected-plan-sha256", required=not recover, type=_hash)
+    parser.add_argument("--expected-plan-sha256", required=True, type=_hash)
     parser.add_argument("--expected-canonical", required=True, type=_absolute)
     parser.add_argument("--expected-adapter", required=True)
     _add_binary_binding_args(parser, "tracker")
@@ -354,6 +354,90 @@ def _control_root() -> Path:
     return home / ".local" / "state" / "beads-convergence" / "control"
 
 
+def _pinned_verifier() -> SshApprovalVerifier:
+    """Construct the verifier from the fixed host executable, never approval data."""
+
+    path = Path("/usr/bin/ssh-keygen")
+    digest = sha256_hex(_capture(path))
+    return SshApprovalVerifier(BinaryBinding(path, "system", digest))
+
+
+def _transaction_context(args: argparse.Namespace) -> dict[str, object]:
+    """Return non-secret operator bindings for success and failure receipts."""
+
+    context: dict[str, object] = {
+        "repo_id": getattr(args, "repo", None),
+        "adapter": getattr(args, "expected_adapter", None),
+        "registry_sha256": getattr(args, "expected_registry_sha256", None),
+        "manifest_sha256": getattr(args, "expected_manifest_sha256", None),
+        "plan_sha256": getattr(args, "expected_plan_sha256", None),
+        "canonical_beads": str(getattr(args, "expected_canonical", "")),
+        "tracker_path": str(getattr(args, "expected_tracker_path", "")),
+        "tracker_version": getattr(args, "expected_tracker_version", None),
+        "tracker_sha256": getattr(args, "expected_tracker_sha256", None),
+        "git_path": str(getattr(args, "expected_git_path", "")),
+        "git_version": getattr(args, "expected_git_version", None),
+        "git_sha256": getattr(args, "expected_git_sha256", None),
+    }
+    journal_sha = getattr(args, "expected_journal_sha256", None)
+    if journal_sha is not None:
+        context["journal_sha256"] = journal_sha
+    return {key: value for key, value in context.items() if value not in (None, "")}
+
+
+def _transaction_failure(args: argparse.Namespace, error: str) -> dict[str, object]:
+    fields = _transaction_context(args)
+    fields.update(
+        {
+            "schema": "beads.redirect-convergence.cli.v1",
+            "tool_version": TOOL_VERSION,
+            "operation": args.command,
+            "ok": False,
+            "error": error,
+        }
+    )
+    if args.command == "apply":
+        fields["applied"] = False
+    if args.command == "recover":
+        fields["recovered"] = False
+    return fields
+
+
+def _transaction_success(
+    args: argparse.Namespace,
+    receipt: object,
+    *,
+    status: str,
+) -> int:
+    fields = _transaction_context(args)
+    fields.update(
+        {
+            "schema": "beads.redirect-convergence.cli.v1",
+            "tool_version": TOOL_VERSION,
+            "operation": args.command,
+            "ok": status in ("COMMITTED", "ROLLED_BACK"),
+            "status": status,
+            "run_id": receipt.run_id,
+            "journal_sha256": receipt.journal_sha256,
+        }
+    )
+    if args.command == "apply":
+        fields.update(
+            {
+                "canonical_key": receipt.canonical_key,
+                "signer_principal": receipt.signer_principal,
+                "signer_fingerprint": receipt.signer_fingerprint,
+            }
+        )
+        fields["applied"] = status == "COMMITTED"
+    if args.command == "recover":
+        # Recovery is successful both when it restores pre-state (ROLLED_BACK)
+        # and when it regenerates a receipt for a previously committed run.
+        fields["recovered"] = status in ("COMMITTED", "ROLLED_BACK")
+    _emit(fields)
+    return EXIT_OK if fields["ok"] else EXIT_FAILURE
+
+
 def _plan_payload(plan: Plan) -> dict[str, object]:
     payload = asdict(plan)
     payload["sha256"] = plan.sha256
@@ -459,12 +543,12 @@ def _run(args: argparse.Namespace) -> int:
             plan_value,
             BrSqliteV1Adapter(),
             signed,
-            SshApprovalVerifier(signed.envelope.signer_fingerprint),
+            _pinned_verifier(),
             FileControlStore(_control_root()),
             datetime_module.datetime.now(datetime_module.timezone.utc).isoformat().replace("+00:00", "Z"),
         )
         receipt = apply_plan(request)
-        return _success("apply", **asdict(receipt), applied=receipt.status == "COMMITTED")
+        return _transaction_success(args, receipt, status=receipt.status)
 
     if args.command == "recover":
         if args.repo != config.repo_id:
@@ -473,6 +557,26 @@ def _run(args: argparse.Namespace) -> int:
         for item in repositories:
             item.close()
         _config_binding_args_match(args, config)
+        # Rebuild the manifest from retained validation authority.  The supplied
+        # artifact remains an independent operator binding, not a mutable plan
+        # input or an authorization source.
+        supplied_manifest = _load_manifest(args.manifest, args.expected_manifest_sha256)
+        if supplied_manifest.repo_id != args.repo or supplied_manifest.registry_sha256 != registry_sha256:
+            raise ValueError("manifest repository or registry binding does not match")
+        _binding_args_match(args, config, supplied_manifest)
+        selected, repositories = _validated_repo(registry, args.repo)
+        try:
+            adapter = BrSqliteV1Adapter()
+            manifest = build_manifest(selected, adapter)
+        finally:
+            for item in repositories:
+                item.close()
+        if sha256_hex(canonical_json_bytes(manifest)) != sha256_hex(canonical_json_bytes(supplied_manifest)):
+            raise ValueError("fresh recovery manifest does not match expected manifest")
+        plan_value = build_plan(manifest)
+        if plan_value.sha256 != args.expected_plan_sha256:
+            raise ValueError("recomputed plan SHA-256 does not match expected digest")
+
         # Recovery is deliberately still delegated to the transaction boundary;
         # the production implementation rejects non-fixture control stores.
         signed = _approval(args.approval, args.approval_signature)
@@ -494,8 +598,21 @@ def _run(args: argparse.Namespace) -> int:
             raise ValueError("journal SHA-256 does not match expected digest")
         if journal.get("repo_id") != args.repo or journal.get("canonical_beads") != str(args.expected_canonical):
             raise ValueError("journal binding does not match operator bindings")
-        receipt = recover_run(RecoveryRequest(control, BrSqliteV1Adapter(), args.run_id))
-        return _success("recover", **asdict(receipt), recovered=receipt.status == "COMMITTED")
+        request = RecoveryRequest(
+            control,
+            adapter,
+            args.run_id,
+            True,
+            registry,
+            manifest,
+            plan_value,
+            signed,
+            _pinned_verifier(),
+            datetime_module.datetime.now(datetime_module.timezone.utc).isoformat().replace("+00:00", "Z"),
+            args.expected_journal_sha256,
+        )
+        receipt = recover_run(request)
+        return _transaction_success(args, receipt, status=receipt.status)
 
     raise ValueError("unknown command")
 
@@ -504,6 +621,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI and return a stable process exit code."""
 
     parser = build_parser()
+    args: argparse.Namespace | None = None
     try:
         args = parser.parse_args(list(argv) if argv is not None else None)
         return _run(args)
@@ -512,7 +630,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"beads-converge: {exc}", file=sys.stderr)
         return EXIT_USAGE
     except Exception as exc:  # noqa: BLE001 - CLI must fail closed without a traceback
-        _emit({"schema": "beads.redirect-convergence.cli.v1", "tool_version": TOOL_VERSION, "ok": False, "error": str(exc)})
+        if args is not None and args.command in ("apply", "recover"):
+            _emit(_transaction_failure(args, str(exc)))
+        else:
+            _emit({"schema": "beads.redirect-convergence.cli.v1", "tool_version": TOOL_VERSION, "ok": False, "error": str(exc)})
         print(f"beads-converge: {exc}", file=sys.stderr)
         return EXIT_FAILURE
 
