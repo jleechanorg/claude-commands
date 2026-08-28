@@ -208,6 +208,8 @@ class CliContractTest(unittest.TestCase):
             self.assertEqual(payload["status"], "ROLLED_BACK")
             self.assertEqual(payload["repo_id"], "repo-a")
             self.assertEqual(payload["adapter"], "br-sqlite-v1")
+            self.assertEqual(payload["signer_principal"], "ops@example.test")
+            self.assertEqual(payload["signer_fingerprint"], "SHA256:fixture-external-key")
             self.assertEqual(diagnostics.getvalue(), "")
 
 

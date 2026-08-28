@@ -408,6 +408,7 @@ def _transaction_success(
     receipt: object,
     *,
     status: str,
+    signer: tuple[str, str] | None = None,
 ) -> int:
     fields = _transaction_context(args)
     fields.update(
@@ -434,6 +435,13 @@ def _transaction_success(
         # Recovery is successful both when it restores pre-state (ROLLED_BACK)
         # and when it regenerates a receipt for a previously committed run.
         fields["recovered"] = status in ("COMMITTED", "ROLLED_BACK")
+        if signer is not None:
+            fields.update(
+                {
+                    "signer_principal": signer[0],
+                    "signer_fingerprint": signer[1],
+                }
+            )
     _emit(fields)
     return EXIT_OK if fields["ok"] else EXIT_FAILURE
 
@@ -612,7 +620,14 @@ def _run(args: argparse.Namespace) -> int:
             args.expected_journal_sha256,
         )
         receipt = recover_run(request)
-        return _transaction_success(args, receipt, status=receipt.status)
+        return _transaction_success(
+            args,
+            receipt,
+            status=receipt.status,
+            # recover_run has verified this exact signed capability before
+            # returning either COMMITTED, ROLLED_BACK, or NEEDS_OPERATOR.
+            signer=(signed.envelope.signer_principal, signed.envelope.signer_fingerprint),
+        )
 
     raise ValueError("unknown command")
 
