@@ -15,7 +15,6 @@ from .registry import (
     validate_repository,
 )
 
-
 _PLAN_SCHEMA = "beads.redirect-convergence.plan.v1"
 _REQUIRED_SOURCES = frozenset({"beads.db", "issues.jsonl"})
 _KNOWN_SOURCES = frozenset(
@@ -256,7 +255,8 @@ def plan_all(registry: Registry) -> PlanAllReceipt:
 
     try:
         validated = validate_registry(registry)
-    except Exception as exc:
+    # Registry validation failures must degrade to per-repository isolation.
+    except Exception as exc:  # noqa: BLE001
         del exc
         identity_guard = PhysicalIdentityClaims()
         for config in sorted(registry.repositories, key=lambda item: item.repo_id):
@@ -269,7 +269,8 @@ def plan_all(registry: Registry) -> PlanAllReceipt:
                         ),
                     )
                 )
-            except Exception as exc:  # isolate one repository's failure
+            # A repository failure must not suppress independent plans.
+            except Exception as exc:  # noqa: BLE001
                 results.append(PlanResult(config.repo_id, error=str(exc)))
     else:
         for repository in sorted(validated, key=lambda item: item.config.repo_id):
@@ -280,7 +281,8 @@ def plan_all(registry: Registry) -> PlanAllReceipt:
                         _plan_validated_repository(repository),
                     )
                 )
-            except Exception as exc:  # isolate one repository's failure
+            # A repository failure must not suppress independent plans.
+            except Exception as exc:  # noqa: BLE001
                 results.append(
                     PlanResult(repository.config.repo_id, error=str(exc))
                 )

@@ -7,6 +7,7 @@ import os
 import stat
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Self
 
 from .codec import ContractError, canonical_json_bytes, decode_registry, sha256_hex
 from .fsafety import (
@@ -78,7 +79,7 @@ class ValidatedRepository:
         for root in self.allowed_roots:
             root.close()
 
-    def __enter__(self) -> "ValidatedRepository":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_: object) -> None:

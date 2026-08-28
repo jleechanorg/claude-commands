@@ -14,12 +14,11 @@ from .fsafety import (
     FsafetyError,
     UnsupportedCapability,
     open_descendant,
-    open_verified_executable,
     run_verified,
 )
 from .models import (
-    Manifest,
     HealthFingerprint,
+    Manifest,
     RedirectState,
     SourceFingerprint,
     WorktreeRecord,
@@ -58,9 +57,9 @@ def _parse_git_porcelain(raw: bytes) -> tuple[Path, ...]:
     paths: list[Path] = []
     current: Path | None = None
     for line in text.splitlines(keepends=True):
-        if line.endswith("\r\n") or line.endswith("\r") or "\x00" in line:
+        if line.endswith(("\r\n", "\r")) or "\x00" in line:
             raise InventoryError("malformed Git porcelain output")
-        value = line[:-1] if line.endswith("\n") else line
+        value = line.removesuffix("\n")
         if not value:
             current = None
             continue
@@ -74,9 +73,7 @@ def _parse_git_porcelain(raw: bytes) -> tuple[Path, ...]:
                 raise InventoryError("malformed Git porcelain worktree path")
             current = path
             paths.append(path)
-        elif current is None:
-            raise InventoryError("malformed Git porcelain output")
-        elif not value.startswith(_GIT_RECORD_FIELDS):
+        elif current is None or not value.startswith(_GIT_RECORD_FIELDS):
             raise InventoryError("malformed Git porcelain output")
     if current is not None and not text.endswith("\n"):
         # A final record without a separator is valid porcelain, but only when
@@ -299,7 +296,7 @@ def _validate_redirect_text(value: str) -> None:
         or value.count("\n") > 1
         or "\n" in value.rstrip("\n")
         or any(
-            line.endswith(" ") or line.endswith("\t")
+            line.endswith((" ", "\t"))
             for line in value.splitlines()
         )
     ):

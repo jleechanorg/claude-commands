@@ -1,8 +1,6 @@
 """Focused tests for captured registry loading and descriptor-anchored validation."""
 
 import hashlib
-import json
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,17 +8,17 @@ from types import SimpleNamespace
 from unittest import mock
 
 from scripts.beads_convergence.codec import canonical_json_bytes
-from scripts.beads_convergence.models import BinaryBinding, Registry, RepositoryConfig
-from scripts.beads_convergence.registry import (
-    RegistryError,
-    load_registry,
-    validate_registry,
-)
 from scripts.beads_convergence.fsafety import (
     FsafetyError,
     open_descendant,
     open_trusted_tree,
     validate_fixed_control_root,
+)
+from scripts.beads_convergence.models import BinaryBinding, Registry, RepositoryConfig
+from scripts.beads_convergence.registry import (
+    RegistryError,
+    load_registry,
+    validate_registry,
 )
 
 
@@ -173,13 +171,15 @@ class RegistryTest(unittest.TestCase):
             ):
                 path.chmod(0o700)
             fake_pwd = SimpleNamespace(pw_dir=str(home))
-            with mock.patch("pwd.getpwuid", return_value=fake_pwd):
-                with validate_fixed_control_root() as handle:
-                    self.assertEqual(handle.display_path, control)
+            with mock.patch(
+                "pwd.getpwuid", return_value=fake_pwd
+            ), validate_fixed_control_root() as handle:
+                self.assertEqual(handle.display_path, control)
             (home / ".local/state").chmod(0o755)
-            with mock.patch("pwd.getpwuid", return_value=fake_pwd):
-                with self.assertRaisesRegex(FsafetyError, "unsafe fixed"):
-                    validate_fixed_control_root()
+            with mock.patch(
+                "pwd.getpwuid", return_value=fake_pwd
+            ), self.assertRaisesRegex(FsafetyError, "unsafe fixed"):
+                validate_fixed_control_root()
 
 
 if __name__ == "__main__":

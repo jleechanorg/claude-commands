@@ -14,9 +14,9 @@ from scripts.beads_convergence.adapters import (
     SourceMember,
     SourceSnapshot,
 )
+from scripts.beads_convergence.inventory import InventoryError, build_manifest
 from scripts.beads_convergence.models import BinaryBinding, Registry, RepositoryConfig
 from scripts.beads_convergence.registry import validate_registry
-from scripts.beads_convergence.inventory import InventoryError, build_manifest
 
 
 class FakeAdapter:
@@ -166,9 +166,6 @@ class InventoryTest(unittest.TestCase):
                     "scripts.beads_convergence.inventory.run_verified",
                     return_value=result,
                 ), patch(
-                    "scripts.beads_convergence.inventory.open_verified_executable",
-                    return_value=SimpleNamespace(close=lambda: None),
-                ), patch(
                     "scripts.beads_convergence.inventory._common_dir_identity",
                     return_value=(repository.seed.device, repository.seed.inode),
                 ):
@@ -212,9 +209,6 @@ class InventoryTest(unittest.TestCase):
                     "scripts.beads_convergence.inventory.run_verified",
                     return_value=result,
                 ), patch(
-                    "scripts.beads_convergence.inventory.open_verified_executable",
-                    return_value=SimpleNamespace(close=lambda: None),
-                ), patch(
                     "scripts.beads_convergence.inventory._common_dir_identity",
                     return_value=(repository.seed.device, repository.seed.inode),
                 ):
@@ -238,9 +232,6 @@ class InventoryTest(unittest.TestCase):
                 with patch(
                     "scripts.beads_convergence.inventory.run_verified",
                     return_value=result,
-                ), patch(
-                    "scripts.beads_convergence.inventory.open_verified_executable",
-                    return_value=SimpleNamespace(close=lambda: None),
                 ), patch(
                     "scripts.beads_convergence.inventory._common_dir_identity",
                     return_value=(repository.seed.device, repository.seed.inode),

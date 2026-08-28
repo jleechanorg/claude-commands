@@ -5,7 +5,6 @@ import sys
 import unittest
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILL = REPO_ROOT / ".claude/skills/beads-redirect-convergence/SKILL.md"
 COMMAND = REPO_ROOT / ".claude/commands/beads-converge.md"

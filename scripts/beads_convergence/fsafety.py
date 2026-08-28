@@ -10,9 +10,10 @@ import selectors
 import signal
 import stat
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
+from typing import Self
 
 
 class FsafetyError(RuntimeError):
@@ -72,7 +73,7 @@ class DirectoryHandle:
         return self.inode
 
     @classmethod
-    def from_fd(cls, fd: int, display_path: Path) -> "DirectoryHandle":
+    def from_fd(cls, fd: int, display_path: Path) -> DirectoryHandle:
         info = os.fstat(fd)
         if not stat.S_ISDIR(info.st_mode):
             raise FsafetyError(f"not a directory: {display_path}")
@@ -88,7 +89,7 @@ class DirectoryHandle:
             os.close(self.fd)
             self.fd = -1
 
-    def __enter__(self) -> "DirectoryHandle":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_: object) -> None:
@@ -221,11 +222,8 @@ class VerifiedExecutable:
 
 
 def open_verified_executable(binding: object) -> VerifiedExecutable:
-    path = Path(getattr(binding, "path"))
-    try:
-        _parts(path)
-    except FsafetyError:
-        raise
+    path = Path(binding.path)
+    _parts(path)
     parent = path.parent
     name = path.name
     with open_trusted_tree(Path("/"), parent) as parent_handle:
@@ -237,7 +235,7 @@ def open_verified_executable(binding: object) -> VerifiedExecutable:
         os.lseek(fd, 0, os.SEEK_SET)
         digest = hashlib.sha256(_read_fd(fd)).hexdigest()
         os.lseek(fd, 0, os.SEEK_SET)
-        if digest != getattr(binding, "sha256"):
+        if digest != binding.sha256:
             raise FsafetyError("binary SHA-256 does not match binding")
         path_info = os.stat(os.fspath(path), follow_symlinks=False)
         if (path_info.st_dev, path_info.st_ino) != (info.st_dev, info.st_ino):
@@ -256,7 +254,7 @@ def descriptor_exec_supported() -> bool:
     if hasattr(os, "fexecve"):
         return True
     try:
-        return bool(getattr(ctypes.CDLL(None), "fexecve"))
+        return bool(ctypes.CDLL(None).fexecve)
     except (AttributeError, OSError):
         return sys.platform.startswith("linux") and os.path.exists("/proc/self/fd")
 
@@ -315,7 +313,7 @@ def run_verified(
         raise FsafetyError("retained executable identity changed")
     try:
         path_info = os.stat(
-            os.fspath(Path(getattr(executable.binding, "path"))),
+            os.fspath(Path(executable.binding.path)),
             follow_symlinks=False,
         )
         if (path_info.st_dev, path_info.st_ino) != (
@@ -339,9 +337,11 @@ def run_verified(
             cwd.verify_identity()
             os.fchdir(cwd.fd)
             os.set_inheritable(executable.fd, True)
-            command = [Path(getattr(executable.binding, "path")).name, *map(str, argv)]
+            command = [Path(executable.binding.path).name, *map(str, argv)]
             _exec_fd(executable.fd, command, dict(CHILD_ENV))
-        except BaseException as exc:
+        # The child must report every pre-exec failure and exit fail-closed;
+        # narrowing this catch could strand descriptors or skip the 127 exit.
+        except BaseException as exc:  # noqa: BLE001
             try:
                 os.write(2, f"descriptor execution failed: {exc}\n".encode())
             finally:
@@ -411,7 +411,7 @@ def run_verified(
         raise FsafetyError("retained executable digest changed after execution")
     try:
         path_info = os.stat(
-            os.fspath(Path(getattr(executable.binding, "path"))),
+            os.fspath(Path(executable.binding.path)),
             follow_symlinks=False,
         )
         if (path_info.st_dev, path_info.st_ino) != (

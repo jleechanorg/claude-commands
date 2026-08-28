@@ -13,7 +13,6 @@ from scripts.beads_convergence.adapters import (
 )
 from scripts.beads_convergence.fsafety import (
     ExecutionResult,
-    FsafetyError,
     UnsupportedCapability,
     VerifiedExecutable,
     open_trusted_tree,
@@ -49,18 +48,20 @@ class AdapterTest(unittest.TestCase):
             root = Path(temp)
             beads = self._beads(root)
             (beads / "beads.db-journal").write_bytes(b"hot")
-            with open_trusted_tree(root, beads) as handle:
-                with self.assertRaisesRegex(AdapterError, "hot beads.db-journal"):
-                    BrSqliteV1Adapter().attest_backend(handle)
+            with open_trusted_tree(root, beads) as handle, self.assertRaisesRegex(
+                AdapterError, "hot beads.db-journal"
+            ):
+                BrSqliteV1Adapter().attest_backend(handle)
 
     def test_hard_linked_source_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             beads = self._beads(root)
             os.link(beads / "issues.jsonl", beads / "beads.db-wal")
-            with open_trusted_tree(root, beads) as handle:
-                with self.assertRaisesRegex(AdapterError, "unsafe source"):
-                    BrSqliteV1Adapter().fingerprint_sources(handle)
+            with open_trusted_tree(root, beads) as handle, self.assertRaisesRegex(
+                AdapterError, "unsafe source"
+            ):
+                BrSqliteV1Adapter().fingerprint_sources(handle)
 
     def test_unproven_writer_lease_is_plan_only(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -79,24 +80,23 @@ class AdapterTest(unittest.TestCase):
         with mock.patch(
             "scripts.beads_convergence.adapters.run_verified",
             side_effect=UnsupportedCapability("descriptor execution is unavailable"),
-        ):
-            with self.assertRaisesRegex(AdapterError, "unverified"):
-                BrSqliteV1Adapter().verify_binary(binding)
+        ), self.assertRaisesRegex(AdapterError, "unverified"):
+            BrSqliteV1Adapter().verify_binary(binding)
 
     def test_health_rejects_duplicate_and_unknown_fields(self) -> None:
         adapter = BrSqliteV1Adapter()
         fake = VerifiedExecutable(0, object(), 0, 0, "")
-        with tempfile.TemporaryDirectory() as temp:
-            with open_trusted_tree(Path(temp), Path(temp)) as worktree:
-                result = ExecutionResult(
-                    b'{"dirty_count":0,"dirty_count":0}', b"", 0
-                )
-                with mock.patch(
-                    "scripts.beads_convergence.adapters.run_verified",
-                    return_value=result,
-                ):
-                    with self.assertRaises(AdapterError):
-                        adapter.verify_health(worktree, fake)
+        with tempfile.TemporaryDirectory() as temp, open_trusted_tree(
+            Path(temp), Path(temp)
+        ) as worktree:
+            result = ExecutionResult(
+                b'{"dirty_count":0,"dirty_count":0}', b"", 0
+            )
+            with mock.patch(
+                "scripts.beads_convergence.adapters.run_verified",
+                return_value=result,
+            ), self.assertRaises(AdapterError):
+                adapter.verify_health(worktree, fake)
 
 
 if __name__ == "__main__":

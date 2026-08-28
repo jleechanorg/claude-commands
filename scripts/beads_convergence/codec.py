@@ -383,10 +383,10 @@ def _pairs_without_duplicates(pairs: list[tuple[str, object]]) -> dict[str, obje
 def _exact(payload: dict[str, object], expected: set[str], field: str) -> None:
     unknown = set(payload) - expected
     if unknown:
-        raise ContractError(f"{field} has unknown field {sorted(unknown)[0]!r}")
+        raise ContractError(f"{field} has unknown field {min(unknown)!r}")
     missing = expected - set(payload)
     if missing:
-        raise ContractError(f"{field} missing required field {sorted(missing)[0]!r}")
+        raise ContractError(f"{field} missing required field {min(missing)!r}")
 
 
 def _schema(value: object, expected: str) -> None:

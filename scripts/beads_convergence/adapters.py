@@ -168,7 +168,7 @@ class BrSqliteV1Adapter:
                 },
                 "version",
             )
-            if payload["version"] != getattr(binding, "version"):
+            if payload["version"] != binding.version:
                 raise AdapterError("tracker version does not match binding")
         except UnsupportedCapability as exc:
             executable.close()
@@ -199,7 +199,7 @@ class BrSqliteV1Adapter:
             if result.returncode != 0:
                 raise AdapterError("Git version probe failed")
             line = result.stdout.decode("utf-8").strip()
-            expected = f"git version {getattr(binding, 'version')}"
+            expected = f"git version {binding.version}"
             if line != expected:
                 raise AdapterError("Git version does not match binding")
             return executable
