@@ -116,8 +116,8 @@ binary bindings, and the registry SHA. A plan is deterministic and bound to
 that manifest. Apply recomputes the plan from a fresh descriptor-bound
 manifest; a mutable plan file or a copied hash is not an input substitute.
 
-Every future apply must independently bind all of the following literal
-operator arguments to the fresh operation:
+Every future apply or recovery must independently bind all of the following
+literal operator arguments to the fresh operation:
 
 - Repository: exactly one `repo_id`; never a list or wildcard.
 - Registry: captured bytes and `--expected-registry-sha256`.
@@ -181,11 +181,9 @@ automatic rollback claim based only on process output.
 ## One-repository recovery boundary
 
 Recovery is a separate operation, not an automatic continuation of apply. It
-names exactly one repository and one run. The parser exposes optional
-`--manifest`, `--expected-manifest-sha256`, and `--expected-plan-sha256` for
-recovery, but those optional arguments do not grant capability or authority. It
-requires a new signed recovery
-approval plus `--expected-registry-sha256`, `--run-id`, and
+names exactly one repository and one run. Recovery requires `--manifest`,
+`--expected-manifest-sha256`, and `--expected-plan-sha256`, plus a new signed
+recovery approval with `--expected-registry-sha256`, `--run-id`, and
 `--expected-journal-sha256`, plus canonical path, adapter, and tracker/Git
 bindings, and literal `--recover`. The recovery binding includes the run ID and
 journal SHA. It can restore only the recorded

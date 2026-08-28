@@ -65,6 +65,10 @@ class BeadsRedirectConvergenceSkillTest(unittest.TestCase):
                 self.assertIn(binding, self.text)
         self.assertIn("exactly one `repo_id`", self.text)
         self.assertIn("separately signed", self.flat_text)
+        self.assertIn(
+            "recovery requires `--manifest`, `--expected-manifest-sha256`,",
+            self.flat_text.lower(),
+        )
 
     def test_authority_and_certification_boundaries_are_explicit(self):
         text = self.flat_text.lower()
