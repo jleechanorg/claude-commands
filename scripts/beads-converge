@@ -9,7 +9,7 @@ _SCRIPTS_DIR = os.path.dirname(_LAUNCHER)
 _ISOLATED_ENV = {"LANG": "C", "LC_ALL": "C", "TZ": "UTC"}
 
 
-if not sys.flags.isolated:
+if not (sys.flags.isolated and sys.flags.no_site):
     if not os.path.isabs(sys.executable) or not os.path.isabs(_LAUNCHER):
         raise SystemExit("beads-converge: isolated Python executable is unavailable")
     try:

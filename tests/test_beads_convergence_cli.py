@@ -61,6 +61,50 @@ def all_hash_args() -> tuple[str, ...]:
 
 
 class CliContractTest(unittest.TestCase):
+    def test_direct_isolated_python_reexecs_without_site_before_runtime_import(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            scripts = root / "release/scripts"
+            shutil.copytree(ROOT / "scripts", scripts)
+            flags_record = root / "runtime-flags"
+            hook_record = root / "sitecustomize-imported"
+            package = scripts / "beads_convergence"
+            (package / "__init__.py").write_text(
+                "import sys\n"
+                f"with open({str(flags_record)!r}, 'w') as handle:\n"
+                "    handle.write(f'isolated={sys.flags.isolated},' "
+                "f'no_site={sys.flags.no_site}')\n"
+            )
+            (package / "cli.py").write_text("def main():\n    return 0\n")
+
+            userbase = root / "userbase"
+            site_packages = (
+                userbase
+                / "lib"
+                / f"python{sys.version_info.major}.{sys.version_info.minor}"
+                / "site-packages"
+            )
+            site_packages.mkdir(parents=True)
+            (site_packages / "sitecustomize.py").write_text(
+                "from pathlib import Path\n"
+                f"Path({str(hook_record)!r}).touch()\n"
+            )
+            environment = dict(os.environ)
+            environment["PYTHONUSERBASE"] = str(userbase)
+            environment["PYTHONPATH"] = str(site_packages)
+
+            result = subprocess.run(
+                (sys.executable, "-I", str(scripts / "beads-converge")),
+                env=environment,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(flags_record.read_text(), "isolated=1,no_site=1")
+            self.assertFalse(hook_record.exists())
+
     def test_launcher_ignores_root_cwd_and_pythonpath_shadows(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
