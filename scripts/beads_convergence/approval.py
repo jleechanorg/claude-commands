@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import datetime as dt
+import hashlib
 import os
 import stat
 import subprocess
@@ -30,6 +31,28 @@ _ALLOWED_SIGNERS_MAX_BYTES = 1024 * 1024
 
 class ApprovalError(RuntimeError):
     """The independently-controlled approval is absent, stale, or mismatched."""
+
+
+TOOL_TREE_RELEASE_FILES = (
+    "scripts/beads-converge",
+    "scripts/beads_convergence/__init__.py",
+    "scripts/beads_convergence/adapters.py",
+    "scripts/beads_convergence/approval.py",
+    "scripts/beads_convergence/cli.py",
+    "scripts/beads_convergence/codec.py",
+    "scripts/beads_convergence/fsafety.py",
+    "scripts/beads_convergence/inventory.py",
+    "scripts/beads_convergence/models.py",
+    "scripts/beads_convergence/planner.py",
+    "scripts/beads_convergence/registry.py",
+    "scripts/beads_convergence/transaction.py",
+    ".claude/skills/beads-redirect-convergence/references/approval-v1.schema.json",
+    ".claude/skills/beads-redirect-convergence/references/journal-v1.schema.json",
+    ".claude/skills/beads-redirect-convergence/references/manifest-v1.schema.json",
+    ".claude/skills/beads-redirect-convergence/references/plan-v1.schema.json",
+    ".claude/skills/beads-redirect-convergence/references/receipt-v1.schema.json",
+    ".claude/skills/beads-redirect-convergence/references/registry-v1.schema.json",
+)
 
 
 def compiled_trust_root() -> Path:
@@ -61,23 +84,99 @@ def envelope_bytes(envelope: ApprovalEnvelope) -> bytes:
 
 
 def tool_tree_sha256() -> str:
-    """Bind the exact shipped transaction contract, never a caller-supplied path."""
+    """Bind the exact launcher, runtime package, and schema release tree."""
 
-    import hashlib
-
-    root = Path(__file__).resolve().parents[2]
-    files = (
-        root / "scripts/beads_convergence/approval.py",
-        root / "scripts/beads_convergence/transaction.py",
-        root / ".claude/skills/beads-redirect-convergence/references/approval-v1.schema.json",
-        root / ".claude/skills/beads-redirect-convergence/references/journal-v1.schema.json",
-        root / ".claude/skills/beads-redirect-convergence/references/receipt-v1.schema.json",
+    root = Path(os.path.abspath(__file__)).parents[2]
+    runtime_prefix = "scripts/beads_convergence/"
+    expected_runtime = {
+        Path(relative).name
+        for relative in TOOL_TREE_RELEASE_FILES
+        if relative.startswith(runtime_prefix) and relative.endswith(".py")
+    }
+    schema_prefix = ".claude/skills/beads-redirect-convergence/references/"
+    expected_schemas = {
+        Path(relative).name
+        for relative in TOOL_TREE_RELEASE_FILES
+        if relative.startswith(schema_prefix) and relative.endswith(".schema.json")
+    }
+    _assert_release_directory(
+        root / "scripts/beads_convergence", expected_runtime, ".py"
+    )
+    _assert_release_directory(
+        root / schema_prefix, expected_schemas, ".schema.json"
     )
     digest = hashlib.sha256()
-    for path in files:
-        digest.update(os.fspath(path.relative_to(root)).encode() + b"\0")
-        digest.update(path.read_bytes())
+    digest.update(b"beads-convergence-tool-tree-v2\0")
+    for relative in TOOL_TREE_RELEASE_FILES:
+        path_bytes = relative.encode("utf-8")
+        payload = _read_release_file(root / relative)
+        digest.update(len(path_bytes).to_bytes(8, "big"))
+        digest.update(path_bytes)
+        digest.update(len(payload).to_bytes(8, "big"))
+        digest.update(payload)
     return digest.hexdigest()
+
+
+def _assert_release_directory(
+    directory: Path, expected: set[str], suffix: str
+) -> None:
+    try:
+        directory_info = os.lstat(directory)
+        if not stat.S_ISDIR(directory_info.st_mode):
+            raise ApprovalError("tool tree directory is nonregular")
+        with os.scandir(directory) as iterator:
+            entries = tuple(iterator)
+    except OSError as exc:
+        raise ApprovalError("tool tree directory is unavailable") from exc
+    actual: set[str] = set()
+    for entry in entries:
+        if not entry.name.endswith(suffix):
+            continue
+        if entry.is_symlink() or not entry.is_file(follow_symlinks=False):
+            raise ApprovalError("tool tree contains a nonregular dependency")
+        actual.add(entry.name)
+    if actual != expected:
+        raise ApprovalError("tool tree contains an unexpected runtime dependency")
+
+
+def _read_release_file(path: Path) -> bytes:
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if not isinstance(nofollow, int) or nofollow == 0:
+        raise ApprovalError("tool tree requires O_NOFOLLOW")
+    try:
+        fd = os.open(path, flags | nofollow)
+    except OSError as exc:
+        raise ApprovalError("tool tree file is unavailable") from exc
+    try:
+        before = os.fstat(fd)
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or before.st_nlink != 1
+            or stat.S_IMODE(before.st_mode) & 0o444 == 0
+        ):
+            raise ApprovalError("tool tree file is unsafe or unreadable")
+        chunks: list[bytes] = []
+        while chunk := os.read(fd, 1024 * 1024):
+            chunks.append(chunk)
+        after = os.fstat(fd)
+        if (
+            before.st_dev,
+            before.st_ino,
+            before.st_size,
+            before.st_mtime_ns,
+        ) != (
+            after.st_dev,
+            after.st_ino,
+            after.st_size,
+            after.st_mtime_ns,
+        ):
+            raise ApprovalError("tool tree file changed while hashing")
+        return b"".join(chunks)
+    except OSError as exc:
+        raise ApprovalError("tool tree file is unreadable") from exc
+    finally:
+        os.close(fd)
 
 
 def _parse_time(value: str) -> dt.datetime:

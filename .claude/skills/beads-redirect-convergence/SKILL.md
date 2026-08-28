@@ -1,9 +1,9 @@
 ---
 name: beads-redirect-convergence
 description: >-
-  Safely inventory and plan repository-local Beads redirect convergence; real
-  apply and recovery are one-repository, externally signed, and separately
-  authorized.
+  Safely inventory and plan repository-local Beads redirect convergence; v1
+  real apply and recovery remain hard-disabled until the adapter proves a
+  production writer lease.
 ---
 
 # Beads redirect convergence
@@ -80,9 +80,10 @@ beads-converge inventory \
   --expected-registry-sha256 "$REGISTRY_SHA256"
 ```
 
-Build a deterministic one-repository plan. A plan may write hash-bound
-evidence below the registry-selected evidence root, but it must not write a
-repository source or redirect:
+Build a deterministic one-repository plan. V1 emits the manifest and plan on
+stdout and does not write a repository source, redirect, or evidence artifact.
+The validated registry `evidence_root` field is reserved for a future evidence
+writer and is otherwise unused by v1:
 
 ```bash
 beads-converge plan \
@@ -153,7 +154,15 @@ could be pasted to apply it.
 
 ## One-repository apply boundary (not certification)
 
-Real apply is allowed only after all of these independent gates pass:
+V1 production apply is unavailable. The shipped `apply` command returns a
+nonzero machine-readable failure before reading registry, manifest, approval,
+or control-root state. `apply_plan` has no caller-selectable adapter, control
+store, verifier, fixture marker, or fault-injection seam and fails the same
+way. Disposable transaction tests use a tests-only harness which is not part
+of the shipped `scripts/beads_convergence` package.
+
+A future production apply remains prohibited until all of these independent
+gates pass and the shipped implementation is replaced deliberately:
 
 1. A fresh read-only inventory and deterministic plan identify exactly one
    repository and no skipped, missing, unsupported, or newly discovered entry.
@@ -179,6 +188,11 @@ full reverse rollback or leave a durable `NEEDS_OPERATOR` journal. There is no
 automatic rollback claim based only on process output.
 
 ## One-repository recovery boundary
+
+V1 production recovery is unavailable for the same missing writer-lease proof.
+The shipped `recover` command and `recover_run` fail before opening a journal or
+other control-root artifact. The requirements below describe a future enabled
+implementation, not a capability supplied by v1.
 
 Recovery is a separate operation, not an automatic continuation of apply. It
 names exactly one repository and one run. Recovery requires `--manifest`,
@@ -212,7 +226,8 @@ permissions before invoking the fixed `ssh-keygen -Y verify` namespace
 `beads-redirect-convergence-v1@jleechan.org`. The allowed-signers file and
 verifier binding are part of that root-owned installation.
 
-Locks, active journals, and the nonce ledger use one fixed control namespace
+Future production locks, active journals, nonce ledger, and receipts use one
+fixed control namespace
 derived from the effective user's passwd home, never from `HOME` or a
 registry field:
 
@@ -222,9 +237,10 @@ registry field:
 
 The control root and ancestors must be non-symlink directories owned by the
 effective user with mode `0700`; control artifacts are `0600`. A changed or
-unsafe control namespace is a hard failure. Evidence (manifests, plans,
-backups, and receipts) stays in the registry-selected evidence root, outside
-the worktree, canonical `.beads`, and control namespace.
+unsafe control namespace is a hard failure. In v1, manifests and plans are
+stdout results, no backups are emitted, and the reserved `evidence_root` is
+validated but unused. Tests-only receipts stay in their disposable control
+root; any future production receipt belongs in the fixed control namespace.
 
 Signer custody is an operational security boundary. The allowed private key
 must be hardware-held, off-host, or controlled by a separately administered
@@ -248,8 +264,8 @@ Keep these classes separate in reports and approvals:
   host operation.
 - Offline approval issuance: signing one exact envelope; separate signer
   custody and human approval.
-- Real apply/recovery: one-repository transaction or recovery; new
-  authorization and proven capabilities.
+- Real apply/recovery: unavailable in v1; a future one-repository transaction
+  or recovery still requires new authorization and proven capabilities.
 
 Passing fixture apply or real dry-run proves implementation readiness only. It
 does not authorize a real repository mutation. Production has no test-authority
@@ -301,13 +317,13 @@ Before calling the work complete, record:
 - the exact registry path and captured SHA (without treating it as permission);
 - selected `repo_id`, manifest and plan digests, and all independent binary
   bindings;
-- read-only evidence paths and unchanged source/redirect hashes;
+- captured stdout manifest/plan results and unchanged source/redirect hashes;
 - adapter health, backend, redirect-oracle, and writer-lease capability;
 - trust-root/control-root checks and the independent custody certification;
 - whether the result is fixture apply, real dry-run, trust provisioning,
   offline approval issuance, or real apply/recovery;
-- explicit `applied` or `recovered` status from the receipt, or the exact
-  fail-closed reason and durable journal state.
+- the exact v1 fail-closed unavailable reason; only the tests-only harness can
+  report a disposable `applied`/`recovered` receipt or durable journal state.
 
 Never describe a plan as applied, a fixture as real, a signature as custody
 proof, or a registry as authority. Real apply or recovery requires a new explicit

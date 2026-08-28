@@ -33,7 +33,7 @@ from scripts.beads_convergence.models import (
     RepositoryConfig,
 )
 from scripts.beads_convergence.registry import RegistryError, validate_registry
-from scripts.beads_convergence.transaction import (
+from tests.beads_convergence_fixture_harness import (
     ApplyRequest,
     FixtureControlStore,
     apply_plan,

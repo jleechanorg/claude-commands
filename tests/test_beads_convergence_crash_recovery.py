@@ -12,7 +12,7 @@ from scripts.beads_convergence.approval import SignedApproval
 from scripts.beads_convergence.codec import canonical_json_bytes, sha256_hex
 from scripts.beads_convergence.models import RedirectState, WorktreeRecord
 from scripts.beads_convergence.planner import build_plan
-from scripts.beads_convergence.transaction import (
+from tests.beads_convergence_fixture_harness import (
     ApplyRequest,
     FixtureControlStore,
     RecoveryRequest,
@@ -66,7 +66,7 @@ def _fork_apply(request: ApplyRequest, exit_code: int) -> int:
 
     child_pid = os.fork()
     if child_pid == 0:
-        from scripts.beads_convergence import transaction as transaction_module
+        from tests import beads_convergence_fixture_harness as transaction_module
 
         class ProcessCrash(BaseException):
             def __init__(self) -> None:

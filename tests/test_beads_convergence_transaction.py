@@ -38,13 +38,14 @@ from scripts.beads_convergence.models import (
     WorktreeRecord,
 )
 from scripts.beads_convergence.planner import build_plan
-from scripts.beads_convergence.transaction import (
+from tests.beads_convergence_fixture_harness import (
     ApplyRequest,
     FixtureControlStore,
     RecoveryRequest,
     TransactionCrash,
     TransactionError,
     apply_plan,
+    recover_run,
 )
 
 
@@ -197,6 +198,108 @@ def make_recovery_request(request: ApplyRequest, *, nonce: str = "recover-nonce"
 
 
 class TransactionTest(unittest.TestCase):
+    def test_incomplete_topology_fails_before_nonce_journal_or_redirect(self) -> None:
+        rejected = (
+            "missing",
+            "unsupported",
+            "unresolved",
+            "unresolved_noncanonical",
+            "skipped",
+            "unexpected",
+            "new",
+            "unexpected_new",
+        )
+        for classification in rejected:
+            with self.subTest(classification=classification), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                request = make_request(root)
+                records = list(request.manifest.worktrees)
+                records[1] = replace(records[1], classification=classification)
+                manifest = replace(request.manifest, worktrees=tuple(records))
+                plan = build_plan(manifest)
+                assert request.approval is not None
+                approval = SignedApproval(
+                    replace(
+                        request.approval.envelope,
+                        manifest_sha256=sha256_hex(canonical_json_bytes(manifest)),
+                        plan_sha256=plan.sha256,
+                    ),
+                    request.approval.signature,
+                )
+                incomplete = replace(
+                    request,
+                    manifest=manifest,
+                    plan=plan,
+                    approval=approval,
+                )
+
+                with self.assertRaisesRegex(
+                    TransactionError, "manifest topology is incomplete"
+                ):
+                    apply_plan(incomplete)
+
+                self.assertFalse((root / "target" / ".beads" / "redirect").exists())
+                self.assertFalse((root / "control" / "nonces").exists())
+                self.assertFalse((root / "control" / "journals").exists())
+
+    def test_recovery_rejects_incomplete_topology_without_durable_mutation(self) -> None:
+        rejected = (
+            "missing",
+            "unsupported",
+            "unresolved",
+            "unresolved_noncanonical",
+            "skipped",
+            "unexpected",
+            "new",
+            "unexpected_new",
+        )
+        for classification in rejected:
+            with self.subTest(classification=classification), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                request = make_request(root)
+                with self.assertRaises(TransactionCrash):
+                    apply_plan(replace(request, fault_at="after-rename"))
+                recovery = make_recovery_request(request)
+                records = list(request.manifest.worktrees)
+                records[1] = replace(records[1], classification=classification)
+                manifest = replace(request.manifest, worktrees=tuple(records))
+                plan = build_plan(manifest)
+                assert recovery.approval is not None
+                approval = SignedApproval(
+                    replace(
+                        recovery.approval.envelope,
+                        manifest_sha256=sha256_hex(canonical_json_bytes(manifest)),
+                        plan_sha256=plan.sha256,
+                    ),
+                    recovery.approval.signature,
+                )
+                incomplete = replace(
+                    recovery,
+                    manifest=manifest,
+                    plan=plan,
+                    approval=approval,
+                )
+                journal_path = request.control.journal_path(str(request.run_id))
+                before_journal = journal_path.read_bytes()
+                redirect = root / "target" / ".beads" / "redirect"
+                before_redirect = redirect.read_bytes()
+                nonce_root = root / "control" / "nonces"
+                before_nonces = {
+                    path.name: path.read_bytes() for path in nonce_root.iterdir()
+                }
+
+                with self.assertRaisesRegex(
+                    TransactionError, "manifest topology is incomplete"
+                ):
+                    recover_run(incomplete)
+
+                self.assertEqual(journal_path.read_bytes(), before_journal)
+                self.assertEqual(redirect.read_bytes(), before_redirect)
+                self.assertEqual(
+                    {path.name: path.read_bytes() for path in nonce_root.iterdir()},
+                    before_nonces,
+                )
+
     def test_apply_requires_literal_flag_and_all_bindings(self) -> None:
         with (
             tempfile.TemporaryDirectory() as temp,

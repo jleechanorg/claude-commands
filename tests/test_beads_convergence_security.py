@@ -11,7 +11,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from scripts.beads_convergence.approval import ApprovalError, SshApprovalVerifier
-from scripts.beads_convergence.transaction import (
+from tests.beads_convergence_fixture_harness import (
     FileControlStore,
     FixtureControlStore,
     TransactionError,
@@ -51,7 +51,7 @@ class ConvergenceSecurityTest(unittest.TestCase):
             os.chmod(local, 0o755)
             with (
                 mock.patch(
-                    "scripts.beads_convergence.transaction.pwd.getpwuid",
+                    "tests.beads_convergence_fixture_harness.pwd.getpwuid",
                     return_value=SimpleNamespace(pw_dir=str(home)),
                 ),
                 self.assertRaisesRegex(TransactionError, "unsafe control directory"),
@@ -65,7 +65,7 @@ class ConvergenceSecurityTest(unittest.TestCase):
             os.chmod(home, 0o755)
             with (
                 mock.patch(
-                    "scripts.beads_convergence.transaction.pwd.getpwuid",
+                    "tests.beads_convergence_fixture_harness.pwd.getpwuid",
                     return_value=SimpleNamespace(pw_dir=str(home)),
                 ),
                 self.assertRaisesRegex(TransactionError, "unsafe control directory"),
@@ -77,7 +77,7 @@ class ConvergenceSecurityTest(unittest.TestCase):
             home = Path(temp) / "home"
             home.mkdir(mode=0o700)
             with mock.patch(
-                "scripts.beads_convergence.transaction.pwd.getpwuid",
+                "tests.beads_convergence_fixture_harness.pwd.getpwuid",
                 return_value=SimpleNamespace(pw_dir=str(home)),
             ):
                 store = FileControlStore()
@@ -93,7 +93,7 @@ class ConvergenceSecurityTest(unittest.TestCase):
             (home / ".local").mkdir(parents=True, mode=0o700)
             os.chmod(home, 0o700)
             with mock.patch(
-                "scripts.beads_convergence.transaction.pwd.getpwuid",
+                "tests.beads_convergence_fixture_harness.pwd.getpwuid",
                 return_value=SimpleNamespace(pw_dir=str(home)),
             ):
                 store = FileControlStore()

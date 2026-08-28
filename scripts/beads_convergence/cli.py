@@ -9,7 +9,6 @@ operation.
 from __future__ import annotations
 
 import argparse
-import datetime as datetime_module
 import hashlib
 import json
 import os
@@ -27,13 +26,7 @@ from .inventory import build_manifest
 from .models import ApprovalEnvelope, BinaryBinding, Manifest, Registry
 from .planner import Plan, build_plan, plan_all
 from .registry import ValidatedRepository, load_registry, validate_registry
-from .transaction import (
-    ApplyRequest,
-    FileControlStore,
-    RecoveryRequest,
-    apply_plan,
-    recover_run,
-)
+from .transaction import TransactionError
 
 EXIT_OK = 0
 EXIT_FAILURE = 1
@@ -480,6 +473,12 @@ def _run(args: argparse.Namespace) -> int:
             for item in repositories:
                 item.close()
 
+    if args.command in ("apply", "recover"):
+        raise TransactionError(
+            "production writer lease is unavailable; "
+            f"{args.command} is disabled before mutation"
+        )
+
     registry = load_registry(args.registry, args.expected_registry_sha256)
     registry_sha256 = sha256_hex(canonical_json_bytes(registry))
 
@@ -503,7 +502,6 @@ def _run(args: argparse.Namespace) -> int:
         })
         return receipt.exit_code
 
-    config = _repo(registry, args.repo)
     if args.command in ("inventory", "plan"):
         selected, repositories = _validated_repo(registry, args.repo)
         try:
@@ -528,106 +526,6 @@ def _run(args: argparse.Namespace) -> int:
         finally:
             for item in repositories:
                 item.close()
-
-    if args.command == "apply":
-        # Apply must attest the complete registry before it consumes any
-        # operator-supplied artifact.  The transaction layer repeats its own
-        # checks and still rejects the production adapter/control boundary.
-        _, repositories = _validated_repo(registry, args.repo)
-        for item in repositories:
-            item.close()
-        manifest = _load_manifest(args.manifest, args.expected_manifest_sha256)
-        if manifest.repo_id != args.repo or manifest.registry_sha256 != registry_sha256:
-            raise ValueError("manifest repository or registry binding does not match")
-        _binding_args_match(args, config, manifest)
-        plan_value = build_plan(manifest)
-        if plan_value.sha256 != args.expected_plan_sha256:
-            raise ValueError("recomputed plan SHA-256 does not match expected digest")
-        signed = _approval(args.approval, args.approval_signature)
-        request = ApplyRequest(
-            True,
-            registry,
-            manifest,
-            plan_value,
-            BrSqliteV1Adapter(),
-            signed,
-            _pinned_verifier(),
-            FileControlStore(_control_root()),
-            datetime_module.datetime.now(datetime_module.timezone.utc).isoformat().replace("+00:00", "Z"),
-        )
-        receipt = apply_plan(request)
-        return _transaction_success(args, receipt, status=receipt.status)
-
-    if args.command == "recover":
-        if args.repo != config.repo_id:
-            raise ValueError("recovery repository binding does not match")
-        _, repositories = _validated_repo(registry, args.repo)
-        for item in repositories:
-            item.close()
-        _config_binding_args_match(args, config)
-        # Rebuild the manifest from retained validation authority.  The supplied
-        # artifact remains an independent operator binding, not a mutable plan
-        # input or an authorization source.
-        supplied_manifest = _load_manifest(args.manifest, args.expected_manifest_sha256)
-        if supplied_manifest.repo_id != args.repo or supplied_manifest.registry_sha256 != registry_sha256:
-            raise ValueError("manifest repository or registry binding does not match")
-        _binding_args_match(args, config, supplied_manifest)
-        selected, repositories = _validated_repo(registry, args.repo)
-        try:
-            adapter = BrSqliteV1Adapter()
-            manifest = build_manifest(selected, adapter)
-        finally:
-            for item in repositories:
-                item.close()
-        if sha256_hex(canonical_json_bytes(manifest)) != sha256_hex(canonical_json_bytes(supplied_manifest)):
-            raise ValueError("fresh recovery manifest does not match expected manifest")
-        plan_value = build_plan(manifest)
-        if plan_value.sha256 != args.expected_plan_sha256:
-            raise ValueError("recomputed plan SHA-256 does not match expected digest")
-
-        # Recovery is deliberately still delegated to the transaction boundary;
-        # the production implementation rejects non-fixture control stores.
-        signed = _approval(args.approval, args.approval_signature)
-        if (
-            signed.envelope.operation != "recover"
-            or signed.envelope.repo_id != args.repo
-            or signed.envelope.registry_sha256 != registry_sha256
-            or signed.envelope.canonical_beads != args.expected_canonical
-            or signed.envelope.adapter != args.expected_adapter
-            or signed.envelope.tracker_binary != config.tracker_binary
-            or signed.envelope.git_binary != config.git_binary
-            or signed.envelope.run_id != args.run_id
-            or signed.envelope.journal_sha256 != args.expected_journal_sha256
-        ):
-            raise ValueError("recovery approval binding does not match")
-        control = FileControlStore(_control_root())
-        journal = control.load_journal(args.run_id)
-        if sha256_hex(canonical_json_bytes(journal)) != args.expected_journal_sha256:
-            raise ValueError("journal SHA-256 does not match expected digest")
-        if journal.get("repo_id") != args.repo or journal.get("canonical_beads") != str(args.expected_canonical):
-            raise ValueError("journal binding does not match operator bindings")
-        request = RecoveryRequest(
-            control,
-            adapter,
-            args.run_id,
-            True,
-            registry,
-            manifest,
-            plan_value,
-            signed,
-            _pinned_verifier(),
-            datetime_module.datetime.now(datetime_module.timezone.utc).isoformat().replace("+00:00", "Z"),
-            args.expected_journal_sha256,
-        )
-        receipt = recover_run(request)
-        return _transaction_success(
-            args,
-            receipt,
-            status=receipt.status,
-            # recover_run has verified this exact signed capability before
-            # returning either COMMITTED, ROLLED_BACK, or NEEDS_OPERATOR.
-            signer=(signed.envelope.signer_principal, signed.envelope.signer_fingerprint),
-        )
 
     raise ValueError("unknown command")
 
