@@ -9,10 +9,12 @@ represented as protected by these helpers.
 
 from __future__ import annotations
 
+import errno
 import fcntl
 import hashlib
 import json
 import os
+import pwd
 import stat
 import sys
 import uuid
@@ -125,11 +127,58 @@ class FileControlStore:
     fixture_only = False
     _CHILDREN = ("journals", "receipts", "nonces", "locks")
 
-    def __init__(self, root: Path) -> None:
-        self.root = Path(root)
+    def __init__(self, root: Path | None = None) -> None:
+        if self.fixture_only:
+            if root is None:
+                raise TransactionError("fixture control root is required")
+            self.root = Path(root)
+            self._protected_start = len(self.root.parts) - 2
+            self._create_start = self._protected_start
+        else:
+            home = Path(pwd.getpwuid(os.geteuid()).pw_dir)
+            self.root = home / ".local/state/beads-convergence/control"
+            if root is not None and Path(root) != self.root:
+                raise TransactionError("control root is fixed by the effective user")
+            self._protected_start = len(home.parts) - 1
+            self._create_start = len(home.parts) - 1
         self._root_fd = -1
         self._root_identity: tuple[int, int] | None = None
+        self._ancestors: dict[int, tuple[int, int, int]] = {}
         self._directories: dict[str, tuple[int, int, int]] = {}
+        self._active_locks: list[tuple[str, int, int, int]] = []
+
+    @staticmethod
+    def _directory_flags() -> int:
+        nofollow = getattr(os, "O_NOFOLLOW", None)
+        directory = getattr(os, "O_DIRECTORY", None)
+        if not isinstance(nofollow, int) or nofollow == 0:
+            raise TransactionError("O_NOFOLLOW is unavailable")
+        if not isinstance(directory, int) or directory == 0:
+            raise TransactionError("O_DIRECTORY is unavailable")
+        return os.O_RDONLY | directory | getattr(os, "O_CLOEXEC", 0) | nofollow
+
+    @staticmethod
+    def _artifact_flags(flags: int) -> int:
+        nofollow = getattr(os, "O_NOFOLLOW", None)
+        if not isinstance(nofollow, int) or nofollow == 0:
+            raise TransactionError("O_NOFOLLOW is unavailable")
+        return flags | getattr(os, "O_CLOEXEC", 0) | nofollow
+
+    def _open_control_component(self, directory_fd: int, component: str) -> int:
+        try:
+            return os.open(component, self._directory_flags(), dir_fd=directory_fd)
+        except OSError as exc:
+            if (
+                sys.platform == "darwin"
+                and component in {"var", "tmp"}
+                and exc.errno in (errno.ELOOP, errno.ENOTDIR)
+            ):
+                alias_root = os.open("private", self._directory_flags(), dir_fd=directory_fd)
+                try:
+                    return os.open(component, self._directory_flags(), dir_fd=alias_root)
+                finally:
+                    os.close(alias_root)
+            raise
 
     @staticmethod
     def _token(value: str, label: str) -> str:
@@ -162,27 +211,74 @@ class FileControlStore:
             raise TransactionError("unsafe control artifact")
         return info
 
+    def _verify_control_path(self) -> None:
+        """Bind and re-open every effective-user control ancestor by identity."""
+
+        parts = self.root.parts
+        if not self.root.is_absolute() or not parts or parts[0] != os.sep:
+            raise TransactionError("control hierarchy is unavailable")
+        initial = self._root_fd < 0
+        current = os.open(os.sep, self._directory_flags())
+        try:
+            for index, component in enumerate(parts[1:]):
+                try:
+                    nxt = self._open_control_component(current, component)
+                except FileNotFoundError:
+                    if not initial or index < self._create_start:
+                        raise
+                    os.mkdir(component, 0o700, dir_fd=current)
+                    _durable_fsync(current)
+                    nxt = self._open_control_component(current, component)
+                if index >= self._protected_start:
+                    info = self._directory_info(nxt)
+                    retained = self._ancestors.get(index)
+                    identity = (info.st_dev, info.st_ino)
+                    if retained is None:
+                        self._ancestors[index] = (os.dup(nxt), *identity)
+                    else:
+                        retained_fd, device, inode = retained
+                        retained_info = self._directory_info(retained_fd)
+                        if (
+                            (retained_info.st_dev, retained_info.st_ino) != (device, inode)
+                            or identity != (device, inode)
+                        ):
+                            raise TransactionError("retained control directory changed")
+                if index == len(parts) - 2:
+                    info = self._directory_info(nxt)
+                    identity = (info.st_dev, info.st_ino)
+                    if self._root_fd < 0:
+                        self._root_fd = os.dup(nxt)
+                        self._root_identity = identity
+                    elif self._root_identity != identity:
+                        raise TransactionError("retained control directory changed")
+                os.close(current)
+                current = nxt
+        except (OSError, TransactionError) as exc:
+            if initial:
+                self._close_retained()
+            if isinstance(exc, TransactionError):
+                raise
+            raise TransactionError("control hierarchy is unavailable") from exc
+        finally:
+            os.close(current)
+
+    def _close_retained(self) -> None:
+        for fd, _device, _inode in self._ancestors.values():
+            os.close(fd)
+        self._ancestors.clear()
+        if self._root_fd >= 0:
+            os.close(self._root_fd)
+            self._root_fd = -1
+        self._root_identity = None
+
+    def _open_child_directory(self, child: str) -> int:
+        try:
+            return os.open(child, self._directory_flags(), dir_fd=self._root_fd)
+        except OSError as exc:
+            raise TransactionError("control hierarchy is unavailable") from exc
+
     def _ensure(self) -> None:
-        if self._root_fd < 0:
-            try:
-                with open_trusted_tree(Path("/"), self.root.parent) as parent:
-                    try:
-                        os.mkdir(self.root.name, 0o700, dir_fd=parent.fd)
-                        _durable_fsync(parent.fd)
-                    except FileExistsError:
-                        pass
-                    self._root_fd = os.open(
-                        self.root.name,
-                        os.O_RDONLY
-                        | getattr(os, "O_DIRECTORY", 0)
-                        | getattr(os, "O_CLOEXEC", 0)
-                        | getattr(os, "O_NOFOLLOW", 0),
-                        dir_fd=parent.fd,
-                    )
-            except (FsafetyError, OSError) as exc:
-                raise TransactionError("control hierarchy is unavailable") from exc
-            root = self._directory_info(self._root_fd)
-            self._root_identity = (root.st_dev, root.st_ino)
+        self._verify_control_path()
         root_info = self._directory_info(self._root_fd)
         if self._root_identity != (root_info.st_dev, root_info.st_ino):
             raise TransactionError("retained control directory changed")
@@ -194,23 +290,23 @@ class FileControlStore:
                     _durable_fsync(self._root_fd)
                 except FileExistsError:
                     pass
-                try:
-                    fd = os.open(
-                        child,
-                        os.O_RDONLY
-                        | getattr(os, "O_DIRECTORY", 0)
-                        | getattr(os, "O_CLOEXEC", 0)
-                        | getattr(os, "O_NOFOLLOW", 0),
-                        dir_fd=self._root_fd,
-                    )
-                except OSError as exc:
-                    raise TransactionError("control hierarchy is unavailable") from exc
+                fd = self._open_child_directory(child)
                 info = self._directory_info(fd)
                 self._directories[child] = (fd, info.st_dev, info.st_ino)
             else:
                 fd, device, inode = retained
                 info = self._directory_info(fd)
-                if (info.st_dev, info.st_ino) != (device, inode):
+                reopened = -1
+                try:
+                    reopened = self._open_child_directory(child)
+                    reopened_info = self._directory_info(reopened)
+                finally:
+                    if reopened >= 0:
+                        os.close(reopened)
+                if (
+                    (info.st_dev, info.st_ino) != (device, inode)
+                    or (reopened_info.st_dev, reopened_info.st_ino) != (device, inode)
+                ):
                     raise TransactionError("retained control directory changed")
 
     def _directory(self, name: str) -> int:
@@ -222,7 +318,7 @@ class FileControlStore:
         try:
             fd = os.open(
                 name,
-                flags | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                self._artifact_flags(flags),
                 0o600,
                 dir_fd=self._directory(directory),
             )
@@ -331,20 +427,46 @@ class FileControlStore:
 
     @contextmanager
     def lock(self, key: str) -> Iterator[None]:
-        fd = self._open_artifact(
-            "locks", f"{self._token(key, 'canonical key')}.lock", os.O_RDWR | os.O_CREAT
-        )
+        name = f"{self._token(key, 'canonical key')}.lock"
+        fd = self._open_artifact("locks", name, os.O_RDWR | os.O_CREAT)
         try:
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as exc:
                 raise TransactionError("canonical transaction lock is contended") from exc
+            info = self._artifact_info(fd)
+            retained = (name, fd, info.st_dev, info.st_ino)
+            self._active_locks.append(retained)
             yield
         finally:
             try:
                 fcntl.flock(fd, fcntl.LOCK_UN)
             finally:
+                if self._active_locks and self._active_locks[-1][1] == fd:
+                    self._active_locks.pop()
                 os.close(fd)
+
+    def verify_before_redirect_mutation(self) -> None:
+        """Reject namespace replacement before redirect apply or rollback writes."""
+
+        self._ensure()
+        if not self._active_locks:
+            raise TransactionError("redirect mutation requires a retained control lock")
+        lock_directory = self._directories["locks"][0]
+        for name, fd, device, inode in self._active_locks:
+            info = self._artifact_info(fd)
+            if (info.st_dev, info.st_ino) != (device, inode):
+                raise TransactionError("retained control lock changed")
+            try:
+                current = os.open(name, self._artifact_flags(os.O_RDONLY), dir_fd=lock_directory)
+            except OSError as exc:
+                raise TransactionError("retained control lock changed") from exc
+            try:
+                current_info = self._artifact_info(current)
+                if (current_info.st_dev, current_info.st_ino) != (device, inode):
+                    raise TransactionError("retained control lock changed")
+            finally:
+                os.close(current)
 
 
 class FixtureControlStore(FileControlStore):
@@ -471,7 +593,8 @@ def _verify_authority(adapter: object, worktree: DirectoryHandle, canonical: Dir
         raise TransactionError("redirect does not resolve one hop to canonical authority")
 
 
-def _write_redirect(beads: DirectoryHandle, pre: dict[str, Any], intended: str, fault_at: str | None, *, adapter: object, worktree: DirectoryHandle, canonical: DirectoryHandle, executable: object, expected: tuple[int, int]) -> None:
+def _write_redirect(beads: DirectoryHandle, pre: dict[str, Any], intended: str, fault_at: str | None, *, control: FileControlStore, adapter: object, worktree: DirectoryHandle, canonical: DirectoryHandle, executable: object, expected: tuple[int, int]) -> None:
+    control.verify_before_redirect_mutation()
     info = os.fstat(beads.fd)
     if (info.st_dev, info.st_ino) != (pre["parent_device"], pre["parent_inode"]):
         raise TransactionError("redirect parent identity changed")
@@ -580,10 +703,11 @@ def _reattest(adapter: object, manifest: Manifest) -> tuple[object, WriterLease,
         raise TransactionError("typed adapter re-attestation failed") from exc
 
 
-def _restore_redirect(beads: DirectoryHandle, pre: dict[str, Any], intended: str, *, adapter: object, worktree: DirectoryHandle, canonical: DirectoryHandle) -> None:
+def _restore_redirect(beads: DirectoryHandle, pre: dict[str, Any], intended: str, *, control: FileControlStore, adapter: object, worktree: DirectoryHandle, canonical: DirectoryHandle) -> None:
     """Reverse only an exactly-recorded intended redirect; preserve other bytes."""
 
     del adapter, worktree, canonical
+    control.verify_before_redirect_mutation()
 
     actual = _redirect_state(beads)
     if _matches_pre(actual, pre):
@@ -614,7 +738,7 @@ def _rollback(journal: dict[str, Any], control: FileControlStore, adapter: objec
     try:
         for action in reversed(journal["actions"]):
             worktree, beads = topology.action_target(action)
-            _restore_redirect(beads, action["pre"], str(action["intended"]), adapter=adapter, worktree=worktree, canonical=topology.canonical)
+            _restore_redirect(beads, action["pre"], str(action["intended"]), control=control, adapter=adapter, worktree=worktree, canonical=topology.canonical)
             action["state"] = "ROLLED_BACK"
             control.save_journal(journal)
         journal["status"] = "ROLLED_BACK"
@@ -751,7 +875,7 @@ def apply_plan(request: ApplyRequest) -> ApplyReceipt:
             for action in journal["actions"]:
                 worktree, beads = topology.action_target(action)
                 _assert_sources(beads, action["sources"])
-                _write_redirect(beads, action["pre"], str(action["intended"]), request.fault_at, adapter=request.adapter, worktree=worktree, canonical=topology.canonical, executable=executable, expected=(action["directory_device"], action["directory_inode"]))
+                _write_redirect(beads, action["pre"], str(action["intended"]), request.fault_at, control=request.control, adapter=request.adapter, worktree=worktree, canonical=topology.canonical, executable=executable, expected=(action["directory_device"], action["directory_inode"]))
                 action["state"] = "APPLIED"
                 request.control.save_journal(journal)
                 if request.fault_at == "after-progress":
@@ -851,7 +975,7 @@ def recover_run(request: RecoveryRequest) -> RecoveryReceipt:
             for action in reversed(journal["actions"]):
                 worktree, beads = topology.action_target(action)
                 _assert_sources(beads, action["sources"])
-                _restore_redirect(beads, action["pre"], str(action["intended"]), adapter=request.adapter, worktree=worktree, canonical=topology.canonical)
+                _restore_redirect(beads, action["pre"], str(action["intended"]), control=request.control, adapter=request.adapter, worktree=worktree, canonical=topology.canonical)
                 action["state"] = "ROLLED_BACK"
                 request.control.save_journal(journal)
             journal["status"] = "ROLLED_BACK"
