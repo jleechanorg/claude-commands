@@ -58,6 +58,9 @@ def valid_manifest_dict() -> dict[str, object]:
         "canonical_beads": "/absolute/projects/worldarchitect.ai/.beads",
         "tracker_binary": valid_binary(),
         "git_binary": valid_binary("/absolute/bin/git"),
+        "redirect_codec": "br-sqlite-v1-redirect-v1",
+        "redirect_intended_bytes": "/absolute/projects/worldarchitect.ai/.beads\n",
+        "redirect_oracle_receipt_sha256": "d" * 64,
         "worktrees": [
             {
                 "path": "/absolute/projects/worldarchitect.ai",
@@ -66,6 +69,14 @@ def valid_manifest_dict() -> dict[str, object]:
                 "directory_inode": 2,
                 "sources": [],
                 "redirect": None,
+                "backend": "sqlite",
+                "health": {
+                    "dirty_count": 0,
+                    "db_newer": False,
+                    "jsonl_newer": False,
+                    "workspace_health": "healthy",
+                    "receipt_sha256": "e" * 64,
+                },
             }
         ],
     }

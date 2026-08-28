@@ -6,7 +6,8 @@
   "additionalProperties": false,
   "required": [
     "schema", "registry_sha256", "repo_id", "adapter", "canonical_beads",
-    "tracker_binary", "git_binary", "worktrees"
+    "tracker_binary", "git_binary", "worktrees", "redirect_codec",
+    "redirect_intended_bytes", "redirect_oracle_receipt_sha256"
   ],
   "properties": {
     "schema": { "const": "beads.redirect-convergence.manifest.v1" },
@@ -16,7 +17,10 @@
     "canonical_beads": { "$ref": "#/$defs/absolutePath" },
     "tracker_binary": { "$ref": "#/$defs/binary" },
     "git_binary": { "$ref": "#/$defs/binary" },
-    "worktrees": { "type": "array", "items": { "$ref": "#/$defs/worktree" } }
+    "worktrees": { "type": "array", "items": { "$ref": "#/$defs/worktree" } },
+    "redirect_codec": { "type": ["string", "null"] },
+    "redirect_intended_bytes": { "type": ["string", "null"] },
+    "redirect_oracle_receipt_sha256": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }
   },
   "$defs": {
     "absolutePath": { "type": "string", "pattern": "^/[^\\u0000]*$" },
@@ -48,7 +52,7 @@
       "additionalProperties": false,
       "required": [
         "present", "mode", "bytes", "parent_device", "parent_inode",
-        "codec", "intended_bytes"
+        "codec", "intended_bytes", "oracle_receipt_sha256"
       ],
       "properties": {
         "present": { "type": "boolean" },
@@ -64,7 +68,23 @@
           "type": "integer", "minimum": 0
         },
         "codec": { "type": ["string", "null"] },
-        "intended_bytes": { "type": ["string", "null"] }
+        "intended_bytes": { "type": ["string", "null"] },
+        "oracle_receipt_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dirty_count", "db_newer", "jsonl_newer", "workspace_health",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "dirty_count": { "type": "integer", "minimum": 0 },
+        "db_newer": { "type": "boolean" },
+        "jsonl_newer": { "type": "boolean" },
+        "workspace_health": { "type": "string", "minLength": 1 },
+        "receipt_sha256": { "$ref": "#/$defs/sha256" }
       }
     },
     "worktree": {
@@ -72,7 +92,7 @@
       "additionalProperties": false,
       "required": [
         "path", "classification", "directory_device", "directory_inode",
-        "sources", "redirect"
+        "sources", "redirect", "backend", "health"
       ],
       "properties": {
         "path": { "$ref": "#/$defs/absolutePath" },
@@ -89,7 +109,9 @@
           "type": "integer", "minimum": 0
         },
         "sources": { "type": "array", "items": { "$ref": "#/$defs/source" } },
-        "redirect": { "anyOf": [{ "$ref": "#/$defs/redirect" }, { "type": "null" }] }
+        "redirect": { "anyOf": [{ "$ref": "#/$defs/redirect" }, { "type": "null" }] },
+        "backend": { "type": ["string", "null"] },
+        "health": { "anyOf": [{ "$ref": "#/$defs/health" }, { "type": "null" }] }
       }
     }
   }

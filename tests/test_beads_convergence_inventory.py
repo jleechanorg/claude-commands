@@ -10,18 +10,38 @@ from unittest.mock import patch
 
 from scripts.beads_convergence.adapters import (
     BackendAttestation,
+    RedirectOracle,
     SourceMember,
     SourceSnapshot,
 )
-from scripts.beads_convergence.models import BinaryBinding, RepositoryConfig
-from scripts.beads_convergence.registry import validate_repository
+from scripts.beads_convergence.models import BinaryBinding, Registry, RepositoryConfig
+from scripts.beads_convergence.registry import validate_registry
 
 
 class FakeAdapter:
     adapter_id = "br-sqlite-v1"
     source_names = ("beads.db", "beads.db-wal", "beads.db-shm", "issues.jsonl")
-    redirect_codec_id = "br-sqlite-v1-redirect-v1"
-    intended_redirect_bytes = "/canonical/.beads\n"
+
+    def verify_git_binary(self, binding: object) -> object:
+        return SimpleNamespace(binding=binding, close=lambda: None)
+
+    def redirect_oracle(
+        self, canonical: Path, worktree: object, executable: object
+    ) -> RedirectOracle:
+        return RedirectOracle(
+            "br-sqlite-v1-redirect-v1",
+            b"/canonical/.beads\n",
+            "c" * 64,
+        )
+
+    def verify_health(self, worktree: object, executable: object) -> object:
+        return SimpleNamespace(
+            dirty_count=0,
+            db_newer=False,
+            jsonl_newer=False,
+            workspace_health="healthy",
+            raw={"workspace_health": "healthy"},
+        )
 
     def verify_binary(self, binding: object) -> object:
         return SimpleNamespace(binding=binding, close=lambda: None)
@@ -59,7 +79,9 @@ def _repository(root: Path, *, extras: tuple[Path, ...] = ()) -> object:
         BinaryBinding(Path("/bin/git"), "2.0", "b" * 64),
         evidence,
     )
-    return validate_repository(config)
+    return validate_registry(
+        Registry("beads.redirect-convergence.registry.v1", "test", (config,))
+    )[0]
 
 
 class InventoryTest(unittest.TestCase):
@@ -72,6 +94,8 @@ class InventoryTest(unittest.TestCase):
                 porcelain = (
                     f"worktree {repository.config.repository_seed}\n"
                     "HEAD 0123456789abcdef0123456789abcdef01234567\n\n"
+                    f"worktree {extra}\n"
+                    "HEAD 0123456789abcdef0123456789abcdef01234567\n\n"
                 ).encode()
                 result = SimpleNamespace(stdout=porcelain, stderr=b"", returncode=0)
                 with patch(
@@ -80,6 +104,9 @@ class InventoryTest(unittest.TestCase):
                 ), patch(
                     "scripts.beads_convergence.inventory.open_verified_executable",
                     return_value=SimpleNamespace(close=lambda: None),
+                ), patch(
+                    "scripts.beads_convergence.inventory._common_dir_identity",
+                    return_value=(repository.seed.device, repository.seed.inode),
                 ):
                     from scripts.beads_convergence.inventory import build_manifest
 
@@ -87,6 +114,14 @@ class InventoryTest(unittest.TestCase):
             self.assertEqual(
                 tuple(record.path for record in manifest.worktrees),
                 (extra, root / "seed"),
+            )
+            self.assertEqual(manifest.redirect_codec, "br-sqlite-v1-redirect-v1")
+            self.assertEqual(manifest.redirect_oracle_receipt_sha256, "c" * 64)
+            self.assertTrue(
+                all(record.health is not None for record in manifest.worktrees)
+            )
+            self.assertTrue(
+                all(record.backend == "sqlite" for record in manifest.worktrees)
             )
 
     def test_inventory_does_not_change_source_or_redirect_hashes(self) -> None:
@@ -115,6 +150,9 @@ class InventoryTest(unittest.TestCase):
                 ), patch(
                     "scripts.beads_convergence.inventory.open_verified_executable",
                     return_value=SimpleNamespace(close=lambda: None),
+                ), patch(
+                    "scripts.beads_convergence.inventory._common_dir_identity",
+                    return_value=(repository.seed.device, repository.seed.inode),
                 ):
                     from scripts.beads_convergence.inventory import build_manifest
 
@@ -139,6 +177,9 @@ class InventoryTest(unittest.TestCase):
                 ), patch(
                     "scripts.beads_convergence.inventory.open_verified_executable",
                     return_value=SimpleNamespace(close=lambda: None),
+                ), patch(
+                    "scripts.beads_convergence.inventory._common_dir_identity",
+                    return_value=(repository.seed.device, repository.seed.inode),
                 ):
                     from scripts.beads_convergence.inventory import (
                         InventoryError,
@@ -146,7 +187,7 @@ class InventoryTest(unittest.TestCase):
                     )
 
                     with self.assertRaisesRegex(InventoryError, "malformed Git"):
-                        discover_worktrees(repository)
+                        discover_worktrees(repository, _adapter=FakeAdapter())
 
 
 if __name__ == "__main__":

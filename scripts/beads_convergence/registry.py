@@ -8,7 +8,7 @@ import stat
 from dataclasses import dataclass
 from pathlib import Path
 
-from .codec import ContractError, decode_registry
+from .codec import ContractError, canonical_json_bytes, decode_registry, sha256_hex
 from .fsafety import (
     DirectoryHandle,
     FsafetyError,
@@ -34,6 +34,7 @@ class ValidatedRepository:
     canonical: DirectoryHandle
     evidence: DirectoryHandle
     allowed_roots: tuple[DirectoryHandle, ...]
+    registry_sha256: str | None = None
 
     @property
     def physical_identity(self) -> tuple[int, int]:
@@ -120,6 +121,8 @@ def validate_registry(registry: Registry) -> tuple[ValidatedRepository, ...]:
         raise RegistryError("unsupported registry schema")
     seen_ids: set[str] = set()
     seen_authorities: set[tuple[int, int]] = set()
+    seen_managed: set[tuple[int, int]] = set()
+    registry_sha256 = sha256_hex(canonical_json_bytes(registry))
     validated: list[ValidatedRepository] = []
     try:
         for config in registry.repositories:
@@ -132,6 +135,11 @@ def validate_registry(registry: Registry) -> tuple[ValidatedRepository, ...]:
             if item.physical_identity in seen_authorities:
                 raise RegistryError("duplicate canonical authority")
             seen_authorities.add(item.physical_identity)
+            for identity in _managed_beads_identities(item):
+                if identity in seen_managed:
+                    raise RegistryError("duplicate managed .beads identity")
+                seen_managed.add(identity)
+            item.registry_sha256 = registry_sha256
             validated.append(item)
         return tuple(validated)
     except (FsafetyError, OSError) as exc:
@@ -142,6 +150,44 @@ def validate_registry(registry: Registry) -> tuple[ValidatedRepository, ...]:
         for item in validated:
             item.close()
         raise
+
+
+def _managed_beads_identities(
+    repository: ValidatedRepository,
+) -> set[tuple[int, int]]:
+    """Collect declared seed/extra stores through retained root descriptors."""
+
+    config = repository.config
+    paths = (config.repository_seed, *config.additional_worktrees)
+    identities: set[tuple[int, int]] = set()
+    for path in paths:
+        root = next(
+            (
+                candidate
+                for candidate in repository.allowed_roots
+                if _under(candidate.display_path, path)
+            ),
+            None,
+        )
+        if root is None:
+            raise RegistryError("managed worktree is outside allowed roots")
+        try:
+            worktree = open_descendant(root, path)
+        except FileNotFoundError:
+            continue
+        try:
+            try:
+                beads = open_descendant(worktree, path / ".beads")
+            except FileNotFoundError:
+                continue
+            try:
+                identities.add((beads.device, beads.inode))
+            finally:
+                beads.close()
+        finally:
+            worktree.close()
+    identities.add((repository.canonical.device, repository.canonical.inode))
+    return identities
 
 
 def validate_repository(config: RepositoryConfig) -> ValidatedRepository:

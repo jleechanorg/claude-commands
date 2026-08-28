@@ -90,6 +90,51 @@ class RegistryTest(unittest.TestCase):
                     Registry("beads.redirect-convergence.registry.v1", "h", (config,))
                 )
 
+    def test_registry_rejects_duplicate_managed_store_identities(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            first = _config(root, "first")
+            second = _config(root, "second")
+            for config in (first, second):
+                config.repository_seed.mkdir(parents=True, exist_ok=True)
+                config.canonical_beads.mkdir(parents=True, exist_ok=True)
+                config.evidence_root.mkdir(parents=True, exist_ok=True)
+            shared = root / "shared-extra"
+            (shared / ".beads").mkdir(parents=True)
+            first = RepositoryConfig(
+                first.repo_id, first.adapter, first.repository_seed,
+                first.canonical_beads, first.allowed_worktree_roots, (shared,),
+                first.tracker_binary, first.git_binary, first.evidence_root,
+            )
+            second = RepositoryConfig(
+                second.repo_id, second.adapter, second.repository_seed,
+                second.canonical_beads, second.allowed_worktree_roots, (shared,),
+                second.tracker_binary, second.git_binary, second.evidence_root,
+            )
+            with self.assertRaisesRegex(RegistryError, "duplicate managed"):
+                validate_registry(
+                    Registry(
+                        "beads.redirect-convergence.registry.v1", "h", (first, second)
+                    )
+                )
+
+    def test_validated_repository_carries_full_registry_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            config = _config(root)
+            config.repository_seed.mkdir(parents=True)
+            config.canonical_beads.mkdir()
+            config.evidence_root.mkdir(parents=True)
+            registry = Registry(
+                "beads.redirect-convergence.registry.v1", "h", (config,)
+            )
+            expected = hashlib.sha256(canonical_json_bytes(registry)).hexdigest()
+            validated = validate_registry(registry)
+            try:
+                self.assertEqual(validated[0].registry_sha256, expected)
+            finally:
+                validated[0].close()
+
     def test_component_walk_rejects_symlink_and_traversal(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .models import (
     BinaryBinding,
+    HealthFingerprint,
     Manifest,
     Plan,
     RedirectState,
@@ -79,6 +80,9 @@ def decode_manifest(value: object) -> Manifest:
             "tracker_binary",
             "git_binary",
             "worktrees",
+            "redirect_codec",
+            "redirect_intended_bytes",
+            "redirect_oracle_receipt_sha256",
         },
         "manifest",
     )
@@ -101,6 +105,14 @@ def decode_manifest(value: object) -> Manifest:
         tracker,
         git,
         records,
+        _nullable_string(payload["redirect_codec"], "redirect_codec"),
+        _nullable_string(
+            payload["redirect_intended_bytes"], "redirect_intended_bytes"
+        ),
+        _nullable_hash(
+            payload["redirect_oracle_receipt_sha256"],
+            "redirect_oracle_receipt_sha256",
+        ),
     )
 
 
@@ -187,6 +199,8 @@ def _decode_worktree(value: object) -> WorktreeRecord:
             "directory_inode",
             "sources",
             "redirect",
+            "backend",
+            "health",
         },
         "worktree",
     )
@@ -203,6 +217,10 @@ def _decode_worktree(value: object) -> WorktreeRecord:
         _nonnegative_int(payload["directory_inode"], "directory_inode"),
         tuple(_decode_source(item) for item in sources),
         None if redirect is None else _decode_redirect(redirect),
+        _string(payload["backend"], "worktree.backend")
+        if payload["backend"] is not None
+        else None,
+        None if payload["health"] is None else _decode_health(payload["health"]),
     )
 
 
@@ -230,6 +248,7 @@ def _decode_redirect(value: object) -> RedirectState:
             "parent_inode",
             "codec",
             "intended_bytes",
+            "oracle_receipt_sha256",
         },
         "redirect",
     )
@@ -250,9 +269,38 @@ def _decode_redirect(value: object) -> RedirectState:
         _nonnegative_int(payload["parent_inode"], "redirect.parent_inode"),
         payload["codec"],
         payload["intended_bytes"],
+        None
+        if payload["oracle_receipt_sha256"] is None
+        else _hash(payload["oracle_receipt_sha256"], "redirect.oracle_receipt_sha256"),
     )
 
 
+def _decode_health(value: object) -> HealthFingerprint:
+    payload = _object(value, "health")
+    _exact(
+        payload,
+        {
+            "dirty_count",
+            "db_newer",
+            "jsonl_newer",
+            "workspace_health",
+            "receipt_sha256",
+        },
+        "health",
+    )
+    dirty = _nonnegative_int(payload["dirty_count"], "health.dirty_count")
+    if type(payload["db_newer"]) is not bool:
+        raise ContractError("health.db_newer must be a boolean")
+    if type(payload["jsonl_newer"]) is not bool:
+        raise ContractError("health.jsonl_newer must be a boolean")
+    _string(payload["workspace_health"], "health.workspace_health", nonempty=True)
+    return HealthFingerprint(
+        dirty,
+        payload["db_newer"],
+        payload["jsonl_newer"],
+        payload["workspace_health"],
+        _hash(payload["receipt_sha256"], "health.receipt_sha256"),
+    )
 def _json_value(value: object) -> object:
     if isinstance(value, Path):
         return str(value)
@@ -357,6 +405,14 @@ def _string(value: object, field: str, *, nonempty: bool = False) -> str:
     if type(value) is not str or (nonempty and not value):
         raise ContractError(f"{field} must be a string")
     return value
+
+
+def _nullable_string(value: object, field: str) -> str | None:
+    return None if value is None else _string(value, field)
+
+
+def _nullable_hash(value: object, field: str) -> str | None:
+    return None if value is None else _hash(value, field)
 
 
 def _repo_id(value: object) -> str:

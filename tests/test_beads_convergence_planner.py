@@ -13,6 +13,7 @@ from unittest.mock import patch
 from scripts.beads_convergence.adapters import BrSqliteV1Adapter, HealthAttestation
 from scripts.beads_convergence.models import (
     BinaryBinding,
+    HealthFingerprint,
     Manifest,
     RedirectState,
     Registry,
@@ -37,6 +38,9 @@ def _manifest(
         binary,
         BinaryBinding(Path("/bin/git"), "2.0", "c" * 64),
         worktrees if worktrees is not None else (_worktree("/fixtures/repo-one"),),
+        "br-sqlite-v1-redirect-v1",
+        "/fixtures/repo-one/.beads\n",
+        "d" * 64,
     )
 
 
@@ -59,7 +63,10 @@ def _worktree(path: str, classification: str = "noncanonical") -> WorktreeRecord
             3,
             "br-sqlite-v1-redirect-v1",
             "/fixtures/repo-one/.beads",
+            "d" * 64,
         ),
+        "sqlite",
+        HealthFingerprint(0, False, False, "healthy", "e" * 64),
     )
 
 
@@ -96,6 +103,8 @@ class PlannerTest(unittest.TestCase):
             source_changed.directory_inode,
             (_source("beads.db", "f"), source_changed.sources[1]),
             source_changed.redirect,
+            source_changed.backend,
+            source_changed.health,
         )
         self.assertNotEqual(
             baseline.sha256,
@@ -112,6 +121,7 @@ class PlannerTest(unittest.TestCase):
             redirect.parent_inode,
             redirect.codec,
             "/fixtures/another/.beads",
+            "d" * 64,
         )
         with_redirect = _worktree("/fixtures/repo-one")
         with_redirect = WorktreeRecord(
@@ -121,6 +131,8 @@ class PlannerTest(unittest.TestCase):
             with_redirect.directory_inode,
             with_redirect.sources,
             redirect_changed,
+            with_redirect.backend,
+            with_redirect.health,
         )
         self.assertNotEqual(
             baseline.sha256,
@@ -135,6 +147,8 @@ class PlannerTest(unittest.TestCase):
             identity_changed.directory_inode,
             identity_changed.sources,
             identity_changed.redirect,
+            identity_changed.backend,
+            identity_changed.health,
         )
         self.assertNotEqual(
             baseline.sha256,
@@ -307,7 +321,10 @@ class PlannerTest(unittest.TestCase):
             registry = Registry("beads.redirect-convergence.registry.v1", "h", configs)
             git_results = [
                 SimpleNamespace(
-                    stdout=f"worktree {config.repository_seed}\n\n".encode(),
+                    stdout=(
+                        f"worktree {config.repository_seed}\n\n"
+                        f"worktree {config.additional_worktrees[0]}\n\n"
+                    ).encode(),
                     stderr=b"",
                     returncode=0,
                 )
@@ -320,10 +337,22 @@ class PlannerTest(unittest.TestCase):
             ), patch.object(
                 inventory,
                 "_codec_metadata",
-                return_value=("br-sqlite-v1-redirect-v1", "/canonical/.beads"),
+                return_value=(
+                    "br-sqlite-v1-redirect-v1",
+                    "/canonical/.beads",
+                    "d" * 64,
+                ),
+            ), patch.object(
+                inventory,
+                "_common_dir_identity",
+                return_value=(1, 1),
             ), patch.object(
                 BrSqliteV1Adapter,
                 "verify_binary",
+                return_value=SimpleNamespace(close=lambda: None),
+            ), patch.object(
+                BrSqliteV1Adapter,
+                "verify_git_binary",
                 return_value=SimpleNamespace(close=lambda: None),
             ), patch.object(
                 BrSqliteV1Adapter,

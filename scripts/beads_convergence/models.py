@@ -67,6 +67,16 @@ class RedirectState:
     parent_inode: int
     codec: str | None
     intended_bytes: str | None
+    oracle_receipt_sha256: str | None = None
+
+
+@dataclass(frozen=True)
+class HealthFingerprint:
+    dirty_count: int
+    db_newer: bool
+    jsonl_newer: bool
+    workspace_health: str
+    receipt_sha256: str
 
 
 @dataclass(frozen=True)
@@ -77,6 +87,8 @@ class WorktreeRecord:
     directory_inode: int
     sources: tuple[SourceFingerprint, ...]
     redirect: RedirectState | None
+    backend: str | None = None
+    health: HealthFingerprint | None = None
 
 
 @dataclass(frozen=True)
@@ -89,6 +101,9 @@ class Manifest:
     tracker_binary: BinaryBinding
     git_binary: BinaryBinding
     worktrees: tuple[WorktreeRecord, ...]
+    redirect_codec: str | None = None
+    redirect_intended_bytes: str | None = None
+    redirect_oracle_receipt_sha256: str | None = None
 
 
 @dataclass(frozen=True)

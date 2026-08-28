@@ -88,6 +88,7 @@ def _redirect_payload(redirect: RedirectState) -> dict[str, object]:
         "parent_inode": redirect.parent_inode,
         "codec": redirect.codec,
         "intended_bytes": redirect.intended_bytes,
+        "oracle_receipt_sha256": redirect.oracle_receipt_sha256,
     }
 
 
@@ -103,6 +104,18 @@ def _complete_noncanonical(worktree: object) -> bool:
     if not worktree.path.is_absolute():
         return False
     if worktree.directory_device < 0 or worktree.directory_inode < 0:
+        return False
+    if worktree.backend != "sqlite" or worktree.health is None:
+        return False
+    health = worktree.health
+    if (
+        health.dirty_count != 0
+        or health.db_newer
+        or health.jsonl_newer
+        or health.workspace_health != "healthy"
+        or len(health.receipt_sha256) != 64
+        or not set(health.receipt_sha256).issubset(_HEX_DIGITS)
+    ):
         return False
     names = [source.name for source in worktree.sources]
     if (
@@ -131,6 +144,9 @@ def _complete_noncanonical(worktree: object) -> bool:
         or not redirect.codec
         or redirect.intended_bytes is None
         or not redirect.intended_bytes
+        or redirect.oracle_receipt_sha256 is None
+        or len(redirect.oracle_receipt_sha256) != 64
+        or not set(redirect.oracle_receipt_sha256).issubset(_HEX_DIGITS)
         or redirect.parent_device < 0
         or redirect.parent_inode < 0
     ):
@@ -169,10 +185,19 @@ def build_plan(manifest: Manifest) -> Plan:
     by the manifest but never become actions.
     """
 
+    manifest_attested = (
+        manifest.redirect_codec is not None
+        and bool(manifest.redirect_codec)
+        and manifest.redirect_intended_bytes is not None
+        and bool(manifest.redirect_intended_bytes)
+        and manifest.redirect_oracle_receipt_sha256 is not None
+        and len(manifest.redirect_oracle_receipt_sha256) == 64
+        and set(manifest.redirect_oracle_receipt_sha256).issubset(_HEX_DIGITS)
+    )
     eligible = [
         worktree
         for worktree in manifest.worktrees
-        if _complete_noncanonical(worktree)
+        if manifest_attested and _complete_noncanonical(worktree)
     ]
     eligible.sort(key=lambda item: str(_resolved_path(item.path)))
     actions = tuple(_action(worktree) for worktree in eligible)
@@ -187,7 +212,9 @@ def build_plan(manifest: Manifest) -> Plan:
     )
 
 
-def _plan_repository(config: RepositoryConfig) -> Plan:
+def _plan_repository(
+    config: RepositoryConfig, registry_sha256: str | None = None
+) -> Plan:
     """Validate, inventory, and plan one repository without a mutation path."""
 
     from .adapters import BrSqliteV1Adapter
@@ -195,6 +222,8 @@ def _plan_repository(config: RepositoryConfig) -> Plan:
     from .registry import validate_repository
 
     repository = validate_repository(config)
+    if registry_sha256 is not None:
+        repository.registry_sha256 = registry_sha256
     try:
         adapter = BrSqliteV1Adapter()
         manifest = build_manifest(repository, adapter)
@@ -211,9 +240,30 @@ def plan_all(registry: Registry) -> PlanAllReceipt:
     """
 
     results: list[PlanResult] = []
+    registry_sha256: str | None = None
+    registry_error: Exception | None = None
+    from .registry import validate_registry
+
+    try:
+        validated = validate_registry(registry)
+        try:
+            if validated:
+                registry_sha256 = validated[0].registry_sha256
+        finally:
+            for repository in validated:
+                repository.close()
+    except Exception as exc:
+        registry_error = exc
     for config in sorted(registry.repositories, key=lambda item: item.repo_id):
         try:
-            results.append(PlanResult(config.repo_id, _plan_repository(config)))
+            if registry_error is not None:
+                results.append(PlanResult(config.repo_id, _plan_repository(config)))
+            else:
+                results.append(
+                    PlanResult(
+                        config.repo_id, _plan_repository(config, registry_sha256)
+                    )
+                )
         except Exception as exc:  # isolate one repository's failure
             results.append(PlanResult(config.repo_id, error=str(exc)))
     status = 0 if all(result.ok for result in results) else 1

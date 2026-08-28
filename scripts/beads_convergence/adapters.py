@@ -68,6 +68,13 @@ class SourceSnapshot:
     reason: str = "writer exclusion is unavailable"
 
 
+@dataclass(frozen=True)
+class RedirectOracle:
+    codec_id: str
+    intended_bytes: bytes
+    receipt_sha256: str
+
+
 class _DuplicateField(ValueError):
     pass
 
@@ -104,6 +111,8 @@ class TrackerAdapter(Protocol):
 
     def verify_binary(self, binding: object) -> VerifiedExecutable: ...
 
+    def verify_git_binary(self, binding: object) -> VerifiedExecutable: ...
+
     def attest_backend(self, beads_dir: DirectoryHandle) -> BackendAttestation: ...
 
     def verify_health(
@@ -119,6 +128,13 @@ class TrackerAdapter(Protocol):
     def resolve_authority(
         self, worktree: DirectoryHandle, executable: VerifiedExecutable
     ) -> Path: ...
+
+    def redirect_oracle(
+        self,
+        canonical: Path,
+        worktree: DirectoryHandle,
+        executable: VerifiedExecutable,
+    ) -> RedirectOracle: ...
 
 
 class BrSqliteV1Adapter:
@@ -199,6 +215,17 @@ class BrSqliteV1Adapter:
             if isinstance(exc, AdapterError):
                 raise
             raise AdapterError(str(exc)) from exc
+
+    def redirect_oracle(
+        self,
+        canonical: Path,
+        worktree: DirectoryHandle,
+        executable: VerifiedExecutable,
+    ) -> RedirectOracle:
+        del canonical, worktree, executable
+        raise AdapterError(
+            "br-sqlite-v1 redirect codec oracle is unavailable for this host"
+        )
 
     def attest_backend(self, beads_dir: DirectoryHandle) -> BackendAttestation:
         beads_dir.verify_identity()

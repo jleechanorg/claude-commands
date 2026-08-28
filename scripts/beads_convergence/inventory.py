@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import hashlib
 import os
 import stat
 from pathlib import Path
 from typing import Any
 
-from .adapters import AdapterError, TrackerAdapter
-from .codec import canonical_json_bytes
+from .adapters import AdapterError, BrSqliteV1Adapter, RedirectOracle, TrackerAdapter
+from .codec import canonical_json_bytes, sha256_hex
 from .fsafety import (
     DirectoryHandle,
     FsafetyError,
@@ -20,6 +19,7 @@ from .fsafety import (
 )
 from .models import (
     Manifest,
+    HealthFingerprint,
     RedirectState,
     SourceFingerprint,
     WorktreeRecord,
@@ -87,32 +87,100 @@ def _parse_git_porcelain(raw: bytes) -> tuple[Path, ...]:
     return tuple(paths)
 
 
-def _git_worktrees(repository: Any) -> tuple[Path, ...]:
+def _common_dir_identity(
+    repository: Any, executable: object, path: Path, worktree: DirectoryHandle
+) -> tuple[int, int]:
+    result = run_verified(
+        executable, ("rev-parse", "--git-common-dir"), worktree, timeout=30
+    )
+    if result.returncode != 0:
+        raise InventoryError("Git common-dir query failed")
+    try:
+        raw = result.stdout.decode("utf-8").strip()
+    except UnicodeDecodeError as exc:
+        raise InventoryError("Git common-dir output is malformed") from exc
+    if not raw or "\x00" in raw or "\n" in raw or "\r" in raw:
+        raise InventoryError("Git common-dir output is malformed")
+    common = Path(raw)
+    if not common.is_absolute():
+        common = path / common
+    if not common.is_absolute() or any(part in (".", "..") for part in common.parts):
+        raise InventoryError("Git common-dir output escapes the worktree")
+    try:
+        handle = open_verified_tree(common)
+    except (OSError, FsafetyError) as exc:
+        raise InventoryError("Git common-dir cannot be opened safely") from exc
+    try:
+        return handle.device, handle.inode
+    finally:
+        handle.close()
+
+
+def _git_worktrees(
+    repository: Any, adapter: TrackerAdapter | None = None
+) -> tuple[Path, ...]:
     executable = None
     try:
-        executable = open_verified_executable(repository.config.git_binary)
+        verifier = adapter
+        if verifier is None:
+            verifier = BrSqliteV1Adapter()
+        executable = verifier.verify_git_binary(repository.config.git_binary)
         result = run_verified(executable, _GIT_WORKTREE_COMMAND, repository.seed)
-    except (FsafetyError, UnsupportedCapability, OSError, TimeoutError) as exc:
+        if result.returncode != 0:
+            raise InventoryError("Git worktree discovery failed")
+        discovered = _parse_git_porcelain(result.stdout)
+        seed_common = _common_dir_identity(
+            repository, executable, repository.config.repository_seed, repository.seed
+        )
+        for path in discovered:
+            root = _root_for(repository, path)
+            if root is None:
+                raise InventoryError(f"worktree is outside allowed roots: {path}")
+            try:
+                handle = open_descendant(root, path)
+            except (FileNotFoundError, NotADirectoryError):
+                continue
+            except (OSError, FsafetyError) as exc:
+                raise InventoryError(
+                    f"worktree cannot be opened safely: {path}"
+                ) from exc
+            try:
+                if (
+                    _common_dir_identity(repository, executable, path, handle)
+                    != seed_common
+                ):
+                    raise InventoryError("Git common-dir mismatch")
+            finally:
+                handle.close()
+        return discovered
+    except (
+        AdapterError,
+        FsafetyError,
+        UnsupportedCapability,
+        OSError,
+        TimeoutError,
+    ) as exc:
         raise InventoryError(f"Git worktree discovery failed: {exc}") from exc
     finally:
         if executable is not None:
             executable.close()
-    if result.returncode != 0:
-        raise InventoryError("Git worktree discovery failed")
-    return _parse_git_porcelain(result.stdout)
 
 
-def discover_worktrees(repository: Any) -> tuple[Path, ...]:
+def discover_worktrees(
+    repository: Any, *, _adapter: TrackerAdapter | None = None
+) -> tuple[Path, ...]:
     """Return only Git-listed worktrees plus explicitly registered extras."""
 
     configured = tuple(Path(item) for item in repository.config.additional_worktrees)
-    discovered = _git_worktrees(repository)
+    discovered = _git_worktrees(repository, _adapter)
     merged: set[Path] = set()
     for path in (*discovered, *configured):
         if not path.is_absolute() or any(part in (".", "..") for part in path.parts):
             raise InventoryError("worktree path must be absolute and traversal-free")
         if _root_for(repository, path) is None:
             raise InventoryError(f"worktree is outside allowed roots: {path}")
+        if path in configured and path not in discovered:
+            raise InventoryError("independent-clone extras are not registry-bound")
         merged.add(path)
     return tuple(sorted(merged, key=os.fspath))
 
@@ -198,32 +266,29 @@ def _source_fingerprints(
     return tuple(sorted(converted, key=lambda item: item.name))
 
 
-def _codec_metadata(adapter: Any, canonical: Path) -> tuple[str | None, str | None]:
-    """Read codec data supplied by the adapter's verified oracle only."""
+def _codec_metadata(
+    adapter: TrackerAdapter,
+    canonical: Path,
+    worktree: DirectoryHandle,
+    executable: object,
+) -> tuple[str, str, str]:
+    """Consume only the adapter's descriptor-bound oracle result."""
 
-    oracle = getattr(adapter, "redirect_oracle", None)
-    if callable(oracle):
-        result = oracle(canonical)
-        if not isinstance(result, tuple) or len(result) != 2:
-            raise InventoryError("redirect codec oracle returned malformed data")
-        codec, intended = result
-    else:
-        codec = getattr(adapter, "redirect_codec_id", None)
-        intended = getattr(adapter, "intended_redirect_bytes", None)
-        if callable(intended):
-            intended = intended(canonical)
-    if codec is not None and not isinstance(codec, str):
-        raise InventoryError("redirect codec ID is malformed")
-    if intended is not None:
-        if isinstance(intended, bytes):
-            try:
-                intended = intended.decode("utf-8")
-            except UnicodeDecodeError as exc:
-                raise InventoryError("oracle redirect bytes are not UTF-8") from exc
-        if not isinstance(intended, str):
-            raise InventoryError("oracle redirect bytes are malformed")
-        _validate_redirect_text(intended)
-    return codec, intended
+    oracle = adapter.redirect_oracle(canonical, worktree, executable)
+    if not isinstance(oracle, RedirectOracle):
+        raise InventoryError("redirect codec oracle returned malformed data")
+    if not oracle.codec_id or not isinstance(oracle.receipt_sha256, str):
+        raise InventoryError("redirect codec oracle returned malformed data")
+    if len(oracle.receipt_sha256) != 64 or any(
+        char not in "0123456789abcdef" for char in oracle.receipt_sha256
+    ):
+        raise InventoryError("redirect codec oracle receipt is malformed")
+    try:
+        intended = oracle.intended_bytes.decode("utf-8")
+    except (AttributeError, UnicodeDecodeError) as exc:
+        raise InventoryError("oracle redirect bytes are malformed") from exc
+    _validate_redirect_text(intended)
+    return oracle.codec_id, intended, oracle.receipt_sha256
 
 
 def _validate_redirect_text(value: str) -> None:
@@ -267,13 +332,15 @@ def _classify(
     beads: DirectoryHandle,
     executable: object,
     redirect: RedirectState,
+    codec: str,
+    intended: str,
+    receipt: str,
 ) -> tuple[str, RedirectState | None]:
     canonical = repository.canonical
     if (beads.device, beads.inode) == (canonical.device, canonical.inode):
         if redirect.present:
             raise InventoryError("canonical store has an unexpected redirect")
         return "canonical", None
-    codec, intended = _codec_metadata(adapter, repository.config.canonical_beads)
     if not redirect.present:
         return "noncanonical", RedirectState(
             False,
@@ -283,6 +350,7 @@ def _classify(
             beads.inode,
             codec,
             intended,
+            receipt,
         )
     if codec is None or intended is None:
         return "unsupported", redirect
@@ -297,6 +365,7 @@ def _classify(
             redirect.parent_inode,
             codec,
             intended,
+            receipt,
         )
     if not isinstance(authority, Path) or not authority.is_absolute():
         return "unresolved_noncanonical", redirect
@@ -309,6 +378,7 @@ def _classify(
             redirect.parent_inode,
             codec,
             intended,
+            receipt,
         )
     target_redirect = authority / _REDIRECT_NAME
     if target_redirect.exists() or target_redirect.is_symlink():
@@ -321,6 +391,7 @@ def _classify(
         redirect.parent_inode,
         codec,
         intended,
+        receipt,
     )
 
 
@@ -333,6 +404,9 @@ def build_manifest(repository: Any, adapter: TrackerAdapter) -> Manifest:
 
     if adapter.adapter_id != repository.config.adapter:
         raise InventoryError("adapter does not match repository registry")
+    registry_sha = repository.registry_sha256
+    if not isinstance(registry_sha, str) or len(registry_sha) != 64:
+        raise InventoryError("validated repository has no registry SHA-256")
     try:
         executable = adapter.verify_binary(repository.config.tracker_binary)
     except Exception as exc:
@@ -340,7 +414,10 @@ def build_manifest(repository: Any, adapter: TrackerAdapter) -> Manifest:
     records: list[WorktreeRecord] = []
     seen_beads: set[tuple[int, int]] = set()
     try:
-        for path in discover_worktrees(repository):
+        codec, intended, oracle_receipt = _codec_metadata(
+            adapter, repository.config.canonical_beads, repository.seed, executable
+        )
+        for path in discover_worktrees(repository, _adapter=adapter):
             root = _root_for(repository, path)
             if root is None:
                 raise InventoryError(f"worktree is outside allowed roots: {path}")
@@ -369,14 +446,41 @@ def build_manifest(repository: Any, adapter: TrackerAdapter) -> Manifest:
                         raise InventoryError("duplicate physical .beads identity")
                     seen_beads.add(identity)
                     try:
-                        adapter.attest_backend(beads)
+                        backend = adapter.attest_backend(beads)
+                        if backend.backend != "sqlite":
+                            raise AdapterError("unsupported backend attestation")
+                        backend_name = backend.backend
+                        health = adapter.verify_health(worktree, executable)
+                        if (
+                            health.dirty_count != 0
+                            or health.db_newer
+                            or health.jsonl_newer
+                            or health.workspace_health != "healthy"
+                        ):
+                            raise AdapterError("tracker workspace is not healthy")
+                        health_record = HealthFingerprint(
+                            health.dirty_count,
+                            health.db_newer,
+                            health.jsonl_newer,
+                            health.workspace_health,
+                            sha256_hex(canonical_json_bytes(health.raw)),
+                        )
                         sources = _source_fingerprints(adapter, beads)
                         redirect = _read_redirect(beads)
                         classification, redirect = _classify(
-                            repository, adapter, worktree, beads, executable, redirect
+                            repository,
+                            adapter,
+                            worktree,
+                            beads,
+                            executable,
+                            redirect,
+                            codec,
+                            intended,
+                            oracle_receipt,
                         )
                     except (AdapterError, FsafetyError, OSError) as exc:
                         classification, sources, redirect = "unsupported", (), None
+                        backend_name, health_record = None, None
                         del exc
                     records.append(
                         WorktreeRecord(
@@ -386,6 +490,8 @@ def build_manifest(repository: Any, adapter: TrackerAdapter) -> Manifest:
                             worktree.inode,
                             sources,
                             redirect,
+                            backend_name,
+                            health_record,
                         )
                     )
                 finally:
@@ -397,9 +503,6 @@ def build_manifest(repository: Any, adapter: TrackerAdapter) -> Manifest:
         if callable(close):
             close()
     config = repository.config
-    registry_sha = getattr(repository, "registry_sha256", None)
-    if not isinstance(registry_sha, str):
-        registry_sha = hashlib.sha256(canonical_json_bytes(config)).hexdigest()
     return Manifest(
         "beads.redirect-convergence.manifest.v1",
         registry_sha,
@@ -409,4 +512,7 @@ def build_manifest(repository: Any, adapter: TrackerAdapter) -> Manifest:
         config.tracker_binary,
         config.git_binary,
         tuple(sorted(records, key=lambda item: os.fspath(item.path))),
+        codec,
+        intended,
+        oracle_receipt,
     )
