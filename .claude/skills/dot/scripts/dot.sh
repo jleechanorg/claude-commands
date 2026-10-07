@@ -47,6 +47,12 @@ while [[ $# -gt 0 ]]; do
 done
 set -- ${NEW_ARGS[@]+"${NEW_ARGS[@]}"}
 
+# Existing-profile-only launch is local by contract and never falls back to another host.
+if [[ "${1:-}" == "existing-profile-only" ]]; then
+  DOT_NO_REMOTE=1
+  export DOT_NO_REMOTE
+fi
+
 # Resolve Node runtime before any inline node invocations
 if [[ -n "${DOT_NODE:-}" ]]; then
   NODE="$DOT_NODE"
@@ -123,8 +129,10 @@ URL_HOST=$("$NODE" -e '
     process.stdout.write(process.argv[1] || "");
   }
 ' "$DOT_URL" 2>/dev/null || echo "$DOT_URL")
-PROFILE_DIR_DISPLAY="${DOT_CHROME_USER_DATA:-~/.config/dot-headless-chrome-${ACCOUNT}}"
-echo "dot.sh: account=$ACCOUNT backend=$BACKEND url=$URL_HOST dir=$PROFILE_DIR_DISPLAY" >&2
+if [[ "${1:-}" != "existing-profile-only" ]]; then
+  PROFILE_DIR_DISPLAY="${DOT_CHROME_USER_DATA:-~/.config/dot-headless-chrome-${ACCOUNT}}"
+  echo "dot.sh: account=$ACCOUNT backend=$BACKEND url=$URL_HOST dir=$PROFILE_DIR_DISPLAY" >&2
+fi
 
 forward_to_mac() {
   if [[ $# -eq 0 ]]; then return 1; fi
@@ -373,10 +381,22 @@ cmd_login() {
   exec "$chrome_bin" --user-data-dir="$dir" --no-first-run --no-default-browser-check "$target_url"
 }
 
+cmd_existing_profile_only() {
+  local rc=0
+  run_chrome existing-profile-only || rc=$?
+  if [[ $rc -ne 0 && $rc -ne 10 ]]; then
+    echo "DOT_PROFILE_LAUNCH_RESULT {\"schema_version\":1,\"launch_state\":\"unavailable\",\"diagnostic\":\"transport_error\"}"
+    exit "$rc"
+  fi
+  printf '%s\n' "$CHROME_OUT"
+  exit "$rc"
+}
+
 case "${1:-}" in
   read) shift; cmd_read "$@" ;;
   send) shift; cmd_send "$@" ;;
   send-once) shift; cmd_send_once "$@" ;;
+  existing-profile-only) shift; cmd_existing_profile_only "$@" ;;
   login|auth) shift; cmd_login "$@" ;;
-  *) echo "usage: dot.sh [--account <name>] [--url <url>] read [chars] | send|send-once <message-file> | login" >&2; exit 2 ;;
+  *) echo "usage: dot.sh [--account <name>] [--url <url>] read [chars] | send|send-once <message-file> | existing-profile-only | login" >&2; exit 2 ;;
 esac
