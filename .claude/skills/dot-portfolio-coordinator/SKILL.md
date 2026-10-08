@@ -136,3 +136,95 @@ These checks cover the named application dependencies, not an immutable OS or a 
 `coordinator-delivery-exception.py` requires a separately approved, pinned private manifest for one fresh event and message. It preserves the existing sender ledger byte-for-byte, copies a read-only historical backup, holds the existing sender lock and durably consumes one claim before transport. It requires a fresh typed identity probe and exact finite one-message grant. An uncertain result remains consumed. It is an exceptional operator operation, not a recurring scheduler or automatic hold reconciliation.
 
 Ongoing scheduling is separate from the finite pilot. Never renew an expired pilot, reuse a consumed delivery exception, or remove an uncertainty hold merely to resume messaging. Cross-host scheduling requires shared hold coordination in addition to local deduplication; local file locks do not coordinate two machines.
+
+## Recurring operation (separate authority from the expired pilot)
+
+`scripts/coordinator-recurring.py` provides a shared admission broker and a finite
+host worker. It never installs or starts itself. A separately approved, private,
+SHA-pinned schedule grants ongoing recurrence; it does not extend any old grant
+or reset an old sender ledger. The operator must explicitly select the admitted
+driver; there is no automatic replacement of AGY with Claude.
+
+The designated Linux hostname owns one private durable shared state directory.
+Mac accesses its broker using an existing SSH alias and authentication. Both
+entry paths enforce the Linux hostname and platform. There is no local fallback
+if SSH, source pins, configuration pins or shared state are unavailable.
+
+Each account has its own pending claim and per-host UTC slot watermark. One
+atomic claim wins concurrent admission; claim expiry, restart and the next hour
+never clear it. Unknown, orphaned or uncertain operations remain held across both
+hosts. Verified delivery and proven no-send outcomes finish the claim, but never
+permit another attempt in the same slot. A completion written before a settlement
+crash remains preserved and held for deliberate recovery. There is no automatic
+reconciliation command. Caller tokens correlate claims; existing trusted local
+operator/SSH authority is the trust boundary, not cryptographic human approval.
+
+Enrollment reads the three pinned historical ledgers without modifying them,
+copies their exact bytes into mode-0400 `historical/<account>.json` snapshots,
+verifies the copies, and commits private state. Original-file changes, while the
+original exists, block that account. Loss of an old temporary path does not erase
+its snapshotted uncertainty hold. A held account does not block other accounts.
+Never delete `enrolled.json`, `ledger.json`, historical snapshots or pending claims
+to repair a failure; initialization refuses an already enrolled directory.
+
+Mac batches start at :00 UTC and Linux at :30 UTC. Account positions 0, 1 and 2
+run at offsets 0, 20 and 40 minutes within each batch, so each account has one slot
+per hour per host and Linux is 30 minutes later than Mac. Linux position 2 is at
+:10 of the following hour. Wakes more than 120 seconds late skip the slot, with no
+catch-up burst. Grants are immutable, expire 20 minutes after the account's due
+time, allow one message, and retain the sender's 3600-second interval field.
+Cross-grant cadence is enforced by shared UTC slot watermarks, not a claim of a
+rolling one-hour limit across both hosts. A batch has a monotonic one-hour wait
+limit and a 3600-second outer process bound; systemd adds a 3720-second bound.
+
+Before model execution, the worker checks its hostname/platform, pinned source,
+registry, dot configuration, driver and transport dependencies, and a fresh typed
+browser probe (matching identity, HTTP 200, available composer and resolved
+cleanup). Failed preflight is known no-send; ambiguous execution remains held.
+The existing short current-work prompt, audience filtering, source/grant checks
+and prepared sender protocol are reused. Shared claim and execution checks repeat
+before the model, before transport and in the final source callback. No draft
+clearing, credential copying, login automation, account rotation or old service
+restart is performed.
+
+The shared root's `STOP` blocks all new operations; `STOP-<account>` blocks one
+account across hosts. Each host's private state root also supports `STOP`.
+Dangling stop-marker symlinks still stop work. Stops do not erase existing claims
+or receipts. Each host retains `<state_dir>/<event_id>/grant.json`, sender state,
+result and sanitized session probe; bounded driver diagnostics are copied there
+before temporary workspace cleanup. Shared `receipts/<event_id>.json` records
+admission/completion. Receipts contain no message text or raw model output and
+have no automatic retention deletion.
+
+Machine-local schedule fields (never commit actual values):
+
+- `schema_version: 1`, unique `schedule_id`, short approved `authority`, and
+  `source_digest` computed from the frozen installed coordinator tree.
+- `shared_state_dir`: existing, private, durable Linux directory, initially empty.
+- Exactly three `accounts`, each with `account`, `historical_ledger` and its
+  `historical_sha256`.
+- `hosts.mac` and `hosts.linux`: `hostname`, private durable `state_dir`, approved
+  `driver`, `sources`, `dot_config_file`, `transport_script`, `execution_sha256`.
+- `authority_endpoint`: existing `ssh_host` alias, absolute Linux `python`,
+  `script` and final private `schedule` path.
+
+Prepare the common schedule privately, obtain each host's execution digest using
+`inspect` against its draft schedule hash, then pin the final identical bytes on
+both hosts. This is an operator enrollment step; source/configuration changes
+require a reviewed migration that preserves existing state, not reinitialization.
+
+```bash
+python3 scripts/coordinator-recurring.py --schedule /private/schedule.json --sha256 <pin> --role linux inspect
+python3 scripts/coordinator-recurring.py --schedule /private/schedule.json --sha256 <pin> initialize
+python3 scripts/coordinator-recurring.py --schedule /private/schedule.json --sha256 <pin> --role linux render
+```
+
+`initialize` is only for first enrollment on the designated Linux host. `render`
+prints definitions without installing them: Mac label `ai.dot-portfolio-hourly-v1`
+and Linux `dot-portfolio-hourly-v1.service` / `.timer`. Generate on each target
+host; the Mac calendar minute accounts for that host's current UTC offset. A
+change to its minute offset requires regeneration; the UTC gate otherwise skips
+misphased wakes. Definitions have no immediate RunAtLoad, KeepAlive, catch-up or
+random delay. Keep them disabled until review, installation, source/authentication
+and shared-hold gates are verified. Existing pilot and legacy units are separate
+and must remain stopped.

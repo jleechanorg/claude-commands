@@ -258,7 +258,7 @@ def run_pilot_slot(config: Dict[str, Any], slot: Dict[str, Any], state: Dict[str
                    snapshot: Dict[str, Any], root: Path, driver: str,
                    transport: str, deadline: float,
                    source_receipt_reader: Optional[SourceReceiptReader] = None,
-                   execution_guard=None, execution_profile=None, node_path=None
+                   execution_guard=None, execution_profile=None, node_path=None, sender_state_dir=None
                    ) -> Dict[str, Any]:
     from modules.driver_adapter import DriverAdapter
     if execution_guard is not None and not execution_guard():
@@ -341,7 +341,11 @@ def run_pilot_slot(config: Dict[str, Any], slot: Dict[str, Any], state: Dict[str
 
     guidance = (SCRIPT_DIR.parent / "references" / "dot-self-unblock.md").read_text()
     message = guidance + "\n\n" + decision_payload["message"]
-    sender_root = private_run_directory(str(root / f"sender-{account_index}"))
+    if sender_state_dir is None:
+        sender_root = private_run_directory(str(root / f"sender-{account_index}"))
+    else:
+        from modules.recurring_ledger import private_directory
+        sender_root = private_directory(sender_state_dir)
     argv = ["--account", account["account"], "--state-dir", str(sender_root),
             "--grant-file", account["grant_file"], "--grant-sha256", account["grant_sha256"],
             "--transport-script", transport, "--full-rollup"]
@@ -440,6 +444,51 @@ def process_due_slots(config, state, root, snapshot, driver, transport, deadline
             result = {"outcome": "missed_slot", "delivery_verified": False}
         state["slots"][key] = result
         atomic_write_json(root / "run_state.json", state)
+
+
+def model_snapshot_and_reader(collected, registry, deadline):
+    driver_candidates, candidate_reason = build_driver_candidates(collected, registry)
+    model_snapshot = {"coverage": {key: collected.get(key) for key in
+                      ("registered_count", "fresh_count", "stale_count", "unavailable_count")},
+                      "sources": {}, "candidate_bindings": driver_candidates}
+    for sid, source in collected.get("snapshots", {}).items():
+        model_source = {"status": source.get("status"), "version": source.get("version"),
+            "cursor": source.get("cursor"),
+            "checkpoint_committed": source.get("checkpoint_committed"),
+            "authority": registry.get_source(sid).get("authority"),
+            "items": [registry.filter_by_audience(sid, item, "model")
+                      for item in source.get("items", [])]}
+        for field in ("collected_at", "validated_at", "attempted_at"):
+            value = source.get(field)
+            if isinstance(value, int) and not isinstance(value, bool):
+                model_source[field] = value
+        model_snapshot["sources"][sid] = model_source
+    if candidate_reason != "ok":
+        model_snapshot["candidate_bindings"] = None
+
+    def source_receipt_reader(
+        binding: Dict[str, Any], timeout_secs: float
+    ) -> Tuple[Optional[Dict[str, Any]], str]:
+        source_id = binding.get("source_id")
+        prior_source = collected.get("snapshots", {}).get(source_id)
+        if (source_id not in registry.sources or
+                type(timeout_secs) not in (int, float) or timeout_secs <= 0):
+            return None, "source_receipt_unavailable"
+        refreshed = PortfolioCollector(registry, audience="model").collect_source_snapshot(
+            source_id, prior_snapshot=prior_source,
+            deadline_mono=min(deadline, time.monotonic() + timeout_secs),
+        )
+        cursor = refreshed.get("cursor") if isinstance(refreshed, dict) else None
+        if (not isinstance(refreshed, dict) or refreshed.get("status") != "fresh" or
+                not isinstance(cursor, dict) or cursor.get("completed") is not True or
+                refreshed.get("checkpoint_committed") is not True):
+            return None, "source_snapshot_incomplete"
+        matches = [item for item in refreshed.get("items", [])
+                   if item.get("task_composite_key") == binding["task_composite_key"]]
+        if len(matches) != 1:
+            return None, "source_task_missing_or_ambiguous"
+        return task_source_binding(source_id, matches[0])
+    return model_snapshot, source_receipt_reader
 
 
 def cmd_observe(args: argparse.Namespace, registry: SourceRegistry) -> None:
@@ -557,46 +606,7 @@ def cmd_observe(args: argparse.Namespace, registry: SourceRegistry) -> None:
                 collected = {"snapshots": prior_snapshots, "coverage": "collection_failed"}
                 driver_candidates, candidate_reason = None, "source_snapshot_incomplete"
             if config:
-                model_snapshot = {"coverage": {key: collected.get(key) for key in
-                                  ("registered_count", "fresh_count", "stale_count", "unavailable_count")},
-                                  "sources": {}, "candidate_bindings": driver_candidates}
-                for sid, source in collected.get("snapshots", {}).items():
-                    model_source = {"status": source.get("status"), "version": source.get("version"),
-                        "cursor": source.get("cursor"),
-                        "checkpoint_committed": source.get("checkpoint_committed"),
-                        "authority": registry.get_source(sid).get("authority"),
-                        "items": [registry.filter_by_audience(sid, item, "model")
-                                  for item in source.get("items", [])]}
-                    for field in ("collected_at", "validated_at", "attempted_at"):
-                        value = source.get(field)
-                        if isinstance(value, int) and not isinstance(value, bool):
-                            model_source[field] = value
-                    model_snapshot["sources"][sid] = model_source
-                if candidate_reason != "ok":
-                    model_snapshot["candidate_bindings"] = None
-
-                def source_receipt_reader(
-                    binding: Dict[str, Any], timeout_secs: float
-                ) -> Tuple[Optional[Dict[str, Any]], str]:
-                    source_id = binding.get("source_id")
-                    prior_source = collected.get("snapshots", {}).get(source_id)
-                    if (source_id not in registry.sources or
-                            type(timeout_secs) not in (int, float) or timeout_secs <= 0):
-                        return None, "source_receipt_unavailable"
-                    refreshed = PortfolioCollector(registry, audience="model").collect_source_snapshot(
-                        source_id, prior_snapshot=prior_source,
-                        deadline_mono=min(deadline, time.monotonic() + timeout_secs),
-                    )
-                    cursor = refreshed.get("cursor") if isinstance(refreshed, dict) else None
-                    if (not isinstance(refreshed, dict) or refreshed.get("status") != "fresh" or
-                            not isinstance(cursor, dict) or cursor.get("completed") is not True or
-                            refreshed.get("checkpoint_committed") is not True):
-                        return None, "source_snapshot_incomplete"
-                    matches = [item for item in refreshed.get("items", [])
-                               if item.get("task_composite_key") == binding["task_composite_key"]]
-                    if len(matches) != 1:
-                        return None, "source_task_missing_or_ambiguous"
-                    return task_source_binding(source_id, matches[0])
+                model_snapshot, source_receipt_reader = model_snapshot_and_reader(collected, registry, deadline)
 
                 process_due_slots(
                     config, state, root, model_snapshot, args.driver, transport,
