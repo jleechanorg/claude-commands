@@ -3,10 +3,13 @@ import json
 import os
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from modules.process_utils import ProcessTimeoutError, run_bounded_command
+from modules.model_admission import ModelAdmissionChecker
+from modules.decision_execution import decision_environment, profile_unchanged
 
 ALLOWED_DRIVERS = ("agy", "claude", "codex")
 PACKET_FIELDS = {
@@ -353,16 +356,16 @@ def _validate_decision(
 
 
 class DriverAdapter:
-    """Run one model-selected dialogue turn with full configured CLI permissions.
+    """Run a schema-bound decision using an admitted no-tool CLI profile.
 
-    The supplied directory is the CLI working directory, not a sandbox or
-    security boundary.
+    The supplied workspace receives parent-written diagnostics only. CLI cwd is
+    an ephemeral private directory outside that state tree, not an OS sandbox.
     """
 
     def __init__(self, driver: str = "agy") -> None:
         self.driver = driver
 
-    def decide(self, packet: dict, workspace: Path, timeout_secs: int = 600) -> dict:
+    def decide(self, packet: dict, workspace: Path, timeout_secs: int = 600, expected_profile=None) -> dict:
         packet, reason = _validate_packet(packet)
         if packet is None:
             return _failure(reason)
@@ -376,9 +379,20 @@ class DriverAdapter:
                 return _failure("invalid_workspace")
         except (TypeError, OSError):
             return _failure("invalid_workspace")
+        operation_deadline = time.monotonic() + timeout_secs
         executable = shutil.which(self.driver)
         if not executable:
             return _failure("driver_unavailable")
+        try:
+            profile = ModelAdmissionChecker.admit_decision_driver(
+                self.driver, executable, min(20, timeout_secs))
+        except Exception:
+            return _failure("capability_blocked")
+        if expected_profile is not None and profile != expected_profile:
+            return _failure("execution_dependency_changed")
+        if not profile_unchanged(profile):
+            return _failure("execution_dependency_changed")
+        executable = profile["executable"]["resolved_path"]
         guidance_path = (
             Path(__file__).resolve().parents[2]
             / "references"
@@ -394,14 +408,10 @@ class DriverAdapter:
 
         with tempfile.TemporaryDirectory(prefix="dot-driver-", dir="/tmp") as temp_dir:
             temp_path = Path(temp_dir)
-            prompt_path = temp_path / "prompt.txt"
-            prompt_path.write_text(prompt, encoding="utf-8")
-            prompt_path.chmod(0o600)
             last_message_path = temp_path / "last-message.txt"
             if self.driver == "agy":
                 cmd = [
                     executable,
-                    "--dangerously-skip-permissions",
                     "--new-project",
                     "--print-timeout",
                     f"{timeout_secs}s",
@@ -415,22 +425,21 @@ class DriverAdapter:
                 if len(input_text.encode("utf-8")) > MAX_PACKET_BYTES + 24_000:
                     return _failure("input_too_large")
             elif self.driver == "claude":
-                cmd = [executable, "-p", f"@{prompt_path}", "--output-format", "json",
-                       "--verbose", "--dangerously-skip-permissions"]
-                input_text = None
+                cmd = [executable, *profile["args"]]
+                input_text = prompt
             else:
-                cmd = [executable, "exec", "--yolo", "--skip-git-repo-check",
+                cmd = [executable, "exec", "--sandbox", "read-only", "--skip-git-repo-check",
                        "--output-last-message", str(last_message_path)]
                 input_text = prompt
-            child_env = os.environ.copy()
-            if self.driver == "claude":
-                child_env.pop("ANTHROPIC_API_KEY", None)
-                child_env.pop("ANTHROPIC_BASE_URL", None)
-            elif self.driver == "codex":
-                child_env.pop("OPENAI_API_KEY", None)
+            child_env = decision_environment()
+            remaining = operation_deadline-time.monotonic()
+            if remaining <= 0:
+                return _attempt_failure(workspace_path, self.driver, "timeout", "timeout")
+            if not profile_unchanged(profile):
+                return _failure("execution_dependency_changed")
             try:
                 rc, stdout, stderr = run_bounded_command(
-                    cmd, cwd=str(workspace_path), timeout_secs=timeout_secs,
+                    cmd, cwd=str(temp_path), timeout_secs=remaining,
                     input_text=input_text, env=child_env)
             except ProcessTimeoutError:
                 return _attempt_failure(workspace_path, self.driver, "timeout", "timeout")

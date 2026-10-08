@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Dot Portfolio Coordinator CLI.
 
-Entry point for portfolio collection, review validation, journal persistence,
-budget reservations, notification binding resolution, and observation loops.
+Entry point for portfolio collection, bounded observation, and grant-bound pilot
+delivery. Budget, journal and publication helpers are not active controller paths.
 """
 import argparse
 import contextlib
@@ -13,6 +13,7 @@ import json
 import math
 import os
 import signal
+import shutil
 import stat
 import sys
 import tempfile
@@ -30,6 +31,7 @@ if str(MODULES_DIR) not in sys.path:
 from modules.registry import SourceRegistry
 from modules.collector import PortfolioCollector
 from modules.model_admission import ModelAdmissionChecker
+from modules.decision_execution import execution_dependencies
 from modules.proposal_validator import ProposalValidator
 from modules.beads_journal import BeadsControlJournal
 from modules.authority_adapter import AuthorityAdapter
@@ -54,18 +56,19 @@ def get_caller_principal() -> str:
 
 def compute_dir_manifest(base_dir: Path) -> Dict[str, str]:
     manifest = {}
-    for root, _, files in os.walk(base_dir):
-        for f in sorted(files):
-            if f.endswith((".py", ".sh", ".json", ".md")):
-                full_path = Path(root) / f
-                rel_path = full_path.relative_to(base_dir)
-                try:
-                    with open(full_path, "rb") as fp:
-                        digest = hashlib.sha256(fp.read()).hexdigest()
-                    manifest[str(rel_path)] = digest
-                except Exception:
-                    pass
+    def failed(error):
+        raise error
+    for root, _, files in os.walk(base_dir, onerror=failed):
+        for name in sorted(files):
+            if name.endswith((".py", ".sh", ".json", ".md", ".mjs")):
+                path = Path(root) / name
+                manifest[str(path.relative_to(base_dir))] = hashlib.sha256(path.read_bytes()).hexdigest()
     return manifest
+
+
+def run_binding(manifest, registry_hash, pilot_hash, driver, execution):
+    return hashlib.sha256(json.dumps({"manifest": manifest, "registry": registry_hash,
+        "pilot": pilot_hash, "driver": driver, "execution": execution}, sort_keys=True).encode()).hexdigest()
 
 
 def atomic_write_json(file_path: Path, data: Any, mode: int = 0o600) -> None:
@@ -119,14 +122,27 @@ def call_sender(
     event_id: str,
     message: str,
     source_callback: Optional[Callable[[], Tuple[bool, str]]] = None,
+    node_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     from modules.sender import run_sender_cli
     changes = {"COORDINATOR_CHANGE_ID": event_id, "COORDINATOR_CHANGE_SUMMARY": message,
                "DOT_NO_REMOTE": "1"}
+    if node_path is not None:
+        changes["DOT_NODE"] = node_path
+    # Do not execute inherited Node or shell preload code in the transport.
+    for key in ('NODE_OPTIONS', 'NODE_PATH', 'BASH_ENV', 'ENV'):
+        changes[key] = None
+    for key in os.environ:
+        if key.startswith('BASH_FUNC_'):
+            changes[key] = None
     previous = {key: os.environ.get(key) for key in changes}
     output = io.StringIO()
     try:
-        os.environ.update(changes)
+        for key, value in changes.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         with contextlib.redirect_stdout(output):
             rc = run_sender_cli(argv, source_callback=source_callback)
     finally:
@@ -241,9 +257,12 @@ def load_pilot_config(path: str) -> Dict[str, Any]:
 def run_pilot_slot(config: Dict[str, Any], slot: Dict[str, Any], state: Dict[str, Any],
                    snapshot: Dict[str, Any], root: Path, driver: str,
                    transport: str, deadline: float,
-                   source_receipt_reader: Optional[SourceReceiptReader] = None
+                   source_receipt_reader: Optional[SourceReceiptReader] = None,
+                   execution_guard=None, execution_profile=None, node_path=None
                    ) -> Dict[str, Any]:
     from modules.driver_adapter import DriverAdapter
+    if execution_guard is not None and not execution_guard():
+        return {"outcome": "no_action", "reason": "execution_dependency_changed", "delivery_verified": False}
     account_index = slot["account_index"]
     account = config["accounts"][account_index]
     # Each scheduled slot checks current work independently of prior dialogue.
@@ -283,8 +302,11 @@ def run_pilot_slot(config: Dict[str, Any], slot: Dict[str, Any], state: Dict[str
     remaining = deadline - time.monotonic()
     if remaining < 180:
         return {"outcome": "deadline_hold", "delivery_verified": False}
+    if execution_guard is not None and not execution_guard():
+        return {"outcome": "no_action", "reason": "execution_dependency_changed", "delivery_verified": False}
+    profile_args = {"expected_profile": execution_profile} if execution_profile is not None else {}
     decision = DriverAdapter(driver=driver).decide(
-        packet, workspace, timeout_secs=min(600, int(remaining))
+        packet, workspace, timeout_secs=min(600, int(remaining)), **profile_args
     )
     if decision.get("status") != "ok":
         return {"outcome": "driver_failed",
@@ -303,12 +325,16 @@ def run_pilot_slot(config: Dict[str, Any], slot: Dict[str, Any], state: Dict[str
     expected_binding = decision_payload["source_binding"]
 
     def check_source() -> Tuple[bool, str]:
+        if execution_guard is not None and not execution_guard():
+            return False, "execution_dependency_changed"
         remaining = min(120.0, max(0.0, deadline - time.monotonic()))
         refreshed_binding, refresh_reason = source_receipt_reader(
             expected_binding, remaining
         )
         if refreshed_binding is None:
             return False, refresh_reason
+        if execution_guard is not None and not execution_guard():
+            return False, "execution_dependency_changed"
         if refreshed_binding != expected_binding:
             return False, "source_changed_after_draft"
         return True, "ok"
@@ -321,7 +347,10 @@ def run_pilot_slot(config: Dict[str, Any], slot: Dict[str, Any], state: Dict[str
             "--transport-script", transport, "--full-rollup"]
     if deadline - time.monotonic() < 600:
         return {"outcome": "deadline_hold", "delivery_verified": False}
-    return call_sender(argv, slot["event_id"], message, source_callback=check_source)
+    if execution_guard is not None and not execution_guard():
+        return {"outcome": "no_action", "reason": "execution_dependency_changed", "delivery_verified": False}
+    node_args = {"node_path": node_path} if node_path is not None else {}
+    return call_sender(argv, slot["event_id"], message, source_callback=check_source, **node_args)
 
 
 def cmd_reserve(args: argparse.Namespace, registry: SourceRegistry) -> None:
@@ -384,7 +413,7 @@ def cmd_collect(args: argparse.Namespace, registry: SourceRegistry) -> None:
 
 
 def process_due_slots(config, state, root, snapshot, driver, transport, deadline, now,
-                      source_receipt_reader=None):
+                      source_receipt_reader=None, execution_guard=None, execution_profile=None, node_path=None):
     # This exact defer is emitted before sender reservation or transport work.
     spacing_defer = {"outcome": "deferred", "reason": "grant_min_interval",
                      "delivery_verified": False}
@@ -403,6 +432,7 @@ def process_due_slots(config, state, root, snapshot, driver, transport, deadline
             result = run_pilot_slot(
                 config, slot, state, snapshot, root, driver, transport, deadline,
                 source_receipt_reader=source_receipt_reader,
+                execution_guard=execution_guard, execution_profile=execution_profile, node_path=node_path,
             )
         except Exception:
             result = {"outcome": "slot_failed_hold", "delivery_verified": False}
@@ -446,8 +476,26 @@ def cmd_observe(args: argparse.Namespace, registry: SourceRegistry) -> None:
         manifest = compute_dir_manifest(SCRIPT_DIR.parent)
         registry_hash = hashlib.sha256(Path(args.sources).read_bytes()).hexdigest()
         pilot_hash = hashlib.sha256(Path(args.pilot_config).read_bytes()).hexdigest() if config else None
-        binding = hashlib.sha256(json.dumps({"manifest": manifest, "registry": registry_hash,
-                                             "pilot": pilot_hash, "driver": args.driver}, sort_keys=True).encode()).hexdigest()
+        transport = args.transport_script or str(SCRIPT_DIR.parent.parent / "dot/scripts/dot.sh")
+        execution_profile = None
+        execution = None
+        if config:
+            executable = shutil.which(args.driver)
+            if not executable:
+                raise ValueError("driver_unavailable")
+            execution_profile = ModelAdmissionChecker.admit_decision_driver(args.driver, executable)
+            execution = execution_dependencies(execution_profile, transport)
+
+        def execution_guard():
+            try:
+                return (compute_dir_manifest(SCRIPT_DIR.parent) == manifest and
+                    hashlib.sha256(Path(args.sources).read_bytes()).hexdigest() == registry_hash and
+                    (not config or (hashlib.sha256(Path(args.pilot_config).read_bytes()).hexdigest() == pilot_hash and
+                     execution_dependencies(execution_profile, transport) == execution)))
+            except (OSError, ValueError):
+                return False
+
+        binding = run_binding(manifest, registry_hash, pilot_hash, args.driver, execution)
         duration = config["duration_secs"] if config else args.duration
         started = config["activated_at_epoch"] if config else time.time()
         state = load_run_state(root, binding, duration, started)
@@ -456,6 +504,7 @@ def cmd_observe(args: argparse.Namespace, registry: SourceRegistry) -> None:
         deadline_epoch = state["started_at_epoch"] + duration
         deadline = time.monotonic() + max(0, deadline_epoch - time.time())
         atomic_write_json(root / "source_manifest.json", manifest)
+        atomic_write_json(root / "execution_dependencies.json", execution)
         atomic_write_json(root / "registry_hash.json", {"sha256": registry_hash})
         prior, reason = _read_json_file(str(root / "latest_snapshot.json"), "snapshot")
         if prior is None and reason != "snapshot_missing":
@@ -485,14 +534,11 @@ def cmd_observe(args: argparse.Namespace, registry: SourceRegistry) -> None:
             old_handlers[sig] = signal.signal(sig, stop_signal)
         heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
         heartbeat_thread.start()
-        transport = args.transport_script or str(SCRIPT_DIR.parent.parent / "dot/scripts/dot.sh")
         while time.monotonic() < deadline:
             if heartbeat_failed.is_set():
                 stop_reason = "heartbeat_failed"
                 break
-            if (compute_dir_manifest(SCRIPT_DIR.parent) != manifest or
-                    hashlib.sha256(Path(args.sources).read_bytes()).hexdigest() != registry_hash or
-                    (config and hashlib.sha256(Path(args.pilot_config).read_bytes()).hexdigest() != pilot_hash)):
+            if not execution_guard():
                 stop_reason = "manifest_drift_detected"
                 break
             state["last_observed_epoch"] = time.time()
@@ -555,6 +601,8 @@ def cmd_observe(args: argparse.Namespace, registry: SourceRegistry) -> None:
                 process_due_slots(
                     config, state, root, model_snapshot, args.driver, transport,
                     deadline, time.time(), source_receipt_reader=source_receipt_reader,
+                    execution_guard=execution_guard, execution_profile=execution_profile,
+                    node_path=execution["node"]["selected_path"],
                 )
             stopped.wait(min(args.interval, max(0, deadline - time.monotonic())))
     except KeyboardInterrupt:

@@ -140,7 +140,8 @@ class TestDotPortfolioCoordinatorSender(unittest.TestCase):
 
     @staticmethod
     def _proof_frame(reason, **overrides):
-        proof = {"schema_version": 1, "phase": "precommit", "reason": reason,
+        proof = {"schema_version": 2, "phase": "precommit", "reason": reason,
+                 "account": "default", "event_id": "ev-proof",
                  "message_sha256": hashlib.sha256(b"Synthetic proof").hexdigest()}
         proof.update(overrides)
         return "DOT_PRECOMMIT_NO_SEND " + json.dumps(proof)
@@ -224,7 +225,10 @@ class TestDotPortfolioCoordinatorSender(unittest.TestCase):
 
     def test_typed_precommit_no_send_restores_reservation(self):
         for reason, exit_code in (("usage_limit", 0), ("composer_not_empty", 0),
-                                  ("composer_mismatch", 0), ("profile_unavailable", 10)):
+                                  ("composer_mismatch", 0), ("profile_unavailable", 10),
+                                  ("challenge", 10), ("authentication_required", 10),
+                                  ("composer_unavailable", 10), ("navigation_failed", 10),
+                                  ("page_creation_failed", 10)):
             with self.subTest(reason=reason):
                 account_file = Path(self.state_dir) / "account_default.json"
                 prior = {"schema_version": 1, "grant_sha256": self.grant_sha256,
@@ -246,6 +250,9 @@ class TestDotPortfolioCoordinatorSender(unittest.TestCase):
         cases = (
             ("legacy diagnostic", "DOT_USAGE_LIMIT_REACHED: synthetic", False, 0),
             ("wrong digest", self._proof_frame("usage_limit", message_sha256="0" * 64), False, 0),
+            ("wrong account", self._proof_frame("usage_limit", account="other"), False, 0),
+            ("wrong event", self._proof_frame("usage_limit", event_id="other"), False, 0),
+            ("legacy schema", self._proof_frame("usage_limit", schema_version=1), False, 0),
             ("wrong phase", self._proof_frame("usage_limit", phase="postcommit"), False, 0),
             ("unknown reason", self._proof_frame("unknown"), False, 0),
             ("wrong schema", self._proof_frame("usage_limit", schema_version=True), False, 0),

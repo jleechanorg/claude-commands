@@ -14,6 +14,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from modules.driver_adapter import DriverAdapter, _validate_decision, _validate_packet
 from modules.process_utils import ProcessTimeoutError
+from modules.decision_execution import CLAUDE_ARGS
 
 
 class TestDriverAdapter(unittest.TestCase):
@@ -44,6 +45,12 @@ class TestDriverAdapter(unittest.TestCase):
         executable = self.bin_dir / name
         executable.write_text("#!/usr/bin/env python3\n" + script, encoding="utf-8")
         executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+        # Offline protocol/receipt fixtures bypass admission only in this test.
+        # Production admission and blocked legacy drivers have separate tests.
+        profile = {"driver": name, "executable": {"resolved_path": str(executable)},
+                   "args": CLAUDE_ARGS}
+        self.enterContext(mock.patch("modules.model_admission.ModelAdmissionChecker.admit_decision_driver", return_value=profile))
+        self.enterContext(mock.patch("modules.driver_adapter.profile_unchanged", return_value=True))
         return executable
 
     def _path_env(self):
@@ -187,14 +194,14 @@ class TestDriverAdapter(unittest.TestCase):
         )
         self.assertEqual(guidance, f"{compact_prompt}\n\n{secret_rule}\n")
 
-    def test_agy_default_uses_real_stream_protocol_and_full_permission_mode(self):
+    def test_legacy_agy_protocol_fixture_never_adds_bypass_flags(self):
         response = self.response_text
         guidance = (
             SCRIPTS_DIR.parent / "references" / "dot-self-unblock.md"
         ).read_text(encoding="utf-8")
         self._fake_driver("agy", f'''import json, sys
 args = sys.argv[1:]
-assert "--dangerously-skip-permissions" in args
+assert "--dangerously-skip-permissions" not in args
 assert "--new-project" in args
 assert ("--input-format" in args and
         args[args.index("--input-format") + 1] == "stream-json")
@@ -216,16 +223,16 @@ print(json.dumps({{"event": "result", "result": {{"status": "SUCCESS",
         self.assertEqual(result["decision"]["event_id"], "event-456")
         self.assertEqual(result["decision"]["message"], self.decision["message"])
 
-    def test_claude_output_envelope_and_full_permission_mode(self):
+    def test_claude_output_envelope_uses_stdin_and_no_tool_profile(self):
         response = self.response_text
         self._fake_driver("claude", f'''import json, pathlib, sys
 args = sys.argv[1:]
-assert "--dangerously-skip-permissions" in args
+assert "--dangerously-skip-permissions" not in args
 assert "--output-format" in args and args[args.index("--output-format") + 1] == "json"
 assert "ANTHROPIC_API_KEY" not in __import__("os").environ
 assert "ANTHROPIC_BASE_URL" not in __import__("os").environ
-prompt_arg = next(value for value in args if value.startswith("@"))
-assert "dialogue_stage" in pathlib.Path(prompt_arg[1:]).read_text()
+assert "--tools" in args and args[args.index("--tools") + 1] == ""
+assert "dialogue_stage" in sys.stdin.read()
 print(json.dumps({{"type": "result", "subtype": "success",
     "is_error": False, "result": {response!r}}}))
 ''')
@@ -259,7 +266,8 @@ print(json.dumps([
         self._fake_driver("codex", f'''import pathlib, sys
 args = sys.argv[1:]
 assert args[0] == "exec"
-assert "--yolo" in args
+assert "--yolo" not in args
+assert args[args.index("--sandbox") + 1] == "read-only"
 assert "--skip-git-repo-check" in args
 assert "OPENAI_API_KEY" not in __import__("os").environ
 assert "--output-last-message" in args

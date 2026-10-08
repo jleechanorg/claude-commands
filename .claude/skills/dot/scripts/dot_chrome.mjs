@@ -169,6 +169,12 @@ const stripReadReceipt = (t) => t.replace(/Read\s+\d{1,2}:\d{2}\s*(?:[AP]M)?/gi,
 
 class Unavailable extends Error {}
 const unavailable = (why) => { throw new Unavailable(why); };
+class PrecommitUnavailable extends Unavailable {
+  constructor(reason) {
+    super(reason);
+    this.reason = reason;
+  }
+}
 class ExistingProfileUnavailable extends Unavailable {
   constructor(code) {
     super(code);
@@ -182,13 +188,19 @@ let ctx = null;
 let clicked = false;
 let aborted = false;
 let commitReceived = false;
+let preparedEmitted = false;
 const isPreparedMode = mode === 'send-prepared' || (mode === 'send' && process.env.DOT_PREPARED === '1');
 
 function reportPrecommitNoSend(reason, file) {
-  if (!isPreparedMode || commitReceived || clicked || aborted) return;
+  if (!isPreparedMode || preparedEmitted || commitReceived || clicked || aborted) return;
+  const account = process.env.DOT_ACCOUNT;
+  const eventId = process.env.COORDINATOR_CHANGE_ID;
+  if (!account || !eventId) return;
   process.stdout.write('DOT_PRECOMMIT_NO_SEND ' + JSON.stringify({
-    schema_version: 1,
+    schema_version: 2,
     phase: 'precommit',
+    account,
+    event_id: eventId,
     reason,
     message_sha256: crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),
   }) + '\n');
@@ -422,6 +434,10 @@ async function checkAuthSession(page, fetchTimeoutMs = 0) {
 }
 
 async function settlePage(page, currentMode) {
+  const failReadiness = (reason, message) => {
+    if (currentMode === 'send-prepared') throw new PrecommitUnavailable(reason);
+    unavailable(message);
+  };
   // Settle loop: wait for Cloudflare challenge to clear and page to render
   const deadline = Date.now() + 45000;
   let last = -1, stable = 0;
@@ -449,10 +465,10 @@ async function settlePage(page, currentMode) {
       // Validate auth immediately even when composer is visible (distinguishes logged-out anonymous composer)
       const session = await checkAuthSession(page);
       if (session.status === 200 && session.isJson && !session.hasUser) {
-        unavailable('not signed in');
+        failReadiness('authentication_required', 'not signed in');
       }
       if (session.status === 403) {
-        unavailable('Cloudflare 403 on session endpoint');
+        failReadiness('challenge', 'Cloudflare 403 on session endpoint');
       }
 
       if (currentMode === 'send' || currentMode === 'send-prepared') return page;
@@ -472,13 +488,13 @@ async function settlePage(page, currentMode) {
 
   // Settle deadline elapsed without active composer: diagnose exact failure reason
   const title = await page.title().catch(() => '');
-  if (/just a moment/i.test(title)) unavailable('Cloudflare challenge');
+  if (/just a moment/i.test(title)) failReadiness('challenge', 'Cloudflare challenge');
 
   const session = await checkAuthSession(page);
   if (session.status === 403) {
-    unavailable('Cloudflare 403 on session endpoint');
+    failReadiness('challenge', 'Cloudflare 403 on session endpoint');
   } else if (session.status === 200 && session.isJson && !session.hasUser) {
-    unavailable('not signed in');
+    failReadiness('authentication_required', 'not signed in');
   }
 
   const hasLoginButtons = await page.evaluate(() => {
@@ -486,10 +502,10 @@ async function settlePage(page, currentMode) {
     return btns.some(b => /^(log in|sign up)$/i.test((b.innerText || '').trim()));
   }).catch(() => false);
 
-  if (hasLoginButtons) unavailable('not signed in');
+  if (hasLoginButtons) failReadiness('authentication_required', 'not signed in');
 
   if (currentMode === 'read') return page;
-  return unavailable('composer not found');
+  return failReadiness('composer_unavailable', 'composer not found');
 }
 
 async function launch() {
@@ -530,8 +546,11 @@ async function launchPrepared() {
   } catch {
     existingProfileUnavailable('chrome_launch_failed');
   }
-  const page = await ctx.newPage();
-  await page.goto(URL_, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  let page;
+  try { page = await ctx.newPage(); }
+  catch { throw new PrecommitUnavailable('page_creation_failed'); }
+  try { await page.goto(URL_, { waitUntil: 'domcontentloaded', timeout: 45000 }); }
+  catch { throw new PrecommitUnavailable('navigation_failed'); }
   return await settlePage(page, 'send-prepared');
 }
 
@@ -847,6 +866,7 @@ async function send(page, file, dry, opts = {}) {
   if (opts.prepared) {
     const nonce = crypto.randomBytes(16).toString('hex');
     opts.onPrepared?.();
+    preparedEmitted = true;
     process.stdout.write(`prepared ${nonce}\n`);
     const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
     let decision = null;
@@ -964,7 +984,10 @@ try {
   }
 } catch (e) {
   if (clicked) console.log('DOT_SEND_UNVERIFIED chrome_error=' + e.message);
-  else if (e instanceof ExistingProfileUnavailable) {
+  else if (e instanceof PrecommitUnavailable) {
+    reportPrecommitNoSend(e.reason, arg);
+    code = 10;
+  } else if (e instanceof ExistingProfileUnavailable) {
     if (isPreparedMode) reportPrecommitNoSend('profile_unavailable', arg);
     else console.log('DOT_PROFILE_LAUNCH_RESULT ' + JSON.stringify({
       schema_version: 1,
@@ -980,6 +1003,11 @@ try {
   try {
     await ctx?.close();
     await sleep(300);
-  } catch {}
+  } catch {
+    // A candidate proof cannot survive uncertain cleanup. The receiver rejects
+    // this trailing frame and retains its hold. Never expose exception text.
+    if (isPreparedMode) console.log('DOT_CHROME_UNAVAILABLE: cleanup_failed');
+    code = 10;
+  }
 }
 process.exit(code);

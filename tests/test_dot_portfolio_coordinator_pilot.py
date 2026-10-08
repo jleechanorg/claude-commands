@@ -152,7 +152,11 @@ class RecurringPilotTests(unittest.TestCase):
         self.transport.chmod(0o700)
         self.enterContext(mock.patch.dict(os.environ, {"DOT_CAPTURE_FILE": str(self.capture)}))
         self.enterContext(mock.patch("time.time", side_effect=lambda: self.now))
-        # Only model execution is faked; packet and decision validation stay real.
+        # Model admission/execution are offline fixtures; packet and decision
+        # validation and actual sender protocol remain real.
+        self.enterContext(mock.patch("modules.model_admission.ModelAdmissionChecker.admit_decision_driver",
+            return_value={"executable": {"resolved_path": "/fixture/agy"}}))
+        self.enterContext(mock.patch("modules.driver_adapter.profile_unchanged", return_value=True))
         self.enterContext(mock.patch("modules.driver_adapter.shutil.which", return_value="/fixture/agy"))
         self.enterContext(mock.patch("modules.driver_adapter.run_bounded_command", side_effect=self.model))
         self.send = self.enterContext(mock.patch.object(cli, "call_sender", wraps=cli.call_sender))

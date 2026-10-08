@@ -541,7 +541,9 @@ class TestDotPortfolioCoordinatorObserve(unittest.TestCase):
             return 0, json.dumps({"event": "result", "result": {
                 "status": "SUCCESS", "response": json.dumps(decision)}}), ""
 
-        with mock.patch("modules.driver_adapter.shutil.which", return_value="/fixture/agy"), \
+        with mock.patch("modules.model_admission.ModelAdmissionChecker.admit_decision_driver", return_value={"executable": {"resolved_path": "/fixture/agy"}}), \
+                mock.patch("modules.driver_adapter.profile_unchanged", return_value=True), \
+                mock.patch("modules.driver_adapter.shutil.which", return_value="/fixture/agy"), \
                 mock.patch("modules.driver_adapter.run_bounded_command", side_effect=run):
             result = DriverAdapter().decide(packet, Path(self.temp_dir.name))
             self.assertEqual(result, {"status": "ok", "decision": decision})
@@ -552,7 +554,9 @@ class TestDotPortfolioCoordinatorObserve(unittest.TestCase):
                         field == "task_composite_key" else "b" * 64)
                     self.assertEqual(DriverAdapter().decide(packet, Path(self.temp_dir.name)),
                                      {"status": "driver_failed", "reason": "invalid_output"})
-        with mock.patch("modules.driver_adapter.shutil.which", return_value="/fixture/agy"), \
+        with mock.patch("modules.model_admission.ModelAdmissionChecker.admit_decision_driver", return_value={"executable": {"resolved_path": "/fixture/agy"}}), \
+                mock.patch("modules.driver_adapter.profile_unchanged", return_value=True), \
+                mock.patch("modules.driver_adapter.shutil.which", return_value="/fixture/agy"), \
                 mock.patch("modules.driver_adapter.run_bounded_command", return_value=(
                     0, '{"event":"result","result":{"status":"SUCCESS","response":""}}', "")):
             self.assertEqual(DriverAdapter().decide(packet, Path(self.temp_dir.name)),
@@ -566,7 +570,9 @@ class TestDotPortfolioCoordinatorObserve(unittest.TestCase):
         packet["snapshot"]["sources"] = {}
         packet["previous_dot_reply"] = '\\"' * 18_000
         self.assertEqual(_validate_packet(packet)[1], "ok")
-        with mock.patch("modules.driver_adapter.shutil.which", return_value="/fixture/agy"), \
+        with mock.patch("modules.model_admission.ModelAdmissionChecker.admit_decision_driver", return_value={"executable": {"resolved_path": "/fixture/agy"}}), \
+                mock.patch("modules.driver_adapter.profile_unchanged", return_value=True), \
+                mock.patch("modules.driver_adapter.shutil.which", return_value="/fixture/agy"), \
                 mock.patch("modules.driver_adapter.run_bounded_command") as run:
             self.assertEqual(DriverAdapter().decide(packet, Path(self.temp_dir.name)),
                              {"status": "driver_failed", "reason": "input_too_large"})
@@ -668,7 +674,7 @@ class TestDotPortfolioCoordinatorObserve(unittest.TestCase):
                 "#!/usr/bin/env python3\nimport json,sys\n"
                 "event=json.loads(sys.stdin.readline())\n"
                 "p=json.loads(event['message']['content'].split('Packet JSON:' + chr(10))[-1])\n"
-                "__import__('pathlib').Path(__import__('os').environ['PACKET_CAPTURE_FILE']).write_text(json.dumps(p))\n"
+                f"__import__('pathlib').Path({str(root / 'packet.json')!r}).write_text(json.dumps(p))\n"
                 "source=p['snapshot']['sources']['test-repo']\n"
                 "assert source['items']==[{'title':'Fixture authorized task','status':'open'}], source['items']\n"
                 "assert all(value not in json.dumps(p) for value in ('internal-owner-only','raw-notes-private','raw-description-private'))\n"
@@ -701,6 +707,22 @@ class TestDotPortfolioCoordinatorObserve(unittest.TestCase):
             cmd = [CLI_SCRIPT, "--sources", self.sources_file, "observe", "--interval", "1",
                    "--send-messages", "--pilot-config", str(pilot), "--transport-script", str(fake_dot),
                    "--run-dir", self.run_dir]
+            # Only admission/profile identity are synthetic. Collector, adapter
+            # packet validation, sender and prepared transport remain real.
+            runner = root / "fixture_runner.py"
+            runner.write_text(
+                "import runpy,sys\nfrom unittest import mock\n"
+                f"sys.path.insert(0, {SCRIPTS_DIR!r})\n"
+                "from modules.model_admission import ModelAdmissionChecker\n"
+                "from modules import driver_adapter,decision_execution\n"
+                f"profile={{'executable':{{'resolved_path':{str(fake_agy)!r}}}}}\n"
+                "ModelAdmissionChecker.admit_decision_driver=lambda *args:profile\n"
+                "driver_adapter.profile_unchanged=lambda p:True\n"
+                "decision_execution.execution_dependencies=lambda *args:{'node':{'selected_path':'/fixture/node'}}\n"
+                f"sys.argv=[{CLI_SCRIPT!r}]+sys.argv[1:]\n"
+                f"runpy.run_path({CLI_SCRIPT!r},run_name='__main__')\n"
+            )
+            cmd = [sys.executable, str(runner), *cmd[1:]]
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
             observed = None
             try:

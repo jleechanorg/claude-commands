@@ -79,6 +79,7 @@ exports.chromium = {
             {
                 "HOME": str(self.home),
                 "DOT_ACCOUNT": "fixture",
+                "COORDINATOR_CHANGE_ID": "fixture-event",
                 "DOT_CONFIG_FILE": str(self.config),
                 "DOT_CHROME_USER_DATA": str(self.profile),
                 "DOT_CHROME_BIN": str(self.chrome),
@@ -186,11 +187,22 @@ exports.chromium = {
     def _run_clocked_prepared(self, *, decision="commit", advance_ms=120000,
                               initial_composer="", usage_limit=False,
                               mismatched_composer=False, missing_profile=False,
-                              hang_launch=False, hang_after_commit=False,
+                              hang_launch=False, hang_after_commit=False, failure=None,
                               send_advance_ms=120000):
         state_path = self._install_fake_send_playwright(initial_composer)
         module = self.root / "node_modules" / "playwright" / "index.js"
         source = module.read_text()
+        if failure == "navigation_failed":
+            source = source.replace('async goto() {}', 'async goto() { throw new Error("synthetic navigation failure"); }')
+        elif failure == "page_creation_failed":
+            source = source.replace('async newPage() { return page; }', 'async newPage() { throw new Error("synthetic page failure"); }')
+        elif failure == "challenge":
+            source = source.replace('status: 200, hasUser: true', 'status: 403, hasUser: false')
+        elif failure == "authentication_required":
+            source = source.replace('status: 200, hasUser: true', 'status: 200, hasUser: false')
+        elif failure == "composer_unavailable":
+            source = source.replace('async count() { return 1; }', 'async count() { return 0; }')
+            source = source.replace('return "Fixture conversation";', 'return false;')
         if usage_limit:
             source = source.replace('includes("usage limit")) return ""', 'includes("usage limit")) return "synthetic usage limit"')
         if mismatched_composer:
@@ -300,7 +312,8 @@ process.stdout.write = (chunk, ...args) => {
                 frames = [json.loads(line.removeprefix("DOT_PRECOMMIT_NO_SEND "))
                           for line in proc.stdout.splitlines()
                           if line.startswith("DOT_PRECOMMIT_NO_SEND ")]
-                self.assertEqual(frames, [{"schema_version": 1, "phase": "precommit",
+                self.assertEqual(frames, [{"schema_version": 2, "phase": "precommit",
+                                          "account": "fixture", "event_id": "fixture-event",
                                           "reason": reason,
                                           "message_sha256": hashlib.sha256(b"Synthetic proof").hexdigest()}])
                 self.assertEqual(proc.returncode, 10 if reason == "profile_unavailable" else 0)
@@ -308,6 +321,21 @@ process.stdout.write = (chunk, ...args) => {
                     self.assertFalse(state["clicked"])
                     if reason == "composer_not_empty":
                         self.assertEqual(state["composer"], "Existing draft")
+
+    def test_prepared_known_readiness_failures_prove_no_commit(self):
+        for reason in ("navigation_failed", "page_creation_failed", "challenge",
+                       "authentication_required", "composer_unavailable"):
+            with self.subTest(reason=reason):
+                proc, state = self._run_clocked_prepared(failure=reason)
+                frames = [json.loads(line.removeprefix("DOT_PRECOMMIT_NO_SEND "))
+                          for line in proc.stdout.splitlines()
+                          if line.startswith("DOT_PRECOMMIT_NO_SEND ")]
+                self.assertEqual(frames, [{"schema_version": 2, "phase": "precommit",
+                    "reason": reason, "account": "fixture", "event_id": "fixture-event",
+                    "message_sha256": hashlib.sha256(b"Synthetic proof").hexdigest()}])
+                self.assertEqual(proc.returncode, 10)
+                self.assertNotIn("prepared ", proc.stdout)
+                self.assertFalse(state["clicked"])
 
     def _run_prepared_send(self, control):
         message_path = self.root / "prepared-message.txt"
@@ -614,7 +642,8 @@ process.stdout.write = (chunk, ...args) => {
         self.assertEqual(proc.returncode, 10, proc.stderr)
         self.assertEqual(
             json.loads(proc.stdout.removeprefix("DOT_PRECOMMIT_NO_SEND ")),
-            {"schema_version": 1, "phase": "precommit", "reason": "profile_unavailable",
+            {"schema_version": 2, "phase": "precommit",
+                                          "account": "fixture", "event_id": "fixture-event", "reason": "profile_unavailable",
              "message_sha256": hashlib.sha256(b"Hello dot").hexdigest()},
         )
         self.assertFalse(self.profile.exists())
@@ -637,7 +666,8 @@ process.stdout.write = (chunk, ...args) => {
         self.assertEqual(proc.returncode, 10, proc.stderr)
         self.assertEqual(
             json.loads(proc.stdout.removeprefix("DOT_PRECOMMIT_NO_SEND ")),
-            {"schema_version": 1, "phase": "precommit", "reason": "profile_unavailable",
+            {"schema_version": 2, "phase": "precommit",
+                                          "account": "fixture", "event_id": "fixture-event", "reason": "profile_unavailable",
              "message_sha256": hashlib.sha256(b"Hello dot").hexdigest()},
         )
         self.assertTrue(lock.is_symlink())

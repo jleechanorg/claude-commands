@@ -30,7 +30,10 @@ MAX_SUMMARY_CHARS = 32000
 VERIFIED_MARKER = "DOT_SENT_VERIFIED"
 NO_SEND_PREFIX = "DOT_PRECOMMIT_NO_SEND "
 NO_SEND_EXIT_CODES = {"usage_limit": 0, "composer_not_empty": 0,
-                      "composer_mismatch": 0, "profile_unavailable": 10}
+                      "composer_mismatch": 0, "profile_unavailable": 10,
+                      "challenge": 10, "authentication_required": 10,
+                      "composer_unavailable": 10, "navigation_failed": 10,
+                      "page_creation_failed": 10}
 ACCOUNT_RE = re.compile(r"^[A-Za-z0-9_.-]{1,80}$")
 WORKER_SHA = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
@@ -323,11 +326,12 @@ def run_sender_cli(
                 try:
                     proof = json.loads(frame_text[len(NO_SEND_PREFIX):])
                     if (isinstance(proof, dict) and
-                            set(proof) == {"schema_version", "phase", "reason", "message_sha256"} and
-                            type(proof["schema_version"]) is int and proof["schema_version"] == 1 and
+                            set(proof) == {"schema_version", "phase", "reason", "message_sha256", "account", "event_id"} and
+                            type(proof["schema_version"]) is int and proof["schema_version"] == 2 and
                             proof["phase"] == "precommit" and
                             isinstance(proof["reason"], str) and proof["reason"] in NO_SEND_EXIT_CODES and
-                            proof["message_sha256"] == msg_hash):
+                            proof["message_sha256"] == msg_hash and
+                            proof["account"] == account and proof["event_id"] == event_id):
                         delivery_result = {"status": "no_send", "reason": proof["reason"]}
                         return
                 except (ValueError, TypeError):
@@ -411,6 +415,8 @@ def run_sender_cli(
 
         try:
             transport_env = os.environ.copy()
+            transport_env["DOT_ACCOUNT"] = account
+            transport_env["COORDINATOR_CHANGE_ID"] = event_id
             transport_env["DOT_ROTATE_ON_LIMIT"] = "0"
             transport_env["DOT_PREPARED"] = "1"
             transport_env["DOT_NO_REMOTE"] = "1"

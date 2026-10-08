@@ -1,8 +1,9 @@
 """Model admission module for dot-portfolio-coordinator.
 
 Enforces:
-- Model admission ALWAYS returns capability_blocked unless a genuine independently
-  enforced isolation adapter actually exists. Caller JSON booleans never establish admission.
+- Legacy caller-manifest isolation admission remains capability_blocked.
+- Decision CLI admission resolves an internal no-tool profile, not an OS sandbox.
+  Caller JSON booleans never establish admission.
 - Strict minimization from scratch based on reviewed audience policy.
 - Zero re-injection of denied private identities, notes, or raw metadata.
 """
@@ -22,10 +23,16 @@ SOURCE_TIMESTAMP_FIELDS = ("collected_at", "validated_at", "attempted_at")
 
 
 class ModelAdmissionChecker:
-    """Enforces genuine sandbox/isolation and audience-based snapshot minimization."""
+    """Separates legacy isolation admission, CLI capability checks and minimization."""
 
     def __init__(self, registry: Any):
         self.registry = registry
+
+    @staticmethod
+    def admit_decision_driver(driver, executable, timeout_secs=20):
+        """Resolve the internally owned CLI no-tool profile, not caller assertions."""
+        from modules.decision_execution import resolve_decision_profile
+        return resolve_decision_profile(driver, executable, timeout_secs)
 
     def admit_model_transport(self, environment_manifest: Dict[str, Any]) -> Dict[str, Any]:
         """Validates reasoning environment isolation.
