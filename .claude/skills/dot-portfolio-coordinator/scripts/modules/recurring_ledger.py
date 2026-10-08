@@ -20,6 +20,7 @@ from modules.sender import ACCOUNT_RE, _atomic_write, _read_json_file
 
 PHASES = {'mac': 0, 'linux': 1800}
 START_WINDOW = 120
+MAX_CLOCK_SKEW = 60
 OPERATION_WINDOW = 1200
 SAFE_TERMINALS = {'no_action', 'no_eligible_task', 'cycle_complete', 'driver_failed',
                   'deadline_hold', 'grant_invalid'}
@@ -171,6 +172,65 @@ class SharedLedger:
                 return held('ledger_schema_hold')
             pending = current['pending']
             action = request.get('action')
+            if action == 'status' and 'token' not in request:
+                # Resolve a durably recorded client identity after every claim
+                # reply was lost. This reports state, never execution permission.
+                request_id, due = request.get('request_id'), request.get('due_epoch')
+                if (not isinstance(request_id, str) or len(request_id) != 32 or
+                        any(c not in '0123456789abcdef' for c in request_id) or
+                        type(due) is not int or due_slot(due, role, self.names.index(account)) != due):
+                    return held('claim_mismatch_hold')
+                event = hashlib.sha256(json.dumps([self.binding, role, account, due]).encode()).hexdigest()
+                prior, _ = _read_json_file(str(self.root/'receipts'/(event+'.json')), 'receipt')
+                if isinstance(pending, dict) and pending.get('request_id') == request_id:
+                    if any(pending.get(k) != v for k,v in
+                           (('role',role),('account',account),('due_epoch',due),('event_id',event))):
+                        return held('claim_mismatch_hold')
+                    request = {**pending, 'action': 'status'}
+                elif (prior is not None and prior.get('request_id') == request_id and
+                        prior.get('role') == role and prior.get('account') == account):
+                    request = {**prior, 'action': 'status'}
+                else:
+                    return {'status': 'not_claimed', 'claim_consumed': False}
+            # Completion is immutable. A lost reply or failed ledger settlement
+            # may refetch/replay this exact result, never replace it.
+            if action in ('status', 'finish'):
+                event = request.get('event_id')
+                if not isinstance(event, str) or len(event) != 64 or any(c not in '0123456789abcdef' for c in event):
+                    return held('claim_mismatch_hold')
+                prior, _ = _read_json_file(str(self.root/'receipts'/(event+'.json')), 'receipt')
+                keys = ('role', 'account', 'token', 'event_id', 'request_id')
+                if prior is None or any(request.get(k) != prior.get(k) for k in keys):
+                    return held('claim_mismatch_hold')
+                if prior.get('outcome') != 'in_progress_hold':
+                    response = {'status': 'recorded', 'hold_preserved': prior.get('hold_preserved') is not False,
+                                'outcome': prior.get('outcome'), 'delivery_verified': prior.get('delivery_verified') is True}
+                    response['settlement_pending'] = (isinstance(pending, dict) and
+                        all(pending.get(k) == prior.get(k) for k in keys) and not pending.get('terminal_hold'))
+                    if action == 'status':return response  # Observation never grants execution.
+                    result = request.get('result')
+                    if (not isinstance(result, dict) or result.get('outcome') != prior.get('outcome') or
+                            result.get('delivery_verified') is not prior.get('delivery_verified')):
+                        return held('completion_conflict_hold')
+                    if isinstance(pending, dict) and all(pending.get(k) == prior.get(k) for k in keys):
+                        if prior.get('hold_preserved') is False:
+                            current['pending'] = None
+                        else:
+                            current['pending']['terminal_hold'] = True
+                        self._write(state)
+                    response['settlement_pending'] = False
+                    return response
+                if action == 'status':return {'status': 'pending', 'hold_preserved': True, 'claim': prior}
+            if action == 'claim' and request.get('request_id') is not None:
+                request_id = request['request_id']
+                if not isinstance(request_id, str) or len(request_id) != 32 or any(c not in '0123456789abcdef' for c in request_id):
+                    return held('invalid_request_id')
+                if isinstance(pending, dict) and pending.get('request_id') == request_id:
+                    if (pending.get('role') != role or pending.get('account') != account or
+                            ('due_epoch' in request and request['due_epoch'] != pending.get('due_epoch'))):
+                        return held('claim_mismatch_hold')
+                    request = {**pending, 'action': 'check'}
+                    action = 'check'
             if action in ('check', 'finish'):
                 if (not isinstance(pending, dict) or any(request.get(k) != pending.get(k)
                         for k in ('role', 'account', 'token', 'event_id'))):
@@ -211,25 +271,31 @@ class SharedLedger:
                 return held(historical)
             if action == 'check':
                 self._write(state)
-                return dict(pending, status='admitted') if now < pending['deadline_epoch'] else held('claim_expired_hold')
+                return dict(pending, status='admitted', authority_epoch=now) if now < pending['deadline_epoch'] else held('claim_expired_hold')
             if action != 'claim':
                 return held('invalid_action')
             if pending is not None:
                 return held('account_pending_hold')
-            due = due_slot(now, role, self.names.index(account))
-            if not 0 <= now - due <= START_WINDOW:
+            due = request.get('due_epoch', due_slot(now, role, self.names.index(account)))
+            explicit_due = 'due_epoch' in request
+            if (type(due) is not int or due_slot(due, role, self.names.index(account)) != due):
+                return held('invalid_due_slot')
+            early = MAX_CLOCK_SKEW if explicit_due else 0
+            late = START_WINDOW + MAX_CLOCK_SKEW if explicit_due else START_WINDOW
+            if not -early <= now - due <= late:
                 return held('missed_start_window')
             if due <= current['last_due'].get(role, -1):
                 return held('slot_already_claimed')
             event = hashlib.sha256(json.dumps([self.binding, role, account, due]).encode()).hexdigest()
             claim = {'role': role, 'account': account, 'event_id': event, 'token': uuid.uuid4().hex,
-                     'due_epoch': due, 'deadline_epoch': due + OPERATION_WINDOW}
+                     'due_epoch': due, 'activated_at_epoch': min(now,due), 'deadline_epoch': due + OPERATION_WINDOW}
+            if request.get('request_id') is not None:claim['request_id'] = request['request_id']
             current['last_due'][role] = due
             current['pending'] = claim
             self._write(state)  # Claim is consumed durably before returning it.
             receipts = private_directory(self.root/'receipts')
             _atomic_write(str(receipts/(event+'.json')), dict(claim, outcome='in_progress_hold'), str(receipts))
-            return dict(claim, status='admitted')
+            return dict(claim, status='admitted', authority_epoch=now)
         except (OSError, ValueError, KeyError, TypeError):
             return held('shared_state_unavailable_hold')
         finally:

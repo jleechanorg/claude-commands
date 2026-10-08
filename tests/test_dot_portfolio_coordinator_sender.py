@@ -557,6 +557,28 @@ class TestDotPortfolioCoordinatorSender(unittest.TestCase):
         self.assertEqual(rc, 4)
         self.assertEqual(res["reason"], "send_unverified")
 
+    def test_grant_abort_requires_exact_ack_clean_exit_and_no_trailing_output(self):
+        original=Path(self.grant_file).read_bytes()
+        cases={'exact':f"print('aborted {PREPARED_NONCE}',flush=True)",
+               'wrong':"print('aborted wrong',flush=True)",
+               'missing':'pass',
+               'trailing':f"print('aborted {PREPARED_NONCE}',flush=True);print('extra',flush=True)",
+               'nonzero':f"print('aborted {PREPARED_NONCE}',flush=True);sys.exit(7)",
+               'hang':f"print('aborted {PREPARED_NONCE}',flush=True);time.sleep(5)"}
+        for case,ending in cases.items():
+            with self.subTest(case=case):
+                self.state_dir=str(Path(self.temp_dir.name)/('state-'+case));os.mkdir(self.state_dir,0o700)
+                Path(self.grant_file).chmod(0o600);Path(self.grant_file).write_bytes(original);Path(self.grant_file).chmod(0o400)
+                def invalidate():
+                    Path(self.grant_file).chmod(0o600);Path(self.grant_file).write_text('{}');Path(self.grant_file).chmod(0o400)
+                    return True,'ok'
+                body="import sys,time\n"+f"print('prepared {PREPARED_NONCE}',flush=True)\n"+f"assert input()=='abort {PREPARED_NONCE}'\n"+ending+"\n"
+                rc,result,state=self._run_synthetic_child(body,timeout_secs=1,callback=invalidate)
+                if case=='exact':
+                    self.assertEqual(result['outcome'],'no_action')
+                    self.assertIsNone(state['pending_delivery']);self.assertEqual(state['attempted_count'],0)
+                else:self._assert_held((rc,result,state))
+
     def test_grant_invalid_or_expired_after_prepared_aborts_without_delivered_receipt(self):
         import shlex
         root = Path(self.temp_dir.name)

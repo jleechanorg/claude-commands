@@ -155,8 +155,15 @@ atomic claim wins concurrent admission; claim expiry, restart and the next hour
 never clear it. Unknown, orphaned or uncertain operations remain held across both
 hosts. Verified delivery and proven no-send outcomes finish the claim, but never
 permit another attempt in the same slot. A completion written before a settlement
-crash remains preserved and held for deliberate recovery. There is no automatic
-reconciliation command. Caller tokens correlate claims; existing trusted local
+crash remains preserved. A durable client request ID and per-account local lock
+prevent repeated execution when SSH replies are lost. Exact finish retries and
+read-only broker status recover recorded outcomes; conflicting completions and
+genuine send uncertainty remain held. The `recover` command only resolves an
+existing local handshake: it never creates a new claim or executes an operation.
+It may close a provably unstarted local claim as no-send, or replay a durable
+completion to settle that exact claim. A `started` operation without completion
+proof stays held. Terminal local journals are retained in `rpc-history/`.
+Caller tokens correlate claims; existing trusted local
 operator/SSH authority is the trust boundary, not cryptographic human approval.
 
 Enrollment reads the three pinned historical ledgers without modifying them,
@@ -173,14 +180,21 @@ per hour per host and Linux is 30 minutes later than Mac. Linux position 2 is at
 :10 of the following hour. Wakes more than 120 seconds late skip the slot, with no
 catch-up burst. Grants are immutable, expire 20 minutes after the account's due
 time, allow one message, and retain the sender's 3600-second interval field.
+The worker submits the exact UTC due slot. The authority permits 60 seconds of
+early clock skew and 180 seconds late (120-second wake allowance plus 60-second
+skew). Wrong cadence and times outside that bound are rejected. The immutable
+grant activates at the earlier of authority time and due, for at most 1260
+seconds; its due+1200 expiry never renews. The local monotonic execution budget
+uses authority time minus the full RPC duration. Authority checks before commit
+still enforce the fixed expiry. This is a tested tolerance, not clock sync.
 Cross-grant cadence is enforced by shared UTC slot watermarks, not a claim of a
 rolling one-hour limit across both hosts. A batch has a monotonic one-hour wait
-limit and a 3600-second outer process bound; systemd adds a 3720-second bound.
+limit and a 3600-second outer process bound; systemd adds a 3720-second bound. Each operation ends at least 120 seconds before the batch outer bound to reserve time for completion persistence and bounded RPC settlement. Unacknowledged completion stays durable for recovery.
 
 Before model execution, the worker checks its hostname/platform, pinned source,
 registry, dot configuration, driver and transport dependencies, and a fresh typed
 browser probe (matching identity, HTTP 200, available composer and resolved
-cleanup). Failed preflight is known no-send; ambiguous execution remains held.
+cleanup). Known unstarted preflight failures are no-send; existing local attempts and ambiguous execution remain held. The assembled message is checked against the existing 32,000-character limit before reservation. A grant abort is no-send only with exact nonce acknowledgment, clean exit, no trailing output and no commit attempt.
 The existing short current-work prompt, audience filtering, source/grant checks
 and prepared sender protocol are reused. Shared claim and execution checks repeat
 before the model, before transport and in the final source callback. No draft
@@ -204,7 +218,7 @@ Machine-local schedule fields (never commit actual values):
 - Exactly three `accounts`, each with `account`, `historical_ledger` and its
   `historical_sha256`.
 - `hosts.mac` and `hosts.linux`: `hostname`, private durable `state_dir`, approved
-  `driver`, `sources`, `dot_config_file`, `transport_script`, `execution_sha256`.
+  `driver`, `sources`, `dot_config_file`, `transport_script`, `execution_sha256`, numeric `uid`, and `service_environment` containing only explicit absolute `HOME` and colon-separated absolute `PATH`. Inspect and execution use this same environment, not an interactive shell PATH.
 - `authority_endpoint`: existing `ssh_host` alias, absolute Linux `python`,
   `script` and final private `schedule` path.
 
@@ -221,7 +235,7 @@ python3 scripts/coordinator-recurring.py --schedule /private/schedule.json --sha
 
 `initialize` is only for first enrollment on the designated Linux host. `render`
 prints definitions without installing them: Mac label `ai.dot-portfolio-hourly-v1`
-and Linux `dot-portfolio-hourly-v1.service` / `.timer`. Generate on each target
+and Linux `dot-portfolio-hourly-v1.service` / `.timer`. Linux definitions are user units for `systemctl --user`, never system services; both platforms receive the pinned HOME/PATH and verify the configured UID. Generate on each target
 host; the Mac calendar minute accounts for that host's current UTC offset. A
 change to its minute offset requires regeneration; the UTC gate otherwise skips
 misphased wakes. Definitions have no immediate RunAtLoad, KeepAlive, catch-up or

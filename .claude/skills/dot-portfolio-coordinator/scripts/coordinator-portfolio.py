@@ -341,6 +341,9 @@ def run_pilot_slot(config: Dict[str, Any], slot: Dict[str, Any], state: Dict[str
 
     guidance = (SCRIPT_DIR.parent / "references" / "dot-self-unblock.md").read_text()
     message = guidance + "\n\n" + decision_payload["message"]
+    from modules.sender import MAX_SUMMARY_CHARS
+    if len(message) > MAX_SUMMARY_CHARS:
+        return {"outcome": "no_action", "reason": "message_too_large", "delivery_verified": False}
     if sender_state_dir is None:
         sender_root = private_run_directory(str(root / f"sender-{account_index}"))
     else:

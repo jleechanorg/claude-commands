@@ -378,18 +378,14 @@ def run_sender_cli(
                 args.grant_file, args.grant_sha256, account
             )
             if not valid or grant_data is None:
+                delivery_result = {"status": "uncertain", "reason": "grant_abort_unverified"}
                 try:
                     child.send_frame(abort_cmd)
-                    try:
-                        child.read_frame()
-                    except Exception:
-                        pass
+                    if child.read_frame() == f"aborted {nonce}".encode("utf-8"):
+                        delivery_result = {"status": "grant_aborted",
+                            "reason": f"grant_changed_after_reservation_{grant_reason}"}
                 except Exception:
                     pass
-                delivery_result = {
-                    "status": "grant_aborted",
-                    "reason": f"grant_changed_after_reservation_{grant_reason}",
-                }
                 return
 
             # 4. Both source and grant revalidations passed; send commit to same prepared context
@@ -432,7 +428,7 @@ def run_sender_cli(
                              if delivery_result["status"] == "no_send" else 0)
             if (not isinstance(completed, InteractiveCompletion) or
                     completed.returncode != expected_exit or completed.trailing_output or
-                    (delivery_result["status"] == "no_send" and commit_attempted)):
+                    (delivery_result["status"] in ("no_send", "source_aborted", "grant_aborted") and commit_attempted)):
                 delivery_result = {"status": "uncertain", "reason": "send_unverified"}
         except Exception:
             # Marker/proof candidates cannot survive timeout or forced cleanup.
@@ -450,16 +446,13 @@ def run_sender_cli(
             emit_result("delivered", "verified_by_transport", account,
                         delivery_verified=True, event_id=event_id)
             return 0
-        elif delivery_result["status"] in ("source_aborted", "no_send"):
+        elif delivery_result["status"] in ("source_aborted", "grant_aborted", "no_send"):
             acc["pending_delivery"] = None
             acc["attempted_count"] = attempts
             acc["last_attempt_epoch"] = last_attempt
             _atomic_write(account_file, acc, state_dir)
             emit_result("no_action", delivery_result["reason"], account, event_id=event_id)
             return 0
-        elif delivery_result["status"] == "grant_aborted":
-            emit_result("uncertain", delivery_result["reason"], account, event_id=event_id)
-            return 4
         else:
             emit_result("uncertain", delivery_result.get("reason", "send_unverified"), account, event_id=event_id)
             return 4

@@ -234,6 +234,24 @@ class RecurringPilotTests(unittest.TestCase):
         self.assertFalse(self.capture.exists())
         self.assertFalse((self.root / "sender-0").exists())
 
+    def test_final_message_length_limit_is_checked_before_sender(self):
+        from modules.sender import MAX_SUMMARY_CHARS
+        guidance=(SCRIPT.parent.parent/'references/dot-self-unblock.md').read_text()+'\n\n'
+        valid_proposal=MAX_SUMMARY_CHARS-len(guidance)
+        for length,expected in ((valid_proposal,'delivered'),(valid_proposal+1,'no_action'),(MAX_SUMMARY_CHARS,'no_action')):
+            with self.subTest(length=length):
+                def model(argv,**kwargs):
+                    rc,out,err=self.model(argv,**kwargs)
+                    wrapper=json.loads(out);decision=json.loads(wrapper['result']['response'])
+                    decision['message']='x'*length;wrapper['result']['response']=json.dumps(decision)
+                    return rc,json.dumps(wrapper),err
+                with mock.patch('modules.driver_adapter.run_bounded_command',side_effect=model), \
+                     mock.patch.object(cli,'call_sender',return_value={'outcome':'delivered','delivery_verified':True}) as send:
+                    result=cli.run_pilot_slot(self.config,self.slots[0],self.state,self.snapshot,self.root,
+                        'agy',str(self.transport),time.monotonic()+1000,source_receipt_reader=self.source_reader)
+                self.assertEqual(result['outcome'],expected)
+                self.assertEqual(send.call_count,1 if expected=='delivered' else 0)
+
     def test_two_same_account_slots_each_invoke_driver_and_sender(self):
         self.driver_delay = 120
         self.process()

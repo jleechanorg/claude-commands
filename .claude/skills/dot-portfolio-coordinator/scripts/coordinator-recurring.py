@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Shared admission RPC and finite hourly host worker. Never starts itself."""
 import argparse
+from contextlib import nullcontext
 import json
 from datetime import datetime
 from pathlib import Path
@@ -8,7 +9,7 @@ import sys
 
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from modules.recurring_ledger import SharedLedger,load_schedule
-from modules.recurring_worker import RecurringWorker,inspect_execution,source_digest,service_definitions
+from modules.recurring_worker import RecurringWorker,inspect_execution,source_digest,service_definitions,service_environment
 from modules.process_utils import run_bounded_command
 
 
@@ -17,15 +18,20 @@ def main():
     parser.add_argument('--schedule',required=True)
     parser.add_argument('--sha256',required=True)
     parser.add_argument('--role',choices=('mac','linux'))
-    parser.add_argument('command',choices=('initialize','broker','inspect','render','run','run-worker'))
+    parser.add_argument('command',choices=('initialize','broker','inspect','render','run','run-worker','recover'))
     args=parser.parse_args()
     config=load_schedule(args.schedule,args.sha256)
+    with service_environment(config['hosts'][args.role]) if args.role else nullcontext():
+        execute(args,config)
+
+
+def execute(args,config):
     if args.command=='inspect':
         if not args.role:raise ValueError('role_required')
         _,_,digest=inspect_execution(config['hosts'][args.role])
         print(json.dumps({'execution_sha256':digest,'source_digest':source_digest()}));return
     if args.command=='render':
-        print(json.dumps(service_definitions(sys.executable,str(Path(__file__).resolve()),args.schedule,args.sha256,mac_utc_offset_minutes=int(datetime.now().astimezone().utcoffset().total_seconds()/60))));return
+        print(json.dumps(service_definitions(sys.executable,str(Path(__file__).resolve()),args.schedule,args.sha256,mac_utc_offset_minutes=int(datetime.now().astimezone().utcoffset().total_seconds()/60),environments={role:host['service_environment'] for role,host in config['hosts'].items()})));return
     if source_digest()!=config['source_digest']:raise ValueError('source_digest_mismatch')
     if args.command=='initialize':
         SharedLedger(config,args.sha256).initialize()
@@ -37,6 +43,10 @@ def main():
         if not isinstance(request,dict):raise ValueError('invalid_request')
         print(json.dumps(SharedLedger(config,args.sha256).apply(request)));return
     if not args.role:raise ValueError('role_required')
+    if args.command=='recover':
+        worker=RecurringWorker(config,args.sha256,args.role,schedule_path=args.schedule)
+        print(json.dumps([worker.run_account(a['account'],recover_only=True) for a in config['accounts']]))
+        return
     if args.command=='run':
         rc,stdout,_=run_bounded_command([sys.executable,str(Path(__file__).resolve()),'--schedule',args.schedule,'--sha256',args.sha256,'--role',args.role,'run-worker'],cwd='/tmp',timeout_secs=3600)
         print(stdout,end='');sys.exit(rc)

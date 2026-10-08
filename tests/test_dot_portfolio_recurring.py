@@ -24,6 +24,9 @@ class SharedRecurrenceTests(unittest.TestCase):
             self.accounts.append({'account':name,'historical_ledger':str(p),'historical_sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
         self.state=self.root/'shared';self.state.mkdir(mode=0o700)
         self.config={'schedule_id':'hourly-fixture','authority':'Check current work, no merge authority.', 'accounts':self.accounts,'shared_state_dir':str(self.state)}
+        local=self.root/'default-worker';local.mkdir(mode=0o700)
+        self.config['hosts']={'mac':{'state_dir':str(local)}}
+        self.enterContext(mock.patch('time.time',side_effect=lambda:self.now))
         self.binding='1'*64
         self.enterContext(mock.patch.object(self.m,'authority_host_matches',return_value=True,create=True))
         self.ledger=self.m.SharedLedger(self.config,self.binding)
@@ -34,6 +37,219 @@ class SharedRecurrenceTests(unittest.TestCase):
 
     def finish(self,claim,outcome='delivered',verified=True):
         return self.ledger.apply({'action':'finish','role':claim['role'],'account':claim['account'],'token':claim['token'],'event_id':claim['event_id'],'result':{'outcome':outcome,'delivery_verified':verified}},now=self.now+10)
+
+    def recovery_worker(self,rpc):
+        from modules.recurring_worker import RecurringWorker
+        root=self.root/'rpc-local'
+        root.mkdir(mode=0o700,exist_ok=True)
+        self.config['hosts']={'mac':{'state_dir':str(root)}}
+        return RecurringWorker(self.config,self.binding,'mac',rpc=rpc)
+
+    def test_lost_claim_and_finish_replies_recover_without_second_execution(self):
+        for lost in ('claim','finish'):
+            with self.subTest(lost=lost):
+                account='first' if lost=='claim' else 'second'
+                self.now=36000 if account=='first' else 37200
+                calls=[];failed=[]
+                def rpc(request):
+                    result=self.ledger.apply(request,now=self.now)
+                    if request['action']==lost and (lost=='finish' or not failed):
+                        failed.append(True);raise OSError('synthetic lost reply')
+                    return result
+                worker=self.recovery_worker(rpc)
+                worker.operation=lambda claim:calls.append(claim['event_id']) or {'outcome':'delivered','delivery_verified':True}
+                with mock.patch('time.time',side_effect=lambda:self.now):
+                    result=worker.run_account(account)
+                self.assertEqual(result['status'],'recorded')
+                self.assertEqual(len(calls),1)
+                self.assertIsNone(json.loads((self.state/'ledger.json').read_text())['accounts'][account]['pending'])
+
+    def test_durable_finish_survives_outage_and_worker_restart(self):
+        sent=[]
+        def broken(request):
+            if request['action'] in ('finish','status'):raise OSError('synthetic outage')
+            return self.ledger.apply(request,now=self.now)
+        worker=self.recovery_worker(broken)
+        worker.operation=lambda claim:sent.append(claim['event_id']) or {'outcome':'delivered','delivery_verified':True}
+        with mock.patch('time.time',return_value=self.now):
+            self.assertEqual(worker.run_account('first')['status'],'held')
+            resumed=self.recovery_worker(lambda r:self.ledger.apply(r,now=self.now))
+            resumed.operation=lambda c:self.fail('durable completion must not execute again')
+            self.assertEqual(resumed.run_account('first')['status'],'recorded')
+        self.assertEqual(len(sent),1)
+
+    def test_transient_finish_lock_contention_is_retryable(self):
+        failures=[]
+        def rpc(request):
+            if request['action']=='finish' and not failures:
+                import fcntl
+                failures.append(True)
+                fd=self.ledger._lock()
+                try:
+                    reply=self.ledger.apply(request,now=self.now)
+                    self.assertEqual(reply['reason'],'shared_lock_busy')
+                    return reply
+                finally:os.close(fd)
+            return self.ledger.apply(request,now=self.now)
+        worker=self.recovery_worker(rpc)
+        worker.operation=lambda c:{'outcome':'no_action','delivery_verified':False}
+        with mock.patch('time.time',return_value=self.now):
+            self.assertEqual(worker.run_account('first')['status'],'recorded')
+
+    def test_finish_is_idempotent_and_status_never_admits_execution(self):
+        first=self.claim()
+        self.assertEqual(self.finish(first)['status'],'recorded')
+        self.assertEqual(self.finish(first)['status'],'recorded')
+        status=self.ledger.apply(dict(first,action='status'),now=self.now+11)
+        self.assertEqual(status['status'],'recorded')
+        self.assertEqual(self.finish(first,'no_action',False)['status'],'held')
+
+    def test_safe_terminal_receipt_can_settle_after_ledger_write_failure(self):
+        first=self.claim()
+        with mock.patch.object(self.ledger,'_write',side_effect=OSError('synthetic fsync failure')):
+            self.assertEqual(self.finish(first)['status'],'held')
+        self.assertEqual(self.finish(first)['status'],'recorded')
+        self.assertEqual(self.claim('linux',now=37800)['status'],'admitted')
+
+    def test_explicit_due_accepts_bounded_skew_without_changing_slot(self):
+        for offset in (-60,60,180):
+            with self.subTest(offset=offset):
+                # Separate fixture account/hour for each grant.
+                due=36000+(offset+60)*3600
+                result=self.ledger.apply({'action':'claim','role':'mac','account':'first',
+                    'request_id':('a' if offset==-60 else 'b' if offset==60 else 'c')*32,
+                    'due_epoch':due},now=due+offset)
+                self.assertEqual(result['status'],'admitted')
+                self.assertEqual(result['due_epoch'],due)
+                self.assertEqual(result['deadline_epoch'],due+1200)
+                self.assertEqual(result['authority_epoch'],due+offset)
+                self.ledger.apply(dict(result,action='finish',result={'outcome':'no_action','delivery_verified':False}),now=due+offset)
+
+    def test_explicit_due_rejects_outside_skew_and_wrong_cadence(self):
+        for due,now in ((36000,35939),(36000,36181),(36001,36001)):
+            result=self.ledger.apply({'action':'claim','role':'mac','account':'first','due_epoch':due},now=now)
+            self.assertEqual(result['status'],'held')
+        self.assertIsNone(json.loads((self.state/'ledger.json').read_text())['accounts']['first']['pending'])
+
+    def test_claim_retry_keeps_deadline_and_updates_authority_clock(self):
+        request={'action':'claim','role':'mac','account':'first','due_epoch':36000,'request_id':'a'*32}
+        first=self.ledger.apply(request,now=35940)
+        second=self.ledger.apply(request,now=36020)
+        self.assertEqual(first['event_id'],second['event_id'])
+        self.assertEqual(first['deadline_epoch'],second['deadline_epoch'])
+        self.assertEqual(second['authority_epoch'],36020)
+
+    def test_authority_clock_and_full_rpc_elapsed_bound_local_budget(self):
+        from modules.recurring_worker import authority_deadline
+        with mock.patch('time.monotonic',return_value=200):
+            self.assertEqual(authority_deadline({'deadline_epoch':37200,'authority_epoch':36060},190),1330)
+
+    def test_lost_claim_recovers_after_expiry_without_dispatch(self):
+        def outage(request):
+            if request['action']=='claim':self.ledger.apply(request,now=self.now)
+            raise OSError('synthetic reply outage')
+        worker=self.recovery_worker(outage)
+        worker.operation=lambda c:self.fail('lost claim must not dispatch')
+        self.assertEqual(worker.run_account('first')['status'],'held')
+        self.now+=3600
+        resumed=self.recovery_worker(lambda r:self.ledger.apply(r,now=self.now))
+        resumed.operation=lambda c:self.fail('expired unstarted claim must not dispatch')
+        self.assertEqual(resumed.run_account('first',recover_only=True)['status'],'recorded')
+        self.assertIsNone(json.loads((self.state/'ledger.json').read_text())['accounts']['first']['pending'])
+
+    def test_recovery_command_never_creates_a_claim(self):
+        worker=self.recovery_worker(lambda r:self.fail('recovery with no journal must not call authority'))
+        self.assertEqual(worker.run_account('first',recover_only=True)['status'],'no_action')
+        self.assertIsNone(json.loads((self.state/'ledger.json').read_text())['accounts']['first']['pending'])
+
+    def test_local_execution_lock_excludes_second_worker(self):
+        import fcntl
+        worker=self.recovery_worker(lambda r:self.ledger.apply(r,now=self.now))
+        lock=self.root/'rpc-local/rpc-first.lock'
+        fd=os.open(lock,os.O_CREAT|os.O_RDWR,0o600)
+        try:
+            fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            worker.operation=lambda c:self.fail('concurrent worker must not execute')
+            self.assertEqual(worker.run_account('first')['reason'],'local_execution_busy')
+        finally:os.close(fd)
+        self.assertIsNone(json.loads((self.state/'ledger.json').read_text())['accounts']['first']['pending'])
+
+    def test_request_identity_cannot_be_rebound_to_another_due(self):
+        request={'action':'claim','role':'mac','account':'first','due_epoch':36000,'request_id':'d'*32}
+        self.assertEqual(self.ledger.apply(request,now=36000)['status'],'admitted')
+        for action in ('claim','status'):
+            result=self.ledger.apply(dict(request,action=action,due_epoch=39600),now=36001)
+            self.assertEqual(result['status'],'held')
+
+    def test_terminal_history_is_durable_before_current_journal_completes(self):
+        from modules import recurring_worker as w
+        worker=self.recovery_worker(lambda r:self.ledger.apply(r,now=self.now))
+        worker.operation=lambda c:{'outcome':'no_action','delivery_verified':False}
+        real=w._atomic_write
+        def write(path,*args):
+            if '/rpc-history/' in path:raise OSError('synthetic archive failure')
+            return real(path,*args)
+        with mock.patch.object(w,'_atomic_write',side_effect=write):
+            with self.assertRaises(OSError):worker.run_account('first')
+        journal=json.loads((self.root/'rpc-local/rpc-first.json').read_text())
+        self.assertEqual(journal['phase'],'finish')
+
+    def test_service_environment_is_explicit_and_user_unit_is_labelled(self):
+        from modules.recurring_worker import service_definitions
+        import plistlib
+        env={'HOME':'/fixture/home','PATH':'/fixture/bin:/usr/bin:/bin'}
+        files=service_definitions('/usr/bin/python3','/fixture/worker.py','/fixture/schedule.json','a'*64,
+                                 environments={'mac':env,'linux':env})
+        self.assertEqual(plistlib.loads(files['mac_plist'].encode())['EnvironmentVariables'],env)
+        self.assertIn('Environment="HOME=/fixture/home"',files['linux_service'])
+        self.assertIn('user unit',files['linux_service'])
+
+    def test_batch_reserves_settlement_margin(self):
+        from modules.recurring_worker import bounded_operation_deadline
+        self.assertEqual(bounded_operation_deadline(5000,3600),3480)
+        self.assertEqual(bounded_operation_deadline(3000,3600),3000)
+
+    def test_cli_render_uses_pinned_environment_and_rejects_wrong_uid(self):
+        import subprocess,plistlib
+        env={'HOME':str(self.root),'PATH':'/usr/bin:/bin'}
+        config=dict(self.config,schema_version=1,hosts={role:{'uid':os.getuid(),'service_environment':env} for role in ('mac','linux')})
+        path=self.root/'schedule-cli.json'
+        for uid,expected in ((os.getuid(),0),(os.getuid()+1,2)):
+            config['hosts']['mac']['uid']=uid
+            path.write_text(json.dumps(config));path.chmod(0o600)
+            digest=hashlib.sha256(path.read_bytes()).hexdigest()
+            result=subprocess.run([sys.executable,str(ROOT/'.claude/skills/dot-portfolio-coordinator/scripts/coordinator-recurring.py'),
+                '--schedule',str(path),'--sha256',digest,'--role','mac','render'],capture_output=True,text=True,timeout=10)
+            self.assertEqual(result.returncode,expected)
+            reply=json.loads(result.stdout)
+            if expected==0:self.assertEqual(plistlib.loads(reply['mac_plist'].encode())['EnvironmentVariables'],env)
+            else:self.assertEqual(reply['status'],'held')
+
+    def test_remote_request_preserves_exact_broker_packet_without_local_fallback(self):
+        from modules import recurring_worker as w
+        self.config['authority_endpoint']={'python':'/fixture/python','script':'/fixture/broker.py',
+            'schedule':'/fixture/private.json','ssh_host':'fixture-existing-alias'}
+        worker=w.RecurringWorker(self.config,self.binding,'mac')
+        request={'action':'claim','role':'mac','account':'first','request_id':'f'*32,'due_epoch':36000}
+        def remote(argv,**kwargs):
+            self.assertEqual(argv[:7],['ssh','-o','BatchMode=yes','-o','ConnectTimeout=10','--','fixture-existing-alias'])
+            self.assertIn('/fixture/broker.py',argv[-1]);self.assertEqual(kwargs['timeout_secs'],20)
+            return 0,json.dumps(self.ledger.apply(json.loads(kwargs['input_text']),now=self.now)),''
+        with mock.patch.object(w,'run_bounded_command',side_effect=remote):
+            reply=worker.remote_request(request)
+        self.assertEqual(reply['request_id'],request['request_id'])
+        with mock.patch.object(w,'run_bounded_command',return_value=(255,'','')):
+            with self.assertRaises(ValueError):worker.remote_request(request)
+
+    def test_normal_batch_waits_for_exact_account_offsets(self):
+        from modules import recurring_worker as w
+        worker=self.recovery_worker(lambda r:{})
+        seen=[]
+        worker.run_account=lambda a:seen.append((a,self.now)) or {'status':'recorded'}
+        with mock.patch.object(w.time,'sleep',side_effect=lambda delay:setattr(self,'now',self.now+delay)):
+            worker.run_batch()
+        self.assertEqual(seen,[('first',36000),('second',37200),('third',38400)])
+        self.assertIsNotNone(worker.batch_deadline)
 
     def test_utc_cadence_host_offset_and_no_catchup(self):
         self.assertEqual(self.m.due_slot(36000,'mac',0),36000)
@@ -119,11 +335,13 @@ class SharedRecurrenceTests(unittest.TestCase):
         worker.operation=lambda claim: calls.append(claim['account']) or {'outcome':'delivered','delivery_verified':True}
         self.assertEqual(worker.run_account('first')['status'],'recorded')
         self.assertEqual(worker.run_account('first')['reason'],'slot_already_claimed')
-        self.now=37200
+        self.now=39600
+        self.assertEqual(worker.run_account('first')['status'],'recorded')
+        self.now=40800
         self.assertEqual(worker.run_account('second')['status'],'recorded')
-        self.now=38400
+        self.now=42000
         self.assertEqual(worker.run_account('third')['reason'],'historical_pending_hold')
-        self.assertEqual(calls,['first','second'])
+        self.assertEqual(calls,['first','first','second'])
 
     def test_worker_crash_and_authority_outage_never_release_or_fall_back_local(self):
         from modules.recurring_worker import RecurringWorker
@@ -232,6 +450,16 @@ class SharedRecurrenceTests(unittest.TestCase):
             receipt=json.loads((self.state/'receipts'/(event+'.json')).read_text())
             self.assertEqual(worker.operation(receipt)['outcome'],'uncertain')
             self.assertEqual(fixture.capture.read_text().splitlines(),['first '+event])
+            # Real typed no-send proof passes through sender and shared settlement.
+            fixture.transport.write_text('#!'+sys.executable+'\nimport sys,json,hashlib,os\n'
+                "message=open(sys.argv[4],'rb').read()\n"
+                "print('DOT_PRECOMMIT_NO_SEND '+json.dumps({'schema_version':2,'phase':'precommit','reason':'composer_not_empty','account':sys.argv[2],'event_id':os.environ['COORDINATOR_CHANGE_ID'],'message_sha256':hashlib.sha256(message).hexdigest()}),flush=True)\n")
+            self.now=fixture.now=37200
+            no_send=worker.run_account('second')
+            self.assertEqual(no_send['result']['outcome'],'no_action')
+            self.assertFalse(no_send['hold_preserved'])
+            self.assertEqual(self.claim(account='second')['reason'],'slot_already_claimed')
+            self.assertEqual(self.claim('linux','second',now=39000)['status'],'admitted')
 
     def test_known_preflight_failure_does_not_create_uncertain_account_hold(self):
         from modules import recurring_worker as worker_module
