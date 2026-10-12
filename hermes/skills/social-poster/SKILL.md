@@ -61,6 +61,17 @@ For Instagram, keep Threads/Facebook cross-share disabled unless each is
 explicitly selected; stop if that cannot be verified. Selection does not grant
 publication permission.
 
+`reddit` selects the Reddit family; `reddit_example` selects only r/example.
+The drafter accepts either form. `--reddit-subs` narrows the Reddit targets;
+without it, scoped selections name their own targets and a bare `reddit` creates
+an untargeted local draft. For example, `--platforms reddit_example
+--reddit-subs example,sibling` produces only `reddit_example.md`. Disjoint
+subreddit selections and empty/invalid allowlists are errors, not successful
+empty draft runs. The publisher intersects token and flag scopes symmetrically:
+`POST APPROVED reddit_example` plus `--platforms reddit` still authorizes only
+`reddit_example`, never sibling communities. An empty intersection exits with
+an error before submission; it cannot fall back to default permission.
+
 The latest request controls the action: **draft/research means discovery and
 local drafts only**, with no auto-staging, scheduling, or publishing. Stage only
 when requested. Publish only reviewed content to the verified account and

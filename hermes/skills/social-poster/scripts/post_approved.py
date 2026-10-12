@@ -24,7 +24,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from platform_policy import parse_platforms, selected
+from platform_policy import intersect_platforms, parse_platforms, selected
 
 
 def check_approval(token: str | None) -> None:
@@ -116,12 +116,17 @@ def main():
     normalized, token_plats = parse_approval_platforms(args.approval_token)
     check_approval(normalized if args.approval_token else "")
 
-    # A flag may narrow a token allowlist, never broaden it.
-    allow = parse_platforms(args.platforms if args.platforms is not None
-                            else (",".join(token_plats) if token_plats else None))
-    if token_plats:
-        token_allow = parse_platforms(",".join(token_plats))
-        allow = [p for p in allow if selected(p, token_allow)]
+    # Intersect both directions: reddit ∩ reddit_example is reddit_example.
+    # An explicitly empty token scope must not fall back to default permission.
+    try:
+        allow = parse_platforms(args.platforms if args.platforms is not None
+                                else (",".join(token_plats) if token_plats is not None else None))
+        if token_plats is not None:
+            allow = intersect_platforms(allow, parse_platforms(",".join(token_plats)))
+        if not allow:
+            raise ValueError("Token and flag platform selections have no destinations in common")
+    except ValueError as exc:
+        ap.error(str(exc))
 
     drafts_dir = Path(args.drafts).expanduser().resolve()
     manifest_path = drafts_dir / "manifest.json"

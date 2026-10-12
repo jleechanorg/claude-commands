@@ -122,7 +122,9 @@ def test_token_allowlist_cannot_be_broadened(tmp_path, monkeypatch):
     monkeypatch.setattr(publisher, 'click_submit_via_aside', calls)
     argv(monkeypatch, publisher, drafts(tmp_path), '--approval-token', 'POST APPROVED twitter',
          '--publish-request', '--platforms', 'linkedin')
-    assert publisher.main() == 0
+    with pytest.raises(SystemExit) as error:
+        publisher.main()
+    assert error.value.code == 2
     calls.assert_not_called()
 
 
@@ -149,3 +151,69 @@ def test_multi_source_discovery_instruction_contract():
     assert 'no duplicate draft' in contract
     assert 'No auto-stage on /social' in text
     assert 'keep Threads/Facebook cross-share disabled' in text
+
+
+@pytest.mark.parametrize('subs', [None, 'example', 'example,sibling'])
+def test_scoped_reddit_draft_creates_only_selected_subreddit(tmp_path, subs):
+    args = [sys.executable, str(SKILL / 'scripts/draft_social_post.py'),
+            '--intent', 'An observation', '--platforms', 'reddit_example', '--out', str(tmp_path)]
+    if subs is not None:
+        args += ['--reddit-subs', subs]
+    result = subprocess.run(args, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert {p.stem for p in tmp_path.glob('*.md')} == {'reddit_example'}
+    manifest = json.loads((tmp_path / 'manifest.json').read_text())
+    assert manifest['reddit_subs'] == ['example']
+    assert set(manifest['files']) == {'reddit_example', 'reddit_example_title'}
+
+
+def test_disjoint_reddit_draft_selection_reports_error(tmp_path):
+    result = subprocess.run([sys.executable, str(SKILL / 'scripts/draft_social_post.py'),
+        '--intent', 'An observation', '--platforms', 'reddit_example',
+        '--reddit-subs', 'sibling', '--out', str(tmp_path)], capture_output=True, text=True)
+    assert result.returncode == 2
+    assert 'no subreddit' in result.stderr.lower()
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize('token_scope,flag_scope,expected', [
+    ('reddit_example', 'reddit', {'reddit_example'}),
+    ('reddit', 'reddit_example', {'reddit_example'}),
+    ('reddit_example', 'reddit_example', {'reddit_example'}),
+    ('reddit_example,twitter', 'reddit,x', {'reddit_example', 'twitter'}),
+    ('reddit_example,reddit_sibling', 'reddit_example', {'reddit_example'}),
+])
+def test_publisher_exact_scope_intersection(tmp_path, monkeypatch, token_scope, flag_scope, expected):
+    directory = drafts(tmp_path)
+    sibling = directory / 'reddit_sibling.md'
+    sibling.write_text('A sibling draft that may not be authorized.')
+    manifest = json.loads((directory / 'manifest.json').read_text())
+    manifest['files']['reddit_sibling'] = str(sibling)
+    (directory / 'manifest.json').write_text(json.dumps(manifest))
+    calls = []
+    def submit(key, url):
+        calls.append(key)
+        return {'status': 'posted', 'url': 'https://example.org/post'}
+    monkeypatch.setattr(publisher, 'click_submit_via_aside', submit)
+    argv(monkeypatch, publisher, directory, '--approval-token', 'POST APPROVED ' + token_scope,
+         '--publish-request', '--platforms', flag_scope)
+    assert publisher.main() == 0
+    assert set(calls) == expected
+
+
+@pytest.mark.parametrize('token_scope,flag_scope', [
+    ('reddit_example', 'reddit_sibling'), ('twitter', 'linkedin'),
+    ('reddit_example', ''), ('reddit_example', 'reddit_'),
+    (',', 'reddit'), ('reddit_', 'reddit'),
+])
+def test_empty_or_invalid_publish_scope_is_error(tmp_path, monkeypatch, capsys, token_scope, flag_scope):
+    calls = Mock()
+    monkeypatch.setattr(publisher, 'click_submit_via_aside', calls)
+    argv(monkeypatch, publisher, drafts(tmp_path), '--approval-token', 'POST APPROVED ' + token_scope,
+         '--publish-request', '--platforms', flag_scope)
+    with pytest.raises(SystemExit) as error:
+        publisher.main()
+    assert error.value.code == 2
+    assert 'error:' in capsys.readouterr().err
+    calls.assert_not_called()
+    assert not (tmp_path / 'posted.json').exists()

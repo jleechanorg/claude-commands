@@ -27,7 +27,7 @@ import sys
 import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
-from platform_policy import parse_platforms
+from platform_policy import parse_platforms, resolve_reddit_subs
 
 # ----- Platform config -----
 
@@ -463,13 +463,14 @@ def main():
                     help="Comma-separated hashtag list (used by LinkedIn + Instagram)")
     ap.add_argument("--platforms", default=None,
                     help="Comma-separated platforms (default: reddit,twitter; x aliases twitter)")
-    ap.add_argument("--reddit-subs", default="",
-                    help="Verified target subreddits; omitted creates an untargeted Reddit draft")
+    ap.add_argument("--reddit-subs", default=None,
+                    help="Narrow Reddit targets; omitted uses scoped names or an untargeted draft for bare reddit")
     ap.add_argument("--out", required=True, help="Output directory for drafts + manifest")
     args = ap.parse_args()
 
     try:
         platforms = parse_platforms(args.platforms)
+        reddit_subs = resolve_reddit_subs(platforms, args.reddit_subs)
     except ValueError as exc:
         ap.error(str(exc))
 
@@ -479,7 +480,6 @@ def main():
 
     key_points = [kp.strip() for kp in args.key_points.split(",") if kp.strip()]
     hashtags = [h.strip() for h in args.hashtags.split(",") if h.strip()]
-    reddit_subs = [s.strip() for s in args.reddit_subs.split(",") if s.strip()]
 
     manifest = {
         "mode": "draft",
@@ -501,7 +501,10 @@ def main():
         key = f"reddit_{sub}" if sub else filename.replace(".md", "")
         manifest["files"][key] = str(path)
 
-    for platform in platforms:
+    # Render the resolved Reddit targets once, even when family and scoped flags overlap.
+    draft_platforms = list(dict.fromkeys(
+        "reddit" if p.startswith("reddit_") else p for p in platforms))
+    for platform in draft_platforms:
         if platform == "linkedin":
             content = draft_linkedin(args.intent, key_points, args.link, hashtags)
             write_and_track("linkedin.md", content)
