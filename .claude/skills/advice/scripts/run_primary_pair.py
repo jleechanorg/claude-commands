@@ -2,7 +2,7 @@
 """Run the /advice Codex and Opus reviewers concurrently at one exact SHA.
 
 The reviewers intentionally retain their full-permission flags. Repository
-mutation risk is reduced by giving each process its own independent clone; this
+mutation risk is reduced by giving each process its own independent checkout; this
 is not an operating-system sandbox.
 """
 
@@ -492,6 +492,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", required=True, type=Path)
     parser.add_argument("--ref", required=True)
+    parser.add_argument(
+        "--context-ref",
+        action="append",
+        default=[],
+        help="explicit comparison commit or ref to include; repeat for each context",
+    )
     parser.add_argument("--packet-file", required=True, type=Path)
     parser.add_argument("--document", action="append", default=[],
                         help="saved Markdown document relative to repo; repeat for document-only review")
@@ -520,6 +526,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Codex model for primary review (default: gpt-6-sol; 5.6 models forbidden, only gpt 6 or 6.1 allowed)",
     )
     args = parser.parse_args(argv)
+    if len(set(args.context_ref)) != len(args.context_ref):
+        parser.error("--context-ref values must not be duplicated")
     try:
         args.codex_model = validate_codex_model(args.codex_model)
     except ValueError as err:
@@ -543,14 +551,18 @@ def cleanup_directory(path: Path) -> dict[str, Any]:
     return {"success": True, "error": None, "path": str(path)}
 
 
-def create_clone(source: Path, destination: Path, sha: str) -> None:
-    # Two environment-dependent clone failures this guard fixes:
+def create_clone(
+    source: Path,
+    destination: Path,
+    sha: str,
+    context_shas: tuple[str, ...] = (),
+) -> None:
+    # Two environment-dependent fetch failures this guard fixes:
     # 1. A partial/promisor source (remote.origin.partialclonefilter=blob:none)
-    #    makes upload-pack refuse to lazy-fetch missing objects, so
-    #    `git clone --no-local` dies with "lazy fetching disabled". Force lazy
-    #    fetch back on for the disposable clone.
+    #    makes upload-pack refuse to lazy-fetch missing objects. Force lazy
+    #    fetch back on while transferring each exact commit's full ancestry.
     # 2. When filter.lfs.required=true, the checkout smudge filter needs the
-    #    LFS endpoint, but create_clone removes `origin` first, so the smudge
+    #    LFS endpoint, but the isolated checkout has no remote, so the smudge
     #    filter fails with `missing protocol`. Skip LFS smudge: reviewers read
     #    source, not LFS media.
     os.environ["GIT_NO_LAZY_FETCH"] = "0"
@@ -558,18 +570,16 @@ def create_clone(source: Path, destination: Path, sha: str) -> None:
     subprocess.run(
         [
             "git",
-            "clone",
+            "init",
             "--quiet",
-            "--no-local",
-            "--no-checkout",
-            str(source),
             str(destination),
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=True,
     )
-    git(destination, "remote", "remove", "origin")
+    for context_sha in dict.fromkeys((sha, *context_shas)):
+        git(destination, "fetch", "--quiet", "--no-tags", str(source), context_sha)
     git(destination, "checkout", "--quiet", "--detach", sha)
 
 
@@ -648,6 +658,23 @@ def main(
     if sha is None:
         print(f"review ref does not resolve to a commit: {args.ref}", file=sys.stderr)
         return 2
+    context_refs = []
+    for requested_ref in args.context_ref:
+        context_sha = resolve_ref(repo, requested_ref)
+        if context_sha is None:
+            print(
+                f"context ref does not resolve to a commit: {requested_ref}",
+                file=sys.stderr,
+            )
+            return 2
+        context_refs.append(
+            {
+                "requested_ref": requested_ref,
+                "resolved_sha_before": context_sha,
+                "resolved_sha_after": None,
+                "changed": False,
+            }
+        )
     before = repository_snapshot(repo)
     try:
         documents = read_review_documents(repo, args.document)
@@ -659,10 +686,22 @@ def main(
         json.dumps(document_hashes, sort_keys=True).encode()
     ).hexdigest() if documents else None
     packet = args.packet_file.read_text()
+    context_prompt = ""
+    if context_refs:
+        context_prompt = (
+            "Explicit comparison context commits are available in the local Git object "
+            "database; they are not the reviewed checkout:\n"
+            + "\n".join(
+                f"- {context['requested_ref']}: {context['resolved_sha_before']}"
+                for context in context_refs
+            )
+            + "\n\n"
+        )
     prompt = (
         f"EXACT REVIEW SHA: {sha}\n"
-        "The current directory is an independent detached clone at that SHA. Review only this checkout.\n\n"
-        f"{packet}"
+        "The current directory is an independent detached checkout at that SHA. "
+        "Review this checkout as the subject.\n"
+        f"{context_prompt}\n{packet}"
     )
     if documents:
         prompt = (
@@ -710,7 +749,8 @@ def main(
         "document_hashes": document_hashes,
         "document_bundle_sha256": document_bundle_sha256,
         "parallel_dispatch": len(args.reviewers) > 1,
-        "checkout_kind": "independent_clone_no_local",
+        "checkout_kind": "independent_exact_sha_fetch",
+        "context_refs": context_refs,
         "minimum_clone_free_bytes": MIN_CLONE_FREE_BYTES,
         "clone_disk_checks": [initial_disk_check],
         "timeout_seconds": args.timeout_seconds,
@@ -731,7 +771,15 @@ def main(
                     f"{MIN_CLONE_FREE_BYTES / 1024**3:.0f} GiB admission threshold "
                     "before the next reviewer clone"
                 )
-            create_clone_fn(repo, path, sha)
+            if context_refs:
+                create_clone_fn(
+                    repo,
+                    path,
+                    sha,
+                    tuple(context["resolved_sha_before"] for context in context_refs),
+                )
+            else:
+                create_clone_fn(repo, path, sha)
             if documents:
                 document_root = path / ".advice-review-documents"
                 document_root.mkdir(exist_ok=False)
@@ -805,6 +853,13 @@ def main(
             receipt["original_changed_components"] = sorted(
                 component for component in before if before[component] != after[component]
             )
+            for context in receipt["context_refs"]:
+                context["resolved_sha_after"] = resolve_ref(
+                    repo, context["requested_ref"]
+                )
+                context["changed"] = (
+                    context["resolved_sha_after"] != context["resolved_sha_before"]
+                )
             receipt["original_repository_unchanged"] = not receipt["original_changed_components"]
             receipt["original_checkout_unchanged"] = receipt["original_repository_unchanged"]
         except Exception as error:

@@ -71,6 +71,113 @@ class PrimaryPairTest(unittest.TestCase):
         path.write_text("#!/bin/sh\nset -eu\n" + body)
         path.chmod(0o755)
 
+    def test_exact_fetch_keeps_context_ancestry_and_drops_unrelated_blobs(self) -> None:
+        runner = load_runner_module()
+        target_path = self.repo / "tracked.txt"
+        target_path.write_text("target revision\n")
+        run("git", "add", "tracked.txt", cwd=self.repo)
+        run("git", "commit", "-qm", "review target", cwd=self.repo)
+        target_sha = run("git", "rev-parse", "HEAD", cwd=self.repo).stdout.strip()
+
+        run("git", "checkout", "--orphan", "context", cwd=self.repo)
+        for path in self.repo.iterdir():
+            if path.name != ".git" and path.is_file():
+                path.unlink()
+        (self.repo / "context.txt").write_text("comparison base\n")
+        run("git", "add", "context.txt", cwd=self.repo)
+        run("git", "commit", "-qm", "comparison base parent", cwd=self.repo)
+        context_parent_sha = run(
+            "git", "rev-parse", "HEAD", cwd=self.repo
+        ).stdout.strip()
+        (self.repo / "context.txt").write_text("comparison base head\n")
+        run("git", "add", "context.txt", cwd=self.repo)
+        run("git", "commit", "-qm", "comparison base head", cwd=self.repo)
+        context_sha = run("git", "rev-parse", "HEAD", cwd=self.repo).stdout.strip()
+
+        run("git", "checkout", "--orphan", "unrelated", cwd=self.repo)
+        for path in self.repo.iterdir():
+            if path.name != ".git" and path.is_file():
+                path.unlink()
+        unrelated_blob = self.repo / "unrelated.bin"
+        unrelated_blob.write_bytes(b"unrelated history\0" * 65536)
+        run("git", "add", "unrelated.bin", cwd=self.repo)
+        run("git", "commit", "-qm", "unrelated large history", cwd=self.repo)
+        unrelated_sha = run("git", "rev-parse", "HEAD", cwd=self.repo).stdout.strip()
+
+        destination = self.root / "reviewer"
+        runner.create_clone(
+            self.repo,
+            destination,
+            target_sha,
+            context_shas=(context_sha,),
+        )
+
+        self.assertEqual(
+            run("git", "rev-parse", "HEAD", cwd=destination).stdout.strip(),
+            target_sha,
+        )
+        self.assertEqual(
+            run(
+                "git", "merge-base", "--is-ancestor", context_sha, target_sha,
+                cwd=destination,
+            ).returncode,
+            1,
+        )
+        self.assertEqual(
+            run(
+                "git", "cat-file", "-e", f"{context_sha}^{{commit}}",
+                cwd=destination,
+            ).returncode,
+            0,
+        )
+        self.assertEqual(
+            run(
+                "git",
+                "merge-base",
+                "--is-ancestor",
+                context_parent_sha,
+                context_sha,
+                cwd=destination,
+            ).returncode,
+            0,
+        )
+        self.assertEqual(
+            run(
+                "git", "merge-base", "--is-ancestor", self.sha, target_sha,
+                cwd=destination,
+            ).returncode,
+            0,
+        )
+        self.assertEqual(
+            run("git", "diff", context_sha, target_sha, cwd=destination).returncode,
+            0,
+        )
+        unrelated_blob_sha = run(
+            "git", "rev-parse", f"{unrelated_sha}:unrelated.bin", cwd=self.repo
+        ).stdout.strip()
+        self.assertNotEqual(
+            run(
+                "git", "cat-file", "-e", unrelated_blob_sha, cwd=destination
+            ).returncode,
+            0,
+        )
+        self.assertNotEqual(
+            run(
+                "git", "cat-file", "-e", f"{unrelated_sha}^{{commit}}",
+                cwd=destination,
+            ).returncode,
+            0,
+        )
+        alternates = destination / ".git" / "objects" / "info" / "alternates"
+        self.assertFalse(alternates.exists())
+        self.assertNotEqual(
+            run(
+                "git", "config", "--local", "--get", "remote.origin.url",
+                cwd=destination,
+            ).returncode,
+            0,
+        )
+
     def invoke(
         self, *extra: str, ref: str | None = None
     ) -> subprocess.CompletedProcess[str]:
@@ -178,6 +285,50 @@ class PrimaryPairTest(unittest.TestCase):
         self.assertFalse(receipt["overlap_proven"])
         self.assertFalse((self.sync / "unexpected-opus.ran").exists())
 
+    def test_context_ref_is_resolved_and_recorded_in_receipt(self) -> None:
+        self.executable("codex", "printf 'VERDICT: APPROVED\\nCOVERAGE: all\\n'\n")
+        context_ref = "refs/heads/comparison-context"
+        second_context_ref = "refs/heads/second-comparison-context"
+        run("git", "update-ref", context_ref, self.sha, cwd=self.repo)
+        run("git", "update-ref", second_context_ref, self.sha, cwd=self.repo)
+
+        result = self.invoke(
+            "--context-ref",
+            context_ref,
+            "--context-ref",
+            second_context_ref,
+            "--reviewers",
+            "codex",
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt = json.loads((self.output / "receipt.json").read_text())
+        self.assertEqual(
+            receipt["context_refs"],
+            [
+                {
+                    "requested_ref": context_ref,
+                    "resolved_sha_before": self.sha,
+                    "resolved_sha_after": self.sha,
+                    "changed": False,
+                },
+                {
+                    "requested_ref": second_context_ref,
+                    "resolved_sha_before": self.sha,
+                    "resolved_sha_after": self.sha,
+                    "changed": False,
+                },
+            ],
+        )
+        self.assertEqual(receipt["checkout_kind"], "independent_exact_sha_fetch")
+
+    def test_unresolvable_context_ref_fails_before_reserving_output(self) -> None:
+        result = self.invoke("--context-ref", "refs/heads/missing-context")
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("context ref does not resolve", result.stderr)
+        self.assertFalse(self.output.exists())
+
     def test_opus_only_runs_only_opus_and_records_non_parallel_dispatch(self) -> None:
         self.executable("codex", "touch \"$ADVICE_TEST_SYNC_DIR/unexpected-codex.ran\"\n")
         self.executable(
@@ -253,7 +404,7 @@ printf 'VERDICT: APPROVED\\nCOVERAGE: all\\n'
         receipt = json.loads((self.output / "receipt.json").read_text())
         self.assertTrue(receipt["overlap_proven"])
         self.assertEqual(receipt["clone_shas"], {"codex": self.sha, "opus": self.sha})
-        self.assertEqual(receipt["checkout_kind"], "independent_clone_no_local")
+        self.assertEqual(receipt["checkout_kind"], "independent_exact_sha_fetch")
         self.assertEqual(receipt["reviewers"]["codex"]["status"], "success")
         self.assertEqual(receipt["reviewers"]["opus"]["status"], "success")
         self.assertNotEqual((self.sync / "codex.cwd").read_text(), (self.sync / "opus.cwd").read_text())
