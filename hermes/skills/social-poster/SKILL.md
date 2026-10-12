@@ -98,10 +98,20 @@ For **each input source URL**, independently:
    Open candidate discussions, verify their original and latest activity dates,
    and read enough context to explain relevance. Prefer active discussions;
    label older threads, locked/archived threads, and any uncertainty.
-3. Read current community rules, pinned guidance, self-promotion/AI-content
-   restrictions, link policies, and flair requirements. Record exact rule URLs
-   and the check date. Historical rule tables below are leads only, never live
-   verification. Skip disallowed content even if the community was requested.
+3. **Mandatory Reddit promotion-rule gate:** before recommending a destination or drafting for it,
+   verify current subreddit-specific rules and pinned guidance for promotion eligibility,
+   affiliation disclosure, required flair, frequency/duplicate limits,
+   AI/bot restrictions, account eligibility (such as age, karma, or prior
+   participation), and link policies. Record each rule source URL and check date,
+   relevant restrictions, and a disposition: `allowed`, `conditional`,
+   `prohibited`, or `unverified`. For `conditional`, identify the conditions and
+   verify that the proposed content and intended account satisfy them before
+   recommending or drafting. If rules or account eligibility are inaccessible or ambiguous,
+   do not assume promotion is allowed: mark the destination `unverified` and
+   withhold a destination-specific promotional draft, or choose a verified alternative.
+   Skip prohibited promotion even if the community was explicitly requested.
+   Historical rule tables are leads only, never current verification. Passing
+   this gate does not grant publication permission.
 4. Inspect the intended user's prior posts **and replies** for matching source
    links, text/media, or the same topic in each candidate community/thread.
    Record existing permalinks and the history window searched. If identity or
@@ -128,6 +138,8 @@ into a single unmapped recommendation. Each section must include:
 - For each target: platform, exact community URL and exact existing thread URL
   (for replies), discussion date/latest activity, relevance, current rules URL
   and checked-at date, flair/link constraints, and prior-user-post/reply evidence.
+  For Reddit, include the promotion disposition (`allowed`, `conditional`,
+  `prohibited`, or `unverified`) and evidence for any eligibility conditions.
 - Decision: `standalone`, `reply`, `existing`, or `skip`, with rationale. Include
   the exact existing permalink when found; no duplicate draft for that target.
 - The complete tailored draft (Reddit title/body for standalone; reply text for

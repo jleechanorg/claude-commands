@@ -217,3 +217,18 @@ def test_empty_or_invalid_publish_scope_is_error(tmp_path, monkeypatch, capsys, 
     assert 'error:' in capsys.readouterr().err
     calls.assert_not_called()
     assert not (tmp_path / 'posted.json').exists()
+
+
+def test_reddit_promotion_rules_are_a_prerequisite_instruction_contract():
+    # Instruction coverage only, not evidence that live subreddit rules were checked.
+    text = (SKILL / 'SKILL.md').read_text()
+    start = text.index('## Phase 0')
+    contract = text[start:text.index('## Twitter/X browser workflow')]
+    for requirement in ['before recommending a destination or drafting for it',
+            'promotion eligibility', 'affiliation disclosure', 'required flair',
+            'frequency/duplicate limits', 'AI/bot restrictions', 'account eligibility',
+            'rule source URL', 'check date', '`allowed`', '`conditional`',
+            '`prohibited`', '`unverified`', 'inaccessible or ambiguous',
+            'do not assume promotion is allowed', 'verified alternative',
+            'does not grant publication permission']:
+        assert requirement in contract

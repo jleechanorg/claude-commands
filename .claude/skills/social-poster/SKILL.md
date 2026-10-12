@@ -56,6 +56,10 @@ For every selected platform, whether running inside Aside or from another local 
 ## Reddit staging supplement
 
 This is a Reddit-only supplement to the universal staging flow:
+Before recommending a subreddit or drafting for it, complete the canonical
+promotion-rule gate and record the rule source/date and allowed, conditional,
+prohibited, or unverified disposition. Inaccessible or ambiguous rules do not
+establish permission to promote; this check is not publication authorization.
 
 1. Read the subreddit rules and choose a required post flair before staging. Use a context-appropriate flair such as `Discussion`; do not assume a flair is optional.
 2. On old Reddit self-post forms, target named fields: `textarea[name="title"]` and `textarea[name="text"]`. Do not use generic `input` selectors, which can reach hidden fields or page-level search controls.
