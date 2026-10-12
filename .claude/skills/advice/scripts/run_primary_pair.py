@@ -684,7 +684,7 @@ def main(
         print(
             "review clone disk admission failed: temporary volume has "
             f"{initial_disk_check['free_bytes'] / 1024**3:.1f} GiB free; "
-            f"at least {MIN_CLONE_FREE_BYTES / 1024**3:.0f} GiB must remain free",
+            f"admission threshold is {MIN_CLONE_FREE_BYTES / 1024**3:.0f} GiB",
             file=sys.stderr,
         )
         return 8
