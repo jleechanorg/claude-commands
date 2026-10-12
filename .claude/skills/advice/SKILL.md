@@ -124,8 +124,13 @@ full-permission transports explicitly: `codex exec --yolo` for A1 and
 `claude -p --model opus --dangerously-skip-permissions` for A2. Independent
 clones prevent reviewer writes to refs, config, or hooks from sharing the
 original repository's `.git` state; they are deliberately **not** an OS security
-sandbox. If the original checkout, refs, local config, or hooks change, the
-runner fails closed and its verdicts may not be used.
+sandbox. If the original checkout, local config, or hooks change, the runner
+fails closed and its verdicts may not be used. The review commit is resolved
+before cloning and remains the result's identity; changes to refs in a shared
+source repository do not invalidate it. The receipt records the requested
+ref's resolved commit before and after review, so movement of that ref remains
+visible alongside the fixed review SHA. LFS binary media is unavailable because
+clone setup skips smudging; reviewers cannot assess that media from this clone.
 
 While each reviewer root is alive, the runner samples the macOS/Linux process
 tree, retains PID plus process-start identity for discovered descendants even

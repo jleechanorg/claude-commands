@@ -71,14 +71,16 @@ class PrimaryPairTest(unittest.TestCase):
         path.write_text("#!/bin/sh\nset -eu\n" + body)
         path.chmod(0o755)
 
-    def invoke(self, *extra: str) -> subprocess.CompletedProcess[str]:
+    def invoke(
+        self, *extra: str, ref: str | None = None
+    ) -> subprocess.CompletedProcess[str]:
         return run(
             "python3",
             str(SCRIPT),
             "--repo",
             str(self.repo),
             "--ref",
-            self.sha,
+            ref or self.sha,
             "--packet-file",
             str(self.packet),
             "--output-dir",
@@ -257,6 +259,69 @@ printf 'VERDICT: APPROVED\\nCOVERAGE: all\\n'
             run("git", "show-ref", "--verify", "--quiet", "refs/heads/reviewer-evil", cwd=self.repo).returncode,
             0,
         )
+
+    def test_unrelated_source_ref_mutation_does_not_invalidate_exact_sha_review(
+        self,
+    ) -> None:
+        self.env["ADVICE_TEST_SOURCE_REPO"] = str(self.repo)
+        self.env["ADVICE_TEST_SOURCE_SHA"] = self.sha
+        self.executable(
+            "codex",
+            "git -C \"$ADVICE_TEST_SOURCE_REPO\" update-ref "
+            "refs/heads/sibling \"$ADVICE_TEST_SOURCE_SHA\"\n"
+            "printf 'VERDICT: APPROVED\\nCOVERAGE: exact SHA\\n'\n",
+        )
+
+        result = self.invoke("--reviewers", "codex")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt = json.loads((self.output / "receipt.json").read_text())
+        self.assertEqual(receipt["sha"], self.sha)
+        self.assertTrue(receipt["original_repository_unchanged"])
+        self.assertEqual(receipt["original_changed_components"], [])
+        self.assertEqual(
+            run("git", "rev-parse", "refs/heads/sibling", cwd=self.repo).stdout.strip(),
+            self.sha,
+        )
+
+    def test_requested_ref_movement_is_reported_without_changing_review_sha(
+        self,
+    ) -> None:
+        tree = run("git", "rev-parse", "HEAD^{tree}", cwd=self.repo).stdout.strip()
+        next_sha = run(
+            "git",
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit-tree",
+            tree,
+            "-p",
+            self.sha,
+            "-m",
+            "next ref target",
+            cwd=self.repo,
+        ).stdout.strip()
+        run("git", "update-ref", "refs/heads/review", self.sha, cwd=self.repo)
+        self.env["ADVICE_TEST_SOURCE_REPO"] = str(self.repo)
+        self.env["ADVICE_TEST_NEXT_SHA"] = next_sha
+        self.executable(
+            "codex",
+            "git -C \"$ADVICE_TEST_SOURCE_REPO\" update-ref "
+            "refs/heads/review \"$ADVICE_TEST_NEXT_SHA\"\n"
+            "printf 'VERDICT: APPROVED\\nCOVERAGE: exact SHA\\n'\n",
+        )
+
+        result = self.invoke("--reviewers", "codex", ref="review")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt = json.loads((self.output / "receipt.json").read_text())
+        self.assertEqual(receipt["sha"], self.sha)
+        self.assertEqual(receipt["requested_ref"], "review")
+        self.assertEqual(receipt["requested_ref_sha_before"], self.sha)
+        self.assertEqual(receipt["requested_ref_sha_after"], next_sha)
+        self.assertTrue(receipt["requested_ref_changed"])
+        self.assertTrue(receipt["original_repository_unchanged"])
 
     def test_document_review_accepts_all_git_states_without_changing_source(self) -> None:
         import shutil

@@ -138,9 +138,16 @@ def repository_snapshot(repo: Path) -> dict[str, str]:
         "checkout": checkout_fingerprint(repo),
         "ignored_metadata": digest_bytes(ignored_path_metadata(repo)),
         "local_config": digest_bytes(git(repo, "config", "--local", "--null", "--list").stdout),
-        "refs": digest_bytes(git(repo, "show-ref", "--head", check=False).stdout),
         "effective_hooks": hook_tree_fingerprint(effective_hooks),
     }
+
+
+def resolve_ref(repo: Path, ref: str) -> str | None:
+    """Resolve the requested review ref, or report that it no longer exists."""
+    result = git(repo, "rev-parse", f"{ref}^{{commit}}", check=False)
+    if result.returncode != 0:
+        return None
+    return result.stdout.decode().strip()
 
 
 def command_path(name: str) -> str | None:
@@ -537,6 +544,17 @@ def cleanup_directory(path: Path) -> dict[str, Any]:
 
 
 def create_clone(source: Path, destination: Path, sha: str) -> None:
+    # Two environment-dependent clone failures this guard fixes:
+    # 1. A partial/promisor source (remote.origin.partialclonefilter=blob:none)
+    #    makes upload-pack refuse to lazy-fetch missing objects, so
+    #    `git clone --no-local` dies with "lazy fetching disabled". Force lazy
+    #    fetch back on for the disposable clone.
+    # 2. When filter.lfs.required=true, the checkout smudge filter needs the
+    #    LFS endpoint, but create_clone removes `origin` first, so the smudge
+    #    filter fails with `missing protocol`. Skip LFS smudge: reviewers read
+    #    source, not LFS media.
+    os.environ["GIT_NO_LAZY_FETCH"] = "0"
+    os.environ["GIT_LFS_SKIP_SMUDGE"] = "1"
     subprocess.run(
         [
             "git",
@@ -606,7 +624,10 @@ def main(
     if not args.document and git(repo, "status", "--porcelain=v1", "--untracked-files=all").stdout:
         print("input checkout must be clean; dirty state is not represented by an exact SHA", file=sys.stderr)
         return 2
-    sha = git(repo, "rev-parse", f"{args.ref}^{{commit}}").stdout.decode().strip()
+    sha = resolve_ref(repo, args.ref)
+    if sha is None:
+        print(f"review ref does not resolve to a commit: {args.ref}", file=sys.stderr)
+        return 2
     before = repository_snapshot(repo)
     try:
         documents = read_review_documents(repo, args.document)
@@ -648,6 +669,10 @@ def main(
     temp_root = Path(tempfile.mkdtemp(prefix="advice-primary-pair-"))
     receipt: dict[str, Any] = {
         "sha": sha,
+        "requested_ref": args.ref,
+        "requested_ref_sha_before": sha,
+        "requested_ref_sha_after": None,
+        "requested_ref_changed": False,
         "review_kind": "documents" if documents else "revision",
         "document_hashes": document_hashes,
         "document_bundle_sha256": document_bundle_sha256,
@@ -727,6 +752,9 @@ def main(
         receipt["cleanup"] = cleanup_fn(temp_root)
         try:
             after = repository_snapshot(repo)
+            requested_ref_sha_after = resolve_ref(repo, args.ref)
+            receipt["requested_ref_sha_after"] = requested_ref_sha_after
+            receipt["requested_ref_changed"] = requested_ref_sha_after != sha
             receipt["original_changed_components"] = sorted(
                 component for component in before if before[component] != after[component]
             )
