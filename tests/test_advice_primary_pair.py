@@ -178,6 +178,43 @@ class PrimaryPairTest(unittest.TestCase):
             0,
         )
 
+    def test_clone_environment_overrides_do_not_leak_to_reviewer_process(self) -> None:
+        runner = load_runner_module()
+        destination = self.root / "reviewer"
+
+        with mock.patch.dict(
+            os.environ,
+            {"GIT_NO_LAZY_FETCH": "1", "GIT_LFS_SKIP_SMUDGE": "0"},
+        ):
+            process_env = os.environ.copy()
+            commands: list[tuple[list[str], dict[str, object]]] = []
+            real_run = runner.subprocess.run
+
+            def capture_run(
+                args: list[str], **kwargs: object
+            ) -> subprocess.CompletedProcess[bytes]:
+                if isinstance(args, list) and "-C" in args:
+                    command_index = args.index("-C") + 2
+                    if args[command_index] in {"fetch", "checkout"}:
+                        commands.append((args, kwargs))
+                return real_run(args, **kwargs)
+
+            with mock.patch.object(runner.subprocess, "run", side_effect=capture_run):
+                runner.create_clone(self.repo, destination, self.sha)
+
+            self.assertEqual(os.environ["GIT_NO_LAZY_FETCH"], "1")
+            self.assertEqual(os.environ["GIT_LFS_SKIP_SMUDGE"], "0")
+            self.assertEqual(os.environ.copy(), process_env)
+
+        fetch = next(kwargs for args, kwargs in commands if args[3] == "fetch")
+        checkout = next(kwargs for args, kwargs in commands if args[3] == "checkout")
+        self.assertEqual(fetch["timeout"], 600)
+        self.assertEqual(checkout["timeout"], 600)
+        self.assertEqual(fetch["env"]["GIT_NO_LAZY_FETCH"], "0")
+        self.assertEqual(fetch["env"]["GIT_LFS_SKIP_SMUDGE"], "0")
+        self.assertEqual(checkout["env"]["GIT_NO_LAZY_FETCH"], "1")
+        self.assertEqual(checkout["env"]["GIT_LFS_SKIP_SMUDGE"], "1")
+
     def invoke(
         self, *extra: str, ref: str | None = None
     ) -> subprocess.CompletedProcess[str]:

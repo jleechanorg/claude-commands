@@ -27,12 +27,20 @@ from pathlib import Path
 from typing import Any
 
 
-def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[bytes]:
+def git(
+    repo: Path,
+    *args: str,
+    check: bool = True,
+    env: dict[str, str] | None = None,
+    timeout: float = 600,
+) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
         ["git", "-C", str(repo), *args],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=check,
+        env=env,
+        timeout=timeout,
     )
 
 
@@ -565,8 +573,10 @@ def create_clone(
     #    LFS endpoint, but the isolated checkout has no remote, so the smudge
     #    filter fails with `missing protocol`. Skip LFS smudge: reviewers read
     #    source, not LFS media.
-    os.environ["GIT_NO_LAZY_FETCH"] = "0"
-    os.environ["GIT_LFS_SKIP_SMUDGE"] = "1"
+    fetch_env = os.environ.copy()
+    fetch_env["GIT_NO_LAZY_FETCH"] = "0"
+    checkout_env = os.environ.copy()
+    checkout_env["GIT_LFS_SKIP_SMUDGE"] = "1"
     subprocess.run(
         [
             "git",
@@ -577,10 +587,26 @@ def create_clone(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=True,
+        timeout=600,
     )
     for context_sha in dict.fromkeys((sha, *context_shas)):
-        git(destination, "fetch", "--quiet", "--no-tags", str(source), context_sha)
-    git(destination, "checkout", "--quiet", "--detach", sha)
+        git(
+            destination,
+            "fetch",
+            "--quiet",
+            "--no-tags",
+            str(source),
+            context_sha,
+            env=fetch_env,
+        )
+    git(
+        destination,
+        "checkout",
+        "--quiet",
+        "--detach",
+        sha,
+        env=checkout_env,
+    )
 
 
 MIN_CLONE_FREE_BYTES = 10 * 1024**3
