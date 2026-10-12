@@ -131,6 +131,12 @@ source repository do not invalidate it. The receipt records the requested
 ref's resolved commit before and after review, so movement of that ref remains
 visible alongside the fixed review SHA. LFS binary media is unavailable because
 clone setup skips smudging; reviewers cannot assess that media from this clone.
+Before creating reviewer outputs and again before each clone, the runner requires
+at least 10 GiB free on the temporary volume and refuses if the check fails or
+cannot be measured. This is an admission threshold, not a guarantee that space
+will remain available: concurrent disk use can race the checks, a partial/promisor
+source may fetch additional objects, and clone size can exceed the space above
+the threshold.
 
 While each reviewer root is alive, the runner samples the macOS/Linux process
 tree, retains PID plus process-start identity for discovered descendants even

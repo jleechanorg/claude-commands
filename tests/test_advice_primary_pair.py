@@ -89,6 +89,72 @@ class PrimaryPairTest(unittest.TestCase):
             env=self.env,
         )
 
+    def test_low_temp_space_refuses_before_creating_outputs_or_reviewer_clones(self) -> None:
+        runner = load_runner_module()
+        clone = mock.Mock()
+        stderr = io.StringIO()
+        low_space = mock.Mock(free=6 * 1024**3)
+
+        with (
+            mock.patch.object(runner.shutil, "disk_usage", return_value=low_space),
+            redirect_stderr(stderr),
+        ):
+            result = runner.main(
+                [
+                    "--repo", str(self.repo),
+                    "--ref", self.sha,
+                    "--packet-file", str(self.packet),
+                    "--output-dir", str(self.output),
+                ],
+                create_clone_fn=clone,
+            )
+
+        self.assertNotEqual(result, 0)
+        self.assertIn("disk", stderr.getvalue().lower())
+        clone.assert_not_called()
+        self.assertFalse(self.output.exists())
+
+    def test_disk_admission_accepts_exact_minimum_free_space(self) -> None:
+        runner = load_runner_module()
+
+        with mock.patch.object(
+            runner.shutil,
+            "disk_usage",
+            return_value=mock.Mock(free=runner.MIN_CLONE_FREE_BYTES),
+        ):
+            result = runner.check_clone_disk_space()
+
+        self.assertTrue(result["sufficient"])
+        self.assertEqual(result["free_bytes"], runner.MIN_CLONE_FREE_BYTES)
+
+    def test_disk_floor_is_rechecked_before_each_reviewer_clone(self) -> None:
+        runner = load_runner_module()
+        clone = mock.Mock(side_effect=lambda _repo, destination, _sha: destination.mkdir())
+        free_values = iter((20 * 1024**3, 20 * 1024**3, 6 * 1024**3))
+        disk_usage = mock.Mock(side_effect=lambda _path: mock.Mock(free=next(free_values)))
+        stderr = io.StringIO()
+
+        with (
+            mock.patch.object(runner.shutil, "disk_usage", disk_usage),
+            redirect_stderr(stderr),
+        ):
+            result = runner.main(
+                [
+                    "--repo", str(self.repo),
+                    "--ref", self.sha,
+                    "--packet-file", str(self.packet),
+                    "--output-dir", str(self.output),
+                ],
+                create_clone_fn=clone,
+            )
+
+        self.assertEqual(result, 8, stderr.getvalue())
+        self.assertEqual(clone.call_count, 1)
+        self.assertIn("disk admission", stderr.getvalue())
+        receipt = json.loads((self.output / "receipt.json").read_text())
+        self.assertEqual(len(receipt["clone_disk_checks"]), 3)
+        self.assertIn("disk_admission_error", receipt)
+
     def test_reviewers_accepts_codex_opus_subset_and_rejects_unknown_or_duplicates(self) -> None:
         self.executable("codex", "printf 'VERDICT: APPROVED\\nCOVERAGE: all\\n'\n")
         self.executable("claude", "printf 'VERDICT: APPROVED\\nCOVERAGE: all\\n'\n")

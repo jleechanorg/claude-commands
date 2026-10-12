@@ -573,6 +573,26 @@ def create_clone(source: Path, destination: Path, sha: str) -> None:
     git(destination, "checkout", "--quiet", "--detach", sha)
 
 
+MIN_CLONE_FREE_BYTES = 10 * 1024**3
+
+
+class DiskAdmissionError(RuntimeError):
+    """The temporary volume does not meet the free-space threshold."""
+
+
+def check_clone_disk_space() -> dict[str, int | bool]:
+    try:
+        free_bytes = shutil.disk_usage(tempfile.gettempdir()).free
+    except OSError as error:
+        message = f"cannot measure temporary-volume free space: {error}"
+        raise DiskAdmissionError(message) from error
+    return {
+        "free_bytes": free_bytes,
+        "minimum_free_bytes": MIN_CLONE_FREE_BYTES,
+        "sufficient": free_bytes >= MIN_CLONE_FREE_BYTES,
+    }
+
+
 def descendant_termination_failures(reviewers: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     for reviewer, result in reviewers.items():
@@ -656,6 +676,19 @@ def main(
             + "\n\n" + packet
         )
     try:
+        initial_disk_check = check_clone_disk_space()
+    except DiskAdmissionError as error:
+        print(f"review clone disk admission failed: {error}", file=sys.stderr)
+        return 8
+    if not initial_disk_check["sufficient"]:
+        print(
+            "review clone disk admission failed: temporary volume has "
+            f"{initial_disk_check['free_bytes'] / 1024**3:.1f} GiB free; "
+            f"at least {MIN_CLONE_FREE_BYTES / 1024**3:.0f} GiB must remain free",
+            file=sys.stderr,
+        )
+        return 8
+    try:
         # Reserve the result path before dispatch. Reusing a directory could
         # leave an unselected review artifact beside a fresh receipt.
         output_dir.mkdir(parents=True, exist_ok=False)
@@ -678,6 +711,8 @@ def main(
         "document_bundle_sha256": document_bundle_sha256,
         "parallel_dispatch": len(args.reviewers) > 1,
         "checkout_kind": "independent_clone_no_local",
+        "minimum_clone_free_bytes": MIN_CLONE_FREE_BYTES,
+        "clone_disk_checks": [initial_disk_check],
         "timeout_seconds": args.timeout_seconds,
         "timeout_grace_seconds": args.timeout_grace_seconds,
         "codex_model": args.codex_model,
@@ -688,6 +723,14 @@ def main(
         reviewer_names = args.reviewers
         clones = {name: temp_root / name for name in reviewer_names}
         for path in clones.values():
+            disk_check = check_clone_disk_space()
+            receipt["clone_disk_checks"].append(disk_check)
+            if not disk_check["sufficient"]:
+                raise DiskAdmissionError(
+                    "temporary volume fell below the "
+                    f"{MIN_CLONE_FREE_BYTES / 1024**3:.0f} GiB admission threshold "
+                    "before the next reviewer clone"
+                )
             create_clone_fn(repo, path, sha)
             if documents:
                 document_root = path / ".advice-review-documents"
@@ -745,6 +788,10 @@ def main(
         if documents and read_review_documents(repo, args.document) != documents:
             raise RuntimeError("source documents changed during review")
         receipt["operation"] = {"success": True, "error": None}
+    except DiskAdmissionError as error:
+        operational_error = f"{type(error).__name__}: {error}"
+        receipt["disk_admission_error"] = str(error)
+        receipt["operation"] = {"success": False, "error": operational_error}
     except Exception as error:
         operational_error = f"{type(error).__name__}: {error}"
         receipt["operation"] = {"success": False, "error": operational_error}
@@ -778,6 +825,13 @@ def main(
     if not receipt["cleanup"]["success"]:
         print(f"failed to clean disposable clones: {receipt['cleanup']['error']}", file=sys.stderr)
         return 5
+    if receipt.get("disk_admission_error"):
+        print(
+            "review clone disk admission failed: "
+            f"{receipt['disk_admission_error']}",
+            file=sys.stderr,
+        )
+        return 8
     if operational_error is not None:
         print(f"primary reviewer operation failed: {operational_error}", file=sys.stderr)
         return 6
