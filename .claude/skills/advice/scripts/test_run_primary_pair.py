@@ -39,6 +39,35 @@ class SourceRefIntegrityTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
+    def test_disk_admission_rejects_space_below_threshold(self) -> None:
+        with mock.patch.object(
+            runner.shutil,
+            "disk_usage",
+            return_value=mock.Mock(free=runner.MIN_CLONE_FREE_BYTES - 1),
+        ):
+            result = runner.check_clone_disk_space()
+
+        self.assertFalse(result["sufficient"])
+
+    def test_disk_admission_accepts_exact_threshold(self) -> None:
+        with mock.patch.object(
+            runner.shutil,
+            "disk_usage",
+            return_value=mock.Mock(free=runner.MIN_CLONE_FREE_BYTES),
+        ):
+            result = runner.check_clone_disk_space()
+
+        self.assertTrue(result["sufficient"])
+
+    def test_disk_admission_fails_closed_when_space_cannot_be_measured(self) -> None:
+        with (
+            mock.patch.object(
+                runner.shutil, "disk_usage", side_effect=OSError("unavailable")
+            ),
+            self.assertRaises(runner.DiskAdmissionError),
+        ):
+            runner.check_clone_disk_space()
+
     def git(self, *args: str) -> str:
         return subprocess.run(
             ["git", "-C", str(self.repo), *args],
