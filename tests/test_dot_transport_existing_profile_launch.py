@@ -597,6 +597,108 @@ process.stdout.write = (chunk, ...args) => {
         )
         self.assertFalse(self.launch_record.exists())
 
+    def test_ignores_only_ancestor_owned_exact_profile_lock_holder(self):
+        bin_dir = self.root / "lock-holder-bin"
+        bin_dir.mkdir()
+        fake_ps = bin_dir / "ps"
+        lock_holder = (
+            f"python3 - {self.profile}/.dot-profile.lock "
+            f"{self.profile}/.dot-profile.lock.ready.ABC123"
+        )
+        fake_ps.write_text(
+            "#!/bin/sh\n"
+            'node_pid="$PPID"\n'
+            'parent_pid=$(/bin/ps -o ppid= -p "$node_pid" | tr -d "[:space:]")\n'
+            '/bin/ps -o pid=,ppid=,command= -p "$parent_pid"\n'
+            "printf '%s %s %s\\n' 987654 \"$parent_pid\" "
+            + shlex.quote(lock_holder)
+            + "\n",
+            encoding="utf-8",
+        )
+        fake_ps.chmod(fake_ps.stat().st_mode | stat.S_IXUSR)
+        env = dict(self.env)
+        env["PATH"] = f"{bin_dir}{os.pathsep}{self.env['PATH']}"
+
+        proc = self._run(env=env)
+
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertTrue(self.launch_record.exists())
+        self.assertEqual(
+            self._result(proc.stdout),
+            {
+                "schema_version": 1,
+                "launch_state": "started",
+                "browser_disposition": "spawned",
+                "cleanup_state": "context_close_returned",
+            },
+        )
+
+    def test_same_ancestor_non_lock_process_still_blocks_launch(self):
+        bin_dir = self.root / "same-parent-bin"
+        bin_dir.mkdir()
+        fake_ps = bin_dir / "ps"
+        fake_ps.write_text(
+            "#!/bin/sh\n"
+            'node_pid="$PPID"\n'
+            'parent_pid=$(/bin/ps -o ppid= -p "$node_pid" | tr -d "[:space:]")\n'
+            '/bin/ps -o pid=,ppid=,command= -p "$parent_pid"\n'
+            "printf '%s %s %s\\n' 987654 \"$parent_pid\" "
+            + shlex.quote(f"python3 - {self.profile}/unrelated-helper")
+            + "\n",
+            encoding="utf-8",
+        )
+        fake_ps.chmod(fake_ps.stat().st_mode | stat.S_IXUSR)
+        env = dict(self.env)
+        env["PATH"] = f"{bin_dir}{os.pathsep}{self.env['PATH']}"
+
+        proc = self._run(env=env)
+
+        self.assertEqual(proc.returncode, 10, proc.stderr)
+        self.assertEqual(
+            self._result(proc.stdout),
+            {
+                "schema_version": 1,
+                "launch_state": "unavailable",
+                "diagnostic": "profile_owner_present",
+            },
+        )
+        self.assertFalse(self.launch_record.exists())
+
+    def test_non_ancestor_profile_lock_holder_still_blocks_launch(self):
+        bin_dir = self.root / "foreign-lock-holder-bin"
+        bin_dir.mkdir()
+        fake_ps = bin_dir / "ps"
+        lock_holder = (
+            f"python3 - {self.profile}/.dot-profile.lock "
+            f"{self.profile}/.dot-profile.lock.ready.ABC123"
+        )
+        fake_ps.write_text(
+            "#!/bin/sh\n"
+            'node_pid="$PPID"\n'
+            'parent_pid=$(/bin/ps -o ppid= -p "$node_pid" | tr -d "[:space:]")\n'
+            '/bin/ps -o pid=,ppid=,command= -p "$parent_pid"\n'
+            "printf '%s %s %s\\n' 987654 1 "
+            + shlex.quote(lock_holder)
+            + "\n",
+            encoding="utf-8",
+        )
+        fake_ps.chmod(fake_ps.stat().st_mode | stat.S_IXUSR)
+        env = dict(self.env)
+        env["PATH"] = f"{bin_dir}{os.pathsep}{self.env['PATH']}"
+
+        proc = self._run(env=env)
+
+        self.assertEqual(proc.returncode, 10, proc.stderr)
+        self.assertEqual(
+            self._result(proc.stdout),
+            {
+                "schema_version": 1,
+                "launch_state": "unavailable",
+                "diagnostic": "profile_owner_present",
+            },
+        )
+        self.assertFalse(self.launch_record.exists())
+
     def test_prepared_send_mode_blocks_when_profile_missing_without_seeding(self):
         self.profile.rmdir()
         msg_file = self.root / "msg.txt"

@@ -294,7 +294,7 @@ function assertExistingProfileAvailable(dir) {
 
   let processTable;
   try {
-    processTable = execFileSync('ps', ['-A', '-o', 'command='], {
+    processTable = execFileSync('ps', ['-A', '-o', 'pid=,ppid=,command='], {
       encoding: 'utf8',
       timeout: 2000,
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -302,7 +302,31 @@ function assertExistingProfileAvailable(dir) {
   } catch {
     existingProfileUnavailable('profile_owner_unknown');
   }
-  if (processTable.split('\n').some((line) => line.includes(dir))) {
+
+  const processes = processTable.split('\n').flatMap((line) => {
+    const match = line.match(/^\s*(\d+)\s+(\d+)\s+(.*)$/);
+    return match ? [{ pid: Number(match[1]), ppid: Number(match[2]), command: match[3] }] : [];
+  });
+  const processByPid = new Map(processes.map((entry) => [entry.pid, entry]));
+  const ancestorPids = new Set();
+  let ancestorPid = process.ppid;
+  while (ancestorPid > 1 && !ancestorPids.has(ancestorPid)) {
+    ancestorPids.add(ancestorPid);
+    ancestorPid = processByPid.get(ancestorPid)?.ppid || 0;
+  }
+
+  const profileLockPath = path.join(dir, '.dot-profile.lock');
+  const ownLockHolder = (entry) => {
+    if (!ancestorPids.has(entry.ppid)) return false;
+    return /(?:^|\s)\S*(?:python(?:\d+(?:\.\d+)*)?|Python)\s+-\s/.test(entry.command) &&
+      entry.command.includes(` ${profileLockPath} ${profileLockPath}.ready.`);
+  };
+  if (processTable.split('\n').some((line) => {
+    if (!line.includes(dir)) return false;
+    const match = line.match(/^\s*(\d+)\s+(\d+)\s+(.*)$/);
+    if (!match) return true;
+    return !ownLockHolder({ ppid: Number(match[2]), command: match[3] });
+  })) {
     existingProfileUnavailable('profile_owner_present');
   }
 }
