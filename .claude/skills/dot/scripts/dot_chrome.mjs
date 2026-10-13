@@ -321,7 +321,9 @@ function assertExistingProfileAvailable(dir) {
     const argvSuffix = ` - ${profileLockPath} ${profileLockPath}.ready.`;
     const suffixIndex = entry.command.lastIndexOf(argvSuffix);
     if (suffixIndex < 0) return false;
-    const executable = path.basename(entry.command.slice(0, suffixIndex));
+    const executablePrefix = entry.command.slice(0, suffixIndex);
+    if (/\s/.test(executablePrefix)) return false;
+    const executable = path.basename(executablePrefix);
     const readyToken = entry.command.slice(suffixIndex + argvSuffix.length);
     return /^(?:python(?:\d+(?:\.\d+)*)?|Python)$/.test(executable) &&
       /^[A-Za-z0-9]{6}$/.test(readyToken);

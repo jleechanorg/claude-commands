@@ -674,6 +674,42 @@ process.stdout.write = (chunk, ...args) => {
         )
         self.assertFalse(self.launch_record.exists())
 
+    def test_ancestor_python_prefix_with_embedded_arguments_still_blocks_launch(self):
+        bin_dir = self.root / "embedded-python-prefix-bin"
+        bin_dir.mkdir()
+        fake_ps = bin_dir / "ps"
+        lock_path = f"{self.profile}/.dot-profile.lock"
+        lock_holder_lookalike = (
+            f"/usr/bin/python3 -c /tmp/python3 - {lock_path} "
+            f"{lock_path}.ready.ABC123"
+        )
+        fake_ps.write_text(
+            "#!/bin/sh\n"
+            'node_pid="$PPID"\n'
+            'parent_pid=$(/bin/ps -o ppid= -p "$node_pid" | tr -d "[:space:]")\n'
+            '/bin/ps -o pid=,ppid=,command= -p "$parent_pid"\n'
+            "printf '%s %s %s\\n' 987654 \"$parent_pid\" "
+            + shlex.quote(lock_holder_lookalike)
+            + "\n",
+            encoding="utf-8",
+        )
+        fake_ps.chmod(fake_ps.stat().st_mode | stat.S_IXUSR)
+        env = dict(self.env)
+        env["PATH"] = f"{bin_dir}{os.pathsep}{self.env['PATH']}"
+
+        proc = self._run(env=env)
+
+        self.assertEqual(proc.returncode, 10, proc.stdout + proc.stderr)
+        self.assertEqual(
+            self._result(proc.stdout),
+            {
+                "schema_version": 1,
+                "launch_state": "unavailable",
+                "diagnostic": "profile_owner_present",
+            },
+        )
+        self.assertFalse(self.launch_record.exists())
+
     def test_same_ancestor_non_lock_process_still_blocks_launch(self):
         bin_dir = self.root / "same-parent-bin"
         bin_dir.mkdir()
