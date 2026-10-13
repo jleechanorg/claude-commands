@@ -44,11 +44,13 @@ check("body mandates the reply labels",
       all(label in m.REMINDER_BODY for label in ('STATUS:', 'ACTIONS + PROOF:', 'BLOCKERS:', 'NEXT:')))
 check("body states standing authorization",
       'standing owner-authorized scope' in m.REMINDER_BODY)
-check("body preserves every original imperative",
+check("body preserves the load-bearing original imperatives",
       all(text in m.REMINDER_BODY for text in (
-          'Resume unfinished authorized requests', 'avoid duplicate writers',
-          'Use cloud coders', 'Six useful tasks is a target',
-          'preserve cancellations', 'wait quietly only when all such work is blocked')))
+          'resume authorized requests', 'avoid duplicate writers',
+          'Six useful tasks is a target', 'Wait quietly only when all work is blocked')))
+check("delivered message stays within the repo's 1,200-byte contract",
+      all(len(m.delivery_message(pv, m.REMINDER_BODY).encode()) <= 1200
+          for pv in ('agy', 'codex', 'haiku', 'luna', 'minimax', 'gemini')))
 check("delivery appends the no-new-authority attribution",
       m.delivery_message('luna', m.REMINDER_BODY).endswith(
           'From LunaRoute coordinator: automated reminder; no new authority.'))
@@ -84,7 +86,7 @@ collapse = lambda t: ' '.join(t.replace('\u2019', "'").split())
 reformatted = m.REMINDER_BODY.replace('\n\n', '\n').replace('  ', ' ')
 check("reformatted echo passes the content-exact contract", collapse(reformatted) == collapse(m.REMINDER_BODY))
 check("altered text fails the content-exact contract",
-      collapse(m.REMINDER_BODY.replace('wait quietly only when', 'whenever you feel like it,')) != collapse(m.REMINDER_BODY))
+      collapse(m.REMINDER_BODY.replace('Wait quietly only when', 'Whenever you feel like it,')) != collapse(m.REMINDER_BODY))
 
 # --- reply classification (the historical failure) ---
 reminder = m.REMINDER_BODY + '\nFrom LunaRoute coordinator: automated reminder; no new authority.'

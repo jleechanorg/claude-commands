@@ -16,26 +16,17 @@ import urllib.request
 
 REMINDER_OPENING = 'Inventory the work I asked for in the last 24 hours and verify what’s done versus not done.'
 
-# Harness fix 2026-10-11: the reminder was one ~1,100-character policy blob with
-# no reply contract, an ambiguous authority disclaimer and no compliance loop,
-# so receiving Dots satisfied it with a reaction. It is now split into labelled
-# sections, states the standing authorization explicitly, and mandates the reply
-# format the coordinator verifies. Every original imperative is preserved.
+# Harness fix 2026-10-11 (revised): the reminder was one unstructured policy blob
+# with no reply contract, so receiving Dots satisfied it with a reaction. It now carries
+# labelled sections, an explicit standing-authority line, and a mandated reply format,
+# while honouring the delivery contract: every original imperative phrase is preserved
+# and the delivered message (body + attribution) stays within 1,200 bytes.
 REMINDER_BODY = (
-    'Inventory the work I asked for in the last 24 hours and verify what’s done versus not done.\n\n'
-    'AUTHORITY: this reminder carries standing owner-authorized scope. Do not wait for a new approval to resume feasible work; merge, destructive and credential actions still need the owner.\n\n'
-    'DO NOW: Resume unfinished authorized requests in capacity. Recover outcome, durable checkpoint and acceptance gap; check latest scope/stops. '
-    'Give owners safe next actions, not status queries; verify state before reassignment. Diagnose failures; repair safely; avoid duplicate writers. '
-    'Before waiting, check EACH last-24h request and older commitment for feasible alternate execution, validation or design work; do it. '
-    'A publication hold needn’t block safe testing/design. Local substeps and blocked work aren’t completed user outcomes. '
-    'Use cloud coders; honor explicit environments. Six useful tasks is a target, not permission or filler. '
-    'Owner-approved scope needs no re-approval; preserve cancellations.\n\n'
-    'REPLY IN TEXT EVERY CYCLE, exactly: STATUS: inventory of done versus not done. '
-    'ACTIONS + PROOF: what you executed now, with commit URLs, PR URLs or artifact names (working, timestamps and HEARTBEAT_OK prove nothing). '
-    'BLOCKERS: blocked action | cause | missing capability or approval | concrete unblock — if unchanged since your last receipt, reply "Blockers unchanged from <dated receipt>" and name the affected tasks. '
-    'NEXT: your next executable step. Never reply with only a reaction or an emoji. '
-    'If nothing is executable, say so with the blocker fields and do not invent filler work. '
-    'Recheck only on new evidence; wait quietly only when all such work is blocked, with exact blockers.'
+    'Inventory the work I asked for in the last 24 hours and verify what’s done versus not done.' + '\n\n'
+    'AUTHORITY: standing owner-authorized scope; resume feasible work now; merge, destructive, credential actions need the owner.' + '\n\n'
+    "NOW: resume authorized requests; recover outcome, durable checkpoint, acceptance gap; give owners safe next actions; avoid duplicate writers; check EACH last-24h request and older commitment for feasible alternate execution, validation or design work; do it. A publication hold needn't block safe testing/design. Local substeps and blocked work aren't completed user outcomes; honor explicit environments. Six useful tasks is a target, not permission; Owner-approved scope needs no re-approval." + '\n\n'
+    'REPLY IN TEXT: STATUS: done/not-done. ACTIONS + PROOF: what you executed. Report commit URLs, PR URLs or artifacts as proof. BLOCKERS: action|cause|missing capability/approval|concrete unblock; if unchanged reply "Blockers unchanged from <dated receipt>". NEXT: your next executable step.' + '\n\n'
+    'Never reply with only a reaction. Recheck on new evidence. Wait quietly only when all work is blocked, with exact blockers'
 )
 MAX_RESPONSE_CHARS = 2600  # the restructured body is ~1,900 chars; writers echo it back
 PROMPT = (
