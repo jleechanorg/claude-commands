@@ -205,7 +205,10 @@ run_chrome() {
   # profile (orphaned Chrome corrupts the cookie store on its next write).
   # Tear down any surviving group member before returning.
   if kill -TERM -- -"$pid" 2>/dev/null; then
-    sleep "$grace" 2>/dev/null
+    # A descendant surviving a NORMAL wrapper exit is an orphan: tear it down
+    # promptly (the long grace applies only to the timeout path, where Chrome
+    # may still be flushing its cookie store).
+    sleep "${DOT_CHROME_TEARDOWN_GRACE_SECS:-1}" 2>/dev/null
     kill -KILL -- -"$pid" 2>/dev/null || true
   fi
   set +m
