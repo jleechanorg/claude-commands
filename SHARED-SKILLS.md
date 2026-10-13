@@ -89,3 +89,20 @@ Previous portable adapter SHA256:
 The old portable 4layer body is removed from its manifest, avoiding a second maintained
 implementation. Its existing installed bytes are preserved until reviewed activation.
 The other 29 portable entries remain untouched during this first bounded migration.
+
+## One bundle, one verifier, one installer (decision record, 2026-10-13)
+
+The repo had grown five competing distribution mechanisms. This decision record names the
+single surviving path; see `docs/superpowers/specs/2026-10-13-skill-distribution-consolidation-design.md`
+and its staged plan for the migration.
+
+| Concern | Single survivor | Retired / demoted |
+|---|---|---|
+| Bundle manifest | `shared-skills.json` (`jleechan-shared-skills-v1`) | `portable/manifest.json` (`jleechan-portable-skills-v1`) - deprecated; its duplicate `portable/skills/**` tree is removed in the staged plan |
+| Verifier | one verifier over the surviving manifest | `scripts/verify_portable_skills.py` (retired with the portable bundle) |
+| Installer | `scripts/install_shared_catalog.py` | `install-claude-commands.sh` (whole-home installer) |
+| Marketplace manifest | `.claude-plugin/marketplace.json` | `.agents/plugins/marketplace.json` is now a **symlink** to it |
+| Live discovery tree | `~/.claude/skills` (canonical) | other runtime trees are generated links, not independent sources |
+
+Content source of truth remains `.claude/skills/**` (README). The surviving manifest selects and
+sha256-pins which of those bytes ship, so "what is installed" has one answer.
