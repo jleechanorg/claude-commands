@@ -318,8 +318,13 @@ function assertExistingProfileAvailable(dir) {
   const profileLockPath = path.join(dir, '.dot-profile.lock');
   const ownLockHolder = (entry) => {
     if (!ancestorPids.has(entry.ppid)) return false;
-    return /(?:^|\s)\S*(?:python(?:\d+(?:\.\d+)*)?|Python)\s+-\s/.test(entry.command) &&
-      entry.command.includes(` ${profileLockPath} ${profileLockPath}.ready.`);
+    const argvSuffix = ` - ${profileLockPath} ${profileLockPath}.ready.`;
+    const suffixIndex = entry.command.lastIndexOf(argvSuffix);
+    if (suffixIndex < 0) return false;
+    const executable = path.basename(entry.command.slice(0, suffixIndex));
+    const readyToken = entry.command.slice(suffixIndex + argvSuffix.length);
+    return /^(?:python(?:\d+(?:\.\d+)*)?|Python)$/.test(executable) &&
+      /^[A-Za-z0-9]{6}$/.test(readyToken);
   };
   if (processTable.split('\n').some((line) => {
     if (!line.includes(dir)) return false;

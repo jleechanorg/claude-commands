@@ -598,6 +598,12 @@ process.stdout.write = (chunk, ...args) => {
         self.assertFalse(self.launch_record.exists())
 
     def test_ignores_only_ancestor_owned_exact_profile_lock_holder(self):
+        self.profile.rename(self.root / "profile with spaces")
+        self.profile = self.root / "profile with spaces"
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["accounts"]["fixture"]["user_data_dir"] = str(self.profile)
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        self.env["DOT_CHROME_USER_DATA"] = str(self.profile)
         bin_dir = self.root / "lock-holder-bin"
         bin_dir.mkdir()
         fake_ps = bin_dir / "ps"
@@ -632,6 +638,41 @@ process.stdout.write = (chunk, ...args) => {
                 "cleanup_state": "context_close_returned",
             },
         )
+
+    def test_ancestor_process_with_extra_lock_arguments_still_blocks_launch(self):
+        bin_dir = self.root / "lookalike-lock-holder-bin"
+        bin_dir.mkdir()
+        fake_ps = bin_dir / "ps"
+        lock_path = f"{self.profile}/.dot-profile.lock"
+        lock_holder_lookalike = (
+            f"python3 - unrelated-helper {lock_path} {lock_path}.ready.ABC123"
+        )
+        fake_ps.write_text(
+            "#!/bin/sh\n"
+            'node_pid="$PPID"\n'
+            'parent_pid=$(/bin/ps -o ppid= -p "$node_pid" | tr -d "[:space:]")\n'
+            '/bin/ps -o pid=,ppid=,command= -p "$parent_pid"\n'
+            "printf '%s %s %s\\n' 987654 \"$parent_pid\" "
+            + shlex.quote(lock_holder_lookalike)
+            + "\n",
+            encoding="utf-8",
+        )
+        fake_ps.chmod(fake_ps.stat().st_mode | stat.S_IXUSR)
+        env = dict(self.env)
+        env["PATH"] = f"{bin_dir}{os.pathsep}{self.env['PATH']}"
+
+        proc = self._run(env=env)
+
+        self.assertEqual(proc.returncode, 10, proc.stderr)
+        self.assertEqual(
+            self._result(proc.stdout),
+            {
+                "schema_version": 1,
+                "launch_state": "unavailable",
+                "diagnostic": "profile_owner_present",
+            },
+        )
+        self.assertFalse(self.launch_record.exists())
 
     def test_same_ancestor_non_lock_process_still_blocks_launch(self):
         bin_dir = self.root / "same-parent-bin"
