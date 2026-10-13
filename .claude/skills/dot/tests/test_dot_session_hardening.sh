@@ -97,13 +97,18 @@ else
 fi
 rm -rf "$F"
 
-echo "== test 2: foreign binary guard =="
+echo "== test 2: foreign binary enforcement is opt-in =="
 F=$(new_fixture); FIXTURE="$F" mk_chrome_stub "$F" chrome 0
-out=$(FIXTURE="$F" run_login "$F" DOT_CHROME_BIN="$F/chrome")
+out=$(FIXTURE="$F" run_login "$F" DOT_CHROME_BIN="$F/chrome" DOT_ENFORCE_SYSTEM_CHROME=1)
 if [[ "$out" == *"refusing login"* && ! -f "$F/chrome-argv.txt" ]]; then
-  ok "foreign binary refused without DOT_ALLOW_FOREIGN_BINARY"
+  ok "DOT_ENFORCE_SYSTEM_CHROME=1 refuses a non-system binary without the override"
 else
-  bad "foreign Chrome binary must be refused unless DOT_ALLOW_FOREIGN_BINARY=1 (out: $out)"
+  bad "enforcement must refuse a foreign binary (out: $out)"
+fi
+if FIXTURE="$F" run_login "$F" DOT_CHROME_BIN="$F/chrome" >/dev/null 2>&1 && [[ -f "$F/chrome-argv.txt" ]]; then
+  ok "documented DOT_CHROME_BIN overrides still work by default"
+else
+  bad "a plain DOT_CHROME_BIN override must keep working (documented caller)"
 fi
 rm -rf "$F"
 
@@ -236,7 +241,7 @@ source "$F/dot.sh" >/dev/null 2>&1
 set +e +o pipefail 2>/dev/null || set +e
 ( acquire_profile_lock "$F/profile" 10 2>/dev/null; sleep 30 ) & holder_job=$!
 sleep 2
-touch -t 202001010000 "$F/profile/.dot-profile.lock" 2>/dev/null
+lp="$(profile_lock_path "$F/profile")"; touch -t 202001010000 "$lp" 2>/dev/null
 if acquire_profile_lock "$F/profile" 3 2>/dev/null; then
   bad "flock was stolen via apparent file age"
   release_profile_lock
