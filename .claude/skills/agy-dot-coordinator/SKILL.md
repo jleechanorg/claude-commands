@@ -13,13 +13,19 @@ Each scheduled invocation executes `scripts/ping-dots.py` via `scripts/agy-dot-c
 
 1. **Slot & Account Resolution**: Determines the due account for the current time slot from `DOT_CONFIG_FILE` (default `~/.config/dot/config.json`). Exactly three distinct accounts must be configured.
 2. **Lock & State Check**: Acquires an exclusive non-blocking `flock` on `/tmp/ai.gemini.agy-dot-coordinator.lock`. Aborts safely if another ping is running, if `STOP` exists in the state directory, or if the account has an unresolved unverified delivery hold.
-3. **Provider Generation Ladder**: Generates a standard reminder paragraph using the provider sequence:
-   - **Primary**: AGY (`agy --input-format stream-json`)
-   - **Secondary**: Codex Luna (`gpt-6-luna`)
-   - **Tertiary**: Claude Haiku (`claude-haiku-5-5`)
-   A failed, malformed, empty, or oversized (>1,200 characters) provider output advances to the next provider. No provider retry or backoff is performed.
-4. **Byte-for-Byte Contract Verification**: Verifies that the model returned the exact required reminder instructions. Any unauthorized alteration fails generation and triggers provider fallback.
+3. **Provider Generation Ladder**: Generates a standard reminder using the provider sequence:
+   - **Primary**: LunaRoute (`/luna` engine: `pi --provider lunaroute`, default `deepseek-4.1-flash`; key from `LUNAROUTE_API_KEY` or `lunaroute key`)
+   - **Fallback 1**: MiniMax Claude (`claude` against `https://api.minimax.io/anthropic`, `MiniMax-M3.1-Flash-Preview`, key from `MINIMAX_API_KEY`)
+   - **Fallback 2**: Codex Luna (`gpt-6-luna`)
+   - **Fallback 3 (last resort)**: direct Gemini API (`gemini-3.8-flash` by default, override with `COORDINATOR_GEMINI_MODEL`; key from `GEMINI_API_KEY` or `WORLDAI_DEV_GEMINI_API_KEY`). Do not reuse the `GEMINI_MODEL` variable — `~/.bashrc` exports it for the agy CLI, whose aliases (e.g. `gemini-3.6-flash-high`) are not valid direct-API model names.
+   Claude Haiku remains available only via `--generator haiku`.
+   **AGY is quota-quarantined** (owner directive 2026-10-12, quota resets in ~33-50h): it is removed from the automatic ladder and is reachable only via `--generator agy`. When the quota recovers, restore it by adding `'agy'` back to `PROVIDERS` (no other change needed). Never spawn or wait on an agy lane while quarantined.
+   A failed, timed-out, malformed, empty, or oversized (`MAX_RESPONSE_CHARS`, 2,600) provider output advances to the next provider. No provider retry or backoff is performed. Provider stdin is file-backed so a child that never reads stdin cannot outlive the 180-second timeout.
+4. **Content-Exact Contract Verification**: Verifies that the model returned the required reminder instructions with identical content (whitespace/layout tolerant) and delivers the canonical body, so wording — not writer formatting — is byte-stable. Any alteration fails generation and triggers provider fallback.
 5. **Transport Dispatch**: Appends attribution and the no-new-authority notice, writes to a temporary file, and invokes `dot.sh --account <account> send-once <file>`. Requires `rc=0` and standalone `DOT_SENT_VERIFIED` output. Send failures never retry or switch providers.
+6. **Compliance Verification & Escalation**: After a verified send the coordinator waits `COORDINATOR_RESPONSE_WAIT_SECS` (default 180), reads the conversation tail with a **progressive window** (`COORDINATOR_READ_WINDOWS`, default `12000,40000`) — a busy Dot can push the reminder beyond a small tail (observed 10,040 characters behind the end on worldarchitect, which produced false `no_response` verdicts and spurious escalations), so only the largest window may conclude `no_response` — and classifies the reply with `classify_response()`: `compliant` (the reply carries the mandated STATUS / ACTIONS + PROOF / BLOCKERS / NEXT labels, or "Blockers unchanged from …"), `reaction_only` (a reaction or a short body — the historical failure), `unstructured_text`, or `no_response`. A first non-compliant verdict is re-checked after `COORDINATOR_RESPONSE_RECHECK_SECS` (default 120; Dots commonly reason for 3-6 minutes); only a persistently non-compliant verdict sends exactly one explicit text-demanding escalation (the form empirically proven to convert an emoji-only Dot into substantive work) and records `last_response_status`, `escalation_sent_epoch`, `escalation_verified`, and `consecutive_noncompliance` in `state/<account>_state.json`-style state files. Set `COORDINATOR_VERIFY_RESPONSE=0` to skip the check (tests/manual generation).
+
+The reminder body itself states the standing authorization ("do not wait for a new approval to resume feasible work; merge, destructive and credential actions still need the owner") and the required reply format, because the receiving Dots' own instructions live in ChatGPT and cannot carry a contract this repository can enforce.
 
 ## Scheduling & Rotation
 
@@ -53,7 +59,7 @@ python3 "${CLAUDE_HOME:-$HOME/.claude}/skills/agy-dot-coordinator/scripts/ping-d
 ### Options
 
 - `--account <name>`: Target one configured account key instead of calculating the due slot.
-- `--generator {auto,agy,codex,haiku}`: Select model provider (default: `auto` ladder).
+- `--generator {auto,agy,luna,minimax,codex,haiku}`: Select model provider (default: `auto` ladder agy → luna → minimax → codex).
 - `--generate-only`: Generate and print the reminder to stdout; bypass Dot transport send.
 
 ## Coordination Contract & Invariants
