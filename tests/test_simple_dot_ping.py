@@ -206,3 +206,10 @@ class SimplePingTests(unittest.TestCase):
         timer = (SCRIPT.parents[1]/'systemd/ai.gemini.agy-dot-coordinator.timer').read_text()
         self.assertIn('OnCalendar=*:10,30,50:00', timer)
         self.assertIn('Persistent=false', timer)
+
+    def test_thin_coordinator_loc_guardrail(self):
+        lines = SCRIPT.read_text().splitlines()
+        code_lines = [line for line in lines if line.strip() and not line.strip().startswith('#')]
+        self.assertLessEqual(len(lines), 420, f"ping-dots.py total lines ({len(lines)}) exceeds 420-line thin-coordinator cap")
+        self.assertLessEqual(len(code_lines), 380, f"ping-dots.py non-comment LOC ({len(code_lines)}) exceeds 380-line thin-coordinator cap")
+
