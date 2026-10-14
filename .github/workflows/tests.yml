@@ -55,4 +55,7 @@ jobs:
         run: |
           python3 .claude/skills/agy-dot-coordinator/tests/test_reminder_compliance.py
           python3 .claude/skills/agy-dot-coordinator/tests/test_ping_dots_timeout.py
-
+      - name: Dot skill LOC guardrail + transport tests
+        run: |
+          bash .claude/skills/dot/scripts/check_budget.sh
+          bash .claude/skills/dot/tests/test_run_chrome_timeout.sh

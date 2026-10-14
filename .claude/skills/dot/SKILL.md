@@ -5,41 +5,7 @@ description: Use when the user invokes /dot or asks to "message the dot", "ask d
 
 # /dot
 
-Talk to the user's ChatGPT dot assistant using `scripts/dot.sh`. Platform-aware architecture:
-- **Dynamic Multi-Account Support:** Target any ChatGPT dot account via `--account <name>` or `DOT_ACCOUNT=<name>`.
-- **Machine-Local Configuration:** Configured in `~/.config/dot/config.json` mapping accounts to URLs and dedicated profile directories.
-- **Independent Chrome Sessions:** Runs headless Google Chrome against dedicated persistent profiles (`~/.config/dot-headless-chrome-<account_slug>`) on Linux and macOS with unified profile resolution and non-destructive lock recovery. Every host/account pair signs in locally.
-
-## Machine Configuration (`~/.config/dot/config.json`)
-
-Accounts, target dot URLs, and preferred backends can be declared per-machine in `~/.config/dot/config.json` without hardcoding personal data into the repository:
-
-```json
-{
-  "default_account": "primary",
-  "rotation": ["primary", "secondary"],
-  "accounts": {
-    "primary": {
-      "url": "https://chatgpt.com/dots/<dot-id>",
-      "backend": "chrome",
-      "user_data_dir": "~/.config/dot-headless-chrome-primary",
-      "profile_directory": "Profile 1"
-    },
-    "secondary": {
-      "url": "https://chatgpt.com/dots/<dot-id>",
-      "backend": "chrome",
-      "user_data_dir": "~/.config/dot-headless-chrome-secondary",
-      "profile_directory": "Profile 2"
-    }
-  },
-  "aliases": {
-    "work": "primary",
-    "personal": "secondary"
-  }
-}
-```
-
-Each `user_data_dir` must be dedicated to that Dot account and must not point inside the system Google Chrome profile. If `user_data_dir` is omitted, Dot derives a separate local directory from the account key. `profile_directory` is optional: it selects a named Chrome subprofile and defaults to `Default` when absent. The value must be one safe directory name, such as `Profile 1`; path separators, `.` and `..`, and control characters are rejected. `DOT_PROFILE_DIRECTORY` may temporarily override the configured subprofile for one invocation, subject to the same validation. Chrome is the only backend.
+Talk to the user's ChatGPT dot assistant using `scripts/dot.sh`. The scripts are a thin mechanical pointer (type, read, submit, clear, verify — see `GUARDRAIL.md`); every judgment call lives in this file, read top-down: how to work through the dot first, then transport actions and the peer-draft policy, then operational reference.
 
 ## Default: delegate, then monitor
 
@@ -79,6 +45,21 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
 - Send: write the message to a `mktemp` file, then `dot.sh [--account <name>] [--url <url>] send <file>`. Prefix every message with the sender identity, e.g. `From Claude (<model>, <worktree>): ...`. Never interpolate raw text into JS; the script JSON-encodes the file.
   - **Mandatory after any send that hands off or asks for work:** in the same turn, without asking, harden the wait condition with `/ironclad` (binary, verified at the source; use the coordinator recovery checkback condition when applicable, otherwise the generic 4-hour cap), then set it via `/cmux-goal` (or native `/goal` when cmux is unavailable) using the condition in "Default: delegate, then monitor". Run `send` in the background, since it can wait up to 30 min on a busy composer; it posts once and never resends. A send without a goal is an unfinished step.
 - Single send attempt: `dot.sh [--account <name>] [--url <url>] send-once <file>`.
+- Submit the existing draft: `dot.sh [--account <name>] submit-draft` sends whatever draft/edit state the composer already holds (prints `DOT_DRAFT_SUBMITTED: <text>`), or `DOT_SUBMIT_NOTHING_TO_SEND` when empty.
+- Clear the existing draft: `dot.sh [--account <name>] clear-draft` discards whatever the composer holds (prints `DOT_DRAFT_CLEARED`), escaping any edit state first.
+
+### Peer-draft policy (decision lives HERE, not in code)
+
+Other agent sessions share this composer; ChatGPT restores a saved draft lazily on focus, so `send` focuses first, then inspects. When `send`/`send-once` reports `DOT_DRAFT_PRESENT` (exit 3), do NOT immediately clear or keep blind-retrying:
+1. **Check back within 5 minutes**: sleep up to 300s, then `dot.sh read` (or re-attempt `send-once`) to see if the peer sent it themselves or the draft changed.
+2. **If the draft is still stuck, decide by reading it:**
+   - **Sensible message** (complete sentences, a real instruction/question for the dot) → **prefer sending it**: `dot.sh submit-draft` (prints `DOT_DRAFT_SUBMITTED`). The peer's intent reaches the dot; then send your own message.
+   - **Weird half-typed text** (mid-word cutoffs, command fragments, pasted garbage) → **clear it**: `dot.sh clear-draft` (prints `DOT_DRAFT_CLEARED`), then send your own message.
+3. Never force-clear a draft while a peer session is provably actively typing (draft text changing between reads). `DOT_CLEAR_DRAFT=1` on `send` remains the forced-clear escape hatch; own-leftover and already-sent drafts are always safe-cleared automatically.
+
+**Verified send:** `DOT_SENT_VERIFIED` requires exact composer match after typing, emptied composer after sending, and the submitted text appearing in the conversation message list (`[data-message-author-role=user]`). Exit 4 means mismatched or unverified.
+- Send only what the user asked to send. Do not post test messages.
+- Avoid line-leading list markers (`1)`, `-`, `*`): the composer converts them to list formatting, which can cause mismatch detection. Use plain sentences.
 - Interactive login / auth: `dot.sh [--account <name>] login` launches visible Chrome attached to that account's profile directory.
 - To ask and get an answer: send, then poll `dot.sh read 3000` (separate calls, each under 60s) until the tail no longer ends in `Thinking` or `Working`.
 - Run the script with a Bash timeout of at least 150s.
@@ -130,20 +111,7 @@ If an account returns `DOT_CHROME_UNAVAILABLE: not signed in`:
 - **Session snapshots (own-profile, no coupling):** every authenticated read/send/probe keeps `Cookies.snapshot` next to the live store (SQLite online backup; `DOT_SNAPSHOT=0` disables). `dot.sh restore-session` restores it — only with Chrome fully stopped, keeping a `.pre-restore` copy. Restoration is opportunistic: server-side token rotation may make a snapshot stale, in which case the probe reports logged out and the canonical `dot.sh --account <name> login` path still applies. Never resync cookies from another browser profile.
 - **Login-window hygiene:** while a `dot.sh login` window is open, the profile is process-locked (dot commands return `profile directory locked by active process`); set the coordinator STOP marker (`~/.local/state/ai.gemini.agy-dot-coordinator/STOP`) before launching and remove it after the window closes; after closing a login window manually, remove stale `SingletonLock`/`SingletonCookie`/`SingletonSocket` in the profile dir if a probe reports a stale lock.
 
-- Other agent sessions share this composer. ChatGPT restores a saved draft lazily on focus, so `send` focuses first, then inspects.
-- **Stale draft:** A draft is only cleared if:
-  1. It matches our own message from an interrupted prior attempt, OR
-  2. The text already appears in a previously submitted user message (`[data-message-author-role=user]`) matching the full normalized message content (never wiping on short prefix substrings), OR
-  3. Forced via `DOT_CLEAR_DRAFT=1`.
-  If cleared, `send` prints `DOT_STALE_DRAFT_CLEARED`.
-- **Unsent draft:** If an unsubmitted draft belonging to another session is present, `send` NEVER clears or overwrites it. It retries every 60s (`DOT_RETRY_SECS`) up to 30 min (`DOT_WAIT_SECS`) and sends once the composer is empty; exit 3 means still busy after the wait.
-- **Verified send:** `DOT_SENT_VERIFIED` requires:
-  1. Exact composer match after typing,
-  2. Emptied composer after clicking send,
-  3. The submitted text appearing in the conversation message list (`[data-message-author-role=user]`).
-  Exit 4 means mismatched or unverified.
-- Send only what the user asked to send. Do not post test messages.
-- Avoid line-leading list markers (`1)`, `-`, `*`): the composer converts them to list formatting, which can cause mismatch detection. Use plain sentences.
+**Thin-pointer invariant:** `dot.sh`/`dot_chrome.mjs` are mechanical transport only (type, read, submit, clear, verify). All judgment — what to send, when to submit vs clear a peer draft, how to phrase coordination — belongs in THIS SKILL.md and the calling agent, never hardcoded in the scripts. See `GUARDRAIL.md` for the enforced LOC budget.
 
 ## Account Rotation on Limits (Mandatory)
 
@@ -171,5 +139,36 @@ Always rotate across configured accounts when hitting a rate limit, usage limit,
 - `DOT_CONFIG_FILE`: Custom path to dot JSON configuration (defaults to `~/.config/dot/config.json`).
 - `DOT_CHROME_USER_DATA`: Explicit Chrome user data directory (defaults to account-specific persistent dir configured in `~/.config/dot/config.json`).
 - `DOT_PROFILE_DIRECTORY`: Explicit named Chrome subprofile override (defaults to the account's `profile_directory`, or `Default` when absent); it must pass the same single-directory-name validation.
-- `DOT_CLEAR_DRAFT`: When set to `1`, forces clearing any existing draft in the composer before typing and sending.
+- `DOT_CLEAR_DRAFT`: When set to `1`, forces clearing any existing draft or edit state in the composer before typing and sending. Peer-draft decisions otherwise follow the SKILL.md policy (check back within 5 min, then `submit-draft` or `clear-draft`).
 - `DOT_DRY_RUN`: When `1` (Chrome backend), types, verifies exact match, clears composer, and prints `DOT_DRYRUN_OK` without sending.
+
+## Machine Configuration (`~/.config/dot/config.json`) — reference
+
+Accounts, target dot URLs, and preferred backends can be declared per-machine in `~/.config/dot/config.json` without hardcoding personal data into the repository:
+
+```json
+{
+  "default_account": "primary",
+  "rotation": ["primary", "secondary"],
+  "accounts": {
+    "primary": {
+      "url": "https://chatgpt.com/dots/<dot-id>",
+      "backend": "chrome",
+      "user_data_dir": "~/.config/dot-headless-chrome-primary",
+      "profile_directory": "Profile 1"
+    },
+    "secondary": {
+      "url": "https://chatgpt.com/dots/<dot-id>",
+      "backend": "chrome",
+      "user_data_dir": "~/.config/dot-headless-chrome-secondary",
+      "profile_directory": "Profile 2"
+    }
+  },
+  "aliases": {
+    "work": "primary",
+    "personal": "secondary"
+  }
+}
+```
+
+Each `user_data_dir` must be dedicated to that Dot account and must not point inside the system Google Chrome profile. If `user_data_dir` is omitted, Dot derives a separate local directory from the account key. `profile_directory` is optional: it selects a named Chrome subprofile and defaults to `Default` when absent. The value must be one safe directory name, such as `Profile 1`; path separators, `.` and `..`, and control characters are rejected. `DOT_PROFILE_DIRECTORY` may temporarily override the configured subprofile for one invocation, subject to the same validation. Chrome is the only backend. Multi-account targeting uses `--account <name>` / `DOT_ACCOUNT`, with independent headless-Chrome sessions per host/account pair and unified profile resolution with non-destructive lock recovery.

@@ -811,6 +811,36 @@ async function probeSession(expectedDigest) {
   return sessionProbeResult(status, identityMatch, composerAvailable, endpointStatus, cleanupState);
 }
 
+// Thin mechanical primitives for the SKILL.md draft policy. No judgment here:
+// the deciding agent reads the composer (via `read`) and calls one of these.
+async function submitDraft(page) {
+  await page.click(COMPOSER);
+  await sleep(800);
+  const composer = (await page.locator(COMPOSER).first().innerText().catch(() => '')).trim();
+  if (composer === '') { console.log('DOT_SUBMIT_NOTHING_TO_SEND'); return; }
+  const userMsgLocator = page.locator('[data-message-author-role=user], article.self, article[class*="self"]');
+  const before = await userMsgLocator.count().catch(() => 0);
+  await page.keyboard.press('Enter');
+  await sleep(3000);
+  const after = await userMsgLocator.count().catch(() => 0);
+  const cleared = ((await page.locator(COMPOSER).first().innerText().catch(() => '')).trim()) === '';
+  if (cleared && after > before) console.log('DOT_DRAFT_SUBMITTED: ' + composer.slice(0, 200));
+  else console.log('DOT_SUBMIT_UNVERIFIED composer_cleared=' + cleared);
+}
+
+async function clearDraft(page) {
+  await page.click(COMPOSER);
+  await sleep(800);
+  const had = ((await page.locator(COMPOSER).first().innerText().catch(() => '')).trim()) !== '';
+  await page.keyboard.press('Escape'); // exits edit mode if any; no-op on a plain draft
+  await sleep(400);
+  await page.keyboard.press(isMac ? 'Meta+A' : 'Control+A');
+  await page.keyboard.press('Backspace');
+  await sleep(800);
+  const left = ((await page.locator(COMPOSER).first().innerText().catch(() => '')).trim());
+  console.log(left === '' ? ('DOT_DRAFT_CLEARED had_content=' + had) : ('DOT_DRAFT_CLEAR_FAILED left=' + left.length));
+}
+
 async function read(page, n) {
   let bodyText = (await page.evaluate(() => document.body.innerText)).trim();
   if (/ChatGPT hit a snag|Something went wrong/i.test(bodyText)) {
@@ -1036,6 +1066,8 @@ if (isMainModule()) {
             } else {
               const page = await launch();
               if (mode === 'read') await read(page, Number(arg || 5000));
+              else if (mode === 'submit-draft') await submitDraft(page);
+              else if (mode === 'clear-draft') await clearDraft(page);
               else await send(page, arg, process.env.DOT_DRY_RUN === '1');
             }
           })(),
