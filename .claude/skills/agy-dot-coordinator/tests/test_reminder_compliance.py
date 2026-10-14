@@ -162,15 +162,21 @@ try:
 
     try:
         out_minimax = m.generate('minimax', prompt=custom_prompt)
-        check("generate('minimax', prompt=...) passes custom prompt",
-              out_minimax == 'claude-out' and recorded_Bounded[-1][0][-1] == custom_prompt)
+        minimax_cmd = recorded_Bounded[-1][0]
+        check("generate('minimax', prompt=...) passes custom prompt with --strict-mcp-config and no skip-permissions",
+              out_minimax == 'claude-out' and minimax_cmd[-1] == custom_prompt
+              and '--strict-mcp-config' in minimax_cmd
+              and '--dangerously-skip-permissions' not in minimax_cmd)
     except Exception as exc:
         check(f"generate('minimax', prompt=...) passes custom prompt ({exc})", False)
 
     try:
         out_haiku = m.generate('haiku', prompt=custom_prompt)
-        check("generate('haiku', prompt=...) passes custom prompt",
-              out_haiku == 'claude-out' and recorded_Bounded[-1][0][-1] == custom_prompt)
+        haiku_cmd = recorded_Bounded[-1][0]
+        check("generate('haiku', prompt=...) passes custom prompt with --strict-mcp-config and no skip-permissions",
+              out_haiku == 'claude-out' and haiku_cmd[-1] == custom_prompt
+              and '--strict-mcp-config' in haiku_cmd
+              and '--dangerously-skip-permissions' not in haiku_cmd)
     except Exception as exc:
         check(f"generate('haiku', prompt=...) passes custom prompt ({exc})", False)
 

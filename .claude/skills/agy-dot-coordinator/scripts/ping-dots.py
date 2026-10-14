@@ -102,7 +102,7 @@ def run_with_stdin(command, stdin_text, timeout=180, **kwargs):
 
 
 def claude_json(model, env=None, prompt=PROMPT):
-    command = [shutil.which('claude') or 'claude', '--dangerously-skip-permissions',
+    command = [shutil.which('claude') or 'claude', '--strict-mcp-config',
                '--print', '--model', model, '--output-format', 'json',
                '--no-session-persistence', '--tools', '', '--disable-slash-commands', prompt]
     response = json.loads(bounded_run(command, timeout=180, cwd='/tmp', env=env).stdout)
