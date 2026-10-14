@@ -20,6 +20,10 @@ metadata:
 
 Merge authorization is unchanged and separate from `/green`: never call `gh pr merge` / `gh api .../merge` without literal `MERGE APPROVED` (case-insensitive) in the human's most recent live message, for `$GITHUB_REPOSITORY`. Reaching `/green` is not merge authorization.
 
+## Retained review integrations
+
+The shared catalog preserves host-installed `/advice` and `/web-advice` integrations instead of installing them. Before invoking either, resolve its `../advice/SKILL.md` or `../web-advice/SKILL.md` relative to this package and read the existing skill. For a remote invocation, check the corresponding skill on the target host. If absent, report that integration as `UNAVAILABLE` and identify the missing package; do not invent a replacement runner, claim an approval, or treat a required gate as passed. Continue independent authorized work, but leave any dependent readiness or plan-approval gate unmet. Existing review quorum, external-disclosure authorization, and optional-review rules still apply.
+
 ## Documentation-only CI exception
 
 Classify the complete diff at the current PR HEAD by what changed, not by file extension alone. Documentation-only changes do not require CI, triggering/retrying CI, waiting for runners, or the ten-minute backlog threshold. Instruction and skill documentation (including AGENTS.md, CLAUDE.md and SKILL.md) and documentation-only pointer maintenance qualify when no executable or application-runtime behavior changes.
