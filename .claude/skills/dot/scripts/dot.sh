@@ -2,12 +2,15 @@
 # Talk to the user's ChatGPT "dot" assistant.
 # Platform-aware architecture: macOS and Linux each use local headless Chrome and dedicated account profiles.
 # Usage: dot.sh [--account <name>] [--url <url>] read [chars]        print tail of conversation (default 5000 chars)
+#        dot.sh [--account <name>] [--url <url>] submit-draft         submit (send) whatever draft/edit state the composer holds
+#        dot.sh [--account <name>] [--url <url>] clear-draft          discard whatever draft/edit state the composer holds
 #        dot.sh [--account <name>] [--url <url>] send <message-file> send file contents; while composer holds peer draft,
 #                                                                    retry every DOT_RETRY_SECS (60) up to DOT_WAIT_SECS (1800)
 #        dot.sh [--account <name>] [--url <url>] send-once <file>    single attempt, no retry
 #        dot.sh [--account <name>] login|auth                        launch visible Chrome window on account profile for manual sign-in
 # DOT_ACCOUNT selects account (configured in ~/.config/dot/config.json or custom identifier).
 # DOT_BACKEND=chrome forces backend. DOT_DRY_RUN=1 (chrome send): type, verify, clear, never send.
+# DOT_CLEAR_DRAFT=1 forces clearing the composer draft before sending; policy for peer drafts lives in SKILL.md (check back within 5 min, then submit-draft or clear-draft).
 # Exit codes: 0 ok, 2 usage/error, 3 composer still busy after the wait, 4 send not verified, 5 usage limit reached.
 set -euo pipefail
 
@@ -456,6 +459,25 @@ emit_store_forensics() {
   fi
 }
 
+cmd_simple() {
+  local action="$1"
+  local out="" rc=0
+  run_chrome "$action" || rc=$?
+  [[ $rc -eq 124 ]] && { CHROME_OUT="DOT_CHROME_UNAVAILABLE: timeout"; rc=10; }
+  if [[ $rc -ne 10 ]]; then
+    out="$CHROME_OUT"
+    echo "$out"
+    case "$out" in
+      *DOT_DRAFT_SUBMITTED*|*DOT_DRAFT_CLEARED*|*DOT_SUBMIT_NOTHING_TO_SEND*) ;;
+      *DOT_DRAFT_CLEAR_FAILED*|*DOT_SUBMIT_UNVERIFIED*) echo "Draft action not verified; run 'dot.sh read' to check." >&2; exit 4 ;;
+      *) echo "Draft action unrecognized; run 'dot.sh read' to check." >&2; exit 4 ;;
+    esac
+  else
+    echo "$CHROME_OUT" >&2
+    exit 2
+  fi
+}
+
 cmd_read() {
   local n="${1:-5000}"
   [[ "$n" =~ ^[0-9]+$ ]] || { echo "chars must be an integer" >&2; exit 2; }
@@ -519,7 +541,7 @@ cmd_send_once() {
   echo "$out"
   case "$out" in
     *DOT_COMPOSER_MISMATCH*) echo "Composer text did not match the message after typing; nothing sent. Check with 'dot.sh read'." >&2; exit 4 ;;
-    *DOT_DRAFT_PRESENT*) echo "Refusing to send: the dot composer holds an unsent draft (a peer session?). Not cleared. Retry later." >&2; exit 3 ;;
+    *DOT_DRAFT_PRESENT*) echo "Peer draft present (not sent). Per SKILL.md policy: wait up to 5 min, re-read with 'dot.sh read', then submit-draft (sensible message) or clear-draft (half-typed junk). Nothing sent." >&2; exit 3 ;;
     *DOT_USAGE_LIMIT_REACHED*) echo "ChatGPT usage limit reached: $out" >&2; exit 5 ;;
     *DOT_SENT_VERIFIED*|*DOT_DRYRUN_OK*) ;;
     *) echo "Send not verified in page text; run 'dot.sh read' to check." >&2; exit 4 ;;
@@ -699,6 +721,8 @@ if [[ "${DOT_SKIP_DISPATCH:-0}" != "1" ]]; then
   trap 'release_profile_lock; login_stop_cleanup' EXIT
   case "${1:-}" in
     read) shift; cmd_read "$@" ;;
+    submit-draft) shift; cmd_simple submit-draft ;;
+    clear-draft) shift; cmd_simple clear-draft ;;
     probe) shift; cmd_probe "$@" ;;
     send) shift; cmd_send "$@" ;;
     send-once) shift; cmd_send_once "$@" ;;
@@ -706,6 +730,6 @@ if [[ "${DOT_SKIP_DISPATCH:-0}" != "1" ]]; then
     existing-profile-only) shift; cmd_existing_profile_only "$@" ;;
     restore-session) shift; cmd_restore_session "$@" ;;
     login|auth) shift; cmd_login "$@" ;;
-    *) echo "usage: dot.sh [--account <name>] [--url <url>] read [chars] | probe <expected-email-sha256> | send|send-once|send-prepared <message-file> | existing-profile-only | restore-session | login" >&2; exit 2 ;;
+    *) echo "usage: dot.sh [--account <name>] [--url <url>] read [chars] | submit-draft | clear-draft | probe <expected-email-sha256> | send|send-once|send-prepared <message-file> | existing-profile-only | restore-session | login" >&2; exit 2 ;;
   esac
 fi

@@ -51,3 +51,7 @@ jobs:
           echo "$install_dir" >> "$GITHUB_PATH"
       - name: Run repo contract tests
         run: python3 -m unittest discover -s tests -p "test_*.py" -v
+      - name: Dot skill LOC guardrail + transport tests
+        run: |
+          bash .claude/skills/dot/scripts/check_budget.sh
+          bash .claude/skills/dot/tests/test_run_chrome_timeout.sh
