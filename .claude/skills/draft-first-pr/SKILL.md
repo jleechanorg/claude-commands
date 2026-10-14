@@ -45,6 +45,14 @@ High-risk changes retain their required independent coverage even when `/advice`
 itself is optional. Initial gate applicability and later re-review depth are
 separate decisions.
 
+For a high-risk change with optional `/advice`, follow the repository's required
+independent code/safety lane. If none is named, require a named independent
+full-diff code/safety reviewer (not the author or orchestrator) to inspect the
+risk controls and record exact SHA, complete coverage, findings, and verdict.
+Evidence-only review does not satisfy this code-review gate. Preserve stricter
+repository lanes and quorums; this fallback does not make `/advice` mandatory
+for an under-50 PR.
+
 Count additions + deletions in the complete PR diff at the live head against its
 actual base, including all production and non-production files, not net lines or
 production-only lines. Use complete GitHub PR totals or the equivalent verified
@@ -319,6 +327,13 @@ other named lanes and native reviews, update the PR description with the exact
 reviewed SHA, review type/phase, verdict or status, gist URL, timestamp, and
 reviewer/coverage. Document reviews additionally retain document hashes; their
 context SHA does not turn document approval into code approval.
+
+For evidence-gate compatibility, keep one current marker in the PR body:
+`**Evidence**: <gist-url> (head <sha>)`, pointing to the authorized sanitized
+evidence-review receipt for current applicability. Update that index only;
+preserve the historical ledger, receipt URLs, and original capture SHAs.
+Underlying raw artifacts may remain private. Missing publication authority or
+an inaccessible receipt leaves this marker incomplete; never fabricate its URL.
 
 Publish each completed review's sanitized receipt as a gist only within the
 approved disclosure scope. A gist is link-accessible, not private storage; omit

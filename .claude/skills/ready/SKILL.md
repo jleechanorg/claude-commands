@@ -31,7 +31,8 @@ A PR is READY when ALL of the following hold, verified at the CURRENT head SHA
    and the repository overlay. Retain original capture provenance and record
    current applicability separately. Underlying artifacts may use authorized
    private hosting; the separate sanitized review receipt follows
-   `draft-first-pr` § Review records in the PR description.
+   `draft-first-pr` § Review records in the PR description, including its one
+   current `**Evidence**` marker. Preserve historical receipts and capture SHAs.
 2. **/er** — when `draft-first-pr` (including repo-defined exemptions) requires
    it, adversarial evidence review verdict PASS at the current head (findings
    fixed RED-first). A head move whose actual delta leaves every tested claim,

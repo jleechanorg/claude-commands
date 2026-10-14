@@ -14,7 +14,7 @@ metadata:
 | 1 | **Applicable validation** | Documentation-only: CI NOT REQUIRED with proportionate local validation below. Otherwise every required check passes at HEAD, through CI or the local-equivalent exception for backlogged checks. |
 | 2 | **No merge conflicts** | `mergeable == MERGEABLE` (retry while `UNKNOWN`; `CONFLICTING` is a hard FAIL) |
 
-**Nothing else gates `/green`.** Inline-comment resolution (`resolveReviewThread`), the evidence-link gate, the PR-description gate, and the old "6-green" numbering are **not** `/green` gates anymore (operator directive, 2026-07-28). Those quality checks happen in the **draft phase**, before a PR is marked ready for review. The full canonical lifecycle, including when `/er` is required by that lifecycle, and its **SHA-binding rule** (every gate verdict, including `/green`, expires the moment PR HEAD moves and must be re-earned at the new SHA) live in `~/.claude/skills/draft-first-pr/SKILL.md` — do not restate that chain here, just apply it.
+**Nothing else gates `/green`.** Inline-comment resolution (`resolveReviewThread`), the evidence-link gate, the PR-description gate, and the old "6-green" numbering are **not** `/green` gates anymore (operator directive, 2026-07-28). Those quality checks follow the canonical **draft and ready/final phases** in `~/.claude/skills/draft-first-pr/SKILL.md`; green alone does not establish READY. Apply that owner's applicability (including when `/er` is required by that lifecycle), final `/er` and `/advice` closure, and SHA-binding rule, including justified delta-based reaffirmation — do not restate that chain here, just apply it. Recheck `/green` at the live head and base before stating its verdict.
 
 **CodeRabbit/Bugbot: optional advisory reviewers** — read their feedback, take what's useful; never a gate, never a wait, at any phase of the PR lifecycle. Human `MERGE APPROVED` remains the only merge gate.
 
@@ -26,7 +26,7 @@ Classify the complete diff at the current PR HEAD by what changed, not by file e
 
 Executable code or embedded automation, application prompts, workflows, schemas, runtime configuration, and mixed diffs containing those changes do not qualify, even inside a Markdown file or docs directory. An agent workflow described in prose is instruction documentation; changing executable hook/script content is not.
 
-Run proportionate local checks for the actual change, such as diff hygiene, link/pointer resolution, or skill metadata validation. Record `Gate 1: CI NOT REQUIRED — documentation-only` with the reviewed SHA, scope, commands and results; never label skipped or unrun CI as passed. Address relevant failures in those local checks. Gate 2, applicable draft-phase review/evidence requirements, and merge authorization remain unchanged. This policy does not bypass branch protection or authorize disabling/canceling CI jobs.
+Run proportionate local checks for the actual change, such as diff hygiene, link/pointer resolution, or skill metadata validation. Record `Gate 1: CI NOT REQUIRED — documentation-only` with the reviewed SHA, scope, commands and results; never label skipped or unrun CI as passed. Address relevant failures in those local checks. Gate 2, applicable draft and final review/evidence requirements, and merge authorization remain unchanged. This policy does not bypass branch protection or authorize disabling/canceling CI jobs.
 
 ## Gate 1 — CI green: verification procedure (when CI applies)
 
@@ -77,5 +77,5 @@ If a check has been queued/pending for **more than 10 minutes**, run its actual 
 
 ## Related
 
-- `~/.claude/skills/draft-first-pr/SKILL.md` — the pre-green quality gates that now live in the draft phase, not in `/green`
+- `~/.claude/skills/draft-first-pr/SKILL.md` — applicable draft and ready/final quality gates, separate from `/green`
 - `~/.claude/skills/github-cli-reference.md` — REST ↔ GraphQL dual-bucket procedure

@@ -196,12 +196,22 @@ class CodingLifecycleContract(unittest.TestCase):
     def test_size_exception_does_not_relax_other_gates(self):
         self.assertIn("## Advice applicability", self.owner)
         section = self.owner.split("## Advice applicability", 1)[1].split(" ## ", 1)[0]
+        # read() collapses whitespace before splitting; a raw-newline split is wrong here.
+        self.assertNotIn("## Coding lifecycle", section)
         self.assertIn("every PR under 50 changed lines", section)
         self.assertIn("50 or more changed lines requires", section)
         self.assertIn("supersedes broader docs/test/non-production `/advice` exemptions", section)
         for gate in ("independent", "security", "evidence", "CI", "merge authorization"):
             self.assertIn(gate, section)
         self.assertNotIn("low-risk PRs under", section)
+
+    def test_small_high_risk_change_keeps_named_code_review_without_forcing_advice(self):
+        section = self.owner.split("## Advice applicability", 1)[1].split(" ## ", 1)[0]
+        self.assertIn("every PR under 50 changed lines", section)
+        self.assertIn("named independent full-diff code/safety reviewer", section)
+        self.assertIn("not the author or orchestrator", section)
+        self.assertIn("Evidence-only review does not satisfy this code-review gate", section)
+        self.assertIn("Preserve stricter repository lanes and quorums", section)
 
     def test_two_phase_lifecycle_has_final_reviews_after_ready_work(self):
         self.assertIn("mark ready-for-review", self.owner)
@@ -302,6 +312,42 @@ class CodingLifecycleContract(unittest.TestCase):
         self.assertIn("separate sanitized review receipt", standards)
         self.assertIn("PUBLICATION BLOCKED", standards)
         self.assertNotIn('`Unit-only proof is NOT sufficient`', standards)
+
+    def test_goal_instructions_and_template_use_claim_based_evidence(self):
+        goal = read("write-goal")
+        template = " ".join((SKILLS / "write-goal" / "templates" / "goal-spec.md").read_text().split())
+        for text in (goal, template):
+            with self.subTest(text=text[:40]):
+                self.assertIn("lowest sufficient layer", text)
+                self.assertIn("claims and boundaries", text)
+                self.assertNotIn("<100 delta lines", text)
+                self.assertNotIn("unit-only is INSUFFICIENT for production changes", text)
+                self.assertNotIn("/er PASS (advisory)", text)
+                self.assertIn("final", text)
+
+    def test_unit_coverage_keeps_command_result_sha_proof(self):
+        coverage = read("evidence-coverage")
+        self.assertIn("commands, results, and tested SHA", coverage)
+        self.assertIn("CI run/job link", coverage)
+        self.assertIn("N/A is not a substitute", coverage)
+        self.assertNotIn("layer doesn't require evidence", coverage)
+        self.assertNotIn("CI (no local evidence needed)", coverage)
+
+    def test_green_delegates_quality_to_draft_and_final_phases(self):
+        green = read("pr-green-definition")
+        self.assertIn("draft and ready/final phases", green)
+        self.assertIn("do not restate that chain here", green)
+        self.assertNotIn("Those quality checks happen in the **draft phase**", green)
+        self.assertNotIn("the pre-green quality gates that now live in the draft phase", green)
+        self.assertIn("exactly TWO gates", green)
+
+    def test_current_evidence_marker_indexes_sanitized_receipt_without_erasing_history(self):
+        self.assertIn("**Evidence**: <gist-url> (head <sha>)", self.owner)
+        self.assertIn("one current marker", self.owner)
+        self.assertIn("sanitized evidence-review receipt", self.owner)
+        self.assertIn("preserve the historical ledger", self.owner)
+        self.assertIn("original capture SHAs", self.owner)
+        self.assertIn("current `**Evidence**` marker", read("ready"))
 
 
 if __name__ == "__main__":
