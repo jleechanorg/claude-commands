@@ -95,11 +95,11 @@ non-production changes, from `/er` and `/advice`; when they do, follow that
 classification and its exclusions. The narrow documentation allowlist below is
 the default when the repo defines none. No exemption covers changes to approval,
 merge, review, evidence, or security rules, or to security, permission,
-credential, or merge-path code.
+credential, or merge-path code. **Anti-salami-slicing rule**: Never split a coherent feature into micro-PRs or strip its tests/docs into separate PRs to duck the 50-line `/advice` or 150-line `/cs` thresholds (see `~/.claude/skills/pr-quantity-control/SKILL.md`).
 
 1. **`/es`** — evidence bundle passes (real evidence per `~/.claude/skills/evidence-standards/SKILL.md` + repo-specific extensions), verified at the PR's current HEAD SHA.
 2. **`/er`** — for every PR except the documentation-only class below or a repo-exempted class, evidence review verdict is PASS (not PARTIAL/FAIL/INCONCLUSIVE), verified at the same current HEAD SHA — re-run if `/es` was earned at an older SHA.
-3. **`/advice`** — second-opinion approval on the change itself (`APPROVED at <SHA>` / `NOT APPROVED at <SHA>` / `WITHHELD at <SHA>` — see `~/.claude/skills/advice/SKILL.md`), bound to the same current HEAD SHA, unless a repo-exempted class applies. `WITHHELD` does not satisfy the draft gate.
+3. **`/advice`** — second-opinion approval on the change itself (`APPROVED at <SHA>` / `NOT APPROVED at <SHA>` / `WITHHELD at <SHA>` — see `~/.claude/skills/advice/SKILL.md`), bound to the same current HEAD SHA, unless a repo-exempted class applies. `WITHHELD` does not satisfy the draft gate. Must be recorded in the PR description under `## Advice Approval`. If subsequent commits on the branch modify strictly non-production files (tests, docs, comments, prompt ratchet adjustments per `scripts/green_merge_nonprod.py`), the existing approval remains valid and re-affirmed.
 
 Only after every applicable gate passes **at the same current SHA**: flip the PR from draft to ready-for-review (`gh pr ready <N>`).
 
