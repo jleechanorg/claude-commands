@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Replace regex/substring/marker-counting reply classification in `.claude/skills/agy-dot-coordinator/scripts/ping-dots.py` with a thin Zero-Framework Cognition (`/zfc`) LLM classifier using the existing provider ladder, then reinstall and verify on both macOS and Linux (`jeff-ubuntu`).
+**Goal:** Replace regex/substring/marker-counting reply classification in `.claude/skills/agy-dot-coordinator/scripts/ping-dots.py` with a thin Zero-Framework Cognition (`/zfc`) LLM classifier using the existing provider ladder, then reinstall and verify on both macOS and Linux (`<linux-host>`).
 
 **Architecture:** `.claude/skills/agy-dot-coordinator/scripts/ping-dots.py` retains only deterministic OS/transport mechanics (slot selection, `flock`, `STOP`/`delivery_unverified` holds, bounded process-group execution, `DOT_SENT_VERIFIED` checks, and JSON state writes) and delegates semantic reply evaluation (`compliant`, `working`, `reaction_only`, `unstructured_text`, `idle_refusal`) to the existing LLM provider ladder (`generate(provider, prompt)`). Empty, pre-reminder, or unattributed tails deterministically return `'no_response'` without an LLM call; provider failures during classification fail closed as `'classification_unavailable'` (incrementing `consecutive_classification_failures` in state JSON) without heuristic fallback or spurious escalation.
 
@@ -119,17 +119,17 @@ git commit -m "gemini/gemini-4-argon: feat(coordinator): replace regex/marker he
 
 ---
 
-### Task 3: Sync, Reinstall, and Rerun on macOS and Linux (`jeff-ubuntu`)
+### Task 3: Sync, Reinstall, and Rerun on macOS and Linux (`<linux-host>`)
 
 **Files:**
 - Modify (runtime install on macOS): `~/.claude/skills/agy-dot-coordinator/`
-- Modify (runtime install on Linux `jeff-ubuntu`): `jeff-ubuntu:~/.claude/skills/agy-dot-coordinator/`
+- Modify (runtime install on Linux `<linux-host>`): `<linux-host>:~/.claude/skills/agy-dot-coordinator/`
 
-**Step 1: Diff-check, sync, and run installed unit tests on both macOS and `jeff-ubuntu`**
+**Step 1: Diff-check, sync, and run installed unit tests on both macOS and `<linux-host>`**
 
-- Inspect `diff -ru ~/.claude/skills/agy-dot-coordinator/ .claude/skills/agy-dot-coordinator/` on macOS and via SSH on `jeff-ubuntu` to confirm no unmerged local runtime edits are overwritten.
-- Sync `.claude/skills/agy-dot-coordinator/` to `~/.claude/skills/agy-dot-coordinator/` on macOS and to `jeff-ubuntu:~/.claude/skills/agy-dot-coordinator/`.
-- Run `test_reminder_compliance.py` and `test_ping_dots_timeout.py` on both macOS and `jeff-ubuntu`.
+- Inspect `diff -ru ~/.claude/skills/agy-dot-coordinator/ .claude/skills/agy-dot-coordinator/` on macOS and via SSH on `<linux-host>` to confirm no unmerged local runtime edits are overwritten.
+- Sync `.claude/skills/agy-dot-coordinator/` to `~/.claude/skills/agy-dot-coordinator/` on macOS and to `<linux-host>:~/.claude/skills/agy-dot-coordinator/`.
+- Run `test_reminder_compliance.py` and `test_ping_dots_timeout.py` on both macOS and `<linux-host>`.
 
 **Step 2: Reinstall native scheduler services on macOS and Linux**
 
@@ -138,9 +138,9 @@ git commit -m "gemini/gemini-4-argon: feat(coordinator): replace regex/marker he
   /bin/bash ~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh
   ```
   Expected: `SUCCESS: ai.gemini.agy-dot-coordinator is registered.`
-- On Linux (`jeff-ubuntu`):
+- On Linux (`<linux-host>`):
   ```bash
-  ssh jeff-ubuntu '/bin/bash ~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh'
+  ssh <linux-host> '/bin/bash ~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh'
   ```
   Expected: `ai.gemini.agy-dot-coordinator.timer` enabled and listed in `systemctl --user list-timers`.
 
@@ -150,10 +150,10 @@ git commit -m "gemini/gemini-4-argon: feat(coordinator): replace regex/marker he
   1. Run `~/.claude/skills/agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh --account test --generate-only` to verify live provider generation.
   2. Run a live LLM classification check invoking `classify_response()` from `~/.claude/skills/agy-dot-coordinator/scripts/ping-dots.py` against the real `dot.sh --account test read 12000` conversation tail (verifying live LLM classification returns `'idle_refusal'` on the 2026-10-13 refusal tail rather than `'compliant'`).
   3. Run `~/.claude/skills/agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh --account test` with `COORDINATOR_RESPONSE_WAIT_SECS=30 COORDINATOR_RESPONSE_RECHECK_SECS=30` to execute a full live ping + ZFC LLM response verification cycle on macOS.
-- On Linux (`jeff-ubuntu`):
-  1. Run `ssh jeff-ubuntu '~/.claude/skills/agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh --account worldarchitect --generate-only'` to verify live provider generation on Linux.
-  2. Run a live LLM classification check on `jeff-ubuntu` invoking `classify_response()` via the installed `~/.claude/skills/agy-dot-coordinator/scripts/ping-dots.py` against a real reminder + reply payload to verify live LLM classification over the Linux provider ladder.
-  3. Run `ssh jeff-ubuntu '~/.claude/skills/agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh'` to verify live scheduled wrapper execution on Linux.
+- On Linux (`<linux-host>`):
+  1. Run `ssh <linux-host> '~/.claude/skills/agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh --account <account-b> --generate-only'` to verify live provider generation on Linux.
+  2. Run a live LLM classification check on `<linux-host>` invoking `classify_response()` via the installed `~/.claude/skills/agy-dot-coordinator/scripts/ping-dots.py` against a real reminder + reply payload to verify live LLM classification over the Linux provider ladder.
+  3. Run `ssh <linux-host> '~/.claude/skills/agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh'` to verify live scheduled wrapper execution on Linux.
 
 ---
 
@@ -163,10 +163,10 @@ git commit -m "gemini/gemini-4-argon: feat(coordinator): replace regex/marker he
 |---|---|---|---|
 | Task 1: Parameterize `generate` + `parse_verdict` + `extract_reply_after_reminder` | Yes | Write failing tests in `test_reminder_compliance.py` → verify FAIL (`AttributeError: parse_verdict`) → implement in `ping-dots.py` → verify PASS → commit | `python3 .claude/skills/agy-dot-coordinator/tests/test_reminder_compliance.py` |
 | Task 2: ZFC LLM `classify_response` + `idle_refusal` escalation | Yes | Write failing hermetic tests asserting `STATUS_MARKERS` removal, `<dot_reply>` fencing, fallback ladder, and LLM `idle_refusal` detection → verify FAIL → implement in `ping-dots.py` and `SKILL.md` → verify PASS across all 6 test suites → commit | `python3 .claude/skills/agy-dot-coordinator/tests/test_reminder_compliance.py && python3 .claude/skills/agy-dot-coordinator/tests/test_ping_dots_timeout.py && python3 -m unittest tests/test_simple_dot_ping.py tests/test_dot_recovery_prompt.py tests/test_agy_dot_coordinator.py tests/test_dot_coordinator_checkback_contract.py` |
-| Task 3: Cross-host reinstall & live rerun (macOS + `jeff-ubuntu`) | Operational deployment (`TDD: N/A` — deploys code already TDD-verified in Tasks 1–2 to local/remote runtime dirs and reloads `launchd`/`systemd`) | Verified by running installed unit tests on both hosts, checking `launchctl list` / `systemctl --user list-timers`, and executing live `ping-dots.py` generation and classification runs on macOS and `jeff-ubuntu` | `/bin/bash ~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh` and `ssh jeff-ubuntu '/bin/bash ~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh'` |
+| Task 3: Cross-host reinstall & live rerun (macOS + `<linux-host>`) | Operational deployment (`TDD: N/A` — deploys code already TDD-verified in Tasks 1–2 to local/remote runtime dirs and reloads `launchd`/`systemd`) | Verified by running installed unit tests on both hosts, checking `launchctl list` / `systemctl --user list-timers`, and executing live `ping-dots.py` generation and classification runs on macOS and `<linux-host>` | `/bin/bash ~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh` and `ssh <linux-host> '/bin/bash ~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh'` |
 
 ## Implementation Preconditions
 
 - Local macOS `launchd` user domain (`gui/$UID`) and `~/.claude/skills/agy-dot-coordinator/` exist.
-- SSH access to `jeff-ubuntu` (`Jeff-Ubuntu`) and remote `~/.claude/skills/agy-dot-coordinator/` exist (verified via `ssh -o ConnectTimeout=5 jeff-ubuntu 'hostname && ls -la ~/.claude/skills/agy-dot-coordinator/scripts/'`).
+- SSH access to `<linux-host>` (`<linux-host>`) and remote `~/.claude/skills/agy-dot-coordinator/` exist (verified via `ssh -o ConnectTimeout=5 <linux-host> 'hostname && ls -la ~/.claude/skills/agy-dot-coordinator/scripts/'`).
 - LLM provider credentials (`lunaroute key` / `LUNAROUTE_API_KEY`, `MINIMAX_API_KEY`, `codex`, `GEMINI_API_KEY` / `WORLDAI_DEV_GEMINI_API_KEY`) are sourced by `agy-dot-coordinator-wrapper.sh` from `~/.bashrc`.

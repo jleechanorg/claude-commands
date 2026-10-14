@@ -202,7 +202,7 @@ CLASSIFY_PROMPT_TEMPLATE = (
    - Inspect `diff -ru ~/.claude/skills/agy-dot-coordinator/ .claude/skills/agy-dot-coordinator/` before syncing so no unmerged local changes are lost, then sync `.claude/skills/agy-dot-coordinator/` to `~/.claude/skills/agy-dot-coordinator/`.
    - Run `~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh` (which runs `install-launchagent.sh` to reload `ai.gemini.agy-dot-coordinator`).
    - Verify live LLM generation (`--generate-only`) and live ZFC LLM `classify_response()` on captured `dot.sh read` conversation tails across configured accounts.
-2. **Linux (`jeff-ubuntu` via SSH):**
-   - Inspect remote diff via SSH before syncing, then sync `.claude/skills/agy-dot-coordinator/` to `jeff-ubuntu:~/.claude/skills/agy-dot-coordinator/`.
-   - Run `~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh` on `jeff-ubuntu` (which runs `install-systemd.sh` to reload `ai.gemini.agy-dot-coordinator.service` and `.timer`).
-   - Verify live LLM generation (`--generate-only`) and live ZFC LLM `classify_response()` execution on `jeff-ubuntu`.
+2. **Linux (`<linux-host>` via SSH):**
+   - Inspect remote diff via SSH before syncing, then sync `.claude/skills/agy-dot-coordinator/` to `<linux-host>:~/.claude/skills/agy-dot-coordinator/`.
+   - Run `~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh` on `<linux-host>` (which runs `install-systemd.sh` to reload `ai.gemini.agy-dot-coordinator.service` and `.timer`).
+   - Verify live LLM generation (`--generate-only`) and live ZFC LLM `classify_response()` execution on `<linux-host>`.
