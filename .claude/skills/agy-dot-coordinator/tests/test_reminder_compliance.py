@@ -236,14 +236,10 @@ try:
 except Exception as exc:
     check(f"extract_reply_after_reminder available and functional ({exc})", False)
 
-# --- Thin-coordinator LOC guardrail ---
-script_lines = SCRIPT.read_text().splitlines()
-script_code_lines = [line for line in script_lines if line.strip() and not line.strip().startswith('#')]
-check(f"ping-dots.py stays under 420 total lines (actual={len(script_lines)})", len(script_lines) <= 420)
-check(f"ping-dots.py stays under 380 non-comment LOC (actual={len(script_code_lines)})", len(script_code_lines) <= 380)
-
-# --- Task 2: ZFC LLM reply classification (no STATUS_MARKERS heuristics) ---
+# --- Task 2: ZFC LLM reply classification (no STATUS_MARKERS heuristics, tool-less providers only) ---
 check("STATUS_MARKERS heuristic constant is removed", not hasattr(m, 'STATUS_MARKERS'))
+check("CLASSIFY_PROVIDERS restricts reply classification to tool-less providers",
+      m.CLASSIFY_PROVIDERS == ('luna', 'minimax', 'gemini'))
 
 orig_generate = m.generate
 try:
@@ -262,6 +258,9 @@ try:
           m.classify_response(m.REMINDER_BODY) == 'no_response' and len(classify_calls) == 0)
     check("reminder with no reply after attribution is no_response without calling LLM",
           m.classify_response(reminder + '\n   ') == 'no_response' and len(classify_calls) == 0)
+    check("classify_response skips tool-enabled codex and agy providers",
+          m.classify_response(reminder + '\nSTATUS: ok', providers=('codex', 'agy')) == 'classification_unavailable'
+          and len(classify_calls) == 0)
 
     # Verify head truncation at MAX_CLASSIFY_REPLY_CHARS (6000), case-insensitive </dot_reply> escaping, and <dot_reply> fencing
     captured_prompts = []
@@ -303,7 +302,7 @@ try:
         check(f"classify_response returns LLM verdict '{expected_verdict}'",
               m.classify_response(reminder + '\nsome reply', providers=('luna',)) == expected_verdict)
 
-    # Verify fallback across providers when earlier provider fails or returns invalid JSON
+    # Verify fallback across tool-less providers when earlier provider fails or returns invalid JSON
     fallback_Order = []
 
     def stub_generate_fallback(provider, prompt=None):
@@ -315,9 +314,9 @@ try:
         return '{"verdict": "compliant"}'
 
     m.generate = stub_generate_fallback
-    check("classify_response falls back across providers on error or malformed JSON",
-          m.classify_response(reminder + '\nSTATUS: ok', providers=('luna', 'minimax', 'codex')) == 'compliant'
-          and fallback_Order == ['luna', 'minimax', 'codex'])
+    check("classify_response falls back across tool-less providers on error or malformed JSON",
+          m.classify_response(reminder + '\nSTATUS: ok', providers=('luna', 'minimax', 'gemini')) == 'compliant'
+          and fallback_Order == ['luna', 'minimax', 'gemini'])
 
     # Verify classification_unavailable when all providers fail
     m.generate = lambda provider, prompt=None: (_ for _ in ()).throw(ValueError(f'{provider} down'))

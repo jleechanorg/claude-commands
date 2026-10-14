@@ -34,6 +34,7 @@ MINIMAX_MODEL = 'MiniMax-M3.1-Flash-Preview'
 MINIMAX_BASE_URL = 'https://api.minimax.io/anthropic'
 GEMINI_MODEL = os.environ.get('COORDINATOR_GEMINI_MODEL') or 'gemini-3.8-flash'
 PROVIDERS = ('luna', 'minimax', 'codex', 'gemini')
+CLASSIFY_PROVIDERS = ('luna', 'minimax', 'gemini')
 IDENTITIES = {'agy': 'AGY', 'luna': 'LunaRoute', 'minimax': 'MiniMax Claude',
               'gemini': 'Gemini direct', 'codex': 'Codex', 'haiku': 'Claude Haiku'}
 ATTRIBUTION_SUFFIX = 'coordinator: automated reminder; no new authority.'
@@ -245,14 +246,16 @@ def parse_verdict(raw_text):
     return obj['verdict']
 
 
-def classify_response(page_text, providers=PROVIDERS):
-    """Classify the Dot reply to the most recent reminder using the LLM provider ladder."""
+def classify_response(page_text, providers=CLASSIFY_PROVIDERS):
+    """Classify the Dot reply to the most recent reminder using tool-less LLM providers only."""
     reply = extract_reply_after_reminder(page_text)
     if not reply:
         return 'no_response'
     safe_reply = reply[:MAX_CLASSIFY_REPLY_CHARS].replace('</', '<\\/')
     prompt = CLASSIFY_PROMPT_TEMPLATE.format(reply_text=safe_reply)
     for provider in providers:
+        if provider not in CLASSIFY_PROVIDERS:
+            continue
         try:
             return parse_verdict(generate(provider, prompt))
         except (OSError, ValueError, subprocess.SubprocessError) as error:
@@ -265,7 +268,7 @@ def read_tail(dot, account, env, chars=12000, timeout=180):
                        timeout=timeout, env=env, check=False).stdout
 
 
-def read_and_classify(dot, account, env, windows=None, providers=PROVIDERS):
+def read_and_classify(dot, account, env, windows=None, providers=CLASSIFY_PROVIDERS):
     if windows is None:
         windows = tuple(int(n) for n in os.environ.get('COORDINATOR_READ_WINDOWS', '12000,40000').split(','))
     verdict = 'no_response'
@@ -279,7 +282,8 @@ def read_and_classify(dot, account, env, windows=None, providers=PROVIDERS):
 def verify_and_escalate(dot, account, env, provider, state_file, wait_secs=180, recheck_secs=120, providers=None):
     classify_providers = (
         tuple(providers) if providers is not None else
-        ((provider,) + tuple(p for p in PROVIDERS if p != provider) if provider in PROVIDERS else PROVIDERS)
+        ((provider,) + tuple(p for p in CLASSIFY_PROVIDERS if p != provider)
+         if provider in CLASSIFY_PROVIDERS else CLASSIFY_PROVIDERS)
     )
     time.sleep(min(max(wait_secs, 0), 900))
     verdict = read_and_classify(dot, account, env, providers=classify_providers)
