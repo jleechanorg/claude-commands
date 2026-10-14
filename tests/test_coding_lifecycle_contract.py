@@ -165,26 +165,143 @@ class CodingLifecycleContract(unittest.TestCase):
         self.assertIn("may exempt defined low-risk classes", owner)
         self.assertIn("docs-only, test-only, or small non-production changes", owner)
         self.assertIn("default when the repo defines none", owner)
-        self.assertIn("No exemption covers changes to approval, merge, review, evidence, or security rules", owner)
+        self.assertIn("No `/er` exemption covers changes to approval, merge, review, evidence, or security rules", owner)
 
-    def test_gate_entrypoints_respect_repo_exemptions(self):
+    def test_gate_entrypoints_delegate_applicability_to_owner(self):
         owner = read("draft-first-pr")
         self.assertIn("accept these final gates, where applicable, in sequence", owner)
         self.assertIn("documentation-only class below or a repo-exempted class", owner)
-        self.assertIn("unless a repo-exempted class applies", owner)
         self.assertIn("outside any low-risk class the repo's own instructions exempt", read("evidence-review"))
-        ready = read("ready")
-        self.assertIn("/er and /advice where `draft-first-pr` (including repo-defined exemptions) requires them", ready)
-        self.assertNotIn("Final acceptance remains /es → /er → /advice at the current SHA;", ready)
-        self.assertIn("2. **/er** — when `draft-first-pr` (including repo-defined exemptions) requires it,", ready)
-        self.assertIn("3. **/advice** — when `draft-first-pr` (including repo-defined exemptions) requires it,", ready)
-        self.assertIn("still require `/es` and, unless a repo-exempted class applies, `/advice` at the current SHA", owner)
-        self.assertNotIn("still require `/es` and `/advice` at the current SHA", owner)
-        self.assertIn("→ /advice APPROVED @ SHA (unless a repo-exempted class applies)", owner)
-        self.assertIn("or a repo-exempted class applies)", owner)
+        for name in ("ready", "advice"):
+            self.assertIn("`draft-first-pr`", read(name))
+            self.assertIn("Advice applicability", read(name))
+        self.assertNotIn("unless a repo-exempted class applies", owner)
         self.assertIn("security, permission, credential, or merge-path code", owner)
         command = " ".join((SKILLS.parent / "commands" / "ready.md").read_text().split())
-        self.assertIn("/er and /advice where `draft-first-pr` (including repo-defined exemptions) requires them", command)
+        self.assertIn("draft-first-pr", command)
+        self.assertNotIn("including repo-defined exemptions", command)
+
+    def test_advice_boundary_counts_complete_diff_not_net_or_prod_only(self):
+        self.assertIn("additions + deletions", self.owner)
+        self.assertIn("complete PR diff", self.owner)
+        self.assertIn("not net lines or production-only lines", self.owner)
+        self.assertIn("actual base", self.owner)
+        for example in ("+25/-24 = 49: optional", "+25/-25 = 50: required",
+                        "+10/-0 code and +40/-0 docs = 50: required"):
+            with self.subTest(example=example):
+                self.assertIn(example, self.owner)
+        self.assertIn("unknown or incomplete count does not qualify", self.owner)
+        self.assertIn("Recompute after a head or base change", self.owner)
+
+    def test_size_exception_does_not_relax_other_gates(self):
+        self.assertIn("## Advice applicability", self.owner)
+        section = self.owner.split("## Advice applicability", 1)[1].split(" ## ", 1)[0]
+        self.assertIn("every PR under 50 changed lines", section)
+        self.assertIn("50 or more changed lines requires", section)
+        self.assertIn("supersedes broader docs/test/non-production `/advice` exemptions", section)
+        for gate in ("independent", "security", "evidence", "CI", "merge authorization"):
+            self.assertIn(gate, section)
+        self.assertNotIn("low-risk PRs under", section)
+
+    def test_two_phase_lifecycle_has_final_reviews_after_ready_work(self):
+        self.assertIn("mark ready-for-review", self.owner)
+        flow = self.owner.split("## Canonical lifecycle", 1)[1].split("## Advice applicability", 1)[0]
+        ordered = ("DRAFT", "/es PASS", "/er PASS", "/advice APPROVED",
+                   "mark ready-for-review", "/ready work", "final /er PASS",
+                   "final /advice APPROVED", "READY", "separate merge authorization")
+        cursor = 0
+        for token in ordered:
+            cursor = flow.index(token, cursor) + len(token)
+        self.assertIn("Undrafting starts `/ready`; it does not establish completed readiness", self.owner)
+        self.assertIn("final `/er`", read("ready"))
+        self.assertIn("final `/advice`", read("ready"))
+
+    def test_final_fix_reopens_affected_gates_without_destructive_freeze(self):
+        self.assertIn("If a final review requires a fix", self.owner)
+        self.assertIn("rerun affected checks/evidence", self.owner)
+        self.assertIn("coordinated candidate SHA", self.owner)
+        self.assertIn("not a branch lock", self.owner)
+        self.assertIn("does not authorize resets, history rewrites, or discarded work", self.owner)
+        self.assertIn("No cycle-count limit", self.owner)
+
+    def test_early_repro_and_ci_diagnosis_precede_final_expensive_capture(self):
+        self.assertIn("direct causal reproducer early", self.owner)
+        self.assertIn("relevant code and checks have stabilized", self.owner)
+        self.assertIn("Do not wait for green to diagnose a failed test", self.owner)
+        self.assertNotIn("Get through every applicable draft gate first", self.owner)
+        self.assertIn("local-equivalent exception", self.owner)
+
+    def test_receipts_keep_original_tested_sha_and_reviewed_delta(self):
+        self.assertIn("original tested SHA", self.owner)
+        self.assertIn("current applicability", self.owner)
+        self.assertIn("never relabel an old capture as a new run", self.owner)
+        self.assertIn("relevant tests", self.owner)
+
+    def test_web_advice_is_optional_and_missing_required_advice_stays_open(self):
+        self.assertIn("`/wa` (`/web-advice`) is optional", self.owner)
+        self.assertIn("`UNAVAILABLE`", self.owner)
+        self.assertIn("leave any dependent readiness", self.owner)
+        self.assertIn("`WITHHELD` does not satisfy", self.owner)
+
+    def test_change_impact_distinguishes_initial_gate_from_rerun_depth(self):
+        self.assertIn("## Change-impact review and test depth", self.owner)
+        self.assertIn("Initial gate applicability", self.owner)
+        for term in ("/4layer", "testing-layers", "single-file", "service boundary",
+                     "prompt/schema", "browser/UI", "shared fixture", "CI config",
+                     "non-production labels", "real-service-only"):
+            with self.subTest(term=term):
+                self.assertIn(term, self.owner)
+        self.assertIn("lowest sufficient layer", self.owner)
+        self.assertIn("does not prove model compliance, auth, persistence races, or browser behavior", self.owner)
+
+    def test_every_review_receipt_keeps_gist_sha_and_honest_state(self):
+        self.assertIn("## Review records in the PR description", self.owner)
+        section = self.owner.split("## Review records in the PR description", 1)[1].split(" ## ", 1)[0]
+        for term in ("every review type", "/es", "/er", "/advice", "/wa", "/cs",
+                     "native", "gist URL", "exact reviewed SHA", "timestamp", "reviewer",
+                     "FAILED", "PENDING", "UNAVAILABLE", "SUPERSEDED", "PUBLICATION BLOCKED"):
+            with self.subTest(term=term):
+                self.assertIn(term, section)
+        self.assertIn("never invent a gist URL or passing verdict", section)
+        self.assertIn("not private storage", section)
+        self.assertIn("document hashes", section)
+
+    def test_review_ledger_append_is_duplicate_free_and_preserves_evidence(self):
+        self.assertIn("review type + phase + reviewed SHA + receipt identity", self.owner)
+        self.assertIn("append a new record only when that key or status is new", self.owner)
+        self.assertIn("unchanged key and unchanged status are a no-op", self.owner)
+        self.assertIn("Preserve prior rounds and visual tables", self.owner)
+        self.assertIn("current-applicability review", self.owner)
+        self.assertIn("retain the original tested SHA", self.owner)
+
+    def test_evidence_owners_use_claim_boundaries_not_blanket_size_exceptions(self):
+        standards = read("evidence-standards")
+        layers = read("testing-layers")
+        self.assertIn("bounded deterministic claim", standards)
+        self.assertIn("fresh focused unit RED/GREEN", standards)
+        self.assertIn("not selected by line count alone", standards)
+        self.assertNotIn("production changes under 100 delta lines", standards)
+        self.assertNotIn("Mock (no `/es` credit)", layers)
+        self.assertNotIn("only valid source of `/es` evidence", layers)
+        self.assertNotIn("Unit/E2E tests** do not emit `/es` bundles", layers)
+        for text in (standards, layers):
+            self.assertIn("model compliance", text)
+            self.assertIn("persistence races", text)
+            self.assertIn("browser behavior", text)
+
+    def test_ready_delegates_green_and_separate_live_merge_authority(self):
+        ready = read("ready")
+        self.assertNotIn("standing conditional", ready)
+        self.assertNotIn("every current-head CI check green", ready)
+        self.assertIn("separate live merge authorization", ready)
+        self.assertIn("`pr-green-definition`", ready)
+
+    def test_artifact_hosting_is_distinct_from_review_receipt_publication(self):
+        standards = read("evidence-standards")
+        self.assertIn("underlying evidence artifacts", standards)
+        self.assertIn("separate sanitized review receipt", standards)
+        self.assertIn("PUBLICATION BLOCKED", standards)
+        self.assertNotIn('`Unit-only proof is NOT sufficient`', standards)
 
 
 if __name__ == "__main__":

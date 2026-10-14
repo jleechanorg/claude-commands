@@ -14,7 +14,7 @@ The shared catalog preserves host-installed `/advice` and `/web-advice` integrat
 
 **Every new PR is opened as DRAFT** (`gh pr create --draft`) and stays draft until quality is proven. Flipping to ready-for-review is a deliberate, gated action — not a side effect of pushing code.
 
-## Canonical lifecycle (operator-approved 2026-07-29)
+## Canonical lifecycle
 
 This is the full state machine — every other file (`pr-green-definition`, `/green`, `CLAUDE.md`, `AGENTS.md`) points here rather than restating it:
 
@@ -22,14 +22,41 @@ This is the full state machine — every other file (`pr-green-definition`, `/gr
 DRAFT
   → /es PASS @ SHA
   → /er PASS @ SHA (unless the narrow /er documentation allowlist or a repo-exempted class applies)
-  → /advice APPROVED @ SHA (unless a repo-exempted class applies)
-  → mark ready (gh pr ready <N>)
-  → /green: applicable CI or documented exception + no merge conflicts @ current HEAD SHA
+  → /advice APPROVED @ SHA when required by Advice applicability below
+  → mark ready-for-review (gh pr ready <N>)
+  → /ready work: /green, comments, conflicts, and regression checks
+  → final /er PASS @ current HEAD when applicable
+  → final /advice APPROVED @ current HEAD when required
+  → READY
   → separate merge authorization: explicit human "MERGE APPROVED" (case-insensitive)
     in the most recent live user message
 ```
 
 Each arrow is a gate, not a formality — do not skip ahead, and do not treat an earlier gate's pass as still valid once HEAD has moved (see "SHA-binding rule" below).
+
+## Advice applicability
+
+`/advice` is optional for every PR under 50 changed lines, at both the draft and
+final ready-review phases. A PR with 50 or more changed lines requires `/advice`
+at both phases. A specifically requested review still runs. This size rule
+supersedes broader docs/test/non-production `/advice` exemptions; it does not
+waive independent safety/code review, security, evidence, CI, or merge authorization.
+High-risk changes retain their required independent coverage even when `/advice`
+itself is optional. Initial gate applicability and later re-review depth are
+separate decisions.
+
+Count additions + deletions in the complete PR diff at the live head against its
+actual base, including all production and non-production files, not net lines or
+production-only lines. Use complete GitHub PR totals or the equivalent verified
+base...head Git diff; record both refs and the count. An unknown or incomplete
+count does not qualify, nor may uncounted binary changes establish the exception.
+Recompute after a head or base change; do not use only the latest commit's size.
+Examples: +25/-24 = 49: optional; +25/-25 = 50: required;
++10/-0 code and +40/-0 docs = 50: required.
+
+`/wa` (`/web-advice`) is optional, never an implicit lifecycle gate. Run it only
+when requested or separately authorized; preserve its real verdict if it runs.
+Neither optional review permits ignoring a known correctness or safety blocker.
 
 ## Coding lifecycle (pre-draft work) — scale layers to risk
 
@@ -45,7 +72,7 @@ only the affected behavior.
 | Ordinary feature | Outcome spec, TDD, unit + relevant tests, correctness checkpoint, then formal review. |
 | Cross-service boundary | Add an integration-layer test; a mocked unit test cannot prove it. |
 | Large change | May pause at the correctness checkpoint for human direction before expensive review (optional, never a gate). |
-| High-risk (security, data-integrity, permission, deployment, approval, merge, destructive, credential) | No layer skipping; the full gate chain and independent final coverage still apply. |
+| High-risk (security, data-integrity, permission, deployment, approval, merge, destructive, credential) | No layer skipping except the explicit Advice applicability rule; independent final coverage and all other required gates still apply. |
 
 **Mandatory regardless of class:** gates the user explicitly required;
 high-risk, security, data-integrity, permission, deployment, approval, merge,
@@ -56,8 +83,15 @@ applies only to high-risk or user-required cases, or an unresolved material
 decision. Skill pipelines (`write-goal`, `ironclad`, `ready`) delegate
 applicability and review timing here; none may apply universally.
 
-Cheap real smoke (e.g. UI target check) may run early to catch a wrong target;
-expensive final evidence follows correct, frozen code.
+Run a direct causal reproducer early; cheap real smoke may catch a wrong target.
+Collect expensive final evidence once relevant code and checks have stabilized.
+Do not wait for green to diagnose a failed test. Diagnose existing failures and
+batch fixes before paid capture; apply the documented local-equivalent exception
+for backlogged checks, never label a failed or unproven check as passed.
+
+Freeze means a coordinated candidate SHA with the executing owners, not a branch
+lock. It does not authorize resets, history rewrites, or discarded work. After a
+necessary fix, agree the new candidate and revalidate the affected claims.
 
 **Execution handoff invariant.** An accepted next step must have an executing
 owner or started tool before reporting `Working`. With only an exact blocker plus
@@ -91,15 +125,15 @@ While a PR is draft, accept these final gates, where applicable, in sequence —
 
 A repository's own instructions (for example its `AGENTS.md` coding lifecycle)
 may exempt defined low-risk classes, such as docs-only, test-only, or small
-non-production changes, from `/er` and `/advice`; when they do, follow that
+non-production changes, from `/er`; when they do, follow that
 classification and its exclusions. The narrow documentation allowlist below is
-the default when the repo defines none. No exemption covers changes to approval,
+the default when the repo defines none. No `/er` exemption covers changes to approval,
 merge, review, evidence, or security rules, or to security, permission,
 credential, or merge-path code.
 
 1. **`/es`** — evidence bundle passes (real evidence per `~/.claude/skills/evidence-standards/SKILL.md` + repo-specific extensions), verified at the PR's current HEAD SHA.
 2. **`/er`** — for every PR except the documentation-only class below or a repo-exempted class, evidence review verdict is PASS (not PARTIAL/FAIL/INCONCLUSIVE), verified at the same current HEAD SHA — re-run if `/es` was earned at an older SHA.
-3. **`/advice`** — second-opinion approval on the change itself (`APPROVED at <SHA>` / `NOT APPROVED at <SHA>` / `WITHHELD at <SHA>` — see `~/.claude/skills/advice/SKILL.md`), bound to the same current HEAD SHA, unless a repo-exempted class applies. `WITHHELD` does not satisfy the draft gate.
+3. **`/advice`** — second-opinion approval on the change itself (`APPROVED at <SHA>` / `NOT APPROVED at <SHA>` / `WITHHELD at <SHA>` — see `~/.claude/skills/advice/SKILL.md`), bound to the same current HEAD SHA, when required by Advice applicability. `WITHHELD` does not satisfy the draft gate.
 
 Only after every applicable gate passes **at the same current SHA**: flip the PR from draft to ready-for-review (`gh pr ready <N>`).
 
@@ -185,13 +219,39 @@ For this `/er` exemption, every changed path must be one of:
 
 For that class, do not run `/er`. Record
 `/er: NOT REQUIRED — documentation-only (<changed paths>)` on the PR, then
-continue to `/advice` where required. Documentation-only PRs still require `/es`
-and, unless a repo-exempted class applies, `/advice` at the current SHA, followed by `/green` using its documentation-only CI exception and separate merge authorization.
+continue to `/advice` where Advice applicability requires it. Documentation-only
+PRs still require applicable `/es` and current-SHA verdicts, followed by the ready
+phase using the documentation-only CI exception and separate merge authorization.
 
 This `/er` exemption is an exact allowlist, not a file-extension heuristic. Changes under
 `.claude/**`, `.codex/**`, `.github/**`, prompts, tests, scripts, configuration,
 schemas, or source code do not qualify even when the file is Markdown. Any
 mixed diff uses the normal `/er` gate.
+
+## Change-impact review and test depth
+
+Initial gate applicability follows the rules above. For a later delta, read the
+full change and identify which claims, contracts, assertions, or drivers it can
+invalidate before choosing full re-review versus focused reaffirmation. Use
+`~/.claude/skills/4layer/SKILL.md` (`/4layer`) and
+`~/.claude/skills/testing-layers/SKILL.md`, plus the repository testing-layers
+overlay, to select the lowest sufficient layer. Evidence classification (`/es`)
+does not by itself require a paid model call or browser run.
+
+| Actual change or claim | Proof and review depth |
+|---|---|
+| Unrelated prose delta | Read the delta, run relevant checks, and reaffirm unchanged claims; no automatic expensive replay. |
+| Small single-file deterministic fix | Fresh causal unit RED/GREEN plus affected regressions can prove the deterministic claim when no external boundary is implicated; focused delta review may suffice. |
+| A service boundary, auth, or persistence race | Integration proof crossing the implicated boundary; isolated unit mocks cannot establish the claim. |
+| A prompt/schema or model-behavior change | Check assembled inputs deterministically first; run real LLM evidence when lower layers cannot prove the claim or an applicable risk-specific rule requires it. |
+| New browser/UI behavior | Real browser proof for browser/UI claims, with required visual evidence. |
+| CI config, agent policy, security, shared fixture, or weakened assertion | Review actual effects and rerun dependent proof; non-production labels and small file counts do not establish safety. |
+
+Unit proof does not prove model compliance, auth, persistence races, or browser
+behavior. Do not manufacture live proof from mocks or replays. Preserve strict
+real-service-only rules inside `testing_mcp/` and `testing_ui/`; use deterministic
+layers outside those directories. File count, path category, and line count
+alone never decide evidence sufficiency or independent safety-review depth.
 
 ## SHA-binding rule (critical — applies to every gate in this chain)
 
@@ -212,6 +272,12 @@ after reading the delta and documenting why no tested claim, driver, or assertio
 affected; a changed assertion, driver, or behavioral instruction invalidates the
 evidence that depends on it.
 
+Preserve the original tested SHA in every artifact. Record current applicability
+separately with the actual reviewed delta, affected claims, relevant tests and
+results, reviewer, and new SHA; never relabel an old capture as a new run.
+A base-only change also requires checking its effect on the diff, advice size,
+mergeability, and claims; an unchanged head is not proof of unchanged context.
+
 The verdict rule applies uniformly:
 
 - A stale `/es` PASS does not justify running `/er` against it when `/er` is required.
@@ -223,11 +289,56 @@ Before trusting any prior verdict, compare the SHA it was stamped with against t
 
 **Chain timing and quality.** The draft chain (`/es` → `/er` → `/advice`) is the FINAL pass: run it after code is complete and all known findings are resolved or deferred (`evidence-standards` § Evidence Sequencing) — not per push while fixes are still landing. Review findings remain subject to the required correctness gates: behavior-blocking findings must be fixed and reverified, while style/nit/doc feedback may be tracked as follow-ups. Batch pending behavioral fixes into one SHA before re-earning affected evidence.
 
-## Ready phase — drive `/green`
+## Ready phase — finish `/ready`, then final reviews
 
-Once ready-for-review, drive `/green` per `~/.claude/skills/pr-green-definition/SKILL.md` (applicable CI or documentation-only exception, plus mergeability, SHA-bound) — do not restate the gate mechanics here.
+Undrafting starts `/ready`; it does not establish completed readiness. Invoke the
+`ready` skill for current-head `/green`, comments, conflicts, and cross-thread
+regression checks. Follow `pr-green-definition` for applicable CI, documented
+exceptions, and fresh mergeability; do not duplicate those mechanics here.
+Keep an already non-draft PR non-draft while completing its open gates.
 
-Do NOT burn CI cycles chasing green on an unproven draft — that's what starved capacity before this policy. Get through every applicable draft gate first, *then* spend CI budget on the 2-gate `/green` loop.
+After ready-phase work stabilizes, perform the final `/er` when applicable, then
+one final `/advice` when Advice applicability requires it. These are explicit
+closing verdicts, not an automatic copy of draft approvals. At an unchanged
+candidate, reviewers may inspect the completed work/receipts and reaffirm prior
+coverage without repeating unchanged expensive captures. Required advice keeps
+its canonical independent quorum; the orchestrator cannot approve itself.
+
+If a final review requires a fix, batch fixes, rerun affected checks/evidence,
+refresh `/green` at the new head, and repeat final `/er` then final `/advice`
+where applicable until approved. No cycle-count limit substitutes for finishing;
+stop only for a genuine blocker/decision or the governing autonomy deadline.
+Report READY only after applicable closing verdicts and current readiness checks
+pass. PARTIAL, FAIL, INCONCLUSIVE, WITHHELD, or an unavailable required reviewer
+leaves its gate open. READY never supplies merge authorization.
+
+## Review records in the PR description
+
+For every review type that runs, including `/es`, `/er`, `/advice`, `/wa`, `/cs`,
+other named lanes and native reviews, update the PR description with the exact
+reviewed SHA, review type/phase, verdict or status, gist URL, timestamp, and
+reviewer/coverage. Document reviews additionally retain document hashes; their
+context SHA does not turn document approval into code approval.
+
+Publish each completed review's sanitized receipt as a gist only within the
+approved disclosure scope. A gist is link-accessible, not private storage; omit
+credentials, private source, personal communications, and sensitive artifacts
+unless separately authorized. Verify the gist URL and intended reviewer access
+before calling publication complete. If tools or permissions prevent publishing,
+record `PUBLICATION BLOCKED` with the exact reason and local receipt location;
+never invent a gist URL or passing verdict, and do not claim the record complete.
+
+Keep `PENDING`, `UNAVAILABLE`, `FAILED`, and `SUPERSEDED` results visible as well
+as approvals. Read the current body before updating it. Use the idempotency key
+review type + phase + reviewed SHA + receipt identity; append a new record only
+when that key or status is new. Retries with unchanged key and unchanged status
+are a no-op. A status transition (including PENDING to PASS with the same receipt)
+appends a dated superseding event identifying its prior record; an applicability
+change likewise creates a new event without erasing history. Preserve prior rounds and visual
+tables. For a moved head, add a current-applicability review and retain the
+original tested SHA and capture link, instead of rewriting historical receipts.
+Read back the PR body after each update; uncertain writes require readback before
+retrying. Optional/skipped reviews are recorded honestly without fabricated gists.
 
 ## Slow CI — never block-wait
 
@@ -237,7 +348,7 @@ For checks queued/pending more than 10 minutes, follow the local-equivalent exce
 
 ## Rationale
 
-Long-open PRs that skipped straight to chasing CI green (e.g. the level-up auto-PR class) were starved by CI contention — CI capacity is a shared resource, not a private queue. The `ci-value-audit-v2` findings (`green-gate` workflow: 341 hr/wk consumed, 50.7% cancel rate pre-[#8637](https://github.com/$GITHUB_REPOSITORY/pull/8637)) show that driving unproven work through full CI repeatedly is the dominant cost driver. Gating quality (`/es`, and `/er` and `/advice` when required) in draft — before CI spend — front-loads correctness and back-loads CI cost only onto PRs already known-good.
+Long-open PRs that skipped straight to chasing CI green (e.g. the level-up auto-PR class) were starved by CI contention — CI capacity is a shared resource, not a private queue. The `ci-value-audit-v2` findings (`green-gate` workflow: 341 hr/wk consumed, 50.7% cancel rate pre-[#8637](https://github.com/$GITHUB_REPOSITORY/pull/8637)) show that driving unproven work through full CI repeatedly is the dominant cost driver. Stabilizing correctness and applicable checks before final expensive capture avoids repeated evidence and review cost without delaying diagnosis of failing CI.
 
 ## CodeRabbit/Bugbot — optional advisory reviewers
 

@@ -7,6 +7,10 @@ description: "Token-efficient second opinion slash command /advice. Extracts the
 
 **Replaces `advisor()`. Never call advisor() — use this instead.**
 
+For PR lifecycle applicability, follow `draft-first-pr` § Advice applicability;
+its size exception does not change this command's reviewer quorum when it runs.
+Record each run under that owner's Review records in the PR description contract.
+
 ## When invoked
 
 `/advice [optional: specific question]` — invoked manually or automatically at a decision point.

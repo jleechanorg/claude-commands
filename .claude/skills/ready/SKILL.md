@@ -12,24 +12,26 @@ The shared catalog preserves host-installed `/advice` and `/web-advice` integrat
 
 **Order matters (draft-first):** if the PR is a DRAFT, keep it draft while
 driving the applicable gates 1–3 (/es, and /er and /advice where `draft-first-pr`
-(including repo-defined exemptions) requires them) to approved; only THEN undraft, then
-drive gate 4 (/green) and gate 5 to done. If the PR is ALREADY non-draft,
+requires them (including its Advice applicability rule)) to approved; only THEN undraft, then
+drive the remaining ready work and the final reviews below to done. If the PR is ALREADY non-draft,
 leave it non-draft — never convert an open non-draft PR back to draft; just
 apply the same final gate requirements.
 
 These are final acceptance gates, not a serial work schedule. Follow
 `draft-first-pr/SKILL.md`: run independent code reviews and cheap focused checks
 early in parallel, resolve or explicitly defer findings, then freeze the change
-before expensive evidence. Final acceptance remains the applicable /es → /er → /advice chain at
-the current SHA; do not postpone the first code review until after evidence.
+before expensive evidence. Apply its Advice applicability and change-impact rules;
+do not postpone the first code review until after evidence. Undrafting begins
+ready work, not completed readiness.
 
 A PR is READY when ALL of the following hold, verified at the CURRENT head SHA
 (newest check-run attempt per name; REST when GraphQL quota is low):
 
-1. **/es** — evidence bundle exists and is published (gist linked from the PR
-   body as a single canonical `**Evidence**: <gist-url> (head <sha>)` marker —
-   one marker only; stale markers with old head declarations make the
-   Evidence Gate fail).
+1. **/es** — evidence satisfies the applicable class in `evidence-standards`
+   and the repository overlay. Retain original capture provenance and record
+   current applicability separately. Underlying artifacts may use authorized
+   private hosting; the separate sanitized review receipt follows
+   `draft-first-pr` § Review records in the PR description.
 2. **/er** — when `draft-first-pr` (including repo-defined exemptions) requires
    it, adversarial evidence review verdict PASS at the current head (findings
    fixed RED-first). A head move whose actual delta leaves every tested claim,
@@ -37,7 +39,7 @@ A PR is READY when ALL of the following hold, verified at the CURRENT head SHA
    `draft-first-pr/SKILL.md`'s SHA-binding rule — document the delta and the
    prior verdict's provenance rather than relabeling the old capture; a
    behavioral change or a changed assertion/driver requires a fresh run.
-3. **/advice** — when `draft-first-pr` (including repo-defined exemptions)
+3. **/advice** — when `draft-first-pr` § Advice applicability
    requires it, at least two independent full-coverage approval reviewers
    from the canonical `advice/SKILL.md` approval lanes approve the exact head, or
    every REQUEST_CHANGES finding is fixed and the two-reviewer quorum is rerun
@@ -48,10 +50,9 @@ A PR is READY when ALL of the following hold, verified at the CURRENT head SHA
    documented at the new SHA) — it never reduces the two-reviewer quorum or the
    named-reviewer requirement in `advice/SKILL.md`; changing that requirement
    needs its own separate, explicitly approved change.
-4. **/green** — every current-head CI check green (rerun infra-signature
-   failures: SIGKILL-during-rustc, Set-up-Python, sqlite3-amalgamation;
-   diagnose real failures instead of rerunning) AND mergeable with no
-   conflicts.
+4. **/green** — follow `pr-green-definition` for applicable checks, its
+   documented CI exceptions, and fresh current-head mergeability. Diagnose
+   real failures; a failed or missing required check is not a pass.
 5. **Comments handled** — every unresolved review thread and actionable bot
    comment addressed (fix or reasoned reply); merge conflicts resolved by
    rebase.
@@ -67,7 +68,15 @@ A PR is READY when ALL of the following hold, verified at the CURRENT head SHA
    found via a parallel `/repro` thread sat un-triaged while the PR merged
    anyway.)
 
+After this work stabilizes, complete final `/er` then final `/advice` as required
+by `draft-first-pr` § Ready phase. At an unchanged SHA, closing reviewers may
+reaffirm completed coverage; do not rerun unchanged expensive evidence. A fix
+reopens affected proof and current-head readiness checks. Record every review's
+gist URL and reviewed SHA under that owner's Review records contract, preserving
+history and honest blocked states. Do not report READY before this closure.
+
 If a PR does not satisfy these, MAKE it satisfy them (fix lanes, evidence
 publication, gate reruns), then re-verify. Merges remain human-authorized:
-report READY state and merge only under an explicit or standing conditional
-approval that names these gates.
+report READY state separately from the live merge authorization required by
+`draft-first-pr` and the repository. The separate live merge authorization is
+never supplied by a review, ledger entry, or READY verdict.

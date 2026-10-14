@@ -10,7 +10,7 @@ when-to-use: Before /er, /green, gate fixes, or AO worker dispatch on a PR that 
 
 Evidence must **prove what you claim**. The strongest evidence is a raw
 request/response capture from the real production code path; a unit test in
-isolation proves nothing about real behavior. Match proof to the claim, label
+isolation proves only its bounded deterministic claim, not a live boundary. Match proof to the claim, label
 every claim with its evidence layer, and never substitute a green test suite
 for proof of integration correctness. The companion files in this directory
 (`bundle-anatomy.md`, `tmux-video-evidence.md`, `ui-video-evidence.md`) cover
@@ -133,11 +133,11 @@ artifact — not only from the prose asserting it.
 
 ## Core principle: raw req/resp > unit tests > nothing
 
-Ordered by strength, for a production behavior claim:
+For claims about integrated or live production behavior:
 
 1. **Raw request/response capture from the real code path** (HTTP, JSONL, logs, video) — Layer 2.
 2. **Real-service capture with mocks only at the network boundary** (`httpx.MockTransport`, `responses`, `respx` with a recorded body) — Layer 2 mock-at-network.
-3. **Unit test in isolation** (monkeypatched, no real callstack) — Layer 1, **insufficient for production claims**.
+3. **Unit test in isolation** (monkeypatched, no real callstack) — Layer 1, **insufficient for integrated/live claims**, but sufficient for a bounded deterministic claim under the rule below.
 4. **No evidence** — invalid for any non-trivial claim.
 
 Real beats fast. A 30-second test against the real local server beats a 200-test
@@ -179,8 +179,8 @@ prompt, contract, or executable instruction that a claim depends on does. Flaggi
 
 1. Determine the evidence SHA (from `metadata.json.provenance.git_head` or the bundle README).
 2. `git diff <evidence-sha> HEAD` — read every changed file's content diff against the claims it could affect.
-3. If **every** changed file's content diff is non-behavioral (candidates: docs, comments, type-hints,
-   lint CI workflows **excluding** `deploy*`/`*preview*`) → evidence remains valid; document the tolerance and move on.
+3. If **every** content diff leaves the reviewed claims, assertions, and drivers intact,
+   evidence remains valid; record the reviewed delta, relevant checks, and current applicability.
    Path category is a starting hint only: a test, evidence driver/capture, prompt, contract, schema, or
    `.claude/`/`.codex/`/`.cursor/` skill or agent file whose assertion, driver, or executable instruction
    changed can invalidate the proof it supports — read its diff against the claim it backs.
@@ -190,14 +190,15 @@ prompt, contract, or executable instruction that a claim depends on does. Flaggi
 depends on** between the SHAs: a test assertion, evidence driver/capture, or executable instruction
 backing the claim; production code (the repo's source tree excluding its test dirs, **including** prompt/template surfaces — the repo-level /es file names the exact paths),
 API/endpoints/game logic/agent routing, runtime config (env vars, feature flags), DB schema/migrations,
-or a deploy/preview workflow — or any **mixed** diff containing at least one such file.
+or a deploy/preview workflow. For a mixed diff, rerun proof affected by its actual
+behavior or claim-dependent changes; a path alone does not invalidate every capture.
 
 **Rationale:** rerunning real-server + real-LLM evidence for a docs typo or test rename burns
 hours of LLM time for zero added confidence. The evidence proves a *behavior*; if the behavior's
 code is byte-identical at HEAD and no assertion or driver backing it changed, the proof is
 byte-valid at HEAD. Repo-level files may add
-path-specific context (e.g. `<repo>/.claude/skills/evidence-standards.md` §"Evidence Staleness
-Tolerance for Test/Docs-Only Changes") and take precedence on conflict, but cannot waive the
+project-specific context (e.g. `<repo>/.claude/skills/evidence-standards.md` §
+"Claim-scoped evidence revalidation") and take precedence on conflict, but cannot waive the
 delta-and-claim test above.
 
 ## Evidence Sequencing — expensive evidence runs LAST, once
@@ -254,32 +255,31 @@ failures until raw provider proof supports a product or auth diagnosis.
 | **real-callstack + mock-at-network** | Real callstack, HTTP boundary mocked with recorded body | Layer 2 | Yes, for non-LLM claims |
 | **real-callstack + real-BQ/HTTP** | Real BigQuery / Firestore / HTTP insert | Layer 2 | Yes |
 | **real-callstack + in-process SDK mock** | `gemini_provider.get_client = lambda: _FakeClient()` — SDK short-circuited | Layer 1 synthetic-LLM | **No** (named anti-pattern, see below) |
-| **unit test** | `mock.patch(...)`, no real callstack | Layer 1 | **No** for production claims (3 exceptions below) |
+| **unit test** | Isolated deterministic execution | Layer 1 | Bounded deterministic claims only; never live-boundary proof |
 | **none** | No artifact, just assertion | — | No |
 
-## Disallow unit tests as evidence (with 3 exceptions)
+## Unit proof and claim boundaries
 
-**Unit-only proof is NOT sufficient.** A behavior verified only by unit tests
-(Layer 1, mocked/isolated) is not proven. `/es` and `/er` must treat unit-only
-evidence as **INSUFFICIENT** and explicitly warn the user when a claim rests
-on unit tests alone. The minimum acceptable proof is **Layer 2** end-to-end
-integration — real callstack exercised, mocks only at external API boundaries
-(network, third-party services). For production code paths that include an
-LLM or external service, real-service evidence is required (no mocked
-provider).
+Use `draft-first-pr` § Change-impact review and test depth, `/4layer`, and
+`testing-layers` to choose sufficient evidence, not selected by line count alone.
+`/es` remains the evidence-classification gate; it does not force every production
+edit through live LLM or browser capture.
 
-**Exception 1:** non-production changes (docs, tests, tooling/scripts) that
-back no production-behavior claim — no evidence required.
+A bounded deterministic claim may use fresh focused unit RED/GREEN and affected
+regressions when the changed logic is self-contained and no service, model,
+security, persistence, or browser boundary is implicated. A small single-function
+fix can qualify; small size alone does not qualify. State exactly what the unit
+proof covers and does not cover, retaining commands, results, and tested SHA.
 
-**Exception 2:** production changes under 100 delta lines of non-test code —
-unit-only IS acceptable.
+Unit proof is insufficient for model compliance, auth, persistence races, or
+browser behavior. Integration claims require the implicated real callstack and
+boundary; model behavior needs real-provider proof where lower layers cannot
+establish the claim. Never replace required real-service captures with mocks or
+replays. Non-production work still requires proportionate checks; a test assertion,
+shared driver, CI rule, or agent policy change can invalidate existing evidence.
 
-**Exception 3:** (none — these two are the only carve-outs from the
-"unit-only is insufficient" rule.)
-
-This applies regardless of how many unit tests pass or how high coverage is.
-"All unit tests green" does not constitute proof of integration correctness,
-server behavior, or LLM output.
+No amount of unit coverage proves an unexercised integration or live boundary.
+All existing real-service-only directory contracts remain in force.
 
 ### SDK-mock named anti-pattern
 
@@ -315,8 +315,11 @@ Keep the original evidence and its provenance intact. Provide the intended
 reviewer with accessible reproduction directions and artifact links in the PR,
 a checked-in document, an access-controlled receipt/store, or an authorized gist.
 Include the reviewed/tested SHA, dependencies, exact commands and expected results
-required for the applicable evidence class. A gist is one supported location;
-it is not an independent prerequisite for a passing verdict.
+required for the applicable evidence class. These underlying evidence artifacts
+may remain in authorized private hosting. The separate sanitized review receipt
+must follow `draft-first-pr` § Review records in the PR description, including
+its gist URL, exact reviewed SHA, and `PUBLICATION BLOCKED` state when publication
+cannot complete. Do not confuse artifact hosting with review-record completion.
 
 Publish or send artifacts only within the current task's authorized audience and
 destination. Sanitize any shareable copy while retaining private originals and
@@ -446,10 +449,10 @@ Visual comparisons under `## Visual Evidence` in PR descriptions must render ima
 This is the **user-scope (global)** `/es` policy. For complete evidence
 standards, always read both this skill and the relevant repo-level file:
 
-1. **Master policy** — `~/.claude/CLAUDE.md` § "Evidence — match proof to the claim" (the
-   `Evidence-first` rule, the `Unit-only proof is NOT sufficient` rule with its
-   three-exception wording, the UI-video requirement, and the PR-touching
-   trigger list — the repo-level /es file names the repo's exact trigger paths).
+1. **Master policy** — `~/.claude/CLAUDE.md` § "Evidence — match proof to the claim"
+   and this skill's Unit proof and claim boundaries. Use the current claim-based
+   rule rather than obsolete blanket production/size-only exceptions. Preserve
+   UI-video and risk-specific requirements; the repo overlay names its triggers.
 2. **Repo-level /es** — most repos mirror this skill at
    `<repo>/.claude/skills/evidence-standards.md` with project-specific
    extensions (e.g. `your-project.com` has dice-claim, campaign-isolation,
