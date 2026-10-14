@@ -32,14 +32,32 @@ import sys
 SCROLLBACK_LINES = 1500
 
 CHURN_RE = re.compile(
-    r"Working\s*\(|Worked for|Thinking|Pursuing goal|Reticulating|"
-    r"Precipitating|Photosyn|esc to cancel|⠋|⠙|⠸|⠴|⠼|⠏"
+    r"Working\s*\(|Thinking|Pursuing goal|Reticulating|"
+    r"Precipitating|Photosyn|esc to cancel|"
+    r"●\s*Agent\([^\n]*·\s*\d+[ms]|\b\d+\s+active agents?\b|[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]"
 )
-DEAD_RE = re.compile(r"quota reached|rate-limit-options|weekly limit|usage limit", re.I)
+IDLE_OVERRIDE_RE = re.compile(
+    r"^\s*[✻•]?\s*Worked for\b|Goal achieved|Goal stalled"
+)
+DEAD_RE = re.compile(
+    r"quota reached|rate-limit-options|hit your weekly limit|"
+    r"weekly limit reached|usage limit reached|usage limit.*try again",
+    re.I,
+)
 SHELL_RE = re.compile(r"jleechan@[^\n]*\$\s*$")
-FOOTER_RE = re.compile(r"\? for shortcuts|Ask Codex to do anything|esc to cancel$|GPT-\d")
-PARK_RE = re.compile(r"Want me to|Which\?|awaiting|pending your", re.I)
-QUESTION_RE = re.compile(r"[a-z0-9\)\?]\?\s*$")
+FOOTER_RE = re.compile(
+    r"\? for shortcuts|Ask Codex to do anything|esc to cancel$|"
+    r"GPT-\d(?![^\n]*Goal stalled)|"
+    r"^\s*[─━]{10,}\s*$|"
+    r"^\s*↑[\d.]+[kM]?.*↓[\d.]+[kM]?|"
+    r"\((?:lunaroute|openai|anthropic|google)\)\s+[a-z0-9._-]+|"
+    r"^\s*~\/[^\n]*\([a-zA-Z0-9_./ -]+(?:\)|\.\.\.)\s*$|"
+    r"^\s*[>❯›]\s*$"
+)
+PARK_RE = re.compile(
+    r"Want me to|Which\b[^\n]*\?|awaiting|pending your|Goal stalled", re.I
+)
+QUESTION_RE = re.compile(r"[a-z0-9\)\?\"']\?\s*$", re.I | re.M)
 
 
 def surfaces() -> list[tuple[str, str, str]]:
@@ -71,19 +89,33 @@ def classify(lines: list[str]) -> tuple[str, str]:
         return "EMPTY", ""
     last = lines[-1]
     nonfooter = [l for l in lines if not FOOTER_RE.search(l)]
-    tail20 = "\n".join(lines[-20:])
     tail_state = "\n".join(nonfooter[-10:])
 
     if DEAD_RE.search(tail_state):
         m = DEAD_RE.search(tail_state)
         return "DEAD", m.group(0)
-    if CHURN_RE.search(tail20):
-        return "CHURN", (CHURN_RE.search(tail20).group(0) or "").strip()
+
+    has_codex_prompt = any("Ask Codex to do anything" in l for l in lines[-3:])
+    tail_lines = lines[-4:] if has_codex_prompt else lines[-6:]
+    for idx in range(len(tail_lines) - 1, -1, -1):
+        if IDLE_OVERRIDE_RE.search(tail_lines[idx]):
+            tail_lines = tail_lines[idx + 1 :]
+            break
+    tail_active = "\n".join(tail_lines)
+    if CHURN_RE.search(tail_active):
+        return "CHURN", (CHURN_RE.search(tail_active).group(0) or "").strip()
     if SHELL_RE.search(last):
         return "SHELL", last[:80]
     body_tail = "\n".join(nonfooter[-8:])
     if PARK_RE.search(body_tail) or QUESTION_RE.search(body_tail):
-        return "PARKED", body_tail.replace("\n", " | ")[:300]
+        matched_lines = [
+            l for l in nonfooter[-8:]
+            if PARK_RE.search(l) or QUESTION_RE.search(l)
+        ]
+        summary_lines = nonfooter[-2:]
+        if matched_lines and matched_lines[-1] not in summary_lines:
+            summary_lines = [matched_lines[-1], *summary_lines]
+        return "PARKED", " | ".join(summary_lines)[-300:]
     return "IDLE", ""
 
 

@@ -198,3 +198,29 @@ End reports quoting agent output with the LLM-provenance footer:
   QUOTA-DEAD only from the current-state tail; classify CHURN first when the
   latest lines show Working/Thinking. (2026-10-12: 6 churning Codex surfaces
   were misclassified by buffer-wide quota matching.)
+
+## Syncing copies (repo ↔ hosts)
+
+Published source of truth: `jleechanorg/jleechan-skills` → `.claude/skills/cmux-bulk-steer/`
+(merged 2026-10-13, PR #499). Live working copies: `~/.claude/skills/cmux-bulk-steer/`
+on Mac and on jeff-ubuntu.
+
+Keep all three byte-identical. Verify with:
+
+```bash
+# Mac live vs repo
+shasum -a 256 ~/.claude/skills/cmux-bulk-steer/SKILL.md \
+  ~/.claude/skills/cmux-bulk-steer/scripts/scan.py
+# Linux live
+ssh jeff-ubuntu 'sha256sum ~/.claude/skills/cmux-bulk-steer/SKILL.md \
+  ~/.claude/skills/cmux-bulk-steer/scripts/scan.py'
+```
+
+After editing ANY copy, propagate to the other two in the same session:
+1. edit the Mac live copy → `scp` it to jeff-ubuntu;
+2. copy both files into a fresh `origin/main` branch of `jleechan-skills` and open a PR
+   (the repo copy only lands through review);
+3. re-run the two hash commands above and confirm all six digests match.
+
+Never leave a host or the repo ahead/behind. The repo copy is published output; the live
+copies are what agents actually execute — drift means agents run an unreviewed variant.
