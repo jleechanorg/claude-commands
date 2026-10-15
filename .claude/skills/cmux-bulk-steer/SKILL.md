@@ -1,6 +1,6 @@
 ---
 name: cmux-bulk-steer
-description: "Pure Subagent-Native Zero-Framework Cognition (/zfc) fleet review, deduplication, and steering. Captures ~10,000 words per cmux terminal surface mechanically without regex classifiers, fans out /parallel subagents to classify and dedupe overlapping PR/worktree lanes, then steers sole owners. Use when asked to review/audit cmux surfaces, 'see what's off track', 'nudge/steer the terminals', or orchestrate across the fleet. NOT for single-surface work (see cmux-steer)."
+description: "Pure Subagent-Native Zero-Framework Cognition (/zfc) fleet review, deduplication, and steering. Always `/parallel` — every phase fans out across disjoint subagents because independent work must never be serialized. Captures ~10,000 words per cmux terminal surface mechanically without regex classifiers, fans out /parallel subagents to classify and dedupe overlapping PR/worktree lanes, then steers sole owners. Use when asked to review/audit cmux surfaces, 'see what's off track', 'nudge/steer the terminals', or orchestrate across the fleet. NOT for single-surface work (see cmux-steer)."
 ---
 
 # cmux-bulk-steer — Subagent-Native `/zfc` Fleet Review, Dedupe, and Steer
@@ -9,6 +9,20 @@ Three phases, strictly in order:
 **Phase 1: CAPTURE ALL (Mechanical 10,000-Word Dump) → Phase 2: PARALLEL SUBAGENT `/zfc` ASSESSMENT + STRICT DEDUPE → Phase 3: STEER DEDUPED SOLE OWNERS**.
 
 Never steer from a short tail, never use regex/keyword classifiers to guess terminal state, and never skip cross-surface deduplication.
+
+**Always `/parallel`. `/parallel` is the default execution mode for every phase, not an optimization.** If two items do not depend on each other, they MUST run concurrently — never as `item N` then `item N+1`. Concretely: assessment fans out across disjoint subagents (Phase 2), dedupe reads every shard concurrently, and steering dispatches to all owners at once (Phase 3). Before any sequential loop over surfaces/shards/lines, ask "can `/parallel` run these at the same time?" and if yes, fan out. The only serialization allowed is a genuine data dependency (a later step needs an earlier step's output) or a bounded resource cap — see `~/.claude/skills/parallelize-to-ceiling/SKILL.md`. Report the degree of parallelism achieved (e.g. "6 shards, 6 subagents") in the final report.
+
+---
+
+## `/parallel` Is the Default (Never Serialize Independent Work)
+
+Apply this at every phase boundary:
+- **Capture (Phase 1)**: one mechanical pass; still parallelize per-surface reads when the collector supports it (do not `read-screen` surface-by-surface in a shell loop).
+- **Assess (Phase 2)**: partition surfaces into `min(surface_count, 10)` disjoint `/parallel` subagents — target 6–10 shards only when the fleet has enough surfaces. Spawn all shards in ONE fan-out call; never assess shard 1, wait, then shard 2.
+- **Dedupe (Phase 2)**: build the ownership map from all shard results concurrently.
+- **Steer (Phase 3)**: send to all deduped owners concurrently, then verify all of them in one parallel read pass. Do not steer+wait per surface.
+
+If you catch yourself in a sequential per-item loop, stop and convert it to a `/parallel` fan-out.
 
 ---
 
@@ -73,7 +87,7 @@ Partition the captured `ws_*_sf_*.txt` files from `$OUT_DIR/manifest.json` acros
 
 ## Phase 3 — STEER DEDUPED SOLE OWNERS (4-Step Ritual + Narrow-Screen Cards)
 
-For every surface that needs action after deduplication, execute the mandatory 4-step ritual (`cmux send` does NOT press Enter):
+For every surface that needs action after deduplication, execute the mandatory 4-step ritual (`cmux send` does NOT press Enter). **Dispatch every surface's ritual concurrently** (`/parallel`): send to all owners in one fan-out, then do a single parallel verify pass — never send→sleep→verify one surface at a time.
 
 ```bash
 cmux send --workspace <ws_ref> --surface <sf_ref> "<message>"
