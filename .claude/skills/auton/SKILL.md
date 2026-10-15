@@ -63,6 +63,8 @@ worker-signals-completion:
 ```
 And the repo must have a healthy `skeptic-cron.yml` workflow. `approved-and-green` may still exist, but it is no longer the canonical merge executor.
 
+**Retired (2026-07-28):** the Skeptic gate is REMOVED/not used. `/green` is exactly two gates at the current HEAD SHA (see the canonical `pr-green-definition`): (1) applicable CI/validation is green — documentation-only PRs use the documented documentation-only exception, and checks queued/pending past the normal runtime may use the documented passing local-equivalent exception (do not require CI for those cases, and do not reject an allowed local equivalent); (2) no merge conflicts. CodeRabbit and Bugbot are optional advisory reviewers, never gates. `skeptic-cron.yml` is a deprecated no-op stub; references to skeptic-review trigger wiring below describe the historical AO machinery only.
+
 If `worker-signals-completion` is missing, `auto: false`, or not `action: skeptic-review`, that is the local skeptic trigger gap.
 
 **Full autonomy means: idea in → merged PR out, zero human clicks.**
@@ -533,7 +535,7 @@ These are the observed failure classes across 48h windows. Assign each stalled w
 |-------|------|---------|-----|
 | RC-1 | **Spawn context gap** | Worker asked "what task should I do?" — no task prose in spawn | Always include prose: `ao spawn --bead bd-xxx "Implement X: ..."` |
 | RC-2 | **Scope drift** | Worker documented the problem instead of solving it (PR title contains "docs" when impl was requested) | Send `ao send <session> "DRIVER: implement, not document. Fix <file>:<line>"` |
-| RC-3 | **Stall-without-escalate** | Worker went idle at a gate (CR, CI, skeptic) without sending `ao send` to orchestrator or posting `/skeptic` | Post `/skeptic` on PR; steer worker with DRIVER mode |
+| RC-3 | **Stall-without-escalate** | Worker went idle at a gate (CI, draft gates) without sending `ao send` to orchestrator | Steer worker with DRIVER mode |
 | RC-4 | **Wrong-bead correction** | Worker pivoted to merged/non-existent bead after receiving correction | Always `br show <bead>` before sending any `ao send` correction |
 | RC-5 | **Hook noise** | `PostToolUse hook error: unbound variable` slowing worker but not blocking | Fix hook script (`pr_create_pattern` unbound var); non-critical if worker still progresses |
 | RC-6 | **Context exhaustion** | Worker context hit limit mid-task; state partially preserved in handoff | Check session for "context is N% remaining" lines; spawn fresh worker with recap |

@@ -22,7 +22,7 @@
 - Artifacts:
   - <e.g. "real callstack log showing the fix path is hit, mock only at external API boundaries">
   - <e.g. "browser screenshot of the user-facing surface after deploy">
-  - <e.g. "/er verdict URL from skeptic gate">
+  - <e.g. "/er verdict URL">
 - Forbidden:
   - Bullet list of command names only (proof-before-claim rule)
   - "Key output observed: dependency install completed" (fabrication pattern)
