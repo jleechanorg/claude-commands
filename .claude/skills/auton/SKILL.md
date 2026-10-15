@@ -63,7 +63,7 @@ worker-signals-completion:
 ```
 And the repo must have a healthy `skeptic-cron.yml` workflow. `approved-and-green` may still exist, but it is no longer the canonical merge executor.
 
-**Retired (2026-07-28):** the Skeptic gate is REMOVED/not used. `/green` is exactly two gates — CI green + no merge conflicts at the current HEAD SHA (see `pr-green-definition`). CodeRabbit and Bugbot are optional advisory reviewers, never gates. `skeptic-cron.yml` is a deprecated no-op stub; references to skeptic-review trigger wiring below describe the historical AO machinery only.
+**Retired (2026-07-28):** the Skeptic gate is REMOVED/not used. `/green` is exactly two gates at the current HEAD SHA (see the canonical `pr-green-definition`): (1) applicable CI/validation is green — documentation-only PRs use the documented documentation-only exception, and checks queued/pending past the normal runtime may use the documented passing local-equivalent exception (do not require CI for those cases, and do not reject an allowed local equivalent); (2) no merge conflicts. CodeRabbit and Bugbot are optional advisory reviewers, never gates. `skeptic-cron.yml` is a deprecated no-op stub; references to skeptic-review trigger wiring below describe the historical AO machinery only.
 
 If `worker-signals-completion` is missing, `auto: false`, or not `action: skeptic-review`, that is the local skeptic trigger gap.
 
