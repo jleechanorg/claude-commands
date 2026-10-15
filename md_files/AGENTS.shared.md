@@ -151,7 +151,6 @@ Never run `gh pr merge`, merge API calls, or push directly to a default branch u
 
 ## AO operations
 
-Resolve AO `--agent` shorthands from live `~/.hermes/agent-orchestrator.yaml`; do not infer unsupported names. Exact parameter fidelity and post-spawn verification: `~/.claude/skills/ao-operator-discipline/SKILL.md`. Worker caps and admission checks: `~/.claude/skills/ao-spawn-safety/SKILL.md`. AO never merges, as required by Merge safety above.
 
 ## Configuration and service safety
 
