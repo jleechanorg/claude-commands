@@ -38,12 +38,16 @@ class HumanReviewBriefSkillTests(unittest.TestCase):
         ):
             self.assertIn(required_phrase, skill_text)
 
-        self.assertIn("Why the LLM cannot do this:", cmd_text)
+        self.assertIn("human-review-brief/SKILL.md", cmd_text)
+        self.assertIn("human-review-brief/SKILL.md", pr_summary_text)
         self.assertIn("Why the LLM cannot do this:", pr_summary_text)
-        self.assertIn(
+        for canonical_only_phrase in (
+            "Subjective Product / UX Taste or Tradeoff Preference",
+            "Uninstrumented External / Physical Ground Truth",
             "None — all code, test, and sync checks were verified autonomously by the LLM.",
-            pr_summary_text,
-        )
+        ):
+            self.assertNotIn(canonical_only_phrase, pr_summary_text)
+            self.assertNotIn(canonical_only_phrase, cmd_text)
 
     def test_skill_covers_mac_and_linux_empirical_blind_spots(self) -> None:
         text = SKILL_PATH.read_text(encoding="utf-8")
