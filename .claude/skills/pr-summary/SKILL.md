@@ -54,7 +54,11 @@ Verify model vs backend ownership:
 - **Anti-Pattern Check**: Verify that no regex parsing, hardcoded gameplay heuristics, procedural game rules, or keyword matching were added to backend code.
 
 #### `### What to Review as a Human`
-Follow `${CLAUDE_HOME:-$HOME/.claude}/skills/human-review-brief/SKILL.md` to emit 3–6 surface-matched human review bullets (visual/UX frames, product constants/prompts, ZFC & scope boundaries, cross-PR/provider/schema limits, cross-host/systemd hazards), plus **What Current Evidence Does NOT Prove** and **Exact Human Decision Needed**.
+Follow `${CLAUDE_HOME:-$HOME/.claude}/skills/human-review-brief/SKILL.md`:
+- **Never offload LLM-verifiable checks** (`grep` counts, `SHA-256` hash matches, line deltas, or test passes) to `### What to Review as a Human` — run them yourself and put the proof in `### How It Works` / `## What Was Done`.
+- Every human review item MUST include `Why the LLM cannot do this: <exact structural reason: Authority / Permission Boundary, Subjective Product / UX Taste or Tradeoff Preference, Uninstrumented External / Physical Ground Truth, or Intent Alignment vs. Shared Assumption>`.
+- When all code, test, and sync checks were verified autonomously by the LLM and no subjective product tradeoff remains, emit: `None — all code, test, and sync checks were verified autonomously by the LLM. Only human authorization (MERGE APPROVED) is required because agents are forbidden from self-approving merges.`
+- Always close with **What Current Evidence Does NOT Prove** and **Exact Human Decision Needed**.
 
 ---
 
