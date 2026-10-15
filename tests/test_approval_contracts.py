@@ -185,7 +185,7 @@ class ApprovalContractsTest(unittest.TestCase):
         advice = skill("advice")
         web_advice_command = (COMMANDS / "web-advice.md").read_text()
 
-        self.assertIn("/er and /advice\nwhere `draft-first-pr` (including repo-defined exemptions) requires them", (COMMANDS / "ready.md").read_text())
+        self.assertIn("Use `draft-first-pr` for applicability", (COMMANDS / "ready.md").read_text())
         self.assertIn("**/advice**", ready)
         self.assertIn("→ /advice APPROVED @ SHA", draft_first)
         self.assertNotIn("/web-advice", advice)
@@ -250,11 +250,8 @@ class ApprovalContractsTest(unittest.TestCase):
         self.assertIn("`README.md`", draft_first)
         self.assertIn("`docs/**`", draft_first)
         self.assertIn("`.claude/**`", draft_first)
-        self.assertRegex(
-            draft_first,
-            r"still require `/es`\s+and, unless a repo-exempted class applies,"
-            r"\s+`/advice`",
-        )
+        self.assertIn("Advice applicability requires it", draft_first)
+        self.assertIn("PRs still require applicable `/es`", draft_first)
         allowlist = re.search(
             r"For this `/er` exemption, every changed path must be one of:\n\n"
             r"(?P<paths>(?:- `[^`]+`\n)+)",

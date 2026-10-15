@@ -13,9 +13,9 @@ This skill defines the **concrete test directory structure** for Your Project, t
 
 | Layer | Directory | Runner | Count | Evidence Class |
 |---|---|---|---|---|
-| **1. Unit** | `$PROJECT_ROOT/tests/` | `./vpython -m pytest $PROJECT_ROOT/tests/test_*.py` | ~295 files | Mock (no `/es` credit) |
-| **1b. Unit (top-level)** | `tests/` | `./vpython -m pytest tests/test_*.py` | ~4 files | Mock (no `/es` credit) |
-| **2. End-to-End**| `$PROJECT_ROOT/tests/test_end2end/` | `./vpython -m pytest $PROJECT_ROOT/tests/test_end2end/` | ~30 files | Mock (no `/es` credit) — see `/end2end-testing` skill |
+| **1. Unit** | `$PROJECT_ROOT/tests/` | `./vpython -m pytest $PROJECT_ROOT/tests/test_*.py` | ~295 files | Deterministic proof only; no live-service credit |
+| **1b. Unit (top-level)** | `tests/` | `./vpython -m pytest tests/test_*.py` | ~4 files | Deterministic proof only; no live-service credit |
+| **2. End-to-End**| `$PROJECT_ROOT/tests/test_end2end/` | `./vpython -m pytest $PROJECT_ROOT/tests/test_end2end/` | ~30 files | Deterministic proof only; no live-service credit — see `/end2end-testing` skill |
 | **3. MCP API** | `testing_mcp/` | `./vpython testing_mcp/test_*.py --server http://127.0.0.1:8001` | ~139 files | Server + LLM (full `/es`) — see `/llm-testing` skill |
 | **4. HTTP API** | `testing_http/` | `./vpython testing_http/test_*.py` | ~25 files | Server (partial `/es`) |
 | **5. Browser** | `testing_ui/` | `./vpython testing_ui/test_*.py` | ~40 files | Server + LLM + Browser (full `/es` + video) — see `/llm-testing` skill |
@@ -34,10 +34,20 @@ This skill defines the **concrete test directory structure** for Your Project, t
 ### Execution Environment
 
 - **Layer 1-2, 4 (Unit, E2E, HTTP)**: Default test environment is `TEST_MODE=mock` (via `run_tests.sh`).
-- **Layer 3 & 5 (MCP, Browser)**: Must use real services. Set `MCP_TEST_MODE=real`, `TEST_MODE=real`, `MOCK_SERVICES_MODE=false`, `TESTING_AUTH_BYPASS=true`. **Use `/llm-testing`** as the canonical entry point — it forces the zero-mock real-LLM run and is the only valid source of `/es` evidence.
+- **Layer 3 & 5 (MCP, Browser)**: Must use real services. Set `MCP_TEST_MODE=real`, `TEST_MODE=real`, `MOCK_SERVICES_MODE=false`, `TESTING_AUTH_BYPASS=true`. **Use `/llm-testing`** as the canonical entry point — it forces the zero-mock real-LLM run for live model-behavior claims; deterministic proof follows the claim boundary below.
 - **Never use mock mode** for `testing_mcp/` or `testing_ui/` — this is a hard policy (`/llm-testing` enforces it: a run with any mock flag set is void)
 
 ---
+
+## Claim boundary
+
+Follow `draft-first-pr` § Change-impact review and test depth and
+`evidence-standards` § Unit proof and claim boundaries. Unit proof can establish
+self-contained deterministic behavior, but not model compliance, auth,
+persistence races, or browser behavior. `/es` classification is independent of
+whether a real LLM or browser run is necessary. Non-production labels, one file,
+or a small line count cannot replace inspecting the actual claim and risk.
+The real-service-only directory rules above remain mandatory.
 
 ## Decision Principles — Which Layer to Test At
 
@@ -111,17 +121,17 @@ If a real-LLM test can pass **without the guard ever firing** (because the LLM d
 
 | Layer | `/es` Evidence Credit | What It Proves | What It Does NOT Prove |
 |---|---|---|---|
-| **Unit** | ❌ None — supporting only | Logic correctness in isolation | Integration, real LLM shapes, persistence, UI rendering |
-| **E2E** | ❌ None — supporting only | High-fidelity callstack integration with mock services | Real LLM shapes, browser behavior |
+| **Unit** | Bounded deterministic claims only | Logic correctness in isolation | Integration, real LLM shapes, persistence, UI rendering |
+| **E2E** | Deterministic composed claims only | High-fidelity callstack integration with mock services | Real LLM shapes, browser behavior |
 | **MCP** | ✅ Server + LLM | Real server processes real LLM output correctly | UI rendering, browser behavior |
 | **HTTP** | ⚠️ Server only (no LLM unless explicitly called) | HTTP API contract, auth, response shapes | LLM behavior, UI rendering |
-| **Browser** | ✅ Full (Server + LLM + UI + Video) | End-to-end user-visible behavior | Nothing — highest confidence |
+| **Browser** | Real browser proof for the exercised claim | Observed end-to-end UI behavior | Unexercised flows or services |
 
 ### Evidence Bundle Requirements
 
 - **MCP tests** using `MCPTestBase` auto-emit: `metadata.json`, `collection_log.jsonl`, `raw_llm_request_responses.jsonl`, `raw_http_request_responses.jsonl`
 - **Browser tests** using `BrowserTestBase` auto-emit: all MCP artifacts + screenshots + `.webm` video + VTT subtitles
-- **Unit/E2E tests** do not emit `/es` bundles — they are CI gate artifacts only
+- **Unit/E2E tests** record commands, results, tested SHA, and claim limits; they may satisfy bounded deterministic evidence, never live-service proof.
 
 ---
 

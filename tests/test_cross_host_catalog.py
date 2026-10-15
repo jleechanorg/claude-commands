@@ -260,7 +260,8 @@ class ReviewRegressionTests(unittest.TestCase):
      self.assertIn('For a remote invocation, check',text,p.parent.name)
      self.assertIn('UNAVAILABLE',text,p.parent.name)
      self.assertIn('leave any dependent readiness or plan-approval gate unmet',text,p.parent.name)
-    self.assertEqual(len(checked),15)
+    self.assertIn('pr-green-definition',checked)
+    self.assertEqual(len(checked),16)
     for n in ['advice','web-advice']:
      p=h/'.claude/skills'/n/'SKILL.md'
      if existing:
