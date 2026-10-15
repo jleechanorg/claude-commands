@@ -18,7 +18,7 @@ Never steer from a short tail, never use regex/keyword classifiers to guess term
 
 Apply this at every phase boundary:
 - **Capture (Phase 1)**: one mechanical pass; still parallelize per-surface reads when the collector supports it (do not `read-screen` surface-by-surface in a shell loop).
-- **Assess (Phase 2)**: partition surfaces into 6–10 disjoint `/parallel` subagents. Spawn all shards in ONE fan-out call; never assess shard 1, wait, then shard 2.
+- **Assess (Phase 2)**: partition surfaces into `min(surface_count, 10)` disjoint `/parallel` subagents — target 6–10 shards only when the fleet has enough surfaces. Spawn all shards in ONE fan-out call; never assess shard 1, wait, then shard 2.
 - **Dedupe (Phase 2)**: build the ownership map from all shard results concurrently.
 - **Steer (Phase 3)**: send to all deduped owners concurrently, then verify all of them in one parallel read pass. Do not steer+wait per surface.
 
