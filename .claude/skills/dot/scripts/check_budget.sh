@@ -16,15 +16,15 @@ check() { # name file cap
   fi
 }
 
-check "dot.sh" "scripts/dot.sh" 800
-check "dot_chrome.mjs" "scripts/dot_chrome.mjs" 1200
+check "dot.sh" "scripts/dot.sh" 520
+check "dot_chrome.mjs" "scripts/dot_chrome.mjs" 900
 
 combined=$(( $(wc -l < scripts/dot.sh) + $(wc -l < scripts/dot_chrome.mjs) ))
-if [[ "$combined" -gt 2000 ]]; then
-  echo "BUDGET BREACH: transport scripts combined = $combined LOC > cap 2000" >&2
+if [[ "$combined" -gt 1400 ]]; then
+  echo "BUDGET BREACH: transport scripts combined = $combined LOC > cap 1400" >&2
   fail=1
 else
-  echo "ok: transport scripts combined = $combined LOC (cap 2000)"
+  echo "ok: transport scripts combined = $combined LOC (cap 1400)"
 fi
 
 check "SKILL.md" "SKILL.md" 400

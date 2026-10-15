@@ -9,10 +9,10 @@ how to coordinate) lives in `SKILL.md` and the calling agent, never in code.
 
 | Surface | Current | Budget (hard cap) |
 |---|---|---|
-| `scripts/dot.sh` | 735 LOC | **≤ 800** |
-| `scripts/dot_chrome.mjs` | 1110 LOC | **≤ 1200** |
-| Transport scripts combined (`dot.sh` + `dot_chrome.mjs`) | 1845 LOC | **≤ 2000** |
-| `SKILL.md` (policy layer — grows freely, this is where behavior belongs) | 176 LOC | **≤ 400** |
+| `scripts/dot.sh` | 479 LOC | **≤ 520** |
+| `scripts/dot_chrome.mjs` | 843 LOC | **≤ 900** |
+| Transport scripts combined (`dot.sh` + `dot_chrome.mjs`) | 1322 LOC | **≤ 1400** |
+| `SKILL.md` (policy layer — grows freely, this is where behavior belongs) | 174 LOC | **≤ 400** |
 | `tests/` (excluded — tests guard behavior, they are not transport) | 417 LOC | no cap |
 
 ## Rules
