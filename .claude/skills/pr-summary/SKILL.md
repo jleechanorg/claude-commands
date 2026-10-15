@@ -54,7 +54,7 @@ Verify model vs backend ownership:
 - **Anti-Pattern Check**: Verify that no regex parsing, hardcoded gameplay heuristics, procedural game rules, or keyword matching were added to backend code.
 
 #### `### What to Review as a Human`
-Follow `${CLAUDE_HOME:-$HOME/.claude}/skills/human-review-brief/SKILL.md` to emit 3–6 surface-matched human review bullets (visual/UX frames, product constants/prompts, ZFC & scope boundaries, cross-PR/provider/schema limits, cross-host/systemd hazards), plus **What Current Evidence Does NOT Prove** and **Exact Human Decision Needed**.
+Follow `${CLAUDE_HOME:-$HOME/.claude}/skills/human-review-brief/SKILL.md` (canonical owner — never list LLM-verifiable checks; every item requires `Why the LLM cannot do this:`).
 
 ---
 
