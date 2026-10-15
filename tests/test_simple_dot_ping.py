@@ -210,6 +210,9 @@ class SimplePingTests(unittest.TestCase):
     def test_thin_coordinator_loc_guardrail(self):
         lines = SCRIPT.read_text().splitlines()
         code_lines = [line for line in lines if line.strip() and not line.strip().startswith('#')]
-        self.assertLessEqual(len(lines), 420, f"ping-dots.py total lines ({len(lines)}) exceeds 420-line thin-coordinator cap")
-        self.assertLessEqual(len(code_lines), 380, f"ping-dots.py non-comment LOC ({len(code_lines)}) exceeds 380-line thin-coordinator cap")
+        self.assertLessEqual(len(lines), 300, f"ping-dots.py total lines ({len(lines)}) exceeds 300-line thin-coordinator cap")
+        self.assertLessEqual(len(code_lines), 270, f"ping-dots.py non-comment LOC ({len(code_lines)}) exceeds 270-line thin-coordinator cap")
+        self.assertTrue(PING.SKILL_MD.is_file())
+        for tag in ('REMINDER_BODY', 'WRITER_PREFIX', 'CLASSIFY_PROMPT_TEMPLATE', 'ESCALATION_BODY'):
+            self.assertIn(f'<!-- PROMPT:{tag} -->', PING.SKILL_MD.read_text())
 
