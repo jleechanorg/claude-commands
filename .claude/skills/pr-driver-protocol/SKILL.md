@@ -28,7 +28,7 @@ A standalone, callable protocol for any agent (worker, babysit, human) that is d
 
 Do not stop at the first failure. Use `/green <PR>` or read the `failure-class` log and build a complete list. For each failure, capture:
 
-- **Gate name** (Green Gate, CodeRabbit, Skeptic, Evidence, Bugbot, inline threads)
+- **Gate name** (Green Gate, Evidence, inline threads — the draft-phase gates; CodeRabbit and Bugbot are optional advisory reviewers, not gates)
 - **File and line** (e.g., `packages/cli/src/doctor.ts:142`)
 - **Failure text** (the actual error message, not a paraphrase)
 - **Root cause hypothesis** (what is wrong, not just what is failing)
@@ -65,11 +65,10 @@ Run the local equivalent of each failing gate **before** pushing:
 | Gate | Local verification |
 |---|---|
 | Green Gate (CI) | `pnpm test` (and the relevant package test) |
-| CodeRabbit | Read the diff once more: does each CR comment have an addressed counterpart? |
-| Skeptic | `gh pr checks` — wait for Skeptic Gate to settle, then re-trigger via `/skeptic` comment |
 | Evidence | Open the PR description: are all claims backed by a gist or media link? |
-| Bugbot | Read the file change: is the bug fix actually verified? |
 | Inline threads | `gh api graphql ... isResolved` — every thread resolved? |
+
+CodeRabbit and Bugbot are optional advisory reviewers — read their feedback if useful, but they are never a gate and never a wait, so they are not enumerated or verified here.
 
 If verification fails, **do not push**. Go back to step 3 with the new failures added to the list.
 
@@ -79,7 +78,6 @@ One commit, one push, then immediately back to step 1 (the loop continues). Whil
 
 - The previous run's tail (often the next failure is in the same area)
 - Any CodeRabbit comments not yet addressed
-- Any `ao skeptic verify` verdicts from prior runs
 
 ## Worked example: PR #7618 (rate-limit) — 3+ partial pushes, then 1 fix-all push
 

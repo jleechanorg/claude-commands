@@ -15,6 +15,6 @@ The PR description must use the following sections, in this order:
 5. **Testing** — what was tested, what was not tested, and the evidence path (commands, logs, screenshots, video).
 6. **Low-level details** — non-obvious decisions, schema/prompt deltas, gotchas, follow-ups.
 
-This is the source of truth for the `your-project.com` `.github/pull_request_template.md` and any new agent-led PR. The Skeptic Gate reads the PR description as the canonical review context; consistency with this section list is required.
+This is the source of truth for the `your-project.com` `.github/pull_request_template.md` and any new agent-led PR. Reviewers read the PR description as the canonical review context; consistency with this section list is required.
 
 **Design-doc gate (CI):** the `design-doc-gate.yml` Gate 0 regex accepts `## Design Decision`, `## Governing Design Doc & Tracking`, **or** `## Tenets` as the design-doc/artifact-link header. If you rename or restructure that header in the future, update the regex in the same PR — otherwise production PRs >50 lines will fail CI even when the design-doc and bead links are present under the new name.

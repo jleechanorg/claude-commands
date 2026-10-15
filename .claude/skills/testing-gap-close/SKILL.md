@@ -9,7 +9,7 @@ This skill codifies the mandatory architectural and testing processes required t
 
 ## The Evidence Triad Requirement
 
-Any PR touching `$PROJECT_ROOT/` or its subdirectories must produce an evidence bundle containing the complete "Evidence Triad" to pass Skeptic Gate (`/er`):
+Any PR touching `$PROJECT_ROOT/` or its subdirectories must produce an evidence bundle containing the complete "Evidence Triad" to pass the `/er` evidence-review gate:
 1. `http_request_responses.jsonl`
 2. `llm_request_responses.jsonl`
 3. `gemini_http_request_responses.jsonl`
