@@ -32,20 +32,20 @@ python3 ~/.claude/skills/cmux-bulk-steer/scripts/scan.py --out-dir "$OUT_DIR" --
 ```
 
 What `scripts/scan.py` writes to `$OUT_DIR`:
-- `manifest.json`: deterministic inventory of all terminal surfaces (`workspace`, `workspace_ref`, `surface`, `surface_ref`, `surface_title`, `cpu_percent`, `file_10k`, `total_words`, `captured_words`, `lines_read`, `tail_lines`). Non-terminal browser surfaces (`Surface is not a terminal`) are skipped automatically.
-- `ws_<ws_id>_sf_<sf_id>.txt`: up to `10,000` trailing words of scrollback per terminal surface.
+- `manifest.json`: deterministic inventory of all terminal surfaces (`workspace`, `workspace_ref`, `surface`, `surface_ref`, `surface_title`, `cpu_percent`, `file_10k`, `pi_session_jsonl`, `total_words`, `captured_words`, `lines_read`, `tail_lines`). Non-terminal browser surfaces (`Surface is not a terminal`) are skipped automatically.
+- `ws_<ws_id>_sf_<sf_id>.txt`: up to `10,000` trailing words of scrollback per terminal surface. For alternate-screen `pi` (`π`) TUI panes (where `cmux capture-pane` only sees the `35`-row TUI screen), `scan.py` automatically matches the pane's `cwd` footer to the newest session file in `~/.pi/agent/sessions/*/*.jsonl` and prepends `=== PI SESSION TRANSCRIPT (<jsonl_path>) ===` ahead of `=== LIVE TERMINAL PANE ===` so every `pi` surface also receives a full `10,000`-word capture.
 - `top_flat.tsv`: raw `cmux top --all --flat` output (`CPU%`, memory, process count per workspace/pane/surface).
 - `gh_prs.json` (when `--with-gh` is passed): live open PR metadata.
 
 Rules:
-- **Read the FULL buffer before any decision** — canonical rule in `~/.codex/AGENTS.md` § "Reading a cmux terminal before deciding (full-buffer rule)": inspect the `ws_<ws_id>_sf_<sf_id>.txt` (`~10,000` words) for task history, receipts, and PR ownership, then inspect the bottom lines for current state.
+- **Read 100% of the 10,000-word buffer before any decision (Sequential Slice Rule)** — canonical rule in `~/.codex/AGENTS.md` § "Reading a cmux terminal before deciding (full-buffer rule)": because `view_file` / `Read` tools cap at `800` lines per call while a `10,000`-word `ws_<ws_id>_sf_<sf_id>.txt` file spans `1,000–3,500` lines, each subagent MUST read sequential line slices (`1..800`, `801..1600`, `1601..2400`, `2401..end`) until `lines_read` is 100% covered. Never rely on a single `view_file` call or a short tail!
 - Use `capture-pane`, NOT `read-screen` — cross-workspace `read-screen` can return the focused surface's content.
 
 ---
 
 ## Phase 2 — PARALLEL SUBAGENT `/zfc` ASSESSMENT + STRICT DEDUPE
 
-Partition the captured `ws_*_sf_*.txt` files from `$OUT_DIR/manifest.json` across disjoint `/parallel` subagents (e.g., 6–10 surfaces per subagent). Each subagent reads the full `ws_*_sf_*.txt` files in its shard plus live GitHub PR statuses (`gh pr view <N> --json state,isDraft,mergeable,mergeStateStatus,statusCheckRollup`) and returns a structured semantic assessment per surface:
+Partition the captured `ws_*_sf_*.txt` files from `$OUT_DIR/manifest.json` across disjoint `/parallel` subagents (e.g., 6–10 surfaces per subagent). Each subagent MUST read all sequential line slices (`1..800`, `801..1600`, `1601..2400`, `2401..end`) of every `ws_*_sf_*.txt` file in its shard (covering 100% of the captured `10,000` words, including any `=== PI SESSION TRANSCRIPT ===` section) plus live GitHub PR statuses (`gh pr view <N> --json state,isDraft,mergeable,mergeStateStatus,statusCheckRollup`) and return a structured semantic assessment per surface:
 
 ### Semantic Categories (Model-Decided, Never Regex-Guessed)
 - `WORKING`: Actively executing a turn, tool call, test run, or subagent wait with live progress.

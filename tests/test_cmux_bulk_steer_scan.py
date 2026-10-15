@@ -142,6 +142,104 @@ class CmuxBulkSteerZfcScanTests(unittest.TestCase):
             self.assertTrue(captured_file.is_file())
             self.assertIn("step 14: working on PR #10379", captured_file.read_text(encoding="utf-8"))
 
+    def test_capture_fleet_enriches_alternate_screen_pi_surface_from_session_jsonl(self):
+        scan = load_scan_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_home = Path(tmpdir) / "home"
+            worktree_dir = tmp_home / "projects" / "worktree_demo"
+            worktree_dir.mkdir(parents=True)
+            session_dir = tmp_home / ".pi" / "agent" / "sessions" / "--projects-worktree_demo--"
+            session_dir.mkdir(parents=True)
+            session_jsonl = session_dir / "2026-10-14T18-00-00-000Z_demo.jsonl"
+            session_rows = [
+                {"type": "session", "id": "demo", "cwd": str(worktree_dir)},
+                {
+                    "type": "message",
+                    "message": {
+                        "role": "user",
+                        "content": [{"type": "text", "text": "Fix PR #10999 level up bug"}],
+                    },
+                },
+                {
+                    "type": "message",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "thinking", "thinking": "Checking game_state_merge.py"},
+                            {
+                                "type": "toolCall",
+                                "name": "bash",
+                                "arguments": {"command": "./run_tests.sh tests/unit/test_demo.py"},
+                            },
+                            {
+                                "type": "text",
+                                "text": " ".join(f"transcript_word_{i}" for i in range(80)),
+                            },
+                        ],
+                    },
+                },
+            ]
+            session_jsonl.write_text(
+                "\n".join(json.dumps(r) for r in session_rows) + "\n",
+                encoding="utf-8",
+            )
+
+            fake_tree = {
+                "windows": [
+                    {
+                        "ref": "window:1",
+                        "workspaces": [
+                            {
+                                "ref": "workspace:44",
+                                "title": "pi-lane",
+                                "panes": [
+                                    {
+                                        "ref": "pane:1",
+                                        "surfaces": [
+                                            {
+                                                "ref": "surface:99",
+                                                "title": "π - worktree_demo",
+                                                "type": "terminal",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+            fake_pane = (
+                "── ⠋ Working ──────────────────────────────────────────\n"
+                "~/projects/worktree_demo (feat/demo-branch)\n"
+                "↑216k ↓41k R5.7M (lunaroute) deepseek-4.1-flash • medium\n"
+            )
+
+            def fake_run(cmd, *args, **kwargs):
+                if cmd[:3] == ["cmux", "tree", "--all"]:
+                    return mock.Mock(returncode=0, stdout=json.dumps(fake_tree), stderr="")
+                if cmd[:3] == ["cmux", "top", "--all"]:
+                    return mock.Mock(returncode=0, stdout="", stderr="")
+                if cmd[:2] == ["cmux", "capture-pane"]:
+                    return mock.Mock(returncode=0, stdout=fake_pane, stderr="")
+                raise AssertionError(f"Unexpected command: {cmd}")
+
+            out_dir = Path(tmpdir) / "out"
+            with mock.patch("subprocess.run", side_effect=fake_run):
+                manifest = scan.capture_fleet(
+                    out_dir=out_dir, max_words=60, home_dir=tmp_home
+                )
+
+            entry = manifest["surfaces"][0]
+            self.assertEqual(entry["pi_session_jsonl"], str(session_jsonl.resolve()))
+            self.assertLessEqual(entry["captured_words"], 65)
+            self.assertGreaterEqual(entry["captured_words"], 40)
+            captured_text = Path(entry["file_10k"]).read_text(encoding="utf-8")
+            self.assertIn("=== PI SESSION TRANSCRIPT", captured_text)
+            self.assertIn("=== LIVE TERMINAL PANE ===", captured_text)
+            self.assertIn("transcript_word_79", captured_text)
+            self.assertIn("~/projects/worktree_demo (feat/demo-branch)", captured_text)
+
     def test_skill_md_documents_zfc_ban_on_regex_classifiers_and_parallel_subagent_workflow(self):
         text = SKILL_MD.read_text(encoding="utf-8")
         self.assertIn("/zfc", text)
@@ -149,6 +247,8 @@ class CmuxBulkSteerZfcScanTests(unittest.TestCase):
         self.assertIn("10,000", text)
         self.assertIn("/parallel", text)
         self.assertIn("STOOD_DOWN_DUPLICATE", text)
+        self.assertIn(".pi/agent/sessions", text)
+        self.assertIn("801..1600", text)
         self.assertNotIn("--parked-only", text)
 
 

@@ -100,14 +100,113 @@ def parse_top_cpu_by_surface(top_output: str) -> dict[str, float]:
     return cpu_by_surface
 
 
+def load_pi_sessions_by_cwd(home_dir: Path | None = None) -> dict[str, Path]:
+    """Map resolved and raw cwd paths to the newest ~/.pi/agent/sessions/*/*.jsonl file."""
+    base_home = home_dir or Path.home()
+    sessions_root = base_home / ".pi" / "agent" / "sessions"
+    if not sessions_root.is_dir():
+        return {}
+    by_cwd: dict[str, Path] = {}
+    session_files = sorted(
+        sessions_root.glob("*/*.jsonl"), key=lambda p: p.stat().st_mtime
+    )
+    for session_path in session_files:
+        try:
+            with session_path.open(encoding="utf-8") as fh:
+                first_line = fh.readline().strip()
+            if not first_line:
+                continue
+            header = json.loads(first_line)
+            cwd = header.get("cwd")
+            if isinstance(cwd, str) and cwd.strip():
+                by_cwd[cwd.strip()] = session_path
+                by_cwd[str(Path(cwd.strip()).expanduser().resolve())] = session_path
+        except (OSError, ValueError, KeyError):
+            continue
+    return by_cwd
+
+
+def match_pi_session_for_tail(
+    tail_lines: list[str],
+    by_cwd: dict[str, Path],
+    home_dir: Path | None = None,
+) -> Path | None:
+    """Match a pi TUI footer cwd line (`~/path (branch)` or `/path (branch)`) to its JSONL session."""
+    if not by_cwd or not tail_lines:
+        return None
+    base_home = home_dir or Path.home()
+    has_tui_rule = any("───" in line for line in tail_lines[-8:])
+    for raw_line in reversed(tail_lines[-8:]):
+        stripped = raw_line.strip()
+        if not (stripped.startswith("~/") or stripped.startswith("/")):
+            continue
+        if " (" not in stripped and not has_tui_rule:
+            continue
+        raw_path = stripped.split(" (", 1)[0].strip()
+        if raw_path.startswith("~/"):
+            candidate = base_home / raw_path[2:]
+        else:
+            candidate = Path(raw_path)
+        for key in (raw_path, str(candidate), str(candidate.resolve())):
+            if key in by_cwd:
+                return by_cwd[key]
+    return None
+
+
+def render_pi_session_transcript(jsonl_path: Path) -> str:
+    """Extract chronological message text/thinking/toolCall entries from a pi session JSONL."""
+    rendered_lines: list[str] = []
+    try:
+        with jsonl_path.open(encoding="utf-8") as fh:
+            for raw_line in fh:
+                raw_line = raw_line.strip()
+                if not raw_line:
+                    continue
+                try:
+                    entry = json.loads(raw_line)
+                except ValueError:
+                    continue
+                if entry.get("type") != "message":
+                    continue
+                msg = entry.get("message") or {}
+                role = str(msg.get("role") or "unknown")
+                content = msg.get("content")
+                if isinstance(content, str) and content.strip():
+                    rendered_lines.append(f"[{role}] {content.strip()}")
+                elif isinstance(content, list):
+                    for block in content:
+                        if not isinstance(block, dict):
+                            continue
+                        btype = block.get("type")
+                        if btype == "text":
+                            text_val = str(block.get("text") or "").strip()
+                            if text_val:
+                                rendered_lines.append(f"[{role}] {text_val}")
+                        elif btype == "thinking":
+                            think_val = str(block.get("thinking") or "").strip()
+                            if think_val:
+                                rendered_lines.append(f"[{role}:thinking] {think_val}")
+                        elif btype == "toolCall":
+                            name = str(block.get("name") or "")
+                            args = json.dumps(
+                                block.get("arguments") or {}, ensure_ascii=False
+                            )
+                            rendered_lines.append(f"[{role}:toolCall {name}] {args}")
+    except OSError:
+        return ""
+    return "\n".join(rendered_lines)
+
+
 def capture_fleet(
     out_dir: Path,
     max_words: int = DEFAULT_MAX_WORDS,
     scrollback_lines: int = SCROLLBACK_LINES,
     with_gh: bool = False,
+    home_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Capture 10k-word scrollback files and write `manifest.json`."""
     out_dir.mkdir(parents=True, exist_ok=True)
+    pi_sessions_by_cwd = load_pi_sessions_by_cwd(home_dir=home_dir)
 
     tree_proc = subprocess.run(
         ["cmux", "tree", "--all", "--json"],
@@ -155,6 +254,34 @@ def capture_fleet(
         truncated_text, total_words, captured_words = truncate_to_last_n_words(
             raw_stdout, max_words=max_words
         )
+        pi_session_jsonl: str | None = None
+        if captured_words < max_words:
+            matched_jsonl = match_pi_session_for_tail(
+                non_empty_lines[-TAIL_PREVIEW_LINES:],
+                pi_sessions_by_cwd,
+                home_dir=home_dir,
+            )
+            if matched_jsonl is not None:
+                pi_transcript = render_pi_session_transcript(matched_jsonl)
+                if pi_transcript:
+                    pi_session_jsonl = str(matched_jsonl.resolve())
+                    remaining_budget = max(1, max_words - captured_words - 12)
+                    pi_slice, pi_total_words, _ = truncate_to_last_n_words(
+                        pi_transcript, max_words=remaining_budget
+                    )
+                    truncated_text = (
+                        f"=== PI SESSION TRANSCRIPT ({pi_session_jsonl}) ===\n"
+                        f"{pi_slice}\n\n"
+                        f"=== LIVE TERMINAL PANE ===\n"
+                        f"{truncated_text}"
+                    )
+                    total_words = pi_total_words + total_words
+                    captured_words = len(truncated_text.split())
+                    non_empty_lines = [
+                        line.rstrip()
+                        for line in truncated_text.splitlines()
+                        if line.strip()
+                    ]
 
         ws_id = _ref_suffix(ws_ref)
         sf_id = _ref_suffix(sf_ref)
@@ -170,6 +297,7 @@ def capture_fleet(
                 "surface_title": item["surface_title"],
                 "cpu_percent": cpu_by_surface.get(sf_ref, 0.0),
                 "file_10k": str(file_10k.resolve()),
+                "pi_session_jsonl": pi_session_jsonl,
                 "total_words": total_words,
                 "captured_words": captured_words,
                 "lines_read": len(non_empty_lines),
@@ -220,6 +348,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--out-dir",
+        "--output-dir",
+        dest="out_dir",
         type=Path,
         default=None,
         help="Output directory for ws_*_sf_*.txt and manifest.json (default: /tmp/cmux_fleet_<HHMMSS>).",
@@ -232,6 +362,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--scrollback-lines",
+        "--lines",
+        dest="scrollback_lines",
         type=int,
         default=SCROLLBACK_LINES,
         help="Scrollback lines passed to cmux capture-pane (default: 4000).",
