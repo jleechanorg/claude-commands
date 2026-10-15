@@ -9,6 +9,8 @@ how to coordinate) lives in `SKILL.md` and the calling agent, never in code.
 
 | Surface | Current | Budget (hard cap) |
 |---|---|---|
+| `agy-dot-coordinator/scripts/ping-dots.py` (coordinator script — prompts live in `SKILL.md`) | 282 LOC | **≤ 300** |
+| `agy-dot-coordinator/SKILL.md` (coordinator prompts & policy) | 141 LOC | **≤ 400** |
 | `scripts/dot.sh` | 479 LOC | **≤ 520** |
 | `scripts/dot_chrome.mjs` | 843 LOC | **≤ 900** |
 | Transport scripts combined (`dot.sh` + `dot_chrome.mjs`) | 1322 LOC | **≤ 1400** |

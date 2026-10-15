@@ -67,6 +67,10 @@ check("delivery appends the no-new-authority attribution",
           'From LunaRoute coordinator: automated reminder; no new authority.'))
 check("luna is primary, direct Gemini replaces agy, and agy is quarantined from the ladder",
       m.PROVIDERS[0] == 'luna' and 'gemini' in m.PROVIDERS and 'agy' not in m.PROVIDERS)
+check("ping-dots.py stays within the <= 300 total LOC thin-coordinator cap and loads prompts from SKILL.md",
+      len(SCRIPT.read_text().splitlines()) <= 300 and m.SKILL_MD.is_file()
+      and all(f'<!-- PROMPT:{t} -->' in m.SKILL_MD.read_text()
+              for t in ('REMINDER_BODY', 'WRITER_PREFIX', 'CLASSIFY_PROMPT_TEMPLATE', 'ESCALATION_BODY')))
 
 # --- direct Gemini provider (agy quota quarantine, owner directive 2026-10-12) ---
 check("gemini model ignores the agy-CLI GEMINI_MODEL alias",

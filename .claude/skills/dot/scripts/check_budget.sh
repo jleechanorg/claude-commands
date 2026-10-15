@@ -28,6 +28,10 @@ else
 fi
 
 check "SKILL.md" "SKILL.md" 400
+if [[ -f "../agy-dot-coordinator/scripts/ping-dots.py" ]]; then
+  check "ping-dots.py" "../agy-dot-coordinator/scripts/ping-dots.py" 300
+  check "agy-dot-coordinator/SKILL.md" "../agy-dot-coordinator/SKILL.md" 400
+fi
 
 bash -n scripts/dot.sh
 
