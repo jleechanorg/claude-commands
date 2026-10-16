@@ -1,0 +1,11 @@
+[Unit]
+Description=Dot coordinator account @ACCOUNT@
+
+[Service]
+Type=oneshot
+TimeoutStartSec=800
+WorkingDirectory=%h
+EnvironmentFile=%h/.config/agy-dot-coordinator/@UNIT@.env
+ExecStart=/bin/bash %h/.claude/skills/agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh --account @ACCOUNT@
+StandardOutput=journal
+StandardError=journal

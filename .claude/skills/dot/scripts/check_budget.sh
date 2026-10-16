@@ -29,7 +29,7 @@ fi
 
 check "SKILL.md" "SKILL.md" 400
 if [[ -f "../agy-dot-coordinator/scripts/ping-dots.py" ]]; then
-  combined=$(( $(wc -l < ../agy-dot-coordinator/scripts/ping-dots.py) + $(wc -l < ../agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh) ))
+  combined=$(( $(wc -l < ../agy-dot-coordinator/scripts/ping-dots.py) + $(wc -l < ../agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh) + $(wc -l < ../agy-dot-coordinator/scripts/pi-lunaroute-adapter.sh) ))
   if [[ "$combined" -gt 150 ]]; then
     echo "BUDGET BREACH: coordinator launch glue = $combined LOC > cap 150" >&2
     fail=1
