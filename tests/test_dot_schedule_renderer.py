@@ -57,8 +57,14 @@ class ScheduleRendererTests(unittest.TestCase):
 
     def test_linux_renders_ordered_timer_service_and_private_env(self):
         self.write_config("linux")
+        fake_home = self.root / "home"
+        preferred = fake_home / ".nvm/versions/node/v22.22.0/bin"
+        other = fake_home / ".nvm/versions/node/v22.23.1/bin"
+        for node_bin in (preferred, other):
+            node_bin.mkdir(parents=True)
+            (node_bin / "node").write_text("node fixture")
         session = {"DISPLAY": ":1", "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus", "XDG_RUNTIME_DIR": "/run/user/1000"}
-        with patch.dict(os.environ, session):
+        with patch.dict(os.environ, session), patch.object(renderer.Path, "home", return_value=fake_home):
             out = renderer.render(self.config, self.root / "linux-stage", "linux")
         timers = sorted(out.glob("*.timer"))
         self.assertEqual({"10", "30", "50"}, {p.stem.rsplit("-", 1)[1] for p in timers})
@@ -70,6 +76,8 @@ class ScheduleRendererTests(unittest.TestCase):
         self.assertIn("DOT_EXPECTED_IDENTITY_SHA256=\"", (out / "ai.gemini.agy-dot-coordinator-30.env").read_text())
         self.assertIn('DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/1000/bus"', (out / "ai.gemini.agy-dot-coordinator-30.env").read_text())
         self.assertIn('XDG_RUNTIME_DIR="/run/user/1000"', (out / "ai.gemini.agy-dot-coordinator-30.env").read_text())
+        path = next(line.removeprefix("PATH=") for line in (out / "ai.gemini.agy-dot-coordinator-30.env").read_text().splitlines() if line.startswith("PATH="))
+        self.assertTrue(path.startswith(f'"{preferred}:{other}:'))
 
     def test_rejects_wrong_cadence_or_host_before_output(self):
         self.write_config("macos", (10, 20, 40))
