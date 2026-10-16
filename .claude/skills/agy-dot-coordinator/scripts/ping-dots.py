@@ -114,7 +114,7 @@ def main():
             names = json.loads(cfg.read_text()).get('mcpServers', {}) if cfg.exists() else {}
             if not isinstance(names, dict): raise Blocked('global Pi MCP config is invalid')
             servers = {name: {'enabled': False} for name in names}
-            servers['dot_browser'] = {'command': str(node_dir / 'node'), 'args': mcp_args}
+            servers['dot_browser'] = {'command': str(node_dir / 'node'), 'args': mcp_args, 'exposure': 'direct'}
             mcp_file = project / 'mcp.json'
             mcp_file.write_text(json.dumps({'mcpServers': servers}))
             mcp_file.chmod(0o600)

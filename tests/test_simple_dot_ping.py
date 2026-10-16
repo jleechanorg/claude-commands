@@ -57,6 +57,8 @@ class LauncherContractTests(unittest.TestCase):
         self.assertNotIn('--provider', source)
         self.assertNotIn('--model', source)
         self.assertIn('read-only', skill)
+        self.assertIn('Use only the directly exposed `mcp__dot_browser__*` tools', skill)
+        self.assertIn('Do not invoke nested Pi/runtime sessions, Codemode', skill)
         self.assertIn('do not retry or send a correction', skill)
 
     def test_scheduler_wrapper_is_thin_and_does_not_choose_account(self):
@@ -139,6 +141,7 @@ class LauncherExecutionTests(unittest.TestCase):
         servers = spawned['mcp']['mcpServers']
         self.assertFalse(servers['unrelated']['enabled'])
         browser = servers['dot_browser']
+        self.assertEqual(browser['exposure'], 'direct')
         self.assertEqual(browser['command'], str(self.node_home / 'bin/node'))
         self.assertIn(str(self.mcp), browser['args'])
         self.assertIn('--userDataDir=' + str(self.profile.resolve()), browser['args'])
