@@ -59,7 +59,23 @@ class LauncherContractTests(unittest.TestCase):
         self.assertIn('read-only', skill)
         self.assertIn('Use only the directly exposed `mcp__dot_browser__*` tools', skill)
         self.assertIn('Do not invoke nested Pi/runtime sessions, Codemode', skill)
-        self.assertIn('do not retry or send a correction', skill)
+        self.assertIn('do not retry or send a correction', skill.lower())
+
+    def test_stop_and_legacy_delivery_holds_block_fresh_send(self):
+        skill = (SCRIPT.parent.parent / 'SKILL.md').read_text()
+        self.assertIn('Before preparing any fresh message', skill)
+        self.assertIn('os.path.lexists', skill)
+        self.assertIn('state.json', skill)
+        self.assertIn('state_<COORDINATOR_SELECTED_ACCOUNT>.json', skill)
+        self.assertIn('unresolved or unknown delivery', skill)
+        self.assertIn('unreadable, corrupt, or ambiguous', skill)
+        self.assertIn('Immediately before the submit click', skill)
+        self.assertIn('recheck `<parent>/STOP`', skill)
+        self.assertIn('exact unchanged payload', skill)
+        self.assertIn('latest user instruction', skill)
+        self.assertIn('they cannot authorize a send', skill)
+        self.assertIn('flush the file and its parent directory', skill.lower())
+        self.assertIn('do not claim mechanical exactly-once delivery', skill)
 
     def test_scheduler_wrapper_is_thin_and_does_not_choose_account(self):
         wrapper = (SCRIPT.parent / 'agy-dot-coordinator-wrapper.sh').read_text()
