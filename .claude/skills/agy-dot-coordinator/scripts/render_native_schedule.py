@@ -34,6 +34,17 @@ def systemd_value(value):
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$").replace("`", "\\`") + '"'
 
 
+def node22_bins(home):
+    nvm = Path(home) / ".nvm/versions/node"
+    versions = [p for p in nvm.glob("v22.*") if (p / "bin/node").is_file()] if nvm.is_dir() else []
+    versions.sort(key=lambda p: tuple(map(int, p.name[1:].split("."))), reverse=True)
+    preferred = nvm / "v22.22.0"
+    if preferred in versions:
+        versions.remove(preferred)
+        versions.insert(0, preferred)
+    return [p / "bin" for p in versions]
+
+
 def render(config_path, output, host):
     config = private_json(config_path)
     if config.get("version") != 1 or config.get("host_role") != host:
@@ -74,15 +85,10 @@ def render(config_path, output, host):
         fail("render destination already exists; choose a new staging directory")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.mkdir(mode=0o700)
-    nvm = home / ".nvm/versions/node"
-    versions = list(nvm.glob("v22.*")) if nvm.is_dir() else []
-    versions.sort(key=lambda p: tuple(map(int, p.name[1:].split("."))))
-    if (nvm / "v22.22.0").is_dir():
-        versions = [nvm / "v22.22.0"]
-    if not versions or not (versions[-1] / "bin/node").is_file():
+    node_bins = node22_bins(home)
+    if not node_bins:
         fail("Node 22 from nvm is unavailable")
-    node_bin = versions[-1] / "bin"
-    path = f"{node_bin}:{home / '.local/bin'}:/usr/local/bin:/usr/bin:/bin"
+    path = f"{os.pathsep.join(map(str, node_bins))}{os.pathsep}{home / '.local/bin'}:/usr/local/bin:/usr/bin:/bin"
     if host == "macos":
         path += ":/opt/homebrew/bin"
     for row in rows:
