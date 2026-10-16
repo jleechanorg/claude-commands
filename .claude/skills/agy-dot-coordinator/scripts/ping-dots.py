@@ -1,282 +1,143 @@
 #!/usr/bin/env python3
-"""One scheduled model-written ping through the existing Dot tool; prompts live in SKILL.md."""
-import argparse, fcntl, json, os, platform, shutil, signal, subprocess, sys, tempfile, time, urllib.request
+"""Run one scheduler-bound Dot coordinator turn using Pi and Chrome DevTools MCP."""
+import argparse, fcntl, hashlib, json, os, re, shutil, signal, subprocess, sys, tempfile, time
 from pathlib import Path
 
-SKILL_MD = Path(__file__).resolve().parents[1] / 'SKILL.md'
+SKILL = Path(__file__).resolve().parents[1] / 'SKILL.md'
+UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36'
+STATE = Path(os.environ.get('COORDINATOR_STATE_DIR', '~/.local/state/ai.gemini.agy-dot-coordinator')).expanduser()
+STOP = STATE / 'STOP'
+LOCK = Path(os.environ.get('COORDINATOR_LOCK_FILE', '/tmp/ai.gemini.agy-dot-coordinator.lock'))
+TIMEOUT, GRACE = min(max(int(os.environ.get('COORDINATOR_TIMEOUT_SECS', '720')), 1), 720), 8
 
-def _md_block(tag):
-    text = SKILL_MD.read_text()
-    start = text.index('```text\n', text.index(f'<!-- PROMPT:{tag} -->')) + len('```text\n')
-    return text[start:text.index('\n```', start)]
+class Blocked(RuntimeError):
+    pass
 
-REMINDER_BODY = _md_block('REMINDER_BODY')
-REMINDER_OPENING, MAX_RESPONSE_CHARS = REMINDER_BODY.splitlines()[0], 2600
-PROMPT = _md_block('WRITER_PREFIX').format(limit=MAX_RESPONSE_CHARS) + '\n\n' + REMINDER_BODY
-CLASSIFY_PROMPT_TEMPLATE, ESCALATION_BODY = _md_block('CLASSIFY_PROMPT_TEMPLATE') + '\n', _md_block('ESCALATION_BODY')
-HAIKU_MODEL, MINIMAX_MODEL, MINIMAX_BASE_URL = 'claude-haiku-5-5', 'MiniMax-M3.1-Flash-Preview', 'https://api.minimax.io/anthropic'
-LUNA_MODEL = os.environ.get('LUNAROUTE_MODEL') or 'deepseek-4.1-flash'
-GEMINI_MODEL = os.environ.get('COORDINATOR_GEMINI_MODEL') or 'gemini-3.8-flash'
-PROVIDERS, CLASSIFY_PROVIDERS = ('luna', 'minimax', 'codex', 'gemini'), ('luna', 'minimax', 'gemini')
-IDENTITIES = {'agy': 'AGY', 'luna': 'LunaRoute', 'minimax': 'MiniMax Claude',
-              'gemini': 'Gemini direct', 'codex': 'Codex', 'haiku': 'Claude Haiku'}
-ATTRIBUTION_SUFFIX, MAX_CLASSIFY_REPLY_CHARS = 'coordinator: automated reminder; no new authority.', 6000
-VALID_VERDICTS = ('compliant', 'working', 'reaction_only', 'unstructured_text', 'idle_refusal')
-
-def bounded_run(command, stdin_text=None, timeout=180, cwd=None, env=None, check=True):
-    stdin_file = tempfile.TemporaryFile(mode='w+') if stdin_text is not None else None
-    try:
-        if stdin_file is not None:
-            stdin_file.write(stdin_text)
-            stdin_file.seek(0)
-        proc = subprocess.Popen(command, stdin=stdin_file or subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, text=True, cwd=cwd, env=env, start_new_session=True)
-        try:
-            stdout, stderr = proc.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            try: os.killpg(proc.pid, signal.SIGKILL)
-            except (ProcessLookupError, PermissionError): proc.kill()
-            proc.communicate()
-            raise
-    finally:
-        if stdin_file is not None: stdin_file.close()
-    if check and proc.returncode != 0:
-        raise subprocess.CalledProcessError(proc.returncode, command, stderr=stderr)
-    return subprocess.CompletedProcess(command, proc.returncode, stdout, stderr)
-
-def run_with_stdin(command, stdin_text, timeout=180, **kwargs):
-    return bounded_run(command, stdin_text=stdin_text, timeout=timeout, **kwargs)
-
-def claude_json(model, env=None, prompt=PROMPT):
-    command = [shutil.which('claude') or 'claude', '--strict-mcp-config', '--print', '--model', model,
-               '--output-format', 'json', '--no-session-persistence', '--tools', '', '--disable-slash-commands', prompt]
-    response = json.loads(bounded_run(command, timeout=180, cwd='/tmp', env=env).stdout)
-    if not isinstance(response, dict) or response.get('is_error') is not False or not isinstance(response.get('result'), str):
-        raise ValueError('Claude returned no successful result')
-    return response['result']
-
-def gemini_payload(prompt):
-    return {'contents': [{'parts': [{'text': prompt}]}]}
-
-def gemini_extract(body):
-    try: text = body['candidates'][0]['content']['parts'][0]['text']
-    except (KeyError, IndexError, TypeError): raise ValueError('Gemini returned no text candidate')
-    if not isinstance(text, str) or not text.strip(): raise ValueError('Gemini returned empty text')
-    return text
-
-def generate_gemini(prompt=PROMPT):
-    key = os.environ.get('GEMINI_API_KEY') or os.environ.get('WORLDAI_DEV_GEMINI_API_KEY')
-    if not key: raise ValueError('GEMINI_API_KEY unavailable')
-    url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent'
-    req = urllib.request.Request(url, data=json.dumps(gemini_payload(prompt)).encode(),
-                                 headers={'Content-Type': 'application/json', 'x-goog-api-key': key})
-    with urllib.request.urlopen(req, timeout=180) as response:
-        return gemini_extract(json.loads(response.read().decode()))
-
-def generate(provider, prompt=PROMPT):
-    if provider == 'gemini': return generate_gemini(prompt=prompt)
-    if provider == 'agy':
-        command = [os.environ.get('COORDINATOR_AGY') or shutil.which('agy') or 'agy',
-                   '--dangerously-skip-permissions', '--new-project', '--print-timeout', '180s',
-                   '--input-format', 'stream-json', '--output-format', 'stream-json']
-        request = json.dumps({'event': 'user', 'message': {'content': prompt}}) + '\n'
-        with tempfile.TemporaryDirectory(prefix='dot-ping-agy-', dir='/tmp') as workdir:
-            result = run_with_stdin(command, request, cwd=workdir)
-        events = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
-        if any(not isinstance(event, dict) for event in events): raise ValueError('AGY returned malformed event data')
-        results = [event.get('result') for event in events if event.get('event') == 'result']
-        if len(results) != 1 or not isinstance(results[0], dict) or results[0].get('status') != 'SUCCESS':
-            raise ValueError('AGY returned no single successful result')
-        if not isinstance(results[0].get('response'), str): raise ValueError('AGY returned no text response')
-        return results[0]['response']
-    if provider == 'luna':
-        key = os.environ.get('LUNAROUTE_API_KEY') or bounded_run([shutil.which('lunaroute') or 'lunaroute', 'key'], timeout=30).stdout.strip()
-        if not key: raise ValueError('LunaRoute key unavailable')
-        command = [shutil.which('pi') or 'pi', '--provider', 'lunaroute', '--model', LUNA_MODEL, '--print', '--mode',
-                   'text', '--no-session', '--no-tools', '--no-extensions', '--no-skills', '--no-mcp', '--no-prompt-templates', prompt]
-        return bounded_run(command, timeout=180, cwd='/tmp', env=dict(os.environ, LUNAROUTE_API_KEY=key)).stdout
-    if provider == 'minimax':
-        key = os.environ.get('MINIMAX_API_KEY')
-        if not key: raise ValueError('MINIMAX_API_KEY unavailable')
-        env = dict(os.environ, ANTHROPIC_BASE_URL=MINIMAX_BASE_URL, ANTHROPIC_AUTH_TOKEN=key, ANTHROPIC_MODEL=MINIMAX_MODEL)
-        env.pop('ANTHROPIC_API_KEY', None)
-        return claude_json(MINIMAX_MODEL, env, prompt=prompt)
-    if provider == 'codex':
-        gen = os.environ.get('COORDINATOR_GENERATOR') or shutil.which('codex-luna') or shutil.which('codex') or 'codex'
-        cmd = [gen] + ([] if Path(gen).name == 'codex-luna' else ['exec', '--yolo', '-m', 'gpt-6-luna'])
-        with tempfile.TemporaryDirectory(prefix='dot-ping-codex-', dir='/tmp') as workdir:
-            with tempfile.NamedTemporaryFile(mode='r+', dir=workdir, prefix='message-') as output:
-                run_with_stdin(cmd + ['--ephemeral', '--skip-git-repo-check', '--config', 'project_doc_max_bytes=0',
-                                      '--output-last-message', output.name], prompt, cwd=workdir)
-                output.seek(0)
-                return output.read()
-    if provider == 'haiku': return claude_json(HAIKU_MODEL, prompt=prompt)
-    raise ValueError('Unknown generator: ' + provider)
-
-def generate_message(providers):
-    for provider in providers:
-        try:
-            message = generate(provider)
-            if not isinstance(message, str): raise ValueError('response is not text')
-            stripped = message.strip()
-            if not stripped: raise ValueError(f'response empty after trimming ({len(message):,} raw characters)')
-            if len(stripped) > MAX_RESPONSE_CHARS:
-                raise ValueError(f'response exceeds {MAX_RESPONSE_CHARS:,} characters ({len(stripped):,} stripped; {len(message):,} raw)')
-            collapse = lambda text: ' '.join(text.replace('’', "'").split())
-            if not stripped.startswith(REMINDER_OPENING):
-                raise ValueError('response does not begin with the required inventory sentence')
-            if collapse(stripped) != collapse(REMINDER_BODY):
-                raise ValueError('response changed the required recovery instructions')
-            print('Generation succeeded with ' + provider)
-            return provider, REMINDER_BODY
-        except (OSError, ValueError, subprocess.SubprocessError) as error:
-            print(provider + ' generation failed: ' + str(error), file=sys.stderr)
-            if isinstance(error, subprocess.CalledProcessError) and error.stderr:
-                print(error.stderr[:4000], file=sys.stderr)
-    raise ValueError('All generation providers failed; no Dot send')
-
-def extract_reply_after_reminder(page_text):
-    if not isinstance(page_text, str) or not page_text.strip(): return ''
-    cut = page_text.rfind(ATTRIBUTION_SUFFIX)
-    if cut == -1 or page_text.find(REMINDER_OPENING, 0, cut) == -1: return ''
-    return page_text[cut + len(ATTRIBUTION_SUFFIX):].strip()
-
-def parse_verdict(raw_text):
-    if not isinstance(raw_text, str) or not raw_text.strip(): raise ValueError('Empty classifier output')
-    cleaned = raw_text.strip()
-    if cleaned.startswith('```'):
-        lines = cleaned.splitlines()[1:]
-        cleaned = '\n'.join(lines[:-1] if lines and lines[-1].strip() == '```' else lines).strip()
-    try: obj = json.loads(cleaned)
-    except ValueError as error: raise ValueError('Invalid classifier JSON: ' + str(error)) from error
-    if not isinstance(obj, dict) or obj.get('verdict') not in VALID_VERDICTS:
-        raise ValueError('Invalid classifier verdict: ' + repr(obj))
-    return obj['verdict']
-
-def classify_response(page_text, providers=CLASSIFY_PROVIDERS):
-    reply = extract_reply_after_reminder(page_text)
-    if not reply: return 'no_response'
-    prompt = CLASSIFY_PROMPT_TEMPLATE.format(reply_text=reply[:MAX_CLASSIFY_REPLY_CHARS].replace('</', '<\\/'))
-    for provider in providers:
-        if provider in CLASSIFY_PROVIDERS:
-            try: return parse_verdict(generate(provider, prompt))
-            except (OSError, ValueError, subprocess.SubprocessError) as error:
-                print(provider + ' classification failed: ' + str(error), file=sys.stderr)
-    return 'classification_unavailable'
-
-def read_tail(dot, account, env, chars=12000, timeout=180):
-    return bounded_run([dot, '--account', account, 'read', str(chars)], timeout=timeout, env=env, check=False).stdout
-
-def read_and_classify(dot, account, env, windows=None, providers=CLASSIFY_PROVIDERS):
-    windows = windows or tuple(int(n) for n in os.environ.get('COORDINATOR_READ_WINDOWS', '12000,40000').split(','))
-    verdict = 'no_response'
-    for chars in windows:
-        verdict = classify_response(read_tail(dot, account, env, chars=chars), providers=providers)
-        if verdict != 'no_response': return verdict
-    return verdict
-
-def verify_and_escalate(dot, account, env, provider, state_file, wait_secs=180, recheck_secs=120, providers=None):
-    c_provs = tuple(providers) if providers is not None else (
-        (provider,) + tuple(p for p in CLASSIFY_PROVIDERS if p != provider) if provider in CLASSIFY_PROVIDERS else CLASSIFY_PROVIDERS)
-    time.sleep(min(max(wait_secs, 0), 900))
-    verdict = read_and_classify(dot, account, env, providers=c_provs)
-    if verdict not in ('compliant', 'classification_unavailable') and recheck_secs > 0:
-        time.sleep(min(max(recheck_secs, 0), 600))
-        verdict = read_and_classify(dot, account, env, providers=c_provs)
-    try: record = json.loads(state_file.read_text()) if state_file.exists() else {}
-    except (OSError, ValueError): record = {}
-    record.update(last_response_status=verdict, last_response_checked_epoch=int(time.time()))
-    if verdict == 'compliant':
-        record.update(consecutive_noncompliance=0, consecutive_classification_failures=0)
-        print(account + ': response compliant')
-    elif verdict == 'working':
-        record['consecutive_classification_failures'] = 0
-        print(account + ': response working; no escalation')
-    elif verdict == 'classification_unavailable':
-        record['consecutive_classification_failures'] = int(record.get('consecutive_classification_failures', 0)) + 1
-        print(account + ': response classification_unavailable; no escalation')
-    else:
-        record['consecutive_classification_failures'] = 0
-        with tempfile.NamedTemporaryFile(mode='w+', prefix='dot-escalation-', dir='/tmp') as file:
-            file.write(ESCALATION_BODY + '\nFrom ' + IDENTITIES.get(provider, 'Coordinator') + ' coordinator: automated escalation; no new authority.')
-            file.flush()
-            sent = bounded_run([dot, '--account', account, 'send-once', file.name], timeout=180, env=env, check=False)
-        escalated = sent.returncode == 0 and 'DOT_SENT_VERIFIED' in sent.stdout.splitlines()
-        record.update(escalation_sent_epoch=int(time.time()), escalation_verified=escalated,
-                      consecutive_noncompliance=int(record.get('consecutive_noncompliance', 0)) + 1)
-        print(account + ': response ' + verdict + '; escalation ' + ('sent' if escalated else 'not verified'))
-    state_file.write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
-    return verdict
-
-def delivery_message(provider, message):
-    if message != REMINDER_BODY: raise ValueError('The complete required recovery instructions must be delivered')
-    return message + '\nFrom ' + IDENTITIES[provider] + ' coordinator: automated reminder; no new authority.'
-
-def due_account(accounts, role, now):
-    offsets = (0, 20, 40) if role == 'mac' else (30, 50, 10)
-    sec = time.localtime(now).tm_min * 60 + time.localtime(now).tm_sec
-    return next((a for a, m in zip(accounts, offsets) if 0 <= (sec - m * 60) % 3600 <= 120), None)
+def stop(proc):
+    if not proc: return
+    if proc.poll() is None:
+        try: proc.terminate()
+        except ProcessLookupError: pass
+    deadline = time.monotonic() + GRACE
+    while time.monotonic() < deadline:
+        if proc.poll() is None:
+            time.sleep(.1)
+            continue
+        try: os.killpg(proc.pid, 0)
+        except ProcessLookupError: return
+        time.sleep(.1)
+    try: os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError: return
+    try: proc.wait(timeout=GRACE)
+    except subprocess.TimeoutExpired: pass
+    try: os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError: pass
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--account', help='One configured account; otherwise use this host’s due slot')
-    parser.add_argument('--generator', choices=('auto',) + tuple(IDENTITIES), default='auto')
-    parser.add_argument('--generate-only', action='store_true', help='Generate and print one message without sending')
-    args = parser.parse_args()
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--account', required=True, help='Exact machine-local Dot account key supplied by scheduler')
+    p.add_argument('--instruction', default=os.environ.get('COORDINATOR_TASK', ''), help='Owner-provided task context or mode')
+    args = p.parse_args()
+    if not re.fullmatch(r'[A-Za-z0-9._@+-]{1,160}', args.account): raise Blocked('invalid account key')
+    expected = os.environ.get('DOT_EXPECTED_IDENTITY_SHA256', '').lower()
+    if not re.fullmatch(r'[0-9a-f]{64}', expected): raise Blocked('expected identity binding is missing or invalid')
+    nvm = Path.home() / '.nvm/versions/node'
+    versions = list(nvm.glob('v22.*')) if nvm.is_dir() else []
+    versions.sort(key=lambda path: tuple(map(int, path.name[1:].split('.'))))
+    if (nvm / 'v22.22.0').is_dir(): versions = [nvm / 'v22.22.0']
+    if not versions: raise Blocked('Node 22 from nvm is unavailable')
+    node_dir = versions[-1] / 'bin'
+    if not (node_dir / 'node').is_file(): raise Blocked('Node 22 executable is unavailable')
+    os.environ['PATH'] = str(node_dir) + os.pathsep + str(Path.home() / '.local/bin') + os.pathsep + os.environ.get('PATH', '')
     config = json.loads(Path(os.environ.get('DOT_CONFIG_FILE', '~/.config/dot/config.json')).expanduser().read_text())
-    accounts = config.get('rotation') or list(config.get('accounts', {}))
-    if not isinstance(accounts, list) or len(accounts) != 3 or len(set(accounts)) != 3:
-        raise ValueError('Configure exactly three distinct Dot account keys')
-    account = args.account or due_account(accounts, 'mac' if platform.system() == 'Darwin' else 'linux', time.time())
-    if account is None:
-        print('No account due; no send')
-        return 0
-    if account not in accounts: raise ValueError('Unknown configured account')
-    state = Path(os.environ.get('COORDINATOR_STATE_DIR', '~/.local/state/ai.gemini.agy-dot-coordinator')).expanduser()
-    state.mkdir(mode=0o700, parents=True, exist_ok=True)
-    with Path(os.environ.get('COORDINATOR_LOCK_FILE', '/tmp/ai.gemini.agy-dot-coordinator.lock')).open('a') as lock:
-        try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            print('Another ping is running; no send')
-            return 0
-        if (state / 'STOP').exists():
-            print('STOP is present; no send')
-            return 0
-        for path in (state / 'state.json', state / ('state_' + account + '.json')):
-            if path.exists():
-                rec = json.loads(path.read_text())
-                rec = rec.get('accounts', {}).get(account, rec)
-                if rec.get('delivery_unverified') or str(rec.get('last_status', '')).startswith('UNVERIFIED_SEND'):
-                    print(account + ': existing delivery hold; no send')
-                    return 0
-        provider, message = generate_message(PROVIDERS if args.generator == 'auto' else (args.generator,))
-        if args.generate_only:
-            print(message)
-            return 0
-        if (state / 'STOP').exists():
-            print('STOP is present; no send')
-            return 0
-        env = {k: v for k, v in dict(os.environ, DOT_ROTATE_ON_LIMIT='0').items()
-               if k not in ('DOT_REMOTE_HOST', 'DOT_CHROME_USER_DATA', 'DOT_URL', 'DOT_CLEAR_DRAFT')}
-        dot = os.environ.get('COORDINATOR_DOT_SCRIPT', str(Path(__file__).resolve().parents[2] / 'dot/scripts/dot.sh'))
-        with tempfile.NamedTemporaryFile(mode='w+', prefix='dot-ping-', dir='/tmp') as file:
-            file.write(delivery_message(provider, message))
-            file.flush()
-            sent = bounded_run([dot, '--account', account, 'send-once', file.name], timeout=180, env=env, check=False)
-        sys.stdout.write(sent.stdout)
-        sys.stderr.write(sent.stderr)
-        if not (sent.returncode == 0 and 'DOT_SENT_VERIFIED' in sent.stdout.splitlines()):
-            print(account + ': send not verified; inspect the existing Dot tool before retrying')
-            return 1
-        print(account + ': sent')
-        if os.environ.get('COORDINATOR_VERIFY_RESPONSE', '1') == '1':
-            verify_and_escalate(dot, account, env, provider, state / ('state_' + account + '.json'),
-                                wait_secs=int(os.environ.get('COORDINATOR_RESPONSE_WAIT_SECS', '180')),
-                                recheck_secs=int(os.environ.get('COORDINATOR_RESPONSE_RECHECK_SECS', '120')))
-        return 0
+    accounts = config.get('accounts', {})
+    if not isinstance(accounts, dict) or args.account not in accounts: raise Blocked('account is not configured')
+    info = accounts[args.account]
+    if not isinstance(info, dict) or not info.get('user_data_dir'): raise Blocked('account profile root is not configured')
+    profile = Path(os.path.expandvars(os.path.expanduser(info['user_data_dir'])))
+    if profile.is_symlink(): raise Blocked('Dot profile root cannot be a symbolic link')
+    profile = profile.resolve()
+    subprofile = info.get('profile_directory', 'Default')
+    target = info.get('url') or config.get('default_url')
+    if (not profile.is_dir() or not isinstance(subprofile, str) or subprofile in ('', '.', '..') or
+        '/' in subprofile or '\\' in subprofile or (profile / subprofile).is_symlink() or not (profile / subprofile).is_dir()):
+        raise Blocked('configured profile is unavailable')
+    if not isinstance(target, str) or not target.startswith(('https://', 'http://')) or any(c.isspace() for c in target):
+        raise Blocked('configured target URL is unavailable')
+    chrome_root = Path.home() / ('Library/Application Support/Google/Chrome' if sys.platform == 'darwin' else '.config/google-chrome')
+    if profile == chrome_root or profile in chrome_root.parents or chrome_root in profile.parents:
+        raise Blocked('Dot profile overlaps system Chrome profile')
+    if os.path.lexists(STOP): raise Blocked('STOP marker is present')
+    STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
+    LOCK.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    global_lock = LOCK.open('a')
+    try: fcntl.flock(global_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        global_lock.close()
+        raise Blocked('coordinator lock is already held')
+    if os.path.lexists(STOP): raise Blocked('STOP marker is present')
+    lock_dir = Path(os.environ.get('DOT_LOCK_BASE', tempfile.gettempdir())) / 'dot-profile-locks'
+    lock_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    lock_path = lock_dir / (hashlib.sha256(str(profile).encode()).hexdigest()[:16] + '.lock')
+    profile_lock = lock_path.open('a')
+    try: fcntl.flock(profile_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        profile_lock.close()
+        raise Blocked('shared Dot profile lock is already held')
+    if os.path.lexists(profile / 'SingletonLock'): raise Blocked('Chrome or a stale SingletonLock already owns this Dot profile')
+    if any(str(profile) in row and 'Chrome' in row for row in subprocess.check_output(['ps', '-Ao', 'args'], text=True).splitlines()):
+        raise Blocked('a Chrome process already uses this Dot profile')
+    chrome_bin = os.environ.get('DOT_CHROME_BIN') or ('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' if sys.platform == 'darwin' else '/usr/bin/google-chrome')
+    mcp_bin = Path(os.environ.get('CHROME_DEVTOOLS_MCP_JS', node_dir.parent / 'lib/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js')).expanduser()
+    pi_bin = os.environ.get('PI_BIN') or shutil.which('pi')
+    if not Path(chrome_bin).is_file() or not mcp_bin.is_file() or not pi_bin: raise Blocked('system Chrome, pinned Chrome DevTools MCP 1.6, or Pi is unavailable')
+    if json.loads((mcp_bin.parents[3] / 'package.json').read_text()).get('version') != '1.6.0': raise Blocked('Chrome DevTools MCP must be version 1.6.0')
+    mcp_args = [str(mcp_bin), '--executablePath=' + chrome_bin, '--userDataDir=' + str(profile),
+        '--chromeArg=--profile-directory=' + subprofile, '--chromeArg=--user-agent=' + UA,
+        '--chromeArg=--disable-blink-features=AutomationControlled',
+        '--chromeArg=--no-first-run', '--chromeArg=--no-default-browser-check',
+        '--ignoreDefaultChromeArg=--enable-automation', '--ignoreDefaultChromeArg=--password-store=basic',
+        '--ignoreDefaultChromeArg=--use-mock-keychain']
+    if sys.platform == 'darwin': mcp_args += ['--headless', '--chromeArg=--password-store=keychain']
+    else:
+        if not (os.environ.get('DISPLAY') or os.environ.get('DBUS_SESSION_BUS_ADDRESS')): raise Blocked('Linux keychain session is unavailable')
+        mcp_args.append('--chromeArg=--password-store=gnome-libsecret')
+        if not os.environ.get('DISPLAY'): mcp_args.append('--headless')
+    pending = STATE / ('send-' + hashlib.sha256(args.account.encode()).hexdigest()[:16] + '.pending')
+    proc = None
+    try:
+        if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent start')
+        with tempfile.TemporaryDirectory(prefix='dot-agent-', dir='/tmp') as run_dir:
+            project = Path(run_dir) / '.pi'
+            project.mkdir(mode=0o700)
+            cfg = Path(os.environ.get('PI_CODING_AGENT_DIR', '~/.pi/agent')).expanduser() / 'mcp.json'
+            names = json.loads(cfg.read_text()).get('mcpServers', {}) if cfg.exists() else {}
+            if not isinstance(names, dict): raise Blocked('global Pi MCP config is invalid')
+            servers = {name: {'enabled': False} for name in names}
+            servers['dot_browser'] = {'command': str(node_dir / 'node'), 'args': mcp_args}
+            mcp_file = project / 'mcp.json'
+            mcp_file.write_text(json.dumps({'mcpServers': servers}))
+            mcp_file.chmod(0o600)
+            if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent dispatch')
+            prompt = f'Account key: {args.account}\nConfigured target: {target}\nExpected identity SHA-256: {expected} (private binding; compare silently and return booleans only).\nPending-send file: {pending}\nOwner-provided task context: {args.instruction}\nRead and follow the loaded skill.'
+            env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_PENDING_FILE=str(pending), COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
+            cmd = [pi_bin, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
+                '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
+            proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    text=True, start_new_session=True)
+            try: out, err = proc.communicate(timeout=TIMEOUT)
+            except subprocess.TimeoutExpired:
+                stop(proc)
+                raise Blocked('Pi exceeded the invocation deadline; send state remains held')
+            sys.stdout.write(out.replace(expected, '[identity redacted]'))
+            sys.stderr.write(err.replace(expected, '[identity redacted]'))
+            if proc.returncode: raise Blocked('Pi failed; inspect pending-send state before another send')
+        return proc.returncode
+    finally:
+        stop(proc)
 
 if __name__ == '__main__':
     try: raise SystemExit(main())
-    except (OSError, ValueError, subprocess.SubprocessError) as error:
-        print('Dot ping failed: ' + str(error), file=sys.stderr)
-        raise SystemExit(1)
+    except (OSError, ValueError, subprocess.SubprocessError, Blocked, json.JSONDecodeError) as error:
+        print('Dot coordinator blocked: ' + str(error), file=sys.stderr)
+        raise SystemExit(2)
