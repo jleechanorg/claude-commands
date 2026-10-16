@@ -29,7 +29,13 @@ fi
 
 check "SKILL.md" "SKILL.md" 400
 if [[ -f "../agy-dot-coordinator/scripts/ping-dots.py" ]]; then
-  check "ping-dots.py" "../agy-dot-coordinator/scripts/ping-dots.py" 300
+  combined=$(( $(wc -l < ../agy-dot-coordinator/scripts/ping-dots.py) + $(wc -l < ../agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh) ))
+  if [[ "$combined" -gt 150 ]]; then
+    echo "BUDGET BREACH: coordinator launch glue = $combined LOC > cap 150" >&2
+    fail=1
+  else
+    echo "ok: coordinator launch glue = $combined LOC (cap 150)"
+  fi
   check "agy-dot-coordinator/SKILL.md" "../agy-dot-coordinator/SKILL.md" 400
 fi
 
