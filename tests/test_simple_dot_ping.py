@@ -112,11 +112,12 @@ class LauncherExecutionTests(unittest.TestCase):
             'DISPLAY': ':9', 'PATH': str(self.node_home / 'bin') + os.pathsep + os.environ.get('PATH', ''),
         }
 
-    def invoke(self, fake_proc=None):
+    def invoke(self, fake_proc=None, on_spawn=None):
         spawned = {}
         def spawn(command, **options):
             spawned['command'] = command
             spawned['mcp'] = json.loads((Path(options['cwd']) / '.pi/mcp.json').read_text())
+            if on_spawn: return on_spawn(command, **options)
             return fake_proc or FakePiProcess()
         with ExitStack() as stack:
             stack.enter_context(patch.object(PING.Path, 'home', return_value=self.home))
@@ -145,27 +146,27 @@ class LauncherExecutionTests(unittest.TestCase):
     def test_stop_dangling_symlink_prevents_pi_spawn(self):
         self.state.mkdir()
         (self.state / 'STOP').symlink_to(self.home / 'missing-stop-target')
-        with patch.object(PING.subprocess, 'Popen') as spawn:
-            with self.assertRaisesRegex(PING.Blocked, 'STOP marker'):
-                self.invoke()
-        spawn.assert_not_called()
+        spawned = []
+        with self.assertRaisesRegex(PING.Blocked, 'STOP marker'):
+            self.invoke(on_spawn=lambda *args, **kwargs: spawned.append(args))
+        self.assertEqual(spawned, [])
 
     def test_global_and_profile_locks_prevent_pi_spawn(self):
         self.lock.parent.mkdir(parents=True, exist_ok=True)
         with self.lock.open('a') as held:
             fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            with patch.object(PING.subprocess, 'Popen') as spawn:
-                with self.assertRaisesRegex(PING.Blocked, 'coordinator lock'):
-                    self.invoke()
-            spawn.assert_not_called()
+            spawned = []
+            with self.assertRaisesRegex(PING.Blocked, 'coordinator lock'):
+                self.invoke(on_spawn=lambda *args, **kwargs: spawned.append(args))
+            self.assertEqual(spawned, [])
         path = self.lock_base / 'dot-profile-locks' / (hashlib.sha256(str(self.profile.resolve()).encode()).hexdigest()[:16] + '.lock')
         path.parent.mkdir(parents=True)
         with path.open('a') as held:
             fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            with patch.object(PING.subprocess, 'Popen') as spawn:
-                with self.assertRaisesRegex(PING.Blocked, 'shared Dot profile lock'):
-                    self.invoke()
-            spawn.assert_not_called()
+            spawned = []
+            with self.assertRaisesRegex(PING.Blocked, 'shared Dot profile lock'):
+                self.invoke(on_spawn=lambda *args, **kwargs: spawned.append(args))
+            self.assertEqual(spawned, [])
 
     def test_timeout_terminates_pi_and_preserves_agent_owned_marker(self):
         class TimedOut(FakePiProcess):
