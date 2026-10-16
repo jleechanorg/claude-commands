@@ -55,6 +55,8 @@ jobs:
         run: |
           python3 .claude/skills/agy-dot-coordinator/tests/test_reminder_compliance.py
           python3 .claude/skills/agy-dot-coordinator/tests/test_ping_dots_timeout.py
+      - name: Timeline skill rendering contracts
+        run: python3 .claude/skills/timeline/scripts/test_build.py
       - name: Dot skill LOC guardrail + transport tests
         run: |
           bash .claude/skills/dot/scripts/check_budget.sh
