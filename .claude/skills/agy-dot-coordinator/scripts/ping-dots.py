@@ -30,10 +30,12 @@ def stop(proc):
     except ProcessLookupError: return
     try: proc.wait(timeout=GRACE)
     except subprocess.TimeoutExpired: pass
+    time.sleep(GRACE)
     try: os.killpg(proc.pid, signal.SIGKILL)
     except ProcessLookupError: pass
 
 def main():
+    signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(128 + signum))
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--account', required=True, help='Exact machine-local Dot account key supplied by scheduler')
     p.add_argument('--instruction', default=os.environ.get('COORDINATOR_TASK', ''), help='Owner-provided task context or mode')
@@ -104,38 +106,34 @@ def main():
             mcp_args.append('--chromeArg=--password-store=gnome-libsecret')
             if not os.environ.get('DISPLAY'): mcp_args.append('--headless')
         pending = STATE / ('send-' + hashlib.sha256(args.account.encode()).hexdigest()[:16] + '.pending')
-        proc = None
-        try:
-            if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent start')
-            with tempfile.TemporaryDirectory(prefix='dot-agent-', dir='/tmp') as run_dir:
-                project = Path(run_dir) / '.pi'
-                project.mkdir(mode=0o700)
-                cfg = Path(os.environ.get('PI_CODING_AGENT_DIR', '~/.pi/agent')).expanduser() / 'mcp.json'
-                names = json.loads(cfg.read_text()).get('mcpServers', {}) if cfg.exists() else {}
-                if not isinstance(names, dict): raise Blocked('global Pi MCP config is invalid')
-                servers = {name: {'enabled': False} for name in names}
-                servers['dot_browser'] = {'command': str(node_dir / 'node'), 'args': mcp_args}
-                mcp_file = project / 'mcp.json'
-                mcp_file.write_text(json.dumps({'mcpServers': servers}))
-                mcp_file.chmod(0o600)
-                if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent dispatch')
-                prompt = f'Account key: {args.account}\nConfigured target: {target}\nExpected identity SHA-256: {expected} (private binding; compare silently and return booleans only).\nPending-send file: {pending}\nOwner-provided task context: {args.instruction}\nRead and follow the loaded skill.'
-                env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_PENDING_FILE=str(pending), COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
-                cmd = [pi_bin, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
-                    '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
-                proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                        text=True, start_new_session=True)
-                try: out, err = proc.communicate(timeout=TIMEOUT)
-                except subprocess.TimeoutExpired:
-                    stop(proc)
-                    raise Blocked('Pi exceeded the invocation deadline; send state remains held')
-                sys.stdout.write(out.replace(expected, '[identity redacted]'))
-                sys.stderr.write(err.replace(expected, '[identity redacted]'))
-                if proc.returncode: raise Blocked('Pi failed; inspect pending-send state before another send')
-            return proc.returncode
-        finally:
-            stop(proc)
+        if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent start')
+        with tempfile.TemporaryDirectory(prefix='dot-agent-', dir='/tmp') as run_dir:
+            project = Path(run_dir) / '.pi'
+            project.mkdir(mode=0o700)
+            cfg = Path(os.environ.get('PI_CODING_AGENT_DIR', '~/.pi/agent')).expanduser() / 'mcp.json'
+            names = json.loads(cfg.read_text()).get('mcpServers', {}) if cfg.exists() else {}
+            if not isinstance(names, dict): raise Blocked('global Pi MCP config is invalid')
+            servers = {name: {'enabled': False} for name in names}
+            servers['dot_browser'] = {'command': str(node_dir / 'node'), 'args': mcp_args}
+            mcp_file = project / 'mcp.json'
+            mcp_file.write_text(json.dumps({'mcpServers': servers}))
+            mcp_file.chmod(0o600)
+            if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent dispatch')
+            prompt = f'Account key: {args.account}\nConfigured target: {target}\nExpected identity SHA-256: {expected} (private binding; compare silently and return booleans only).\nPending-send file: {pending}\nOwner-provided task context: {args.instruction}\nRead and follow the loaded skill.'
+            env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_PENDING_FILE=str(pending), COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
+            cmd = [pi_bin, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
+                '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
+            proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    text=True, start_new_session=True)
+            try: out, err = proc.communicate(timeout=TIMEOUT)
+            except subprocess.TimeoutExpired:
+                raise Blocked('Pi exceeded the invocation deadline; send state remains held')
+            sys.stdout.write(out.replace(expected, '[identity redacted]'))
+            sys.stderr.write(err.replace(expected, '[identity redacted]'))
+            if proc.returncode: raise Blocked('Pi failed; inspect pending-send state before another send')
+        return proc.returncode
     finally:
+        stop(proc)
         if profile_lock: profile_lock.close()
         if global_lock: global_lock.close()
 

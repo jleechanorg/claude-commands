@@ -12,6 +12,7 @@ import hashlib
 import io
 import json
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / '.claude/skills/agy-dot-coordinator/scripts/ping-dots.py'
@@ -184,6 +185,62 @@ class LauncherExecutionTests(unittest.TestCase):
             self.invoke(process)
         self.assertEqual(process.returncode, -15)
         self.assertEqual(pending.read_text(), 'private send intent')
+
+    def test_sigterm_cleans_pi_process_group_before_releasing_locks(self):
+        ready, cleaned = self.home / 'child.ready', self.home / 'child.cleaned'
+        child = self.home / 'child.py'
+        child.write_text('''import fcntl, os, signal, time
+from pathlib import Path
+def cleanup(*_):
+    with open(os.environ["COORDINATOR_LOCK_FILE"], "a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            state = "released"
+        except BlockingIOError:
+            state = "held"
+    Path(os.environ["DOT_CHILD_CLEANED_FILE"]).write_text(state)
+    raise SystemExit
+signal.signal(signal.SIGTERM, cleanup)
+Path(os.environ["DOT_CHILD_READY_FILE"]).write_text("ready")
+time.sleep(60)
+''')
+        self.pi.write_text(f'''#!{sys.executable}
+import os, subprocess, sys, time
+from pathlib import Path
+child = subprocess.Popen([sys.executable, {str(child)!r}])
+Path(os.environ["DOT_CHILD_PID_FILE"]).write_text(str(child.pid))
+time.sleep(60)
+''')
+        self.pi.chmod(0o755)
+        env = dict(os.environ, **self.env, DOT_CHILD_SCRIPT=str(child),
+                   DOT_CHILD_PID_FILE=str(self.home / 'child.pid'),
+                   DOT_CHILD_READY_FILE=str(ready), DOT_CHILD_CLEANED_FILE=str(cleaned))
+        harness = f'''import importlib.util, sys
+spec = importlib.util.spec_from_file_location("dot_launcher", {str(SCRIPT)!r})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+module.GRACE = 0.4
+sys.argv = [{str(SCRIPT)!r}, "--account", "alpha"]
+module.main()
+'''
+        launcher = subprocess.Popen([sys.executable, '-c', harness], env=env,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            deadline = time.monotonic() + 5
+            while not ready.exists() and time.monotonic() < deadline:
+                time.sleep(.02)
+            self.assertTrue(ready.exists(), 'dummy owned child did not start')
+            launcher.terminate()
+            launcher.communicate(timeout=5)
+            self.assertEqual(launcher.returncode, 128 + PING.signal.SIGTERM)
+            self.assertEqual(cleaned.read_text(), 'held')
+            with self.lock.open('a') as contender:
+                fcntl.flock(contender, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        finally:
+            if launcher.poll() is None: launcher.kill()
+            launcher.wait()
+            launcher.stdout.close()
+            launcher.stderr.close()
 
     def test_nonzero_exit_preserves_agent_owned_marker(self):
         self.state.mkdir()
