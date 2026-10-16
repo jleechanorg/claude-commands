@@ -12,12 +12,6 @@ Example invocations:
   --output /tmp/dot-schedule-stage
 ```
 
-```sh
-~/.claude/skills/agy-dot-coordinator/scripts/install-service.sh --render-only \
-  --config ~/.config/agy-dot-coordinator/schedule.json \
-  --output /tmp/dot-schedule-stage
-```
-
 The output directory and files are private (0700/0600), and the renderer refuses to overwrite an existing destination. macOS output contains three independent LaunchAgent plists. Linux output contains one environment file, service, and timer for each account. Both preserve the coordinator's STOP marker and shared global/profile locks through the common launcher. The PATH includes the installed nvm Node 22 and `~/.local/bin` for the Pi adapter and `lunaroute` command. Linux rendering carries the current `DISPLAY`, `DBUS_SESSION_BUS_ADDRESS`, and `XDG_RUNTIME_DIR` when present for the system keychain session.
 
-The old single-service templates remain for reference but are no longer installed. Platform-specific entrypoints are `install-launchagent.sh --render-only ...` and `install-systemd.sh --render-only ...`; `install-service.sh --render-only ...` selects the host. Without `--render-only`, each entrypoint exits before writing anything. Activation is handled by the machine owner after reviewing the staged files.
+The old single-service templates have been retired; the renderer uses the account-bound sources in `templates/`. Platform-specific entrypoints are `install-launchagent.sh --render-only ...` and `install-systemd.sh --render-only ...`; `install-service.sh --render-only ...` selects the host. Without `--render-only`, each entrypoint exits before writing anything. Activation is handled by the machine owner after reviewing the staged files.
