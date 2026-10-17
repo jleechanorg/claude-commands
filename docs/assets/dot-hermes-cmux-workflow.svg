@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1170" viewBox="0 0 1400 1170" role="img" aria-labelledby="title desc">
+<title id="title">User, dot, Hermes, and parallel cmux coding sessions</title>
+<desc id="desc">The user gives goals and decisions to dot and receives results and blockers. dot remains the primary coordinator. A separate dot coordinator sends periodic reminders. dot can directly drive an existing cmux coding session or explicitly delegate another task to Hermes. Each task has one driver and one writer; independent tasks and read-only review run in parallel. Beads is the shared task and knowledge-coordination record. dot, Hermes, and coding agents read and update owners, state, dependencies, decisions, and evidence links. All lanes return exact-commit evidence to Beads. dot polls that evidence, reconciles review, and follows through to the requested endpoint. Merge or deployment requires authorization, current-head checks, no active holds, and one integration owner. These are operating rules, not a claim of automated enforcement.</desc>
+<defs>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#1e293b" stroke-width="0.5"/></pattern>
+
+<marker id="arrow-cyan" viewBox="0 0 10 10" markerWidth="7" markerHeight="7" refX="9" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#22d3ee"/></marker>
+<marker id="arrow-green" viewBox="0 0 10 10" markerWidth="7" markerHeight="7" refX="9" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#34d399"/></marker>
+<marker id="arrow-purple" viewBox="0 0 10 10" markerWidth="7" markerHeight="7" refX="9" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#a78bfa"/></marker>
+<marker id="arrow-amber" viewBox="0 0 10 10" markerWidth="7" markerHeight="7" refX="9" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#fbbf24"/></marker>
+<marker id="arrow-rose" viewBox="0 0 10 10" markerWidth="7" markerHeight="7" refX="9" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#fb7185"/></marker>
+<marker id="arrow-muted" viewBox="0 0 10 10" markerWidth="7" markerHeight="7" refX="9" refY="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#94a3b8"/></marker>
+</defs><rect width="1400" height="1170" rx="18" fill="#020617"/><rect width="1400" height="1170" rx="18" fill="url(#grid)"/>
+<text x="50" y="45" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#f8fafc" text-anchor="start" >Coordination and evidence flow</text>
+<path d="M360 285H510" fill="none" stroke="#22d3ee" stroke-width="2.4" stroke-linejoin="round"  marker-end="url(#arrow-cyan)"/>
+<path d="M510 345H360" fill="none" stroke="#22d3ee" stroke-width="2.4" stroke-linejoin="round"  marker-end="url(#arrow-cyan)"/>
+<path d="M950 285H1100" fill="none" stroke="#22d3ee" stroke-width="2.4" stroke-linejoin="round"  marker-end="url(#arrow-cyan)"/>
+<path d="M1100 345H950" fill="none" stroke="#22d3ee" stroke-width="2.4" stroke-linejoin="round"  marker-end="url(#arrow-cyan)"/>
+<path d="M730 170V240" fill="none" stroke="#fbbf24" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 6" marker-end="url(#arrow-amber)"/>
+<path d="M610 390V460H270V585" fill="none" stroke="#22d3ee" stroke-width="2.4" stroke-linejoin="round"  marker-end="url(#arrow-cyan)"/>
+<path d="M1225 390V490H700V585" fill="none" stroke="#22d3ee" stroke-width="2.4" stroke-linejoin="round"  marker-end="url(#arrow-cyan)"/>
+<path d="M270 765V860" fill="none" stroke="#a78bfa" stroke-width="2.4" stroke-linejoin="round"  marker-end="url(#arrow-purple)"/>
+<path d="M700 765V860" fill="none" stroke="#a78bfa" stroke-width="2.4" stroke-linejoin="round"  marker-end="url(#arrow-purple)"/>
+<path d="M1145 765V860" fill="none" stroke="#a78bfa" stroke-width="2.4" stroke-linejoin="round"  marker-end="url(#arrow-purple)"/>
+<path d="M1350 910H1380V200H900V240" fill="none" stroke="#a78bfa" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 6" marker-end="url(#arrow-purple)"/>
+<path d="M700 980V1030" fill="none" stroke="#fb7185" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 6" marker-end="url(#arrow-rose)"/>
+<rect x="50" y="525" width="1300" height="290" rx="16" fill="#34d399" fill-opacity="0.025" stroke="#34d399" stroke-opacity="0.5" stroke-dasharray="8 5"/>
+<rect x="540" y="80" width="380" height="90" rx="12" fill="#0f172a"/>
+<rect x="540" y="80" width="380" height="90" rx="12" fill="#fbbf24" fill-opacity="0.07" stroke="#fbbf24" stroke-width="1.6"/>
+<text x="562" y="116" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#f8fafc" text-anchor="start" >dot coordinator</text>
+<text x="562" y="146" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Periodic reminders and progress checks</text>
+<text x="710" y="211" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#fbbf24" text-anchor="end" >reminders only</text>
+<rect x="50" y="240" width="310" height="150" rx="12" fill="#0f172a"/>
+<rect x="50" y="240" width="310" height="150" rx="12" fill="#94a3b8" fill-opacity="0.07" stroke="#94a3b8" stroke-width="1.6"/>
+<text x="72" y="276" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#f8fafc" text-anchor="start" >User</text>
+<text x="72" y="306" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Sets the outcome and scope</text>
+<text x="72" y="332" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Makes decisions</text>
+<text x="72" y="358" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Keeps approval authority</text>
+<rect x="510" y="240" width="440" height="150" rx="12" fill="#0f172a"/>
+<rect x="510" y="240" width="440" height="150" rx="12" fill="#22d3ee" fill-opacity="0.07" stroke="#22d3ee" stroke-width="1.6"/>
+<text x="532" y="276" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#f8fafc" text-anchor="start" >ChatGPT dot</text>
+<text x="532" y="306" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Primary conversation and coordinator</text>
+<text x="532" y="332" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Assigns work, polls live evidence</text>
+<text x="532" y="358" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Reconciles review; reports results</text>
+<rect x="1100" y="240" width="250" height="150" rx="12" fill="#0f172a"/>
+<rect x="1100" y="240" width="250" height="150" rx="12" fill="#34d399" fill-opacity="0.07" stroke="#34d399" stroke-width="1.6"/>
+<text x="1122" y="276" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#f8fafc" text-anchor="start" >Hermes</text>
+<text x="1122" y="306" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Secondary coordinator</text>
+<text x="1122" y="332" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Driver only if assigned</text>
+<text x="1122" y="358" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Otherwise an observer</text>
+<text x="435" y="267" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" fill="#22d3ee" text-anchor="middle" >goal + decisions</text>
+<text x="435" y="372" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" fill="#22d3ee" text-anchor="middle" >results + blockers</text>
+<text x="1025" y="267" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" fill="#22d3ee" text-anchor="middle" >delegate</text>
+<text x="1025" y="372" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" fill="#22d3ee" text-anchor="middle" >checkpoint</text>
+<text x="285" y="444" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#22d3ee" text-anchor="start" >dot drives task A</text>
+<text x="855" y="475" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#22d3ee" text-anchor="start" >Hermes drives task B only when assigned</text>
+<text x="75" y="560" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#34d399" text-anchor="start" >PARALLEL LANES</text>
+<text x="1320" y="560" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#cbd5e1" text-anchor="end" >Keep existing sessions and non-overlapping ownership</text>
+<rect x="80" y="585" width="380" height="180" rx="12" fill="#0f172a"/>
+<rect x="80" y="585" width="380" height="180" rx="12" fill="#34d399" fill-opacity="0.07" stroke="#34d399" stroke-width="1.6"/>
+<text x="102" y="621" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#f8fafc" text-anchor="start" >Existing cmux session A</text>
+<text x="102" y="651" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Task A · Driver: dot</text>
+<text x="102" y="677" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >One CLI coding agent is the writer</text>
+<text x="102" y="703" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Own worktree and branch</text>
+<text x="102" y="729" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Implement and test</text>
+<rect x="510" y="585" width="380" height="180" rx="12" fill="#0f172a"/>
+<rect x="510" y="585" width="380" height="180" rx="12" fill="#34d399" fill-opacity="0.07" stroke="#34d399" stroke-width="1.6"/>
+<text x="532" y="621" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#f8fafc" text-anchor="start" >Existing cmux session B</text>
+<text x="532" y="651" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Task B · Driver: Hermes</text>
+<text x="532" y="677" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >One CLI coding agent is the writer</text>
+<text x="532" y="703" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Separate, non-overlapping work</text>
+<text x="532" y="729" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Implement and test</text>
+<rect x="970" y="585" width="350" height="180" rx="12" fill="#0f172a"/>
+<rect x="970" y="585" width="350" height="180" rx="12" fill="#a78bfa" fill-opacity="0.07" stroke="#a78bfa" stroke-width="1.6"/>
+<text x="992" y="621" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#f8fafc" text-anchor="start" >Independent review</text>
+<text x="992" y="651" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Read-only review of an exact head</text>
+<text x="992" y="677" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Checks acceptance and evidence</text>
+<text x="992" y="703" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Reports findings</text>
+<text x="992" y="729" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Does not become a second writer</text>
+<text x="485" y="840" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#a78bfa" text-anchor="middle" >commit + test receipts</text>
+<text x="1162" y="840" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#a78bfa" text-anchor="start" >review findings</text>
+<rect x="50" y="860" width="1300" height="120" rx="12" fill="#0f172a"/>
+<rect x="50" y="860" width="1300" height="120" rx="12" fill="#a78bfa" fill-opacity="0.07" stroke="#a78bfa" stroke-width="1.6"/>
+<text x="72" y="896" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#f8fafc" text-anchor="start" >Beads: shared task + knowledge coordination</text>
+<text x="72" y="926" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >Owners · state · dependencies · decisions · links to documents, PRs, and exact-version evidence</text>
+<text x="72" y="952" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >dot, Hermes, and coding agents read and update the same record</text>
+<text x="1368" y="650" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#a78bfa" text-anchor="middle" transform="rotate(-90 1368 650)">dot polls, reconciles, and follows through</text>
+<rect x="50" y="1030" width="1300" height="85" rx="12" fill="#0f172a"/>
+<rect x="50" y="1030" width="1300" height="85" rx="12" fill="#fb7185" fill-opacity="0.07" stroke="#fb7185" stroke-width="1.6"/>
+<text x="72" y="1066" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#f8fafc" text-anchor="start" >Before merge or deploy: authorization + current-head checks + no active holds</text>
+<text x="72" y="1096" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#cbd5e1" text-anchor="start" >One integration owner verifies the requested endpoint. These are operating rules, not automatic enforcement.</text>
+<text x="50" y="1148" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#94a3b8" text-anchor="start" >Solid arrows: assigned work or results. Dotted arrows: reminders, evidence feedback, and approval boundaries.</text>
+</svg>
