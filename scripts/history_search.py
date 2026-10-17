@@ -328,32 +328,8 @@ def search_pi(
         except Exception:
             return 0.0
 
-    def collect_project_files(entries: list[os.DirEntry], budget: int) -> list[Path]:
-        """Files for each project directory, newest-first, keeping cwd priority."""
-        files: list[Path] = []
-        for pe in entries[:budget]:
-            proj_files: list[Path] = []
-            try:
-                for fe in os.scandir(pe.path):
-                    if fe.is_file() and fe.name.endswith(".jsonl"):
-                        proj_files.append(Path(fe.path))
-            except Exception:
-                continue
-            proj_files.sort(key=file_mtime, reverse=True)
-            files.extend(proj_files)
-        return files
-
-    # Flat JSONL files directly under the session root (explicit session-dir override).
-    flat_files: list[Path] = []
-    try:
-        for fe in os.scandir(base_dir):
-            if fe.is_file() and fe.name.endswith(".jsonl"):
-                flat_files.append(Path(fe.path))
-    except Exception:
-        flat_files = []
-
-    def _flat_session_cwd(path: Path) -> str:
-        """Decoded cwd from a flat session file's header, or "" if unreadable."""
+    def _session_header_cwd(path: Path) -> str:
+        """Recorded cwd from a session file's header, or "" if unreadable."""
         try:
             with open(path, "r", encoding="utf-8", errors="ignore") as fh:
                 for index, raw in enumerate(fh):
@@ -372,16 +348,51 @@ def search_pi(
             return ""
         return ""
 
+    requested_cwd = os.path.normpath(cwd_path) if cwd_path else ""
+
+    def recorded_cwd_matches(path: Path) -> bool:
+        session_cwd = _session_header_cwd(path)
+        return bool(session_cwd and requested_cwd and os.path.normpath(session_cwd) == requested_cwd)
+
+    def collect_project_files(entries: list[os.DirEntry], budget: int) -> list[Path]:
+        """Files for each project directory, newest-first, keeping cwd priority.
+
+        A pi group directory name is a lossy cwd encoding (`/work/a-b` and
+        `/work/a/b` both map to `--work-a-b--`), so when a group can hold
+        multiple real projects, files whose recorded header cwd matches the
+        request are prioritized within the group before mtime ordering.
+        """
+        files: list[Path] = []
+        for pe in entries[:budget]:
+            proj_files: list[Path] = []
+            try:
+                for fe in os.scandir(pe.path):
+                    if fe.is_file() and fe.name.endswith(".jsonl"):
+                        proj_files.append(Path(fe.path))
+            except Exception:
+                continue
+            if requested_cwd:
+                proj_files.sort(key=lambda p: (0 if recorded_cwd_matches(p) else 1, -file_mtime(p)))
+            else:
+                proj_files.sort(key=file_mtime, reverse=True)
+            files.extend(proj_files)
+        return files
+
+    # Flat JSONL files directly under the session root (explicit session-dir override).
+    flat_files: list[Path] = []
+    try:
+        for fe in os.scandir(base_dir):
+            if fe.is_file() and fe.name.endswith(".jsonl"):
+                flat_files.append(Path(fe.path))
+    except Exception:
+        flat_files = []
+
     def _flat_priority(path: Path) -> tuple[int, float]:
         # A flat session whose recorded cwd matches the request outranks an
         # unrelated (newer) flat session in the same shared directory. Compare
         # normalized real paths, not the lossy encoded group name, so
         # `/work/a-b` and `/work/a/b` do not collide.
-        session_cwd = _flat_session_cwd(path)
-        requested = os.path.normpath(cwd_path) if cwd_path else ""
-        matched = 1
-        if session_cwd and requested and os.path.normpath(session_cwd) == requested:
-            matched = 0
+        matched = 0 if recorded_cwd_matches(path) else 1
         return (matched, -file_mtime(path))
 
     flat_files.sort(key=_flat_priority)

@@ -658,6 +658,30 @@ class TestHistorySearch(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].metadata.get("session_cwd"), "/work/a-b")
 
+    def test_search_pi_grouped_dir_distinguishes_encoded_cwd_collision(self) -> None:
+        import os as _os
+
+        base = self.temp_dir / "pi_group_collision"
+        group = base / "--work-a-b--"
+        group.mkdir(parents=True)
+
+        def write(path: Path, cwd: str, mtime: float) -> None:
+            path.write_text(
+                json.dumps({"type": "session", "cwd": cwd}) + "\n"
+                + json.dumps({"type": "message", "timestamp": "2026-10-17T13:03:00.000Z",
+                              "message": {"role": "user", "content": [{"type": "text", "text": "group-collision-needle"}]}}) + "\n",
+                encoding="utf-8",
+            )
+            _os.utime(path, (mtime, mtime))
+
+        # Same lossy group name for two real projects; recorded cwd must win.
+        write(group / "dash.jsonl", "/work/a-b", 1000.0)
+        write(group / "slash.jsonl", "/work/a/b", 9000.0)
+
+        results = search_pi(query="group-collision-needle", cwd="/work/a-b", limit=1, sessions_dir=base)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].metadata.get("session_cwd"), "/work/a-b")
+
     def test_graceful_handling_absent_databases_and_corrupt_files(self) -> None:
         # Nonexistent paths across all sources
         results = search_history(
