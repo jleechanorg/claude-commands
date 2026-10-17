@@ -503,6 +503,7 @@ class TestHistorySearch(unittest.TestCase):
                 "message": {
                     "role": "assistant",
                     "content": [{"type": "thinking", "thinking": "SECRET_THINKING"},
+                                {"type": "thinking", "content": "SECRET_THINKING_CONTENT"},
                                 {"type": "text", "text": "You extend the helper with a pi source."}],
                     "model": "deepseek-4.1-flash",
                 },
@@ -533,6 +534,7 @@ class TestHistorySearch(unittest.TestCase):
         self.assertEqual(len(assistant_hits), 1)
         self.assertEqual(assistant_hits[0].metadata.get("model"), "deepseek-4.1-flash")
         self.assertEqual(search_pi(query="SECRET_THINKING", cwd="/Users/test/myproject", sessions_dir=sessions_base), [])
+        self.assertEqual(search_pi(query="SECRET_THINKING_CONTENT", cwd="/Users/test/myproject", sessions_dir=sessions_base), [])
         self.assertEqual(search_pi(query="SECRET_TOOL_PAYLOAD", cwd="/Users/test/myproject", sessions_dir=sessions_base), [])
 
     def test_search_pi_empty_and_absent_dir_are_graceful(self) -> None:
@@ -608,6 +610,29 @@ class TestHistorySearch(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertIn("flat session dir needle", results[0].snippet)
         self.assertEqual(results[0].label, "/Users/test/myproject")
+
+    def test_search_pi_flat_dir_prefers_recorded_cwd_over_newer_other(self) -> None:
+        import os as _os
+
+        flat = self.temp_dir / "pi_flat_shared"
+        flat.mkdir()
+
+        def write(path: Path, cwd: str, mtime: float) -> None:
+            path.write_text(
+                json.dumps({"type": "session", "cwd": cwd}) + "\n"
+                + json.dumps({"type": "message", "timestamp": "2026-10-17T13:03:00.000Z",
+                              "message": {"role": "user", "content": [{"type": "text", "text": "flat-cwd-needle"}]}}) + "\n",
+                encoding="utf-8",
+            )
+            _os.utime(path, (mtime, mtime))
+
+        # Shared flat dir: the requested cwd is older than an unrelated session.
+        write(flat / "target.jsonl", "/work/target", 1000.0)
+        write(flat / "other.jsonl", "/work/other", 9000.0)
+
+        results = search_pi(query="flat-cwd-needle", cwd="/work/target", limit=1, sessions_dir=flat)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].metadata.get("session_cwd"), "/work/target")
 
     def test_graceful_handling_absent_databases_and_corrupt_files(self) -> None:
         # Nonexistent paths across all sources

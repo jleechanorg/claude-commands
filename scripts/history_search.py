@@ -89,6 +89,33 @@ def _clean_snippet(text: str, max_chars: int = 200) -> str:
     return cleaned[:max_chars]
 
 
+def _extract_pi_content(msg_obj: Any) -> str:
+    """Extract only text blocks from a Pi message.
+
+    Strict allowlist: system prompts, thinking blocks, and tool payloads must
+    never leak, even when a noncanonical block carries its payload under a
+    `content` key instead of `text`. Only blocks whose declared type is a text
+    type (or plain strings) contribute.
+    """
+    if isinstance(msg_obj, str):
+        return msg_obj
+    if isinstance(msg_obj, list):
+        parts = []
+        for part in msg_obj:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict):
+                if part.get("type") in ("text", "input_text", "output_text") and part.get("text"):
+                    parts.append(str(part["text"]))
+        return " ".join(parts)
+    if isinstance(msg_obj, dict):
+        if msg_obj.get("type") in ("text", "input_text", "output_text") and msg_obj.get("text"):
+            return str(msg_obj["text"])
+        if "type" not in msg_obj and isinstance(msg_obj.get("content"), (str, list)):
+            return _extract_pi_content(msg_obj["content"])
+    return ""
+
+
 def _extract_claude_content(msg_obj: Any) -> str:
     if isinstance(msg_obj, str):
         return msg_obj
@@ -324,7 +351,38 @@ def search_pi(
                 flat_files.append(Path(fe.path))
     except Exception:
         flat_files = []
-    flat_files.sort(key=file_mtime, reverse=True)
+
+    def _flat_session_cwd(path: Path) -> str:
+        """Decoded cwd from a flat session file's header, or "" if unreadable."""
+        try:
+            with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+                for index, raw in enumerate(fh):
+                    if index > 20:
+                        break
+                    raw = raw.strip()
+                    if not raw:
+                        continue
+                    try:
+                        obj = json.loads(raw)
+                    except Exception:
+                        continue
+                    if isinstance(obj, dict) and obj.get("type") == "session":
+                        return str(obj.get("cwd") or "")
+        except Exception:
+            return ""
+        return ""
+
+    def _flat_priority(path: Path) -> tuple[int, float]:
+        # A flat session whose recorded cwd matches the request outranks an
+        # unrelated (newer) flat session in the same shared directory.
+        session_cwd = _flat_session_cwd(path)
+        encoded = (
+            session_cwd.lstrip("/\\").replace("/", "-").replace("\\", "-").replace(":", "-")
+        )
+        matched = 0 if (expected_project_dir and f"--{encoded}--" == expected_project_dir) else 1
+        return (matched, -file_mtime(path))
+
+    flat_files.sort(key=_flat_priority)
 
     # Preserve cwd priority: requested-project files first, then flat files, then
     # other projects. A global mtime sort here would let a newer unrelated
@@ -359,12 +417,9 @@ def search_pi(
                     if entry_type == "session":
                         session_cwd = str(obj.get("cwd") or session_cwd)
                         continue
-                    if entry_type == "custom_message":
-                        msg = {"role": "custom", "content": obj.get("content")}
-                    elif entry_type == "message":
-                        msg = obj.get("message", {})
-                    else:
+                    if entry_type != "message":
                         continue
+                    msg = obj.get("message", {})
                     if not isinstance(msg, dict):
                         continue
 
@@ -374,7 +429,7 @@ def search_pi(
                     if role not in ("user", "assistant"):
                         continue
 
-                    content = _extract_claude_content(msg.get("content"))
+                    content = _extract_pi_content(msg.get("content"))
                     if not content:
                         continue
 
