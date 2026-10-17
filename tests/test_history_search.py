@@ -1,4 +1,4 @@
-"""Tests for sparse history search across Claude, Codex, Hermes, agy, and Cursor."""
+"""Tests for sparse history search across Claude, Codex, Hermes, agy, Cursor, and Pi."""
 
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ from scripts.history_search import (
     search_cursor,
     search_hermes,
     search_history,
+    search_pi,
 )
 
 
@@ -473,6 +474,73 @@ class TestHistorySearch(unittest.TestCase):
         self.assertEqual(len(chat_results), 1)
         self.assertIn("cursor-project", chat_results[0].snippet)
 
+    def test_search_pi_scopes_cwd_and_extracts_prompts(self) -> None:
+        sessions_base = self.temp_dir / "pi_sessions"
+        proj_dir = sessions_base / "--Users-test-myproject--"
+        proj_dir.mkdir(parents=True)
+        other_dir = sessions_base / "--Users-test-other--"
+        other_dir.mkdir(parents=True)
+
+        session_file = proj_dir / "2026-10-17T13-01-31-742Z_01a149f4.jsonl"
+        lines = [
+            json.dumps({
+                "type": "session", "version": 3, "id": "01a149f4",
+                "timestamp": "2026-10-17T13:01:31.742Z", "cwd": "/Users/test/myproject",
+            }),
+            json.dumps({
+                "type": "message", "id": "m1", "timestamp": "2026-10-17T13:02:00.000Z",
+                "message": {"role": "system", "content": "", "sections": {"preamble": "system prompt"}},
+            }),
+            "MALFORMED_JSON_LINE_{{{",
+            json.dumps({
+                "type": "message", "id": "m2", "timestamp": "2026-10-17T13:03:00.000Z",
+                "message": {"role": "user", "content": [
+                    {"type": "text", "text": "How do I add pi history to the sparse search?"}
+                ]},
+            }),
+            json.dumps({
+                "type": "message", "id": "m3", "timestamp": "2026-10-17T13:04:00.000Z",
+                "message": {
+                    "role": "assistant",
+                    "content": [{"type": "thinking", "thinking": "SECRET_THINKING"},
+                                {"type": "text", "text": "You extend the helper with a pi source."}],
+                    "model": "deepseek-4.1-flash",
+                },
+            }),
+            json.dumps({
+                "type": "message", "id": "m4", "timestamp": "2026-10-17T13:05:00.000Z",
+                "message": {"role": "toolResult", "toolName": "bash",
+                            "content": [{"type": "text", "text": "SECRET_TOOL_PAYLOAD"}]},
+            }),
+        ]
+        session_file.write_text("\n".join(lines), encoding="utf-8")
+
+        # cwd scoping: the other project must not be sampled first
+        results = search_pi(query="pi history", cwd="/Users/test/myproject", sessions_dir=sessions_base)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].source, "pi")
+        self.assertIn("pi history", results[0].snippet)
+        self.assertEqual(results[0].label, "/Users/test/myproject")
+        self.assertEqual(results[0].metadata.get("session_cwd"), "/Users/test/myproject")
+
+        # overview (no query) returns user prompts only, never assistant/tool payloads
+        overview = search_pi(cwd="/Users/test/myproject", sessions_dir=sessions_base)
+        self.assertEqual(len(overview), 1)
+        self.assertTrue(overview[0].metadata.get("is_user"))
+
+        # assistant matches are searchable, but thinking/tool payloads never leak
+        assistant_hits = search_pi(query="extend the helper", cwd="/Users/test/myproject", sessions_dir=sessions_base)
+        self.assertEqual(len(assistant_hits), 1)
+        self.assertEqual(assistant_hits[0].metadata.get("model"), "deepseek-4.1-flash")
+        self.assertEqual(search_pi(query="SECRET_THINKING", cwd="/Users/test/myproject", sessions_dir=sessions_base), [])
+        self.assertEqual(search_pi(query="SECRET_TOOL_PAYLOAD", cwd="/Users/test/myproject", sessions_dir=sessions_base), [])
+
+    def test_search_pi_empty_and_absent_dir_are_graceful(self) -> None:
+        self.assertEqual(search_pi(query="x", sessions_dir=self.temp_dir / "absent_pi"), [])
+        empty = self.temp_dir / "empty_pi"
+        empty.mkdir()
+        self.assertEqual(search_pi(query="x", sessions_dir=empty), [])
+
     def test_graceful_handling_absent_databases_and_corrupt_files(self) -> None:
         # Nonexistent paths across all sources
         results = search_history(
@@ -486,6 +554,7 @@ class TestHistorySearch(unittest.TestCase):
             cursor_prompt_history_path=self.temp_dir / "absent_cursor.json",
             cursor_chats_dir=self.temp_dir / "absent_chats",
             cursor_projects_dir=self.temp_dir / "absent_projects",
+            pi_sessions_dir=self.temp_dir / "absent_pi",
         )
         self.assertEqual(set(results.keys()), set(ALL_SOURCES))
         for src in ALL_SOURCES:
@@ -510,6 +579,7 @@ class TestHistorySearch(unittest.TestCase):
             hermes_db_path=corrupt_db,
             agy_db_path=corrupt_db,
             cursor_prompt_history_path=corrupt_prompt,
+            pi_sessions_dir=self.temp_dir / "corrupt_pi",
         )
         self.assertIsInstance(corrupt_results, dict)
 
@@ -528,6 +598,7 @@ class TestHistorySearch(unittest.TestCase):
             "hermes": [HistoryEntry("hermes", "2026-08-01", "slack", "sample hermes")],
             "agy": [HistoryEntry("agy", "2026-08-01", "agy title", "sample agy")],
             "cursor": [HistoryEntry("cursor", "2026-08-01", "prompt_history", "sample cursor")],
+            "pi": [HistoryEntry("pi", "2026-08-01", "/Users/test/proj", "sample pi")],
         }
         output = format_results(dummy_results, query="sample", use_color=False)
         self.assertIn("📁 Claude Code (1 matches)", output)
@@ -535,6 +606,7 @@ class TestHistorySearch(unittest.TestCase):
         self.assertIn("⚡ Hermes (1 matches)", output)
         self.assertIn("🌐 agy CLI (1 matches)", output)
         self.assertIn("🖥️  Cursor (1 matches)", output)
+        self.assertIn("🧭 Pi (1 matches)", output)
 
     def test_codex_search_profile_isolation_and_sibling_inference(self) -> None:
         fake_home = self.temp_dir / "fake_home"

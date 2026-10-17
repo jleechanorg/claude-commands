@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sparse conversation history search across Claude, Codex, Hermes, agy CLI, and Cursor.
+"""Sparse conversation history search across Claude, Codex, Hermes, agy CLI, Cursor, and Pi.
 
 Extracts high-signal snippets within strict context budgets.
 Gracefully handles absent databases, missing files, and malformed JSON.
@@ -45,6 +45,7 @@ ANSI = {
     "hermes": "\033[35m",    # magenta
     "agy":    "\033[33m",    # yellow
     "cursor": "\033[32m",    # green
+    "pi":     "\033[95m",    # bright magenta
     "head":   "\033[1;37m",  # bold white
     "match":  "\033[1;33m",  # bold yellow
     "dim":    "\033[2m",
@@ -227,6 +228,164 @@ def search_claude(
                             label=proj_name,
                             snippet=snippet,
                             metadata={"file": file_path.name, "path": str(file_path), "is_user": is_user},
+                        )
+                    )
+                    file_hits += 1
+                    if file_hits >= max_per_file or len(results) >= limit:
+                        break
+        except Exception:
+            continue
+
+    return results[:limit]
+
+
+def search_pi(
+    query: str = "",
+    cwd: str = "",
+    limit: int = 3,
+    max_per_file: int = 3,
+    max_chars: int = 200,
+    sessions_dir: Optional[Path | str] = None,
+) -> list[HistoryEntry]:
+    """Search Pi coding agent sessions (~/.pi/agent/sessions/--<cwd>--/*.jsonl).
+
+    Pi groups sessions by working directory using an encoded directory name
+    (leading separator removed; `/`, `\\`, and `:` replaced with `-`), then
+    wraps that key in `--`, e.g. `/Users/me/proj` -> `--Users-me-proj--`.
+    """
+    results: list[HistoryEntry] = []
+    if sessions_dir is not None:
+        base_dir = Path(sessions_dir)
+    else:
+        env_dir = os.environ.get("PI_CODING_AGENT_SESSION_DIR", "").strip()
+        base_dir = Path(env_dir) if env_dir else Path.home() / ".pi" / "agent" / "sessions"
+    if not base_dir.is_dir():
+        return results
+
+    cwd_path = cwd or os.getcwd()
+    cwd_project_key = (
+        cwd_path.lstrip("/\\").replace("/", "-").replace("\\", "-").replace(":", "-")
+    )
+    cwd_base = Path(cwd_path).name
+
+    try:
+        proj_entries = [e for e in os.scandir(base_dir) if e.is_dir() and not e.name.startswith('.')]
+    except Exception:
+        return results
+
+    if not proj_entries:
+        return results
+
+    def safe_mtime(entry: os.DirEntry) -> float:
+        try:
+            return entry.stat().st_mtime
+        except Exception:
+            return 0.0
+
+    cwd_matches: list[os.DirEntry] = []
+    other_entries: list[os.DirEntry] = []
+
+    for pe in proj_entries:
+        if (cwd_project_key and cwd_project_key in pe.name) or (cwd_base and cwd_base in pe.name):
+            cwd_matches.append(pe)
+        else:
+            other_entries.append(pe)
+
+    sorted_projects = sorted(cwd_matches, key=safe_mtime, reverse=True) + sorted(
+        other_entries, key=safe_mtime, reverse=True
+    )
+
+    query_lower = query.lower() if query else ""
+
+    candidate_files: list[Path] = []
+    for pe in sorted_projects[:10]:
+        try:
+            for fe in os.scandir(pe.path):
+                if fe.is_file() and fe.name.endswith(".jsonl"):
+                    candidate_files.append(Path(fe.path))
+        except Exception:
+            continue
+
+    def file_mtime(p: Path) -> float:
+        try:
+            return p.stat().st_mtime
+        except Exception:
+            return 0.0
+
+    candidate_files.sort(key=file_mtime, reverse=True)
+
+    for file_path in candidate_files:
+        if len(results) >= limit:
+            break
+        proj_name = file_path.parent.name
+        session_cwd = ""
+        file_hits = 0
+
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except Exception:
+                        continue
+                    if not isinstance(obj, dict):
+                        continue
+
+                    entry_type = obj.get("type")
+                    if entry_type == "session":
+                        session_cwd = str(obj.get("cwd") or session_cwd)
+                        continue
+                    if entry_type == "custom_message":
+                        msg = {"role": "custom", "content": obj.get("content")}
+                    elif entry_type == "message":
+                        msg = obj.get("message", {})
+                    else:
+                        continue
+                    if not isinstance(msg, dict):
+                        continue
+
+                    role = msg.get("role", "")
+                    # System prompts and tool results/payloads are never sampled.
+                    is_user = role == "user"
+                    if role not in ("user", "assistant"):
+                        continue
+
+                    content = _extract_claude_content(msg.get("content"))
+                    if not content:
+                        continue
+
+                    # If query is empty, restrict to user prompts only.
+                    if not query_lower and not is_user:
+                        continue
+
+                    if query_lower and query_lower not in content.lower():
+                        continue
+
+                    snippet = _clean_snippet(content, max_chars=max_chars)
+                    if not snippet:
+                        continue
+
+                    ts = str(obj.get("timestamp") or "")[:16]
+                    metadata: dict[str, Any] = {
+                        "file": file_path.name,
+                        "path": str(file_path),
+                        "is_user": is_user,
+                    }
+                    if session_cwd:
+                        metadata["session_cwd"] = session_cwd
+                    model = msg.get("model")
+                    if model:
+                        metadata["model"] = model
+                    results.append(
+                        HistoryEntry(
+                            source="pi",
+                            timestamp=ts,
+                            label=session_cwd or proj_name,
+                            snippet=snippet,
+                            metadata=metadata,
                         )
                     )
                     file_hits += 1
@@ -1023,7 +1182,7 @@ def search_cursor(
     return results[:limit]
 
 
-ALL_SOURCES = ("claude", "codex", "hermes", "agy", "cursor")
+ALL_SOURCES = ("claude", "codex", "hermes", "agy", "cursor", "pi")
 
 
 def search_history(
@@ -1084,6 +1243,14 @@ def search_history(
             chats_dir=kwargs.get("cursor_chats_dir"),
             projects_dir=kwargs.get("cursor_projects_dir"),
         )
+    if "pi" in selected_sources:
+        results["pi"] = search_pi(
+            query=query,
+            cwd=cwd,
+            limit=limit,
+            max_chars=max_chars,
+            sessions_dir=kwargs.get("pi_sessions_dir"),
+        )
 
     return results
 
@@ -1094,6 +1261,7 @@ SOURCE_EMOJIS = {
     "hermes": "⚡ Hermes",
     "agy": "🌐 agy CLI",
     "cursor": "🖥️  Cursor",
+    "pi": "🧭 Pi",
 }
 
 
@@ -1132,7 +1300,7 @@ def format_results(
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Sparse conversation history search across Claude, Codex, Hermes, agy, and Cursor."
+        description="Sparse conversation history search across Claude, Codex, Hermes, agy, Cursor, and Pi."
     )
     parser.add_argument("query", nargs="?", default=os.environ.get("HIST_QUERY", ""), help="Search query string")
     parser.add_argument("-q", "--query-flag", dest="explicit_query", default="", help="Explicit query flag")

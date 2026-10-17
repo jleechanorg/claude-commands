@@ -133,7 +133,7 @@ pointers and are intentionally not the documentation target.
 | `/redgreen` (`/rg`) | [`redgreen`](.claude/skills/redgreen/SKILL.md) | Use to repair one known defect test-first. Provide the current symptom; it requires a fresh failing reproduction, a minimal fix, a passing rerun, and evidence that the full RED → CODE → GREEN flow actually happened. |
 | `/parallel` | [`parallelize-to-ceiling`](.claude/skills/parallelize-to-ceiling/SKILL.md) | Use whenever work has independent files, tests, rows, jobs, or agent lanes. List the work and constraints; it identifies the real CPU, I/O, network, or shared-state limit and proposes safe shards instead of an arbitrary worker count. |
 | `/superpowers-quick` | [`superpowers-quick`](.claude/skills/superpowers-quick/SKILL.md) | Use when you want the normal Superpowers design process to select its recommended defaults autonomously. Give it the idea or requested change; it writes a self-reviewed design specification and implementation plan without pausing for preference or approval questions. |
-| `/history` | [`conversation-history-sparse`](.claude/skills/conversation-history-sparse/SKILL.md) | Use for fast orientation on what the current repo or branch has been doing. Ask a focused question; it samples high-signal Claude, Codex, and Hermes history without loading full transcripts; add `--deep` only when the sparse pass is insufficient. |
+| `/history` | [`conversation-history-sparse`](.claude/skills/conversation-history-sparse/SKILL.md) | Use for fast orientation on what the current repo or branch has been doing. Ask a focused question; it samples high-signal Claude, Codex, Hermes, agy, Cursor, and Pi history without loading full transcripts; add `--deep` only when the sparse pass is insufficient. |
 | `/sidekick` | [`sidekick`](.claude/skills/sidekick/SKILL.md) | Use for one long-running mission that must survive a session crash. Give a named outcome and success criteria; it assigns a persistent teammate and checkpoints durable state plus a resumption Bead. |
 | `/swarm` | [`swarm`](.claude/skills/swarm/SKILL.md) | Use when a goal decomposes into independent, adversarially reviewable lanes. State the goal and optional shape/engine; it sizes the fan-out, assigns explicit models and disjoint outputs, and requires multi-lens verification before synthesis. |
 
@@ -279,7 +279,7 @@ A `jleechanorg`-authored, opt-in autonomous wrapper around [Superpowers](https:/
 
 ### [`conversation-history-sparse`](.claude/skills/conversation-history-sparse/SKILL.md) — `/history`
 
-Sparse, budget-capped search across the 3 canonical history stores (Claude Code JSONL, Codex SQLite threads, Hermes FTS5) with hard sampling limits — never `cat`s a full file. `--deep` escalates to the seven-source, larger-budget `history-search` pass when sparse results are not enough.
+Sparse, budget-capped search across the canonical history stores (Claude Code JSONL, Codex SQLite threads, Hermes FTS5, agy CLI summaries, Cursor prompts/transcripts, and Pi coding-agent JSONL) with hard sampling limits — never `cat`s a full file. `--deep` escalates to the larger-budget `history-search` pass when sparse results are not enough.
 
 ```bash
 /history "why did the worktree cleanup script get deleted"
