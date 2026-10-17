@@ -53,7 +53,8 @@ class TestDotPortfolioCoordinatorAuthorityBudget(unittest.TestCase):
             }
 
         res = self.authority.resolve_authorization(envelope, fetch_fn=mock_fetch)
-        self.assertEqual(res["decision"], "authorized_in_scope")
+        self.assertEqual(res["decision"], "source_verified")
+        self.assertTrue(res["source_verified"])
         self.assertEqual(res["verified_principal"], "verified-local-principal")
 
     def test_authority_github_comment_modified_digest_mismatch(self):

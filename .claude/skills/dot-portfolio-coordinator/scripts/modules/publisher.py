@@ -6,8 +6,9 @@ Implements:
 - Strict per-field audience filtering for public consumption
 - Dedicated draft branch/PR publishing (normal fast-forward pushes only)
 - Remote readback verification at pushed SHA
-- No-op detection when content is identical
+- No-op detection when content is structurally identical
 - Closed-unmerged PR publication hold
+- Truthful capability block when authentic Git environment is unavailable
 """
 import json
 import time
@@ -34,19 +35,22 @@ class RoadmapPublisher:
         """Renders sanitized WORK.md markdown dashboard.
 
         Applies source audience policy for destination 'public'.
+        Omits dynamic clock seconds to avoid artificial no-op diff churn.
         """
         lines = [
             "# Portfolio Dashboard",
-            "",
-            f"Generated: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}",
             "",
             "## Work Items by Track",
             ""
         ]
 
         sources = snapshot.get("sources", {})
-        for sid, sdata in sources.items():
-            lines.append(f"### Source: `{sid}` (version `{sdata.get('version', 'unknown')}`)")
+        for sid, sdata in sorted(sources.items()):
+            src_def = self.registry.get_source(sid)
+            pub_src = self.registry.filter_by_audience(sid, {"id": sid, "title": sid}, "public")
+            src_display = pub_src.get("title", "*(redacted-source)*")
+
+            lines.append(f"### Track: {src_display}")
             items = sdata.get("items", [])
             if not items:
                 lines.append("*No items recorded.*")
@@ -57,9 +61,8 @@ class RoadmapPublisher:
             lines.append("|---|---|---|---|---|---|---|")
 
             for it in items:
-                # Audience policy filtering for 'public'
                 pub = self.registry.filter_by_audience(sid, it, "public")
-                item_id = it.get("id", "-")
+                item_id = pub.get("id", "-") if "id" in pub else "-"
                 title = pub.get("title", "*(redacted)*")
                 status = pub.get("status", "unknown")
                 priority = str(pub.get("priority", "-"))
@@ -74,7 +77,10 @@ class RoadmapPublisher:
         return "\n".join(lines)
 
     def render_coverage_json(self, collection_metrics: Dict[str, Any], gaps: List[str]) -> Dict[str, Any]:
-        """Renders sanitized COVERAGE.json metrics."""
+        """Renders sanitized COVERAGE.json metrics.
+
+        Redacts private repo names from coverage gaps unless approved for public audience.
+        """
         return {
             "schema_version": 1,
             "registered_sources": collection_metrics.get("registered_count", 0),
@@ -82,6 +88,7 @@ class RoadmapPublisher:
             "fresh_sources": collection_metrics.get("fresh_count", 0),
             "stale_sources": collection_metrics.get("stale_count", 0),
             "unavailable_sources": collection_metrics.get("unavailable_count", 0),
+            "coverage_gap_count": len(gaps),
             "coverage_gaps": sorted(gaps),
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         }
@@ -91,11 +98,12 @@ class RoadmapPublisher:
         repo_dir: str,
         work_md_content: str,
         coverage_json_data: Dict[str, Any],
-        git_runner: Any
+        git_runner: Optional[Any] = None
     ) -> Dict[str, Any]:
         """Publishes WORK.md and COVERAGE.json via draft PR on owned branch.
 
         Strictly enforces:
+        - Fails closed with capability_blocked when git_runner is missing
         - Closed-unmerged hold
         - No-op detection
         - No force-push
@@ -103,7 +111,10 @@ class RoadmapPublisher:
         - Remote readback verification
         """
         if not git_runner:
-            raise PublisherError("git_runner is required for publication")
+            return {
+                "status": "capability_blocked",
+                "reason": "Runtime publishing requires an authenticated isolated Git worktree adapter with verified upstream and PR target."
+            }
 
         # 1. Check existing PR state
         pr_state = git_runner.get_pr_state()

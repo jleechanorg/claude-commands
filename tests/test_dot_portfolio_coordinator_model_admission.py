@@ -93,8 +93,10 @@ class TestDotPortfolioCoordinatorModelAdmission(unittest.TestCase):
         self.assertFalse(res["admitted"])
         self.assertEqual(res["reason"], "capability_blocked")
 
-    def test_admission_passes_when_all_isolation_guarantees_met(self):
-        env_isolated = {
+    def test_admission_always_blocked_without_trusted_isolation_adapter(self):
+        # Even if caller supplies sandbox_enforced=True, admission MUST return capability_blocked
+        # because unverified caller booleans cannot establish actual isolation
+        env_claiming_isolated = {
             "sandbox_enforced": True,
             "host_mounts": [],
             "network_egress_allowlist_enforced": True,
@@ -102,9 +104,10 @@ class TestDotPortfolioCoordinatorModelAdmission(unittest.TestCase):
             "tool_inventory": ["read_only_snapshot"],
             "write_credentials_excluded": True
         }
-        res = self.admission.admit_model_transport(env_isolated)
-        self.assertTrue(res["admitted"])
-        self.assertIsNone(res["reason"])
+        res = self.admission.admit_model_transport(env_claiming_isolated)
+        self.assertFalse(res["admitted"])
+        self.assertEqual(res["reason"], "capability_blocked")
+        self.assertIn("isolation adapter", res["details"].lower())
 
     def test_minimized_snapshot_filters_prohibited_fields(self):
         minimized = self.admission.prepare_minimized_snapshot(self.sample_snapshot)

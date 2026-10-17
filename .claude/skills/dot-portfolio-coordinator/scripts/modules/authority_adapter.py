@@ -104,7 +104,8 @@ class AuthorityAdapter:
             }
 
         return {
-            "decision": "authorized_in_scope",
+            "decision": "source_verified",
+            "source_verified": True,
             "verified_principal": principal_id,
             "repository": repo,
             "comment_id": comment_id,
