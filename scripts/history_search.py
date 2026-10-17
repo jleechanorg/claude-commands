@@ -289,7 +289,7 @@ def search_pi(
     if not base_dir.is_dir():
         return results
 
-    cwd_path = cwd or os.getcwd()
+    cwd_path = os.path.normpath(cwd or os.getcwd())
     cwd_project_key = (
         cwd_path.lstrip("/\\").replace("/", "-").replace("\\", "-").replace(":", "-")
     )
@@ -351,6 +351,7 @@ def search_pi(
     requested_cwd = os.path.normpath(cwd_path) if cwd_path else ""
 
     def recorded_cwd_matches(path: Path) -> bool:
+        """Whether a session file's recorded header cwd equals the requested cwd."""
         session_cwd = _session_header_cwd(path)
         return bool(session_cwd and requested_cwd and os.path.normpath(session_cwd) == requested_cwd)
 
@@ -388,6 +389,7 @@ def search_pi(
         flat_files = []
 
     def _flat_priority(path: Path) -> tuple[int, float]:
+        """Sort key: recorded-cwd match first, then newest mtime."""
         # A flat session whose recorded cwd matches the request outranks an
         # unrelated (newer) flat session in the same shared directory. Compare
         # normalized real paths, not the lossy encoded group name, so

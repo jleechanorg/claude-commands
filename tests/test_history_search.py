@@ -658,6 +658,21 @@ class TestHistorySearch(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].metadata.get("session_cwd"), "/work/a-b")
 
+    def test_search_pi_normalizes_trailing_slash_cwd(self) -> None:
+        sessions_base = self.temp_dir / "pi_slash"
+        proj_dir = sessions_base / "--Users-test-myproject--"
+        proj_dir.mkdir(parents=True)
+        (proj_dir / "s.jsonl").write_text(
+            json.dumps({"type": "session", "cwd": "/Users/test/myproject"}) + "\n"
+            + json.dumps({"type": "message", "timestamp": "2026-10-17T13:03:00.000Z",
+                          "message": {"role": "user", "content": [{"type": "text", "text": "slash-needle"}]}}) + "\n",
+            encoding="utf-8",
+        )
+        # A trailing slash must normalize to the real group name.
+        results = search_pi(query="slash-needle", cwd="/Users/test/myproject/", sessions_dir=sessions_base)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].metadata.get("session_cwd"), "/Users/test/myproject")
+
     def test_search_pi_grouped_dir_distinguishes_encoded_cwd_collision(self) -> None:
         import os as _os
 
@@ -712,6 +727,10 @@ class TestHistorySearch(unittest.TestCase):
         corrupt_db = self.temp_dir / "corrupt.db"
         corrupt_db.write_bytes(b"NOT_A_SQLITE_DATABASE_HEADER")
 
+        corrupt_pi = self.temp_dir / "corrupt_pi"
+        corrupt_pi.mkdir()
+        (corrupt_pi / "bad.jsonl").write_text("NOT_JSON_DATA_AT_ALL\n", encoding="utf-8")
+
         # Ensure no exception is raised
         corrupt_results = search_history(
             query="test",
@@ -720,9 +739,10 @@ class TestHistorySearch(unittest.TestCase):
             hermes_db_path=corrupt_db,
             agy_db_path=corrupt_db,
             cursor_prompt_history_path=corrupt_prompt,
-            pi_sessions_dir=self.temp_dir / "corrupt_pi",
+            pi_sessions_dir=corrupt_pi,
         )
         self.assertIsInstance(corrupt_results, dict)
+        self.assertEqual(corrupt_results["pi"], [])
 
     def test_ansify_and_formatting(self) -> None:
         colored = ansify("agy", "2026-08-01 | Test Title | my match snippet", query="match", use_color=True)
