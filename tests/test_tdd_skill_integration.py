@@ -79,7 +79,7 @@ class TddSkillIntegrationTest(unittest.TestCase):
                 self.assertIn(target.resolve(), reached)
             for target in reached:
                 self.assertTrue(target.is_file(), target)
-                self.assertTrue(target.is_relative_to(installed), target)
+                self.assertTrue(target.is_relative_to(installed.resolve()), target)
             for relative in RESOURCES:
                 self.assertEqual((SKILLS/'tdd'/relative).read_bytes(),
                                  (installed/'skills/tdd'/relative).read_bytes())
