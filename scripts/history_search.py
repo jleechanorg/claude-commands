@@ -273,9 +273,6 @@ def search_pi(
     except Exception:
         return results
 
-    if not proj_entries:
-        return results
-
     def safe_mtime(entry: os.DirEntry) -> float:
         try:
             return entry.stat().st_mtime
@@ -291,20 +288,10 @@ def search_pi(
         else:
             other_entries.append(pe)
 
-    sorted_projects = sorted(cwd_matches, key=safe_mtime, reverse=True) + sorted(
-        other_entries, key=safe_mtime, reverse=True
-    )
+    cwd_matches.sort(key=safe_mtime, reverse=True)
+    other_entries.sort(key=safe_mtime, reverse=True)
 
     query_lower = query.lower() if query else ""
-
-    candidate_files: list[Path] = []
-    for pe in sorted_projects[:10]:
-        try:
-            for fe in os.scandir(pe.path):
-                if fe.is_file() and fe.name.endswith(".jsonl"):
-                    candidate_files.append(Path(fe.path))
-        except Exception:
-            continue
 
     def file_mtime(p: Path) -> float:
         try:
@@ -312,7 +299,39 @@ def search_pi(
         except Exception:
             return 0.0
 
-    candidate_files.sort(key=file_mtime, reverse=True)
+    def collect_project_files(entries: list[os.DirEntry], budget: int) -> list[Path]:
+        """Files for each project directory, newest-first, keeping cwd priority."""
+        files: list[Path] = []
+        for pe in entries[:budget]:
+            proj_files: list[Path] = []
+            try:
+                for fe in os.scandir(pe.path):
+                    if fe.is_file() and fe.name.endswith(".jsonl"):
+                        proj_files.append(Path(fe.path))
+            except Exception:
+                continue
+            proj_files.sort(key=file_mtime, reverse=True)
+            files.extend(proj_files)
+        return files
+
+    # Flat JSONL files directly under the session root (explicit session-dir override).
+    flat_files: list[Path] = []
+    try:
+        for fe in os.scandir(base_dir):
+            if fe.is_file() and fe.name.endswith(".jsonl"):
+                flat_files.append(Path(fe.path))
+    except Exception:
+        flat_files = []
+    flat_files.sort(key=file_mtime, reverse=True)
+
+    # Preserve cwd priority: requested-project files first, then flat files, then
+    # other projects. A global mtime sort here would let a newer unrelated
+    # project displace the requested project's results.
+    candidate_files: list[Path] = (
+        collect_project_files(cwd_matches, 10)
+        + flat_files
+        + collect_project_files(other_entries, 10)
+    )
 
     for file_path in candidate_files:
         if len(results) >= limit:

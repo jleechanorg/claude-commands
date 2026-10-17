@@ -511,7 +511,7 @@ print(ansify("cursor", "source coverage: " + json.dumps(coverage, sort_keys=True
 Pi stores sessions under `~/.pi/agent/sessions/`, grouped by working directory.
 Each group directory encodes the cwd by removing the leading separator and
 replacing `/`, `\`, and `:` with `-`, wrapped in `--`
-(`/Users/me/proj` -> `--Users-me-proj--`). Override the root with
+(`/path/to/project` -> `--path-to-project--`). Override the root with
 `PI_CODING_AGENT_SESSION_DIR` or the helper's `--source pi` default. Sessions
 are read-only JSONL; never dump full transcript lines, and never sample system
 prompts, thinking blocks, or tool-result payloads. Wrap every result line with
@@ -575,7 +575,7 @@ Branch/PR:
                                   "scaffold" highlighted yellow
 
 🧭 Pi (N matches)                ← head() — bold white
-  [Pi] 2026-10-17 | /Users/me/proj | Add pi history to the sparse search
+  [Pi] 2026-10-17 | /path/to/project | Add pi history to the sparse search
                                   ↑ bright-magenta label
                                   "Pi" highlighted yellow
 

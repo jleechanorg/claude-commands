@@ -541,6 +541,48 @@ class TestHistorySearch(unittest.TestCase):
         empty.mkdir()
         self.assertEqual(search_pi(query="x", sessions_dir=empty), [])
 
+    def test_search_pi_keeps_cwd_priority_over_newer_unrelated_project(self) -> None:
+        import os as _os
+
+        base = self.temp_dir / "pi_priority"
+        requested = base / "--Users-test-myproject--"
+        unrelated = base / "--Users-test-unrelated--"
+        requested.mkdir(parents=True)
+        unrelated.mkdir(parents=True)
+
+        def write_session(path: Path, cwd: str, text: str, mtime: float) -> None:
+            path.write_text(
+                json.dumps({"type": "session", "cwd": cwd}) + "\n"
+                + json.dumps({"type": "message", "timestamp": "2026-10-17T13:03:00.000Z",
+                              "message": {"role": "user", "content": [{"type": "text", "text": text}]}}) + "\n",
+                encoding="utf-8",
+            )
+            _os.utime(path, (mtime, mtime))
+
+        # The unrelated project is newer, but the requested cwd must still win.
+        write_session(requested / "requested.jsonl", "/Users/test/myproject", "cwd-priority-needle", 1000.0)
+        write_session(unrelated / "unrelated.jsonl", "/Users/test/unrelated", "cwd-priority-needle", 9000.0)
+
+        results = search_pi(
+            query="cwd-priority-needle", cwd="/Users/test/myproject", limit=1, sessions_dir=base
+        )
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].metadata.get("session_cwd"), "/Users/test/myproject")
+
+    def test_search_pi_reads_flat_jsonl_session_directories(self) -> None:
+        flat = self.temp_dir / "pi_flat"
+        flat.mkdir()
+        (flat / "2026-10-17T13-01-31-742Z_flat.jsonl").write_text(
+            json.dumps({"type": "session", "cwd": "/Users/test/myproject"}) + "\n"
+            + json.dumps({"type": "message", "timestamp": "2026-10-17T13:03:00.000Z",
+                          "message": {"role": "user", "content": [{"type": "text", "text": "flat session dir needle"}]}}) + "\n",
+            encoding="utf-8",
+        )
+        results = search_pi(query="flat session dir", sessions_dir=flat)
+        self.assertEqual(len(results), 1)
+        self.assertIn("flat session dir needle", results[0].snippet)
+        self.assertEqual(results[0].label, "/Users/test/myproject")
+
     def test_graceful_handling_absent_databases_and_corrupt_files(self) -> None:
         # Nonexistent paths across all sources
         results = search_history(
