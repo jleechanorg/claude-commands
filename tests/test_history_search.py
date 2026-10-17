@@ -659,17 +659,28 @@ class TestHistorySearch(unittest.TestCase):
         self.assertEqual(results[0].metadata.get("session_cwd"), "/work/a-b")
 
     def test_search_pi_normalizes_trailing_slash_cwd(self) -> None:
+        import os as _os
+
         sessions_base = self.temp_dir / "pi_slash"
         proj_dir = sessions_base / "--Users-test-myproject--"
+        unrelated = sessions_base / "--Users-test-other--"
         proj_dir.mkdir(parents=True)
-        (proj_dir / "s.jsonl").write_text(
-            json.dumps({"type": "session", "cwd": "/Users/test/myproject"}) + "\n"
-            + json.dumps({"type": "message", "timestamp": "2026-10-17T13:03:00.000Z",
-                          "message": {"role": "user", "content": [{"type": "text", "text": "slash-needle"}]}}) + "\n",
-            encoding="utf-8",
-        )
-        # A trailing slash must normalize to the real group name.
-        results = search_pi(query="slash-needle", cwd="/Users/test/myproject/", sessions_dir=sessions_base)
+        unrelated.mkdir(parents=True)
+
+        def write(path: Path, cwd: str, mtime: float) -> None:
+            path.write_text(
+                json.dumps({"type": "session", "cwd": cwd}) + "\n"
+                + json.dumps({"type": "message", "timestamp": "2026-10-17T13:03:00.000Z",
+                              "message": {"role": "user", "content": [{"type": "text", "text": "slash-needle"}]}}) + "\n",
+                encoding="utf-8",
+            )
+            _os.utime(path, (mtime, mtime))
+
+        write(proj_dir / "s.jsonl", "/Users/test/myproject", 1000.0)
+        write(unrelated / "u.jsonl", "/Users/test/other", 9000.0)
+
+        # A trailing slash must normalize to the real group name and keep priority.
+        results = search_pi(query="slash-needle", cwd="/Users/test/myproject/", limit=1, sessions_dir=sessions_base)
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].metadata.get("session_cwd"), "/Users/test/myproject")
 
