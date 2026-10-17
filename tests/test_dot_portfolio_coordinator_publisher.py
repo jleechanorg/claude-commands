@@ -46,9 +46,16 @@ class TestDotPortfolioCoordinatorPublisher(unittest.TestCase):
         self.assertIn("# Portfolio Dashboard", work_md)
         self.assertIn("Roadmap Goal A", work_md)
         self.assertIn("alice", work_md)
-        # Audience policy: notes and principal_id are internal, must NOT appear in public WORK.md
+        # Audience policy: notes, principal_id, and id are not in public audience policy
         self.assertNotIn("Secret internal design notes", work_md)
         self.assertNotIn("admin-99", work_md)
+        self.assertNotIn("bd-1", work_md)
+        self.assertIn("*(redacted)*", work_md)
+
+        # Stable rendering: no volatile timestamps
+        self.assertNotIn("Generated:", work_md)
+        work_md_second = self.publisher.render_work_md(self.sample_snapshot)
+        self.assertEqual(work_md, work_md_second)
 
     def test_render_coverage_json(self):
         metrics = {
@@ -62,8 +69,14 @@ class TestDotPortfolioCoordinatorPublisher(unittest.TestCase):
         coverage = self.publisher.render_coverage_json(metrics, gaps)
         self.assertEqual(coverage["registered_sources"], 3)
         self.assertEqual(coverage["fresh_sources"], 2)
-        self.assertEqual(coverage["coverage_gaps"], ["example-org/unregistered-secret-repo"])
-        self.assertIn("generated_at", coverage)
+        # Verify coverage gaps do NOT leak private repo names
+        self.assertNotIn("example-org/unregistered-secret-repo", str(coverage))
+        self.assertEqual(coverage["coverage_gap_count"], 1)
+        self.assertEqual(coverage["coverage_gaps"], ["gap-1"])
+        # Stable rendering: no volatile generated_at timestamp
+        self.assertNotIn("generated_at", coverage)
+        coverage_second = self.publisher.render_coverage_json(metrics, gaps)
+        self.assertEqual(coverage, coverage_second)
 
     def test_publish_no_op_detection(self):
         mock_git = MagicMock()

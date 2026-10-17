@@ -115,6 +115,16 @@ def cmd_resolve_notification(args: argparse.Namespace, registry: SourceRegistry)
         sys.exit(1)
 
 
+def cmd_publish(args: argparse.Namespace, registry: SourceRegistry) -> None:
+    res = {
+        "status": "rejected",
+        "reason": "capability_blocked",
+        "details": "Live Git branch/PR publishing is capability_blocked pending genuine git credentials, branch management, and remote readback integration."
+    }
+    print(json.dumps(res, indent=2))
+    sys.exit(1)
+
+
 def cmd_collect(args: argparse.Namespace, registry: SourceRegistry) -> None:
     collector = PortfolioCollector(registry)
     result = collector.collect_all()
@@ -357,6 +367,9 @@ def main() -> None:
     p_obs.add_argument("--grant-sha256", help="Pinned SHA256 of grant file")
     p_obs.add_argument("--account", default="default", help="Account identifier")
 
+    # publish
+    p_pub = subparsers.add_parser("publish", parents=[common_parser], help="Publish portfolio snapshot PR (capability_blocked)")
+
     args = parser.parse_args()
 
     sources_path = getattr(args, "sources", str(SCRIPT_DIR.parent / "references" / "sources.json"))
@@ -375,6 +388,8 @@ def main() -> None:
         cmd_collect(args, registry)
     elif args.command == "observe":
         cmd_observe(args, registry)
+    elif args.command == "publish":
+        cmd_publish(args, registry)
     else:
         parser.print_help()
         sys.exit(1)

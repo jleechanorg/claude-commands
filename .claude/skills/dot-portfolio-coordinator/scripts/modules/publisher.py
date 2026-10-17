@@ -33,20 +33,31 @@ class RoadmapPublisher:
     def render_work_md(self, snapshot: Dict[str, Any], proposal: Optional[Dict[str, Any]] = None) -> str:
         """Renders sanitized WORK.md markdown dashboard.
 
-        Applies source audience policy for destination 'public'.
+        Applies source audience policy for destination 'public'. Stable rendering without volatile timestamps.
         """
         lines = [
             "# Portfolio Dashboard",
-            "",
-            f"Generated: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}",
             "",
             "## Work Items by Track",
             ""
         ]
 
         sources = snapshot.get("sources", {})
-        for sid, sdata in sources.items():
-            lines.append(f"### Source: `{sid}` (version `{sdata.get('version', 'unknown')}`)")
+        for sid in sorted(sources.keys()):
+            sdata = sources[sid]
+            src_def = self.registry.get_source(sid)
+            if not src_def:
+                continue
+
+            pub_meta = self.registry.filter_by_audience(
+                sid,
+                {"id": sid, "version": sdata.get("version", "unknown")},
+                "public"
+            )
+            display_sid = pub_meta.get("id", "*(redacted)*")
+            display_ver = pub_meta.get("version", "*(redacted)*")
+
+            lines.append(f"### Source: `{display_sid}` (version `{display_ver}`)")
             items = sdata.get("items", [])
             if not items:
                 lines.append("*No items recorded.*")
@@ -59,7 +70,7 @@ class RoadmapPublisher:
             for it in items:
                 # Audience policy filtering for 'public'
                 pub = self.registry.filter_by_audience(sid, it, "public")
-                item_id = it.get("id", "-")
+                item_id = pub.get("id", "*(redacted)*")
                 title = pub.get("title", "*(redacted)*")
                 status = pub.get("status", "unknown")
                 priority = str(pub.get("priority", "-"))
@@ -74,7 +85,8 @@ class RoadmapPublisher:
         return "\n".join(lines)
 
     def render_coverage_json(self, collection_metrics: Dict[str, Any], gaps: List[str]) -> Dict[str, Any]:
-        """Renders sanitized COVERAGE.json metrics."""
+        """Renders sanitized COVERAGE.json metrics without volatile timestamps or private gap names."""
+        sanitized_gaps = [f"gap-{i+1}" for i in range(len(gaps))]
         return {
             "schema_version": 1,
             "registered_sources": collection_metrics.get("registered_count", 0),
@@ -82,8 +94,8 @@ class RoadmapPublisher:
             "fresh_sources": collection_metrics.get("fresh_count", 0),
             "stale_sources": collection_metrics.get("stale_count", 0),
             "unavailable_sources": collection_metrics.get("unavailable_count", 0),
-            "coverage_gaps": sorted(gaps),
-            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            "coverage_gap_count": len(gaps),
+            "coverage_gaps": sanitized_gaps
         }
 
     def publish_snapshot(
