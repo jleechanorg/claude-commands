@@ -374,12 +374,14 @@ def search_pi(
 
     def _flat_priority(path: Path) -> tuple[int, float]:
         # A flat session whose recorded cwd matches the request outranks an
-        # unrelated (newer) flat session in the same shared directory.
+        # unrelated (newer) flat session in the same shared directory. Compare
+        # normalized real paths, not the lossy encoded group name, so
+        # `/work/a-b` and `/work/a/b` do not collide.
         session_cwd = _flat_session_cwd(path)
-        encoded = (
-            session_cwd.lstrip("/\\").replace("/", "-").replace("\\", "-").replace(":", "-")
-        )
-        matched = 0 if (expected_project_dir and f"--{encoded}--" == expected_project_dir) else 1
+        requested = os.path.normpath(cwd_path) if cwd_path else ""
+        matched = 1
+        if session_cwd and requested and os.path.normpath(session_cwd) == requested:
+            matched = 0
         return (matched, -file_mtime(path))
 
     flat_files.sort(key=_flat_priority)

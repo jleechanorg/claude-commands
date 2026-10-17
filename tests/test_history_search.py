@@ -634,6 +634,30 @@ class TestHistorySearch(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].metadata.get("session_cwd"), "/work/target")
 
+    def test_search_pi_flat_dir_distinguishes_encoded_cwd_collision(self) -> None:
+        import os as _os
+
+        flat = self.temp_dir / "pi_flat_collision"
+        flat.mkdir()
+
+        def write(path: Path, cwd: str, mtime: float) -> None:
+            path.write_text(
+                json.dumps({"type": "session", "cwd": cwd}) + "\n"
+                + json.dumps({"type": "message", "timestamp": "2026-10-17T13:03:00.000Z",
+                              "message": {"role": "user", "content": [{"type": "text", "text": "collision-needle"}]}}) + "\n",
+                encoding="utf-8",
+            )
+            _os.utime(path, (mtime, mtime))
+
+        # `/work/a-b` and `/work/a/b` encode identically; the real recorded path
+        # must disambiguate them.
+        write(flat / "dash.jsonl", "/work/a-b", 1000.0)
+        write(flat / "slash.jsonl", "/work/a/b", 9000.0)
+
+        results = search_pi(query="collision-needle", cwd="/work/a-b", limit=1, sessions_dir=flat)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].metadata.get("session_cwd"), "/work/a-b")
+
     def test_graceful_handling_absent_databases_and_corrupt_files(self) -> None:
         # Nonexistent paths across all sources
         results = search_history(
