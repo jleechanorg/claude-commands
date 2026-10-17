@@ -688,6 +688,98 @@ class MdFilesBootstrapRegressionTests(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+def _git(cwd: str, *args: str) -> str:
+    """Run git in ``cwd`` and return stdout, failing loudly on error."""
+    return subprocess.run(
+        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True
+    ).stdout
+
+
+def _count_production_delta(repo: str, rev_range: str) -> tuple[int, int]:
+    """Count (added, added+deleted) production lines for an explicit git range.
+
+    Production classification here is deliberately simple and deterministic:
+    ``*.py`` files count as production; anything else is non-production.
+    """
+    added = deleted = 0
+    for record in _git(repo, "diff", "--numstat", rev_range).splitlines():
+        parts = record.split("\t")
+        if len(parts) != 3:
+            continue
+        a, d, path = parts
+        if path.endswith(".py"):
+            added += int(a)
+            deleted += int(d)
+    return added, added + deleted
+
+
+class DivergentBaseRangeTests(unittest.TestCase):
+    """The 150-line counters must use merge-base(base, head)..head, not two-dot.
+
+    A base-only commit that deletes lines makes two-dot re-count the surviving
+    ancestor lines as additions. That can push a 150-added-line PR over the
+    trigger even though the PR itself only added 150 lines. This synthetic
+    repository reproduces that divergence and checks both boundary cases.
+    """
+
+    def _write_named_lines(self, repo: str, name: str, count: int) -> None:
+        body = "".join(f"{name}_{i} = {i}\n" for i in range(count))
+        (Path(repo) / name).write_text(body)
+
+    def test_merge_base_counter_excludes_reversed_base_only_commits(self):
+        for added_lines, expected_trigger in ((150, False), (151, True)):
+            with self.subTest(added_lines=added_lines):
+                repo = tempfile.mkdtemp(prefix=f"md_divergent_{added_lines}_")
+                try:
+                    _git(repo, "init", "-b", "main")
+                    _git(repo, "config", "user.email", "test@example.invalid")
+                    _git(repo, "config", "user.name", "Test")
+
+                    # Common ancestor C0: 10 production lines.
+                    self._write_named_lines(repo, "shared.py", 10)
+                    _git(repo, "add", "-A")
+                    _git(repo, "commit", "-m", "common ancestor")
+
+                    # Head branches from C0 and adds exactly N production lines.
+                    _git(repo, "checkout", "-b", "head")
+                    self._write_named_lines(repo, "feature.py", added_lines)
+                    _git(repo, "add", "-A")
+                    _git(repo, "commit", "-m", f"head adds {added_lines}")
+
+                    # Base-only commit after divergence: delete 5 shared lines.
+                    # Two-dot base..head will re-count them as additions.
+                    _git(repo, "checkout", "main")
+                    self._write_named_lines(repo, "shared.py", 5)
+                    _git(repo, "add", "-A")
+                    _git(repo, "commit", "-m", "base-only deletes 5 lines")
+
+                    _git(repo, "checkout", "head")
+                    merge_base = _git(repo, "merge-base", "main", "head").strip()
+                    self.assertNotEqual(
+                        merge_base,
+                        _git(repo, "rev-parse", "main").strip(),
+                        "fixture must keep main ahead of the merge base",
+                    )
+
+                    three_added, three_churn = _count_production_delta(
+                        repo, f"{merge_base}..head"
+                    )
+                    two_added, two_churn = _count_production_delta(repo, "main..head")
+
+                    self.assertEqual(three_added, added_lines)
+                    self.assertEqual(three_churn, added_lines)
+                    self.assertEqual(two_added, added_lines + 5)
+                    self.assertEqual(two_churn, added_lines + 5)
+
+                    self.assertEqual(three_added > 150, expected_trigger)
+                    if added_lines == 150:
+                        # The defect being guarded: two-dot counts 155 and
+                        # would wrongly trigger; merge-base stays at 150.
+                        self.assertTrue(two_added > 150)
+                finally:
+                    shutil.rmtree(repo, ignore_errors=True)
+
+
 class BashBlockSelectorFailClosedTests(unittest.TestCase):
     """Marker selection must fail closed, never fall back to a position."""
 
@@ -726,6 +818,13 @@ class SharedPolicySemanticCanaryTests(unittest.TestCase):
         self.assertIn("Exactly 150 added production lines does not trigger this rule", self.collapsed)
         self.assertIn("151 does", self.collapsed)
         self.assertIn("+100 production and +100 test lines counts 100 production", self.collapsed)
+
+    def test_both_counters_use_merge_base_three_dot_range(self):
+        self.assertIn("merge-base(actual-base, head)..head", self.collapsed)
+        self.assertIn("three-dot `actual-base...head`", self.collapsed)
+        self.assertIn("A two-dot diff is not the counter", self.collapsed)
+        self.assertNotIn("actual-base..head", self.collapsed)
+        self.assertNotIn("complete actual-base..head PR diff", self.collapsed)
 
     def test_merge_churn_metric_is_distinct_from_added_lines(self):
         self.assertIn("added + deleted production lines", self.collapsed)
