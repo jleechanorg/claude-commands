@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -16,7 +17,13 @@ from scripts.beads_convergence.adapters import (
     SourceMember,
     SourceSnapshot,
 )
-from scripts.beads_convergence.inventory import InventoryError, build_manifest
+from scripts.beads_convergence.inventory import (
+    _MAX_REDIRECT_BYTES,
+    InventoryError,
+    _read_redirect,
+    build_manifest,
+    open_verified_tree,
+)
 from scripts.beads_convergence.models import BinaryBinding, Registry, RepositoryConfig
 from scripts.beads_convergence.registry import validate_registry
 
@@ -276,9 +283,17 @@ class InventoryTest(unittest.TestCase):
                 (beads / "redirect").write_text(
                     "/unattested/.beads\n", encoding="utf-8"
                 )
-                monitored = tuple(beads / name for name in payloads)
+                monitored = (
+                    *tuple(beads / name for name in payloads),
+                    beads / "redirect",
+                )
                 before = tuple(
-                    (path.stat().st_ino, path.stat().st_mtime_ns, path.read_bytes())
+                    (
+                        path.stat().st_dev,
+                        path.stat().st_ino,
+                        path.stat().st_mtime_ns,
+                        path.read_bytes(),
+                    )
                     for path in monitored
                 )
                 git_result = SimpleNamespace(
@@ -306,7 +321,12 @@ class InventoryTest(unittest.TestCase):
                 ):
                     manifest = build_manifest(repository, adapter)
                 after = tuple(
-                    (path.stat().st_ino, path.stat().st_mtime_ns, path.read_bytes())
+                    (
+                        path.stat().st_dev,
+                        path.stat().st_ino,
+                        path.stat().st_mtime_ns,
+                        path.read_bytes(),
+                    )
                     for path in monitored
                 )
             self.assertEqual(before, after)
@@ -319,6 +339,79 @@ class InventoryTest(unittest.TestCase):
             self.assertEqual(tuple(item.name for item in record.sources), tuple(sorted(payloads)))
             self.assertIsNotNone(record.redirect)
             self.assertEqual(record.redirect.bytes, "/unattested/.beads\n")
+
+    def test_oversized_redirect_with_valid_prefix_is_rejected_without_mutation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            beads = root / ".beads"
+            beads.mkdir()
+            payloads = {
+                "beads.db": b"SQLite format 3\x00" + b"\0" * 32,
+                "beads.db-wal": b"wal",
+                "beads.db-shm": b"shm",
+                "issues.jsonl": b"{}\n",
+            }
+            for name, content in payloads.items():
+                (beads / name).write_bytes(content)
+            redirect = beads / "redirect"
+            redirect.write_bytes(
+                b"/canonical/.beads\n"
+                + b"x" * (_MAX_REDIRECT_BYTES - len(b"/canonical/.beads\n") + 1)
+            )
+            monitored = (*tuple(beads / name for name in payloads), redirect)
+            before = tuple(
+                (
+                    path.stat().st_dev,
+                    path.stat().st_ino,
+                    path.stat().st_mtime_ns,
+                    path.read_bytes(),
+                )
+                for path in monitored
+            )
+            with (
+                open_verified_tree(beads) as handle,
+                patch(
+                    "scripts.beads_convergence.inventory.os.read",
+                    side_effect=AssertionError("oversized redirect was read"),
+                ),
+                self.assertRaisesRegex(InventoryError, "redirect exceeds size limit"),
+            ):
+                _read_redirect(handle)
+            after = tuple(
+                (
+                    path.stat().st_dev,
+                    path.stat().st_ino,
+                    path.stat().st_mtime_ns,
+                    path.read_bytes(),
+                )
+                for path in monitored
+            )
+            self.assertEqual(before, after)
+
+    def test_redirect_growth_is_rejected_by_streaming_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            beads = Path(temp) / ".beads"
+            beads.mkdir()
+            redirect = beads / "redirect"
+            redirect.write_bytes(b"/canonical/.beads\n")
+            original_read = os.read
+
+            def grow_then_read(fd: int, size: int) -> bytes:
+                with redirect.open("ab") as stream:
+                    stream.write(b"x" * _MAX_REDIRECT_BYTES)
+                return original_read(fd, size)
+
+            with (
+                open_verified_tree(beads) as handle,
+                patch(
+                    "scripts.beads_convergence.inventory.os.read",
+                    side_effect=grow_then_read,
+                ),
+                self.assertRaisesRegex(InventoryError, "redirect exceeds size limit"),
+            ):
+                _read_redirect(handle)
 
 
 if __name__ == "__main__":

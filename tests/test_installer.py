@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -344,6 +345,149 @@ class InstallerIntegrationTest(unittest.TestCase):
             self.assertEqual(original.read_text(encoding="utf-8"), "preserve me\n")
             self.assertFalse(list(temp_dir.glob("claude-home.staging.*")))
             self.assertFalse(list(temp_dir.glob("claude-home.activation-*")))
+
+    def test_merge_rejects_scripts_symlink_without_external_writes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            temp_dir = Path(directory)
+            fixture = self.make_fixture(temp_dir)
+            target = temp_dir / "claude-home"
+            external = temp_dir / "external-scripts"
+            target.mkdir()
+            external.mkdir()
+            sentinel = external / "sentinel.txt"
+            sentinel.write_text("untouched\n", encoding="utf-8")
+            (target / "scripts").symlink_to(external, target_is_directory=True)
+            target_identity = target.stat()
+
+            result = self.run_installer(fixture, target, "--merge")
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("not a real directory", result.stdout + result.stderr)
+            self.assertEqual(target.stat().st_ino, target_identity.st_ino)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "untouched\n")
+            self.assertFalse(list(temp_dir.glob("claude-home.staging.*")))
+
+    def test_merge_rejects_beads_runtime_symlink_without_external_writes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            temp_dir = Path(directory)
+            fixture = self.make_fixture(temp_dir)
+            target = temp_dir / "claude-home"
+            external = temp_dir / "external-runtime"
+            target.mkdir()
+            (target / "scripts").mkdir()
+            external.mkdir()
+            sentinel = external / "sentinel.txt"
+            sentinel.write_text("untouched\n", encoding="utf-8")
+            (target / "scripts/beads_convergence").symlink_to(
+                external, target_is_directory=True
+            )
+            target_identity = target.stat()
+
+            result = self.run_installer(fixture, target, "--merge")
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("not a real directory", result.stdout + result.stderr)
+            self.assertEqual(target.stat().st_ino, target_identity.st_ino)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "untouched\n")
+            self.assertFalse(list(temp_dir.glob("claude-home.staging.*")))
+
+    def test_merge_detects_target_recreation_during_activation_and_retains_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            temp_dir = Path(directory)
+            fixture = self.make_fixture(temp_dir)
+            target = temp_dir / "claude-home"
+            target.mkdir()
+            original = target / "user-file.txt"
+            original.write_text("preserve me\n", encoding="utf-8")
+            fake_bin = temp_dir / "fake-bin"
+            fake_bin.mkdir()
+            fake_move = fake_bin / "mv"
+            fake_move.write_text(
+                f"#!/bin/sh\n"
+                f"if [ \"$1\" = \"{target}\" ]; then\n"
+                "  case \"$2\" in\n"
+                "    *activation-*)\n"
+                "      /bin/mv \"$@\" || exit $?\n"
+                f"      mkdir \"{target}\"\n"
+                f"      printf 'recreated\\n' > \"{target}/race.txt\"\n"
+                "      exit 0\n"
+                "      ;;\n"
+                "  esac\n"
+                "fi\n"
+                "exec /bin/mv \"$@\"\n",
+                encoding="utf-8",
+            )
+            fake_move.chmod(0o755)
+
+            result = self.run_installer(
+                fixture,
+                target,
+                "--merge",
+                extra_environment={"PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"},
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("recreated or staging was nested", result.stdout + result.stderr)
+            self.assertEqual((target / "race.txt").read_text(encoding="utf-8"), "recreated\n")
+            activation_backups = list(temp_dir.glob("claude-home.activation-*"))
+            self.assertEqual(len(activation_backups), 1)
+            self.assertEqual(
+                (activation_backups[0] / "user-file.txt").read_text(encoding="utf-8"),
+                "preserve me\n",
+            )
+            self.assertEqual(len(list(temp_dir.glob("claude-home.staging.*"))), 1)
+
+    def test_merge_serializes_two_processes_for_exact_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            temp_dir = Path(directory)
+            fixture = self.make_fixture(temp_dir)
+            target = temp_dir / "claude-home"
+            target.mkdir()
+            fake_bin = temp_dir / "fake-bin"
+            fake_bin.mkdir()
+            fake_copy = fake_bin / "cp"
+            fake_copy.write_text(
+                "#!/bin/sh\n"
+                "sleep 0.5\n"
+                "exec /bin/cp \"$@\"\n",
+                encoding="utf-8",
+            )
+            fake_copy.chmod(0o755)
+            environment = os.environ | {
+                "CLAUDE_HOME": str(target),
+                "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            }
+            command = ["bash", str(fixture / INSTALLER.name), "--merge"]
+            first = subprocess.Popen(
+                command,
+                cwd=fixture,
+                env=environment,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            try:
+                lock = Path(f"{target}.install.lock")
+                deadline = time.monotonic() + 10
+                while not lock.exists() and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                self.assertTrue(lock.exists(), "first installer never acquired lock")
+                second = self.run_installer(
+                    fixture,
+                    target,
+                    "--merge",
+                    extra_environment={"PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"},
+                )
+                first_stdout, first_stderr = first.communicate(timeout=30)
+            finally:
+                if first.poll() is None:
+                    first.kill()
+                    first.wait()
+
+            self.assertEqual(first.returncode, 0, first_stderr)
+            self.assertNotEqual(second.returncode, 0)
+            self.assertIn("Another installer is active", second.stdout + second.stderr)
+            self.assertFalse(Path(f"{target}.install.lock").exists())
 
     def test_backup_collision_preserves_original_target_without_staging_leak(self):
         with tempfile.TemporaryDirectory() as directory:

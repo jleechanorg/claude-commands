@@ -31,6 +31,7 @@ class InventoryError(RuntimeError):
 
 
 _REDIRECT_NAME = "redirect"
+_MAX_REDIRECT_BYTES = 4096
 _GIT_RECORD_FIELDS = ("HEAD ", "branch ", "detached", "locked", "prunable ")
 
 
@@ -199,8 +200,14 @@ def _read_redirect(beads: DirectoryHandle) -> RedirectState:
         before = os.fstat(fd)
         if not stat.S_ISREG(before.st_mode):
             raise InventoryError("redirect is not a regular file")
+        if before.st_size > _MAX_REDIRECT_BYTES:
+            raise InventoryError("redirect exceeds size limit")
         chunks: list[bytes] = []
-        while chunk := os.read(fd, 1024 * 1024):
+        total = 0
+        while chunk := os.read(fd, min(1024 * 1024, _MAX_REDIRECT_BYTES - total + 1)):
+            total += len(chunk)
+            if total > _MAX_REDIRECT_BYTES:
+                raise InventoryError("redirect exceeds size limit")
             chunks.append(chunk)
         after = os.fstat(fd)
         if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (

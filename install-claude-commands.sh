@@ -40,6 +40,12 @@ INSTALL_ROOT="$CLAUDE_HOME"
 STAGING_DIR=""
 BACKUP_PATH=""
 ACTIVATION_BACKUP_PATH=""
+LOCK_DIR=""
+LOCK_ACQUIRED=0
+RETAIN_STAGING=0
+TARGET_WAS_PRESENT=0
+TARGET_IDENTITY=""
+STAGING_IDENTITY=""
 
 show_usage() {
     cat <<EOF
@@ -75,8 +81,88 @@ directory_mode() {
     fi
 }
 
+path_identity() {
+    if stat -c '%d:%i' "$1" >/dev/null 2>&1; then
+        stat -c '%d:%i' "$1"
+    else
+        stat -f '%d:%i' "$1"
+    fi
+}
+
+path_is_present() {
+    [ -e "$1" ] || [ -L "$1" ]
+}
+
+acquire_install_lock() {
+    local parent
+    parent="$(dirname "$CLAUDE_HOME")"
+    mkdir -p "$parent"
+    LOCK_DIR="${CLAUDE_HOME}.install.lock"
+    if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+        log_error "Another installer is active for CLAUDE_HOME: $CLAUDE_HOME"
+        return 1
+    fi
+    LOCK_ACQUIRED=1
+}
+
+validate_merge_destination_path() {
+    local destination="$1"
+    local source_label="$2"
+    local relative path parent
+
+    if path_is_present "$destination" && { [ -L "$destination" ] || [ ! -d "$destination" ]; }; then
+        log_error "Merge destination is not a real directory: $source_label"
+        return 1
+    fi
+    [ -d "$3" ] || return 0
+    while IFS= read -r -d '' relative; do
+        relative="${relative#./}"
+        path="$destination/$relative"
+        parent="$(dirname "$path")"
+        while [ "$parent" != "$destination" ]; do
+            if path_is_present "$parent" && { [ -L "$parent" ] || [ ! -d "$parent" ]; }; then
+                log_error "Merge destination ancestor is unsafe: $parent"
+                return 1
+            fi
+            parent="$(dirname "$parent")"
+        done
+        if path_is_present "$path" && { [ -L "$path" ] || [ ! -f "$path" ]; }; then
+            log_error "Merge destination is not a regular file: $path"
+            return 1
+        fi
+    done < <(
+        cd "$3"
+        list_installable_files "$4"
+    )
+}
+
+validate_merge_destinations() {
+    [ "$INSTALL_MODE" = "merge" ] || return 0
+    validate_merge_destination_path "$CLAUDE_HOME/agents" "agents" "$SRC_AGENTS_DIR" "agents" || return 1
+    validate_merge_destination_path "$CLAUDE_HOME/commands" "commands" "$SRC_COMMANDS_DIR" "commands" || return 1
+    validate_merge_destination_path "$CLAUDE_HOME/scripts" "scripts" "$SRC_SCRIPTS_DIR" "scripts" || return 1
+    validate_merge_destination_path "$CLAUDE_HOME/scripts/beads_convergence" "beads convergence runtime" "$SRC_BEADS_RUNTIME_DIR" "scripts" || return 1
+    validate_merge_destination_path "$CLAUDE_HOME/skills" "skills" "$SRC_SKILLS_DIR" "skills" || return 1
+    if path_is_present "$CLAUDE_HOME/scripts/beads-converge" && { [ -L "$CLAUDE_HOME/scripts/beads-converge" ] || [ ! -f "$CLAUDE_HOME/scripts/beads-converge" ]; }; then
+        log_error "Merge destination is not a regular file: $CLAUDE_HOME/scripts/beads-converge"
+        return 1
+    fi
+}
+
+revalidate_target_before_activation() {
+    if [ "$TARGET_WAS_PRESENT" -eq 1 ]; then
+        if ! path_is_present "$CLAUDE_HOME" || [ "$(path_identity "$CLAUDE_HOME")" != "$TARGET_IDENTITY" ]; then
+            log_error "CLAUDE_HOME changed during installation; refusing activation"
+            return 1
+        fi
+    elif path_is_present "$CLAUDE_HOME"; then
+        log_error "CLAUDE_HOME reappeared during installation; refusing activation"
+        return 1
+    fi
+}
+
 prepare_target() {
-    if [ -e "$CLAUDE_HOME" ] && [ ! -d "$CLAUDE_HOME" ]; then
+    if [ -L "$CLAUDE_HOME" ] || { [ -e "$CLAUDE_HOME" ] && [ ! -d "$CLAUDE_HOME" ]; }; then
         log_error "Target exists but is not a directory: $CLAUDE_HOME"
         return 1
     fi
@@ -95,6 +181,13 @@ prepare_target() {
         esac
     fi
     mkdir -p "$(dirname "$CLAUDE_HOME")"
+    if path_is_present "$CLAUDE_HOME"; then
+        TARGET_WAS_PRESENT=1
+        TARGET_IDENTITY="$(path_identity "$CLAUDE_HOME")"
+    else
+        TARGET_WAS_PRESENT=0
+        TARGET_IDENTITY=""
+    fi
     STAGING_DIR="$(mktemp -d "${CLAUDE_HOME}.staging.XXXXXX")"
     INSTALL_ROOT="$STAGING_DIR"
     if [ -e "$CLAUDE_HOME" ] && [ "$INSTALL_MODE" != "backup" ]; then
@@ -119,6 +212,8 @@ next_activation_backup_path() {
 
 activate_staged_install() {
     [ -n "$STAGING_DIR" ] || return 0
+    revalidate_target_before_activation
+    STAGING_IDENTITY="$(path_identity "$STAGING_DIR")"
 
     if [ "$INSTALL_MODE" = "backup" ] && [ -e "$CLAUDE_HOME" ]; then
         BACKUP_PATH="${CLAUDE_HOME}.backup-$(date +%Y%m%d%H%M%S)"
@@ -133,6 +228,11 @@ activate_staged_install() {
             return 1
         fi
         log_info "Moved existing target to $BACKUP_PATH"
+        if [ "$(path_identity "$CLAUDE_HOME")" != "$STAGING_IDENTITY" ]; then
+            log_error "Activated target identity does not match staged installation"
+            RETAIN_STAGING=1
+            return 1
+        fi
         STAGING_DIR=""
         return 0
     fi
@@ -149,6 +249,17 @@ activate_staged_install() {
         if [ -n "$ACTIVATION_BACKUP_PATH" ]; then
             mv "$ACTIVATION_BACKUP_PATH" "$CLAUDE_HOME" || log_error "Original target remains at $ACTIVATION_BACKUP_PATH"
         fi
+        return 1
+    fi
+    if [ "$(path_identity "$CLAUDE_HOME")" != "$STAGING_IDENTITY" ]; then
+        log_error "CLAUDE_HOME was recreated or staging was nested during activation"
+        local nested_stage="$CLAUDE_HOME/$(basename "$STAGING_DIR")"
+        if [ -d "$nested_stage" ] && mv "$nested_stage" "$STAGING_DIR"; then
+            :
+        elif [ -d "$nested_stage" ]; then
+            STAGING_DIR="$nested_stage"
+        fi
+        RETAIN_STAGING=1
         return 1
     fi
     STAGING_DIR=""
@@ -189,6 +300,21 @@ validate_beads_convergence_inputs() {
         log_error "Required beads convergence runtime package is empty: $SRC_BEADS_RUNTIME_DIR"
         return 1
     fi
+}
+
+validate_staged_file() {
+    local path="$1"
+    local parent
+    if [ -L "$path" ] || [ ! -f "$path" ]; then
+        return 1
+    fi
+    parent="$(dirname "$path")"
+    while [ "$parent" != "$INSTALL_ROOT" ]; do
+        if [ -L "$parent" ] || [ ! -d "$parent" ]; then
+            return 1
+        fi
+        parent="$(dirname "$parent")"
+    done
 }
 
 # Shared recursive install function
@@ -254,7 +380,7 @@ validate_installation() {
         while IFS= read -r -d '' relative; do
             relative="${relative#./}"
             destination_file="$INSTALL_ROOT/$component/$relative"
-            if [ ! -f "$destination_file" ] || ! cmp -s "$source_dir/$relative" "$destination_file"; then
+            if ! validate_staged_file "$destination_file" || ! cmp -s "$source_dir/$relative" "$destination_file"; then
                 log_error "Manifest validation failed for $component/$relative"
                 return 1
             fi
@@ -266,7 +392,7 @@ validate_installation() {
     done
     if [ -f "$SRC_BEADS_LAUNCHER" ]; then
         destination_file="$INSTALL_ROOT/scripts/beads-converge"
-        if [ ! -f "$destination_file" ] || ! cmp -s "$SRC_BEADS_LAUNCHER" "$destination_file"; then
+        if ! validate_staged_file "$destination_file" || ! cmp -s "$SRC_BEADS_LAUNCHER" "$destination_file"; then
             log_error "Manifest validation failed for scripts/beads-converge"
             return 1
         fi
@@ -276,7 +402,7 @@ validate_installation() {
         while IFS= read -r -d '' relative; do
             relative="${relative#./}"
             destination_file="$INSTALL_ROOT/scripts/beads_convergence/$relative"
-            if [ ! -f "$destination_file" ] || ! cmp -s "$SRC_BEADS_RUNTIME_DIR/$relative" "$destination_file"; then
+            if ! validate_staged_file "$destination_file" || ! cmp -s "$SRC_BEADS_RUNTIME_DIR/$relative" "$destination_file"; then
                 log_error "Manifest validation failed for scripts/beads_convergence/$relative"
                 return 1
             fi
@@ -306,6 +432,8 @@ main() {
     echo
 
     validate_beads_convergence_inputs
+    acquire_install_lock
+    validate_merge_destinations
     prepare_target
     install_agents
     install_commands
@@ -324,7 +452,15 @@ main() {
 cleanup_failed_install() {
     local status=$?
     if [ "$status" -eq 0 ]; then
-        return "$status"
+        if [ "$LOCK_ACQUIRED" -eq 1 ]; then
+            if rmdir "$LOCK_DIR"; then
+                LOCK_ACQUIRED=0
+            else
+                log_error "Cleanup failed; installer lock retained at $LOCK_DIR"
+                return 1
+            fi
+        fi
+        return 0
     fi
     if [ -n "$ACTIVATION_BACKUP_PATH" ] && [ ! -e "$CLAUDE_HOME" ] && [ -e "$ACTIVATION_BACKUP_PATH" ]; then
         if mv "$ACTIVATION_BACKUP_PATH" "$CLAUDE_HOME"; then
@@ -340,11 +476,21 @@ cleanup_failed_install() {
             log_error "Original target remains at $BACKUP_PATH"
         fi
     fi
-    if [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ]; then
+    if [ "$RETAIN_STAGING" -eq 1 ] && [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ]; then
+        log_error "Staged installation retained at $STAGING_DIR"
+    elif [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ]; then
         if rm -rf "$STAGING_DIR"; then
             STAGING_DIR=""
         else
             log_error "Cleanup failed; staged installation retained at $STAGING_DIR"
+        fi
+    fi
+    if [ "$LOCK_ACQUIRED" -eq 1 ]; then
+        if rmdir "$LOCK_DIR"; then
+            LOCK_ACQUIRED=0
+        else
+            log_error "Cleanup failed; installer lock retained at $LOCK_DIR"
+            status=1
         fi
     fi
     log_error "Installation failed. Check the output above for details."
