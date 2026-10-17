@@ -91,13 +91,23 @@ class MdFilesBootstrapRegressionTests(unittest.TestCase):
     def setUpClass(cls):
         cls.readme = README_PATH.read_text()
         blocks = _extract_bash_blocks(cls.readme)
-        # Bootstrap is the first bash block, scan is the second.
-        cls.bootstrap = blocks[0].replace(
+        # Locate blocks by content, not position: README edits that add a
+        # bash block earlier in the file must not silently re-point the
+        # tests at the wrong script (2026-10-17: an autonomy-presence grep
+        # snippet inserted ahead of the bootstrap shifted both indices and
+        # produced 20 false failures).
+        def _find(marker: str, default_index: int) -> str:
+            for b in blocks:
+                if marker in b:
+                    return b
+            return blocks[default_index]
+
+        cls.bootstrap = _find("backup_and_write", 0).replace(
             "md_files/AGENTS.shared.md", str(SRC_DIR / "AGENTS.shared.md")
         ).replace(
             "md_files/CLAUDE.adapter.md", str(SRC_DIR / "CLAUDE.adapter.md")
         )
-        cls.scan = blocks[1]
+        cls.scan = _find("portable: clean", 1)
 
     # ----- Bootstrap: idempotent re-run preserves mtime -----
 
