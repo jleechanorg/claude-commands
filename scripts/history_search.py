@@ -266,7 +266,9 @@ def search_pi(
     cwd_project_key = (
         cwd_path.lstrip("/\\").replace("/", "-").replace("\\", "-").replace(":", "-")
     )
-    cwd_base = Path(cwd_path).name
+    # Pi names each cwd group exactly `--<encoded-cwd>--`. Match that name
+    # exactly so `/work/target-old` is not mistaken for `/work/target`.
+    expected_project_dir = f"--{cwd_project_key}--" if cwd_project_key else ""
 
     try:
         proj_entries = [e for e in os.scandir(base_dir) if e.is_dir() and not e.name.startswith('.')]
@@ -283,7 +285,7 @@ def search_pi(
     other_entries: list[os.DirEntry] = []
 
     for pe in proj_entries:
-        if (cwd_project_key and cwd_project_key in pe.name) or (cwd_base and cwd_base in pe.name):
+        if expected_project_dir and pe.name == expected_project_dir:
             cwd_matches.append(pe)
         else:
             other_entries.append(pe)

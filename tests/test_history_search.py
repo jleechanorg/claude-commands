@@ -569,6 +569,32 @@ class TestHistorySearch(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].metadata.get("session_cwd"), "/Users/test/myproject")
 
+    def test_search_pi_exact_cwd_match_rejects_prefix_sibling(self) -> None:
+        import os as _os
+
+        base = self.temp_dir / "pi_prefix"
+        requested = base / "--work-target--"
+        sibling = base / "--work-target-old--"
+        requested.mkdir(parents=True)
+        sibling.mkdir(parents=True)
+
+        def write_session(path: Path, cwd: str, text: str, mtime: float) -> None:
+            path.write_text(
+                json.dumps({"type": "session", "cwd": cwd}) + "\n"
+                + json.dumps({"type": "message", "timestamp": "2026-10-17T13:03:00.000Z",
+                              "message": {"role": "user", "content": [{"type": "text", "text": text}]}}) + "\n",
+                encoding="utf-8",
+            )
+            _os.utime(path, (mtime, mtime))
+
+        # `/work/target-old` must NOT be treated as `/work/target`.
+        write_session(requested / "requested.jsonl", "/work/target", "prefix-needle", 1000.0)
+        write_session(sibling / "sibling.jsonl", "/work/target-old", "prefix-needle", 9000.0)
+
+        results = search_pi(query="prefix-needle", cwd="/work/target", limit=1, sessions_dir=base)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].metadata.get("session_cwd"), "/work/target")
+
     def test_search_pi_reads_flat_jsonl_session_directories(self) -> None:
         flat = self.temp_dir / "pi_flat"
         flat.mkdir()
