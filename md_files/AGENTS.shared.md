@@ -217,6 +217,9 @@ Runtime configuration belongs to the active `CODEX_HOME/config.toml`; another pr
 - When a teammate or background subagent goes quiet, read its actual transcript/output file before concluding it is stalled — file mtimes alone cannot distinguish a hang from a long synchronous tool call. Only ping or take over once the transcript itself shows no forward progress.
 - Give parallel writers isolated files/worktrees and name the model lane explicitly. Do not delegate tightly coupled atomic work.
 
+### Model routing and Gemini invariant
+
+Gemini Model Invariant: Never use Gemini 3.1 Pro (or older Gemini Pro models). When using the `agy` CLI, always pass `--model gemini-3.8-flash-high` (or `gemini-3.8-flash-medium` / `gemini-3.8-flash`); when spawning subagents via `invoke_subagent` in Antigravity, always pass `Model: "flash"` (or `"flash_lite"`), never `Model: "inherit"`.
 
 ### Codex reply footer
 

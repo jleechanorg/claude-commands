@@ -105,7 +105,7 @@ class WorkflowCommandPairTest(unittest.TestCase):
             normalized_skill,
         )
         self.assertIn(
-            "For simple independent tasks, the Luna lane may also drive the task "
+            "For simple independent tasks, the Flash/Luna lane may also drive the task "
             "through its focused checks and deliver the result; keep the root "
             "session responsible for scope and integration.",
             normalized_skill,
