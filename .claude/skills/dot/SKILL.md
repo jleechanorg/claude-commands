@@ -47,7 +47,7 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
 - Start only after an exact transport receipt for the initial reminder in the intended chat. Inter-check delays in seconds: `60, 120, 300, 300, 300, 300, 300, 300, 300, 300`. Measure each delay from the previous completed observation (first delay from the verified send). Record actual observations and source receipts in the existing checkpoint. New reminders and partial progress never reset the count.
 - Increment once per completed observation attempt, including a recorded timeout or read failure; resume an interrupted attempt under the same count. Later re-observation consumes the next scheduled count: no check eleven or disguised in-check re-observation.
 - This cycle also overrides the account-rotation rules: retain the verified account and intended chat. Set `DOT_ROTATE_ON_LIMIT=0` on each coordinator `dot.sh` invocation so automatic rotation cannot change its target. Do not rotate to another account or target on a busy composer or quota limit; report the exact transport blocker and preserve the checkpoint. A separately authorized reassignment requires a newly verified target and must not create duplicate ownership.
-- Keep the intended destination explicit for every reminder and observation. ChatGPT may redirect a configured URL to a canonical conversation URL, so a pathname change alone is not proof that the wrong conversation opened. If transport reports `DOT_TARGET_MISMATCH`, do not send or retry blindly; inspect the observed destination and establish whether it is the intended conversation before proceeding. Do not remove destination safeguards to silence a mismatch; make them tolerate verified canonical redirects.
+- Keep the intended destination explicit for every reminder and observation. If a transport reports `DOT_TARGET_MISMATCH`, do not send or retry blindly; inspect the current destination and establish whether it is the intended conversation before proceeding. Keep destination safeguards. If a guard rejects a route that resolves to the intended conversation, update it to check stable conversation identity rather than path strings alone.
 - Direct user messages take priority: respond promptly, apply changed scope/cancellations before further action, and preserve the cycle checkpoint. Use the existing supported interruptible wait/wake mechanism. Do not create jobs, daemons, senders or competing coordinators. Do not change providers, credentials or installed schedules. If timing is unsupported, name the exact capability gap; do not claim planned checks ran.
 - Resume unfinished authorized work with its existing owner; recover checkpoints, acceptance gaps and older commitments. Verify owner state before any separately authorized reassignment. A publication hold need not block authorized safe tests or design. Attempt a concrete permitted unblock route for each blocker and continue independent work within evidenced capacity, rather than repeating inventories.
 - At each check require fresh original task artifacts against the requested acceptance criteria and a disposition for every unfinished request. Daemon health, delivery success, Working, timestamps, HEARTBEAT_OK, assignments and chat claims do not prove task execution or completion. Empty/failed reads remain unverified. Passing tests do not prove unperformed activation or publication.
@@ -98,11 +98,11 @@ Other agent sessions share this composer; ChatGPT restores a saved draft lazily 
    - **Weird half-typed text** (mid-word cutoffs, command fragments, pasted garbage) → **clear it**: `dot.sh clear-draft` (prints `DOT_DRAFT_CLEARED`), then send your own message.
 3. Never force-clear a draft while a peer session is provably actively typing (draft text changing between reads). `DOT_CLEAR_DRAFT=1` on `send` remains the forced-clear escape hatch; own-leftover and already-sent drafts are always safe-cleared automatically.
 
-**Verified send:** `DOT_SENT_VERIFIED` reports the browser checks implemented by
-the installed transport. It is not confirmation of server acceptance or durable
-delivery. Exit 4 means the send could not be verified; check the intended chat
-before sending again. Do not describe a URL/path equality check unless the
-installed transport actually performs one.
+**After sending:** Confirm the intended message is present in the intended
+conversation before treating the handoff as complete. If the transport cannot
+verify the send, inspect the intended conversation before retrying. Consult
+`scripts/dot_chrome.mjs` for the installed transport's current verification
+behavior; this skill gives the operator's decision rule.
 - Send only what the user asked to send. Do not post test messages.
 - Avoid line-leading list markers (`1)`, `-`, `*`): the composer converts them to list formatting, which can cause mismatch detection. Use plain sentences.
 - Interactive login / auth: `dot.sh [--account <name>] login` launches visible Chrome attached to that account's profile directory.
