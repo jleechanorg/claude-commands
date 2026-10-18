@@ -124,7 +124,7 @@ exports.chromium = {
         script = r'''const fs = require("node:fs");
 const statePath = __STATE_PATH__;
 const externalComposerPath = __EXTERNAL_COMPOSER_PATH__;
-const state = {composer: __INITIAL_COMPOSER__, clicked: false, enterPressed: false, userMessages: [], currentUrl: ""};
+const state = {composer: __INITIAL_COMPOSER__, clicked: false, retryClicked: false, enterPressed: false, userMessages: [], currentUrl: ""};
 function locator(selector) {
   if (selector.includes("data-message-author-role=user")) {
     return {
@@ -140,7 +140,7 @@ function locator(selector) {
       return state.composer;
     },
     async focus() {},
-    async click() {},
+    async click() { if (selector.includes("Try again") || selector.includes("Retry")) state.retryClicked = true; },
   };
 }
 const page = {
@@ -157,6 +157,7 @@ const page = {
       return {status: 200, hasUser: true, isJson: true};
     }
     if (fn.toString().includes("usage limit")) return "";
+    if (process.env.DOT_TEST_SNAG === "1" && !state.retryClicked) return "ChatGPT hit a snag with an error in this fixture conversation";
     return "Fixture conversation with enough stable text to finish page setup";
   },
   async click(selector) {
@@ -285,6 +286,41 @@ process.stdout.write = (chunk, ...args) => {
         self.assertEqual(proc.returncode, 10, proc.stdout + proc.stderr)
         self.assertIn("requested conversation target mismatch", proc.stdout)
         state = json.loads((self.root / "prepared-send-state.json").read_text())
+        self.assertFalse(state["clicked"])
+
+    def test_redirected_error_page_does_not_activate_retry(self):
+        state_path = self._install_fake_send_playwright()
+        env = dict(self.env, DOT_URL="https://chatgpt.com/c/redirect-me", DOT_TEST_SNAG="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "read", "100"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["retryClicked"])
+
+    def test_prepared_send_does_not_retry_before_commit(self):
+        state_path = self._install_fake_send_playwright()
+        message_path = self.root / "snagged-message.txt"
+        message_path.write_text("Must wait for explicit commit")
+        env = dict(self.env, DOT_PREPARED="1", DOT_TEST_SNAG="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "send-prepared", str(message_path)],
+            env=env,
+            input="",
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["retryClicked"])
         self.assertFalse(state["clicked"])
 
     def test_read_reports_target_match_without_printing_the_url(self):

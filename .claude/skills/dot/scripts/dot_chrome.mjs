@@ -382,6 +382,7 @@ async function checkAuthSession(page, fetchTimeoutMs = 0) {
 
 async function clickRetryIfSnag(page, bodyText, waitMs) {
   if (!/ChatGPT hit a snag|Something went wrong/i.test(bodyText)) return false;
+  if (!sameConversationTarget(page.url(), URL_)) return false;
   try {
     const tryAgainBtn = page.locator('button:has-text("Try again"), button:has-text("Retry")');
     if (await tryAgainBtn.count() > 0) {
@@ -401,7 +402,7 @@ async function settlePage(page, currentMode) {
     const composers = await page.locator(COMPOSER).count().catch(() => 0);
     const bodyText = (await page.evaluate(() => document.body ? document.body.innerText : '').catch(() => ''));
 
-    if (await clickRetryIfSnag(page, bodyText, 2000)) continue;
+    if (currentMode !== 'send-prepared' && await clickRetryIfSnag(page, bodyText, 2000)) continue;
     if (/just a moment/i.test(title)) { await sleep(1500); continue; }
 
     if (composers >= 1) {
@@ -765,6 +766,7 @@ async function send(page, file, dry, opts = {}) {
 
   if (aborted) return;
   requireConversationTarget(page);
+  if (aborted) return;
   clicked = true;
   await page.click('button[data-testid=send-button], button[aria-label*=Send]');
   await sleep(4000);

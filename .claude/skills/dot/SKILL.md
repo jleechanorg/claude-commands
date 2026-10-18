@@ -59,7 +59,8 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
   once with the same URL and automatic retry disabled. `send`, `send-once`,
   `send-prepared`, and `submit-draft` check the active origin and path before
   opening the composer and immediately before submission; a detected mismatch
-  blocks the send. If the
+  blocks the send. Retry controls follow the same target check; prepared sends
+  do not activate a retry before an explicit commit. If the
   next account cannot verify the target, record the observation as failed and
   do not use its default URL. Apply the same check before every observation.
   Keep account attempts local to that scheduled observation. Start with the
