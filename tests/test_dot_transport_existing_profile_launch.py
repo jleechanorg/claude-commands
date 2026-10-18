@@ -125,11 +125,22 @@ exports.chromium = {
 const statePath = __STATE_PATH__;
 const externalComposerPath = __EXTERNAL_COMPOSER_PATH__;
 const state = {composer: __INITIAL_COMPOSER__, clicked: false, retryClicked: false, enterPressed: false, userMessages: [], currentUrl: ""};
+function clickSendButton() {
+  state.clicked = true;
+  state.userMessages.push(state.composer);
+  state.composer = "";
+}
 function locator(selector) {
   if (selector.includes("data-message-author-role=user")) {
     return {
       async allInnerTexts() { return state.userMessages; },
-      async count() { return state.userMessages.length; },
+      async count() {
+        if (state.clicked && process.env.DOT_TEST_HANG_AFTER_CLICK === "1") {
+          globalThis.advanceClock(Number(process.env.DOT_TEST_ADVANCE_DURING_VERIFY || 120000));
+          return new Promise(() => {});
+        }
+        return state.userMessages.length;
+      },
     };
   }
   return {
@@ -147,6 +158,46 @@ function locator(selector) {
     },
     async focus() {},
     async click() { if (selector.includes("Try again") || selector.includes("Retry")) state.retryClicked = true; },
+    async evaluate(fn, expected) {
+      if (selector.includes("send-button") || selector.includes("Send")) {
+        if (process.env.DOT_TEST_ADVANCE_CLOCK_DURING_SEND_EVAL === "1") {
+          globalThis.advanceClock(120000);
+        }
+        if (process.env.DOT_TEST_MUTATE_COMPOSER_DURING_SEND_EVAL === "1") {
+          state.composer = "UNAPPROVED changed message";
+        }
+        if (process.env.DOT_TEST_MUTATE_COMPOSER_WHITESPACE_DURING_SEND_EVAL === "1") {
+          state.composer = "    " + state.composer;
+        }
+        if (process.env.DOT_TEST_REDIRECT_DURING_SEND_CLICK === "1" ||
+            process.env.DOT_TEST_REDIRECT_DURING_SUBMIT_CLICK === "1") {
+          state.currentUrl = "https://chatgpt.com/c/different-conversation";
+        }
+      }
+      const current = new URL(state.currentUrl);
+      globalThis.window = {location: {origin: current.origin, pathname: current.pathname}};
+      const element = {
+        isConnected: true,
+        disabled: false,
+        getAttribute() { return null; },
+        getClientRects() { return [{}]; },
+        click() {
+          if (selector.includes("Try again") || selector.includes("Retry")) state.retryClicked = true;
+          else clickSendButton();
+        },
+      };
+      const composerElement = {};
+      Object.defineProperty(composerElement, "innerText", {get: () => state.composer});
+      Object.defineProperty(composerElement, "value", {get: () => state.composer});
+      composerElement.tagName = "DIV";
+      globalThis.document = {querySelector() { return composerElement; }};
+      const result = fn(element, expected);
+      if (process.env.DOT_TEST_REJECT_AFTER_SEND_DISPATCH === "1" &&
+          (selector.includes("send-button") || selector.includes("Send")) && state.clicked) {
+        throw new Error("synthetic response lost after dispatch");
+      }
+      return result;
+    },
   };
 }
 const page = {
@@ -168,9 +219,13 @@ const page = {
   },
   async click(selector) {
     if (selector.includes("send-button")) {
-      state.clicked = true;
-      state.userMessages.push(state.composer);
-      state.composer = "";
+      if (process.env.DOT_TEST_ADVANCE_CLOCK_DURING_SEND_EVAL === "1") {
+        globalThis.advanceClock(120000);
+      }
+      if (process.env.DOT_TEST_REDIRECT_DURING_SEND_CLICK === "1") {
+        state.currentUrl = "https://chatgpt.com/c/different-conversation";
+      }
+      clickSendButton();
     }
   },
   keyboard: {
@@ -179,6 +234,9 @@ const page = {
       if (key.endsWith("+A")) this.selected = true;
       else if (key === "Backspace" && this.selected) state.composer = "";
       else if (key === "Enter") {
+        if (process.env.DOT_TEST_REDIRECT_DURING_SUBMIT_CLICK === "1") {
+          state.currentUrl = "https://chatgpt.com/c/different-conversation";
+        }
         state.enterPressed = true;
         state.userMessages.push(state.composer);
         state.composer = "";
@@ -207,7 +265,8 @@ exports.chromium = {
                               initial_composer="", usage_limit=False,
                               mismatched_composer=False, missing_profile=False,
                               hang_launch=False, hang_after_commit=False,
-                              send_advance_ms=120000):
+                              send_advance_ms=120000, advance_before_action=False,
+                              mutate_composer_at_action=False):
         state_path = self._install_fake_send_playwright(initial_composer)
         module = self.root / "node_modules" / "playwright" / "index.js"
         source = module.read_text()
@@ -218,8 +277,13 @@ exports.chromium = {
         if hang_launch:
             source = source.replace('async launchPersistentContext() {', 'async launchPersistentContext() { setImmediate(() => globalThis.advanceClock(120000)); await new Promise(() => {});')
         if hang_after_commit:
-            source = source.replace('state.clicked = true;',
-                                    f'state.clicked = true; globalThis.advanceClock({send_advance_ms}); await new Promise(() => {{}});')
+            source = source.replace(
+                'async allInnerTexts() { return state.userMessages; },',
+                'async allInnerTexts() { if (state.clicked) { globalThis.advanceClock(' +
+                str(send_advance_ms) +
+                '); return new Promise(() => {}); } return state.userMessages; },',
+                1,
+            )
         module.write_text(source)
         if missing_profile:
             self.profile.rmdir()
@@ -256,7 +320,12 @@ process.stdout.write = (chunk, ...args) => {
 };
 '''.replace("__ADVANCE__", str(advance_ms)).replace("__DECISION__", decision))
         command = [str(NODE22), "--require", str(preload), str(SCRIPT), "send-prepared", str(message_path)]
-        with subprocess.Popen(command, env=dict(self.env, DOT_PREPARED="1"),
+        env = dict(self.env, DOT_PREPARED="1")
+        if advance_before_action:
+            env["DOT_TEST_ADVANCE_CLOCK_DURING_SEND_EVAL"] = "1"
+        if mutate_composer_at_action:
+            env["DOT_TEST_MUTATE_COMPOSER_DURING_SEND_EVAL"] = "1"
+        with subprocess.Popen(command, env=env,
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE, text=True) as child:
             try:
@@ -381,6 +450,27 @@ process.stdout.write = (chunk, ...args) => {
         self.assertEqual(proc.returncode, 10, proc.stdout + proc.stderr)
         self.assertIn("timeout", proc.stdout)
         self.assertIsNone(state)
+
+    def test_prepared_action_does_not_click_after_phase_deadline(self):
+        proc, state = self._run_clocked_prepared(advance_before_action=True)
+        self.assertNotIn("DOT_SENT_VERIFIED", proc.stdout)
+        self.assertFalse(state["clicked"])
+
+    def test_prepared_send_aborts_if_composer_changes_during_action_resolution(self):
+        proc, state = self._run_clocked_prepared(mutate_composer_at_action=True)
+        self.assertNotIn("DOT_SENT_VERIFIED", proc.stdout)
+        self.assertIn("DOT_PREPARED_ABORTED", proc.stdout)
+        self.assertFalse(state["clicked"])
+        self.assertEqual(state["userMessages"], [])
+        self.assertEqual(state["composer"], "UNAPPROVED changed message")
+
+    def test_prepared_send_aborts_if_composer_changes_during_action_resolution(self):
+        proc, state = self._run_clocked_prepared(mutate_composer_at_action=True)
+        self.assertNotIn("DOT_SENT_VERIFIED", proc.stdout)
+        self.assertIn("DOT_PREPARED_ABORTED", proc.stdout)
+        self.assertFalse(state["clicked"])
+        self.assertEqual(state["userMessages"], [])
+        self.assertEqual(state["composer"], "UNAPPROVED changed message")
 
     def test_prepared_postcommit_work_has_a_phase_timeout(self):
         proc, state = self._run_clocked_prepared(hang_after_commit=True)
@@ -593,6 +683,133 @@ process.stdout.write = (chunk, ...args) => {
         self.assertIn("requested conversation target mismatch", stdout)
         self.assertFalse(state["clicked"])
         self.assertEqual(state["userMessages"], [])
+
+    def test_send_does_not_submit_when_target_redirects_at_action(self):
+        state_path = self._install_fake_send_playwright()
+        message_path = self.root / "redirect-at-send.txt"
+        message_path.write_text("Must remain in the requested conversation")
+        env = dict(self.env, DOT_TEST_REDIRECT_DURING_SEND_CLICK="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "send", str(message_path)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 10, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["clicked"])
+        self.assertEqual(state["userMessages"], [])
+
+    def test_send_does_not_click_if_composer_changes_during_action_resolution(self):
+        state_path = self._install_fake_send_playwright()
+        message_path = self.root / "action-mutation-message.txt"
+        message_path.write_text("Approved message")
+        env = dict(self.env, DOT_TEST_MUTATE_COMPOSER_DURING_SEND_EVAL="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "send", str(message_path)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertNotIn("DOT_SENT_VERIFIED", proc.stdout)
+        self.assertIn("DOT_SEND_UNVERIFIED composer_changed_before_action", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["clicked"])
+        self.assertEqual(state["userMessages"], [])
+        self.assertEqual(state["composer"], "UNAPPROVED changed message")
+
+    def test_submit_draft_does_not_submit_when_target_redirects_at_action(self):
+        state_path = self._install_fake_send_playwright("Draft that must stay unsent")
+        env = dict(self.env, DOT_TEST_REDIRECT_DURING_SUBMIT_CLICK="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "submit-draft"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 10, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["clicked"])
+        self.assertFalse(state["enterPressed"])
+        self.assertEqual(state["userMessages"], [])
+        self.assertEqual(state["composer"], "Draft that must stay unsent")
+
+    def test_submit_draft_clicks_send_control_in_requested_conversation(self):
+        state_path = self._install_fake_send_playwright("Draft that should be sent")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "submit-draft"],
+            env=self.env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("DOT_DRAFT_SUBMITTED", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertTrue(state["clicked"])
+        self.assertFalse(state["enterPressed"])
+        self.assertEqual(state["userMessages"], ["Draft that should be sent"])
+
+    def test_submit_draft_rejects_whitespace_change_during_action_resolution(self):
+        state_path = self._install_fake_send_playwright("approved draft")
+        env = dict(self.env, DOT_TEST_MUTATE_COMPOSER_WHITESPACE_DURING_SEND_EVAL="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "submit-draft"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertNotIn("DOT_DRAFT_SUBMITTED", proc.stdout)
+        self.assertIn("DOT_SUBMIT_UNVERIFIED composer-mismatch", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["clicked"])
+        self.assertEqual(state["userMessages"], [])
+        self.assertEqual(state["composer"], "    approved draft")
+
+    def test_submit_draft_reports_uncertain_after_dispatch_response_fails(self):
+        state_path = self._install_fake_send_playwright("Draft that may have been sent")
+        env = dict(self.env, DOT_TEST_REJECT_AFTER_SEND_DISPATCH="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "submit-draft"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertIn("DOT_SEND_UNVERIFIED", proc.stdout)
+        self.assertNotIn("DOT_CHROME_UNAVAILABLE", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertTrue(state["clicked"])
+        self.assertEqual(state["userMessages"], ["Draft that may have been sent"])
+
+    def test_submit_draft_reports_uncertain_after_dispatch_response_fails(self):
+        state_path = self._install_fake_send_playwright("Draft that may have been sent")
+        env = dict(self.env, DOT_TEST_REJECT_AFTER_SEND_DISPATCH="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "submit-draft"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertIn("DOT_SEND_UNVERIFIED", proc.stdout)
+        self.assertNotIn("DOT_CHROME_UNAVAILABLE", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertTrue(state["clicked"])
+        self.assertEqual(state["userMessages"], ["Draft that may have been sent"])
 
     def test_submit_draft_refuses_if_initial_target_is_redirected(self):
         state_path = self._install_fake_send_playwright("Draft that must stay unsent")

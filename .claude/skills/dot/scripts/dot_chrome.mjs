@@ -174,9 +174,27 @@ const USER_DATA_DIR = accountInfo.profileDir;
 // Cloudflare rejects the default HeadlessChrome UA; any current desktop Chrome UA passes.
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36';
 const COMPOSER = '[contenteditable=true], #prompt-textarea, textarea[placeholder*="Message"]';
+const SEND_BUTTON = 'button[data-testid=send-button], button[aria-label*=Send]';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const norm = (t) => t.replace(/\s+/g, ' ').trim();
 const stripReadReceipt = (t) => t.replace(/Read\s+\d{1,2}:\d{2}\s*(?:[AP]M)?/gi, '').replace(/\s+/g, ' ').trim();
+
+async function clickInRequestedConversation(page, selector, composerText) {
+  const target = new URL(URL_), path = target.pathname.replace(/\/+$/, '') || '/', deadline = Math.min(phaseDeadline, operationDeadline);
+  return page.locator(selector).first().evaluate((control, expected) => {
+    const currentPath = window.location.pathname.replace(/\/+$/, '') || '/', origin = window.location.origin;
+    if (Date.now() >= expected.deadline) return 'timeout';
+    if (origin !== expected.origin || currentPath !== expected.path) return 'target-mismatch';
+    if (expected.composer !== undefined) {
+      const composer = document.querySelector(expected.composerSelector);
+      const value = composer?.tagName === 'TEXTAREA' ? composer.value : composer?.innerText;
+      if (value !== expected.composer) return 'composer-mismatch';
+    }
+    if (!control.isConnected || control.disabled || control.getAttribute('aria-disabled') === 'true' ||
+      control.getClientRects().length === 0) return 'not-actionable';
+    control.click(); return 'clicked';
+  }, { origin: target.origin, path, deadline, composer: composerText, composerSelector: COMPOSER });
+}
 
 class Unavailable extends Error {}
 const unavailable = (why) => { throw new Unavailable(why); };
@@ -190,6 +208,7 @@ let ctx = null;
 let clicked = false;
 let aborted = false;
 let commitReceived = false;
+let phaseDeadline = Infinity, operationDeadline = Infinity;
 const isPreparedMode = mode === 'send-prepared' || (mode === 'send' && process.env.DOT_PREPARED === '1');
 
 function reportPrecommitNoSend(reason, file) {
@@ -385,10 +404,13 @@ async function clickRetryIfSnag(page, bodyText, waitMs) {
   if (!sameConversationTarget(page.url(), URL_)) return false;
   try {
     const tryAgainBtn = page.locator('button:has-text("Try again"), button:has-text("Retry")');
-    if (await tryAgainBtn.count() > 0 && sameConversationTarget(page.url(), URL_)) {
-      await tryAgainBtn.first().click();
-      await sleep(waitMs);
-      return true;
+    if (await tryAgainBtn.count() > 0) {
+      const result = await clickInRequestedConversation(page, 'button:has-text("Try again"), button:has-text("Retry")');
+      if (result === 'timeout') { aborted = true; unavailable('timeout'); }
+      if (result === 'clicked') {
+        await sleep(waitMs);
+        return true;
+      }
     }
   } catch {}
   return false;
@@ -613,16 +635,20 @@ async function submitDraft(page) {
   requireConversationTarget(page);
   await page.click(COMPOSER);
   await sleep(800);
-  const composer = (await page.locator(COMPOSER).first().innerText().catch(() => '')).trim();
+  const rawComposer = await page.locator(COMPOSER).first().innerText().catch(() => ''), composer = rawComposer.trim();
   if (composer === '') { console.log('DOT_SUBMIT_NOTHING_TO_SEND'); return; }
   const userMsgLocator = page.locator('[data-message-author-role=user], article.self, article[class*="self"]');
   const before = await userMsgLocator.count().catch(() => 0);
   requireConversationTarget(page);
-  await page.keyboard.press('Enter');
+  clicked = true;
+  const action = await clickInRequestedConversation(page, SEND_BUTTON, rawComposer);
+  if (action === 'target-mismatch') { clicked = false; console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
+  if (action === 'timeout') { clicked = false; aborted = true; unavailable('timeout'); }
+  if (action !== 'clicked') { clicked = false; console.log('DOT_SUBMIT_UNVERIFIED ' + action); return; }
   await sleep(3000);
   const after = await userMsgLocator.count().catch(() => 0);
   const cleared = ((await page.locator(COMPOSER).first().innerText().catch(() => '')).trim()) === '';
-  if (cleared && after > before) console.log('DOT_DRAFT_SUBMITTED: ' + composer.slice(0, 200));
+  if (cleared && after > before) console.log('DOT_DRAFT_SUBMITTED: ' + rawComposer.slice(0, 200));
   else console.log('DOT_SUBMIT_UNVERIFIED composer_cleared=' + cleared);
 }
 
@@ -768,7 +794,11 @@ async function send(page, file, dry, opts = {}) {
   requireConversationTarget(page);
   if (aborted) return;
   clicked = true;
-  await page.click('button[data-testid=send-button], button[aria-label*=Send]');
+  const action = await clickInRequestedConversation(page, SEND_BUTTON, typed);
+  if (action === 'composer-mismatch') { clicked = false; console.log(opts.prepared ? 'DOT_PREPARED_ABORTED reason=composer_changed_at_action' : 'DOT_SEND_UNVERIFIED composer_changed_before_action'); return; }
+  if (action === 'target-mismatch') { clicked = false; console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
+  if (action === 'timeout') { clicked = false; aborted = true; unavailable('timeout'); }
+  if (action !== 'clicked') { clicked = false; unavailable('send control not actionable'); }
   await sleep(4000);
   const left = (await readComposer()).trim();
   const afterMsgs = await getUserMessages();
@@ -810,6 +840,7 @@ if (isMainModule()) {
       let startPhaseTimer;
       const timeoutPromise = new Promise((_, reject) => {
         startPhaseTimer = () => {
+          phaseDeadline = Date.now() + 120000;
           launchTimer = setTimeout(() => {
             aborted = true;
             reject(new Unavailable('timeout'));
@@ -817,6 +848,7 @@ if (isMainModule()) {
         };
         startPhaseTimer();
         if (isPreparedMode) {
+          operationDeadline = Date.now() + 600000;
           operationTimer = setTimeout(() => {
             aborted = true;
             reject(new Unavailable('timeout'));
@@ -830,7 +862,7 @@ if (isMainModule()) {
               const page = await launchPrepared();
               await send(page, arg, process.env.DOT_DRY_RUN === '1', {
                 prepared: true,
-                onPrepared: () => { clearTimeout(launchTimer); launchTimer = null; },
+                onPrepared: () => { clearTimeout(launchTimer); launchTimer = null; phaseDeadline = Infinity; },
                 onDecision: startPhaseTimer,
               });
             } else {
