@@ -53,14 +53,17 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
   automatic retry clears the URL and can redirect the reminder to another
   account's configured chat. `dot.sh read` reports `DOT_TARGET_VERIFIED` when
   the final page has the requested origin and path, or `DOT_TARGET_MISMATCH`
-  when it does not; the check does not print the private URL. If the send hits
+  when it does not; the check does not print the private URL. A mismatch fails the
+  observation: ignore the returned page text and make no progress decision from
+  it. If the send hits
   a limit, try the next account in configured `rotation` only after reading
   that URL with `--account <next>` and requiring `DOT_TARGET_VERIFIED`; resend
   once with the same URL and automatic retry disabled. `send`, `send-once`,
   `send-prepared`, and `submit-draft` check the active origin and path before
-  opening the composer and immediately before submission; a detected mismatch
-  blocks the send. Retry controls follow the same target check; prepared sends
-  do not activate a retry before an explicit commit. If the
+  opening the composer and immediately before submission; sends also recheck
+  the exact composer text and operation deadline at dispatch; a detected
+  mismatch blocks the send. Retry controls recheck the target and deadline;
+  prepared sends do not activate a retry before an explicit commit. If the
   next account cannot verify the target, record the observation as failed and
   do not use its default URL. Apply the same check before every observation.
   Keep account attempts local to that scheduled observation. Start with the

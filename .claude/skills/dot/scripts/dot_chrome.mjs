@@ -400,9 +400,9 @@ async function checkAuthSession(page, fetchTimeoutMs = 0) {
   }
 }
 
-async function clickRetryIfSnag(page, bodyText, waitMs) {
+async function clickRetryIfSnag(page, bodyText, waitMs, observedUrl) {
   if (!/ChatGPT hit a snag|Something went wrong/i.test(bodyText)) return false;
-  if (!sameConversationTarget(page.url(), URL_)) return false;
+  if (!sameConversationTarget(observedUrl, URL_) || !sameConversationTarget(page.url(), URL_)) return false;
   const retry = 'button:has-text("Try again"), button:has-text("Retry")';
   if (await page.locator(retry).count() === 0) return false;
   clicked = true;
@@ -418,9 +418,10 @@ async function settlePage(page, currentMode) {
   while (Date.now() < deadline) {
     const title = await page.title().catch(() => '');
     const composers = await page.locator(COMPOSER).count().catch(() => 0);
-    const bodyText = (await page.evaluate(() => document.body ? document.body.innerText : '').catch(() => ''));
+    const snapshot = await page.evaluate(() => ({text: document.body ? document.body.innerText : '', url: `${window.location.origin}${window.location.pathname}`})).catch(() => ({text: '', url: ''}));
+    const bodyText = snapshot.text;
 
-    if (currentMode !== 'send-prepared' && await clickRetryIfSnag(page, bodyText, 2000)) continue;
+    if (currentMode !== 'send-prepared' && await clickRetryIfSnag(page, bodyText, 2000, snapshot.url)) continue;
     if (/just a moment/i.test(title)) { await sleep(1500); continue; }
 
     if (composers >= 1) {
@@ -661,12 +662,11 @@ async function clearDraft(page) {
   console.log(left === '' ? ('DOT_DRAFT_CLEARED had_content=' + had) : ('DOT_DRAFT_CLEAR_FAILED left=' + left.length));
 }
 
+const readSnapshot = page => page.evaluate(() => ({text: document.body.innerText, url: `${window.location.origin}${window.location.pathname}`}));
 async function read(page, n) {
-  let bodyText = (await page.evaluate(() => document.body.innerText)).trim();
-  if (await clickRetryIfSnag(page, bodyText, 3000)) {
-    bodyText = (await page.evaluate(() => document.body.innerText)).trim();
-  }
-  console.log(sameConversationTarget(page.url(), URL_) ? 'DOT_TARGET_VERIFIED' : 'DOT_TARGET_MISMATCH');
+  let snapshot = await readSnapshot(page), bodyText = snapshot.text.trim();
+  if (sameConversationTarget(snapshot.url, URL_) && await clickRetryIfSnag(page, bodyText, 3000, snapshot.url)) { snapshot = await readSnapshot(page); bodyText = snapshot.text.trim(); }
+  console.log(sameConversationTarget(snapshot.url, URL_) ? 'DOT_TARGET_VERIFIED' : 'DOT_TARGET_MISMATCH');
   console.log(bodyText.slice(-n));
 }
 

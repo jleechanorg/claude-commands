@@ -125,7 +125,7 @@ exports.chromium = {
         script = r'''const fs = require("node:fs");
 const statePath = __STATE_PATH__;
 const externalComposerPath = __EXTERNAL_COMPOSER_PATH__;
-const state = {composer: __INITIAL_COMPOSER__, clicked: false, retryClicked: false, enterPressed: false, userMessages: [], currentUrl: ""};
+const state = {composer: __INITIAL_COMPOSER__, clicked: false, retryClicked: false, enterPressed: false, userMessages: [], currentUrl: "", readSnapshotRedirected: false, setupSnapshotRedirected: false};
 function clickSendButton() {
   state.clicked = true;
   state.userMessages.push(state.composer);
@@ -212,7 +212,9 @@ function locator(selector) {
 }
 const page = {
   async goto(url) {
-    state.currentUrl = url.endsWith("/redirect-me")
+    state.currentUrl = url.endsWith("/redirect-me") ||
+      process.env.DOT_TEST_NAVIGATE_AFTER_READ_SNAPSHOT === "1" ||
+      process.env.DOT_TEST_NAVIGATE_AFTER_SETUP_SNAPSHOT === "1"
       ? "https://chatgpt.com/c/different-conversation"
       : url;
   },
@@ -222,6 +224,41 @@ const page = {
   async evaluate(fn) {
     if (fn.toString().includes("/api/auth/session")) {
       return {status: 200, hasUser: true, isJson: true};
+    }
+    if (fn.toString().includes("document.body") &&
+        process.env.DOT_TEST_NAVIGATE_AFTER_SETUP_SNAPSHOT === "1" &&
+        !state.setupSnapshotRedirected) {
+      const pageUrl = new URL(state.currentUrl);
+      const pageText = "ChatGPT hit a snag on STATUS FROM OTHER CONVERSATION with enough stable text";
+      state.setupSnapshotRedirected = true;
+      state.currentUrl = process.env.DOT_URL;
+      return fn.toString().includes("window.location")
+        ? {text: pageText, url: pageUrl.origin + pageUrl.pathname}
+        : pageText;
+    }
+    if (fn.toString().includes("document.body.innerText") &&
+        !fn.toString().includes("document.body ?") &&
+        process.env.DOT_TEST_NAVIGATE_AFTER_READ_SNAPSHOT === "1" &&
+        !state.readSnapshotRedirected) {
+      const pageUrl = new URL(state.currentUrl);
+      const pageText = "ChatGPT hit a snag: STATUS FROM OTHER CONVERSATION with enough stable text for page setup";
+      state.readSnapshotRedirected = true;
+      if (fn.toString().includes("window.location")) {
+        const snapshot = {text: pageText, url: pageUrl.origin + pageUrl.pathname};
+        state.currentUrl = process.env.DOT_URL;
+        return snapshot;
+      }
+      state.currentUrl = process.env.DOT_URL;
+      return pageText;
+    }
+    if (fn.toString().includes("document.body.innerText") && fn.toString().includes("window.location")) {
+      const pageUrl = new URL(state.currentUrl);
+      return {
+        text: process.env.DOT_TEST_SNAG === "1" && !state.retryClicked
+          ? "ChatGPT hit a snag with an error in this fixture conversation"
+          : "Fixture conversation with enough stable text to finish page setup",
+        url: pageUrl.origin + pageUrl.pathname,
+      };
     }
     if (fn.toString().includes("usage limit")) return "";
     if (process.env.DOT_TEST_SNAG === "1" && !state.retryClicked) return "ChatGPT hit a snag with an error in this fixture conversation";
@@ -444,6 +481,47 @@ process.stdout.write = (chunk, ...args) => {
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("DOT_TARGET_VERIFIED", proc.stdout)
         self.assertNotIn("https://chatgpt.com/dots/fixture", proc.stdout)
+
+    def test_read_target_marker_stays_bound_to_captured_page_text(self):
+        self._install_fake_send_playwright()
+        env = dict(
+            self.env,
+            DOT_URL="https://chatgpt.com/c/intended-conversation",
+            DOT_TEST_NAVIGATE_AFTER_READ_SNAPSHOT="1",
+        )
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "read", "100"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        self.assertNotIn("DOT_TARGET_VERIFIED", proc.stdout)
+        self.assertIn("STATUS FROM OTHER CONVERSATION", proc.stdout)
+        state = json.loads((self.root / "prepared-send-state.json").read_text())
+        self.assertFalse(state["retryClicked"])
+
+    def test_setup_retry_uses_the_target_of_its_captured_page_text(self):
+        state_path = self._install_fake_send_playwright()
+        env = dict(
+            self.env,
+            DOT_URL="https://chatgpt.com/c/intended-conversation",
+            DOT_TEST_NAVIGATE_AFTER_SETUP_SNAPSHOT="1",
+        )
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "read", "100"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["retryClicked"])
 
     def test_prepared_delayed_abort_clears_only_owned_draft(self):
         proc, state = self._run_clocked_prepared(decision="abort")
