@@ -18,7 +18,7 @@ SCRIPT = (
 class DotTimeoutContractTest(unittest.TestCase):
     def test_timeout_aborts_before_send_click_can_start(self):
         source = SCRIPT.read_text(encoding="utf-8")
-        self.assertIn("let aborted = false;", source)
+        self.assertIn("let aborted = false, code = 0;", source)
 
         timeout = re.search(
             r"launchTimer = setTimeout\(\(\) => \{(?P<body>.*?)\}, 120000\);",

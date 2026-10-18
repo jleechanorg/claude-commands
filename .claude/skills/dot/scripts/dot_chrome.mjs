@@ -205,9 +205,8 @@ class ExistingProfileUnavailable extends Unavailable {
 const existingProfileUnavailable = (code) => { throw new ExistingProfileUnavailable(code); };
 
 const [mode, arg] = process.argv.slice(2);
-let ctx = null;
-let clicked = false;
-let aborted = false;
+let ctx = null, clicked = false;
+let aborted = false, code = 0;
 let commitReceived = false;
 let phaseDeadline = Infinity, operationDeadline = Infinity;
 const isPreparedMode = mode === 'send-prepared' || (mode === 'send' && process.env.DOT_PREPARED === '1');
@@ -666,7 +665,8 @@ const readSnapshot = page => page.evaluate(() => ({text: document.body.innerText
 async function read(page, n) {
   let snapshot = await readSnapshot(page), bodyText = snapshot.text.trim();
   if (sameConversationTarget(snapshot.url, URL_) && await clickRetryIfSnag(page, bodyText, 3000, snapshot.url)) { snapshot = await readSnapshot(page); bodyText = snapshot.text.trim(); }
-  console.log(sameConversationTarget(snapshot.url, URL_) ? 'DOT_TARGET_VERIFIED' : 'DOT_TARGET_MISMATCH');
+  if (!sameConversationTarget(snapshot.url, URL_)) { console.log('DOT_TARGET_MISMATCH'); code = 4; return; }
+  console.log('DOT_TARGET_VERIFIED');
   console.log(bodyText.slice(-n));
 }
 
@@ -811,7 +811,7 @@ if (isMainModule()) {
   process.on('SIGTERM', async () => { try { await ctx?.close(); } catch {} process.exit(143); });
   process.on('SIGINT', async () => { try { await ctx?.close(); } catch {} process.exit(130); });
 
-  let code = 0, launchTimer = null, operationTimer = null;
+  let launchTimer = null, operationTimer = null;
   try {
     if (mode === 'probe') {
       if (!/^[a-f0-9]{64}$/.test(arg || '')) {

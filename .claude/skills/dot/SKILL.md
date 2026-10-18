@@ -53,9 +53,8 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
   automatic retry clears the URL and can redirect the reminder to another
   account's configured chat. `dot.sh read` reports `DOT_TARGET_VERIFIED` when
   the final page has the requested origin and path, or `DOT_TARGET_MISMATCH`
-  when it does not; the check does not print the private URL. A mismatch fails the
-  observation: ignore the returned page text and make no progress decision from
-  it. If the send hits
+  when it does not; the check does not print the private URL. A mismatch returns
+  exit 4 with no page text. If the send hits
   a limit, try the next account in configured `rotation` only after reading
   that URL with `--account <next>` and requiring `DOT_TARGET_VERIFIED`; resend
   once with the same URL and automatic retry disabled. `send`, `send-once`,
@@ -140,7 +139,7 @@ Other agent sessions share this composer; ChatGPT restores a saved draft lazily 
    - **Weird half-typed text** (mid-word cutoffs, command fragments, pasted garbage) → **clear it**: `dot.sh clear-draft` (prints `DOT_DRAFT_CLEARED`), then send your own message.
 3. Never force-clear a draft while a peer session is provably actively typing (draft text changing between reads). `DOT_CLEAR_DRAFT=1` on `send` remains the forced-clear escape hatch; own-leftover and already-sent drafts are always safe-cleared automatically.
 
-**Verified send:** `DOT_SENT_VERIFIED` requires exact composer match after typing, emptied composer after sending, and the submitted text appearing in the conversation message list (`[data-message-author-role=user]`). Exit 4 means mismatched or unverified.
+**UI-confirmed send:** `DOT_SENT_VERIFIED` means the composer matched before dispatch, then cleared, and the count of normalized user-message DOM entries matching the composer increased between the two reads. Containment is accepted only when the shorter text is at least 95% of the longer text. This is a browser DOM observation, not confirmation of server acceptance or durable delivery. Exit 4 means mismatched or unverified; check the intended chat before sending again.
 - Send only what the user asked to send. Do not post test messages.
 - Avoid line-leading list markers (`1)`, `-`, `*`): the composer converts them to list formatting, which can cause mismatch detection. Use plain sentences.
 - Interactive login / auth: `dot.sh [--account <name>] login` launches visible Chrome attached to that account's profile directory.

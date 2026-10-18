@@ -60,7 +60,7 @@ class CoordinatorCheckbackContractTests(unittest.TestCase):
         self.assertIn('requiring `DOT_TARGET_VERIFIED`', self.cycle)
         self.assertIn('`DOT_TARGET_MISMATCH`', self.cycle)
         self.assertIn('`DOT_TARGET_MISMATCH` when it does not', self.cycle)
-        self.assertIn('ignore the returned page text and make no progress decision from it', self.cycle)
+        self.assertIn('returns exit 4 with no page text', self.cycle)
         self.assertIn('check the active origin and path before', self.cycle)
         self.assertIn('`submit-draft`', self.cycle)
         self.assertIn('immediately before submission', self.cycle)

@@ -424,8 +424,10 @@ process.stdout.write = (chunk, ...args) => {
             timeout=30,
             check=False,
         )
-        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
         self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        self.assertNotIn("STATUS FROM OTHER CONVERSATION", proc.stdout)
+        self.assertNotIn("Fixture conversation", proc.stdout)
         state = json.loads(state_path.read_text())
         self.assertFalse(state["retryClicked"])
 
@@ -444,8 +446,10 @@ process.stdout.write = (chunk, ...args) => {
             timeout=30,
             check=False,
         )
-        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
         self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        self.assertNotIn("STATUS FROM OTHER CONVERSATION", proc.stdout)
+        self.assertNotIn("Fixture conversation", proc.stdout)
         state = json.loads(state_path.read_text())
         self.assertFalse(state["retryClicked"])
 
@@ -486,6 +490,28 @@ process.stdout.write = (chunk, ...args) => {
         self._install_fake_send_playwright()
         env = dict(
             self.env,
+            DOT_URL="https://chatgpt.com/c/redirect-me",
+        )
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "read", "100"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        self.assertNotIn("DOT_TARGET_VERIFIED", proc.stdout)
+        self.assertNotIn("STATUS FROM OTHER CONVERSATION", proc.stdout)
+        self.assertNotIn("Fixture conversation", proc.stdout)
+        state = json.loads((self.root / "prepared-send-state.json").read_text())
+        self.assertFalse(state["retryClicked"])
+
+    def test_read_mismatch_snapshot_stays_rejected_after_navigation(self):
+        self._install_fake_send_playwright()
+        env = dict(
+            self.env,
             DOT_URL="https://chatgpt.com/c/intended-conversation",
             DOT_TEST_NAVIGATE_AFTER_READ_SNAPSHOT="1",
         )
@@ -497,12 +523,30 @@ process.stdout.write = (chunk, ...args) => {
             timeout=30,
             check=False,
         )
-        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
         self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
         self.assertNotIn("DOT_TARGET_VERIFIED", proc.stdout)
-        self.assertIn("STATUS FROM OTHER CONVERSATION", proc.stdout)
+        self.assertNotIn("STATUS FROM OTHER CONVERSATION", proc.stdout)
+        self.assertNotIn("Fixture conversation", proc.stdout)
         state = json.loads((self.root / "prepared-send-state.json").read_text())
         self.assertFalse(state["retryClicked"])
+
+    def test_dot_sh_read_propagates_target_mismatch_without_page_text(self):
+        self._install_fake_send_playwright()
+        target = "https://chatgpt.com/c/redirect-me"
+        env = dict(self.env, DOT_URL=target)
+        proc = subprocess.run(
+            [str(DOT_SH), "--url", target, "read", "100"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=40,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        self.assertNotIn("STATUS FROM OTHER CONVERSATION", proc.stdout)
+        self.assertNotIn("Fixture conversation", proc.stdout)
 
     def test_setup_retry_uses_the_target_of_its_captured_page_text(self):
         state_path = self._install_fake_send_playwright()
