@@ -10,6 +10,14 @@ Three phases, strictly in order:
 
 Never steer from a short tail, never use regex/keyword classifiers to guess terminal state, and never skip cross-surface deduplication.
 
+## No workspace selection — read headless (mandatory)
+
+**NEVER select, focus, switch, or reorder workspaces/surfaces.** No `cmux select-workspace`, `cmux workspace-action --action focus`, `focus-window`, `workspace.select`, or any command that moves the operator's active window/tab. Selection steals the operator's focus and is a hard failure.
+
+- Read terminal content **non-focusing** with `cmux capture-pane --workspace <ws_ref> --surface <sf_ref> --scrollback --lines <n>`. **Never use `cmux read-screen`** — it can return the focused surface's content and can steal focus.
+- Steering with `cmux send` / `cmux send-key --workspace <ws_ref> --surface <sf_ref>` is allowed and must **not** require selecting the workspace.
+- If a listing is needed, `cmux tree --all --json` / `cmux list-workspaces` are read-only and do not select.
+
 **Always `/parallel`. `/parallel` is the default execution mode for every phase, not an optimization.** If two items do not depend on each other, they MUST run concurrently — never as `item N` then `item N+1`. Concretely: assessment fans out across disjoint subagents (Phase 2), dedupe reads every shard concurrently, and steering dispatches to all owners at once (Phase 3). Before any sequential loop over surfaces/shards/lines, ask "can `/parallel` run these at the same time?" and if yes, fan out. The only serialization allowed is a genuine data dependency (a later step needs an earlier step's output) or a bounded resource cap — see `~/.claude/skills/parallelize-to-ceiling/SKILL.md`. Report the degree of parallelism achieved (e.g. "6 shards, 6 subagents") in the final report.
 
 ---
@@ -109,8 +117,10 @@ cmux capture-pane --workspace <ws_ref> --surface <sf_ref> --scrollback --lines 1
 
 Wide markdown tables wrap and clip inside split `cmux` panes. Present the fleet report using **Narrow-Screen Vertical Cards** (`<= 65 chars/line`), grouped by action (`STEERED`, `WORKING`, `PARKED_OPERATOR`, `STOOD_DOWN_DUPLICATE`, `QUOTA_BLOCKED`):
 
+**Always name the workspace and surface. Never identify a surface to the operator by its numeric ref alone.** Numeric refs (`workspace:1000010002` / `surface:1000010241`) are not useful to a human — lead every line, card, table, and steer confirmation with the workspace **name** and the surface **title**, and treat the numeric ref as optional secondary detail (append it only when a steer needs a machine-exact target, e.g. `lvl up › c-big (surface:1000010241)`). If a surface title is generic (e.g. `c`, `agy`, `wiki`), disambiguate with the workspace name, the cwd/branch from the footer, or the PR it owns — never fall back to the bare number.
+
 ```markdown
-### [ws_title] workspace:N / surface:M (<cli>)
+### <workspace name> › <surface title> (<cli>)
 - **PR / Task**: PR #10379 (branch `fix/...`)
 - **State**: STEERED -> WORKING
 - **Sent**: "Re-run Green Gate check and report readiness..."
