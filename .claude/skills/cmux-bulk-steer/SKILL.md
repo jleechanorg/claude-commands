@@ -28,6 +28,30 @@ If you catch yourself in a sequential per-item loop, stop and convert it to a `/
 
 ---
 
+## Stalled-on-question unblock (Claude / Codex) — look for it explicitly
+
+A recurring failure pattern: a Claude Code or Codex surface has **finished its turn and is stopped on a question**, waiting for an answer — so it reads as "idle" but is NOT done. During every read (Phase 2), explicitly scan each surface's tail for this pattern and unblock it.
+
+**Signatures (read the surrounding lines, never a bare keyword):**
+- A yes/no confirmation: `Do you want to proceed?`, `(y/n)`, `[y/N]`, `Allow ...?`.
+- A numbered / selectable menu: a `❯ 1. ...` highlighted line, `Enter to select`, `↑/↓ to move`.
+- An `AskUserQuestion` / plan-approval block: a question followed by 2–4 options, one marked recommended/default.
+- A single free-text prompt asking `Should I ...?` / `Which ...?` where the agent states its own recommendation.
+
+**Unblock rule — choose the recommended option:**
+1. If the recommended/default is visible (the `❯` highlighted line, an option labelled `Recommended` / `(Recommended)` / `Yes`, or the agent's own stated recommendation), send it via the headless steer path:
+   - Select menu → send `"\n"` (Enter) to accept the highlighted option.
+   - Yes/no → send `y` (when Yes is recommended) then Enter.
+   - Numbered options → send the recommended option's number/text + Enter.
+2. If the agent asked a free-text question and stated its recommendation, reply with a one-line approval naming that recommendation (e.g. `Yes, do <recommended>.`).
+3. Send via the socket `surface.send_text` / `cmux send` call, then verify with `capture-pane` that the dialog cleared and the agent resumed working.
+
+**Never auto-answer a genuine human decision** — destructive/irreversible actions, production `MERGE APPROVED`, scope/product choices, credential changes, or spend authorizations. Those are `PARKED_OPERATOR`: report them, don't guess.
+
+This augments the `DIALOG_BLOCKED` semantic category below (a stopped coding-agent question is the same failure class).
+
+---
+
 ## Why Regex / Keyword Classifiers Are Banned (`/zfc`)
 
 Per `~/.claude/skills/zero-framework-cognition/SKILL.md` (`/zfc`), `scripts/scan.py` is strictly a **mechanical I/O collector** (`cmux tree --all --json`, `cmux top --all --flat`, `cmux capture-pane --scrollback --lines 4000`, and 10,000-word file slicing). All regex/keyword classifiers (`CHURN_RE`, `DEAD_RE`, `PARK_RE`, `QUESTION_RE`, `FOOTER_RE`) are permanently banned because static pattern matching repeatedly failed on real terminal scrollback:
