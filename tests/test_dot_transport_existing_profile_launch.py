@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 import selectors
 import shlex
 import shutil
@@ -180,7 +181,12 @@ function locator(selector) {
         isConnected: true,
         disabled: false,
         getAttribute() { return null; },
-        getClientRects() { return [{}]; },
+        getClientRects() {
+          if (process.env.DOT_TEST_ADVANCE_CLOCK_DURING_ACTIONABILITY === "1") {
+            globalThis.advanceClock(Number(process.env.DOT_TEST_ACTIONABILITY_ADVANCE_MS || 600000));
+          }
+          return [{}];
+        },
         click() {
           if (selector.includes("Try again") || selector.includes("Retry")) state.retryClicked = true;
           else clickSendButton();
@@ -195,6 +201,10 @@ function locator(selector) {
       if (process.env.DOT_TEST_REJECT_AFTER_SEND_DISPATCH === "1" &&
           (selector.includes("send-button") || selector.includes("Send")) && state.clicked) {
         throw new Error("synthetic response lost after dispatch");
+      }
+      if (process.env.DOT_TEST_REJECT_AFTER_RETRY_DISPATCH === "1" &&
+          (selector.includes("Try again") || selector.includes("Retry")) && state.retryClicked) {
+        throw new Error("synthetic response lost after retry dispatch");
       }
       return result;
     },
@@ -266,7 +276,8 @@ exports.chromium = {
                               mismatched_composer=False, missing_profile=False,
                               hang_launch=False, hang_after_commit=False,
                               send_advance_ms=120000, advance_before_action=False,
-                              mutate_composer_at_action=False):
+                              mutate_composer_at_action=False,
+                              advance_during_actionability=False):
         state_path = self._install_fake_send_playwright(initial_composer)
         module = self.root / "node_modules" / "playwright" / "index.js"
         source = module.read_text()
@@ -323,6 +334,8 @@ process.stdout.write = (chunk, ...args) => {
         env = dict(self.env, DOT_PREPARED="1")
         if advance_before_action:
             env["DOT_TEST_ADVANCE_CLOCK_DURING_SEND_EVAL"] = "1"
+        if advance_during_actionability:
+            env["DOT_TEST_ADVANCE_CLOCK_DURING_ACTIONABILITY"] = "1"
         if mutate_composer_at_action:
             env["DOT_TEST_MUTATE_COMPOSER_DURING_SEND_EVAL"] = "1"
         with subprocess.Popen(command, env=env,
@@ -612,6 +625,41 @@ process.stdout.write = (chunk, ...args) => {
             "User edited this draft",
         )
 
+    def test_prepared_send_reports_nonce_abort_for_composer_change_at_action(self):
+        proc, state = self._run_clocked_prepared(mutate_composer_at_action=True)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        prepared = re.search(r"^prepared ([a-f0-9]{32})$", proc.stdout, re.MULTILINE)
+        self.assertIsNotNone(prepared, proc.stdout)
+        self.assertIn(f"aborted {prepared.group(1)}", proc.stdout)
+        self.assertIn("DOT_PREPARED_ABORTED reason=composer_changed_at_action", proc.stdout)
+        self.assertFalse(state["clicked"])
+        self.assertEqual(state["userMessages"], [])
+        self.assertEqual(state["composer"], "UNAPPROVED changed message")
+
+    def test_retry_dispatch_response_failure_stops_a_new_send(self):
+        state_path = self._install_fake_send_playwright()
+        message_path = self.root / "retry-uncertainty-message.txt"
+        message_path.write_text("Do not send after uncertain retry")
+        env = dict(
+            self.env,
+            DOT_TEST_SNAG="1",
+            DOT_TEST_REJECT_AFTER_RETRY_DISPATCH="1",
+        )
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "send", str(message_path)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertIn("DOT_SEND_UNVERIFIED", proc.stdout)
+        self.assertNotIn("DOT_SENT_VERIFIED", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["clicked"])
+        self.assertTrue(state["retryClicked"])
+        self.assertEqual(state["userMessages"], [])
+
     def test_prepared_send_does_not_click_after_whitespace_change(self):
         edited_composers = (
             "Coordinator-owned fixture  message",
@@ -794,22 +842,12 @@ process.stdout.write = (chunk, ...args) => {
         self.assertTrue(state["clicked"])
         self.assertEqual(state["userMessages"], ["Draft that may have been sent"])
 
-    def test_submit_draft_reports_uncertain_after_dispatch_response_fails(self):
-        state_path = self._install_fake_send_playwright("Draft that may have been sent")
-        env = dict(self.env, DOT_TEST_REJECT_AFTER_SEND_DISPATCH="1")
-        proc = subprocess.run(
-            [str(NODE22), str(SCRIPT), "submit-draft"],
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-        self.assertIn("DOT_SEND_UNVERIFIED", proc.stdout)
-        self.assertNotIn("DOT_CHROME_UNAVAILABLE", proc.stdout)
-        state = json.loads(state_path.read_text())
-        self.assertTrue(state["clicked"])
-        self.assertEqual(state["userMessages"], ["Draft that may have been sent"])
+    def test_submit_draft_does_not_click_if_deadline_expires_during_actionability(self):
+        proc, state = self._run_clocked_prepared(advance_during_actionability=True)
+        self.assertNotIn("DOT_DRAFT_SUBMITTED", proc.stdout)
+        self.assertFalse(state["clicked"])
+        self.assertEqual(state["userMessages"], [])
+        self.assertEqual(state["composer"], "Synthetic proof")
 
     def test_submit_draft_refuses_if_initial_target_is_redirected(self):
         state_path = self._install_fake_send_playwright("Draft that must stay unsent")

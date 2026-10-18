@@ -192,6 +192,7 @@ async function clickInRequestedConversation(page, selector, composerText) {
     }
     if (!control.isConnected || control.disabled || control.getAttribute('aria-disabled') === 'true' ||
       control.getClientRects().length === 0) return 'not-actionable';
+    if (Date.now() >= expected.deadline) return 'timeout';
     control.click(); return 'clicked';
   }, { origin: target.origin, path, deadline, composer: composerText, composerSelector: COMPOSER });
 }
@@ -402,18 +403,13 @@ async function checkAuthSession(page, fetchTimeoutMs = 0) {
 async function clickRetryIfSnag(page, bodyText, waitMs) {
   if (!/ChatGPT hit a snag|Something went wrong/i.test(bodyText)) return false;
   if (!sameConversationTarget(page.url(), URL_)) return false;
-  try {
-    const tryAgainBtn = page.locator('button:has-text("Try again"), button:has-text("Retry")');
-    if (await tryAgainBtn.count() > 0) {
-      const result = await clickInRequestedConversation(page, 'button:has-text("Try again"), button:has-text("Retry")');
-      if (result === 'timeout') { aborted = true; unavailable('timeout'); }
-      if (result === 'clicked') {
-        await sleep(waitMs);
-        return true;
-      }
-    }
-  } catch {}
-  return false;
+  const retry = 'button:has-text("Try again"), button:has-text("Retry")';
+  if (await page.locator(retry).count() === 0) return false;
+  clicked = true;
+  const result = await clickInRequestedConversation(page, retry);
+  if (result === 'timeout') { clicked = false; aborted = true; unavailable('timeout'); }
+  if (result === 'clicked') { await sleep(waitMs); return true; }
+  clicked = false; return false;
 }
 
 async function settlePage(page, currentMode) {
@@ -762,8 +758,8 @@ async function send(page, file, dry, opts = {}) {
   const beforeMsgs = await getUserMessages();
   const beforeCount = countMatches(beforeMsgs, norm(msg));
 
+  const nonce = opts.prepared ? crypto.randomBytes(16).toString('hex') : null;
   if (opts.prepared) {
-    const nonce = crypto.randomBytes(16).toString('hex');
     opts.onPrepared?.();
     process.stdout.write(`prepared ${nonce}\n`);
     const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
@@ -795,7 +791,11 @@ async function send(page, file, dry, opts = {}) {
   if (aborted) return;
   clicked = true;
   const action = await clickInRequestedConversation(page, SEND_BUTTON, typed);
-  if (action === 'composer-mismatch') { clicked = false; console.log(opts.prepared ? 'DOT_PREPARED_ABORTED reason=composer_changed_at_action' : 'DOT_SEND_UNVERIFIED composer_changed_before_action'); return; }
+  if (action === 'composer-mismatch') { clicked = false;
+    if (opts.prepared) { aborted = true; process.stdout.write(`aborted ${nonce}\n`); }
+    console.log(opts.prepared ? 'DOT_PREPARED_ABORTED reason=composer_changed_at_action' :
+      'DOT_SEND_UNVERIFIED composer_changed_before_action'); return;
+  }
   if (action === 'target-mismatch') { clicked = false; console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
   if (action === 'timeout') { clicked = false; aborted = true; unavailable('timeout'); }
   if (action !== 'clicked') { clicked = false; unavailable('send control not actionable'); }
