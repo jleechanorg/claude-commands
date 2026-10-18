@@ -175,6 +175,7 @@ const USER_DATA_DIR = accountInfo.profileDir;
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36';
 const COMPOSER = '[contenteditable=true], #prompt-textarea, textarea[placeholder*="Message"]';
 const SEND_BUTTON = 'button[data-testid=send-button], button[aria-label*=Send]';
+const USER_MESSAGES = '[data-message-author-role=user], article.self, article[class*="self"]';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const norm = (t) => t.replace(/\s+/g, ' ').trim();
 const stripReadReceipt = (t) => t.replace(/Read\s+\d{1,2}:\d{2}\s*(?:[AP]M)?/gi, '').replace(/\s+/g, ' ').trim();
@@ -632,8 +633,8 @@ async function submitDraft(page) {
   await sleep(800);
   const rawComposer = await page.locator(COMPOSER).first().innerText().catch(() => ''), composer = rawComposer.trim();
   if (composer === '') { console.log('DOT_SUBMIT_NOTHING_TO_SEND'); return; }
-  const userMsgLocator = page.locator('[data-message-author-role=user], article.self, article[class*="self"]');
-  const before = await userMsgLocator.count().catch(() => 0);
+  const before = await readSendEvidence(page);
+  if (!sameConversationTarget(before.url, URL_)) { console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
   requireConversationTarget(page);
   clicked = true;
   const action = await clickInRequestedConversation(page, SEND_BUTTON, rawComposer);
@@ -641,12 +642,11 @@ async function submitDraft(page) {
   if (action === 'timeout') { clicked = false; aborted = true; unavailable('timeout'); }
   if (action !== 'clicked') { clicked = false; console.log('DOT_SUBMIT_UNVERIFIED ' + action); return; }
   await sleep(3000);
-  const after = await userMsgLocator.count().catch(() => 0);
-  const cleared = ((await page.locator(COMPOSER).first().innerText().catch(() => '')).trim()) === '';
-  if (cleared && after > before) console.log('DOT_DRAFT_SUBMITTED: ' + rawComposer.slice(0, 200));
-  else console.log('DOT_SUBMIT_UNVERIFIED composer_cleared=' + cleared);
+  const after = await readSendEvidence(page);
+  if (!sameConversationTarget(after.url, URL_)) { console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
+  if (after.composer.trim() === '' && after.messages.length > before.messages.length) console.log('DOT_DRAFT_SUBMITTED: ' + rawComposer.slice(0, 200));
+  else console.log('DOT_SUBMIT_UNVERIFIED composer_cleared=' + (after.composer.trim() === ''));
 }
-
 async function clearDraft(page) {
   await page.click(COMPOSER);
   await sleep(800);
@@ -661,6 +661,10 @@ async function clearDraft(page) {
 }
 
 const readSnapshot = page => page.evaluate(() => ({text: document.body.innerText, url: `${window.location.origin}${window.location.pathname}`}));
+const readSendEvidence = page => page.evaluate(({composerSelector, messageSelector}) => {
+  const composer = document.querySelector(composerSelector);
+  return {url: `${window.location.origin}${window.location.pathname}`, composer: composer?.tagName === 'TEXTAREA' ? composer.value : (composer?.innerText || ''), messages: Array.from(document.querySelectorAll(messageSelector), el => el.innerText || el.textContent || '')};
+}, {composerSelector: COMPOSER, messageSelector: USER_MESSAGES});
 async function read(page, n) {
   let snapshot = await readSnapshot(page), bodyText = snapshot.text.trim();
   if (sameConversationTarget(snapshot.url, URL_) && await clickRetryIfSnag(page, bodyText, 3000, snapshot.url)) { snapshot = await readSnapshot(page); bodyText = snapshot.text.trim(); }
@@ -685,11 +689,6 @@ async function send(page, file, dry, opts = {}) {
       if (preparedDraft !== null && (await readComposer()) === preparedDraft) await clear();
     } catch {}
   };
-  const getUserMessages = () => page.locator('[data-message-author-role=user], article.self, article[class*="self"]')
-    .allInnerTexts()
-    .then(arr => arr.map(norm))
-    .catch(() => []);
-
   const alertText = await page.evaluate(() => {
     const alerts = Array.from(document.querySelectorAll('[role="alert"], [data-testid*="alert"], div[class*="banner"], div[class*="error"]'));
     for (const el of alerts) {
@@ -754,8 +753,9 @@ async function send(page, file, dry, opts = {}) {
   }
 
   const countMatches = (msgs, needle) => msgs.filter(m => matchesMessage(m, needle)).length;
-  const beforeMsgs = await getUserMessages();
-  const beforeCount = countMatches(beforeMsgs, norm(msg));
+  const beforeSnapshot = await readSendEvidence(page);
+  if (!sameConversationTarget(beforeSnapshot.url, URL_)) { console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
+  const beforeCount = countMatches(beforeSnapshot.messages.map(norm), norm(msg));
 
   const nonce = opts.prepared ? crypto.randomBytes(16).toString('hex') : null;
   if (opts.prepared) {
@@ -799,10 +799,10 @@ async function send(page, file, dry, opts = {}) {
   if (action === 'timeout') { clicked = false; aborted = true; unavailable('timeout'); }
   if (action !== 'clicked') { clicked = false; unavailable('send control not actionable'); }
   await sleep(4000);
-  requireConversationTarget(page);
-  const left = (await readComposer()).trim();
-  const afterMsgs = await getUserMessages();
-  const afterCount = countMatches(afterMsgs, norm(msg));
+  const afterSnapshot = await readSendEvidence(page);
+  if (!sameConversationTarget(afterSnapshot.url, URL_)) { console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
+  const left = afterSnapshot.composer.trim();
+  const afterCount = countMatches(afterSnapshot.messages.map(norm), norm(msg));
   const sentVerified = left === '' && afterCount > beforeCount;
   console.log(sentVerified ? 'DOT_SENT_VERIFIED' : 'DOT_SEND_UNVERIFIED composer_left=' + left.length);
 }

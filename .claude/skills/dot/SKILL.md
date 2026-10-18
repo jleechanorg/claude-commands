@@ -50,9 +50,10 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
 - Increment once per completed observation attempt, including a recorded timeout or read failure; resume an interrupted attempt under the same count. Later re-observation consumes the next scheduled count: no check eleven or disguised in-check re-observation.
 - Preserve the cycle checkpoint and the intended chat URL. For each coordinator
   reminder send, set `DOT_ROTATE_ON_LIMIT=0` and pass `--url <intended-chat-url>`;
-  automatic retry clears the URL and can redirect the reminder to another
-  account's configured chat. `dot.sh read` reports `DOT_TARGET_VERIFIED` when
-  the final page has the requested origin and path, or `DOT_TARGET_MISMATCH`
+  disabling rotation returns control on a limit before any unobserved resend.
+  An explicit URL remains in force across account rotation; without one, the
+  next account's configured URL is resolved. `dot.sh read` reports
+  `DOT_TARGET_VERIFIED` when the final page has the requested origin and path, or `DOT_TARGET_MISMATCH`
   when it does not; the check does not print the private URL. A mismatch returns
   exit 4 with no page text. If the send hits
   a limit, try the next account in configured `rotation` only after reading
@@ -60,8 +61,10 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
   once with the same URL and automatic retry disabled. `send`, `send-once`,
   `send-prepared`, and `submit-draft` check the active origin and path before
   opening the composer and immediately before submission; sends also recheck
-  the exact composer text and operation deadline at dispatch; a detected
-  mismatch blocks the send. Retry controls recheck the target and deadline;
+  the exact composer text and operation deadline at dispatch. After dispatch,
+  the URL, composer, and user-message entries are captured in one page snapshot;
+  a target mismatch blocks a success marker. Retry controls recheck the target
+  and deadline;
   prepared sends do not activate a retry before an explicit commit. If the
   next account cannot verify the target, record the observation as failed and
   do not use its default URL. Apply the same check before every observation.
@@ -139,7 +142,7 @@ Other agent sessions share this composer; ChatGPT restores a saved draft lazily 
    - **Weird half-typed text** (mid-word cutoffs, command fragments, pasted garbage) → **clear it**: `dot.sh clear-draft` (prints `DOT_DRAFT_CLEARED`), then send your own message.
 3. Never force-clear a draft while a peer session is provably actively typing (draft text changing between reads). `DOT_CLEAR_DRAFT=1` on `send` remains the forced-clear escape hatch; own-leftover and already-sent drafts are always safe-cleared automatically.
 
-**UI-confirmed send:** `DOT_SENT_VERIFIED` reports that the pre-dispatch composer comparison matched, the post-dispatch composer read compared as empty, and the count of normalized user-message DOM entries matching the composer increased between reads. Containment is accepted only when the shorter text is at least 95% of the longer text. Failed composer or message-list reads are treated as empty, so this marker does not prove both observations succeeded. It is a browser DOM comparison, not confirmation of server acceptance or durable delivery. Exit 4 means mismatched or unverified; check the intended chat before sending again.
+**UI-confirmed send:** `DOT_SENT_VERIFIED` reports that the pre-dispatch composer comparison matched and one post-dispatch page snapshot showed the requested URL, an empty composer, and an increased count of normalized user-message DOM entries matching the message. Containment is accepted only when the shorter text is at least 95% of the longer text. A failed snapshot or target mismatch cannot produce this marker. This is a browser DOM comparison, not confirmation of server acceptance or durable delivery. Exit 4 means mismatched or unverified; check the intended chat before sending again. `DOT_DRAFT_SUBMITTED` uses the same target-bound snapshot check for its composer and message-count comparison.
 - Send only what the user asked to send. Do not post test messages.
 - Avoid line-leading list markers (`1)`, `-`, `*`): the composer converts them to list formatting, which can cause mismatch detection. Use plain sentences.
 - Interactive login / auth: `dot.sh [--account <name>] login` launches visible Chrome attached to that account's profile directory.

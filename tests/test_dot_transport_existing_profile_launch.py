@@ -137,7 +137,12 @@ function clickSendButton() {
 function locator(selector) {
   if (selector.includes("data-message-author-role=user")) {
     return {
-      async allInnerTexts() { return state.userMessages; },
+      async allInnerTexts() {
+        if (state.clicked && process.env.DOT_TEST_REDIRECT_DURING_FINAL_MESSAGE_READ === "1") {
+          state.currentUrl = "https://chatgpt.com/c/different-conversation";
+        }
+        return state.userMessages;
+      },
       async count() {
         if (state.clicked && process.env.DOT_TEST_HANG_AFTER_CLICK === "1") {
           globalThis.advanceClock(Number(process.env.DOT_TEST_ADVANCE_DURING_VERIFY || 120000));
@@ -224,7 +229,27 @@ const page = {
   url() { return state.currentUrl; },
   async title() { return "ChatGPT"; },
   locator,
-  async evaluate(fn) {
+  async evaluate(fn, expected) {
+    if (fn.toString().includes("messageSelector")) {
+      if (state.clicked && process.env.DOT_TEST_HANG_AFTER_CLICK === "1") {
+        globalThis.advanceClock(Number(process.env.DOT_TEST_ADVANCE_DURING_VERIFY || 120000));
+        return new Promise(() => {});
+      }
+      if (state.clicked && process.env.DOT_TEST_REDIRECT_DURING_FINAL_MESSAGE_READ === "1") {
+        state.currentUrl = "https://chatgpt.com/c/different-conversation";
+      }
+      const current = new URL(state.currentUrl);
+      globalThis.window = {location: {origin: current.origin, pathname: current.pathname}};
+      globalThis.document = {
+        querySelector(selector) {
+          return selector.includes("contenteditable") || selector.includes("prompt-textarea")
+            ? {tagName: "DIV", innerText: state.composer, value: state.composer}
+            : null;
+        },
+        querySelectorAll() { return state.userMessages.map(innerText => ({innerText})); },
+      };
+      return fn(expected);
+    }
     if (fn.toString().includes("/api/auth/session")) {
       return {status: 200, hasUser: true, isJson: true};
     }
@@ -327,14 +352,6 @@ exports.chromium = {
             source = source.replace('state.composer += text', 'state.composer += "different fixture"')
         if hang_launch:
             source = source.replace('async launchPersistentContext() {', 'async launchPersistentContext() { setImmediate(() => globalThis.advanceClock(120000)); await new Promise(() => {});')
-        if hang_after_commit:
-            source = source.replace(
-                'async allInnerTexts() { return state.userMessages; },',
-                'async allInnerTexts() { if (state.clicked) { globalThis.advanceClock(' +
-                str(send_advance_ms) +
-                '); return new Promise(() => {}); } return state.userMessages; },',
-                1,
-            )
         module.write_text(source)
         if missing_profile:
             self.profile.rmdir()
@@ -372,6 +389,9 @@ process.stdout.write = (chunk, ...args) => {
 '''.replace("__ADVANCE__", str(advance_ms)).replace("__DECISION__", decision))
         command = [str(NODE22), "--require", str(preload), str(SCRIPT), "send-prepared", str(message_path)]
         env = dict(self.env, DOT_PREPARED="1")
+        if hang_after_commit:
+            env["DOT_TEST_HANG_AFTER_CLICK"] = "1"
+            env["DOT_TEST_ADVANCE_DURING_VERIFY"] = str(send_advance_ms)
         if advance_before_action:
             env["DOT_TEST_ADVANCE_CLOCK_DURING_SEND_EVAL"] = "1"
         if advance_during_actionability:
@@ -848,12 +868,25 @@ process.stdout.write = (chunk, ...args) => {
         self.assertEqual(state["composer"], "")
 
     def test_prepared_send_refuses_if_target_changes_after_initial_check(self):
-        rc, stdout, stderr, state = self._run_prepared_send(
-            lambda nonce: "commit " + nonce, redirect_after_type=True,
+        message_path = self.root / "redirect-after-type-message.txt"
+        message_path.write_text("Coordinator-owned fixture message", encoding="utf-8")
+        state_path = self._install_fake_send_playwright()
+        module = self.root / "node_modules" / "playwright" / "index.js"
+        source = module.read_text(encoding="utf-8").replace(
+            'async insertText(text) { state.composer += text; }',
+            'async insertText(text) { state.composer += text; '
+            'state.currentUrl = "https://chatgpt.com/c/different-conversation"; }',
         )
-        self.assertEqual(rc, 10, stdout + stderr)
-        self.assertIn("DOT_TARGET_MISMATCH", stdout)
-        self.assertIn("requested conversation target mismatch", stdout)
+        module.write_text(source, encoding="utf-8")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "send-prepared", str(message_path)],
+            env=dict(self.env, DOT_PREPARED="1"), capture_output=True, text=True,
+            timeout=30, check=False,
+        )
+        self.assertEqual(proc.returncode, 10, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        self.assertIn("requested conversation target mismatch", proc.stdout)
+        state = json.loads(state_path.read_text())
         self.assertFalse(state["clicked"])
         self.assertEqual(state["userMessages"], [])
 
@@ -896,6 +929,25 @@ process.stdout.write = (chunk, ...args) => {
         state = json.loads(state_path.read_text())
         self.assertTrue(state["clicked"])
         self.assertEqual(state["userMessages"], ["Must verify the requested conversation after send"])
+
+    def test_send_receipt_is_bound_to_final_target_snapshot(self):
+        state_path = self._install_fake_send_playwright()
+        message_path = self.root / "redirect-during-receipt.txt"
+        message_path.write_text("Bind the receipt to the requested conversation")
+        env = dict(self.env, DOT_TEST_REDIRECT_DURING_FINAL_MESSAGE_READ="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "send", str(message_path)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        self.assertNotIn("DOT_SENT_VERIFIED", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertTrue(state["clicked"])
 
     def test_send_does_not_click_if_composer_changes_during_action_resolution(self):
         state_path = self._install_fake_send_playwright()

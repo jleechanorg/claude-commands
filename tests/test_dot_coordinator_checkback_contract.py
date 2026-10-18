@@ -54,7 +54,8 @@ class CoordinatorCheckbackContractTests(unittest.TestCase):
     def test_coordinator_uses_normal_preference_and_account_rotation(self):
         self.assertIn('Preserve the cycle checkpoint and the intended chat URL', self.cycle)
         self.assertIn('set `DOT_ROTATE_ON_LIMIT=0` and pass `--url <intended-chat-url>`', self.cycle)
-        self.assertIn('automatic retry clears the URL', self.cycle)
+        self.assertIn('disabling rotation returns control on a limit before any unobserved resend', self.cycle)
+        self.assertIn('An explicit URL remains in force across account rotation', self.cycle)
         self.assertIn('reading', self.cycle)
         self.assertIn('that URL with `--account <next>`', self.cycle)
         self.assertIn('requiring `DOT_TARGET_VERIFIED`', self.cycle)
@@ -64,7 +65,7 @@ class CoordinatorCheckbackContractTests(unittest.TestCase):
         self.assertIn('check the active origin and path before', self.cycle)
         self.assertIn('`submit-draft`', self.cycle)
         self.assertIn('immediately before submission', self.cycle)
-        self.assertIn('a detected mismatch blocks the send', self.cycle)
+        self.assertIn('a target mismatch blocks a success marker', self.cycle)
         self.assertIn('cannot verify the target', self.cycle)
         self.assertIn('record the observation as failed', self.cycle)
         self.assertIn('do not use its default URL', self.cycle)
