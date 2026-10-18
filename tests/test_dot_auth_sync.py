@@ -665,6 +665,7 @@ exec "$real_node" "$@"
                 DOT_PROFILE_DIRECTORY="Override Profile",
                 DOT_BACKEND="chrome",
             )
+            env.pop("DOT_URL", None)
             result = subprocess.run(
                 ["bash", str(DOT_SH), "send-once", str(message)],
                 env=env, capture_output=True, text=True, timeout=15,
