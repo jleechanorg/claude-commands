@@ -56,8 +56,10 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
   when it does not; the check does not print the private URL. If the send hits
   a limit, try the next account in configured `rotation` only after reading
   that URL with `--account <next>` and requiring `DOT_TARGET_VERIFIED`; resend
-  once with the same URL and automatic retry disabled. Sending also refuses a
-  final page whose origin and path do not match the requested target. If the
+  once with the same URL and automatic retry disabled. `send`, `send-once`,
+  `send-prepared`, and `submit-draft` check the active origin and path before
+  opening the composer and immediately before submission; a detected mismatch
+  blocks the send. If the
   next account cannot verify the target, record the observation as failed and
   do not use its default URL. Apply the same check before every observation.
   Keep account attempts local to that scheduled observation. Start with the

@@ -124,10 +124,13 @@ exports.chromium = {
         script = r'''const fs = require("node:fs");
 const statePath = __STATE_PATH__;
 const externalComposerPath = __EXTERNAL_COMPOSER_PATH__;
-const state = {composer: __INITIAL_COMPOSER__, clicked: false, userMessages: [], currentUrl: ""};
+const state = {composer: __INITIAL_COMPOSER__, clicked: false, enterPressed: false, userMessages: [], currentUrl: ""};
 function locator(selector) {
   if (selector.includes("data-message-author-role=user")) {
-    return {async allInnerTexts() { return state.userMessages; }};
+    return {
+      async allInnerTexts() { return state.userMessages; },
+      async count() { return state.userMessages.length; },
+    };
   }
   return {
     async count() { return 1; },
@@ -168,6 +171,11 @@ const page = {
     async press(key) {
       if (key.endsWith("+A")) this.selected = true;
       else if (key === "Backspace" && this.selected) state.composer = "";
+      else if (key === "Enter") {
+        state.enterPressed = true;
+        state.userMessages.push(state.composer);
+        state.composer = "";
+      }
     },
     async insertText(text) { state.composer += text; },
   },
@@ -347,10 +355,19 @@ process.stdout.write = (chunk, ...args) => {
                     if reason == "composer_not_empty":
                         self.assertEqual(state["composer"], "Existing draft")
 
-    def _run_prepared_send(self, control):
+    def _run_prepared_send(self, control, *, redirect_after_type=False):
         message_path = self.root / "prepared-message.txt"
         message_path.write_text("Coordinator-owned fixture message", encoding="utf-8")
         state_path = self._install_fake_send_playwright()
+        if redirect_after_type:
+            module = self.root / "node_modules" / "playwright" / "index.js"
+            source = module.read_text(encoding="utf-8")
+            source = source.replace(
+                'async insertText(text) { state.composer += text; }',
+                'async insertText(text) { state.composer += text; '
+                'state.currentUrl = "https://chatgpt.com/c/different-conversation"; }',
+            )
+            module.write_text(source, encoding="utf-8")
         env = dict(self.env, DOT_PREPARED="1")
         proc = subprocess.Popen(
             [str(NODE22), str(SCRIPT), "send-prepared", str(message_path)],
@@ -504,6 +521,61 @@ process.stdout.write = (chunk, ...args) => {
         self.assertTrue(state["clicked"])
         self.assertEqual(state["userMessages"], ["Coordinator-owned fixture message"])
         self.assertEqual(state["composer"], "")
+
+    def test_prepared_send_refuses_if_target_changes_after_initial_check(self):
+        rc, stdout, stderr, state = self._run_prepared_send(
+            lambda nonce: "commit " + nonce, redirect_after_type=True,
+        )
+        self.assertEqual(rc, 10, stdout + stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", stdout)
+        self.assertIn("requested conversation target mismatch", stdout)
+        self.assertFalse(state["clicked"])
+        self.assertEqual(state["userMessages"], [])
+
+    def test_submit_draft_refuses_if_initial_target_is_redirected(self):
+        state_path = self._install_fake_send_playwright("Draft that must stay unsent")
+        env = dict(self.env, DOT_URL="https://chatgpt.com/c/redirect-me")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "submit-draft"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 10, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["enterPressed"])
+        self.assertEqual(state["userMessages"], [])
+        self.assertEqual(state["composer"], "Draft that must stay unsent")
+
+    def test_submit_draft_rechecks_target_before_enter(self):
+        state_path = self._install_fake_send_playwright("Draft that must stay unsent")
+        module = self.root / "node_modules" / "playwright" / "index.js"
+        source = module.read_text(encoding="utf-8")
+        source = source.replace(
+            "async click(selector) {\n    if (selector.includes(\"send-button\")) {",
+            "async click(selector) {\n"
+            "    if (selector.includes(\"contenteditable\")) "
+            "state.currentUrl = \"https://chatgpt.com/c/different-conversation\";\n"
+            "    if (selector.includes(\"send-button\")) {",
+        )
+        module.write_text(source, encoding="utf-8")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "submit-draft"],
+            env=self.env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 10, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["enterPressed"])
+        self.assertEqual(state["userMessages"], [])
+        self.assertEqual(state["composer"], "Draft that must stay unsent")
 
     @staticmethod
     def _result(stdout):

@@ -56,6 +56,14 @@ function sameConversationTarget(actualUrl, targetUrl) {
   }
 }
 
+function requireConversationTarget(page) {
+  if (!sameConversationTarget(page.url(), URL_)) {
+    console.log('DOT_TARGET_MISMATCH');
+    unavailable('requested conversation target mismatch; refusing to send');
+  }
+  console.log('DOT_TARGET_VERIFIED');
+}
+
 function assertProfileRootIsNotSymlink(profileDir) {
   try {
     if (fs.lstatSync(path.resolve(profileDir)).isSymbolicLink()) {
@@ -601,12 +609,14 @@ async function probeSession(expectedDigest) {
 // Thin mechanical primitives for the SKILL.md draft policy. No judgment here:
 // the deciding agent reads the composer (via `read`) and calls one of these.
 async function submitDraft(page) {
+  requireConversationTarget(page);
   await page.click(COMPOSER);
   await sleep(800);
   const composer = (await page.locator(COMPOSER).first().innerText().catch(() => '')).trim();
   if (composer === '') { console.log('DOT_SUBMIT_NOTHING_TO_SEND'); return; }
   const userMsgLocator = page.locator('[data-message-author-role=user], article.self, article[class*="self"]');
   const before = await userMsgLocator.count().catch(() => 0);
+  requireConversationTarget(page);
   await page.keyboard.press('Enter');
   await sleep(3000);
   const after = await userMsgLocator.count().catch(() => 0);
@@ -638,10 +648,7 @@ async function read(page, n) {
 }
 
 async function send(page, file, dry, opts = {}) {
-  if (!sameConversationTarget(page.url(), URL_)) {
-    unavailable('requested conversation target mismatch; refusing to send');
-  }
-  console.log('DOT_TARGET_VERIFIED');
+  requireConversationTarget(page);
   const msg = fs.readFileSync(file, 'utf8').trim();
   let preparedDraft = null;
   const readComposer = () => page.locator(COMPOSER).first().innerText().catch(() => '');
@@ -757,6 +764,7 @@ async function send(page, file, dry, opts = {}) {
   }
 
   if (aborted) return;
+  requireConversationTarget(page);
   clicked = true;
   await page.click('button[data-testid=send-button], button[aria-label*=Send]');
   await sleep(4000);
