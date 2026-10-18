@@ -717,12 +717,8 @@ async function send(page, file, dry, opts = {}) {
   await page.click(COMPOSER);
   await sleep(1500);
   let composerSnapshot = await readSendEvidence(page);
-  if (!sameConversationTarget(composerSnapshot.url, URL_)) {
-    console.log('DOT_TARGET_MISMATCH');
-    unavailable('requested conversation target mismatch; refusing to send');
-  }
-  let composer = composerSnapshot.composer.trim();
-
+  if (!sameConversationTarget(composerSnapshot.url, URL_)) { console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
+  const composer = composerSnapshot.composer.trim();
   if (opts.prepared && composer !== '') {
     reportPrecommitNoSend('composer_not_empty', file);
     return;
