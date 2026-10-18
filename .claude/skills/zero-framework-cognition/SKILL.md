@@ -119,37 +119,6 @@ Report unresolved authority, missing captures, unknown counts and review coverag
 A passing fixture or string check is not proof of model compliance or production
 behavior. No repository-compliance PASS when required policy is missing.
 
-## Bounded source findings (reference only)
-
-Source snapshot/review as of 2026-10-18; recheck before relying on statuses.
-
-WorldArchitect source `39b8c968c41b473c858469bb00ae9724b0c8d7a2` contains
-faction formulas (`mvp_site/faction/combat.py:102`, `mvp_site/faction/rankings.py:61`), battle
-round/casualty loops (`mvp_site/faction/battle_sim.py:220`), intel outcome tiers
-(`mvp_site/faction/intel.py:111`), and tool-dispatched gameplay
-(`mvp_site/faction/tools.py:401–407`). Tool selection does not justify those rules.
-Gemini two-phase calls (`mvp_site/llm_providers/gemini_provider.py:5483,5633`),
-streaming phase 2 (`mvp_site/llm_service.py:10880`) and conditional retries
-(`mvp_site/llm_service.py:2876,2984`) are source paths, not measured runtime counts.
-Schema-corrective provider re-prompts remain unverified; do not substitute dead
-retry helpers or database retries. Reuse the reported 209-module/976-site audit;
-the existing applicability addendum was inspected by a separate read-only reviewer.
-Its recorded dispositions are source-only, not independently rerun here: rows
-699/545/937 remain Keep/Narrow/Keep at separate source
-`ae2804b79aef5553e48d2634699ca51a7926bf4f` versus audit-era
-`b65d5c6b0d7ff849016f69ce1800aefac368d60e`. The addendum records no original
-commands/exits or runtime/provider proof; do not conflate it with the snapshot above.
-
-At that same revision, `.claude/skills/worldai-zfc/SKILL.md:10` orders global-first
-reading, conflicting with repository-first discovery here; report unresolved
-ordering, not compatible active policy. Proposed repository PR #10588 at
-`b66958b087a1034cfde9d74a97495fa70de99251` would resolve ordering but is unmerged
-and held. `AGENTS.md:99` permits post-tool LLM calls; repository policy can permit
-extra calls, yet each provider crossing still counts. The requested single-request
-design is stricter and needs its owner's policy resolution. No repository edit or
-runtime claim follows from this reference. The overlay's description of the old
-portable derivation permission is historical, not a new blanket exception.
-
 ## Related session mode: /fable (model routing, not a ZFC rule)
 
 `/fable` is a separate session-level contract for model/subagent routing and
