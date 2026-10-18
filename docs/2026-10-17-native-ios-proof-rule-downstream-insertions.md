@@ -23,7 +23,7 @@ bullet each** — no numbers, no gates, no duplicated evidence classes.
 - **Insert immediately AFTER that line** (new bullet, keep surrounding bullets untouched):
 
   ```text
-  - Any change that alters what a user can observe on native iOS requires NATIVE iOS PROOF before `/ready`, with paired iOS implementation/PR/evidence when the change originates in backend or web UI; canonical (text, evidence classes, and no-broader-authority clause): `~/.codex/AGENTS.md` § Native iOS proof for user-visible UI changes (canonical).
+  - Any user-visible UI change, including backend- or web-origin work, requires native iOS proof before `/ready`; canonical rule, evidence classes, and authority: `~/.codex/AGENTS.md` § Native iOS proof for user-visible UI changes (canonical).
   ```
 
 - **Anchor check before applying:**
@@ -45,7 +45,7 @@ bullet each** — no numbers, no gates, no duplicated evidence classes.
 - **Insert immediately AFTER that line** (final bullet of `## Key Invariants`):
 
   ```text
-  - **Native iOS Proof Before `/ready`**: Any UI change, fix, or PR that alters what a user can observe on native iOS requires native iOS proof (native captures, AX tree dumps, real interaction recordings) bound to the exact candidate SHA plus build identity; web screenshots, fixture-only renders, Jest snapshots, typecheck, and Metro bundle exports are supporting evidence only, and iOS-only UI work need not be reverse-ported to web. Backend or web-UI changes that alter user-visible UI must be paired with their iOS implementation, PR, head, and evidence. This adds no merge authority — canonical: `~/.codex/AGENTS.md` § Native iOS proof for user-visible UI changes (canonical).
+  - **Native iOS Proof Before `/ready`**: Any user-visible UI change requires native iOS proof; canonical rule, evidence classes, and authority: `~/.codex/AGENTS.md` § Native iOS proof for user-visible UI changes (canonical).
   ```
 
 - **Anchor check before applying:**
@@ -66,5 +66,5 @@ bullet each** — no numbers, no gates, no duplicated evidence classes.
 
 ## Explicit non-authority statement
 
-Adding these pointers does not create broader merge authority, does not change review depth, and does
-not alter any existing `/green`, `/cs`, `/advice`, `/es`, or `MERGE APPROVED` gate.
+This note only points at the canonical section; it adds no gates, numeric thresholds, or evidence
+classes, and it creates no broader merge authority.

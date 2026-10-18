@@ -224,12 +224,14 @@ Never push directly to main/master. Before merging, re-verify the current head's
 This section owns the native-iOS-proof requirement for every repository. Downstream repositories point
 here for it and do not restate its text or its evidence classes in their own `CLAUDE.md`/`AGENTS.md`.
 
-- **Trigger.** Any UI change, UI fix, or PR that alters what a user can observe on the native iOS app
-  requires NATIVE iOS PROOF before `/ready`. Passing `/green` is not proof and does not substitute for it.
+- **Trigger.** Any UI change, UI fix, or PR that alters what a user can observe in any client — web or
+  native, including changes that originate in backend or web UI — requires NATIVE iOS PROOF before
+  `/ready`; iOS-only UI work need not be reverse-ported to the web client. Passing `/green` is not proof
+  and does not substitute for it.
 - **Paired implementation, not paired repository.** Backend or web-UI work that changes user-visible UI
   must ship with its accompanying iOS implementation and a paired PR, head, and evidence bundle. The
   pair is required; sharing a repository is not — the iOS side may live in its own repository with its
-  own PR. The reverse does not hold: iOS-only UI work need not be reverse-ported to the web client.
+  own PR.
 - **What counts as proof.** Native iOS captures, accessibility (AX) tree dumps, and real interaction
   recordings, all bound to the exact candidate SHA plus build identity. State the candidate SHA and the
   build identity (scheme/configuration, bundle identifier, build number, and simulator or device
