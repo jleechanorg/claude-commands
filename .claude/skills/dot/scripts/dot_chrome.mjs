@@ -46,6 +46,16 @@ function pathsOverlap(left, right) {
     reverse === '' || (!reverse.startsWith(`..${path.sep}`) && reverse !== '..');
 }
 
+function sameConversationTarget(actualUrl, targetUrl) {
+  try {
+    const actual = new URL(actualUrl), target = new URL(targetUrl);
+    const normalizedPath = (url) => url.pathname.replace(/\/+$/, '') || '/';
+    return actual.origin === target.origin && normalizedPath(actual) === normalizedPath(target);
+  } catch {
+    return false;
+  }
+}
+
 function assertProfileRootIsNotSymlink(profileDir) {
   try {
     if (fs.lstatSync(path.resolve(profileDir)).isSymbolicLink()) {
@@ -623,10 +633,15 @@ async function read(page, n) {
   if (await clickRetryIfSnag(page, bodyText, 3000)) {
     bodyText = (await page.evaluate(() => document.body.innerText)).trim();
   }
+  console.log(sameConversationTarget(page.url(), URL_) ? 'DOT_TARGET_VERIFIED' : 'DOT_TARGET_MISMATCH');
   console.log(bodyText.slice(-n));
 }
 
 async function send(page, file, dry, opts = {}) {
+  if (!sameConversationTarget(page.url(), URL_)) {
+    unavailable('requested conversation target mismatch; refusing to send');
+  }
+  console.log('DOT_TARGET_VERIFIED');
   const msg = fs.readFileSync(file, 'utf8').trim();
   let preparedDraft = null;
   const readComposer = () => page.locator(COMPOSER).first().innerText().catch(() => '');

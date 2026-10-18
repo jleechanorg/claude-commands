@@ -11,7 +11,8 @@ class CoordinatorCheckbackContractTests(unittest.TestCase):
         self.text = (ROOT / '.claude/skills/dot/SKILL.md').read_text()
         start = self.text.find('### Coordinator recovery checkbacks')
         end = self.text.find('### Other delegated work', start + 1)
-        self.cycle = self.text[start:end] if start >= 0 and end > start else ''
+        cycle = self.text[start:end] if start >= 0 and end > start else ''
+        self.cycle = ' '.join(cycle.split())
 
     def test_specific_cycle_precedes_and_overrides_generic_defaults(self):
         self.assertTrue(self.cycle, 'Missing scoped coordinator contract')
@@ -54,12 +55,16 @@ class CoordinatorCheckbackContractTests(unittest.TestCase):
         self.assertIn('Preserve the cycle checkpoint and the intended chat URL', self.cycle)
         self.assertIn('set `DOT_ROTATE_ON_LIMIT=0` and pass `--url <intended-chat-url>`', self.cycle)
         self.assertIn('automatic retry clears the URL', self.cycle)
-        self.assertIn('reading that exact URL with `--account <next>`', self.cycle)
-        self.assertIn('cannot reach the intended chat', self.cycle)
+        self.assertIn('reading', self.cycle)
+        self.assertIn('that URL with `--account <next>`', self.cycle)
+        self.assertIn('requiring `DOT_TARGET_VERIFIED`', self.cycle)
+        self.assertIn('`DOT_TARGET_MISMATCH`', self.cycle)
+        self.assertIn('origin and path do not match the requested target', self.cycle)
+        self.assertIn('cannot verify the target', self.cycle)
         self.assertIn('record the observation as failed', self.cycle)
         self.assertIn('do not use its default URL', self.cycle)
         self.assertIn('do not pin or record a permanent cycle owner', self.cycle)
-        self.assertIn('machine-local `DOT_ACCOUNT` preference', self.cycle)
+        self.assertIn('machine-local `DOT_ACCOUNT`', self.cycle)
         self.assertIn('configured `rotation` order', self.cycle)
         self.assertIn('Except for coordinator sends bound to a specific intended chat',
                       self.text)
@@ -70,6 +75,18 @@ class CoordinatorCheckbackContractTests(unittest.TestCase):
     def test_small_fix_file_threshold_matches_delegate_rule(self):
         self.assertIn('it touches one or two files', self.text)
         self.assertIn('it spans more than two files', self.text)
+
+    def test_capability_gap_reports_require_channel_authorization(self):
+        start = self.text.find('### Cloud-computer capability gaps')
+        end = self.text.find('\n## Actions', start + 1)
+        section = self.text[start:end] if start >= 0 and end > start else ''
+        self.assertTrue(section, 'Missing cloud-computer capability guidance')
+        self.assertIn('only when the user has explicitly authorized that channel and target',
+                      section)
+        self.assertIn('resolve `gog` with `command -v gog`', section)
+        self.assertIn('do not send', section)
+        self.assertIn('state the reason in the current chat', section)
+        self.assertNotIn('/opt/homebrew/bin/gog', section)
 
     def test_recovery_does_not_become_status_only_work(self):
         for clause in ('Resume unfinished authorized work with its existing owner',

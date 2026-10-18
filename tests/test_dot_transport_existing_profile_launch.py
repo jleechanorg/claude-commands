@@ -124,7 +124,7 @@ exports.chromium = {
         script = r'''const fs = require("node:fs");
 const statePath = __STATE_PATH__;
 const externalComposerPath = __EXTERNAL_COMPOSER_PATH__;
-const state = {composer: __INITIAL_COMPOSER__, clicked: false, userMessages: []};
+const state = {composer: __INITIAL_COMPOSER__, clicked: false, userMessages: [], currentUrl: ""};
 function locator(selector) {
   if (selector.includes("data-message-author-role=user")) {
     return {async allInnerTexts() { return state.userMessages; }};
@@ -141,7 +141,12 @@ function locator(selector) {
   };
 }
 const page = {
-  async goto() {},
+  async goto(url) {
+    state.currentUrl = url.endsWith("/redirect-me")
+      ? "https://chatgpt.com/c/different-conversation"
+      : url;
+  },
+  url() { return state.currentUrl; },
   async title() { return "ChatGPT"; },
   locator,
   async evaluate(fn) {
@@ -149,7 +154,7 @@ const page = {
       return {status: 200, hasUser: true, isJson: true};
     }
     if (fn.toString().includes("usage limit")) return "";
-    return "Fixture conversation";
+    return "Fixture conversation with enough stable text to finish page setup";
   },
   async click(selector) {
     if (selector.includes("send-button")) {
@@ -254,6 +259,39 @@ process.stdout.write = (chunk, ...args) => {
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("DOT_SENT_VERIFIED", proc.stdout)
         self.assertTrue(state["clicked"])
+
+    def test_prepared_send_refuses_a_redirected_conversation_target(self):
+        self._install_fake_send_playwright()
+        message_path = self.root / "redirected-message.txt"
+        message_path.write_text("Must not be sent to a different conversation")
+        env = dict(self.env, DOT_PREPARED="1", DOT_URL="https://chatgpt.com/c/redirect-me")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "send-prepared", str(message_path)],
+            env=env,
+            input="",
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 10, proc.stdout + proc.stderr)
+        self.assertIn("requested conversation target mismatch", proc.stdout)
+        state = json.loads((self.root / "prepared-send-state.json").read_text())
+        self.assertFalse(state["clicked"])
+
+    def test_read_reports_target_match_without_printing_the_url(self):
+        self._install_fake_send_playwright()
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "read", "100"],
+            env=self.env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_VERIFIED", proc.stdout)
+        self.assertNotIn("https://chatgpt.com/dots/fixture", proc.stdout)
 
     def test_prepared_delayed_abort_clears_only_owned_draft(self):
         proc, state = self._run_clocked_prepared(decision="abort")

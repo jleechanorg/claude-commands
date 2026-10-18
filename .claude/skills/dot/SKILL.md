@@ -51,15 +51,20 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
 - Preserve the cycle checkpoint and the intended chat URL. For each coordinator
   reminder send, set `DOT_ROTATE_ON_LIMIT=0` and pass `--url <intended-chat-url>`;
   automatic retry clears the URL and can redirect the reminder to another
-  account's configured chat. If the send hits a limit, try the next account in
-  configured rotation only after reading that exact URL with `--account <next>`
-  and verifying it is the intended chat; resend once with the same URL and
-  automatic retry disabled. If that account cannot reach the intended chat,
-  record the observation as failed and do not use its default URL. Apply the
-  same URL check before every observation. Keep account attempts local to that
-  scheduled observation. Use the machine-local `DOT_ACCOUNT` preference for
-  the first candidate and the configured `rotation` order for any further
-  candidates; do not pin or record a permanent cycle owner.
+  account's configured chat. `dot.sh read` reports `DOT_TARGET_VERIFIED` when
+  the final page has the requested origin and path, or `DOT_TARGET_MISMATCH`
+  when it does not; the check does not print the private URL. If the send hits
+  a limit, try the next account in configured `rotation` only after reading
+  that URL with `--account <next>` and requiring `DOT_TARGET_VERIFIED`; resend
+  once with the same URL and automatic retry disabled. Sending also refuses a
+  final page whose origin and path do not match the requested target. If the
+  next account cannot verify the target, record the observation as failed and
+  do not use its default URL. Apply the same check before every observation.
+  Keep account attempts local to that scheduled observation. Start with the
+  effective account selected by `dot.sh`: explicit `--account`, then the
+  machine-local `DOT_ACCOUNT`, then the config default. Use the configured
+  `rotation` order for further candidates; do not pin or record a permanent
+  cycle owner.
 - Direct user messages take priority: respond promptly, apply changed scope/cancellations before further action, and preserve the cycle checkpoint. Use the existing supported interruptible wait/wake mechanism. Do not create jobs, daemons, senders or competing coordinators. Do not change providers, credentials or installed schedules. If timing is unsupported, name the exact capability gap; do not claim planned checks ran.
 - Resume unfinished authorized work with its existing owner; recover checkpoints, acceptance gaps and older commitments. Verify owner state before any separately authorized reassignment. A publication hold need not block authorized safe tests or design. Attempt a concrete permitted unblock route for each blocker and continue independent work within evidenced capacity, rather than repeating inventories.
 - At each check require fresh original task artifacts against the requested acceptance criteria and a disposition for every unfinished request. Daemon health, delivery success, Working, timestamps, HEARTBEAT_OK, assignments and chat claims do not prove task execution or completion. Empty/failed reads remain unverified. Passing tests do not prove unperformed activation or publication.
@@ -93,16 +98,18 @@ calling the task blocked:
    artifact or source state. If the capability remains unavailable, keep
    independent authorized work moving and report the precise unblock rather
    than waiting or claiming completion.
-4. Report the unresolved gap in the current chat, Slack, and email. Slack text
-   uses `mcp__slack__conversations_add_message` to the already verified
-   operator DM or channel (resolve the configured target; do not guess one).
-   For email, use the available `/opt/homebrew/bin/gog gmail send` command with
-   an authorized recipient and a `mktemp` body file; do not invent an email
-   tool, recipient, or credential. If an approved sender or recipient is not
-   available, state `email unavailable` explicitly in the chat and Slack
-   reports. Each report must include the exact blocked command or artifact,
-   setup/install/login/permission attempts and their results, the distinction
-   between requested and granted access, and the concrete unblock needed.
+4. Report the unresolved gap in the current chat. Send a Slack or email report
+   only when the user has explicitly authorized that channel and target for
+   this task. Slack text uses `mcp__slack__conversations_add_message` to the
+   already verified operator DM or channel (resolve the configured target; do
+   not guess one). For email, resolve `gog` with `command -v gog` and use
+   `gog gmail send` with an authorized recipient and a `mktemp` body file; do
+   not invent an email tool, recipient, or credential. If the channel is not
+   authorized or its approved sender or recipient is unavailable, do not send
+   there and state the reason in the current chat. Each report must include the
+   exact blocked command or artifact, setup/install/login/permission attempts
+   and their results, the distinction between requested and granted access,
+   and the concrete unblock needed.
 
 ## Actions
 
