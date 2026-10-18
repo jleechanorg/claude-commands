@@ -716,7 +716,12 @@ async function send(page, file, dry, opts = {}) {
 
   await page.click(COMPOSER);
   await sleep(1500);
-  let composer = (await readComposer()).trim();
+  let composerSnapshot = await readSendEvidence(page);
+  if (!sameConversationTarget(composerSnapshot.url, URL_)) {
+    console.log('DOT_TARGET_MISMATCH');
+    unavailable('requested conversation target mismatch; refusing to send');
+  }
+  let composer = composerSnapshot.composer.trim();
 
   if (opts.prepared && composer !== '') {
     reportPrecommitNoSend('composer_not_empty', file);
@@ -725,8 +730,7 @@ async function send(page, file, dry, opts = {}) {
 
   if (composer !== '') {
     const normComposer = norm(composer);
-    const userMessages = await getUserMessages();
-    const alreadySent = userMessages.some(m => m !== '' && matchesMessage(m, normComposer));
+    const alreadySent = composerSnapshot.messages.some(m => m !== '' && matchesMessage(m, normComposer));
     const ownLeftover = normComposer !== '' && (normComposer === norm(msg) || matchesMessage(norm(msg), normComposer));
     if (process.env.DOT_CLEAR_DRAFT === '1' || ownLeftover || alreadySent) {
       await clear();

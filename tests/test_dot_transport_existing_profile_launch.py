@@ -805,6 +805,25 @@ process.stdout.write = (chunk, ...args) => {
         self.assertTrue(state["retryClicked"])
         self.assertEqual(state["userMessages"], [])
 
+    def test_send_refuses_unrelated_existing_draft_without_clicking(self):
+        state_path = self._install_fake_send_playwright("Unrelated peer draft")
+        message_path = self.root / "message-with-peer-draft.txt"
+        message_path.write_text("Coordinator message that must not overwrite the draft")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "send", str(message_path)],
+            env=self.env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("DOT_DRAFT_PRESENT", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["clicked"])
+        self.assertEqual(state["userMessages"], [])
+        self.assertEqual(state["composer"], "Unrelated peer draft")
+
     def test_prepared_send_does_not_click_after_whitespace_change(self):
         edited_composers = (
             "Coordinator-owned fixture  message",
