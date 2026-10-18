@@ -133,7 +133,13 @@ function locator(selector) {
     };
   }
   return {
-    async count() { return 1; },
+    async count() {
+      const retryControl = selector.includes("Try again") || selector.includes("Retry");
+      if (retryControl && process.env.DOT_TEST_REDIRECT_DURING_RETRY_COUNT === "1") {
+        state.currentUrl = "https://chatgpt.com/c/different-conversation";
+      }
+      return 1;
+    },
     first() { return this; },
     async innerText() {
       if (fs.existsSync(externalComposerPath)) return fs.readFileSync(externalComposerPath, "utf8");
@@ -291,6 +297,26 @@ process.stdout.write = (chunk, ...args) => {
     def test_redirected_error_page_does_not_activate_retry(self):
         state_path = self._install_fake_send_playwright()
         env = dict(self.env, DOT_URL="https://chatgpt.com/c/redirect-me", DOT_TEST_SNAG="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "read", "100"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["retryClicked"])
+
+    def test_retry_count_redirect_does_not_activate_retry(self):
+        state_path = self._install_fake_send_playwright()
+        env = dict(
+            self.env,
+            DOT_TEST_SNAG="1",
+            DOT_TEST_REDIRECT_DURING_RETRY_COUNT="1",
+        )
         proc = subprocess.run(
             [str(NODE22), str(SCRIPT), "read", "100"],
             env=env,

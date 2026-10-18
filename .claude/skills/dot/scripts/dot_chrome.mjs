@@ -385,7 +385,7 @@ async function clickRetryIfSnag(page, bodyText, waitMs) {
   if (!sameConversationTarget(page.url(), URL_)) return false;
   try {
     const tryAgainBtn = page.locator('button:has-text("Try again"), button:has-text("Retry")');
-    if (await tryAgainBtn.count() > 0) {
+    if (await tryAgainBtn.count() > 0 && sameConversationTarget(page.url(), URL_)) {
       await tryAgainBtn.first().click();
       await sleep(waitMs);
       return true;
