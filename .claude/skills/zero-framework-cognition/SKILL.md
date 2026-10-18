@@ -1,202 +1,123 @@
 ---
 name: zero-framework-cognition
-description: Use when designing or reviewing model-owned contracts, output schemas, backend guards, routing, semantic parsing, intent detection, or data fields where application code might duplicate judgment or ask a model for redundant facts.
+description: Use when designing or reviewing model-owned contracts, gameplay, tools, backend guards, semantic routing, or provider request flows. Resolve repository policy before applying portable ZFC guidance.
 ---
 
 # Zero-Framework Cognition
 
-## Core Principle
+Models decide; the server executes authorized operations. Invocation is review-only
+unless edits are already user-authorized; preserve that implementation scope
+without expanding it. Recommendations alone never authorize repairs.
+This portable skill is REFERENCE guidance; the active repository's ZFC policy is PRIMARY.
 
-Models decide; server executes.
+## Resolve authority
 
-Application code must not replace model judgment with keyword routing, regex
-intent detection, heuristic classification, duplicate semantic checks, or
-redundant field computations. The backend should execute tools, persist state,
-and normalize deterministic output shape. Backend correction is a last resort:
-first prove the prompt/schema/agent contract cannot prevent the bad payload on
-the real path, then add only the narrowest correction-only invariant.
+On every invocation, including aliases and review lanes, first locate the active
+repository root and the requested file/diff scope. Read root and in-scope
+`AGENTS.md` / `CLAUDE.md` instructions. Follow their ZFC policy pointers before
+applying this reference. Also check these conventional repository locations:
+`.claude/skills/worldai-zfc/SKILL.md`, `.claude/skills/zfc/SKILL.md`,
+`.claude/skills/zero-framework-cognition/SKILL.md`, and their `.codex/skills/`
+equivalents. Resolve aliases/symlinks to the actual policy, read its required
+companions, and record resolved paths and source revisions. Deduplicate canonical
+paths and detect pointer cycles; do not crawl home directories or unrelated repos.
+An installed alias or this portable file is not evidence of a repository policy.
 
-Reference: [Zero Framework Cognition: A Way to Build Resilient AI Applications](https://steve-yegge.medium.com/zero-framework-cognition-a-way-to-build-resilient-ai-applications-56b090ed3e69).
+Discovery reads identify the applicable policy and its required companions;
+they do not yet apply substantive rules. If a local policy orders global-first
+loading while this dispatcher orders repository-first, read each identified
+source once, record the conflicting order, and report it unresolved rather than
+recursing or claiming compatibility. Read repository policy and companions FIRST
+for discovery; then consult the portable reference. Apply the repository's instruction hierarchy to conflicting
+local policies; report unresolved conflicts. Repository precedence never overrides
+higher-priority instructions, safety constraints, scope limits, or user holds.
 
-## Model Decision Engines
+If no active repo or local policy is found, or required policy/companions cannot
+be read, state exactly what is absent or inaccessible. Use this reference only
+for provisional analysis: do not invent repository exceptions or certify repository
+compliance. Continue independent read-only work; block only dependent conclusions.
 
-In this repository, "model" means:
+## Assign decision ownership
 
-- The LLMs used by the application for reasoning, narration, schema output,
-  routing decisions that require context, and semantic judgment.
-- The FastEmbed semantic intent classifier where the repository already uses it
-  as a model-backed local classifier.
+Model ownership also covers non-game semantic interpretation, intent routing,
+classification, and domain decisions. Do not replace model judgment or existing
+model-backed classifiers with keyword/substring/regex intent routing, phrase maps
+or hand-tuned scores. Mechanical syntax parsing is not semantic interpretation.
+Gameplay semantics belong to the LLM: interpretation, eligibility, progression,
+combat outcomes, rankings, rewards, and context selection. Backend gameplay starts
+at zero. Defaults, aliases, clamps, totals, normalization, and deterministic formulas
+are not blanket exceptions. Recommend removing duplicate semantic checklists and requesting the minimal
+model-owned contract; do not edit it unless explicitly authorized. Never replace
+it silently with backend reasoning.
 
-Do not replace either with new application-code heuristics. New regex,
-substring checks, weighted keyword lists, or phrase maps for semantic judgment
-are ZFC violations.
+Each shared semantic/control field has one authoritative writer and canonical
+home. Avoid redundant independently authored equivalents and silent reconciliation.
+Any derivation remains subject to active repository policy, not blanket
+deterministic permission.
 
-## Minimal Semantic Fields
+Retain server-owned authentication, tenant isolation, credentials, request identity,
+tool-result provenance, storage integrity and measured resource limits. Pure
+parsing/serialization may preserve values; it must not reinterpret domain fields,
+filter unknown model-owned domain fields, or manufacture gameplay decisions.
+Preserve those fields through merge, save, load and the next authorized consumer.
+Validate the trusted server envelope independently: model-authored auth, tenant
+or control fields never grant authority or override server-owned values.
+A model's choice to call
+a tool does not justify a procedural game engine or decision loop inside that tool.
+Trace the implementation behind the tool name, including its downstream calls.
 
-Ask the model for the smallest set of fields that expresses the semantic
-decision. Do not ask the model to emit multiple equivalent fields that can drift
-apart.
+For every proposed or retained backend exception, record the exact function and
+purpose, active policy basis, concrete necessity, model-owned fields it must not
+reinterpret, and proof. Genuine trust/storage controls need boundary evidence;
+domain exceptions need the active policy's proof and must respect its absolute bans.
+Registry membership, determinism and a passing fallback test are not sufficient.
+Recommend removing backend decisions or moving contracts upstream; never add a second
+registry, queue, ledger or compensator merely to make a review pass.
 
-Prefer:
+## Count requests honestly
 
-```json
-{
-  "current_level": 4,
-  "target_level": 5
-}
-```
+Preserve one external application→LLM-provider request/response per logical player
+turn. Record separately the logical turn ID, external request attempts, successful
+responses, model continuations, and provider-internal execution steps. One user
+stream, wrapper call, cache hit or logical turn does not imply one provider request.
 
-Over:
+A tool-result phase, streaming phase 2, application-issued classifier request,
+schema-corrective re-prompt or repair call adds an external request whenever it
+crosses the application→provider boundary. Flag each such crossing explicitly;
+do not silently add or relabel it. Local inference (including an existing local
+FastEmbed classifier) is separately reported computation, not an external
+provider request. A separately authorized transport retry may recover a
+failure, but still increases literal attempts. After a timeout, disclose unknown
+provider completion and possible duplicate processing; do not infer exactly once.
+This reference grants no retry or additional-call authorization.
 
-```json
-{
-  "level_up": true,
-  "level_up_available": true,
-  "current_level": 4,
-  "target_level": 5,
-  "new_level": 5,
-  "current_turn_exp": 6900,
-  "total_exp_for_next_level": 6500,
-  "additional_exp_to_next_level": 0
-}
-```
+Existing provider-native execution may establish facts within one external request
+only when the selected API/model contract supports it. Count its internal steps and
+cost separately; do not claim zero internal reasoning or guaranteed low latency.
+Do not finalize outcome-dependent narration OR state before outcome facts exist:
+use established inputs, verified native execution, or explicit deferral of both
+under the active contract. Do not invent a backend gameplay validator or hidden
+continuation to resolve this causality constraint.
 
-The first contract has one semantic fact: the model believes the target state
-is level 5 from level 4. The second contract gives the model many chances to
-contradict itself.
+## Inspect and report
 
-## Field Ownership
+Scope to the requested change and actual consumers. Reuse existing inventories and
+owner evidence; re-read changed paths, not an entire audit by default. Trace prompt
+and schema → provider attempts → tool implementation → parsing/merge → persistence
+→ next consumer. Load [root-cause-first](../root-cause-first/SKILL.md) in review-only mode as a proof
+standard after local policy/companions; do not launch its owner skills, experiments,
+provider calls or edits merely because this review found a gap.
 
-Every shared field needs one authoritative writer.
-
-Use this split:
-
-- **Model-owned semantic fields:** decisions, selected intent, target state,
-  narrative meaning, choices, reasons.
-- **Backend-owned deterministic derivatives:** aliases, display labels,
-  normalized booleans, progress percentages, IDs, timestamps, persistence
-  wrappers, UI payload formatting.
-- **Server-owned control state:** locks, in-progress flags, tool execution
-  results, commit status, request IDs, modal session state.
-
-If two fields mean the same thing, delete one or derive it deterministically
-outside the model contract.
-
-## Correct Pattern
-
-1. Give the model enough context to make the decision.
-2. Request the minimal semantic output needed to express that decision.
-3. Use schema constraints to make the minimal output explicit.
-4. Capture raw request/response evidence when the model emits a bad payload.
-5. Fix the prompt, schema, or selected-agent instruction first.
-6. Derive display and compatibility aliases in deterministic backend code.
-7. Persist tool results and state changes server-side.
-8. Add backend guards only as a last-resort, narrow correction of contradictory
-   explicit payloads after the prompt/schema path is proven insufficient.
-
-## Banned Patterns
-
-- Keyword or substring routing for user intent.
-- New regex or regexp-based semantic classification, intent detection, routing,
-  or policy judgment.
-- Hardcoded phrase-to-action maps.
-- Hand-tuned keyword scores.
-- Explicit `if` / `else` chains that infer meaning from user text.
-- Asking the model to emit redundant booleans, aliases, totals, and deltas for
-  the same semantic decision.
-- Backend recomputation of semantic decisions that should belong to the model.
-- Backend guards added before capturing raw request/response and checking
-  whether the model received the right prompt/schema.
-- Treating a backend correction as the fix when the model is still being asked
-  for redundant, ambiguous, or server-owned fields.
-
-## Redundant Field Review Checklist
-
-When adding or reviewing a model output field, ask:
-
-- Is this field the minimal semantic decision, or a display derivative?
-- Can it be derived exactly from another accepted field?
-- Is another field already expressing the same fact?
-- Who is the authoritative writer?
-- What happens if this field contradicts its sibling fields?
-- Can schema shape remove the contradiction surface?
-- Has the raw model request/response proven the prompt/schema gap?
-
-If the field is redundant, remove it from the model contract and derive it
-deterministically after the model response is accepted.
-
-## Allowed Deterministic Code
-
-ZFC does not ban mechanical code. These are allowed:
-
-- Syntax parsing, lexing, type checking, JSON serialization, URL encoding.
-- Schema validation and structural validation.
-- File existence checks, path resolution, process-state checks.
-- Deterministic transformations with no judgment call.
-- Tests with explicit expected outputs.
-
-If the code asks "what does this mean?" or "what should we do?", use a model.
-If the code asks "is this JSON valid?" or "does this file exist?", deterministic
-code is appropriate.
-
-## Backend Guard Rule
-
-Backend protection is allowed only after the root cause has been checked at the
-prompt/schema layer. The first fix attempt should be upstream: selected agent,
-prompt wording, schema shape, or tool-result feedback. Backend guards are the
-last resort, not the primary design.
-
-Use `.claude/skills/root-cause-first/SKILL.md` in review-only mode for the
-required proof standard. Stop after classification and findings; do not launch
-its owner skills, experiments, or edits from a ZFC review.
-For every backend guard, fallback, clamp, sanitizer, scrubber, suppression, or
-server-injected choice, classify whether it is a server-owned invariant,
-prompt/schema-insufficient with raw proof, a backend-transformation bug, an
-unproven fallback, or a model-ownership violation candidate (ZFC violation
-candidate).
-
-Allowed guards:
-
-- Suppress stale or contradictory explicit payloads.
-- Normalize deterministic aliases for compatibility.
-- Protect server-owned locks, session state, and tool execution state.
-- Log narrow correction events for evidence and follow-up.
-
-Disallowed guards:
-
-- Compute the model's semantic decision from backend heuristics.
-- Create a second source of truth for intent, eligibility, target state, or
-  narrative meaning.
-- Patch over prompt ambiguity without documenting why prompt/schema correction
-  was insufficient.
-- Correct a field that should have been removed from the model contract.
-
-## Proven vs Not Proven Report
-
-Every ZFC review that touches non-prompt logic must include a table with these
-columns:
-
-| Component | Non-prompt behavior | Proof state | Evidence | Verdict |
+| Function / purpose | Field owner and protected boundary | Active policy basis / necessity | Proof and limitations | Verdict |
 |---|---|---|---|---|
 
-Use these verdicts:
-
-- **Keep** for server-owned invariants and narrow correction-only guards with
-  raw prompt/schema-insufficient proof.
-- **Narrow** when a concrete leak is proven but the implemented guard is broader
-  than the evidence.
-- **Move upstream** when the behavior belongs in prompt, schema, or selected
-  agent instructions.
-- **Delete or prove** when tests show a fallback works but do not prove the
-  model cannot handle the behavior.
-
-Call out explicitly when the available evidence proves only that backend
-fallback behavior works, not that model-owned behavior failed.
-
-## Relationship To Domain Skills
-
-Domain-specific ZFC skills can add file boundaries and contracts. For level-up
-and rewards work, also use `.claude/skills/zfc-leveling-roadmap/SKILL.md`.
+Use **Keep**, **Narrow**, **Move upstream**, or **Delete or prove** per finding;
+report overall **PASS**, **WARN**, or **FAIL** with file/line evidence. Distinguish
+source-level paths, captured execution and runtime counts. Source citations require
+an exact revision and file:line; conditional branches do not prove they executed.
+Report unresolved authority, missing captures, unknown counts and review coverage.
+A passing fixture or string check is not proof of model compliance or production
+behavior. No repository-compliance PASS when required policy is missing.
 
 ## Related session mode: /fable (model routing, not a ZFC rule)
 
