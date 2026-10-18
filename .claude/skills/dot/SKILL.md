@@ -7,9 +7,36 @@ description: Use when the user invokes /dot or asks to "message the dot", "ask d
 
 Talk to the user's ChatGPT dot assistant using `scripts/dot.sh`. The scripts are a thin mechanical pointer (type, read, submit, clear, verify — see `GUARDRAIL.md`); every judgment call lives in this file, read top-down: how to work through the dot first, then transport actions and the peer-draft policy, then operational reference.
 
-## Default: delegate, then monitor
+## Default: delegate non-small work, then monitor
 
-The dot runs its own coders. When /dot is used for work, hand the work to the dot instead of coding it yourself: send a scoped request (goal, PR/branch, acceptance criteria, constraints such as merge gates), then monitor rather than block.
+### Explicit Dot requests take priority
+
+When the user explicitly asks to use Dot or invokes `/dot` for work, send the
+task to Dot even when it looks small. Send a scoped request with the goal,
+branch or PR, acceptance criteria, and applicable constraints. Dot runs its own
+coders; monitor its work and verify claims at the source.
+
+Delegating a task does not expand its authorization. Preserve the user's scope
+and all separate merge, destructive-action, credential, publication, and
+permission boundaries. A reversible action is not automatically authorized
+just because Dot requests it.
+
+### Small fixes do not need Dot unless requested
+
+When deciding whether to involve Dot without an explicit user request, do not
+route a small fix to Dot. A fix is small when all are true:
+
+- it touches one or two files;
+- it changes no more than roughly 30 lines;
+- it needs no new design decision, API, dependency, or provider call;
+- it can be verified with a command available now.
+
+Unfamiliarity alone does not make a fix non-small. Involve Dot when work spans
+more files or subsystems, needs design or contract decisions, requires
+investigation across the codebase, involves long-running checks, or needs
+capabilities or access unavailable locally. When unsure, inspect enough of the
+affected flow to classify it before deciding. Follow the active runtime's
+normal implementation policy for work that is not assigned to Dot.
 
 - **Active work check first (mandatory):** before declining an authorized task, ask the Dot to inventory current work in progress and count only distinct tasks demonstrably executing now. Require a receipt for each claimed active task: item/goal, owner, live run/session or worktree/PR, the exact action happening now, and a fresh artifact or command result. Assignment, rank, "busy", or start time alone is not proof. Idle, stalled, finished, queued, and waiting-for-review tasks are not active. Capacity is a valid refusal only with evidence for at least six distinct active tasks, each showing its exact present action and fresh receipt; include those receipts in the reply. Do not gate acceptance on rank or ask the user to prioritize the task. If fewer than six active tasks are proven, take the authorized task and fill open capacity with safe work. Keep genuine permission/approval holds and measured resource limits separate from a full-capacity refusal: state the evidence and exact blocked action, preserve the approval boundary, and continue work that remains feasible. If the composer stays blocked or the account is limited, send the same request to the next account in `rotation` with `--account <next>`.
 
@@ -20,6 +47,7 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
 - Start only after an exact transport receipt for the initial reminder in the intended chat. Inter-check delays in seconds: `60, 120, 300, 300, 300, 300, 300, 300, 300, 300`. Measure each delay from the previous completed observation (first delay from the verified send). Record actual observations and source receipts in the existing checkpoint. New reminders and partial progress never reset the count.
 - Increment once per completed observation attempt, including a recorded timeout or read failure; resume an interrupted attempt under the same count. Later re-observation consumes the next scheduled count: no check eleven or disguised in-check re-observation.
 - This cycle also overrides the account-rotation rules: retain the verified account and intended chat. Set `DOT_ROTATE_ON_LIMIT=0` on each coordinator `dot.sh` invocation so automatic rotation cannot change its target. Do not rotate to another account or target on a busy composer or quota limit; report the exact transport blocker and preserve the checkpoint. A separately authorized reassignment requires a newly verified target and must not create duplicate ownership.
+- Keep the intended destination explicit for every reminder and observation. ChatGPT may redirect a configured URL to a canonical conversation URL, so a pathname change alone is not proof that the wrong conversation opened. If transport reports `DOT_TARGET_MISMATCH`, do not send or retry blindly; inspect the observed destination and establish whether it is the intended conversation before proceeding. Do not remove destination safeguards to silence a mismatch; make them tolerate verified canonical redirects.
 - Direct user messages take priority: respond promptly, apply changed scope/cancellations before further action, and preserve the cycle checkpoint. Use the existing supported interruptible wait/wake mechanism. Do not create jobs, daemons, senders or competing coordinators. Do not change providers, credentials or installed schedules. If timing is unsupported, name the exact capability gap; do not claim planned checks ran.
 - Resume unfinished authorized work with its existing owner; recover checkpoints, acceptance gaps and older commitments. Verify owner state before any separately authorized reassignment. A publication hold need not block authorized safe tests or design. Attempt a concrete permitted unblock route for each blocker and continue independent work within evidenced capacity, rather than repeating inventories.
 - At each check require fresh original task artifacts against the requested acceptance criteria and a disposition for every unfinished request. Daemon health, delivery success, Working, timestamps, HEARTBEAT_OK, assignments and chat claims do not prove task execution or completion. Empty/failed reads remain unverified. Passing tests do not prove unperformed activation or publication.
@@ -33,6 +61,19 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
   - **Codex (no `/loop`):** the same `/goal`; each turn runs the same poll, then waits the next backoff interval (`sleep 60`, `sleep 120`, `sleep 300`, then `sleep 600` in a backgrounded or bounded command).
   - Stop polling when the deliverable is done, blocked on the user, or the 4-hour limit passes.
 - Verify the dot's claims at the source (git SHAs, `gh pr checks`, PR diffs) before relaying them, and don't duplicate files it has claimed.
+
+### Cloud-computer capability gaps
+
+When Dot cannot perform a requested cloud-computer task, confirm the exact gap
+before calling the task blocked. Record the host, repository or worktree,
+branch or SHA, command, exit status, missing capability, and expected artifact.
+Ask Dot to attempt safe setup using repository-declared dependencies and
+approved login or permission flows. Never copy credentials or browser
+sessions, bypass a guard, or treat a permission request as granted. Re-run the
+exact command and verify its output or artifact at the source. Keep independent
+authorized work moving if the capability remains unavailable, and report the
+precise blocker and required unblock in the current conversation. Notify other
+channels only when that channel and recipient are authorized for the task.
 
 ## Actions
 
@@ -57,7 +98,11 @@ Other agent sessions share this composer; ChatGPT restores a saved draft lazily 
    - **Weird half-typed text** (mid-word cutoffs, command fragments, pasted garbage) → **clear it**: `dot.sh clear-draft` (prints `DOT_DRAFT_CLEARED`), then send your own message.
 3. Never force-clear a draft while a peer session is provably actively typing (draft text changing between reads). `DOT_CLEAR_DRAFT=1` on `send` remains the forced-clear escape hatch; own-leftover and already-sent drafts are always safe-cleared automatically.
 
-**Verified send:** `DOT_SENT_VERIFIED` requires exact composer match after typing, emptied composer after sending, and the submitted text appearing in the conversation message list (`[data-message-author-role=user]`). Exit 4 means mismatched or unverified.
+**Verified send:** `DOT_SENT_VERIFIED` reports the browser checks implemented by
+the installed transport. It is not confirmation of server acceptance or durable
+delivery. Exit 4 means the send could not be verified; check the intended chat
+before sending again. Do not describe a URL/path equality check unless the
+installed transport actually performs one.
 - Send only what the user asked to send. Do not post test messages.
 - Avoid line-leading list markers (`1)`, `-`, `*`): the composer converts them to list formatting, which can cause mismatch detection. Use plain sentences.
 - Interactive login / auth: `dot.sh [--account <name>] login` launches visible Chrome attached to that account's profile directory.
