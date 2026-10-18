@@ -7,11 +7,19 @@ description: Use when the user invokes /dot or asks to "message the dot", "ask d
 
 Talk to the user's ChatGPT dot assistant using `scripts/dot.sh`. The scripts are a thin mechanical pointer (type, read, submit, clear, verify — see `GUARDRAIL.md`); every judgment call lives in this file, read top-down: how to work through the dot first, then transport actions and the peer-draft policy, then operational reference.
 
-## Default: delegate, then monitor
+## Default: delegate non-small work, then monitor
+
+### Explicit delegation takes priority
+
+When the user explicitly asks to use Dot for a task, hand it to Dot even if
+the task appears small. The local-fix rule below applies when deciding whether
+to delegate work that the user has not explicitly assigned to Dot.
 
 ### Small fixes stay local (do NOT delegate)
 
-**Never send the dot a request you can finish yourself in one edit.** Delegation has a real round-trip cost (transport, polling, backoff, source re-verification), and it consumes a shared composer. If the fix is small, do it locally and only report it.
+By default, handle a fix locally when you can finish and verify it in one edit.
+Delegation has a real round-trip cost (transport, polling, backoff, source
+re-verification), and it consumes a shared composer.
 
 A fix is **small** (do it yourself) when all hold:
 - it touches one or two files;
@@ -19,11 +27,18 @@ A fix is **small** (do it yourself) when all hold:
 - it needs no new design decision, API, dependency, or provider call;
 - it can be verified with a command you can run right now (lint, compile, or a focused test).
 
-Delegate instead when the work is **not small**: multiple files or subsystems, a design or contract decision, an unfamiliar area needing investigation, long-running builds/tests, or anything requiring capabilities or access you do not have.
+Unfamiliarity alone does not make a fix non-small. Delegate when the work is
+**not small**: it spans more than two files or multiple subsystems, needs a
+design or contract decision, requires investigation across the codebase,
+involves long-running builds/tests, or needs capabilities or access you do
+not have.
 
-When unsure, prefer doing it locally and reporting the result; escalating is cheap only after you have tried. If you catch yourself writing a dot message to describe a one-file edit, stop and just make the edit.
+When unsure, inspect enough of the affected flow to classify the work. If it
+still meets every small-fix criterion, handle it locally; otherwise delegate.
 
-The dot runs its own coders. When /dot is used for work, hand the work to the dot instead of coding it yourself: send a scoped request (goal, PR/branch, acceptance criteria, constraints such as merge gates), then monitor rather than block.
+When the user asks Dot to own work, send a scoped request (goal, PR/branch,
+acceptance criteria, and constraints such as merge gates), then monitor rather
+than block. Dot runs its own coders.
 
 - **Active work check first (mandatory):** before declining an authorized task, ask the Dot to inventory current work in progress and count only distinct tasks demonstrably executing now. Require a receipt for each claimed active task: item/goal, owner, live run/session or worktree/PR, the exact action happening now, and a fresh artifact or command result. Assignment, rank, "busy", or start time alone is not proof. Idle, stalled, finished, queued, and waiting-for-review tasks are not active. Capacity is a valid refusal only with evidence for at least six distinct active tasks, each showing its exact present action and fresh receipt; include those receipts in the reply. Do not gate acceptance on rank or ask the user to prioritize the task. If fewer than six active tasks are proven, take the authorized task and fill open capacity with safe work. Keep genuine permission/approval holds and measured resource limits separate from a full-capacity refusal: state the evidence and exact blocked action, preserve the approval boundary, and continue work that remains feasible. If the composer stays blocked or the account is limited, send the same request to the next account in `rotation` with `--account <next>`.
 
@@ -33,7 +48,18 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
 
 - Start only after an exact transport receipt for the initial reminder in the intended chat. Inter-check delays in seconds: `60, 120, 300, 300, 300, 300, 300, 300, 300, 300`. Measure each delay from the previous completed observation (first delay from the verified send). Record actual observations and source receipts in the existing checkpoint. New reminders and partial progress never reset the count.
 - Increment once per completed observation attempt, including a recorded timeout or read failure; resume an interrupted attempt under the same count. Later re-observation consumes the next scheduled count: no check eleven or disguised in-check re-observation.
-- Preserve the cycle checkpoint and the intended chat.
+- Preserve the cycle checkpoint and the intended chat URL. For each coordinator
+  reminder send, set `DOT_ROTATE_ON_LIMIT=0` and pass `--url <intended-chat-url>`;
+  automatic retry clears the URL and can redirect the reminder to another
+  account's configured chat. If the send hits a limit, try the next account in
+  configured rotation only after reading that exact URL with `--account <next>`
+  and verifying it is the intended chat; resend once with the same URL and
+  automatic retry disabled. If that account cannot reach the intended chat,
+  record the observation as failed and do not use its default URL. Apply the
+  same URL check before every observation. Keep account attempts local to that
+  scheduled observation. Use the machine-local `DOT_ACCOUNT` preference for
+  the first candidate and the configured `rotation` order for any further
+  candidates; do not pin or record a permanent cycle owner.
 - Direct user messages take priority: respond promptly, apply changed scope/cancellations before further action, and preserve the cycle checkpoint. Use the existing supported interruptible wait/wake mechanism. Do not create jobs, daemons, senders or competing coordinators. Do not change providers, credentials or installed schedules. If timing is unsupported, name the exact capability gap; do not claim planned checks ran.
 - Resume unfinished authorized work with its existing owner; recover checkpoints, acceptance gaps and older commitments. Verify owner state before any separately authorized reassignment. A publication hold need not block authorized safe tests or design. Attempt a concrete permitted unblock route for each blocker and continue independent work within evidenced capacity, rather than repeating inventories.
 - At each check require fresh original task artifacts against the requested acceptance criteria and a disposition for every unfinished request. Daemon health, delivery success, Working, timestamps, HEARTBEAT_OK, assignments and chat claims do not prove task execution or completion. Empty/failed reads remain unverified. Passing tests do not prove unperformed activation or publication.
@@ -148,7 +174,7 @@ If an account returns `DOT_CHROME_UNAVAILABLE: not signed in`:
 
 - **MANDATORY: every dot profile owns an INDEPENDENT session, created only via `dot.sh --account <name> login`** (a visible Chrome window the user signs into; the script itself never enters, stores, or extracts credentials). This is the one canonical recovery from `logged_out` and the only sanctioned way a dot profile ever gets a session. Do not "help" by sharing a session from any other browser — see the resync ban below.
 - **BANNED: cookie-store resync from desktop/other profiles** (copying `Cookies` from a desktop Chrome profile into a dot profile, in either direction). A session shared between two live browsers is a rotation race: ChatGPT rotates the session token on activity, the rotation supersedes the old token server-side, and the browser that did not rotate renders logged out. On 2026-10-11 this logged the user's personal Chrome out of their own account after a resync-based restore. Sessions are cheap and independent — use `dot.sh login` instead.
-- **NEVER launch any browser binary other than system Google Chrome (with `--password-store=keychain`) against a live dot profile** (`~/.config/dot-headless-chrome-*`). This includes Playwright/Puppeteer (`launchPersistentContext`) and any bundled Chromium: Playwright defaults to its own Chromium with `--use-mock-keychain`, which cannot decrypt the Keychain-encrypted cookie store, so Chrome treats the session cookies as corrupt and EVICTS them — the account stays signed in server-side, but the profile is wiped. On 2026-10-11 this destroyed the `jleechan` (jeffrey) and `worldarchitect` profiles 26 seconds apart during a single ad-hoc inspection sweep.
+- **NEVER launch any browser binary other than system Google Chrome (with `--password-store=keychain`) against a live dot profile** (`~/.config/dot-headless-chrome-*`). This includes Playwright/Puppeteer (`launchPersistentContext`) and any bundled Chromium: Playwright defaults to its own Chromium with `--use-mock-keychain`, which cannot decrypt the Keychain-encrypted cookie store, so Chrome treats the session cookies as corrupt and EVICTS them — the account stays signed in server-side, but the profile is wiped. On 2026-10-11 this destroyed two persistent profiles 26 seconds apart during a single ad-hoc inspection sweep.
 - **To check login/session status, use `dot.sh --account <name> read` or `dot.sh --account <name> probe`** — they launch the correct binary with the correct flags. Never open the profile with a foreign browser; if a custom script must inspect the profile internals, copy the profile directory first (e.g. `cp -R ~/.config/dot-headless-chrome-X /tmp/probe-copy`) and run against the copy, or use read-only SQLite (`sqlite3 "file:.../Cookies?mode=ro"`, or `sqlite3 <db> ".backup /tmp/c.sqlite"` for a live store) without launching any browser. **Never `immutable=1` on a database Chrome may be writing** — it ignores the WAL and can mislead on a live store.
 - **Session-loss forensics (read-only, before any recovery):** a wiped profile shows a rebuilt anonymous cookie store (fresh `oai-did`/csrf cookies, zero `session-token` rows) while the account itself is fine server-side. `dot.sh` now classifies this automatically: a not-signed-in read/send also emits `DOT_STORE_REBUILD: ...` when the store shows the rebuild signature. Recover ONLY via `dot.sh login`. Never treat profile logout as an account logout.
 - **Machine checks now built into dot.sh (do not weaken them):** per-profile exclusive lock (a kernel `flock` on a hashed path under `$TMPDIR/dot-profile-locks/`, held by a holder process that dies with its parent — auto-released on ANY exit including kill -9, no stale-lock logic. The lock deliberately lives OUTSIDE the profile directory: a probe contract asserts launches leave the profile dir untouched, and a lock path inside the profile makes process scans that substring-match the profile dir treat it as in use); disk-space floor (`DOT_MIN_FREE_MB`, default 512 — a full disk corrupts the SQLite cookie store); OPT-IN foreign-binary enforcement (`DOT_ENFORCE_SYSTEM_CHROME=1`, honoured on login, headless and send-prepared): refuses a non-system binary unless `DOT_ALLOW_FOREIGN_BINARY=1`, because `DOT_CHROME_BIN` is a supported override for tests and alternate Chrome channels — the real 2026-10-11 wipe came from an ad-hoc script that bypassed `dot.sh` entirely; login launches with the same `--password-store` flags as headless; `login` holds the coordinator STOP marker for the whole window and removes it only if it created it; process-group teardown even when the node wrapper exits before the browser.
@@ -159,7 +185,7 @@ If an account returns `DOT_CHROME_UNAVAILABLE: not signed in`:
 
 ## Account Rotation on Limits (Mandatory)
 
-Always rotate across configured accounts when hitting a rate limit, usage limit, abuse prevention cooldown, or message cap:
+Except for coordinator sends bound to a specific intended chat (see the coordinator contract above), rotate across configured accounts when hitting a rate limit, usage limit, abuse prevention cooldown, or message cap:
 - **Limit Detection:** Detected directly from ChatGPT UI alert elements (`[role=alert]`, alert banners), emitting structured `DOT_USAGE_LIMIT_REACHED` events.
 - **Mandatory Rotation:** When an account hits a limit or cooldown, immediately rotate to the next configured account in `rotation` using `--account <next>`.
 - **Clean Profile Hand-off:** Rotation unsets `DOT_CHROME_USER_DATA`, `DOT_URL`, and `DOT_PROFILE_DIRECTORY` across the boundary so the next account automatically resolves its own dedicated profile directory, target URL, and configured subprofile.
@@ -177,7 +203,7 @@ Always rotate across configured accounts when hitting a rate limit, usage limit,
 
 ## Configuration & Environment Variables
 
-- `DOT_ACCOUNT`: Account identifier in `~/.config/dot/config.json`. Can also be passed via `--account <name>`.
+- `DOT_ACCOUNT`: Machine-local preferred account key or alias. Selection order is explicit `--account <name>` / `-a <name>`, then `DOT_ACCOUNT`, then the `default_account` in `~/.config/dot/config.json`.
 - `DOT_URL`: Target ChatGPT dot assistant URL. Can also be passed via `--url <url>`.
 - `DOT_BACKEND`: Force backend (`chrome` or `auto`). Both values select Chrome.
 - `DOT_CONFIG_FILE`: Custom path to dot JSON configuration (defaults to `~/.config/dot/config.json`).

@@ -50,13 +50,26 @@ class CoordinatorCheckbackContractTests(unittest.TestCase):
                        'Ten checks end the bounded observation cycle, not task ownership'):
             self.assertIn(clause, self.cycle)
 
-    def test_coordinator_stays_on_verified_account_and_disables_auto_rotation(self):
-        for clause in ('overrides the account-rotation rules',
-                       'retain the verified account and intended chat',
-                       'DOT_ROTATE_ON_LIMIT=0',
-                       'Do not rotate to another account or target',
-                       'report the exact transport blocker'):
-            self.assertIn(clause, self.cycle)
+    def test_coordinator_uses_normal_preference_and_account_rotation(self):
+        self.assertIn('Preserve the cycle checkpoint and the intended chat URL', self.cycle)
+        self.assertIn('set `DOT_ROTATE_ON_LIMIT=0` and pass `--url <intended-chat-url>`', self.cycle)
+        self.assertIn('automatic retry clears the URL', self.cycle)
+        self.assertIn('reading that exact URL with `--account <next>`', self.cycle)
+        self.assertIn('cannot reach the intended chat', self.cycle)
+        self.assertIn('record the observation as failed', self.cycle)
+        self.assertIn('do not use its default URL', self.cycle)
+        self.assertIn('do not pin or record a permanent cycle owner', self.cycle)
+        self.assertIn('machine-local `DOT_ACCOUNT` preference', self.cycle)
+        self.assertIn('configured `rotation` order', self.cycle)
+        self.assertIn('Except for coordinator sends bound to a specific intended chat',
+                      self.text)
+        for clause in ('retain the verified account',
+                       'Do not rotate to another account or target'):
+            self.assertNotIn(clause, self.cycle)
+
+    def test_small_fix_file_threshold_matches_delegate_rule(self):
+        self.assertIn('it touches one or two files', self.text)
+        self.assertIn('it spans more than two files', self.text)
 
     def test_recovery_does_not_become_status_only_work(self):
         for clause in ('Resume unfinished authorized work with its existing owner',
