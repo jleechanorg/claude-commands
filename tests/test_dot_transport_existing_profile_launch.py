@@ -130,6 +130,9 @@ function clickSendButton() {
   state.clicked = true;
   state.userMessages.push(state.composer);
   state.composer = "";
+  if (process.env.DOT_TEST_REDIRECT_AFTER_SEND_DISPATCH === "1") {
+    state.currentUrl = "https://chatgpt.com/c/different-conversation";
+  }
 }
 function locator(selector) {
   if (selector.includes("data-message-author-role=user")) {
@@ -872,6 +875,27 @@ process.stdout.write = (chunk, ...args) => {
         state = json.loads(state_path.read_text())
         self.assertFalse(state["clicked"])
         self.assertEqual(state["userMessages"], [])
+
+    def test_send_does_not_verify_after_post_dispatch_redirect(self):
+        state_path = self._install_fake_send_playwright()
+        message_path = self.root / "redirect-after-send.txt"
+        message_path.write_text("Must verify the requested conversation after send")
+        env = dict(self.env, DOT_TEST_REDIRECT_AFTER_SEND_DISPATCH="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "send", str(message_path)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
+        self.assertIn("DOT_TARGET_MISMATCH", proc.stdout)
+        self.assertIn("DOT_SEND_UNVERIFIED", proc.stdout)
+        self.assertNotIn("DOT_SENT_VERIFIED", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertTrue(state["clicked"])
+        self.assertEqual(state["userMessages"], ["Must verify the requested conversation after send"])
 
     def test_send_does_not_click_if_composer_changes_during_action_resolution(self):
         state_path = self._install_fake_send_playwright()

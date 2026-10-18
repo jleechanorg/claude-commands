@@ -206,8 +206,7 @@ const existingProfileUnavailable = (code) => { throw new ExistingProfileUnavaila
 
 const [mode, arg] = process.argv.slice(2);
 let ctx = null, clicked = false;
-let aborted = false, code = 0;
-let commitReceived = false;
+let aborted = false, code = 0, commitReceived = false;
 let phaseDeadline = Infinity, operationDeadline = Infinity;
 const isPreparedMode = mode === 'send-prepared' || (mode === 'send' && process.env.DOT_PREPARED === '1');
 
@@ -800,6 +799,7 @@ async function send(page, file, dry, opts = {}) {
   if (action === 'timeout') { clicked = false; aborted = true; unavailable('timeout'); }
   if (action !== 'clicked') { clicked = false; unavailable('send control not actionable'); }
   await sleep(4000);
+  requireConversationTarget(page);
   const left = (await readComposer()).trim();
   const afterMsgs = await getUserMessages();
   const afterCount = countMatches(afterMsgs, norm(msg));
