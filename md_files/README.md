@@ -59,8 +59,8 @@ imports them via `@~/.codex/AGENTS.md` and adds only Claude-specific rules
 Autonomy-presence check (run after any refresh):
 
 ```console
-$ grep -cE '^## (Authorization, scope|Do not offload|Act, don.t ask|A required artifact|Visible progress|Autonomy time-box|Autonomous follow-through)' md_files/AGENTS.shared.md
-7
+$ grep -cE '^## (Authorization, scope|Do not offload|Act, don.t ask|A required artifact|Visible progress|Autonomy time-box|Proportionality, evidence, and autonomous execution|Editing shared policy or runtime adapters|Autonomous follow-through)' md_files/AGENTS.shared.md
+9
 ```
 
 ## Reproducing this layout on a fresh machine
