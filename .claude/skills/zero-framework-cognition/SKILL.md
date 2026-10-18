@@ -133,7 +133,12 @@ streaming phase 2 (`mvp_site/llm_service.py:10880`) and conditional retries
 (`mvp_site/llm_service.py:2876,2984`) are source paths, not measured runtime counts.
 Schema-corrective provider re-prompts remain unverified; do not substitute dead
 retry helpers or database retries. Reuse the reported 209-module/976-site audit;
-reported re-reads of rows 699, 545 and 937 await receipt verification, not a rerun.
+the existing applicability addendum was inspected by a separate read-only reviewer.
+Its recorded dispositions are source-only, not independently rerun here: rows
+699/545/937 remain Keep/Narrow/Keep at separate source
+`ae2804b79aef5553e48d2634699ca51a7926bf4f` versus audit-era
+`b65d5c6b0d7ff849016f69ce1800aefac368d60e`. The addendum records no original
+commands/exits or runtime/provider proof; do not conflate it with the snapshot above.
 
 At that same revision, `.claude/skills/worldai-zfc/SKILL.md:10` orders global-first
 reading, conflicting with repository-first discovery here; report unresolved
