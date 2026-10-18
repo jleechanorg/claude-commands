@@ -1,6 +1,7 @@
 # Claude Global Baseline
 
 Shared policy is loaded below. Edit universal rules in `$CODEX_HOME/AGENTS.md` (defaults to `~/.codex/AGENTS.md`); keep only Claude-specific additions in this adapter. The imported section explicitly labeled Codex-only does not apply to Claude. Do not duplicate shared rules here.
+PR lifecycle & quantity control: `~/.claude/skills/draft-first-pr/SKILL.md`, `~/.claude/skills/pr-green-definition/SKILL.md`, and `~/.claude/skills/pr-quantity-control/SKILL.md` (`<= 3` open PRs per feature scope by default; hard cap `<= 5` coarse vertical slices when splitting; never micro-slice by line count).
 
 @~/.codex/AGENTS.md
 
@@ -10,7 +11,9 @@ Delegate a task that is genuinely independent and large enough to earn its own c
 
 Confirm a delegated result against its own artifact before repeating its claim to the user: a lane reporting success is not the success, and a report that no lane returned is missing evidence, not assent. Tier table, CLI names, and the stalled-teammate transcript check: `~/.claude/skills/parallelize-to-ceiling/SKILL.md` § Model-tier routing and delegation defaults.
 
-Resource admission gate: before spawning lanes, fleets, or CLI delegations, compute available RAM from `vm_stat` ((free+inactive+purgeable+speculative)×page_size) and check `kern.memorystatus_vm_pressure_level`; defer only when available <4GB or pressure=4, and attribute pressure to its top-RSS source first. Never gate on the `vm.swapusage` ratio (macOS sizes swap dynamically). Never fork a multi-minute CLI delegation (agy/codex/claude -p) as foreground Bash: always background, with a timeout and captured output. Thresholds and source of truth: `~/.claude/skills/parallelize-to-ceiling/SKILL.md` § Resource admission gate.
+Gemini Model Invariant: Never use Gemini 3.1 Pro (or older Gemini Pro models). When using the `agy` CLI, always pass `--model gemini-3.8-flash-high` (or `gemini-3.8-flash-medium` / `gemini-3.8-flash`); when spawning subagents via `invoke_subagent` in Antigravity, always pass `Model: "flash"` (or `"flash_lite"`), never `Model: "inherit"`.
+
+Resource admission gate: before spawning lanes, fleets, or CLI delegations, compute available RAM from `vm_stat` ((free+inactive+purgeable+speculative)×page_size) and check `kern.memorystatus_vm_pressure_level`; for memory, defer only when available <4GB or pressure=4, and attribute pressure to its top-RSS source first. CPU load has its own cap on heavy lanes (§ CPU tier in the skill below). Never gate on the `vm.swapusage` ratio (macOS sizes swap dynamically). Never fork a multi-minute CLI delegation (agy/codex/claude -p) as foreground Bash: always background, with a timeout and captured output. Thresholds and source of truth: `~/.claude/skills/parallelize-to-ceiling/SKILL.md` § Resource admission gate.
 
 ## User-facing language — Opus 5 calibration
 
@@ -46,3 +49,18 @@ These are voice rules and nothing more. They never license omitting a failing te
 ## Reply footer
 
 The status-line and `git-header.sh` procedure live in `~/.claude/CLAUDE-global-reference.md`. Refresh branch, upstream, and PR facts when reporting them or completing Git work, using the hook or direct queries when the status line is missing or stale. Unrelated replies do not require a manual status-hook call.
+
+## Default skill installation targets
+
+For future requested skill installations or updates, the default target set is
+the personal cloud skill registry, this Mac, and the existing authorized Ubuntu
+host. Apply only the selected reviewed packages and report each host separately.
+Keep one live canonical package source at `~/.claude/skills`; filesystem discovery
+links in `.agents/skills` must point directly there. Preserve local edits, unique
+helpers and private undo outside discovery. Do not add `.codex` user projections,
+release snapshots, credentials, grants or a new access route. Verify the existing
+route and package provenance for each operation; an unavailable target remains
+blocked while independent targets continue. Cloud installation uses its documented
+personal-registry workflow. This default does not authorize recurring runs or
+expanding the selected package scope.
+
