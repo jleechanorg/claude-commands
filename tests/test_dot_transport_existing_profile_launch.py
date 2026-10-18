@@ -842,12 +842,57 @@ process.stdout.write = (chunk, ...args) => {
         self.assertTrue(state["clicked"])
         self.assertEqual(state["userMessages"], ["Draft that may have been sent"])
 
-    def test_submit_draft_does_not_click_if_deadline_expires_during_actionability(self):
+    def test_prepared_send_does_not_click_if_deadline_expires_during_actionability(self):
         proc, state = self._run_clocked_prepared(advance_during_actionability=True)
         self.assertNotIn("DOT_DRAFT_SUBMITTED", proc.stdout)
         self.assertFalse(state["clicked"])
         self.assertEqual(state["userMessages"], [])
         self.assertEqual(state["composer"], "Synthetic proof")
+
+    def test_submit_draft_does_not_click_after_deadline_during_actionability(self):
+        state_path = self._install_fake_send_playwright("Draft that must stay unsent")
+        preload = self.root / "submit-deadline-clock.cjs"
+        preload.write_text(
+            "let now = 1000000; Date.now = () => now; "
+            "globalThis.advanceClock = (ms) => { now += ms; };"
+        )
+        env = dict(self.env, DOT_TEST_ADVANCE_CLOCK_DURING_ACTIONABILITY="1")
+        proc = subprocess.run(
+            [str(NODE22), "--require", str(preload), str(SCRIPT), "submit-draft"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 10, proc.stdout + proc.stderr)
+        self.assertNotIn("DOT_DRAFT_SUBMITTED", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertFalse(state["clicked"])
+        self.assertEqual(state["userMessages"], [])
+
+    def test_read_returns_nonzero_after_retry_dispatch_response_failure(self):
+        state_path = self._install_fake_send_playwright()
+        env = dict(
+            self.env,
+            DOT_TEST_SNAG="1",
+            DOT_TEST_REJECT_AFTER_RETRY_DISPATCH="1",
+            DOT_LOCK_BASE=str(self.root / "locks"),
+        )
+        proc = subprocess.run(
+            [str(DOT_SH), "read", "5000"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=45,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
+        self.assertIn("DOT_SEND_UNVERIFIED", proc.stdout)
+        self.assertNotIn("Fixture conversation with enough stable text", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertTrue(state["retryClicked"])
+        self.assertEqual(state["userMessages"], [])
 
     def test_submit_draft_refuses_if_initial_target_is_redirected(self):
         state_path = self._install_fake_send_playwright("Draft that must stay unsent")

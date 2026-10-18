@@ -881,7 +881,7 @@ if (isMainModule()) {
       }
     }
   } catch (e) {
-    if (clicked) console.log('DOT_SEND_UNVERIFIED chrome_error=' + e.message);
+    if (clicked) { console.log('DOT_SEND_UNVERIFIED chrome_error=' + e.message); code = 4; }
     else if (e instanceof ExistingProfileUnavailable) {
       if (isPreparedMode) reportPrecommitNoSend('profile_unavailable', arg);
       else console.log('DOT_PROFILE_LAUNCH_RESULT ' + JSON.stringify({ schema_version: 1, launch_state: 'unavailable', diagnostic: e.code }));
