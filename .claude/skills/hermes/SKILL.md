@@ -28,7 +28,8 @@ machine access beyond the current user's authorization.
 
 Send a bounded handoff: task/goal, existing owner, repository and branch/head,
 acceptance checks, evidence already available, permitted next step, holds, and
-a unique task marker. Ask Hermes to review, monitor, and report a concrete next
+a unique task marker, and the originating Dot account/conversation reference
+when Dot is the caller. Ask Hermes to review, monitor, and report a concrete next
 action. Include takeover permission only when the user has authorized it.
 
 Track these states separately:
@@ -104,9 +105,14 @@ progress. Keep one writer and one monitoring record per task.
 
 ## Dot nudges
 
-Hermes may nudge Dot when authorized for the same engineering task. Read the
-installed [Dot skill](../dot/SKILL.md) and use its existing verified account and
-conversation. Set `DOT_ROTATE_ON_LIMIT=0` on every Dot transport invocation
+Hermes may nudge only the original calling Dot for the same engineering task.
+Use the originating account and stable conversation/room reference recorded in
+the handoff; do not substitute the default Dot, a different chat, or another
+account. If the original destination is missing or cannot be verified, ask the
+caller in the existing Slack task thread and keep the nudge unsent.
+
+Read the installed [Dot skill](../dot/SKILL.md) and resolve that recorded origin
+to its existing verified account and conversation. Set `DOT_ROTATE_ON_LIMIT=0` on every Dot transport invocation
 and pass the verified account/chat explicitly; the transport otherwise rotates
 by default. A quota limit remains a blocker for that same target. Preserve its
 peer-draft and submission rules; confirm the exact
