@@ -1,11 +1,16 @@
 """Scheduled ping tests use fake generation providers and Dot executables."""
+import contextlib
 import importlib.util
+import io
 import json
 import os
-from pathlib import Path
+import stat
 import subprocess
+from pathlib import Path
+import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT/'.claude/skills/agy-dot-coordinator/scripts/ping-dots.py'
@@ -134,6 +139,7 @@ class SimplePingTests(unittest.TestCase):
         self.calls.unlink()
         self.message.unlink()
         (self.root/'state/state_alpha.json').unlink()
+        (self.root/'state/state_alpha.json.hold').unlink(missing_ok=True)
         result = self.run_ping('--generator', 'haiku')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.calls_made(), ['haiku', 'dot'])
@@ -152,6 +158,55 @@ class SimplePingTests(unittest.TestCase):
         self.assertIn('DOT_SEND_UNVERIFIED', result.stdout)
         self.assertIn('dot diagnostic', result.stderr)
         self.assertEqual(self.calls_made(), ['codex', 'dot'])
+
+    def test_draft_present_diagnostic_is_recognized_as_no_dispatch(self):
+        self.env.update(RECEIPT='DOT_DRAFT_PRESENT: peer draft remains in composer', SEND_RC='3')
+        result = self.run_ping()
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('peer draft present; no dispatch occurred', result.stdout)
+        self.assertEqual(self.calls_made(), ['codex', 'dot'])
+        state = json.loads((self.root/'state/state_alpha.json').read_text())
+        self.assertEqual(state['last_status'], 'SKIPPED_COMPOSER_BUSY')
+        self.assertFalse(state['delivery_unverified'])
+        self.assertEqual(state['last_sent_epoch'], 0)
+
+    def test_success_commit_dirsync_failure_keeps_independent_hold(self):
+        self.env.update(RECEIPT='DOT_SERVER_ACCEPTED', SEND_RC='0')
+        original_bounded_run = PING.bounded_run
+        original_fsync = PING.os.fsync
+        transport_returned = False
+
+        def observe_transport(command, *args, **kwargs):
+            nonlocal transport_returned
+            result = original_bounded_run(command, *args, **kwargs)
+            if str(command[0]) == str(self.dot) and 'send-once' in command:
+                transport_returned = True
+            return result
+
+        def fail_success_directory_sync(fd):
+            if transport_returned and stat.S_ISDIR(os.fstat(fd).st_mode):
+                raise OSError('simulated post-receipt directory fsync failure')
+            return original_fsync(fd)
+
+        with mock.patch.dict(os.environ, self.env), \
+                mock.patch.object(PING, 'generate_message', return_value=('codex', MESSAGE)), \
+                mock.patch.object(PING, 'bounded_run', side_effect=observe_transport), \
+                mock.patch.object(PING.os, 'fsync', side_effect=fail_success_directory_sync), \
+                mock.patch.object(sys, 'argv', [str(SCRIPT), '--account', 'alpha']), \
+                contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(OSError, 'post-receipt directory fsync failure'):
+                PING.main()
+
+        state = self.root/'state/state_alpha.json'
+        self.assertTrue(state.with_name(state.name + '.hold').exists())
+        with mock.patch.dict(os.environ, self.env), \
+                mock.patch.object(PING, 'generate_message', return_value=('codex', MESSAGE)) as generate, \
+                mock.patch.object(sys, 'argv', [str(SCRIPT), '--account', 'alpha']), \
+                contextlib.redirect_stdout(io.StringIO()):
+            PING.main()
+        generate.assert_not_called()
+        self.assertEqual(self.calls_made(), ['dot'])
 
     def test_stop_and_existing_hold_prevent_generation(self):
         state = self.root/'state'

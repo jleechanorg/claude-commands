@@ -826,6 +826,29 @@ process.stdout.write = (chunk, ...args) => {
         self.assertEqual(state["userMessages"], [])
         self.assertEqual(state["composer"], "Unrelated peer draft")
 
+    def test_send_clears_stale_draft_before_typing_approved_message(self):
+        state_path = self._install_fake_send_playwright("Stale coordinator draft")
+        message_path = self.root / "message-after-stale-draft.txt"
+        message_path.write_text("Approved coordinator message")
+        env = dict(self.env, DOT_CLEAR_DRAFT="1")
+
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "send", str(message_path)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("DOT_STALE_DRAFT_CLEARED", proc.stdout)
+        self.assertIn("DOT_SENT_VERIFIED", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertTrue(state["clicked"])
+        self.assertEqual(state["userMessages"], ["Approved coordinator message"])
+        self.assertEqual(state["composer"], "")
+
     def test_prepared_send_does_not_click_after_whitespace_change(self):
         edited_composers = (
             "Coordinator-owned fixture  message",

@@ -380,6 +380,24 @@ with tempfile.TemporaryDirectory() as workdir:
               and recorded.get('consecutive_noncompliance') == 1
               and recorded.get('consecutive_classification_failures') == 0)
 
+        state_peer = Path(workdir) / 'state_peer_draft.json'
+        state_peer.write_text(json.dumps({'consecutive_noncompliance': 0}))
+        peer_capture = Path(workdir) / 'escalation_peer_draft.txt'
+        env_peer = dict(os.environ, FAKE_TAIL=reminder + '\n\U0001f440',
+                        FAKE_ESCALATION_CAPTURE=str(peer_capture),
+                        FAKE_ESCALATION_RECEIPT='DOT_DRAFT_PRESENT: peer draft remains in composer',
+                        FAKE_SEND_RC='3')
+        m.generate = lambda provider, prompt=None: '{"verdict": "reaction_only"}'
+        verdict_peer = m.verify_and_escalate(make_fake_dot(workdir, ''), 'test', env_peer, 'luna',
+                                             state_peer, wait_secs=0, recheck_secs=0)
+        recorded_peer = json.loads(state_peer.read_text())
+        check("escalation draft diagnostic releases the no-dispatch hold",
+              verdict_peer == 'reaction_only'
+              and recorded_peer.get('last_status') == 'SKIPPED_COMPOSER_BUSY'
+              and recorded_peer.get('delivery_unverified') is False
+              and recorded_peer.get('escalation_sent_epoch', 0) == 0
+              and not state_peer.with_name(state_peer.name + '.hold').exists())
+
         # 2. idle_refusal reply escalates and increments consecutive_noncompliance
         m.generate = lambda provider, prompt=None: '{"verdict": "idle_refusal"}'
         state_refusal = Path(workdir) / 'state_refusal.json'

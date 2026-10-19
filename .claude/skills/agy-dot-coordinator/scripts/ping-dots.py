@@ -198,14 +198,13 @@ def verify_and_escalate(dot, account, env, provider, state_file, wait_secs=180, 
         if record.get('escalation_unverified'):
             print(account + ': escalation delivery remains unverified; no retry')
         else:
-            delivery_state(state_file, escalation_verified=False, escalation_unverified=True,
-                           delivery_unverified=True, last_status='UNVERIFIED_SEND_ESCALATION_PENDING')
+            record.update(escalation_verified=False, escalation_unverified=True, delivery_unverified=True, last_status='UNVERIFIED_SEND_ESCALATION_PENDING'); delivery_state(state_file, **record)
             with tempfile.NamedTemporaryFile(mode='w+', prefix='dot-escalation-', dir='/tmp') as file:
                 file.write(ESCALATION_BODY + '\nFrom ' + IDENTITIES.get(provider, 'Coordinator') + ' coordinator: automated escalation; no new authority.')
                 file.flush()
                 sent = bounded_run([dot, '--account', account, 'send-once', file.name], timeout=180, env=env, check=False)
             authoritative = sent.returncode == 0 and 'DOT_SERVER_ACCEPTED' in sent.stdout.splitlines()
-            no_dispatch = sent.returncode == 3 and 'DOT_DRAFT_PRESENT' in sent.stdout.splitlines() and not any(marker in sent.stdout for marker in ('DOT_SERVER_ACCEPTED', 'DOT_SENT_VERIFIED', 'DOT_SEND_UNVERIFIED'))
+            no_dispatch = sent.returncode == 3 and any(line == 'DOT_DRAFT_PRESENT' or line.startswith('DOT_DRAFT_PRESENT:') for line in sent.stdout.splitlines()) and not any(marker in sent.stdout for marker in ('DOT_SERVER_ACCEPTED', 'DOT_SENT_VERIFIED', 'DOT_SEND_UNVERIFIED'))
             record.update(escalation_sent_epoch=int(time.time()) if not no_dispatch else record.get('escalation_sent_epoch', 0), escalation_verified=authoritative, escalation_unverified=not (authoritative or no_dispatch), delivery_unverified=not (authoritative or no_dispatch), last_status='SUCCESS' if authoritative else 'SKIPPED_COMPOSER_BUSY' if no_dispatch else 'UNVERIFIED_SEND_ESCALATION', consecutive_noncompliance=int(record.get('consecutive_noncompliance', 0)) + 1)
             print(account + ': response ' + verdict + '; escalation ' + ('sent' if authoritative else 'peer draft; no dispatch' if no_dispatch else 'unverified hold; no retry'))
     delivery_state(state_file, **record)
@@ -215,13 +214,15 @@ def delivery_message(provider, message):
     return message + '\nFrom ' + IDENTITIES[provider] + ' coordinator: automated reminder; no new authority.'
 
 def delivery_state(path, **fields):
+    marker = path.with_name(path.name + '.hold') if fields.get('last_status') in ('SUCCESS', 'SKIPPED_COMPOSER_BUSY') and not path.name.endswith('.hold') else None
+    if marker: delivery_state(marker, delivery_unverified=True)
     record = json.loads(path.read_text()) if path.exists() else {}; record.update(fields); record.setdefault('last_sent_epoch', 0)
     with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, prefix='.delivery-', delete=False) as file:
         json.dump(record, file, indent=2, sort_keys=True); file.write('\n'); file.flush(); os.fsync(file.fileno())
-    os.replace(file.name, path)
-    directory = os.open(path.parent, os.O_RDONLY)
+    os.replace(file.name, path); directory = os.open(path.parent, os.O_RDONLY)
     try: os.fsync(directory)
     finally: os.close(directory)
+    if marker: marker.unlink(missing_ok=True)
 
 def due_account(accounts, role, now):
     offsets = (0, 20, 40) if role == 'mac' else (30, 50, 10)
@@ -252,12 +253,10 @@ def main():
             print('STOP is present; no send')
             return 0
         for path in (state / 'state.json', state / ('state_' + account + '.json')):
-            if path.exists():
-                rec = json.loads(path.read_text())
-                rec = rec.get('accounts', {}).get(account, rec)
-                if rec.get('delivery_unverified') or str(rec.get('last_status', '')).startswith('UNVERIFIED_SEND'):
-                    print(account + ': existing delivery hold; no send')
-                    return 0
+            if path.with_name(path.name + '.hold').exists(): print(account + ': existing delivery hold; no send'); return 0
+            rec = json.loads(path.read_text()) if path.exists() else {}
+            rec = rec.get('accounts', {}).get(account, rec)
+            if rec.get('delivery_unverified') or str(rec.get('last_status', '')).startswith('UNVERIFIED_SEND'): print(account + ': existing delivery hold; no send'); return 0
         provider, message = generate_message(PROVIDERS if args.generator == 'auto' else (args.generator,))
         if args.generate_only: print(message); return 0
         if (state / 'STOP').exists():
@@ -275,7 +274,7 @@ def main():
             delivery_state(hold, account=account, last_status='SUCCESS', last_summary='Authoritative server acceptance receipt', last_sent_epoch=int(time.time()), delivery_unverified=False); print(account + ': sent')
         elif sent.returncode == 0 and 'DOT_SENT_VERIFIED' in sent.stdout.splitlines():
             delivery_state(hold, account=account, last_status='UNVERIFIED_SEND_UI_OBSERVED', last_summary='UI observed the message; server acceptance and durable delivery remain unverified', delivery_unverified=True); print(account + ': UI observed the message; delivery held and no retry will be attempted'); return 0
-        elif sent.returncode == 3 and 'DOT_DRAFT_PRESENT' in sent.stdout.splitlines() and not any(marker in sent.stdout for marker in ('DOT_SERVER_ACCEPTED', 'DOT_SENT_VERIFIED', 'DOT_SEND_UNVERIFIED')):
+        elif sent.returncode == 3 and any(line == 'DOT_DRAFT_PRESENT' or line.startswith('DOT_DRAFT_PRESENT:') for line in sent.stdout.splitlines()) and not any(marker in sent.stdout for marker in ('DOT_SERVER_ACCEPTED', 'DOT_SENT_VERIFIED', 'DOT_SEND_UNVERIFIED')):
             delivery_state(hold, account=account, last_status='SKIPPED_COMPOSER_BUSY', last_summary='Peer draft present; no dispatch occurred', delivery_unverified=False); print(account + ': peer draft present; no dispatch occurred'); return 0
         else:
             print(account + ': send not verified; inspect the existing Dot tool before retrying')
