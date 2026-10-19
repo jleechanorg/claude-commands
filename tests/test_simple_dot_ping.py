@@ -170,6 +170,18 @@ class SimplePingTests(unittest.TestCase):
         self.assertEqual(state['last_status'], 'SKIPPED_COMPOSER_BUSY')
         self.assertFalse(state['delivery_unverified'])
         self.assertEqual(state['last_sent_epoch'], 0)
+        self.assertFalse((self.root/'state/state_alpha.json.hold').exists())
+
+    def test_authoritative_success_clears_independent_hold(self):
+        self.env.update(RECEIPT='DOT_SERVER_ACCEPTED', SEND_RC='0')
+        result = self.run_ping()
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        state = json.loads((self.root/'state/state_alpha.json').read_text())
+        self.assertEqual(state['last_status'], 'SUCCESS')
+        self.assertFalse(state['delivery_unverified'])
+        self.assertFalse((self.root/'state/state_alpha.json.hold').exists())
+        self.assertEqual(self.calls_made(), ['codex', 'dot'])
 
     def test_success_commit_dirsync_failure_keeps_independent_hold(self):
         self.env.update(RECEIPT='DOT_SERVER_ACCEPTED', SEND_RC='0')

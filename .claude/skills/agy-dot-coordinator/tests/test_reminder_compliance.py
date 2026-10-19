@@ -436,7 +436,8 @@ with tempfile.TemporaryDirectory() as workdir:
               and snapshot_hold.get('escalation_unverified') is True
               and snapshot_hold.get('delivery_unverified') is True
               and snapshot_hold.get('last_status') == 'UNVERIFIED_SEND_ESCALATION_PENDING'
-              and json.loads(state_hold.read_text()).get('escalation_verified') is True)
+              and json.loads(state_hold.read_text()).get('escalation_verified') is True
+              and not state_hold.with_name(state_hold.name + '.hold').exists())
 
         # A failed directory fsync leaves the hold write unusable and must
         # prevent the escalation transport from being invoked.
