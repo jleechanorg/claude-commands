@@ -31,6 +31,20 @@ def read_frontmatter(text: str) -> dict:
 
 
 class LLMBackendIsolationContractsTest(unittest.TestCase):
+    def test_portable_skills_defer_request_policy_to_active_repository(self):
+        zfc_text = read_skill("zero-framework-cognition")
+        legacy_text = read_skill("no-second-llm-calls")
+
+        self.assertIn("active repository owns", zfc_text.lower())
+        self.assertIn("request accounting", zfc_text.lower())
+        self.assertIn("local coding", zfc_text.lower())
+        self.assertIn("subagent", zfc_text.lower())
+        self.assertNotIn("per logical player", zfc_text.lower())
+        self.assertNotIn("one external application", zfc_text.lower())
+        self.assertNotIn("One LLM call per user action", legacy_text)
+        self.assertNotIn("world_logic.py", legacy_text)
+        self.assertIn("active repository", legacy_text.lower())
+
     def test_all_affected_skills_have_portable_frontmatter(self):
         allowed_keys = {
             "name",

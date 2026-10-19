@@ -74,29 +74,29 @@ Registry membership, determinism and a passing fallback test are not sufficient.
 Recommend removing backend decisions or moving contracts upstream; never add a second
 registry, queue, ledger or compensator merely to make a review pass.
 
-## Count requests honestly
+## Account for provider requests
 
-Preserve one external application→LLM-provider request/response per logical player
-turn. Record separately the logical turn ID, external request attempts, successful
-responses, model continuations, and provider-internal execution steps. One user
-stream, wrapper call, cache hit or logical turn does not imply one provider request.
+For an application/provider flow under review, distinguish external requests,
+responses, retries, model continuations, and provider-internal execution when
+the evidence supports those counts. A wrapper call, cache hit, stream, logical
+operation, or tool phase does not by itself establish how many provider requests
+occurred. Trace the actual application-to-provider boundary and do not infer a
+request-policy violation merely from a phase name or from separate user actions.
 
-A tool-result phase, streaming phase 2, application-issued classifier request,
-schema-corrective re-prompt or repair call adds an external request whenever it
-crosses the application→provider boundary. Flag each such crossing explicitly;
-do not silently add or relabel it. Local inference (including an existing local
-FastEmbed classifier) is separately reported computation, not an external
-provider request. A separately authorized transport retry may recover a
-failure, but still increases literal attempts. After a timeout, disclose unknown
-provider completion and possible duplicate processing; do not infer exactly once.
-This reference grants no retry or additional-call authorization.
+The active repository owns production request budgets and authorization. This
+reference imposes no numeric limit and creates no approval phrase or permission
+requirement. Its production request accounting does not govern local coding,
+subagents, review, test execution, or orchestration workflows. Report local
+inference separately from external provider requests. Disclose unknown completion
+and possible duplicate processing after a timeout when relevant; do not claim
+exactly-once execution without proof.
 
-Existing provider-native execution may establish facts within one external request
-only when the selected API/model contract supports it. Count its internal steps and
-cost separately; do not claim zero internal reasoning or guaranteed low latency.
-Do not finalize outcome-dependent narration OR state before outcome facts exist:
-use established inputs, verified native execution, or explicit deferral of both
-under the active contract. Do not invent a backend gameplay validator or hidden
+Provider-native execution may establish facts within a request only when the
+selected API/model contract supports it. Count internal steps and cost separately
+when known; do not claim zero internal reasoning or guaranteed low latency. Do not
+finalize outcome-dependent narration or state before outcome facts exist: use
+established inputs, verified native execution, or explicit deferral under the
+active contract. Do not invent a backend gameplay validator or hidden
 continuation to resolve this causality constraint.
 
 ## Inspect and report
