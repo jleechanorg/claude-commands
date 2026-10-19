@@ -47,6 +47,12 @@ rather than waiting for every lane to finish.
 
 ## Monitor and review
 
+When the user asks to "cc Hermes" or have Hermes review a task, include
+monitoring and authorized Dot nudges for that same task in the handoff. Do not
+require a second request just to follow up. This does not authorize monitoring
+unrelated work, new schedules, a second writer, or broader communication.
+Explicit review-only/no-follow-up instructions override this default.
+
 For work the user asked Hermes to oversee, agree on the monitored tasks and
 reuse their existing checkpoints. Record owner, current operation, last
 meaningful progress time with timezone, artifact, next action, and resumption
