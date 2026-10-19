@@ -96,8 +96,10 @@ automatically stealing the branch:
    and result. Never re-run a cancelled action, publish, merge, alter access,
    restart a service, or incur new provider usage merely to clear inactivity.
 
-The 45-minute threshold is measured from the last verified progress, not from
-the latest reminder. A resumed task resets it only after new meaningful
+For a newly dispatched task with no progress yet, start the clock at its first
+verified dispatch timestamp. Missing send confirmation leaves the task
+UNVERIFIED rather than inventing a start time. The 45-minute threshold is then
+measured from the last verified progress, not from the latest reminder. A resumed task resets it only after new meaningful
 progress. Keep one writer and one monitoring record per task.
 
 ## Dot nudges
