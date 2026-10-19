@@ -7,9 +7,36 @@ description: Use when the user invokes /dot or asks to "message the dot", "ask d
 
 Talk to the user's ChatGPT dot assistant using `scripts/dot.sh`. The scripts are a thin mechanical pointer (type, read, submit, clear, verify — see `GUARDRAIL.md`); every judgment call lives in this file, read top-down: how to work through the dot first, then transport actions and the peer-draft policy, then operational reference.
 
-## Default: delegate, then monitor
+## Default: delegate non-small work, then monitor
 
-The dot runs its own coders. When /dot is used for work, hand the work to the dot instead of coding it yourself: send a scoped request (goal, PR/branch, acceptance criteria, constraints such as merge gates), then monitor rather than block.
+### Explicit Dot requests take priority
+
+When the user explicitly asks to use Dot or invokes `/dot` for work, send the
+task to Dot even when it looks small. Send a scoped request with the goal,
+branch or PR, acceptance criteria, and applicable constraints. Dot runs its own
+coders; monitor its work and verify claims at the source.
+
+Delegating a task does not expand its authorization. Preserve the user's scope
+and all separate merge, destructive-action, credential, publication, and
+permission boundaries. A reversible action is not automatically authorized
+just because Dot requests it.
+
+### Small fixes do not need Dot unless requested
+
+When deciding whether to involve Dot without an explicit user request, do not
+route a small fix to Dot. A fix is small when all are true:
+
+- it touches one or two files;
+- it changes no more than roughly 30 lines;
+- it needs no new design decision, API, dependency, or provider call;
+- it can be verified with a command available now.
+
+Unfamiliarity alone does not make a fix non-small. Involve Dot when work spans
+more files or subsystems, needs design or contract decisions, requires
+investigation across the codebase, involves long-running checks, or needs
+capabilities or access unavailable locally. When unsure, inspect enough of the
+affected flow to classify it before deciding. Follow the active runtime's
+normal implementation policy for work that is not assigned to Dot.
 
 - **Active work check first (mandatory):** before declining an authorized task, ask the Dot to inventory current work in progress and count only distinct tasks demonstrably executing now. Require a receipt for each claimed active task: item/goal, owner, live run/session or worktree/PR, the exact action happening now, and a fresh artifact or command result. Assignment, rank, "busy", or start time alone is not proof. Idle, stalled, finished, queued, and waiting-for-review tasks are not active. Capacity is a valid refusal only with evidence for at least six distinct active tasks, each showing its exact present action and fresh receipt; include those receipts in the reply. Do not gate acceptance on rank or ask the user to prioritize the task. If fewer than six active tasks are proven, take the authorized task and fill open capacity with safe work. Keep genuine permission/approval holds and measured resource limits separate from a full-capacity refusal: state the evidence and exact blocked action, preserve the approval boundary, and continue work that remains feasible. If the composer stays blocked or the account is limited, send the same request to the next account in `rotation` with `--account <next>`.
 
@@ -20,6 +47,7 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
 - Start only after an exact transport receipt for the initial reminder in the intended chat. Inter-check delays in seconds: `60, 120, 300, 300, 300, 300, 300, 300, 300, 300`. Measure each delay from the previous completed observation (first delay from the verified send). Record actual observations and source receipts in the existing checkpoint. New reminders and partial progress never reset the count.
 - Increment once per completed observation attempt, including a recorded timeout or read failure; resume an interrupted attempt under the same count. Later re-observation consumes the next scheduled count: no check eleven or disguised in-check re-observation.
 - This cycle also overrides the account-rotation rules: retain the verified account and intended chat. Set `DOT_ROTATE_ON_LIMIT=0` on each coordinator `dot.sh` invocation so automatic rotation cannot change its target. Do not rotate to another account or target on a busy composer or quota limit; report the exact transport blocker and preserve the checkpoint. A separately authorized reassignment requires a newly verified target and must not create duplicate ownership.
+- Keep the intended destination explicit for every reminder and observation. If a transport reports `DOT_TARGET_MISMATCH`, do not send or retry blindly; inspect the current destination and establish whether it is the intended conversation before proceeding. Keep destination safeguards. If a guard rejects a route that resolves to the intended conversation, update it to check stable conversation identity rather than path strings alone.
 - Direct user messages take priority: respond promptly, apply changed scope/cancellations before further action, and preserve the cycle checkpoint. Use the existing supported interruptible wait/wake mechanism. Do not create jobs, daemons, senders or competing coordinators. Do not change providers, credentials or installed schedules. If timing is unsupported, name the exact capability gap; do not claim planned checks ran.
 - Resume unfinished authorized work with its existing owner; recover checkpoints, acceptance gaps and older commitments. Verify owner state before any separately authorized reassignment. A publication hold need not block authorized safe tests or design. Attempt a concrete permitted unblock route for each blocker and continue independent work within evidenced capacity, rather than repeating inventories.
 - At each check require fresh original task artifacts against the requested acceptance criteria and a disposition for every unfinished request. Daemon health, delivery success, Working, timestamps, HEARTBEAT_OK, assignments and chat claims do not prove task execution or completion. Empty/failed reads remain unverified. Passing tests do not prove unperformed activation or publication.
@@ -33,6 +61,19 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
   - **Codex (no `/loop`):** the same `/goal`; each turn runs the same poll, then waits the next backoff interval (`sleep 60`, `sleep 120`, `sleep 300`, then `sleep 600` in a backgrounded or bounded command).
   - Stop polling when the deliverable is done, blocked on the user, or the 4-hour limit passes.
 - Verify the dot's claims at the source (git SHAs, `gh pr checks`, PR diffs) before relaying them, and don't duplicate files it has claimed.
+
+### Cloud-computer capability gaps
+
+When Dot cannot perform a requested cloud-computer task, confirm the exact gap
+before calling the task blocked. Record the host, repository or worktree,
+branch or SHA, command, exit status, missing capability, and expected artifact.
+Ask Dot to attempt safe setup using repository-declared dependencies and
+approved login or permission flows. Never copy credentials or browser
+sessions, bypass a guard, or treat a permission request as granted. Re-run the
+exact command and verify its output or artifact at the source. Keep independent
+authorized work moving if the capability remains unavailable, and report the
+precise blocker and required unblock in the current conversation. Notify other
+channels only when that channel and recipient are authorized for the task.
 
 ## Actions
 
@@ -51,13 +92,16 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
 ### Peer-draft policy (decision lives HERE, not in code)
 
 Other agent sessions share this composer; ChatGPT restores a saved draft lazily on focus, so `send` focuses first, then inspects. When `send`/`send-once` reports `DOT_DRAFT_PRESENT` (exit 3), do NOT immediately clear or keep blind-retrying:
-1. **Check back within 5 minutes**: sleep up to 300s, then `dot.sh read` (or re-attempt `send-once`) to see if the peer sent it themselves or the draft changed.
-2. **If the draft is still stuck, decide by reading it:**
-   - **Sensible message** (complete sentences, a real instruction/question for the dot) → **prefer sending it**: `dot.sh submit-draft` (prints `DOT_DRAFT_SUBMITTED`). The peer's intent reaches the dot; then send your own message.
-   - **Weird half-typed text** (mid-word cutoffs, command fragments, pasted garbage) → **clear it**: `dot.sh clear-draft` (prints `DOT_DRAFT_CLEARED`), then send your own message.
-3. Never force-clear a draft while a peer session is provably actively typing (draft text changing between reads). `DOT_CLEAR_DRAFT=1` on `send` remains the forced-clear escape hatch; own-leftover and already-sent drafts are always safe-cleared automatically.
+1. **Wait 30 seconds, then submit if unchanged.** Sleep up to 30s and re-read the composer. If the draft text is **identical after 30s** (nobody is actively typing), just submit it: `dot.sh submit-draft` (prints `DOT_DRAFT_SUBMITTED`). Do not wait 5 minutes; do not clear a stable draft. Then send your own message.
+2. **If the text is still changing** (a peer is provably actively typing between reads), do not submit or clear yet — wait one more 30s cycle, or route your message to the next account in `rotation`.
+3. **Clear only genuine garbage** (mid-word cutoffs, command fragments, pasted junk) with `dot.sh clear-draft` (prints `DOT_DRAFT_CLEARED`), then send your own message.
+4. `DOT_CLEAR_DRAFT=1` on `send` remains the forced-clear escape hatch; own-leftover and already-sent drafts are always safe-cleared automatically.
 
-**Verified send:** `DOT_SENT_VERIFIED` requires exact composer match after typing, emptied composer after sending, and the submitted text appearing in the conversation message list (`[data-message-author-role=user]`). Exit 4 means mismatched or unverified.
+**After sending:** Confirm the intended message is present in the intended
+conversation before treating the handoff as complete. If the transport cannot
+verify the send, inspect the intended conversation before retrying. Consult
+`scripts/dot_chrome.mjs` for the installed transport's current verification
+behavior; this skill gives the operator's decision rule.
 - Send only what the user asked to send. Do not post test messages.
 - Avoid line-leading list markers (`1)`, `-`, `*`): the composer converts them to list formatting, which can cause mismatch detection. Use plain sentences.
 - Interactive login / auth: `dot.sh [--account <name>] login` launches visible Chrome attached to that account's profile directory.
@@ -104,7 +148,11 @@ If an account returns `DOT_CHROME_UNAVAILABLE: not signed in`:
 
 - **MANDATORY: every dot profile owns an INDEPENDENT session, created only via `dot.sh --account <name> login`** (a visible Chrome window the user signs into; the script itself never enters, stores, or extracts credentials). This is the one canonical recovery from `logged_out` and the only sanctioned way a dot profile ever gets a session. Do not "help" by sharing a session from any other browser — see the resync ban below.
 - **BANNED: cookie-store resync from desktop/other profiles** (copying `Cookies` from a desktop Chrome profile into a dot profile, in either direction). A session shared between two live browsers is a rotation race: ChatGPT rotates the session token on activity, the rotation supersedes the old token server-side, and the browser that did not rotate renders logged out. On 2026-10-11 this logged the user's personal Chrome out of their own account after a resync-based restore. Sessions are cheap and independent — use `dot.sh login` instead.
-- **NEVER launch any browser binary other than system Google Chrome (with `--password-store=keychain`) against a live dot profile** (`~/.config/dot-headless-chrome-*`). This includes Playwright/Puppeteer (`launchPersistentContext`) and any bundled Chromium: Playwright defaults to its own Chromium with `--use-mock-keychain`, which cannot decrypt the Keychain-encrypted cookie store, so Chrome treats the session cookies as corrupt and EVICTS them — the account stays signed in server-side, but the profile is wiped. On 2026-10-11 this destroyed the `jleechan` (jeffrey) and `worldarchitect` profiles 26 seconds apart during a single ad-hoc inspection sweep.
+- **Never launch a browser other than system Google Chrome against a live Dot
+  profile.** Use `dot.sh` for profile operations; it selects the host-specific
+  password store: macOS `--password-store=keychain`; Linux uses
+  `--password-store=gnome-libsecret` for headless Chrome when `DISPLAY` or
+  `DBUS_SESSION_BUS_ADDRESS` is set, and for login. Playwright/Puppeteer and bundled Chromium may use an incompatible keychain backend and damage session cookies.
 - **To check login/session status, use `dot.sh --account <name> read` or `dot.sh --account <name> probe`** — they launch the correct binary with the correct flags. Never open the profile with a foreign browser; if a custom script must inspect the profile internals, copy the profile directory first (e.g. `cp -R ~/.config/dot-headless-chrome-X /tmp/probe-copy`) and run against the copy, or use read-only SQLite (`sqlite3 "file:.../Cookies?mode=ro"`, or `sqlite3 <db> ".backup /tmp/c.sqlite"` for a live store) without launching any browser. **Never `immutable=1` on a database Chrome may be writing** — it ignores the WAL and can mislead on a live store.
 - **Session-loss forensics (read-only, before any recovery):** a wiped profile shows a rebuilt anonymous cookie store (fresh `oai-did`/csrf cookies, zero `session-token` rows) while the account itself is fine server-side. `dot.sh` now classifies this automatically: a not-signed-in read/send also emits `DOT_STORE_REBUILD: ...` when the store shows the rebuild signature. Recover ONLY via `dot.sh login`. Never treat profile logout as an account logout.
 - **Machine checks now built into dot.sh (do not weaken them):** per-profile exclusive lock (a kernel `flock` on a hashed path under `$TMPDIR/dot-profile-locks/`, held by a holder process that dies with its parent — auto-released on ANY exit including kill -9, no stale-lock logic. The lock deliberately lives OUTSIDE the profile directory: a probe contract asserts launches leave the profile dir untouched, and a lock path inside the profile makes process scans that substring-match the profile dir treat it as in use); disk-space floor (`DOT_MIN_FREE_MB`, default 512 — a full disk corrupts the SQLite cookie store); OPT-IN foreign-binary enforcement (`DOT_ENFORCE_SYSTEM_CHROME=1`, honoured on login, headless and send-prepared): refuses a non-system binary unless `DOT_ALLOW_FOREIGN_BINARY=1`, because `DOT_CHROME_BIN` is a supported override for tests and alternate Chrome channels — the real 2026-10-11 wipe came from an ad-hoc script that bypassed `dot.sh` entirely; login launches with the same `--password-store` flags as headless; `login` holds the coordinator STOP marker for the whole window and removes it only if it created it; process-group teardown even when the node wrapper exits before the browser.
@@ -139,7 +187,7 @@ Always rotate across configured accounts when hitting a rate limit, usage limit,
 - `DOT_CONFIG_FILE`: Custom path to dot JSON configuration (defaults to `~/.config/dot/config.json`).
 - `DOT_CHROME_USER_DATA`: Explicit Chrome user data directory (defaults to account-specific persistent dir configured in `~/.config/dot/config.json`).
 - `DOT_PROFILE_DIRECTORY`: Explicit named Chrome subprofile override (defaults to the account's `profile_directory`, or `Default` when absent); it must pass the same single-directory-name validation.
-- `DOT_CLEAR_DRAFT`: When set to `1`, forces clearing any existing draft or edit state in the composer before typing and sending. Peer-draft decisions otherwise follow the SKILL.md policy (check back within 5 min, then `submit-draft` or `clear-draft`).
+- `DOT_CLEAR_DRAFT`: When set to `1`, forces clearing any existing draft or edit state in the composer before typing and sending. Peer-draft decisions otherwise follow the SKILL.md policy (wait 30s, submit if unchanged, else route to the next rotation account).
 - `DOT_DRY_RUN`: When `1` (Chrome backend), types, verifies exact match, clears composer, and prints `DOT_DRYRUN_OK` without sending.
 
 ## Machine Configuration (`~/.config/dot/config.json`) — reference
