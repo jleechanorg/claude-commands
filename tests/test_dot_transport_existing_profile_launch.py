@@ -128,7 +128,9 @@ const externalComposerPath = __EXTERNAL_COMPOSER_PATH__;
 const state = {composer: __INITIAL_COMPOSER__, clicked: false, retryClicked: false, enterPressed: false, userMessages: [], currentUrl: "", readSnapshotRedirected: false, setupSnapshotRedirected: false};
 function clickSendButton() {
   state.clicked = true;
-  state.userMessages.push(state.composer);
+  state.userMessages.push(process.env.DOT_TEST_UNRELATED_AFTER_SUBMIT === "1"
+    ? "Unrelated user message observed during submit"
+    : state.composer);
   state.composer = "";
   if (process.env.DOT_TEST_REDIRECT_AFTER_SEND_DISPATCH === "1") {
     state.currentUrl = "https://chatgpt.com/c/different-conversation";
@@ -1023,6 +1025,25 @@ process.stdout.write = (chunk, ...args) => {
         self.assertTrue(state["clicked"])
         self.assertFalse(state["enterPressed"])
         self.assertEqual(state["userMessages"], ["Draft that should be sent"])
+
+    def test_submit_draft_does_not_claim_success_for_unrelated_user_message(self):
+        state_path = self._install_fake_send_playwright("Draft that must be observed")
+        env = dict(self.env, DOT_TEST_UNRELATED_AFTER_SUBMIT="1")
+        proc = subprocess.run(
+            [str(NODE22), str(SCRIPT), "submit-draft"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertNotIn("DOT_DRAFT_SUBMITTED", proc.stdout)
+        self.assertIn("DOT_SUBMIT_UNVERIFIED composer_cleared=true", proc.stdout)
+        state = json.loads(state_path.read_text())
+        self.assertTrue(state["clicked"])
+        self.assertEqual(state["userMessages"], ["Unrelated user message observed during submit"])
+        self.assertEqual(state["composer"], "")
 
     def test_submit_draft_rejects_whitespace_change_during_action_resolution(self):
         state_path = self._install_fake_send_playwright("approved draft")

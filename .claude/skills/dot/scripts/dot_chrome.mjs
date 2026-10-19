@@ -179,6 +179,15 @@ const USER_MESSAGES = '[data-message-author-role=user], article.self, article[cl
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const norm = (t) => t.replace(/\s+/g, ' ').trim();
 const stripReadReceipt = (t) => t.replace(/Read\s+\d{1,2}:\d{2}\s*(?:[AP]M)?/gi, '').replace(/\s+/g, ' ').trim();
+const matchesMessage = (userMsg, requestedMsg) => {
+  if (!userMsg || !requestedMsg) return false;
+  const observed = stripReadReceipt(norm(userMsg));
+  const requested = stripReadReceipt(norm(requestedMsg));
+  return observed === requested ||
+    (observed.includes(requested) && requested.length >= observed.length * 0.95) ||
+    (requested.includes(observed) && observed.length >= requested.length * 0.95);
+};
+const countMatchingMessages = (messages, requestedMsg) => messages.filter((message) => matchesMessage(message, requestedMsg)).length;
 
 async function clickInRequestedConversation(page, selector, composerText) {
   const target = new URL(URL_), path = target.pathname.replace(/\/+$/, '') || '/', deadline = Math.min(phaseDeadline, operationDeadline);
@@ -644,7 +653,9 @@ async function submitDraft(page) {
   await sleep(3000);
   const after = await readSendEvidence(page);
   if (!sameConversationTarget(after.url, URL_)) { console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
-  if (after.composer.trim() === '' && after.messages.length > before.messages.length) console.log('DOT_DRAFT_SUBMITTED: ' + rawComposer.slice(0, 200));
+  const beforeMatches = countMatchingMessages(before.messages, rawComposer);
+  const afterMatches = countMatchingMessages(after.messages, rawComposer);
+  if (after.composer.trim() === '' && afterMatches > beforeMatches) console.log('DOT_DRAFT_SUBMITTED: ' + rawComposer.slice(0, 200));
   else console.log('DOT_SUBMIT_UNVERIFIED composer_cleared=' + (after.composer.trim() === ''));
 }
 async function clearDraft(page) {
@@ -704,16 +715,6 @@ async function send(page, file, dry, opts = {}) {
     return;
   }
 
-  // Full-content normalized message match (never wiping on short prefix substrings)
-  const matchesMessage = (userMsg, comp) => {
-    if (!userMsg || !comp) return false;
-    const sMsg = stripReadReceipt(norm(userMsg));
-    const sComp = stripReadReceipt(norm(comp));
-    return sMsg === sComp ||
-      (sMsg.includes(sComp) && sComp.length >= sMsg.length * 0.95) ||
-      (sComp.includes(sMsg) && sMsg.length >= sComp.length * 0.95);
-  };
-
   await page.click(COMPOSER);
   await sleep(1500);
   let composerSnapshot = await readSendEvidence(page);
@@ -752,10 +753,9 @@ async function send(page, file, dry, opts = {}) {
     return;
   }
 
-  const countMatches = (msgs, needle) => msgs.filter(m => matchesMessage(m, needle)).length;
   const beforeSnapshot = await readSendEvidence(page);
   if (!sameConversationTarget(beforeSnapshot.url, URL_)) { console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
-  const beforeCount = countMatches(beforeSnapshot.messages.map(norm), norm(msg));
+  const beforeCount = countMatchingMessages(beforeSnapshot.messages, msg);
 
   const nonce = opts.prepared ? crypto.randomBytes(16).toString('hex') : null;
   if (opts.prepared) {
@@ -802,7 +802,7 @@ async function send(page, file, dry, opts = {}) {
   const afterSnapshot = await readSendEvidence(page);
   if (!sameConversationTarget(afterSnapshot.url, URL_)) { console.log('DOT_TARGET_MISMATCH'); unavailable('requested conversation target mismatch; refusing to send'); }
   const left = afterSnapshot.composer.trim();
-  const afterCount = countMatches(afterSnapshot.messages.map(norm), norm(msg));
+  const afterCount = countMatchingMessages(afterSnapshot.messages, msg);
   const sentVerified = left === '' && afterCount > beforeCount;
   console.log(sentVerified ? 'DOT_SENT_VERIFIED' : 'DOT_SEND_UNVERIFIED composer_left=' + left.length);
 }

@@ -133,6 +133,7 @@ class SimplePingTests(unittest.TestCase):
         self.assertEqual(self.calls_made(), ['codex', 'dot'])
         self.calls.unlink()
         self.message.unlink()
+        (self.root/'state/state_alpha.json').unlink()
         result = self.run_ping('--generator', 'haiku')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.calls_made(), ['haiku', 'dot'])
