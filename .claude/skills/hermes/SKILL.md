@@ -1,6 +1,6 @@
 ---
 name: hermes
-description: Coordinate authorized engineering work with Hermes through Slack, verify acknowledgment and evidence, and recover genuinely inactive ownership after 45 minutes.
+description: Coordinate authorized engineering work with Hermes through Slack, verify acknowledgment and evidence, and recover genuinely inactive ownership after 20 minutes.
 ---
 
 # Hermes coordination
@@ -91,9 +91,9 @@ observation and arrange an authorized existing owner; do not promise coverage.
 Hermes reviews exact-head evidence and reports findings to the current writer.
 Review ownership does not itself transfer the writer role or grant merges.
 
-## 45-minute inactivity recovery
+## 20-minute inactivity recovery
 
-At 45 minutes without meaningful progress, investigate rather than
+At 20 minutes without meaningful progress, investigate rather than
 automatically stealing the branch:
 
 1. Re-read the original task, latest owner messages, PR/worktree changes, and
@@ -117,11 +117,24 @@ automatically stealing the branch:
 
 For a newly dispatched task with no progress yet, start the clock at its first
 verified dispatch timestamp. Missing send confirmation leaves the task
-UNVERIFIED rather than inventing a start time. The 45-minute threshold is then
+UNVERIFIED rather than inventing a start time. The 20-minute threshold is then
 measured from the last verified progress, not from the latest reminder. A resumed task resets it only after new meaningful
 progress. Keep one writer and one monitoring record per task.
 
 ## Dot nudges
+
+For a Dot-originated monitor authorized for both channels, at 20 minutes without
+meaningful progress send a targeted nudge to the original calling Dot conversation
+and cc that same Dot in the original corresponding Slack coordination thread.
+Bind the Slack workspace, channel, thread, and Dot identity alongside the caller's
+account and conversation URL in the handoff. Reverify that Slack identity and its
+relationship to the calling Dot through the connected directory and original
+thread before mentioning or routing; a display name or previously observed ID
+alone is insufficient. Never substitute another Dot or broadcast to other chats.
+Track the conversation nudge and Slack cc separately, with exact-message readback
+and a message reference/permalink for each. If one route is blocked or ambiguous,
+report that route's blocker and retain its message unsent; a successful route does
+not establish delivery on the other. Preserve drafts, explicit holds, and STOP.
 
 Hermes may nudge only the original calling Dot for the same engineering task.
 Use the originating account, exact verified conversation URL, and stable
@@ -145,7 +158,7 @@ is not delivery or acknowledgment.
 
 Include the task marker, last progress artifact/time, current owner, blocker
 and requested next action. Do not rotate accounts, bypass a denied route, or
-share credentials. Keep this Hermes monitor's 45-minute evidence rule rather
+share credentials. Keep this Hermes monitor's 20-minute evidence rule rather
 than restarting its clock because a nudge was sent. No new recurring sender
 is authorized by this section.
 
