@@ -48,8 +48,7 @@ def run_with_stdin(command, stdin_text, timeout=180, **kwargs):
     return bounded_run(command, stdin_text=stdin_text, timeout=timeout, **kwargs)
 
 def claude_json(model, env=None, prompt=PROMPT):
-    command = [shutil.which('claude') or 'claude', '--strict-mcp-config', '--print', '--model', model,
-               '--output-format', 'json', '--no-session-persistence', '--tools', '', '--disable-slash-commands', prompt]
+    command = [shutil.which('claude') or 'claude', '--strict-mcp-config', '--print', '--model', model, '--output-format', 'json', '--no-session-persistence', '--tools', '', '--disable-slash-commands', prompt]
     response = json.loads(bounded_run(command, timeout=180, cwd='/tmp', env=env).stdout)
     if not isinstance(response, dict) or response.get('is_error') is not False or not isinstance(response.get('result'), str):
         raise ValueError('Claude returned no successful result')
@@ -183,8 +182,7 @@ def verify_and_escalate(dot, account, env, provider, state_file, wait_secs=180, 
     if verdict not in ('compliant', 'classification_unavailable') and recheck_secs > 0:
         time.sleep(min(max(recheck_secs, 0), 600))
         verdict = read_and_classify(dot, account, env, providers=c_provs)
-    try: record = json.loads(state_file.read_text()) if state_file.exists() else {}
-    except (OSError, ValueError): record = {}
+    record = json.loads(state_file.read_text()) if state_file.exists() else {}
     record.update(last_response_status=verdict, last_response_checked_epoch=int(time.time()))
     if verdict == 'compliant':
         record.update(consecutive_noncompliance=0, consecutive_classification_failures=0)
@@ -197,20 +195,34 @@ def verify_and_escalate(dot, account, env, provider, state_file, wait_secs=180, 
         print(account + ': response classification_unavailable; no escalation')
     else:
         record['consecutive_classification_failures'] = 0
-        with tempfile.NamedTemporaryFile(mode='w+', prefix='dot-escalation-', dir='/tmp') as file:
-            file.write(ESCALATION_BODY + '\nFrom ' + IDENTITIES.get(provider, 'Coordinator') + ' coordinator: automated escalation; no new authority.')
-            file.flush()
-            sent = bounded_run([dot, '--account', account, 'send-once', file.name], timeout=180, env=env, check=False)
-        escalated = sent.returncode == 0 and 'DOT_SENT_VERIFIED' in sent.stdout.splitlines()
-        record.update(escalation_sent_epoch=int(time.time()), escalation_verified=escalated,
-                      consecutive_noncompliance=int(record.get('consecutive_noncompliance', 0)) + 1)
-        print(account + ': response ' + verdict + '; escalation ' + ('sent' if escalated else 'not verified'))
-    state_file.write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
+        if record.get('escalation_unverified'):
+            print(account + ': escalation delivery remains unverified; no retry')
+        else:
+            record.update(escalation_verified=False, escalation_unverified=True, delivery_unverified=True, last_status='UNVERIFIED_SEND_ESCALATION_PENDING'); delivery_state(state_file, **record)
+            with tempfile.NamedTemporaryFile(mode='w+', prefix='dot-escalation-', dir='/tmp') as file:
+                file.write(ESCALATION_BODY + '\nFrom ' + IDENTITIES.get(provider, 'Coordinator') + ' coordinator: automated escalation; no new authority.')
+                file.flush()
+                sent = bounded_run([dot, '--account', account, 'send-once', file.name], timeout=180, env=env, check=False)
+            authoritative = sent.returncode == 0 and 'DOT_SERVER_ACCEPTED' in sent.stdout.splitlines()
+            no_dispatch = sent.returncode == 3 and any(line == 'DOT_DRAFT_PRESENT' or line.startswith('DOT_DRAFT_PRESENT:') for line in sent.stdout.splitlines()) and not any(marker in sent.stdout for marker in ('DOT_SERVER_ACCEPTED', 'DOT_SENT_VERIFIED', 'DOT_SEND_UNVERIFIED'))
+            record.update(escalation_sent_epoch=int(time.time()) if not no_dispatch else record.get('escalation_sent_epoch', 0), escalation_verified=authoritative, escalation_unverified=not (authoritative or no_dispatch), delivery_unverified=not (authoritative or no_dispatch), last_status='SUCCESS' if authoritative else 'SKIPPED_COMPOSER_BUSY' if no_dispatch else 'UNVERIFIED_SEND_ESCALATION', consecutive_noncompliance=int(record.get('consecutive_noncompliance', 0)) + 1)
+            print(account + ': response ' + verdict + '; escalation ' + ('sent' if authoritative else 'peer draft; no dispatch' if no_dispatch else 'unverified hold; no retry'))
+    delivery_state(state_file, **record)
     return verdict
-
 def delivery_message(provider, message):
     if message != REMINDER_BODY: raise ValueError('The complete required recovery instructions must be delivered')
     return message + '\nFrom ' + IDENTITIES[provider] + ' coordinator: automated reminder; no new authority.'
+
+def delivery_state(path, **fields):
+    marker = path.with_name(path.name + '.hold') if fields.get('last_status') in ('SUCCESS', 'SKIPPED_COMPOSER_BUSY') and not path.name.endswith('.hold') else None
+    if marker: delivery_state(marker, delivery_unverified=True)
+    record = json.loads(path.read_text()) if path.exists() else {}; record.update(fields); record.setdefault('last_sent_epoch', 0)
+    with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, prefix='.delivery-', delete=False) as file:
+        json.dump(record, file, indent=2, sort_keys=True); file.write('\n'); file.flush(); os.fsync(file.fileno())
+    os.replace(file.name, path); directory = os.open(path.parent, os.O_RDONLY)
+    try: os.fsync(directory)
+    finally: os.close(directory)
+    if marker: marker.unlink(missing_ok=True)
 
 def due_account(accounts, role, now):
     offsets = (0, 20, 40) if role == 'mac' else (30, 50, 10)
@@ -228,9 +240,7 @@ def main():
     if not isinstance(accounts, list) or len(accounts) != 3 or len(set(accounts)) != 3:
         raise ValueError('Configure exactly three distinct Dot account keys')
     account = args.account or due_account(accounts, 'mac' if platform.system() == 'Darwin' else 'linux', time.time())
-    if account is None:
-        print('No account due; no send')
-        return 0
+    if account is None: print('No account due; no send'); return 0
     if account not in accounts: raise ValueError('Unknown configured account')
     state = Path(os.environ.get('COORDINATOR_STATE_DIR', '~/.local/state/ai.gemini.agy-dot-coordinator')).expanduser()
     state.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -243,36 +253,34 @@ def main():
             print('STOP is present; no send')
             return 0
         for path in (state / 'state.json', state / ('state_' + account + '.json')):
-            if path.exists():
-                rec = json.loads(path.read_text())
-                rec = rec.get('accounts', {}).get(account, rec)
-                if rec.get('delivery_unverified') or str(rec.get('last_status', '')).startswith('UNVERIFIED_SEND'):
-                    print(account + ': existing delivery hold; no send')
-                    return 0
+            if path.with_name(path.name + '.hold').exists(): print(account + ': existing delivery hold; no send'); return 0
+            rec = json.loads(path.read_text()) if path.exists() else {}
+            rec = rec.get('accounts', {}).get(account, rec)
+            if rec.get('delivery_unverified') or str(rec.get('last_status', '')).startswith('UNVERIFIED_SEND'): print(account + ': existing delivery hold; no send'); return 0
         provider, message = generate_message(PROVIDERS if args.generator == 'auto' else (args.generator,))
-        if args.generate_only:
-            print(message)
-            return 0
+        if args.generate_only: print(message); return 0
         if (state / 'STOP').exists():
             print('STOP is present; no send')
             return 0
-        env = {k: v for k, v in dict(os.environ, DOT_ROTATE_ON_LIMIT='0').items()
-               if k not in ('DOT_REMOTE_HOST', 'DOT_CHROME_USER_DATA', 'DOT_URL', 'DOT_CLEAR_DRAFT')}
+        env = {k: v for k, v in dict(os.environ, DOT_ROTATE_ON_LIMIT='0').items() if k not in ('DOT_REMOTE_HOST', 'DOT_CHROME_USER_DATA', 'DOT_URL', 'DOT_CLEAR_DRAFT')}
         dot = os.environ.get('COORDINATOR_DOT_SCRIPT', str(Path(__file__).resolve().parents[2] / 'dot/scripts/dot.sh'))
+        hold = state / ('state_' + account + '.json'); delivery_state(hold, account=account, last_status='UNVERIFIED_SEND_PENDING', last_summary='Awaiting authoritative receipt', delivery_unverified=True)
         with tempfile.NamedTemporaryFile(mode='w+', prefix='dot-ping-', dir='/tmp') as file:
             file.write(delivery_message(provider, message))
             file.flush()
             sent = bounded_run([dot, '--account', account, 'send-once', file.name], timeout=180, env=env, check=False)
-        sys.stdout.write(sent.stdout)
-        sys.stderr.write(sent.stderr)
-        if not (sent.returncode == 0 and 'DOT_SENT_VERIFIED' in sent.stdout.splitlines()):
+        sys.stdout.write(sent.stdout); sys.stderr.write(sent.stderr)
+        if sent.returncode == 0 and 'DOT_SERVER_ACCEPTED' in sent.stdout.splitlines():
+            delivery_state(hold, account=account, last_status='SUCCESS', last_summary='Authoritative server acceptance receipt', last_sent_epoch=int(time.time()), delivery_unverified=False); print(account + ': sent')
+        elif sent.returncode == 0 and 'DOT_SENT_VERIFIED' in sent.stdout.splitlines():
+            delivery_state(hold, account=account, last_status='UNVERIFIED_SEND_UI_OBSERVED', last_summary='UI observed the message; server acceptance and durable delivery remain unverified', delivery_unverified=True); print(account + ': UI observed the message; delivery held and no retry will be attempted'); return 0
+        elif sent.returncode == 3 and any(line == 'DOT_DRAFT_PRESENT' or line.startswith('DOT_DRAFT_PRESENT:') for line in sent.stdout.splitlines()) and not any(marker in sent.stdout for marker in ('DOT_SERVER_ACCEPTED', 'DOT_SENT_VERIFIED', 'DOT_SEND_UNVERIFIED')):
+            delivery_state(hold, account=account, last_status='SKIPPED_COMPOSER_BUSY', last_summary='Peer draft present; no dispatch occurred', delivery_unverified=False); print(account + ': peer draft present; no dispatch occurred'); return 0
+        else:
             print(account + ': send not verified; inspect the existing Dot tool before retrying')
             return 1
-        print(account + ': sent')
         if os.environ.get('COORDINATOR_VERIFY_RESPONSE', '1') == '1':
-            verify_and_escalate(dot, account, env, provider, state / ('state_' + account + '.json'),
-                                wait_secs=int(os.environ.get('COORDINATOR_RESPONSE_WAIT_SECS', '180')),
-                                recheck_secs=int(os.environ.get('COORDINATOR_RESPONSE_RECHECK_SECS', '120')))
+            verify_and_escalate(dot, account, env, provider, state / ('state_' + account + '.json'), wait_secs=int(os.environ.get('COORDINATOR_RESPONSE_WAIT_SECS', '180')), recheck_secs=int(os.environ.get('COORDINATOR_RESPONSE_RECHECK_SECS', '120')))
         return 0
 
 if __name__ == '__main__':

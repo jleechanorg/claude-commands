@@ -643,8 +643,8 @@ if [[ "${{1:-}}" == "$dot_chrome" && "${{2:-}}" == "send" ]]; then
   profile_directory=$("$real_node" -e \\
     'process.stdout.write(JSON.parse(process.argv[1]).profileDirectory)' \\
     "$profile_info")
-  printf '%s\\t%s\\t%s\\n' "$DOT_ACCOUNT" "$profile_directory" \\
-    "${{DOT_PROFILE_DIRECTORY:-}}" >> "$calls"
+  printf '%s\\t%s\\t%s\\t%s\\n' "$DOT_ACCOUNT" "$profile_directory" \\
+    "${{DOT_PROFILE_DIRECTORY:-}}" "${{DOT_URL:-}}" >> "$calls"
   if [[ "$DOT_ACCOUNT" == "account-a" ]]; then
     printf '%s\\n' 'DOT_USAGE_LIMIT_REACHED: fake account limit'
   else
@@ -665,6 +665,7 @@ exec "$real_node" "$@"
                 DOT_PROFILE_DIRECTORY="Override Profile",
                 DOT_BACKEND="chrome",
             )
+            env.pop("DOT_URL", None)
             result = subprocess.run(
                 ["bash", str(DOT_SH), "send-once", str(message)],
                 env=env, capture_output=True, text=True, timeout=15,
@@ -674,8 +675,21 @@ exec "$real_node" "$@"
             self.assertIn("DOT_SENT_VERIFIED", result.stdout)
             observations = [line.split("\t") for line in calls.read_text().splitlines()]
             self.assertEqual(observations, [
-                ["account-a", "Override Profile", "Override Profile"],
-                ["account-b", "Profile B", ""],
+                ["account-a", "Override Profile", "Override Profile", "https://chatgpt.com/dots/account-a"],
+                ["account-b", "Profile B", "", "https://chatgpt.com/dots/account-b"],
+            ])
+
+            calls.write_text("")
+            explicit_url = "https://chatgpt.com/c/coordinator-chat"
+            result = subprocess.run(
+                ["bash", str(DOT_SH), "--url", explicit_url, "send-once", str(message)],
+                env=env, capture_output=True, text=True, timeout=15,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            observations = [line.split("\t") for line in calls.read_text().splitlines()]
+            self.assertEqual(observations, [
+                ["account-a", "Override Profile", "Override Profile", explicit_url],
+                ["account-b", "Profile B", "", explicit_url],
             ])
 
 

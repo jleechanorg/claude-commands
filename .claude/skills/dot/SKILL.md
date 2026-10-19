@@ -7,9 +7,38 @@ description: Use when the user invokes /dot or asks to "message the dot", "ask d
 
 Talk to the user's ChatGPT dot assistant using `scripts/dot.sh`. The scripts are a thin mechanical pointer (type, read, submit, clear, verify — see `GUARDRAIL.md`); every judgment call lives in this file, read top-down: how to work through the dot first, then transport actions and the peer-draft policy, then operational reference.
 
-## Default: delegate, then monitor
+## Default: delegate non-small work, then monitor
 
-The dot runs its own coders. When /dot is used for work, hand the work to the dot instead of coding it yourself: send a scoped request (goal, PR/branch, acceptance criteria, constraints such as merge gates), then monitor rather than block.
+### Explicit delegation takes priority
+
+When the user explicitly asks to use Dot for a task, hand it to Dot even if
+the task appears small. The local-fix rule below applies when deciding whether
+to delegate work that the user has not explicitly assigned to Dot.
+
+### Small fixes stay local (do NOT delegate)
+
+By default, handle a fix locally when you can finish and verify it in one edit.
+Delegation has a real round-trip cost (transport, polling, backoff, source
+re-verification), and it consumes a shared composer.
+
+A fix is **small** (do it yourself) when all hold:
+- it touches one or two files;
+- it changes no more than roughly 30 lines;
+- it needs no new design decision, API, dependency, or provider call;
+- it can be verified with a command you can run right now (lint, compile, or a focused test).
+
+Unfamiliarity alone does not make a fix non-small. Delegate when the work is
+**not small**: it spans more than two files or multiple subsystems, needs a
+design or contract decision, requires investigation across the codebase,
+involves long-running builds/tests, or needs capabilities or access you do
+not have.
+
+When unsure, inspect enough of the affected flow to classify the work. If it
+still meets every small-fix criterion, handle it locally; otherwise delegate.
+
+When the user asks Dot to own work, send a scoped request (goal, PR/branch,
+acceptance criteria, and constraints such as merge gates), then monitor rather
+than block. Dot runs its own coders.
 
 - **Active work check first (mandatory):** before declining an authorized task, ask the Dot to inventory current work in progress and count only distinct tasks demonstrably executing now. Require a receipt for each claimed active task: item/goal, owner, live run/session or worktree/PR, the exact action happening now, and a fresh artifact or command result. Assignment, rank, "busy", or start time alone is not proof. Idle, stalled, finished, queued, and waiting-for-review tasks are not active. Capacity is a valid refusal only with evidence for at least six distinct active tasks, each showing its exact present action and fresh receipt; include those receipts in the reply. Do not gate acceptance on rank or ask the user to prioritize the task. If fewer than six active tasks are proven, take the authorized task and fill open capacity with safe work. Keep genuine permission/approval holds and measured resource limits separate from a full-capacity refusal: state the evidence and exact blocked action, preserve the approval boundary, and continue work that remains feasible. If the composer stays blocked or the account is limited, send the same request to the next account in `rotation` with `--account <next>`.
 
@@ -19,7 +48,31 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
 
 - Start only after an exact transport receipt for the initial reminder in the intended chat. Inter-check delays in seconds: `60, 120, 300, 300, 300, 300, 300, 300, 300, 300`. Measure each delay from the previous completed observation (first delay from the verified send). Record actual observations and source receipts in the existing checkpoint. New reminders and partial progress never reset the count.
 - Increment once per completed observation attempt, including a recorded timeout or read failure; resume an interrupted attempt under the same count. Later re-observation consumes the next scheduled count: no check eleven or disguised in-check re-observation.
-- This cycle also overrides the account-rotation rules: retain the verified account and intended chat. Set `DOT_ROTATE_ON_LIMIT=0` on each coordinator `dot.sh` invocation so automatic rotation cannot change its target. Do not rotate to another account or target on a busy composer or quota limit; report the exact transport blocker and preserve the checkpoint. A separately authorized reassignment requires a newly verified target and must not create duplicate ownership.
+- Preserve the cycle checkpoint and the intended chat URL. For each coordinator
+  reminder send, set `DOT_ROTATE_ON_LIMIT=0` and pass `--url <intended-chat-url>`;
+  disabling rotation returns control on a limit before any unobserved resend.
+  An explicit URL remains in force across account rotation; without one, the
+  next account's configured URL is resolved. `dot.sh read` reports
+  `DOT_TARGET_VERIFIED` when the final page has the requested origin and path, or `DOT_TARGET_MISMATCH`
+  when it does not; the check does not print the private URL. A mismatch returns
+  exit 4 with no page text. If the send hits
+  a limit, try the next account in configured `rotation` only after reading
+  that URL with `--account <next>` and requiring `DOT_TARGET_VERIFIED`; resend
+  once with the same URL and automatic retry disabled. `send`, `send-once`,
+  `send-prepared`, and `submit-draft` check the active origin and path before
+  opening the composer and immediately before submission; sends also recheck
+  the exact composer text and operation deadline at dispatch. After dispatch,
+  the URL, composer, and user-message entries are captured in one page snapshot;
+  a target mismatch blocks a success marker. Retry controls recheck the target
+  and deadline;
+  prepared sends do not activate a retry before an explicit commit. If the
+  next account cannot verify the target, record the observation as failed and
+  do not use its default URL. Apply the same check before every observation.
+  Keep account attempts local to that scheduled observation. Start with the
+  effective account selected by `dot.sh`: explicit `--account`, then the
+  machine-local `DOT_ACCOUNT`, then the config default. Use the configured
+  `rotation` order for further candidates; do not pin or record a permanent
+  cycle owner.
 - Direct user messages take priority: respond promptly, apply changed scope/cancellations before further action, and preserve the cycle checkpoint. Use the existing supported interruptible wait/wake mechanism. Do not create jobs, daemons, senders or competing coordinators. Do not change providers, credentials or installed schedules. If timing is unsupported, name the exact capability gap; do not claim planned checks ran.
 - Resume unfinished authorized work with its existing owner; recover checkpoints, acceptance gaps and older commitments. Verify owner state before any separately authorized reassignment. A publication hold need not block authorized safe tests or design. Attempt a concrete permitted unblock route for each blocker and continue independent work within evidenced capacity, rather than repeating inventories.
 - At each check require fresh original task artifacts against the requested acceptance criteria and a disposition for every unfinished request. Daemon health, delivery success, Working, timestamps, HEARTBEAT_OK, assignments and chat claims do not prove task execution or completion. Empty/failed reads remain unverified. Passing tests do not prove unperformed activation or publication.
@@ -33,6 +86,38 @@ For a user-requested coordinator recovery cycle, this contract overrides the gen
   - **Codex (no `/loop`):** the same `/goal`; each turn runs the same poll, then waits the next backoff interval (`sleep 60`, `sleep 120`, `sleep 300`, then `sleep 600` in a backgrounded or bounded command).
   - Stop polling when the deliverable is done, blocked on the user, or the 4-hour limit passes.
 - Verify the dot's claims at the source (git SHAs, `gh pr checks`, PR diffs) before relaying them, and don't duplicate files it has claimed.
+
+### Cloud-computer capability gaps
+
+When Dot cannot perform a requested cloud-computer task (for example, a test,
+build, browser flow, deployment, or provider operation), handle the gap before
+calling the task blocked:
+
+1. Identify the exact missing capability and capture the command, working
+   directory or worktree, target PR/branch, and the relevant error or output.
+2. Ask Dot to inspect and attempt safe, authorized setup: install a repository-
+   declared dependency with the approved package manager, complete the
+   repository setup, use the canonical provider or browser login flow, or
+   request the needed account or workspace permission through its approved
+   mechanism. Never ask for, copy, or store secrets; never bypass security,
+   disable a guardrail, reuse another account's session, or claim that a
+   request was granted when it was only submitted.
+3. Re-run the exact blocked command after setup and verify the resulting
+   artifact or source state. If the capability remains unavailable, keep
+   independent authorized work moving and report the precise unblock rather
+   than waiting or claiming completion.
+4. Report the unresolved gap in the current chat. Send a Slack or email report
+   only when the user has explicitly authorized that channel and target for
+   this task. Slack text uses `mcp__slack__conversations_add_message` to the
+   already verified operator DM or channel (resolve the configured target; do
+   not guess one). For email, resolve `gog` with `command -v gog` and use
+   `gog gmail send` with an authorized recipient and a `mktemp` body file; do
+   not invent an email tool, recipient, or credential. If the channel is not
+   authorized or its approved sender or recipient is unavailable, do not send
+   there and state the reason in the current chat. Each report must include the
+   exact blocked command or artifact, setup/install/login/permission attempts
+   and their results, the distinction between requested and granted access,
+   and the concrete unblock needed.
 
 ## Actions
 
@@ -57,7 +142,7 @@ Other agent sessions share this composer; ChatGPT restores a saved draft lazily 
    - **Weird half-typed text** (mid-word cutoffs, command fragments, pasted garbage) → **clear it**: `dot.sh clear-draft` (prints `DOT_DRAFT_CLEARED`), then send your own message.
 3. Never force-clear a draft while a peer session is provably actively typing (draft text changing between reads). `DOT_CLEAR_DRAFT=1` on `send` remains the forced-clear escape hatch; own-leftover and already-sent drafts are always safe-cleared automatically.
 
-**Verified send:** `DOT_SENT_VERIFIED` requires exact composer match after typing, emptied composer after sending, and the submitted text appearing in the conversation message list (`[data-message-author-role=user]`). Exit 4 means mismatched or unverified.
+**UI-confirmed send:** `DOT_SENT_VERIFIED` reports that the pre-dispatch composer comparison matched and one post-dispatch page snapshot showed the requested URL, an empty composer, and an increased count of normalized user-message DOM entries matching the message. Containment is accepted only when the shorter text is at least 95% of the longer text. A failed snapshot or target mismatch cannot produce this marker. This is a browser DOM comparison, not confirmation of server acceptance or durable delivery. Coordinators must keep an ambiguous-send hold when this is the only receipt; they must not call it successful delivery or retry it. Exit 4 means mismatched or unverified; check the intended chat before sending again. `DOT_DRAFT_SUBMITTED` uses the same target-bound snapshot check for its composer and message-text comparison.
 - Send only what the user asked to send. Do not post test messages.
 - Avoid line-leading list markers (`1)`, `-`, `*`): the composer converts them to list formatting, which can cause mismatch detection. Use plain sentences.
 - Interactive login / auth: `dot.sh [--account <name>] login` launches visible Chrome attached to that account's profile directory.
@@ -104,7 +189,7 @@ If an account returns `DOT_CHROME_UNAVAILABLE: not signed in`:
 
 - **MANDATORY: every dot profile owns an INDEPENDENT session, created only via `dot.sh --account <name> login`** (a visible Chrome window the user signs into; the script itself never enters, stores, or extracts credentials). This is the one canonical recovery from `logged_out` and the only sanctioned way a dot profile ever gets a session. Do not "help" by sharing a session from any other browser — see the resync ban below.
 - **BANNED: cookie-store resync from desktop/other profiles** (copying `Cookies` from a desktop Chrome profile into a dot profile, in either direction). A session shared between two live browsers is a rotation race: ChatGPT rotates the session token on activity, the rotation supersedes the old token server-side, and the browser that did not rotate renders logged out. On 2026-10-11 this logged the user's personal Chrome out of their own account after a resync-based restore. Sessions are cheap and independent — use `dot.sh login` instead.
-- **NEVER launch any browser binary other than system Google Chrome (with `--password-store=keychain`) against a live dot profile** (`~/.config/dot-headless-chrome-*`). This includes Playwright/Puppeteer (`launchPersistentContext`) and any bundled Chromium: Playwright defaults to its own Chromium with `--use-mock-keychain`, which cannot decrypt the Keychain-encrypted cookie store, so Chrome treats the session cookies as corrupt and EVICTS them — the account stays signed in server-side, but the profile is wiped. On 2026-10-11 this destroyed the `jleechan` (jeffrey) and `worldarchitect` profiles 26 seconds apart during a single ad-hoc inspection sweep.
+- **NEVER launch any browser binary other than system Google Chrome (with `--password-store=keychain`) against a live dot profile** (`~/.config/dot-headless-chrome-*`). This includes Playwright/Puppeteer (`launchPersistentContext`) and any bundled Chromium: Playwright defaults to its own Chromium with `--use-mock-keychain`, which cannot decrypt the Keychain-encrypted cookie store, so Chrome treats the session cookies as corrupt and EVICTS them — the account stays signed in server-side, but the profile is wiped. On 2026-10-11 this destroyed two persistent profiles 26 seconds apart during a single ad-hoc inspection sweep.
 - **To check login/session status, use `dot.sh --account <name> read` or `dot.sh --account <name> probe`** — they launch the correct binary with the correct flags. Never open the profile with a foreign browser; if a custom script must inspect the profile internals, copy the profile directory first (e.g. `cp -R ~/.config/dot-headless-chrome-X /tmp/probe-copy`) and run against the copy, or use read-only SQLite (`sqlite3 "file:.../Cookies?mode=ro"`, or `sqlite3 <db> ".backup /tmp/c.sqlite"` for a live store) without launching any browser. **Never `immutable=1` on a database Chrome may be writing** — it ignores the WAL and can mislead on a live store.
 - **Session-loss forensics (read-only, before any recovery):** a wiped profile shows a rebuilt anonymous cookie store (fresh `oai-did`/csrf cookies, zero `session-token` rows) while the account itself is fine server-side. `dot.sh` now classifies this automatically: a not-signed-in read/send also emits `DOT_STORE_REBUILD: ...` when the store shows the rebuild signature. Recover ONLY via `dot.sh login`. Never treat profile logout as an account logout.
 - **Machine checks now built into dot.sh (do not weaken them):** per-profile exclusive lock (a kernel `flock` on a hashed path under `$TMPDIR/dot-profile-locks/`, held by a holder process that dies with its parent — auto-released on ANY exit including kill -9, no stale-lock logic. The lock deliberately lives OUTSIDE the profile directory: a probe contract asserts launches leave the profile dir untouched, and a lock path inside the profile makes process scans that substring-match the profile dir treat it as in use); disk-space floor (`DOT_MIN_FREE_MB`, default 512 — a full disk corrupts the SQLite cookie store); OPT-IN foreign-binary enforcement (`DOT_ENFORCE_SYSTEM_CHROME=1`, honoured on login, headless and send-prepared): refuses a non-system binary unless `DOT_ALLOW_FOREIGN_BINARY=1`, because `DOT_CHROME_BIN` is a supported override for tests and alternate Chrome channels — the real 2026-10-11 wipe came from an ad-hoc script that bypassed `dot.sh` entirely; login launches with the same `--password-store` flags as headless; `login` holds the coordinator STOP marker for the whole window and removes it only if it created it; process-group teardown even when the node wrapper exits before the browser.
@@ -115,7 +200,7 @@ If an account returns `DOT_CHROME_UNAVAILABLE: not signed in`:
 
 ## Account Rotation on Limits (Mandatory)
 
-Always rotate across configured accounts when hitting a rate limit, usage limit, abuse prevention cooldown, or message cap:
+Except for coordinator sends bound to a specific intended chat (see the coordinator contract above), rotate across configured accounts when hitting a rate limit, usage limit, abuse prevention cooldown, or message cap:
 - **Limit Detection:** Detected directly from ChatGPT UI alert elements (`[role=alert]`, alert banners), emitting structured `DOT_USAGE_LIMIT_REACHED` events.
 - **Mandatory Rotation:** When an account hits a limit or cooldown, immediately rotate to the next configured account in `rotation` using `--account <next>`.
 - **Clean Profile Hand-off:** Rotation unsets `DOT_CHROME_USER_DATA`, `DOT_URL`, and `DOT_PROFILE_DIRECTORY` across the boundary so the next account automatically resolves its own dedicated profile directory, target URL, and configured subprofile.
@@ -133,7 +218,7 @@ Always rotate across configured accounts when hitting a rate limit, usage limit,
 
 ## Configuration & Environment Variables
 
-- `DOT_ACCOUNT`: Account identifier in `~/.config/dot/config.json`. Can also be passed via `--account <name>`.
+- `DOT_ACCOUNT`: Machine-local preferred account key or alias. Selection order is explicit `--account <name>` / `-a <name>`, then `DOT_ACCOUNT`, then the `default_account` in `~/.config/dot/config.json`.
 - `DOT_URL`: Target ChatGPT dot assistant URL. Can also be passed via `--url <url>`.
 - `DOT_BACKEND`: Force backend (`chrome` or `auto`). Both values select Chrome.
 - `DOT_CONFIG_FILE`: Custom path to dot JSON configuration (defaults to `~/.config/dot/config.json`).

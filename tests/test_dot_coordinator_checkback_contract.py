@@ -11,7 +11,8 @@ class CoordinatorCheckbackContractTests(unittest.TestCase):
         self.text = (ROOT / '.claude/skills/dot/SKILL.md').read_text()
         start = self.text.find('### Coordinator recovery checkbacks')
         end = self.text.find('### Other delegated work', start + 1)
-        self.cycle = self.text[start:end] if start >= 0 and end > start else ''
+        cycle = self.text[start:end] if start >= 0 and end > start else ''
+        self.cycle = ' '.join(cycle.split())
 
     def test_specific_cycle_precedes_and_overrides_generic_defaults(self):
         self.assertTrue(self.cycle, 'Missing scoped coordinator contract')
@@ -50,13 +51,48 @@ class CoordinatorCheckbackContractTests(unittest.TestCase):
                        'Ten checks end the bounded observation cycle, not task ownership'):
             self.assertIn(clause, self.cycle)
 
-    def test_coordinator_stays_on_verified_account_and_disables_auto_rotation(self):
-        for clause in ('overrides the account-rotation rules',
-                       'retain the verified account and intended chat',
-                       'DOT_ROTATE_ON_LIMIT=0',
-                       'Do not rotate to another account or target',
-                       'report the exact transport blocker'):
-            self.assertIn(clause, self.cycle)
+    def test_coordinator_uses_normal_preference_and_account_rotation(self):
+        self.assertIn('Preserve the cycle checkpoint and the intended chat URL', self.cycle)
+        self.assertIn('set `DOT_ROTATE_ON_LIMIT=0` and pass `--url <intended-chat-url>`', self.cycle)
+        self.assertIn('disabling rotation returns control on a limit before any unobserved resend', self.cycle)
+        self.assertIn('An explicit URL remains in force across account rotation', self.cycle)
+        self.assertIn('reading', self.cycle)
+        self.assertIn('that URL with `--account <next>`', self.cycle)
+        self.assertIn('requiring `DOT_TARGET_VERIFIED`', self.cycle)
+        self.assertIn('`DOT_TARGET_MISMATCH`', self.cycle)
+        self.assertIn('`DOT_TARGET_MISMATCH` when it does not', self.cycle)
+        self.assertIn('returns exit 4 with no page text', self.cycle)
+        self.assertIn('check the active origin and path before', self.cycle)
+        self.assertIn('`submit-draft`', self.cycle)
+        self.assertIn('immediately before submission', self.cycle)
+        self.assertIn('a target mismatch blocks a success marker', self.cycle)
+        self.assertIn('cannot verify the target', self.cycle)
+        self.assertIn('record the observation as failed', self.cycle)
+        self.assertIn('do not use its default URL', self.cycle)
+        self.assertIn('do not pin or record a permanent cycle owner', self.cycle)
+        self.assertIn('machine-local `DOT_ACCOUNT`', self.cycle)
+        self.assertIn('configured `rotation` order', self.cycle)
+        self.assertIn('Except for coordinator sends bound to a specific intended chat',
+                      self.text)
+        for clause in ('retain the verified account',
+                       'Do not rotate to another account or target'):
+            self.assertNotIn(clause, self.cycle)
+
+    def test_small_fix_file_threshold_matches_delegate_rule(self):
+        self.assertIn('it touches one or two files', self.text)
+        self.assertIn('it spans more than two files', self.text)
+
+    def test_capability_gap_reports_require_channel_authorization(self):
+        start = self.text.find('### Cloud-computer capability gaps')
+        end = self.text.find('\n## Actions', start + 1)
+        section = self.text[start:end] if start >= 0 and end > start else ''
+        self.assertTrue(section, 'Missing cloud-computer capability guidance')
+        self.assertIn('only when the user has explicitly authorized that channel and target',
+                      section)
+        self.assertIn('resolve `gog` with `command -v gog`', section)
+        self.assertIn('do not send', section)
+        self.assertIn('state the reason in the current chat', section)
+        self.assertNotIn('/opt/homebrew/bin/gog', section)
 
     def test_recovery_does_not_become_status_only_work(self):
         for clause in ('Resume unfinished authorized work with its existing owner',

@@ -5,13 +5,14 @@ set -euo pipefail
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
 
+EXPLICIT_DOT_URL="${DOT_URL:-}"
 NEW_ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --account|-a) DOT_ACCOUNT="$2"; shift 2 ;;
     --account=*) DOT_ACCOUNT="${1#*=}"; shift 1 ;;
-    --url|-u) DOT_URL="$2"; shift 2 ;;
-    --url=*) DOT_URL="${1#*=}"; shift 1 ;;
+    --url|-u) DOT_URL="$2"; EXPLICIT_DOT_URL="$2"; shift 2 ;;
+    --url=*) DOT_URL="${1#*=}"; EXPLICIT_DOT_URL="$DOT_URL"; shift 1 ;;
     *) NEW_ARGS+=("$1"); shift 1 ;;
   esac
 done
@@ -164,7 +165,14 @@ rotate_account_if_needed() {
     if [[ -n "$next_acc" && "$next_acc" != "$ACCOUNT" ]] && ! echo ",$rotated," | grep -q ",$next_acc,"; then
       echo "dot.sh: account '$ACCOUNT' hit usage limit; rotating to '$next_acc'..." >&2
       release_profile_lock
-      exec env -u DOT_CHROME_USER_DATA -u DOT_URL -u DOT_PROFILE_DIRECTORY DOT_ROTATED_ACCOUNTS="${rotated:+$rotated,}$ACCOUNT" DOT_ACCOUNT="$next_acc" "$BASH" "${BASH_SOURCE[0]}" "$action" "$@"
+      local env_options=(-u DOT_CHROME_USER_DATA -u DOT_PROFILE_DIRECTORY)
+      local env_values=(DOT_ROTATED_ACCOUNTS="${rotated:+$rotated,}$ACCOUNT" DOT_ACCOUNT="$next_acc")
+      if [[ -n "$EXPLICIT_DOT_URL" ]]; then
+        env_values+=(DOT_URL="$EXPLICIT_DOT_URL")
+      else
+        env_options+=(-u DOT_URL)
+      fi
+      exec env "${env_options[@]}" "${env_values[@]}" "$BASH" "${BASH_SOURCE[0]}" "$action" "$@"
     fi
   fi
 }
