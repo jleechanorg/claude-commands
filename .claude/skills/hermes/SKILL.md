@@ -104,7 +104,10 @@ progress. Keep one writer and one monitoring record per task.
 
 Hermes may nudge Dot when authorized for the same engineering task. Read the
 installed [Dot skill](../dot/SKILL.md) and use its existing verified account and
-conversation. Preserve its peer-draft and submission rules; confirm the exact
+conversation. Set `DOT_ROTATE_ON_LIMIT=0` on every Dot transport invocation
+and pass the verified account/chat explicitly; the transport otherwise rotates
+by default. A quota limit remains a blocker for that same target. Preserve its
+peer-draft and submission rules; confirm the exact
 message was submitted, then obtain an attributable Dot response. A staged
 composer or queued send is not delivery or acknowledgment.
 
@@ -117,9 +120,19 @@ is authorized by this section.
 ## Canonical installation and Linux sync
 
 This repository copy is the source of truth. Do not maintain divergent local
-Hermes instructions. After review and applicable approval, use the repository's
-installer for the approved files and read the installed
+Hermes instructions. After review and applicable approval, inspect the current
+installer's scope before using it: a whole-catalog or `--merge` overwrite is not
+a narrow Hermes install. Read the installed
 [Linux workflow](../linux-remote/SKILL.md) for a requested Linux sync.
+
+For this scoped change, install only the reviewed Hermes skill and its command
+pointer using an existing supported selective installer. If none exists, compare
+the exact destination files and use a permitted file-copy operation limited to
+those approved files, retaining recoverable originals. Do not overwrite Dot,
+Linux, or other installed packages to deploy Hermes. Divergent target content
+requires reconciliation first. If the runtime cannot perform that scoped copy,
+report installation blocked and leave the canonical PR ready for its authorized
+installer; do not silently broaden the install.
 
 Use only a connection permitted by the active runtime. An SSH example in a
 skill does not override a requirement to use a registered remote executor.
