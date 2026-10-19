@@ -133,14 +133,32 @@ installer's scope before using it: a whole-catalog or `--merge` overwrite is not
 a narrow Hermes install. Read the installed
 [Linux workflow](../linux-remote/SKILL.md) for a requested Linux sync.
 
-For this scoped change, install only the reviewed Hermes skill and its command
-pointer using an existing supported selective installer. If none exists, compare
-the exact destination files and use a permitted file-copy operation limited to
-those approved files, retaining recoverable originals. Do not overwrite Dot,
-Linux, or other installed packages to deploy Hermes. Divergent target content
-requires reconciliation first. If the runtime cannot perform that scoped copy,
-report installation blocked and leave the canonical PR ready for its authorized
-installer; do not silently broaden the install.
+For this scoped change, reconcile exactly these three paths, relative to the
+repository's `.claude/` and the destination `${CLAUDE_HOME:-$HOME/.claude}/`:
+
+- `skills/hermes/SKILL.md`
+- `commands/hermes.md` (flat `/hermes` pointer)
+- `commands/extended-library/hermes.md` (legacy namespaced pointer)
+
+Do not flatten the nested command into the flat destination: their relative
+skill links have different depths. Copy each reviewed source to its matching
+destination. The whole-catalog installer preserves this layout, but is not a
+selective installer and must not be used for this narrow update.
+
+Inspect all three destinations before writing, including symlinks and divergent
+content. Reconcile differences first; retain recoverable originals outside the
+discoverable command tree. Use an existing supported selective installer or a
+permitted file-copy operation limited to these three approved files. Replace
+the stale namespaced gateway entry with its reviewed pointer as part of the
+same scoped update; updating only the flat command leaves an unsafe entry.
+Do not overwrite Dot, Linux, or other installed packages to deploy Hermes.
+If any destination cannot be safely reconciled or copied, report installation
+blocked rather than claiming a complete install or broadening its scope.
+
+Verify both `/hermes` and `/extended-library:hermes` resolve to the installed
+canonical skill, and neither discoverable entry retains gateway instructions.
+Check command discovery after reloading the runtime; file hashes alone do not
+prove runtime discovery. Do not send a live message merely to test discovery.
 
 Use only a connection permitted by the active runtime. An SSH example in a
 skill does not override a requirement to use a registered remote executor.
