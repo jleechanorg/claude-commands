@@ -5,36 +5,27 @@ contract applies to cmux-goal's composer fallback as well. Validate these
 commands against the installed CLI; these are retained source contracts, not
 an assertion that every version implements them.
 
-## Separate typing from submission
+## Type and submit in one call
 
-`cmux send` types text; it does not press Enter. Build the text as one literal
-argument using a supported process-argument API, or safely quote a shell
-variable. Never interpolate an untrusted title, path, or prompt into shell
-source or hand-built JSON.
+Headless only (see `../SKILL.md` § "Headless only"; measured in `/tmp/spicy-search/cmux/focus-test.md`): send the text with its trailing `\n` (Enter) — via the socket `surface.send_text` below, or `cmux send` + `cmux send-key enter`. Both were measured NOT to change the operator's selected workspace. Build the JSON with a supported process-argument API or safely quoted shell variable. Never interpolate an untrusted title, path, or prompt into shell source or hand-built JSON.
 
 ```bash
-# WS_REF and SURFACE_REF are freshly resolved; TEXT is the approved payload.
-cmux send --workspace "$WS_REF" --surface "$SURFACE_REF" "$TEXT"
-cmux send-key --workspace "$WS_REF" --surface "$SURFACE_REF" enter
+# SURFACE_UUID is freshly resolved; TEXT is the approved payload (without the trailing newline).
+printf '{"method":"surface.send_text","params":{"surface_id":"%s","text":"%s\\n"}}\n' "$SURFACE_UUID" "$TEXT" \
+  | nc -U -w 3 "${CMUX_SOCKET_PATH:-/Users/jleechan/.local/state/cmux/cmux.sock}"
 ```
 
-Inspect the send result before continuing. If it clearly failed without
-typing, diagnose the failure. If its result is uncertain, inspect the target
-before sending Enter or repeating text. A successful response proves only
-socket acceptance, not that the intended program consumed the input.
+Inspect the response (`ok`, `queued`) before continuing. If it clearly failed,
+diagnose the failure. If its result is uncertain, inspect the target before
+repeating text. A successful response proves only socket acceptance, not that
+the intended program consumed the input.
 
-After Enter, allow the target a brief opportunity to respond (the source
-workflow used roughly 5–15 seconds). Use a supported wait and then read the
-same target through the routing checks in cmux-steer. Where the installed
-build has independently verified explicit-target capture support, the retained
-source form is:
+After the send, allow the target a brief opportunity to respond (the source
+workflow used roughly 5-15 seconds), then read the same target headlessly:
 
 ```bash
-cmux capture-pane --workspace "$WS_REF" --surface "$SURFACE_REF" --lines 25
+cmux capture-pane --workspace "$WS_REF" --surface "$SURFACE_UUID" --lines 25
 ```
-
-Do not rely on this form to bypass an unverified read-routing problem. If
-focus-then-read is needed, apply that workflow's navigation safeguards.
 
 ## What counts as evidence
 
