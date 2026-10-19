@@ -29,8 +29,12 @@ machine access beyond the current user's authorization.
 Send a bounded handoff: task/goal, existing owner, repository and branch/head,
 acceptance checks, evidence already available, permitted next step, holds, and
 a unique task marker, and the originating Dot account/conversation reference
-when Dot is the caller. Ask Hermes to review, monitor, and report a concrete next
-action. Include takeover permission only when the user has authorized it.
+when Dot is the caller. Bind that origin to the verified calling account and exact
+conversation URL, obtained from the current caller or a trusted tool result;
+do not infer it from a display name, default account, or a similar chat title.
+Ask Hermes to acknowledge the task and bound origin, review, monitor, and report
+a concrete next action. Include takeover permission only when the user has
+authorized it.
 
 Track these states separately:
 
@@ -39,6 +43,13 @@ Track these states separately:
 3. EXECUTING: a current command/run or source artifact substantiates work.
 4. COMPLETE: the acceptance checks are verified at the evidenced head.
 5. BLOCKED: the exact missing capability, approval, or artifact is recorded.
+
+For a requested monitor, record MONITORING only after its first evidenced check
+and a supported continuation are established, including the next check or wake.
+An acknowledgment or promise to watch is not a running monitor. For a Dot nudge,
+record DELIVERED only with evidence that the exact message reached the bound
+conversation; track its attributable reply separately from delivery. A transport
+receipt alone does not prove either monitoring coverage or nudge delivery.
 
 A reaction, echoed input, queue entry, process age, spinner, assignment, or
 status claim alone is not an acknowledgment or proof of execution. Verify
@@ -57,13 +68,20 @@ Explicit review-only/no-follow-up instructions override this default.
 For work the user asked Hermes to oversee, agree on the monitored tasks and
 reuse their existing checkpoints. Record owner, current operation, last
 meaningful progress time with timezone, artifact, next action, and resumption
-trigger. Check original sources and later cancellations before acting.
+trigger. Check original sources and later cancellations before acting. Preserve
+an explicit STOP or hold until the user clearly lifts it for that action and
+target; a generic "continue," a review request, or this skill's recovery rule
+does not release an unrelated or still-applicable hold.
 
 Meaningful progress changes the acceptance evidence: a relevant commit,
 advancing test/build output, a captured result, or a verified unblock.
 A repeated status message, poll, acknowledgment, or changed timestamp does not
 reset the inactivity clock. A long-running operation with fresh advancing
-output remains active even without a commit.
+output remains active even without a commit. An unchanged remote head alone
+cannot establish inactivity: inspect the owner's actual task activity, local
+worktree when available, and command/test/build output. If that activity cannot
+be verified, record UNVERIFIED and request evidence rather than starting a
+second writer.
 
 Use the current runtime's supported waits or existing authorized monitoring.
 Do not install daemons, create competing monitors, or change schedules merely
@@ -106,18 +124,24 @@ progress. Keep one writer and one monitoring record per task.
 ## Dot nudges
 
 Hermes may nudge only the original calling Dot for the same engineering task.
-Use the originating account and stable conversation/room reference recorded in
-the handoff; do not substitute the default Dot, a different chat, or another
+Use the originating account, exact verified conversation URL, and stable
+conversation/room reference recorded in the handoff; do not substitute the
+default Dot, a different chat, or another
 account. If the original destination is missing or cannot be verified, ask the
 caller in the existing Slack task thread and keep the nudge unsent.
 
 Read the installed [Dot skill](../dot/SKILL.md) and resolve that recorded origin
-to its existing verified account and conversation. Set `DOT_ROTATE_ON_LIMIT=0` on every Dot transport invocation
+to its existing verified account and conversation. Recheck the active target
+against that binding before submission. Set `DOT_ROTATE_ON_LIMIT=0` on every
+Dot transport invocation
 and pass the verified account/chat explicitly; the transport otherwise rotates
-by default. A quota limit remains a blocker for that same target. Preserve its
-peer-draft and submission rules; confirm the exact
-message was submitted, then obtain an attributable Dot response. A staged
-composer or queued send is not delivery or acknowledgment.
+by default. A quota limit remains a blocker for that same target. Preserve peer
+drafts: do not submit, clear, or modify another draft unless the user's
+authorization covers that exact action and content. If a peer draft blocks the
+nudge, retain it unsent and report the blocker. Verify that the exact nudge
+appears in the bound conversation, then obtain an attributable Dot response;
+record delivery and acknowledgment separately. A staged composer or queued send
+is not delivery or acknowledgment.
 
 Include the task marker, last progress artifact/time, current owner, blocker
 and requested next action. Do not rotate accounts, bypass a denied route, or
