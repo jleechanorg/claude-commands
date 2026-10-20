@@ -9,7 +9,7 @@ description: Resolve, inspect, and safely steer named cmux workspaces, tabs, and
 > Never decide from a short tail. Canonical text: `~/.codex/AGENTS.md` section
 > "Reading a cmux terminal before deciding (full-buffer rule)".
 
-> **No workspace selection (mandatory):** never run `cmux select-workspace`, `workspace.select`, `workspace-action --action focus`, or any command that selects/focuses/switches a workspace or surface — it steals the operator's active window. Read headless with `cmux capture-pane --workspace <ws> --surface <sf> --scrollback --lines <n>`; never `cmux read-screen` for a targeted read (it returns the focused surface's content, so it cannot read a named surface — see "Headless only" for the 2026-10-18 measurement). `cmux send`/`send-key --workspace <ws> --surface <sf>` is allowed and must not select.
+> **No workspace selection (mandatory):** never run `cmux select-workspace`, `workspace.select`, `workspace-action --action focus`, or any command that selects/focuses/switches a workspace or surface — it steals the operator's active window. Read headless with `cmux capture-pane --workspace <ws> --surface <sf> --scrollback --lines <n>`; never `cmux read-screen` as this skill's targeted read (the installed build accepts `--workspace/--surface`, but cross-workspace read routing was historically unreliable — see "Headless only"). `cmux send`/`send-key --workspace <ws> --surface <sf>` is allowed and must not select.
 
 ## Headless only (operator rule 2026-10-18)
 
@@ -56,7 +56,8 @@ at 12:10 PM (`world` `/goal`) on 2026-10-20.
 # PREFERRED — one line, then a real key event (chained or separate, both valid)
 cmux send --surface surface:<sf> "your single-line message" \
   && cmux send-key --surface surface:<sf> enter
-# ACCEPTABLE on builds whose send interprets escapes (checked: cmux send --help)
+# EQUIVALENT on builds whose send interprets escapes (checked: cmux send --help):
+# the trailing \n IS the one Enter — do not also send send-key
 cmux send --surface surface:<sf> "your single-line message\n"
 # WRONG — a real newline anywhere in the argument forms a second line that may
 # park the text unsent or submit a fragment
@@ -82,9 +83,10 @@ accepted, not that the agent received the message.
 ## ⚠️ Submit Discipline (MANDATORY — read this before every cmux steer)
 
 A send without a submit never reaches the agent: the socket `text` must carry the
-Enter (`\n`), and the CLI form must follow with an explicit `cmux send-key enter`
-(verified 2026-07-16: user flagged "you always forget to send" after the fable iOS
-pivot bootstrap). The submit ritual below is a hard contract for every send to a
+Enter (`\n`), and the CLI form must submit with exactly one Enter — either the
+literal `\n` at the end of the argument, or a following `cmux send-key enter`, never
+both (verified 2026-07-16: user flagged "you always forget to send" after the fable
+iOS pivot bootstrap). The submit ritual below is a hard contract for every send to a
 cmux surface.
 
 **Why it is counted as 3 steps.** The 2026-07-16 form is labelled **4-step**
@@ -124,8 +126,8 @@ cmux tree --all --workspace "$WS"
 
 # 3. Read the target HEADLESSLY. NEVER focus/select/activate anything to read:
 #    focusing changes the user's visible workspace (operator directive, repeated).
-#    Use capture-pane only (read-screen reads the focused surface, so it cannot
-#    target), and verify identity by CONTENT, preferring filesystem evidence:
+#    Use capture-pane only (read-screen is not this skill's targeted read), and
+#    verify identity by CONTENT, preferring filesystem evidence:
 #      cmux capture-pane --workspace "$WS" --surface <uuid> --scrollback --lines 1500
 #    If the read cannot be trusted, read the transcript/STATE.md/checkpoint files
 #    (~/.claude/projects/**.jsonl, roadmap STATE files, git worktrees) instead of
@@ -148,8 +150,9 @@ The raw `nc -U $SOCK` blocks below remain useful for low-level debugging
 ### The submit ritual — 3 steps (supersedes the 2026-07-16 4-step ritual)
 
 ```bash
-# STEP 1 — Type + Enter in one measured action. `&&` chain is the preferred CLI form;
-#          the socket form needs the LITERAL two-character escape \n in `text`.
+# STEP 1 — Type the message, then submit it with EXACTLY ONE Enter. `&&` chain is the
+#          preferred CLI form; the socket form needs the LITERAL escape \n in `text`.
+#          Never add a second Enter (no `\n` AND `send-key` in the same steer).
 cmux send --workspace workspace:N --surface surface:M "your message" \
   && cmux send-key --workspace workspace:N --surface surface:M enter
 # Socket equivalent (low-level / CLI unavailable):
@@ -159,7 +162,7 @@ cmux send --workspace workspace:N --surface surface:M "your message" \
 # STEP 2 — Wait 5-15 seconds for the agent to start processing.
 sleep 8
 
-# STEP 3 — Verify with churning label (THE ONLY definitive proof).
+# STEP 3 — Verify by re-capture; a churning label is the strongest proof.
 cmux capture-pane --workspace workspace:N --surface surface:M --lines 25
 # Look for one of:
 #   - "Working (Xs • esc to interrupt)"
@@ -167,9 +170,12 @@ cmux capture-pane --workspace workspace:N --surface surface:M --lines 25
 #   - "Precipitating… (Xs · ↓ tokens)"
 #   - "Brewed / Churned / Cooked for Xm"
 # If you see ANY active churning label → SUBMITTED.
-# If the text is still sitting at the ❯ prompt → NOT submitted; send a bare "\n" via the
-#   same socket call (one `send-key enter`), then re-capture. Never re-send the text.
-# If "Stopped" / "Done" / nothing → no churn, investigate.
+# If the text is still sitting at the ❯ prompt → NOT submitted. Repair with ONE bare
+#   Enter (`cmux send-key --surface <sf> enter`, or a socket send whose `text` is just
+#   "\n"), then re-capture. Never re-send the message.
+# If "Stopped" / "Done" / nothing → no churn: the steer may still have been accepted
+#   (see the newline rule's verdict list) — check for a queued-message line before
+#   concluding it failed.
 ```
 
 ### ⚠️ Output Contract — typed text + terminal response (MANDATORY)

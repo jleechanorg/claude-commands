@@ -28,7 +28,8 @@ newline rule". This skill adds only the `/goal`-specific rules below.
 ### `/goal`-specific rules
 
 1. **The condition must be ONE line.** A multi-line condition, an interpolated
-   multi-line `$VAR`, a heredoc, or `$(cat file)` output whose file ends in `\n`
+   multi-line `$VAR`, a heredoc, or `$(cat file)` whose file contains internal
+   newlines (only the *trailing* newline is stripped by command substitution)
    puts a real newline into the argument. The installed CLI documents that typed
    keystrokes press Enter at every newline, while the operator's 2026-10-20
    incidents (the `lvl up` notice at 10:04 AM and the `world` `/goal` at 12:10 PM)
@@ -36,11 +37,12 @@ newline rule". This skill adds only the `/goal`-specific rules below.
    beneath it and never submitted. Treat that blank-line-with-cursor signature as
    the newline trap. Keep the `/goal` line under ~180 characters and push the
    overflow into the bead.
-2. **Type one line, then submit explicitly:**
+2. **Type one line, then submit with exactly one Enter:**
    ```bash
    SURFACE=surface:<N>
    cmux send --surface "$SURFACE" "/goal <single-line condition>" \
      && cmux send-key --surface "$SURFACE" enter
+   # equivalent: a trailing literal \n does the submitting — never both
    ```
 3. **Repair, never re-type.** If a capture still shows the `/goal` text at the
    `❯` composer, or shows the blank-line-with-cursor signature, send **one**
