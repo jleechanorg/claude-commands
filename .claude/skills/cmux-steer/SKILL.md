@@ -186,7 +186,8 @@ Every reply that reports a `cmux send` action MUST include, in the same reply:
 2. **The cmux terminal response** — verbatim transcript of what `cmux capture-pane` returned AFTER the submit settle window
    (typically 5-15s, counted from the Enter). Specifically, the agent's first action after absorption.
 3. **Submission status** — explicit verdict: "submitted (churning label X)",
-   "not submitted (text still at ❯ prompt)", or "blocked (no churn, retried N times)".
+   "not submitted (text still at ❯ prompt)", "queued (Press up to edit queued
+   messages — accepted, agent busy)", or "blocked (no Enter accepted, retried N times)".
 
 **Treat as not working until we see a response.** A reply that does NOT include
 both the typed text AND a terminal response is invalid evidence that the
@@ -305,7 +306,7 @@ The plain-text `send_surface` command FAILS cross-workspace. Always use the JSON
 | `cmux send` + `cmux send-key enter` | ✅ always works | Preferred CLI form; one `&&` chain |
 | `cmux capture-pane` | ✅ always works | Headless read; the only *targeted* read method |
 | `send_surface` (plain text) | ❌ fails cross-workspace | Only works if workspace is selected |
-| `read_screen` (plain text) | ❌ do not use | Not this skill's read path (measured 2026-10-18: it does not change the selection; the installed build does accept `--workspace/--surface`, but cross-workspace read routing was historically unreliable); read with `cmux capture-pane --workspace … --surface …` |
+| `read_screen` (plain text) | ❌ do not use | Not this skill's read path (the 2026-10-18 selection measurement covered `cmux read-screen`; the installed build also accepts `--workspace/--surface`, but cross-workspace read routing was historically unreliable); read with `cmux capture-pane --workspace … --surface …` |
 
 ## Sending text (headless, cross-workspace)
 
@@ -346,9 +347,12 @@ first — that is the one operation that disturbed the operator's view (§ "Head
 
 ## Special keys (when Enter in text isn't enough)
 
-For key combos, use `surface.send_text` with the control character in `text` (JSON
-escapes: `\u0003` ctrl-c, `\u0004` ctrl-d, `\t` tab, `\u001b` escape, `\n` enter) — this
-stays headless and cross-workspace:
+For key combos, prefer `cmux send-key` with the installed spelling (`ctrl+c`, `ctrl+d`,
+`tab`, `escape`, `enter` — check `cmux send-key --help`). Sending a control character
+through `surface.send_text` (JSON escapes `\u0003` ctrl-c, `\u0004` ctrl-d, `\t` tab,
+`\u001b` escape, `\n` enter) stays headless and cross-workspace, but the 2026-10-18
+measurement covered ordinary text only — **control-character sends through the socket are
+unmeasured**, so use them as a fallback and verify the effect on the target:
 
 ```bash
 printf '{"method":"surface.send_text","params":{"surface_id":"'"$CODER_UUID"'","text":"\\u0003"}}\n' | nc -U -w 3 "$SOCK"
