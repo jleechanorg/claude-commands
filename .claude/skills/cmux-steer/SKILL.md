@@ -257,11 +257,12 @@ from within cmux, without disrupting the user's active workspace navigation.
 ## Socket path
 
 ```bash
-ls /tmp/cmux*.sock
+echo "${CMUX_SOCKET_PATH:-<unset>}"   # preferred: the app exports this per session
+ls /tmp/cmux*.sock                    # older/debug builds keep sockets in /tmp
 # Tagged debug build: /tmp/cmux-debug-<tag>.sock
 # Untagged debug:     /tmp/cmux-debug.sock
-# Release:            /tmp/cmux.sock
-SOCK="${CMUX_SOCKET_PATH:-$HOME/.local/state/cmux/cmux.sock}"  # preferred: env var / release default
+# Release default used by this skill when the env var is unset:
+SOCK="${CMUX_SOCKET_PATH:-$HOME/.local/state/cmux/cmux.sock}"
 # Debug builds: SOCK="/tmp/cmux-debug-appclick.sock"  # update to match your build tag
 ```
 
@@ -368,8 +369,9 @@ Read any workspace headlessly with `capture-pane`:
 cmux capture-pane --workspace "$WS_UUID" --surface "$CODER_UUID" --scrollback --lines 1500
 ```
 
-Never use `read_screen` as a targeted read: it needs a surface index and reads the
-user's focused surface.
+Do not use `read_screen` as a targeted read: the installed build accepts
+`--workspace`/`--surface`, but cross-workspace read routing was historically
+unreliable, so `capture-pane` is this skill's only targeted read (§ "Headless only").
 
 To infer state from the filesystem instead:
 ```bash

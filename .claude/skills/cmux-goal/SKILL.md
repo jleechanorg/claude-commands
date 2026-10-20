@@ -38,11 +38,15 @@ newline rule". This skill adds only the `/goal`-specific rules below.
    the newline trap. Keep the `/goal` line under ~180 characters and push the
    overflow into the bead.
 2. **Type one line, then submit with exactly one Enter:**
+   Resolve your own surface first: `cmux identify` prints a `caller` block whose
+   `surface_ref` (e.g. `surface:1000030005`) is the target; the app also exports it as
+   `$CMUX_SURFACE_ID`.
    ```bash
-   SURFACE=surface:<N>
+   SURFACE="${CMUX_SURFACE_ID:-surface:<N>}"
    cmux send --surface "$SURFACE" "/goal <single-line condition>" \
      && cmux send-key --surface "$SURFACE" enter
-   # equivalent: a trailing literal \n does the submitting — never both
+   # equivalent: end the same one-line argument with the literal \n escape — that IS
+   # the one Enter, so do not also send `send-key`
    ```
 3. **Repair, never re-type.** If a capture still shows the `/goal` text at the
    `❯` composer, or shows the blank-line-with-cursor signature, send **one**
@@ -53,13 +57,14 @@ newline rule". This skill adds only the `/goal`-specific rules below.
 
 ### Success criterion (measured 2026-10-20, Claude Code)
 
-The composer footer shows `◎ /goal active (Nm)` — or the harness prints `Goal set: …`.
-An empty composer, a socket `ok:true`, or a churning label left over from a previous
-turn is NOT proof. Then capture the target surface's full history and tail; if it is
-generating, wait until idle and capture again (text typed during generation can sit
-in the composer). Send, wait 5–15 s, capture, and apply the criterion above. Text
-disappearing, socket `ok:true`, an earlier turn's churning label, or the send call
-returning are not confirmation.
+"Submitted" is owned by `cmux-steer` § "`cmux send` newline rule" (churn, a queued
+line, or text gone). `/goal` needs **more** than submitted: the composer footer must
+show `◎ /goal active (Nm)`, or the harness must print `Goal set: …`. Neither a socket
+`ok:true` nor the send call returning is that check.
+
+Capturing the target surface's full history and tail before you report is still
+required; if it is generating, wait until idle and capture again (text typed during
+generation can sit in the composer).
 
 ### ⚠️ Output Contract — typed text + terminal response (MANDATORY)
 
@@ -105,7 +110,7 @@ churning label.
 **Banned** (these are the failure modes the user keeps flagging):
 - "I sent the message" (no Enter proof)
 - "The agent should have received it" (no churning label)
-- `cmux send` with no follow-up `cmux send-key enter` (or the literal `\n` socket form)
+- `cmux send` with no Enter at all — neither a following `cmux send-key enter` nor a trailing literal `\n` (exactly one of the two, never both)
 - A real newline in the send argument — it parks the text in the composer (2026-10-20)
 - Re-sending text after a non-submit instead of one bare `send-key enter`
 - Focusing or selecting a surface to send; always target with explicit `--workspace`/`--surface`
@@ -145,8 +150,11 @@ cmux-touching skill.
 2. **Compose the condition.** ALWAYS invoke the `ironclad` skill to harden exit criteria — binary, executable, externally anchored (prefer an EXISTING checker/script/gate as the anchor when one exists), anti-gaming, iterate-until; the bead carries the full criteria superset — the builtin gets the short literal condition. Fold in anything concrete Step 0 surfaced (prior traps, measured contracts, in-flight work on other machines). Keep it short (the UI truncates); avoid shell-hostile characters; single-quote it. **The condition must also be ONE LINE** (see § "`/goal`-specific rules") — under ~180 characters, with any overflow pushed into the bead.
    - **CI-check criteria must not silently mean "poll forever."** If any criterion depends on a remote CI system ("zero failing checks", "N-green", "gate passes"), state in the condition (or the bead) that a slow/backlogged/flaky CI run does NOT block progress by itself: per `~/.claude/CLAUDE.md` § "Slow/backlogged CI runners — run locally + post proof, don't just wait", when a check is stuck 10min+ past its normal runtime, run the equivalent test locally instead of re-polling, and treat a real local pass (with command + output + timestamp + git SHA, explicitly labeled "local run — CI still pending") as satisfying that sub-criterion until CI catches up. Repo-specific local-run invocation contracts live in `~/.claude/skills/testing-infrastructure/SKILL.md` — read it for the exact command shape (don't guess). This prevents the goal from trapping the session in an unbounded retry/poll loop against a shared, externally-contended resource (see `~/.claude/skills/ironclad/SKILL.md` § "Verify the structural precondition BEFORE the first grind" — CI capacity is exactly this class of external producer/blocker).
 3. **Create goal once (if needed):** If an existing matching goal was confirmed in Step 1, continue without recreation or replacement. If creating a new goal and the active environment provides a native goal tool, invoke that native tool once with the hardened condition and retain its returned goal identifier/objective for verification. Do not substitute a printed `/goal` command when the native tool is callable. For Claude Code fallback via cmux composer socket typing, type the single-line condition and then submit with one explicit Enter (preferred form, no escaping surface, no UUID resolution):
+   Resolve your own surface first: `cmux identify` prints a `caller` block whose
+   `surface_ref` (e.g. `surface:1000030005`) is the target; the app also exports it as
+   `$CMUX_SURFACE_ID`.
    ```bash
-   SURFACE=surface:<N>
+   SURFACE="${CMUX_SURFACE_ID:-surface:<N>}"
    cmux send --surface "$SURFACE" "/goal <single-line condition>" \
      && cmux send-key --surface "$SURFACE" enter
    ```
