@@ -307,7 +307,7 @@ The plain-text `send_surface` command FAILS cross-workspace. Always use the JSON
 |---|---|---|
 | `surface.send_text` (JSON) | ✅ always works | Include the literal `\n` in text for enter |
 | `cmux send` + `cmux send-key enter` | ✅ always works | Preferred CLI form; one `&&` chain |
-| `cmux capture-pane` | ✅ always works | Headless read; the only *targeted* read method |
+| `cmux capture-pane` | ✅ always works | Headless read; the only targeted read method this skill uses |
 | `send_surface` (plain text) | ❌ fails cross-workspace | Only works if workspace is selected |
 | `read_screen` (plain text) | ❌ do not use | Not this skill's read path (the 2026-10-18 selection measurement covered `cmux read-screen`; the installed build also accepts `--workspace/--surface`, but cross-workspace read routing was historically unreliable); read with `cmux capture-pane --workspace … --surface …` |
 

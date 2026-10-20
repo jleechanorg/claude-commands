@@ -56,6 +56,8 @@ A recurring failure pattern: a Claude Code or Codex surface has **finished its t
 3. For a **free-text** question where the agent stated its recommendation, type that
    one-line approval and submit it with exactly one Enter, using the dialog-safe key form:
    `cmux send --surface <sf> "Yes, do <recommended>." && cmux send-key --force --surface <sf> enter`.
+   If a question/permission **dialog** (not a free-text prompt) is what is open, `cmux send`
+   refuses unless `--force`; in that case use the key procedure in step 2 instead of typing.
 4. Verify with `cmux capture-pane` that the dialog cleared and the agent resumed working.
    If the build rejects a key name, the only documented alternative is the socket
    `surface.send_text` call, whose dialog behaviour is **not documented** — use it and apply
@@ -171,7 +173,7 @@ sleep 10
 cmux capture-pane --workspace <ws_ref> --surface <sf_ref> --scrollback --lines 120
 ```
 
-- **DIALOG_BLOCKED**: a bare `"\\n"` via the same socket `send_text` call selects the highlighted option ONLY when the option text proves it is the agent's own recommended safe choice.
+- **DIALOG_BLOCKED**: use the guarded key procedure in "Unblock rule" above (`cmux send-key --force --surface <sf> enter|y|down`). A bare socket `"\n"` is the undocumented-behaviour fallback, allowed ONLY when the option text proves it is the agent's own recommended safe choice, and it must be verified with `capture-pane`.
 - **Submit rule (`cmux send`)**: send one single-line message and submit it explicitly with `cmux send-key --surface <sf> enter` (or a **literal** `\n` escape on builds whose send interprets escapes). A real newline in the argument put the text in the composer unsent in both 2026-10-20 operator-caught incidents. Repair with one bare Enter — never re-send the text. Verify the composer cleared before reporting "sent" — canonical: `~/.claude/skills/cmux-steer/SKILL.md` § `cmux send` newline rule.
 - **MALFORMED_TOOL_CALL**: Nudge the surface to re-invoke the tool properly instead of printing raw XML/text.
 - **Long briefs (>200 chars)**: Write the brief to `/tmp/<task>_brief.md` and send a one-line pointer.
