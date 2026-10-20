@@ -54,7 +54,7 @@ This augments the `DIALOG_BLOCKED` semantic category below (a stopped coding-age
 
 A Codex lane whose goal is paused reads as idle but is recoverable without any human decision. Look for a goal-status line near the tail: `Goal stalled (/goal resume)`, `Goal paused`, or a `Goal hit usage limits (/goal resume)` line that has no activity after it.
 
-1. Send `/goal resume` through the same headless steer path (it resumes the *existing* goal — it authorizes no merge, spend, or scope change).
+1. First confirm the pause was not deliberate: if the operator (or the lane's own thread) paused the goal on purpose, or a hold/stop instruction is visible in the buffer, report it and do not resume. Otherwise send `/goal resume` through the same headless steer path (it resumes the *existing* goal — it authorizes no merge, spend, or scope change).
 2. Verify the status line becomes `Pursuing goal (Ns)` / `Pursuing goal (Xh Ym)` with a growing timer before reporting it as WORKING.
 3. If it stays stalled, or immediately re-prints the quota wall, classify from the fresh evidence (see next section) — do not retry in a loop.
 
