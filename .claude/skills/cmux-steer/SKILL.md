@@ -3,6 +3,14 @@ name: cmux-steer
 description: Resolve, inspect, and safely steer named cmux workspaces, tabs, and surfaces.
 ---
 
+> **Terminal-reading rule (canonical):** before any classification, assessment, or steer of a
+> cmux surface, read the surface's FULL available history (~10k words when possible;
+> `cmux capture-pane --scrollback --lines 1500`), then the last ~15 lines for current state.
+> Never decide from a short tail. Canonical text: `~/.codex/AGENTS.md` section
+> "Reading a cmux terminal before deciding (full-buffer rule)".
+
+> **No workspace selection (mandatory):** never run `cmux select-workspace`, `workspace.select`, `workspace-action --action focus`, or any command that selects/focuses/switches a workspace or surface — it steals the operator's active window. Read headless with `cmux capture-pane --workspace <ws> --surface <sf> --scrollback --lines <n>`; never `cmux read-screen` (can return the focused surface / steal focus). `cmux send`/`send-key --workspace <ws> --surface <sf>` is allowed and must not select.
+
 ## ⚠️ Submit Discipline (MANDATORY — read this before every cmux steer)
 
 `cmux send` does **NOT** press Enter. This is the #1 recurring cmux failure mode
@@ -37,12 +45,16 @@ print(c.get("workspace_ref") or d.get("focused", {}).get("workspace_ref"))
 #    Do NOT filter the output — sibling tabs and the ◀ markers are the signal.
 cmux tree --all --workspace "$WS"
 
-# 3. Read the target. ⚠ Cross-workspace `cmux read-screen --workspace X
-#    --surface Y` is NOT reliable in current cmux (see
-#    ~/.hermes/skills/cmux/references/surface-read-routing-bug.md): it can
-#    silently return the focused surface's content. For non-focused surfaces,
-#    use focus-then-read: `cmux focus-surface --workspace "$WS" --surface
-#    surface:N` then `cmux read-screen --lines 80` (no --workspace/--surface).
+# 3. Read the target HEADLESSLY. NEVER focus/select/activate anything to read:
+#    focusing changes the user's visible workspace (operator directive, repeated).
+#    Cross-workspace `read-screen --workspace X --surface Y` routing is historically
+#    unreliable, so verify identity by CONTENT and prefer filesystem evidence:
+#      cmux read-screen --surface <uuid> --lines <n>      # explicit target, no focus
+#      cmux capture-pane --surface <uuid> --scrollback    # explicit target, no focus
+#    If the read cannot be trusted, read the transcript/STATE.md/checkpoint files
+#    (~/.claude/projects/**.jsonl, roadmap STATE files, git worktrees) instead of
+#    focusing. Banned for reading: `cmux focus-surface`, `cmux select-workspace`,
+#    `cmux open`, `cmux new-surface`, or any UI click that changes focus.
 ```
 
 ### Three anti-patterns this skill now warns against

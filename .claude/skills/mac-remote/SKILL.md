@@ -45,6 +45,16 @@ fi
 
 Or simpler — try `uname -s` to detect. On MacBook locally, `Darwin`; on jeff-ubuntu, `Linux`; on GitHub Actions ubuntu-latest, `Linux`.
 
+## Invoking Dot on the Mac
+
+When a task needs the Mac's Dot assistant, run `dot.sh` on the Mac and let that
+machine resolve its own account: an explicit `--account` wins, then the Mac's
+machine-local `DOT_ACCOUNT`, then its `~/.config/dot/config.json` default. Do
+not inherit or forward the Linux caller's `DOT_ACCOUNT` accidentally; an
+explicit per-invocation `--account <name>` is the only cross-machine override.
+Apply the installed [Dot skill](../dot/SKILL.md), including its independent
+profile and session rules, for all sends, reads, and recovery actions.
+
 ## Setup on a remote machine (one-time, e.g. on jeff-ubuntu)
 
 ```bash

@@ -3,6 +3,12 @@ name: babysit-openclaw
 description: Monitor OpenClaw Slack tasks for stalls or fabricated progress and nudge them safely.
 ---
 
+> **Terminal-reading rule (canonical):** before any classification, assessment, or steer of a
+> cmux surface, read the surface's FULL available history (~10k words when possible;
+> `cmux capture-pane --scrollback --lines 1500`), then the last ~15 lines for current state.
+> Never decide from a short tail. Canonical: `~/.codex/AGENTS.md` section
+> "Reading a cmux terminal before deciding (full-buffer rule)".
+
 # babysit-openclaw
 
 Monitor an openclaw task in a Slack thread, detect fabrication and stalls, and nudge via Slack when needed.

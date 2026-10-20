@@ -53,6 +53,13 @@ applicable user authority. If a selected document changes, re-review its new byt
 
 **Size/risk gate first.** For low-risk diffs (docs/tests/config-only, or under ~100 changed production lines with no schema/security/prompt-contract surface), Reviewer A alone (Codex + Opus — two independent verdicts, so the ≥2-reviewer quorum for `APPROVED` still holds) satisfies the gate; skip B/C. Reserve the full A+B+C fan-out for diffs touching production behavior, schemas, security, or above that threshold. The quorum, coverage, and inline-artifact rules below apply unchanged regardless of which lanes run.
 
+Before dispatch, use existing quota/session receipts and non-model capability
+checks to identify viable reviewers and whether they can meet the approval quorum.
+Do not spend a separate paid model call solely to probe quota; when availability is
+unknown, launch selected review lanes concurrently. Only A, C, and D are approval
+reviewers. `/research` seats, including Gemini, may inform the
+synthesis but never substitute for a quorum vote.
+
 Spawn every selected reviewer in a single message. **A and B are the portable core** — they work on any machine. **C depends on personal infrastructure** and is skipped, not faked, when unavailable.
 
 ---
@@ -82,6 +89,13 @@ WHAT TO REVIEW:
 Read the change yourself — do not rely on any summary in this prompt.
 Read as much of it as your judgment requires. If you could not read
 what you needed, say so in COVERAGE rather than guessing.
+Apply `/ponytail` (`~/.claude/skills/ponytail/SKILL.md`): reject parallel-module
+duplication (re-implementing an existing pipeline in a new module), post-hoc
+undo / mutate-then-reverse-diff machinery (mutating shared state before
+preconditions or persistence succeed and building an inverse-diff engine instead
+of staging before merge), and additive compensator accretion across review
+rounds (never demand round-trip preservation of malformed legacy wrappers when
+canonicalizing at the ingestion boundary suffices).
 
 Return exactly:
 VERDICT: [recommended approach, one line]

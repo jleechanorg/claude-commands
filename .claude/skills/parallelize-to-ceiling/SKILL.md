@@ -37,7 +37,7 @@ their own gates and are never "overlapped" past them.
 Every subagent or lane launched under `/parallel` drives its unit to done:
 implement, verify, and push or produce the artifact. It does not return a
 plan or analysis for the parent to execute, unless the lane is explicitly a
-read-only review lane. Say so in the lane's prompt.
+read-only review lane. Say so in the lane's prompt. **Single integration PR rule (`pr-quantity-control`)**: When parallel coding lanes implement parts of a single feature, their worktrees/branches must merge into **one shared integration branch/PR** (or at most `≤ 3` coarse stage PRs per `${CLAUDE_HOME:-$HOME/.claude}/skills/pr-quantity-control/SKILL.md`), never N separate GitHub PRs.
 
 ## Timeline, parallel lanes, and milestones (mandatory)
 
@@ -196,14 +196,18 @@ below by this order, don't pick whichever is more convenient):**
    dominated the critical path on changes that were a few lines each).
 3. **Bounded mechanical work that's too large for a handful of calls, but
    doesn't need adversarial review,** goes to the cheapest capable tier
-   (Codex: a `gpt-6-luna` subagent; Claude: haiku/mini) per Model-tier routing
-   below — not the AGY pair. For simple independent tasks, the Luna lane may
-   also drive the task through its focused checks and deliver the result; keep
-   the root session responsible for scope and integration.
+   (AGY CLI: `--model gemini-3.8-flash-high` or `gemini-3.8-flash-medium`;
+   Antigravity `invoke_subagent`: `Model: "flash"` or `"flash_lite"`, NEVER
+   `Model: "inherit"`; Codex: a `gpt-6-luna` subagent; Claude: haiku/mini) per
+   Model-tier routing below — not an expensive root/pro model. For simple
+   independent tasks, the Flash/Luna lane may also drive the task through its
+   focused checks and deliver the result; keep the root session responsible for
+   scope and integration.
 4. **Only once scope actually justifies a dedicated coder + independent
    verifier** (a track large enough to earn its own context, where a second
    independent pass adds real value) do you reach for the AGY pair described
    next.
+5. **Parallel coding lanes for one feature merge into one shared integration branch/PR**: When multiple coding lanes execute in parallel for a single feature, integrate their commits into **one shared feature branch/PR** (or at most `≤ 3` coarse stage PRs per `${CLAUDE_HOME:-$HOME/.claude}/skills/pr-quantity-control/SKILL.md`) rather than opening N separate GitHub PRs.
 
 For implementation and review lanes that clear step 4 above, prefer the
 installed AGY CLI pair. Use the canonical profiles for the complete launch,
@@ -355,10 +359,12 @@ there to a pointer 2026-09-06; this section is the full policy).
   or capability gap that justifies escalation. Honor an explicit user model
   choice under the precedence above.
 - Small/mechanical bounded coding:
+  - AGY CLI (`agy`): pass `--model gemini-3.8-flash-high` (or `gemini-3.8-flash-medium` / `gemini-3.8-flash-low` per `agy models`; alias `gemini-3.8-flash`).
+  - Antigravity native subagents (`invoke_subagent`): pass `Model: "flash"` (or `Model: "flash_lite"` for simple lookups/reads); never leave `Model: "inherit"` or `"pro"` on bounded subagent lanes.
   - Codex: spawn a `gpt-6-luna` subagent when available. If it is unavailable
     or fails, use `gpt-6-sol` (5.6 models forbidden).
   - Claude: `haiku` subagent.
-- Simple task-driving, polling, and mechanical sweeps: the available Luna or
+- Simple task-driving, polling, and mechanical sweeps: the available Gemini 3.8 Flash (`Model: "flash"` / `--model gemini-3.8-flash-medium`), Luna, or
   haiku/mini tier.
 - Apply the same handoff discipline to bounded independent investigation,
   tests, monitoring, and mechanical follow-through when it costs less than
@@ -369,7 +375,7 @@ there to a pointer 2026-09-06; this section is the full policy).
   the worker's execution or repeatedly poll while it is progressing; use
   asynchronous completion notifications, continue independent parent work,
   and inspect the supporting artifact on delivery.
-- **Gemini Model Invariant**: Never use Gemini 3.1 Pro (or older Gemini Pro models). Always use Gemini 3.8 Flash (`gemini-3.8-flash`, `gemini-3.8-flash-high`) or later.
+- **Gemini Model Invariant**: Never use Gemini 3.1 Pro (or older Gemini Pro models), and never default subagents to `Model: "inherit"` when running in AGY CLI. Always use Gemini 3.8 Flash (`gemini-3.8-flash`, `gemini-3.8-flash-high`, `gemini-3.8-flash-medium`, or `Model: "flash"` in `invoke_subagent`) or later.
 - Top tier (the session's own model): reserve for adversarial judgment, or
   only after a cheaper tier has already failed on that unit.
 - Before you repeat a delegated claim **or act on it**, read the artifact it

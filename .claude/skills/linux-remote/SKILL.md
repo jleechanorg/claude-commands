@@ -34,6 +34,53 @@ ssh jeff-ubuntu-ts '<command>'
 
 If both the LAN alias and `jeff-ubuntu-ts` fail, see [cross-machine-ssh-tier](../cross-machine-ssh-tier/SKILL.md) for the Tier 3 messaging-gateway fallback and its debugging caveats (OAuth-scope-vs-connection, bot-message filtering) — that skill is the shared source of truth for this whole ladder, used identically by `mac-remote`, `linux-mirror`, and `mac-mirror`.
 
+## Cloud capability gaps: Dot-first recovery and escalation
+
+When `/dot` cannot perform a required action on its cloud computer (for
+example, a test runner, package, browser, service, login, or permission is
+missing), keep the task moving through this bounded recovery loop:
+
+1. Confirm the exact gap on the target host with a read-only probe before
+   proposing a fix: record the host, repository/worktree, branch or SHA, exact
+   command, exit status, missing binary/package/service, and the artifact the
+   command was expected to produce. Do not call a generic cloud failure a
+   blocker when SSH can answer the question.
+2. Send `/dot` a self-contained remediation request naming the gap and the
+   acceptance check. Ask Dot to install or set up the missing tool, retry the
+   login through its approved interactive flow, or request the specific
+   permission it lacks. Dot must use the existing host/account profiles and
+   credential boundaries; never copy cookies, tokens, passwords, or browser
+   profiles, and never treat a requested permission as granted.
+3. If setup needs `sudo`, an external account, MFA, an OAuth scope, or another
+   user-controlled approval, pause only that dependent action and request the
+   missing approval through the authorized flow. Continue independent
+   read-only checks and preparation. Record `REQUESTED`, `GRANTED`,
+   `DENIED`, or `UNCONFIRMED` separately; a successful install command or a
+   live process is not proof that the needed login or permission works.
+4. Re-run the exact acceptance command on the same host and verify its output
+   or artifact at the source. Report the command, result, SHA, and artifact;
+   Dot's queued message, setup claim, or transport success is not completion.
+5. If Dot remains unable after the authorized install/setup/login/permission
+   attempt, report the precise blocker immediately in the current chat and
+   notify the user through the configured Slack text transport, with the
+   `[AI Terminal: <workspace-name>]` identity prefix and a delivery receipt.
+   The `/slack` command is the canonical media workflow; use the configured
+   text transport (for example, the Slack conversation message capability)
+   for a text alert. Use an approved outbound email capability only after
+   verifying that it is configured and that delivery succeeded. The installed
+   `/gmail` skill is read/search guidance, not proof of an email sender; if no
+   approved email sender is available, report `EMAIL UNAVAILABLE` in chat and
+   Slack rather than fabricating a send or handling credentials. Each
+   notification must include the host, exact command or artifact, Dot's
+   remediation attempt, current permission state, blocker, and the concrete
+   unblock action.
+
+This escalation supplements the [Dot skill](../dot/SKILL.md), the SSH tier
+ladder above, and the existing agent response-proof contract below. It does
+not authorize credential handling, broad package changes, destructive actions,
+or a host replacement. Preserve the exact failing instruction and continue
+any safe independent work while the user-controlled dependency is pending.
+
 ## How to run commands
 
 Always use `ssh jeff-ubuntu '<command>'` for one-liners:
