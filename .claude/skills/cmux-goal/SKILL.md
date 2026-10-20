@@ -66,6 +66,12 @@ three, and nothing else:
 2. the harness prints `Goal set: …`;
 3. the harness reports that a session-scoped Stop hook is now active.
 
+The confirmation must be **fresh and matching**: observed after this send, naming the
+condition you just set (or at minimum appearing below your send in the capture). A
+`Goal set: …` / `◎ /goal active` line that already existed earlier in the required
+full-history capture is history, not confirmation — re-read the tail, and if only an old
+line is present, report the goal as unverified rather than confirmed.
+
 Neither a socket `ok:true`, the send call returning, nor a leftover churning label is
 that check.
 

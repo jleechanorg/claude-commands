@@ -15,7 +15,8 @@ description: Resolve, inspect, and safely steer named cmux workspaces, tabs, and
 
 This section is the single owner of the rule; other cmux skills point here. **Measured** in `/tmp/spicy-search/cmux/focus-test.md` (selection tracked by the `[selected]` marker in `cmux workspace list`).
 
-**Measured to NOT change the selected workspace — all safe to use:**
+**Measured to NOT change the selected workspace** (selection safety only — it does not by
+itself authorize creating or closing anything; see the consent rule below):
 - **Reads:** `cmux capture-pane --workspace <ws> --surface <surface-uuid-or-ref> --scrollback --lines <n>`. The 2026-10-18 measurement also covered `cmux read-screen` and did not see it move the selection; the installed build (`cmux read-screen --help`, checked 2026-10-20) does accept `--workspace`/`--surface`. **This skill still reads only with `capture-pane`** — cross-workspace read routing was historically unreliable, so a targeted read comes from `capture-pane`, not `read-screen`.
 - **Steers:** `cmux send "<text>"` + `cmux send-key enter`, and the raw socket `surface.send_text` call (type + Enter in one call; the trailing `\n` in `text` is Enter; works cross-workspace; resolve the socket from `$CMUX_SOCKET_PATH`, default below; surface UUIDs come from `cmux surface list`):
 
@@ -25,8 +26,8 @@ This section is the single owner of the rule; other cmux skills point here. **Me
   # -> {"ok":true,...,"queued":false|true}
   ```
 
-- **Creates:** `cmux new-surface ... --focus false` / `cmux new-workspace ... --focus false` (**always pass `--focus false`**).
-- **Closes:** `cmux close-surface` (run-2 measured: no selection change).
+- **Creates:** `cmux new-surface ... --focus false` / `cmux new-workspace ... --focus false` (**always pass `--focus false`**). Selection-safe, but still needs operator consent on the live desktop (below).
+- **Closes:** `cmux close-surface` (run-2 measured: no selection change). Same consent rule applies.
 
 **The only thing that disturbed the operator's view:** creating or closing **workspaces/surfaces** on the live desktop — the focus test's `cmux workspace close …` teardown switched the operator's selected workspace twice. **Do NOT create or close cmux workspaces/surfaces on the operator's live desktop unless the operator says yes first.**
 
