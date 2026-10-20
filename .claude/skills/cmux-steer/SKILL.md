@@ -16,7 +16,7 @@ description: Resolve, inspect, and safely steer named cmux workspaces, tabs, and
 This section is the single owner of the rule; other cmux skills point here. **Measured** in `/tmp/spicy-search/cmux/focus-test.md` (selection tracked by the `[selected]` marker in `cmux workspace list`).
 
 **Measured to NOT change the selected workspace — all safe to use:**
-- **Reads:** `cmux capture-pane --workspace <ws> --surface <surface-uuid-or-ref> --scrollback --lines <n>` and `cmux read-screen --scrollback --lines <n>`. `read-screen` does not move the selection, but it reads the **focused** surface, so it is never a valid *targeted* read — use `capture-pane --workspace/--surface` for that.
+- **Reads:** `cmux capture-pane --workspace <ws> --surface <surface-uuid-or-ref> --scrollback --lines <n>`. The 2026-10-18 measurement also covered `cmux read-screen` and did not see it move the selection; the installed build (`cmux read-screen --help`, checked 2026-10-20) does accept `--workspace`/`--surface`. **This skill still reads only with `capture-pane`** — cross-workspace read routing was historically unreliable, so a targeted read comes from `capture-pane`, not `read-screen`.
 - **Steers:** `cmux send "<text>"` + `cmux send-key enter`, and the raw socket `surface.send_text` call (type + Enter in one call; the trailing `\n` in `text` is Enter; works cross-workspace; resolve the socket from `$CMUX_SOCKET_PATH`, default below; surface UUIDs come from `cmux surface list`):
 
   ```bash
@@ -38,51 +38,63 @@ This section is the single owner of the rule; other cmux skills point here. **Me
 
 This section is the single owner of the rule; `cmux-goal` and `cmux-bulk-steer` point here.
 
-`cmux send` only interprets the **literal two-character escape** `\n` / `\r` as Enter.
-A **real newline character** in the argument is typed as a line break: the text stays in
-the composer with a blank line under it and **never submits** (operator caught this on
-`lvl up` at 10:04 AM — the notice was visible in the input box, unsent, because the send
-used an actual newline instead of the escape; caught again on the `world` `/goal` at
-12:10 PM).
+**What the installed CLI documents** (`cmux send --help`, checked 2026-10-20): `\n` and
+`\r` are interpreted as Enter, `\t` as Tab, and typed keystrokes "press Enter at every
+newline, which can submit each line on its own". `--paste` does **not** interpret escapes
+and replaces control characters with spaces. `cmux send` also **refuses** (sends nothing)
+when the target prompt already holds a draft, or a question/permission dialog is open,
+unless `--force` is passed. Builds differ, so treat escape handling as build-dependent.
+
+**What the operator measured** (the failure this rule exists for): a `/goal` sent with a
+**real newline** in the argument was left parked in the composer with a blank line beneath
+the cursor and never submitted — operator-caught at 10:04 AM (`lvl up` notice) and again
+at 12:10 PM (`world` `/goal`) on 2026-10-20.
+
+**Therefore the only safe send is a single-line text plus one explicit Enter:**
 
 ```bash
-# CORRECT — literal backslash-n (bash double quotes keep it literal)
-cmux send --surface surface:<sf> "your message\n"
-# CORRECT — type, then a real key event
-cmux send --surface surface:<sf> "your message" && cmux send-key --surface surface:<sf> enter
-# WRONG — a real newline inside the argument becomes a line break, not Enter
+# PREFERRED — one line, then a real key event (chained or separate, both valid)
+cmux send --surface surface:<sf> "your single-line message" \
+  && cmux send-key --surface surface:<sf> enter
+# ACCEPTABLE on builds whose send interprets escapes (checked: cmux send --help)
+cmux send --surface surface:<sf> "your single-line message\n"
+# WRONG — a real newline anywhere in the argument forms a second line that may
+# park the text unsent or submit a fragment
 cmux send --surface surface:<sf> "$MSG
 "
 ```
 
 Verification is mandatory — capture the bottom ~14 lines afterwards:
-- `❯ <your text>` still visible → **NOT submitted**; press `cmux send-key --surface <sf> enter`
-  (or `cmux send --surface <sf> -- "\r"`), then re-check. **Repair, never re-type** — a second
-  send concatenates a duplicate line into the same buffer.
+- `❯ <your text>` still visible → **NOT submitted**; send one `cmux send-key --surface <sf> enter`
+  and re-check.
 - A blank line with the cursor resting beneath the text → the newline-trap signature: send one
   bare Enter, never the text again.
 - `Press up to edit queued messages` → **submitted and queued** (agent busy); success.
 - text gone / new spinner → **submitted**.
+
+**Repair, never re-type.** Send one bare Enter, then re-capture. Do not re-send the text: on
+builds where the composer already holds a draft `cmux send` refuses the send outright, and on
+builds where it does not the second send appends a duplicate line.
 
 Never report "sent" from `cmux send`'s `OK` alone — `OK` proves keystrokes were
 accepted, not that the agent received the message.
 
 ## ⚠️ Submit Discipline (MANDATORY — read this before every cmux steer)
 
-The socket `text` must end in `\n` (Enter) and the CLI `cmux send` needs a following
-`cmux send-key enter`, or the message sits in the input buffer without ever reaching
-the agent (verified 2026-07-16: user flagged "you always forget to send" after the
-fable iOS pivot bootstrap). The submit ritual below is a hard contract for every
-send to a cmux surface.
+A send without a submit never reaches the agent: the socket `text` must carry the
+Enter (`\n`), and the CLI form must follow with an explicit `cmux send-key enter`
+(verified 2026-07-16: user flagged "you always forget to send" after the fable iOS
+pivot bootstrap). The submit ritual below is a hard contract for every send to a
+cmux surface.
 
-**Supersedes the 4-step form (measured 2026-10-20).** The 2026-07-16 **4-step**
-ritual (type → `send-key enter` → wait → verify) is now counted as a **3-step**
-ritual: the measured preferred send folds typing and Enter into one action
-(`cmux send … && cmux send-key … enter`, or a socket `surface.send_text` whose
-`text` ends in the literal `\n`). Both forms still work — a standalone
-`send-key enter` is never wrong — but the ritual is counted as three steps because
-type+Enter is one measured action. The newline rule that makes step 1 fail is
-owned by § "`cmux send` newline rule" above.
+**Why it is counted as 3 steps.** The 2026-07-16 form is labelled **4-step**
+(type → `send-key enter` → wait → verify). Since 2026-10-20 the same contract is
+written as **3 steps** (send-with-Enter → wait → verify) because step 1's type and
+Enter are issued together — chained with `&&`, or as a socket `surface.send_text`
+whose `text` ends in the literal `\n`. Issuing them together removes one decision
+point; it does not change the number of keystroke operations, and a standalone
+`send-key enter` remains correct. The newline rule that makes step 1 fail is owned
+by § "`cmux send` newline rule" above.
 
 ## ⚠️ SUPERSEDED — Use `cmux` CLI, not raw socket protocol (for name → surface resolution)
 
@@ -286,7 +298,7 @@ The plain-text `send_surface` command FAILS cross-workspace. Always use the JSON
 | `cmux send` + `cmux send-key enter` | ✅ always works | Preferred CLI form; one `&&` chain |
 | `cmux capture-pane` | ✅ always works | Headless read; the only *targeted* read method |
 | `send_surface` (plain text) | ❌ fails cross-workspace | Only works if workspace is selected |
-| `read_screen` (plain text) | ❌ do not use | Returns the *focused* surface's content (measured 2026-10-18: it does not change the selection, but it cannot target a named surface); read with `cmux capture-pane --workspace … --surface …` instead |
+| `read_screen` (plain text) | ❌ do not use | Not this skill's read path (measured 2026-10-18: it does not change the selection; the installed build does accept `--workspace/--surface`, but cross-workspace read routing was historically unreliable); read with `cmux capture-pane --workspace … --surface …` |
 
 ## Sending text (headless, cross-workspace)
 
@@ -300,8 +312,8 @@ printf '{"method":"surface.send_text","params":{"surface_id":"'"$CODER_UUID"'","
 ```
 
 This works from any workspace without switching focus. The literal `\n` at the end acts
-as Enter — a *real* newline is typed as a line break and never submits (§ "`cmux send`
-newline rule").
+as Enter; a *real* newline splits the text and has left it parked unsent in both 2026-10-20
+operator incidents (§ "`cmux send` newline rule"). Send one line and submit explicitly.
 
 ## Checking if idle
 
@@ -417,6 +429,6 @@ printf '{"method":"surface.send_text","params":{"surface_id":"'"$TAB2"'","text":
 1. **Never select or focus anything** — see "Headless only".
 2. **Find workspace by NAME** (`list_workspaces` → grep name → get UUID).
 3. **Use the CLI or JSON API for sends** — `cmux send` + `cmux send-key enter`, or `surface.send_text`; both work headlessly cross-workspace.
-4. **Submit explicitly** — the literal `\n` escape, or a following `send-key enter`; a real newline never submits.
+4. **Submit explicitly** — one single-line message plus a following `send-key enter` (or the literal `\n` escape on builds whose `send` interprets escapes); never rely on a real newline to submit.
 5. **Read with `cmux capture-pane`** — headless, any workspace; never `read_screen` as a targeted read; use git/filesystem for monitoring that needs no screen read.
 6. **Create with `--focus false`** — `cmux new-workspace` / `cmux new-surface` for multi-tab setups, and never create/close on the live desktop without asking.
