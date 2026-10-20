@@ -39,8 +39,9 @@ newline rule". This skill adds only the `/goal`-specific rules below.
    overflow into the bead.
 2. **Type one line, then submit with exactly one Enter:**
    Resolve your own surface first: `cmux identify` prints a `caller` block whose
-   `surface_ref` (e.g. `surface:1000030005`) is the target; the app also exports it as
-   `$CMUX_SURFACE_ID`.
+   `surface_ref` (e.g. `surface:1000030005`) is the target, and the app exports the same
+   surface as `$CMUX_SURFACE_ID` — as a **UUID** (e.g. `6605549A-…`), not a `surface:N`
+   ref. `cmux send --surface` accepts either form.
    ```bash
    SURFACE="${CMUX_SURFACE_ID:-surface:<N>}"
    cmux send --surface "$SURFACE" "/goal <single-line condition>" \
@@ -58,9 +59,15 @@ newline rule". This skill adds only the `/goal`-specific rules below.
 ### Success criterion (measured 2026-10-20, Claude Code)
 
 "Submitted" is owned by `cmux-steer` § "`cmux send` newline rule" (churn, a queued
-line, or text gone). `/goal` needs **more** than submitted: the composer footer must
-show `◎ /goal active (Nm)`, or the harness must print `Goal set: …`. Neither a socket
-`ok:true` nor the send call returning is that check.
+line, or text gone). `/goal` needs **more** than submitted. Accept exactly one of these
+three, and nothing else:
+
+1. the composer footer shows `◎ /goal active (Nm)`;
+2. the harness prints `Goal set: …`;
+3. the harness reports that a session-scoped Stop hook is now active.
+
+Neither a socket `ok:true`, the send call returning, nor a leftover churning label is
+that check.
 
 Capturing the target surface's full history and tail before you report is still
 required; if it is generating, wait until idle and capture again (text typed during
@@ -146,26 +153,35 @@ cmux-touching skill.
    - `/history <goal keywords>` — prior attempts, their failure modes, and what's already in flight.
    This applies EVERY time `/cmux-goal` is invoked, even standalone with no other context — the whole point is that invoking this skill alone is enough to ground the goal in real prior work. Do not skip this because you believe you already "have context" from the current conversation; other sessions/machines may hold relevant state this one doesn't.
 
-1. **Query existing goal and choose mechanism:** Query whether an active goal already exists (e.g. inspect runtime goal state or check `/goal active`) before attempting to install one. If an existing goal matches the intended objective, continue execution without replacement (never clear or replace an existing goal without an explicit user request). If a different goal is active, preserve it unless the user explicitly authorizes replacement or has explicitly cleared it. If a new goal is needed, wait until Step 2 has hardened the condition, then choose the mechanism for the active environment: use the runtime's native goal API/tool directly when one is available (for example Codex `create_goal`), rather than printing a `/goal` line or asking the user to paste it. Only when no native goal mechanism is available should Claude Code confirm cmux hosting with `cmux identify` (which must return a `caller` block with `surface_ref`). If the cmux app itself is absent (no socket, no caller block), there is no composer to type into: prepare the exact `/goal ...` command and hand it to the operator as the only fallback. Distinguish that from Step 3's socket fallback, which covers a missing **CLI binary** while the app and its socket are still running. Goal setup failure does not halt an already-authorized mission or claim an active goal; report the warning and continue authorized execution.
+1. **Query existing goal and choose mechanism:** Query whether an active goal already exists (e.g. inspect runtime goal state or check `/goal active`) before attempting to install one. If an existing goal matches the intended objective, continue execution without replacement (never clear or replace an existing goal without an explicit user request). If a different goal is active, preserve it unless the user explicitly authorizes replacement or has explicitly cleared it. If a new goal is needed, wait until Step 2 has hardened the condition, then choose the mechanism for the active environment: use the runtime's native goal API/tool directly when one is available (for example Codex `create_goal`), rather than printing a `/goal` line or asking the user to paste it. Only when no native goal mechanism is available should Claude Code confirm cmux hosting with `cmux identify` (which must return a `caller` block with `surface_ref`). If the cmux app itself is absent (no socket, no caller block), there is no composer to type into: prepare the exact `/goal ...` command and hand it to the operator as the only fallback. Distinguish that from Step 3's socket fallback, which covers a missing **CLI binary** while the app and its socket are still running — in that case skip `cmux identify` here and go straight to Step 3's socket form. Goal setup failure does not halt an already-authorized mission or claim an active goal; report the warning and continue authorized execution.
 2. **Compose the condition.** ALWAYS invoke the `ironclad` skill to harden exit criteria — binary, executable, externally anchored (prefer an EXISTING checker/script/gate as the anchor when one exists), anti-gaming, iterate-until; the bead carries the full criteria superset — the builtin gets the short literal condition. Fold in anything concrete Step 0 surfaced (prior traps, measured contracts, in-flight work on other machines). Keep it short (the UI truncates); avoid shell-hostile characters; single-quote it. **The condition must also be ONE LINE** (see § "`/goal`-specific rules") — under ~180 characters, with any overflow pushed into the bead.
    - **CI-check criteria must not silently mean "poll forever."** If any criterion depends on a remote CI system ("zero failing checks", "N-green", "gate passes"), state in the condition (or the bead) that a slow/backlogged/flaky CI run does NOT block progress by itself: per `~/.claude/CLAUDE.md` § "Slow/backlogged CI runners — run locally + post proof, don't just wait", when a check is stuck 10min+ past its normal runtime, run the equivalent test locally instead of re-polling, and treat a real local pass (with command + output + timestamp + git SHA, explicitly labeled "local run — CI still pending") as satisfying that sub-criterion until CI catches up. Repo-specific local-run invocation contracts live in `~/.claude/skills/testing-infrastructure/SKILL.md` — read it for the exact command shape (don't guess). This prevents the goal from trapping the session in an unbounded retry/poll loop against a shared, externally-contended resource (see `~/.claude/skills/ironclad/SKILL.md` § "Verify the structural precondition BEFORE the first grind" — CI capacity is exactly this class of external producer/blocker).
 3. **Create goal once (if needed):** If an existing matching goal was confirmed in Step 1, continue without recreation or replacement. If creating a new goal and the active environment provides a native goal tool, invoke that native tool once with the hardened condition and retain its returned goal identifier/objective for verification. Do not substitute a printed `/goal` command when the native tool is callable. For Claude Code fallback via cmux composer socket typing, type the single-line condition and then submit with one explicit Enter (preferred form, no escaping surface, no UUID resolution):
    Resolve your own surface first: `cmux identify` prints a `caller` block whose
-   `surface_ref` (e.g. `surface:1000030005`) is the target; the app also exports it as
-   `$CMUX_SURFACE_ID`.
+   `surface_ref` (e.g. `surface:1000030005`) is the target, and the app exports the same
+   surface as `$CMUX_SURFACE_ID` — as a **UUID** (e.g. `6605549A-…`), not a `surface:N`
+   ref. `cmux send --surface` accepts either form.
    ```bash
    SURFACE="${CMUX_SURFACE_ID:-surface:<N>}"
    cmux send --surface "$SURFACE" "/goal <single-line condition>" \
      && cmux send-key --surface "$SURFACE" enter
    ```
-   Raw socket fallback only when the CLI is unavailable. The surface UUID and socket path come from the environment the app exported to your session (`$CMUX_SURFACE_ID`, `$CMUX_SOCKET_PATH`) — do not shell out to `cmux identify`, which needs the CLI you are working around. The `\n` must be the literal two-character escape, never a real newline:
+   Raw socket fallback only when the cmux **CLI binary** is unavailable but the app and its
+   socket are running. The surface UUID and socket path come from the environment the app
+   exported to your session (`$CMUX_SURFACE_ID`, `$CMUX_SOCKET_PATH`) — do not shell out to
+   `cmux identify`, which needs the CLI you are working around. In this mode `capture-pane`
+   is unavailable too, so rules 1 and 3 above cannot run as written: send one single-line
+   text, then verify from the session's own output (the goal footer appearing in the target,
+   or the target acting on the goal) and report `goal set, shell-level verification
+   unavailable` rather than claiming a confirmed goal. The `\n` must be the literal
+   two-character escape, never a real newline:
    ```bash
    SURFACE_UUID="${CMUX_SURFACE_ID:?no cmux surface id in this environment}"
    SOCK="${CMUX_SOCKET_PATH:-$HOME/.local/state/cmux/cmux.sock}"
    printf '{"method":"surface.send_text","params":{"surface_id":"%s","text":"/goal <condition text>\\n"}}\n' "$SURFACE_UUID" | nc -U -w 3 "$SOCK"
    ```
    **Submission is a separate gate from typing** — apply § "`/goal`-specific rules" above (single-line condition, explicit Enter, then repair-never-re-type); the general submit and newline rules are owned by `~/.claude/skills/cmux-steer/SKILL.md` § "Submit Discipline" and § "`cmux send` newline rule".
-4. **Verify persisted query, not tool-layer:** verify persisted state directly. For a native goal tool, query the runtime again and confirm the goal is active and its objective matches the hardened condition (not merely that the tool returned successfully). For cmux, require harness confirmation such as "Goal set: ..." / "A session-scoped Stop hook is now active", or the measured composer footer `◎ /goal active (Nm)`; `OK surface:N` is only the tool layer. If no confirmation arrives via cmux, check whether another prompt was mid-flight (your text may have appended to it) and retry once — one bare `send-key enter` first, per "Repair, never re-type". If setup still does not succeed, proceed with the authorized mission without halting; do not falsely claim an active goal.
+4. **Verify persisted query, not tool-layer:** verify persisted state directly. For a native goal tool, query the runtime again and confirm the goal is active and its objective matches the hardened condition (not merely that the tool returned successfully). For cmux, accept exactly the three confirmations listed in § "Success criterion" (`◎ /goal active (Nm)`, `Goal set: …`, or a session-scoped Stop hook reported as active); `OK surface:N` is only the tool layer. If the CLI is unavailable and only the socket path was used, apply that section's "shell-level verification unavailable" wording instead of claiming a confirmed goal. If no confirmation arrives via cmux, check whether another prompt was mid-flight (your text may have appended to it) and retry once — one bare `send-key enter` first, per "Repair, never re-type". If setup still does not succeed, proceed with the authorized mission without halting; do not falsely claim an active goal.
 5. Acknowledge briefly and keep working — the goal-exit-criteria UserPromptSubmit hook (if installed) auto-injects ironclad hardening on top.
 
 ## Cautions
