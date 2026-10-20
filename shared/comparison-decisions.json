@@ -16811,7 +16811,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Hermes-authored; every lookup goes through the Hermes web_extract tool, which has no equivalent in other runtimes. Retained locally rather than published."
+    "reason": "Hermes-authored (author and metadata name Hermes Agent). Search and metadata lookups use plain curl, but reading abstracts and PDFs uses the Hermes web_extract tool; deferred until reworked to be runtime-neutral."
   },
   {
     "skill": "backend-justified",

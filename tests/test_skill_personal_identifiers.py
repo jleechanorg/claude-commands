@@ -25,6 +25,27 @@ class PersonalIdentifierTest(unittest.TestCase):
         self.assertEqual(kinds, {"home path", "email", "slack id", "private lan ip", "tailnet ip", "named ssh key", "personal hostname"})
         self.assertEqual(find_personal_identifiers("~/.ssh/id_ed25519 100.10.0.1"), [])
 
+    def test_relative_root_finds_changed_files(self):
+        import os, tempfile
+        with tempfile.TemporaryDirectory() as td:
+            def git(*a):
+                subprocess.run(["git", "-C", td, "-c", "user.name=t", "-c", "user.email=t@example.com", *a],
+                               check=True, capture_output=True)
+            git("init", "-q", "-b", "main")
+            (Path(td) / "skills").mkdir()
+            (Path(td) / "skills" / "a.md").write_text("ok\n")
+            git("add", "-A"); git("commit", "-qm", "base"); git("branch", "base")
+            (Path(td) / "skills" / "a.md").write_text("me@gmail.com\n")
+            git("commit", "-qam", "change")
+            old = os.getcwd()
+            os.chdir(td)
+            try:
+                files = changed_files(Path("skills"), base="base")
+            finally:
+                os.chdir(old)
+            self.assertEqual([f.name for f in files], ["a.md"])
+            self.assertIn(str(files[0]), scan_personal(files))
+
     def test_missing_base_ref_fails_closed(self):
         with self.assertRaises(RuntimeError):
             changed_files(REPO_ROOT, base="refs/heads/definitely-not-a-ref")

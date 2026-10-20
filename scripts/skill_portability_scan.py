@@ -45,6 +45,7 @@ def find_personal_identifiers(text: str) -> list:
 
 def changed_files(root: Path, base: str = "origin/main") -> list:
     """Files under root changed on HEAD relative to base; raises RuntimeError if git/base is unavailable."""
+    root = Path(root).resolve()
     try:
         out = subprocess.run(
             ["git", "-C", str(root), "diff", "--name-only", "--diff-filter=AM", f"{base}...HEAD", "--", str(root)],

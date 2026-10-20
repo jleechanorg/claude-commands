@@ -212,7 +212,7 @@ The plain-text `send_surface` command FAILS cross-workspace. Always use the JSON
 |---|---|---|
 | `surface.send_text` (JSON) | ✅ always works | Include `\n` in text for enter |
 | `send_surface` (plain text) | ❌ fails cross-workspace | Only works if workspace is selected |
-| `read_screen` | ❌ current workspace only | Use index, not UUID |
+| `read_screen` | ❌ do not use | Selects/depends on the focused workspace; read with `cmux capture-pane --workspace … --surface …` instead |
 
 ## Sending text (headless, cross-workspace)
 
@@ -257,18 +257,11 @@ printf "send_key_surface $CODER_UUID ctrl-k\n" | nc -U $SOCK
 
 Available: `ctrl-c`, `ctrl-d`, `enter`, `tab`, `escape`, `up`, `down`, `left`, `right`
 
-## Reading a pane's screen (current workspace only)
+## Reading a pane's screen
 
-`read_screen` requires a surface **index** (not UUID) and only works when the target is in the user's currently focused workspace. Obtain the index from `list_surfaces` output (e.g. `1: F05FCE84-... cmux_coder` → index is `1`).
+Read with `cmux capture-pane --workspace <ws> --surface <sf> --scrollback --lines <n>` (headless, cross-workspace). Never use `read_screen`: it needs a surface index and the user's focused workspace.
 
-```bash
-# IDX = index from list_surfaces for the focused workspace (replace with actual value)
-IDX=1
-printf "read_screen $IDX --lines 40\n" | nc -U $SOCK
-printf "read_screen $IDX --lines 80 --scrollback\n" | nc -U $SOCK
-```
-
-If the user is in a different workspace, infer state from the filesystem instead:
+To infer state from the filesystem instead:
 ```bash
 cd /path/to/project && git log --oneline -5
 ls -lt src/   # recently modified files
@@ -288,7 +281,7 @@ CODER_UUID=$(printf "list_surfaces $WS_UUID\n" | nc -U $SOCK \
 # 2. Send task headlessly (no workspace switch needed)
 printf '{"method":"surface.send_text","params":{"surface_id":"'"$CODER_UUID"'","text":"cargo build && cargo test\\n"}}\n' | nc -U $SOCK
 
-# 3. Monitor progress via filesystem (no read_screen needed)
+# 3. Monitor progress via filesystem (no screen read needed)
 sleep 30
 cd /path/to/project && git log --oneline -3
 ```
@@ -323,5 +316,5 @@ printf '{"method":"surface.send_text","params":{"surface_id":"'"$TAB2"'","text":
 2. **Find workspace by NAME** (`list_workspaces` → grep name → get UUID).
 3. **Use JSON API for sends** — `surface.send_text` works headlessly cross-workspace.
 4. **Append `\n` to text** — acts as Enter key submission.
-5. **Read by index only** — `read_screen` requires being in the right workspace; use git/filesystem for cross-workspace monitoring.
+5. **Read with `capture-pane` only** — never `read_screen`; use git/filesystem for monitoring that needs no screen read.
 6. **Create workspaces via JSON** — `workspace.create` + `surface.create` for multi-tab setups.
