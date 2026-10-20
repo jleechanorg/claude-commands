@@ -196,13 +196,10 @@ below by this order, don't pick whichever is more convenient):**
    dominated the critical path on changes that were a few lines each).
 3. **Bounded mechanical work that's too large for a handful of calls, but
    doesn't need adversarial review,** goes to the cheapest capable tier
-   (AGY CLI: `--model gemini-3.8-flash-high` or `gemini-3.8-flash-medium`;
-   Antigravity `invoke_subagent`: `Model: "flash"` or `"flash_lite"`, NEVER
-   `Model: "inherit"`; Codex: a `gpt-6-luna` subagent; Claude: haiku/mini) per
-   Model-tier routing below — not an expensive root/pro model. For simple
-   independent tasks, the Flash/Luna lane may also drive the task through its
-   focused checks and deliver the result; keep the root session responsible for
-   scope and integration.
+   (Codex: a `gpt-6-luna` subagent; Claude: haiku/mini) per Model-tier routing
+   below — not the AGY pair. For simple independent tasks, the Luna lane may
+   also drive the task through its focused checks and deliver the result; keep
+   the root session responsible for scope and integration.
 4. **Only once scope actually justifies a dedicated coder + independent
    verifier** (a track large enough to earn its own context, where a second
    independent pass adds real value) do you reach for the AGY pair described
