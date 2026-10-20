@@ -13,10 +13,10 @@ The shared catalog preserves host-installed `/advice` and `/web-advice` integrat
 ## Connection
 
 ```bash
-ssh jeff-ubuntu          # alias in ~/.ssh/config → $USER@192.168.254.128
+ssh jeff-ubuntu          # alias in ~/.ssh/config → $USER@<ubuntu-lan-ip>
 ```
 
-- **Host:** `jeff-ubuntu` / `192.168.254.128` (LAN only)
+- **Host:** `jeff-ubuntu` / `<ubuntu-lan-ip>` (LAN only)
 - **User:** `$USER`
 - **Key:** `~/.ssh/id_jeff_ubuntu` (passwordless, no `-i` flag needed via alias)
 - **OS:** Ubuntu 24.04, kernel 6.17, x86_64
@@ -203,7 +203,7 @@ rsync -avz /local/ jeff-ubuntu:/remote/       # sync directory
 
 ## Caveats
 
-- Machine is LAN-only (192.168.254.x) — not reachable when off same network; use the Tailscale fallback above when off-LAN
-- If SSH fails, check if machine is on via `ping 192.168.254.128`, then try Tailscale before assuming it's down
+- Machine is LAN-only (<lan-subnet>) — not reachable when off same network; use the Tailscale fallback above when off-LAN
+- If SSH fails, check if machine is on via `ping <ubuntu-lan-ip>`, then try Tailscale before assuming it's down
 - RustDesk (peer ID `406402544`) is the fallback for GUI access if SSH is down
 - Always prefer SSH over RustDesk for CLI work — RustDesk CLI steering is not possible headlessly on macOS without Accessibility permission

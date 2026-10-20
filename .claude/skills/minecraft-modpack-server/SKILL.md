@@ -151,7 +151,11 @@ mkdir -p "$BACKUP_DIR"
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
 BACKUP_FILE="$BACKUP_DIR/world_${TIMESTAMP}.tar.gz"
 echo "[BACKUP] Starting at $(date)"
-tar -czf "$BACKUP_FILE" -C "$SERVER_DIR" world
+if ! tar -czf "$BACKUP_FILE" -C "$SERVER_DIR" world || [ ! -s "$BACKUP_FILE" ]; then
+    echo "[BACKUP] FAILED: archive not created; keeping existing backups"
+    rm -f "$BACKUP_FILE"
+    exit 1
+fi
 SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
 echo "[BACKUP] Saved: $BACKUP_FILE ($SIZE)"
 BACKUP_COUNT=$(ls -1t "$BACKUP_DIR"/world_*.tar.gz 2>/dev/null | wc -l)
@@ -167,7 +171,7 @@ chmod +x ~/minecraft-server/backup.sh
 
 Add hourly cron:
 ```bash
-(crontab -l 2>/dev/null | grep -v "minecraft/backup.sh"; echo "0 * * * * $HOME/minecraft-server/backup.sh >> $HOME/minecraft-server/backups/backup.log 2>&1") | crontab -
+(crontab -l 2>/dev/null | grep -vF "minecraft-server/backup.sh"; echo "0 * * * * $HOME/minecraft-server/backup.sh >> $HOME/minecraft-server/backups/backup.log 2>&1") | crontab -
 ```
 
 ## Pitfalls

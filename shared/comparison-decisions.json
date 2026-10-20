@@ -16772,7 +16772,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Cites ~/.hermes/agent-orchestrator paths and Hermes agent names; examples tied to Hermes/AO incident threads. Retained locally rather than published."
   },
   {
     "skill": "agentf",
@@ -16811,7 +16811,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored; every lookup goes through the Hermes web_extract tool, which has no equivalent in other runtimes. Retained locally rather than published."
   },
   {
     "skill": "backend-justified",
@@ -16837,7 +16837,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored; fallback table depends on Hermes web_extract versus curl behaviour. Retained locally rather than published."
   },
   {
     "skill": "blogwatcher",
@@ -16876,7 +16876,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Selects among three Hermes skills/creative/ design skills that are not in this catalog. Retained locally rather than published."
   },
   {
     "skill": "cli",
@@ -16889,7 +16889,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Wraps the inference.sh infsh CLI through the Hermes terminal tool; needs an infsh account and Hermes tool names. Retained locally rather than published."
   },
   {
     "skill": "clip",
@@ -16980,7 +16980,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Stores watch state in ~/.hermes/competitor-watches and schedules ticks via Hermes cron plus web_extract; overlaps blogwatcher. Retained locally rather than published."
   },
   {
     "skill": "context-token-audit",
@@ -17006,7 +17006,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes skills/creative skill with Hermes metadata; overlaps superpowers-brainstorming already in the catalog. Retained locally rather than published."
   },
   {
     "skill": "css-variable-coverage-test-strip-comments",
@@ -17084,7 +17084,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored; relies on Hermes read_file/web_extract tools; overlaps catalog document-standards. Retained locally rather than published."
   },
   {
     "skill": "dogfood",
@@ -17097,7 +17097,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Requires the Hermes browser toolset (browser_navigate/snapshot/vision); overlaps catalog browser-testing. Retained locally rather than published."
   },
   {
     "skill": "dot-portfolio-coordinator",
@@ -17123,7 +17123,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Uses Hermes execute_code and web_extract for the DDGS workflow; web search is already provided by runtime tools. Retained locally rather than published."
   },
   {
     "skill": "email-inbox-triage",
@@ -17136,7 +17136,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored; assumes a Hermes mail connector and draft tools; overlaps catalog gmail skill. Retained locally rather than published."
   },
   {
     "skill": "external-agent-slack-handoff-reply",
@@ -17175,7 +17175,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored flexible-engine feedback workflow tied to Hermes issue tooling; overlaps github-issues. Retained locally rather than published."
   },
   {
     "skill": "find-nearby",
@@ -17188,7 +17188,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored; relies on Hermes Telegram location pins and tool names. Retained locally rather than published."
   },
   {
     "skill": "frontend-widget-reinstantiation-leak",
@@ -17214,7 +17214,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hardcodes the worldarchitecture-ai GCP project, a dev-runner service account and a WorldArchitect key-leak incident. Retained locally rather than published."
   },
   {
     "skill": "gha-workflow-extraction-drift",
@@ -17240,7 +17240,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Reports jleechanorg/worldarchitect.ai workflows and defers to hermes-deploy-pipeline; org-specific runner labels. Retained locally rather than published."
   },
   {
     "skill": "github-auth",
@@ -17253,7 +17253,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored token setup (hermes-agent PAT name, ~/.git-credentials plaintext store); overlaps catalog github-cli-reference. Retained locally rather than published."
   },
   {
     "skill": "github-issue-to-pr",
@@ -17266,7 +17266,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored issue-to-PR flow using Hermes tooling; overlaps catalog draft-first-pr and pr-workflow-manager. Retained locally rather than published."
   },
   {
     "skill": "github-issues",
@@ -17279,7 +17279,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Reads GITHUB_TOKEN from $HERMES_HOME/.env; overlaps catalog github-cli-reference. Retained locally rather than published."
   },
   {
     "skill": "github-pr-automation-debug",
@@ -17305,7 +17305,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored song-generation skill needing the HeartMuLa model and GPU; no catalog home. Retained locally rather than published."
   },
   {
     "skill": "hermes-agent-skill-authoring",
@@ -17370,7 +17370,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Built around the Hermes write_file rejection and execute_code workaround. Retained locally rather than published."
   },
   {
     "skill": "kanban-orchestrator",
@@ -17448,7 +17448,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes WIKI_PATH in ~/.hermes/.env and web_extract ingest; overlaps catalog karpathy-wiki and wiki-ingest. Retained locally rather than published."
   },
   {
     "skill": "local-testable-infra-pattern",
@@ -17461,7 +17461,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "deferred: unreviewed; portability of its infra-testability pattern not assessed."
   },
   {
     "skill": "luna",
@@ -17500,7 +17500,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored; overlaps catalog nextsteps and document-standards workflows. Retained locally rather than published."
   },
   {
     "skill": "merge-reconciler",
@@ -17565,7 +17565,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Vault path resolved via $HERMES_HOME/.env OBSIDIAN_VAULT_PATH; needs a personal vault. Retained locally rather than published."
   },
   {
     "skill": "parallel-cli",
@@ -17578,7 +17578,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Third-party Parallel CLI that overlaps Hermes native web_search/web_extract; needs a vendor account. Retained locally rather than published."
   },
   {
     "skill": "parallel-investigate-and-dispatch",
@@ -17630,7 +17630,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "deferred: unreviewed; needs a headless emulator and ROM, portability not assessed."
   },
   {
     "skill": "pr-pinned-aggregate-receipt",
@@ -17656,7 +17656,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored; uses Hermes cron and web_extract to poll prices. Retained locally rather than published."
   },
   {
     "skill": "read-grok-shared-link",
@@ -17708,7 +17708,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Uses Hermes delegate_task batch mode; overlaps the built-in /simplify skill. Retained locally rather than published."
   },
   {
     "skill": "slack-saved-later-triage",
@@ -17747,7 +17747,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Drives the Hermes Spotify toolset (7 tools) and `hermes auth spotify`. Retained locally rather than published."
   },
   {
     "skill": "streaming-utf8-mojibake",
@@ -17773,7 +17773,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Uses Hermes delegate_task; overlaps catalog superpowers-subagent-driven-development. Retained locally rather than published."
   },
   {
     "skill": "wa-closed-pr-reship",
@@ -17838,7 +17838,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Falls back to Hermes browser_navigate; overlaps catalog browser-testing and playwright-ui-testing. Retained locally rather than published."
   },
   {
     "skill": "webhook-subscriptions",
@@ -17864,7 +17864,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored; assumes Hermes calendar/memory connectors; overlaps nextsteps. Retained locally rather than published."
   },
   {
     "skill": "whisper",
@@ -17903,7 +17903,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Hermes-authored (hands off to Hermes subagent-driven-development); overlaps catalog superpowers-writing-plans. Retained locally rather than published."
   },
   {
     "skill": "xitter",
@@ -17916,7 +17916,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
+    "reason": "Requires upstream x-cli with ~/.config/x-cli/.env X API credentials; overlaps xurl. Retained locally rather than published."
   },
   {
     "skill": "xurl",
@@ -17929,20 +17929,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Depends on Hermes-specific tools or overlaps existing catalog skills; not reviewed as portable; retain locally rather than publish."
-  },
-  {
-    "skill": "linux-steer",
-    "sources": [
-      "mac_claude"
-    ],
-    "content_variant_groups": [
-      [
-        "mac_claude"
-      ]
-    ],
-    "decision": "preserve-unmanaged-local-package",
-    "reason": "cmux/terminal-fleet plumbing; retain locally rather than publish."
+    "reason": "Requires xurl CLI with ~/.xurl X OAuth credentials; carries hermes upstream_skill metadata. Retained locally rather than published."
   },
   {
     "skill": "testflight",

@@ -56,7 +56,7 @@ applicable user authority. If a selected document changes, re-review its new byt
 Before dispatch, use existing quota/session receipts and non-model capability
 checks to identify viable reviewers and whether they can meet the approval quorum.
 Do not spend a separate paid model call solely to probe quota; when availability is
-unknown, launch selected review lanes concurrently. Only A, C, and D are approval
+unknown, launch selected review lanes concurrently. Only A and C are approval
 reviewers. `/research` seats, including Gemini, may inform the
 synthesis but never substitute for a quorum vote.
 

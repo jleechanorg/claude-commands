@@ -19,13 +19,13 @@ Monitor an openclaw task in a Slack thread, detect fabrication and stalls, and n
 /babysit-openclaw <thread_ts> [channel_id]
 ```
 
-Default channel: `C0AKYEY48GM`
+Default channel: `<slack-channel>`
 
 ## Step 1 — Read the thread
 
 ```python
 # Use mcp__slack__conversations_replies
-# channel_id: C0AKYEY48GM (or provided)
+# channel_id: <slack-channel> (or provided)
 # thread_ts: <from argument>
 ```
 
@@ -59,7 +59,7 @@ Post via the cmux bot token from `$CMUX_BOT_TOKEN` env var (NOT mcp__slack — p
 ```python
 import json, os, urllib.request
 
-msg = "[AI Terminal: <workspace>] <@U0AEZC7RX1Q> <nudge text>"
+msg = "[AI Terminal: <workspace>] <@<openclaw-bot-user-id>> <nudge text>"
 
 # Read cmux bot token from environment (set in ~/.bashrc)
 token = os.environ.get("CMUX_BOT_TOKEN")
@@ -67,7 +67,7 @@ if not token:
     raise RuntimeError("CMUX_BOT_TOKEN not set — add it to ~/.bashrc. NEVER put it in openclaw.json.")
 
 payload = json.dumps({
-    "channel": "C0AKYEY48GM",
+    "channel": "<slack-channel>",
     "thread_ts": "<thread_ts>",
     "text": msg
 })
@@ -81,7 +81,7 @@ with urllib.request.urlopen(req) as resp:
     print(f"OK ts={d.get('ts')}" if d.get("ok") else f"ERROR: {d.get('error')}")
 ```
 
-Token source: `$CMUX_BOT_TOKEN` env var from `~/.bashrc` (cmux bot, app A0AHF4EBZPE).
+Token source: `$CMUX_BOT_TOKEN` env var from `~/.bashrc` (cmux bot, app <cmux-bot-app-id>).
 
 ### Nudge message guidelines
 
@@ -117,11 +117,11 @@ $HOME/.openclaw/workspace/hermes-agent
 
 ## Key constants
 
-- openclaw bot user ID: `U0AEZC7RX1Q`
-- default channel: `C0AKYEY48GM`
-- token source: `$CMUX_BOT_TOKEN` env var from `~/.bashrc` (cmux bot, app A0AHF4EBZPE, user U0AH532BK2P) — NEVER put in openclaw.json
+- openclaw bot user ID: `<openclaw-bot-user-id>`
+- default channel: `<slack-channel>`
+- token source: `$CMUX_BOT_TOKEN` env var from `~/.bashrc` (cmux bot, app <cmux-bot-app-id>, user <cmux-bot-user-id>) — NEVER put in openclaw.json
 - AI identity prefix: `[AI Terminal: <workspace-name>]` (required by CLAUDE.md)
 
 ## Why mcp__slack doesn't work for nudging
 
-`mcp__slack__conversations_add_message` posts as the openclaw bot (`$OPENCLAW_BOT_USER_ID`). openclaw's self-loop prevention ignores messages from its own account. The OpenClaw gateway (`http://127.0.0.1:18789`) may be webchat-bound with no Slack session target. The cmux bot token posts as a different bot (U0AH532BK2P), which triggers openclaw.
+`mcp__slack__conversations_add_message` posts as the openclaw bot (`$OPENCLAW_BOT_USER_ID`). openclaw's self-loop prevention ignores messages from its own account. The OpenClaw gateway (`http://127.0.0.1:18789`) may be webchat-bound with no Slack session target. The cmux bot token posts as a different bot (<cmux-bot-user-id>), which triggers openclaw.

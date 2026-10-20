@@ -47,10 +47,9 @@ cmux tree --all --workspace "$WS"
 
 # 3. Read the target HEADLESSLY. NEVER focus/select/activate anything to read:
 #    focusing changes the user's visible workspace (operator directive, repeated).
-#    Cross-workspace `read-screen --workspace X --surface Y` routing is historically
-#    unreliable, so verify identity by CONTENT and prefer filesystem evidence:
-#      cmux read-screen --surface <uuid> --lines <n>      # explicit target, no focus
-#      cmux capture-pane --surface <uuid> --scrollback    # explicit target, no focus
+#    Use capture-pane only (read-screen can return the focused surface), and verify
+#    identity by CONTENT, preferring filesystem evidence:
+#      cmux capture-pane --workspace <ws> --surface <uuid> --scrollback --lines <n>
 #    If the read cannot be trusted, read the transcript/STATE.md/checkpoint files
 #    (~/.claude/projects/**.jsonl, roadmap STATE files, git worktrees) instead of
 #    focusing. Banned for reading: `cmux focus-surface`, `cmux select-workspace`,
@@ -98,8 +97,7 @@ cmux capture-pane --workspace workspace:N --surface surface:M --lines 25
 Every reply that reports a `cmux send` action MUST include, in the same reply:
 
 1. **The exact text that was typed** — verbatim copy of the string passed to `cmux send`.
-2. **The cmux terminal response** — verbatim transcript of what `cmux capture-pane` /
-   `cmux read-screen` returned AFTER the `cmux send-key enter` settle window
+2. **The cmux terminal response** — verbatim transcript of what `cmux capture-pane` returned AFTER the `cmux send-key enter` settle window
    (typically 5-15s). Specifically, the agent's first action after absorption.
 3. **Submission status** — explicit verdict: "submitted (churning label X)",
    "not submitted (text still at ❯ prompt)", or "blocked (no churn, retried N times)".
@@ -139,8 +137,7 @@ churning label.
 - "I sent the message" (no Enter proof)
 - "The agent should have received it" (no churning label)
 - `cmux send` with no follow-up `cmux send-key enter`
-- Sending to a surface that hasn't been focused (the global focus may be on a
-  different workspace; use the raw RPC `surface.focus` if needed)
+- Focusing or selecting a surface to send; always target with explicit `--workspace`/`--surface`
 
 ### Worktree-pointer strategy for long briefs
 
@@ -251,7 +248,7 @@ printf '{"method":"surface.create","params":{"workspace_id":"UUID"}}\n' | nc -U 
 
 ## Special keys (when \n in text isn't enough)
 
-For key combos, fall back to plain text protocol (requires workspace focus):
+For key combos, fall back to plain text protocol (the target workspace must already be focused; do not focus it yourself, prefer `cmux send-key --workspace <ws> --surface <sf>`):
 ```bash
 printf "send_key_surface $CODER_UUID ctrl-c\n" | nc -U $SOCK
 printf "send_key_surface $CODER_UUID ctrl-a\n" | nc -U $SOCK
