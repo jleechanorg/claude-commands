@@ -40,8 +40,12 @@ A recurring failure pattern: a Claude Code or Codex surface has **finished its t
 
 **Unblock rule — choose the recommended option:**
 1. If the recommended/default is visible (the `❯` highlighted line, an option labelled `Recommended` / `(Recommended)` / `Yes`, or the agent's own stated recommendation), send it via the headless steer path:
-   - Select menu → send `"\n"` (Enter) to accept the highlighted option.
-   - Yes/no → send `y` (when Yes is recommended) then Enter.
+   - Select menu → send the Enter **key event**: `cmux send-key --surface <sf> enter`
+     (`cmux send` refuses while a question/permission dialog is open unless `--force`
+     is passed, so a text send is the wrong tool here; `--force` is only for a dialog you
+     have already decided to answer).
+   - Yes/no → `cmux send-key --surface <sf> y` (when Yes is recommended), then
+     `cmux send-key --surface <sf> enter`.
    - Numbered options → send the recommended option's number/text + Enter.
 2. If the agent asked a free-text question and stated its recommendation, reply with a one-line approval naming that recommendation (e.g. `Yes, do <recommended>.`).
 3. Send via the socket `surface.send_text` / `cmux send` call, then verify with `capture-pane` that the dialog cleared and the agent resumed working.

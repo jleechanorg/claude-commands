@@ -79,7 +79,9 @@ Every reply that reports a `cmux send` action MUST include, in the same reply:
 
 1. **The exact text that was typed** — verbatim copy of the string passed to `cmux send`.
 2. **The cmux terminal response** — verbatim transcript of what `cmux capture-pane` returned AFTER the submit settle window
-   (typically 5-15s, counted from the Enter). Specifically, the agent's first action after absorption.
+   (typically 5-15s, counted from the Enter). Specifically, the agent's first action after
+   absorption — for a **queued** submission the agent has not acted yet, so report the
+   queued line itself as the observed response and do not claim an action.
 3. **Submission status** — explicit verdict: "submitted (churning label X)",
    "not submitted (text still at ❯ prompt)", "queued (Press up to edit queued
    messages — accepted, agent busy)", or "blocked (no Enter accepted, retried N times)".
