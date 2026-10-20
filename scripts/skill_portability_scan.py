@@ -25,6 +25,7 @@ PERSONAL_PATTERNS = (
     ("home path", re.compile(r"(?:/home|/Users)/([A-Za-z0-9_.-]+)")),
     ("email", re.compile(r"[A-Za-z0-9._+-]+@(?!example\.|users\.noreply\.github\.com)(?:gmail|googlemail|outlook|hotmail|yahoo|icloud|proton(?:mail)?)\.[a-z.]+")),
     ("slack id", re.compile(r"\b[CUAW]0[A-Z0-9]{8,}\b")),
+    ("personal hostname", re.compile(r"\bjeffreys-[a-z0-9-]+")),
     ("private lan ip", re.compile(r"\b192\.168\.\d+\.\d+\b")),
     ("tailnet ip", re.compile(r"\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+\b")),
     ("named ssh key", re.compile(r"\.ssh/id_(?!(?:rsa|ed25519|ecdsa|dsa)\b)[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*")),

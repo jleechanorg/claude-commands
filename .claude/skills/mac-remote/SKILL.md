@@ -36,7 +36,7 @@ If both the LAN alias and `macbook-ts` fail, see [cross-machine-ssh-tier](../cro
 Before SSHing, check if you're already on the MacBook:
 
 ```bash
-if [[ "$(uname -s)" == "Darwin" && "$(hostname -s)" == "jeffreys-macbook-pro" ]]; then
+if [[ "$(uname -s)" == "Darwin" && "$(hostname -s)" == "<mac-hostname>" ]]; then
   echo "local MacBook — no SSH needed"
 else
   ssh macbook '...'  # remote
