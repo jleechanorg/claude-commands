@@ -20,7 +20,7 @@ SKILL_ROOTS = (".claude/skills", "shared/aliases", "portable/skills")
 
 class PersonalIdentifierTest(unittest.TestCase):
     def test_detects_personal_values(self):
-        text = "/home/alice/x /Users/bob/y me@gmail.com C0ABCDEFGHJ 192.168.1.5 100.67.1.2 ~/.ssh/id_my_box jeffreys-macbook-pro"
+        text = "/home/alice/x /Users/bob/y me@gmail.com C0ABCDEFGHJ 192.168.1.5 100.67.1.2 ~/.ssh/id_my_box alices-macbook-pro"
         kinds = {k for k, _ in find_personal_identifiers(text)}
         self.assertEqual(kinds, {"home path", "email", "slack id", "private lan ip", "tailnet ip", "named ssh key", "personal hostname"})
         self.assertEqual(find_personal_identifiers("~/.ssh/id_ed25519 100.10.0.1"), [])

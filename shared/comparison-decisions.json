@@ -17214,7 +17214,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Hardcodes the worldarchitecture-ai GCP project, a dev-runner service account and a WorldArchitect key-leak incident. Retained locally rather than published."
+    "reason": "Hardcodes a specific GCP project, a runner service account and an incident-specific key-leak narrative. Retained locally rather than published."
   },
   {
     "skill": "gha-workflow-extraction-drift",
@@ -17240,7 +17240,7 @@
       ]
     ],
     "decision": "preserve-unmanaged-local-package",
-    "reason": "Reports jleechanorg/worldarchitect.ai workflows and defers to hermes-deploy-pipeline; org-specific runner labels. Retained locally rather than published."
+    "reason": "Reports a specific organization's workflows and depends on a private deploy-pipeline skill and org-specific runner labels. Retained locally rather than published."
   },
   {
     "skill": "github-auth",
