@@ -32,7 +32,7 @@ Every command below is scoped to the same explicitly quoted repo path, and every
 
 4. **Evidence path** — identify where artifacts will land and say whether that path is verified or only expected. One small real artifact is enough, and only when the task truly needs it.
 
-   **If the response is lost or times out, the outcome is `uncertain`, not failed.** Write/upload requests can succeed server-side after the response is lost. **Read back first** (list the destination, fetch the object, check the PR comment). Retry **once** only when the readback shows nothing landed **and** the failure is transient transport, within whatever call, spend or retry authority the task already has — this adds no new cap. **Never** retry an access denial, a policy refusal, or an explicit stop; report those instead.
+   **If the response is lost or times out, the outcome is `uncertain`, not failed.** Write/upload requests can succeed server-side after the response is lost. **Read back first** (list the destination, fetch the object, check the PR comment). Retry **only** when the readback shows nothing landed **and** the failure is transient transport, within whatever call, spend or retry authority the task already has — this sets no count and adds no new cap. **Never** retry an access denial, a policy refusal, or an explicit stop; report those instead.
 
 5. **Auth state** — state whether an authenticated session exists. An unauthenticated `401` has an **unknown cause** until verified: missing token, invalid or expired token, or a token for the wrong audience. An **expired token alongside a valid browser session** is a real combination, so a `401` never proves "no session exists" and a valid session never proves a token works.
 
