@@ -32,7 +32,7 @@ This section is the single owner of the rule; other cmux skills point here. **Me
 
 **Never** use explicit selection/focus commands (`select-workspace`, `workspace.select`, `workspace-action --action focus`, `focus-window`, `focus-surface`, `surface.focus`) — they are never needed for a read/steer and only move the operator's view.
 
-- **Proof of submission:** a later `capture-pane` showing the text accepted (a "Steering:" queued line, or new activity/spinner), never the socket `ok` alone.
+- **Proof of submission:** a later `capture-pane` showing the text accepted (the verdicts in § "`cmux send` newline rule": a `Press up to edit queued messages` line, a churning label, or text gone), never the socket `ok` alone. Where `capture-pane` genuinely does not exist (socket-only mode), the send is reported UNVERIFIED, not confirmed.
 
 ### `cmux send` newline rule (measured 2026-10-20 — the "you didn't submit input" incident)
 
@@ -86,7 +86,8 @@ A send without a submit never reaches the agent: the socket `text` must carry th
 Enter (`\n`), and the CLI form must submit with exactly one Enter — either the
 literal `\n` at the end of the argument, or a following `cmux send-key enter`, never
 both (verified 2026-07-16: user flagged "you always forget to send" after the fable
-iOS pivot bootstrap). The submit ritual below is a hard contract for every send to a
+iOS pivot bootstrap; the same failure was caught again on 2026-10-20 with a `/goal`
+left in the composer). The submit ritual below is a hard contract for every send to a
 cmux surface.
 
 **Why it is counted as 3 steps.** The 2026-07-16 form is labelled **4-step**

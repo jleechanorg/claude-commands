@@ -167,10 +167,18 @@ cmux-touching skill.
    socket are running. The surface UUID and socket path come from the environment the app
    exported to your session (`$CMUX_SURFACE_ID`, `$CMUX_SOCKET_PATH`) — do not shell out to
    `cmux identify`, which needs the CLI you are working around. In this mode `capture-pane`
-   is unavailable too, so rules 2 and 3 above cannot run as written: send one single-line
-   text, then verify from the session's own output (the goal footer appearing in the target,
-   or the target acting on the goal) and report `goal set, shell-level verification
-   unavailable` rather than claiming a confirmed goal. The `\n` must be the literal
+   is unavailable too, so rules 2 and 3 above cannot run as written. Send one single-line
+   text, then report the one verdict that is actually supported:
+   - `goal sent — UNVERIFIED (shell-level verification unavailable)` when the socket
+     returned `ok:true` but none of the three Success-criterion indicators was observed;
+   - a confirmed goal ONLY if one of those three indicators is directly observable
+     without `capture-pane`.
+
+   "The target later acted on the goal" is **not** an accepted indicator here: acting on a
+   goal does not prove the footer/Stop-hook state this skill requires, so it cannot upgrade
+   an unverified send. The Output Contract's verbatim `capture-pane` requirement is also
+   replaced in this mode — report the verbatim socket response plus the UNVERIFIED status
+   instead of claiming a transcript you could not take. The `\n` must be the literal
    two-character escape, never a real newline:
    ```bash
    SURFACE_UUID="${CMUX_SURFACE_ID:?no cmux surface id in this environment}"
