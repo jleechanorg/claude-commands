@@ -78,6 +78,13 @@ cross-reference rather than rewriting both.
 | Hermes | `~/.hermes/workspace/SOUL.md`, only for Hermes behavior |
 | Hermes routing | `~/.hermes/skills/RESOLVER.md`, only for command or skill routing |
 
+
+## Reference - authoritative sources (researched 2026-10-12)
+
+- **Claude Code memory docs**: https://code.claude.com/docs/en/memory (updated 2026-10-08) - load order: managed policy -> user (`~/.claude/CLAUDE.md`) -> project (`./CLAUDE.md` or `./.claude/CLAUDE.md`); Claude Code can read a repo's `AGENTS.md` in place of CLAUDE.md.
+- **`@` import semantics** (same page, "Import additional files"): `@path/to/file` expands into context at launch; relative paths resolve against the **importing file**, not the cwd; recursive imports cap at **4 hops**; spaces need backslash escapes; code spans/fences are skipped. Imports do **not** reduce context cost.
+- **Sizing/scoping**: target **under 200 lines** per CLAUDE.md; prefer path-scoped `.claude/rules/` (load only for matching files) over imports; run `/doctor prompt-audit` (v2.1.283+) to find stale/conflicting instructions.
+
 ## Brief-report contract (operational table goes in Markdown, not chat)
 
 When `/up` writes or updates instructions, **produce a brief Markdown

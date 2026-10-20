@@ -10,6 +10,8 @@ Three phases, strictly in order:
 
 Never steer from a short tail, never use regex/keyword classifiers to guess terminal state, and never skip cross-surface deduplication.
 
+> **Headless only.** **Never select, focus, switch, or reorder a workspace/surface** (`select-workspace`, `workspace-action --action focus`, `focus-window`, `workspace.select`, `surface.focus`). Reads use **`cmux capture-pane --workspace <ws> --surface <sf> --scrollback --lines <n>` exclusively** and steers (`cmux send` + `cmux send-key`, or the socket `surface.send_text` call) do **not** change the operator's selected workspace. **Never use `cmux read-screen`** — it can return the focused surface's content and can steal focus; `capture-pane` is the only read path this skill uses (`scripts/scan.py` already does this). Read-only listings (`cmux tree --all --json`, `cmux list-workspaces`) never select. Always pass `--focus false` to `new-surface` / `new-workspace`. Do **not** create or close workspaces/surfaces on the operator's live desktop without asking first (the only operation that disturbed the view). Never `select-workspace` / `focus` / `workspace-action --action focus`. The same rule is stated in `~/.claude/skills/cmux-steer/SKILL.md`.
+
 **Always `/parallel`. `/parallel` is the default execution mode for every phase, not an optimization.** If two items do not depend on each other, they MUST run concurrently — never as `item N` then `item N+1`. Concretely: assessment fans out across disjoint subagents (Phase 2), dedupe reads every shard concurrently, and steering dispatches to all owners at once (Phase 3). Before any sequential loop over surfaces/shards/lines, ask "can `/parallel` run these at the same time?" and if yes, fan out. The only serialization allowed is a genuine data dependency (a later step needs an earlier step's output) or a bounded resource cap — see `~/.claude/skills/parallelize-to-ceiling/SKILL.md`. Report the degree of parallelism achieved (e.g. "6 shards, 6 subagents") in the final report.
 
 ---
@@ -17,12 +19,64 @@ Never steer from a short tail, never use regex/keyword classifiers to guess term
 ## `/parallel` Is the Default (Never Serialize Independent Work)
 
 Apply this at every phase boundary:
-- **Capture (Phase 1)**: one mechanical pass; still parallelize per-surface reads when the collector supports it (do not `read-screen` surface-by-surface in a shell loop).
+- **Capture (Phase 1)**: one mechanical pass; still parallelize per-surface reads when the collector supports it (do not capture surface-by-surface in a shell loop).
 - **Assess (Phase 2)**: partition surfaces into `min(surface_count, 10)` disjoint `/parallel` subagents — target 6–10 shards only when the fleet has enough surfaces. Spawn all shards in ONE fan-out call; never assess shard 1, wait, then shard 2.
 - **Dedupe (Phase 2)**: build the ownership map from all shard results concurrently.
 - **Steer (Phase 3)**: send to all deduped owners concurrently, then verify all of them in one parallel read pass. Do not steer+wait per surface.
 
 If you catch yourself in a sequential per-item loop, stop and convert it to a `/parallel` fan-out.
+
+---
+
+## Stalled-on-question unblock (Claude / Codex) — look for it explicitly
+
+A recurring failure pattern: a Claude Code or Codex surface has **finished its turn and is stopped on a question**, waiting for an answer — so it reads as "idle" but is NOT done. During every read (Phase 2), explicitly scan each surface's tail for this pattern and unblock it.
+
+**Signatures (read the surrounding lines, never a bare keyword):**
+- A yes/no confirmation: `Do you want to proceed?`, `(y/n)`, `[y/N]`, `Allow ...?`.
+- A numbered / selectable menu: a `❯ 1. ...` highlighted line, `Enter to select`, `↑/↓ to move`.
+- An `AskUserQuestion` / plan-approval block: a question followed by 2–4 options, one marked recommended/default.
+- A single free-text prompt asking `Should I ...?` / `Which ...?` where the agent states its own recommendation.
+
+**Unblock rule — choose the recommended option:**
+1. If the recommended/default is visible (the `❯` highlighted line, an option labelled `Recommended` / `(Recommended)` / `Yes`, or the agent's own stated recommendation), send it via the headless steer path:
+   - Select menu → send `"\n"` (Enter) to accept the highlighted option.
+   - Yes/no → send `y` (when Yes is recommended) then Enter.
+   - Numbered options → send the recommended option's number/text + Enter.
+2. If the agent asked a free-text question and stated its recommendation, reply with a one-line approval naming that recommendation (e.g. `Yes, do <recommended>.`).
+3. Send via the socket `surface.send_text` / `cmux send` call, then verify with `capture-pane` that the dialog cleared and the agent resumed working.
+
+**Never auto-answer a genuine human decision** — destructive/irreversible actions, production `MERGE APPROVED`, scope/product choices, credential changes, or spend authorizations. Those are `PARKED_OPERATOR`: report them, don't guess.
+
+This augments the `DIALOG_BLOCKED` semantic category below (a stopped coding-agent question is the same failure class).
+
+### Codex `/goal` stall — resume, don't reclassify
+
+A Codex lane whose goal is paused reads as idle but is recoverable without any human decision. Look for a goal-status line near the tail: `Goal stalled (/goal resume)`, `Goal paused`, or a `Goal hit usage limits (/goal resume)` line that has no activity after it.
+
+1. First confirm the pause was not deliberate: if the operator (or the lane's own thread) paused the goal on purpose, or a hold/stop instruction is visible in the buffer, report it and do not resume. Otherwise send `/goal resume` through the same headless steer path (it resumes the *existing* goal — it authorizes no merge, spend, or scope change).
+2. Verify the status line becomes `Pursuing goal (Ns)` / `Pursuing goal (Xh Ym)` with a growing timer before reporting it as WORKING.
+3. If it stays stalled, or immediately re-prints the quota wall, classify from the fresh evidence (see next section) — do not retry in a loop.
+
+Live evidence (2026-10-19): a single sweep resumed 8 such lanes (`iOS`, `lvl up`, `auto creation`, `knowledge`, `zfc`, plus idle `strat`/`alerts`), all confirmed `Pursuing goal`/`Working` after the steer.
+
+---
+
+## Stale footer rule — verify before you classify
+
+**Footers are history, not state.** A CLI writes `Goal hit usage limits (/goal resume)` (or `Goal stalled (/goal resume)`, `Working (…)`, a spinner line) once, at the moment it happened, and it survives in the scrollback window long after the condition cleared — including after a quota reset. Reading that line out of a 10,000-word buffer and classifying `QUOTA_BLOCKED` is the single most common misclassification in this skill.
+
+Before writing `QUOTA_BLOCKED` for a surface, confirm all of:
+1. **No activity after the footer.** Look for tool-call lines, assistant text, or user input lines that appear *below* the quota footer in the buffer. Any post-footer activity means the wall is not current.
+2. **No live progress label.** A `Working (1h33m)` / `Pursuing goal (…)` label with a timer longer than the footer's age is proof the lane is running.
+3. **Not just a scrolled artifact.** The quota line must be the last substantive line, not one of several historical occurrences deeper in the buffer.
+4. **Corroborate from outside the pane.** Check `top_flat.tsv` CPU for the surface and any provider meter (weekly/5h percentage) visible on a sibling surface or the operator's quota line. A healthy meter (e.g. 49% on a fresh window) falsifies `QUOTA_BLOCKED` outright; a meter at/near 100% corroborates it.
+
+If the checks disagree, prefer the fresher signal: post-footer activity and a healthy meter beat a stale paragraph.
+
+**Real incident (2026-10-19, operator-caught).** A fleet report labelled `zfc` and `world` as `QUOTA_BLOCKED` from a `Goal hit usage limits (/goal resume)` footer that predated that day's reset. Both were actively working (`Working (1h33m)`, live `ssh`/pytest and dot ACK activity) and the weekly meter was 49% — the footer was stale. Two surfaces were wrongly written off as dead in one report. Verify first.
+
+Conversely, a quota footer with **no** post-footer activity plus a meter at/near 100% is a genuine `QUOTA_BLOCKED`, and `/goal resume` will not help until the window resets — report it, don't steer it.
 
 ---
 
@@ -52,14 +106,19 @@ What `scripts/scan.py` writes to `$OUT_DIR`:
 - `gh_prs.json` (when `--with-gh` is passed): live open PR metadata.
 
 Rules:
+- **The full-read rule binds every substantive surface.** A surface whose whole capture is under ~`100` words has nothing to slice (a shell, or a session that just started); classify it from its complete capture and record it as `SHELL`/`IDLE_*` rather than forcing the four-slice ritual — but never use "short capture" as a reason to skip a surface that does have content.
 - **Read 100% of the 10,000-word buffer before any decision (Sequential Slice Rule)** — canonical rule in `~/.codex/AGENTS.md` § "Reading a cmux terminal before deciding (full-buffer rule)": because `view_file` / `Read` tools cap at `800` lines per call while a `10,000`-word `ws_<ws_id>_sf_<sf_id>.txt` file spans `1,000–3,500` lines, each subagent MUST read sequential line slices (`1..800`, `801..1600`, `1601..2400`, `2401..end`) until `lines_read` is 100% covered. Never rely on a single `view_file` call or a short tail!
-- Use `capture-pane`, NOT `read-screen` — cross-workspace `read-screen` can return the focused surface's content.
+- Use `capture-pane` for every read.
 
 ---
 
 ## Phase 2 — PARALLEL SUBAGENT `/zfc` ASSESSMENT + STRICT DEDUPE
 
 Partition the captured `ws_*_sf_*.txt` files from `$OUT_DIR/manifest.json` across disjoint `/parallel` subagents (e.g., 6–10 surfaces per subagent). Each subagent MUST read all sequential line slices (`1..800`, `801..1600`, `1601..2400`, `2401..end`) of every `ws_*_sf_*.txt` file in its shard (covering 100% of the captured `10,000` words, including any `=== PI SESSION TRANSCRIPT ===` section) plus live GitHub PR statuses (`gh pr view <N> --json state,isDraft,mergeable,mergeStateStatus,statusCheckRollup`) and return a structured semantic assessment per surface:
+
+### Identify the CLI before judging the tail
+
+The same line means different things per CLI, so each subagent names the surface's CLI from its capture first: **`pi` TUI** (`π` title, alternate screen — state lives in the prepended `=== PI SESSION TRANSCRIPT ===` section, not the `35`-row live pane), **Codex** (goal-status line above the composer), **Claude Code**, **`agy`**, or a **plain shell** (`SHELL`). A `Goal …` footer only ever belongs to a Codex/`pi` goal lane; a bare `❯` prompt under a shell footer is a shell, not an idle agent.
 
 ### Semantic Categories (Model-Decided, Never Regex-Guessed)
 - `WORKING`: Actively executing a turn, tool call, test run, or subagent wait with live progress.
@@ -68,7 +127,7 @@ Partition the captured `ws_*_sf_*.txt` files from `$OUT_DIR/manifest.json` acros
 - `PARKED_OPERATOR`: Agent is waiting on a genuine human product/scope/merge decision (not a routine reversible check).
 - `DIALOG_BLOCKED`: Interactive TUI confirmation/selection menu is blocking the composer (`Enter to select · Esc to cancel`).
 - `MALFORMED_TOOL_CALL`: Agent emitted raw tool-call XML/JSON (e.g. `<parameter name="bash">`) as plain text and stalled at the prompt.
-- `QUOTA_BLOCKED`: Current turn is genuinely blocked by an active, unexpired quota/rate-limit wall at the bottom of the buffer.
+- `QUOTA_BLOCKED`: Current turn is genuinely blocked by an active, unexpired quota/rate-limit wall at the bottom of the buffer. The wall must be the *current* state — a `Goal hit usage limits (/goal resume)` footer left in scrollback after a reset is stale; apply the Stale footer rule before using this category.
 - `STOOD_DOWN_DUPLICATE`: Another active surface is the canonical owner of the same PR/branch/worktree.
 - `WEDGED_PROCESS`: Process tree (`cmux top --workspace <ws> --processes` / `ps` / `lsof -p <pid>`) shows a hung child or busy-wait loop with a frozen screen.
 - `SHELL`: Session exited to a plain shell prompt (`zsh`/`bash`).
@@ -87,30 +146,30 @@ Partition the captured `ws_*_sf_*.txt` files from `$OUT_DIR/manifest.json` acros
 
 ## Phase 3 — STEER DEDUPED SOLE OWNERS (4-Step Ritual + Narrow-Screen Cards)
 
-For every surface that needs action after deduplication, execute the mandatory 4-step ritual (`cmux send` does NOT press Enter). **Dispatch every surface's ritual concurrently** (`/parallel`): send to all owners in one fan-out, then do a single parallel verify pass — never send→sleep→verify one surface at a time.
+For every surface that needs action after deduplication, execute the mandatory 3-step ritual (the socket `text` must end in `\n`, which is Enter). **Dispatch every surface's ritual concurrently** (`/parallel`): send to all owners in one fan-out, then do a single parallel verify pass — never send→sleep→verify one surface at a time.
 
 ```bash
-cmux send --workspace <ws_ref> --surface <sf_ref> "<message>"
-cmux send-key --workspace <ws_ref> --surface <sf_ref> enter
+printf '{"method":"surface.send_text","params":{"surface_id":"<SURFACE-UUID>","text":"<message>\\n"}}\n' | nc -U -w 3 "${CMUX_SOCKET_PATH:-$HOME/.local/state/cmux/cmux.sock}"
 sleep 10
 cmux capture-pane --workspace <ws_ref> --surface <sf_ref> --scrollback --lines 120
 ```
 
-- **DIALOG_BLOCKED**: `cmux send-key --workspace <ws_ref> --surface <sf_ref> --force enter` selects the highlighted option ONLY when the option text proves it is the agent's own recommended safe choice.
+- **DIALOG_BLOCKED**: a bare `"\\n"` via the same socket `send_text` call selects the highlighted option ONLY when the option text proves it is the agent's own recommended safe choice.
 - **MALFORMED_TOOL_CALL**: Nudge the surface to re-invoke the tool properly instead of printing raw XML/text.
 - **Long briefs (>200 chars)**: Write the brief to `/tmp/<task>_brief.md` and send a one-line pointer.
-- **NEVER `select-workspace`** (steals the operator's active window focus).
 - **Spawning a dedicated surface** (when no related terminal exists):
   1. Create an isolated worktree under `~/.worktrees/<repo>/<name>` (`diskm worktree-new <repo> <branch>`).
-  2. Launch a dedicated surface via `cmux new-workspace --name "<task>" --cwd <worktree> --command "<agent>"` or `cmux new-surface --type terminal --workspace <ws> --command "<agent>"`.
+  2. Launch a dedicated surface via `cmux new-workspace --focus false --name "<task>" --cwd <worktree> --command "<agent>"` or `cmux new-surface --focus false --type terminal --workspace <ws> --command "<agent>"`.
   3. Follow `~/.codex/AGENTS.md` § "Shared provider & review-gate policy (canonical)" for current provider routing.
 
 ### Report Contract (Narrow-Screen Vertical Cards, `<= 65 chars/line`)
 
 Wide markdown tables wrap and clip inside split `cmux` panes. Present the fleet report using **Narrow-Screen Vertical Cards** (`<= 65 chars/line`), grouped by action (`STEERED`, `WORKING`, `PARKED_OPERATOR`, `STOOD_DOWN_DUPLICATE`, `QUOTA_BLOCKED`):
 
+**Always name the workspace and surface. Never identify a surface to the operator by its numeric ref alone.** Numeric refs (`workspace:1000010002` / `surface:1000010241`) are not useful to a human — lead every line, card, table, and steer confirmation with the workspace **name** and the surface **title**, and treat the numeric ref as optional secondary detail (append it only when a steer needs a machine-exact target, e.g. `lvl up › c-big (surface:1000010241)`). If a surface title is generic (e.g. `c`, `agy`, `wiki`), disambiguate with the workspace name, the cwd/branch from the footer, or the PR it owns — never fall back to the bare number.
+
 ```markdown
-### [ws_title] workspace:N / surface:M (<cli>)
+### <workspace name> › <surface title> (<cli>)
 - **PR / Task**: PR #10379 (branch `fix/...`)
 - **State**: STEERED -> WORKING
 - **Sent**: "Re-run Green Gate check and report readiness..."
