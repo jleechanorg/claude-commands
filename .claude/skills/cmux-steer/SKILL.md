@@ -183,8 +183,8 @@ cmux capture-pane --workspace workspace:N --surface surface:M --lines 25
 Every reply that reports a `cmux send` action MUST include, in the same reply:
 
 1. **The exact text that was typed** — verbatim copy of the string passed to `cmux send` (or the `text` sent via `surface.send_text`).
-2. **The cmux terminal response** — verbatim transcript of what `cmux capture-pane` returned AFTER the `cmux send-key enter` settle window
-   (typically 5-15s). Specifically, the agent's first action after absorption.
+2. **The cmux terminal response** — verbatim transcript of what `cmux capture-pane` returned AFTER the submit settle window
+   (typically 5-15s, counted from the Enter). Specifically, the agent's first action after absorption.
 3. **Submission status** — explicit verdict: "submitted (churning label X)",
    "not submitted (text still at ❯ prompt)", or "blocked (no churn, retried N times)".
 
@@ -222,7 +222,7 @@ churning label.
 **Banned** (these are the failure modes the user keeps flagging):
 - "I sent the message" (no Enter proof)
 - "The agent should have received it" (no churning label)
-- `cmux send` with no follow-up `cmux send-key enter` (or a `surface.send_text` whose `text` lacks the trailing `\n`)
+- A send with no Enter at all: neither a following `cmux send-key enter` nor a trailing literal `\n` (exactly one of the two, never both)
 - A real newline character in the send argument (2026-10-20 — parks the text unsent)
 - Re-sending text after a non-submit instead of one bare Enter
 - Focusing or selecting a surface to send; always target with explicit `--workspace`/`--surface`
