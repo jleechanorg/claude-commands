@@ -26,6 +26,8 @@ PERSONAL_PATTERNS = (
     ("email", re.compile(r"[A-Za-z0-9._+-]+@(?!example\.|users\.noreply\.github\.com)(?:gmail|googlemail|outlook|hotmail|yahoo|icloud|proton(?:mail)?)\.[a-z.]+")),
     ("slack id", re.compile(r"\b[CUAW]0[A-Z0-9]{8,}\b")),
     ("private lan ip", re.compile(r"\b192\.168\.\d+\.\d+\b")),
+    ("tailnet ip", re.compile(r"\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+\b")),
+    ("named ssh key", re.compile(r"\.ssh/id_(?!(?:rsa|ed25519|ecdsa|dsa)\b)[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*")),
 )
 
 
@@ -41,7 +43,7 @@ def find_personal_identifiers(text: str) -> list:
 
 
 def changed_files(root: Path, base: str = "origin/main") -> list:
-    """Files under root changed on HEAD relative to base (empty if git/base unavailable)."""
+    """Files under root changed on HEAD relative to base; raises RuntimeError if git/base is unavailable."""
     try:
         out = subprocess.run(
             ["git", "-C", str(root), "diff", "--name-only", "--diff-filter=AM", f"{base}...HEAD", "--", str(root)],
@@ -49,8 +51,8 @@ def changed_files(root: Path, base: str = "origin/main") -> list:
         ).stdout
         top = subprocess.run(["git", "-C", str(root), "rev-parse", "--show-toplevel"],
                              capture_output=True, text=True, check=True).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return []
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError(f"cannot list files changed against {base}: {exc}") from exc
     return [Path(top) / line for line in out.splitlines() if line]
 
 
@@ -159,7 +161,12 @@ def main(argv=None) -> int:
             print(f"{bucket}: {len(result[bucket])}")
 
     if args.check_personal:
-        found = scan_personal(changed_files(args.root, args.base))
+        try:
+            files = changed_files(args.root, args.base)
+        except RuntimeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        found = scan_personal(files)
         for path, hits in sorted(found.items()):
             print(f"{path}: {hits[:3]}", file=sys.stderr)
         if found:

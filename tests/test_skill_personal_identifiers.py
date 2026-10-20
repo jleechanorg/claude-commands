@@ -13,16 +13,21 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.skill_portability_scan import find_personal_identifiers, scan_personal  # noqa: E402
+from scripts.skill_portability_scan import changed_files, find_personal_identifiers, scan_personal  # noqa: E402
 
 SKILL_ROOTS = (".claude/skills", "shared/aliases", "portable/skills")
 
 
 class PersonalIdentifierTest(unittest.TestCase):
     def test_detects_personal_values(self):
-        text = "/home/alice/x /Users/bob/y me@gmail.com C0ABCDEFGHJ 192.168.1.5"
+        text = "/home/alice/x /Users/bob/y me@gmail.com C0ABCDEFGHJ 192.168.1.5 100.67.1.2 ~/.ssh/id_my_box"
         kinds = {k for k, _ in find_personal_identifiers(text)}
-        self.assertEqual(kinds, {"home path", "email", "slack id", "private lan ip"})
+        self.assertEqual(kinds, {"home path", "email", "slack id", "private lan ip", "tailnet ip", "named ssh key"})
+        self.assertEqual(find_personal_identifiers("~/.ssh/id_ed25519 100.10.0.1"), [])
+
+    def test_missing_base_ref_fails_closed(self):
+        with self.assertRaises(RuntimeError):
+            changed_files(REPO_ROOT, base="refs/heads/definitely-not-a-ref")
 
     def test_placeholders_are_allowed(self):
         text = "$HOME /home/user/x /Users/<user>/y a@example.com <slack-channel>"

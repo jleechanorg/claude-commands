@@ -13,9 +13,9 @@ Mirror of `/linux` (jeff-ubuntu), but targeting the MacBook. Runs from any machi
 |---|---|
 | **Host alias (recommended)** | `macbook` (after `~/.ssh/config` setup below) |
 | **Hostname (LAN)** | `<mac-hostname>.local` or `<mac-lan-ip>` |
-| **Hostname (Tailscale)** | `100.67.70.24` (works off-LAN via Tailscale) |
+| **Hostname (Tailscale)** | `<mac-tailscale-ip>` (works off-LAN via Tailscale) |
 | **User** | `$USER` |
-| **Key (from MacBook)** | `~/.ssh/id_jeff_ubuntu` (same key used by jeff-ubuntu's reverse direction) |
+| **Key (from MacBook)** | `~/.ssh/<ubuntu-key>` (same key used by jeff-ubuntu's reverse direction) |
 | **SSH port** | 22 (default) |
 | **OS** | macOS 14+ (Sonoma/Sequoia), aarch64 |
 
@@ -59,10 +59,10 @@ profile and session rules, for all sends, reads, and recovery actions.
 
 ```bash
 # 1. Generate an SSH key on the remote machine (if none exists)
-ssh-keygen -t ed25519 -f ~/.ssh/id_macbook -N ""
+ssh-keygen -t ed25519 -f ~/.ssh/<mac-key> -N ""
 
 # 2. Copy the public key to MacBook's authorized_keys
-ssh-copy-id -i ~/.ssh/id_macbook.pub $USER@<mac-lan-ip>
+ssh-copy-id -i ~/.ssh/<mac-key>.pub $USER@<mac-lan-ip>
 # (prompts for $USER's MacBook password once)
 
 # 3. Add the macbook alias to ~/.ssh/config
@@ -71,7 +71,7 @@ cat >> ~/.ssh/config <<'EOF'
 Host macbook
     HostName <mac-lan-ip>
     User $USER
-    IdentityFile ~/.ssh/id_macbook
+    IdentityFile ~/.ssh/<mac-key>
     StrictHostKeyChecking no
 EOF
 ```
@@ -165,7 +165,7 @@ ssh macbook 'git clone https://github.com/$GITHUB_REPOSITORY.git /tmp/your-proje
 ## Caveats
 
 - **LAN-only by default**: `<mac-lan-ip>` only reachable when both machines on the same home LAN. Use the Tailscale fallback above for off-LAN access — `ssh macbook-ts` already includes its `IdentityFile`, no `-i` needed; `-i` is only required if you connect to the raw Tailscale IP directly instead of through that alias.
-- **macOS SSH keychain**: First SSH attempt may prompt for keychain access; use `ssh-add --apple-use-keychain ~/.ssh/id_macbook` to cache.
+- **macOS SSH keychain**: First SSH attempt may prompt for keychain access; use `ssh-add --apple-use-keychain ~/.ssh/<mac-key>` to cache.
 - **No headless Docker**: MacBook uses colima for Docker; running Docker on the MacBook requires colima VM to be Running (the `ezgha-fleet-watchdog` script auto-starts it).
 - **macOS sandboxing**: Some `~/Library/...` paths may need Full Disk Access for the terminal app to read them.
 - **sudo prompts on macOS**: Touch ID prompt instead of password on physical Mac; over SSH use `expect` with password.
