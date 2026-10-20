@@ -38,17 +38,29 @@ A recurring failure pattern: a Claude Code or Codex surface has **finished its t
 - An `AskUserQuestion` / plan-approval block: a question followed by 2–4 options, one marked recommended/default.
 - A single free-text prompt asking `Should I ...?` / `Which ...?` where the agent states its own recommendation.
 
-**Unblock rule — choose the recommended option:**
-1. If the recommended/default is visible (the `❯` highlighted line, an option labelled `Recommended` / `(Recommended)` / `Yes`, or the agent's own stated recommendation), send it via the headless steer path:
-   - Select menu → send the Enter **key event**: `cmux send-key --surface <sf> enter`
-     (`cmux send` refuses while a question/permission dialog is open unless `--force`
-     is passed, so a text send is the wrong tool here; `--force` is only for a dialog you
-     have already decided to answer).
-   - Yes/no → `cmux send-key --surface <sf> y` (when Yes is recommended), then
-     `cmux send-key --surface <sf> enter`.
-   - Numbered options → send the recommended option's number/text + Enter.
-2. If the agent asked a free-text question and stated its recommendation, reply with a one-line approval naming that recommendation (e.g. `Yes, do <recommended>.`).
-3. Send via the socket `surface.send_text` / `cmux send` call, then verify with `capture-pane` that the dialog cleared and the agent resumed working.
+**Unblock rule — choose the recommended option (one procedure, no alternatives):**
+1. Read the dialog and identify the recommended/default choice — the highlighted `❯` line,
+   an option labelled `Recommended` / `(Recommended)` / `Yes`, or the agent's own stated
+   recommendation. If the dialog offers no defensible default, stop: it is
+   `PARKED_OPERATOR`, not an unblock.
+2. Answer it with **one guarded key event**. A dialog blocks ordinary sends, so the key
+   command must carry `--force` (`cmux send-key --help`: `--force  Send even into an open
+   dialog`):
+   ```bash
+   cmux send-key --force --surface <sf> enter   # accept the highlighted menu option
+   cmux send-key --force --surface <sf> y       # then: cmux send-key --force --surface <sf> enter
+   cmux send-key --force --surface <sf> down    # numbered list: move to the option, then enter
+   ```
+   `--force` here is decision authority over a dialog you have already judged safe (step 1),
+   not permission to bypass one unread.
+3. For a **free-text** question where the agent stated its recommendation, type that
+   one-line approval and submit it with exactly one Enter, using the dialog-safe key form:
+   `cmux send --surface <sf> "Yes, do <recommended>." && cmux send-key --force --surface <sf> enter`.
+4. Verify with `cmux capture-pane` that the dialog cleared and the agent resumed working.
+   If the build rejects a key name, the only documented alternative is the socket
+   `surface.send_text` call, whose dialog behaviour is **not documented** — use it and apply
+   the same `capture-pane` verification, reporting the steer as unverified if the dialog is
+   still there.
 
 **Never auto-answer a genuine human decision** — destructive/irreversible actions, production `MERGE APPROVED`, scope/product choices, credential changes, or spend authorizations. Those are `PARKED_OPERATOR`: report them, don't guess.
 
