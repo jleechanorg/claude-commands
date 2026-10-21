@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import stat
 import subprocess
 import tempfile
 import unittest
@@ -1029,6 +1030,61 @@ class InstallerSymlinkModeSafetyTest(unittest.TestCase):
         )
         self.assertEqual(external.stat().st_mode & 0o777, 0o400)
         self.assertEqual(external.read_text(encoding="utf-8"), "external\n")
+
+
+class InstallerEntryKindsTest(unittest.TestCase):
+    def build(self):
+        import tempfile as tf
+
+        temp = tf.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        fixture = root / "fixture"
+        (fixture / ".claude" / "commands").mkdir(parents=True)
+        (fixture / ".claude" / "commands" / "cmd.md").write_text("managed\n", encoding="utf-8")
+        (fixture / "scripts").mkdir()
+        shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+        return root, fixture, root / "target"
+
+    def run_merge(self, fixture, target, timeout=120):
+        return subprocess.run(
+            ["bash", str(fixture / INSTALLER.name), "--merge"],
+            cwd=fixture,
+            env=os.environ | {"CLAUDE_HOME": str(target)},
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+
+    def test_read_only_hard_link_keeps_outside_mode_and_content(self):
+        root, fixture, target = self.build()
+        (target / "commands").mkdir(parents=True)
+        external = root / "external.md"
+        external.write_text("external\n", encoding="utf-8")
+        external.chmod(0o400)
+        os.link(external, target / "commands" / "cmd.md")
+
+        result = self.run_merge(fixture, target)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(external.stat().st_mode & 0o777, 0o400)
+        self.assertEqual(external.read_text(encoding="utf-8"), "external\n")
+        self.assertEqual(
+            (target / "commands" / "cmd.md").read_text(encoding="utf-8"), "managed\n"
+        )
+
+    def test_fifo_destination_is_replaced_without_hanging(self):
+        root, fixture, target = self.build()
+        (target / "commands").mkdir(parents=True)
+        fifo = target / "commands" / "cmd.md"
+        os.mkfifo(fifo)
+
+        result = self.run_merge(fixture, target, timeout=60)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(fifo.is_file())
+        self.assertFalse(stat.S_ISFIFO(fifo.stat().st_mode))
+        self.assertEqual(fifo.read_text(encoding="utf-8"), "managed\n")
 
 
 class InstallerMovesWrongKindEntryAsideTest(unittest.TestCase):

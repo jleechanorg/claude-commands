@@ -403,15 +403,15 @@ install_component() {
                     return 1
                 fi
             fi
-            if [ -L "$dest_entry" ]; then
-                # Unlink the link itself. Never chmod it: chmod follows the link
-                # and would change the mode of a file outside the target.
+            if [ -d "$dest_entry" ] && [ ! -L "$dest_entry" ]; then
+                : # a directory matching a directory source is updated in place
+            elif [ -e "$dest_entry" ] || [ -L "$dest_entry" ]; then
+                # Unlink the single entry whatever it is (symlink, read-only
+                # file, hard link, FIFO, socket, device) and let the copy create
+                # a fresh one. No chmod: chmod follows a symlink and mutates the
+                # shared inode of a hard link, both of which reach outside the
+                # target. No recursion: a directory is never removed here.
                 rm -f -- "$dest_entry"
-            elif [ -f "$dest_entry" ] && [ ! -w "$dest_entry" ]; then
-                chmod u+w "$dest_entry" || {
-                    log_error "Cannot make $dest_entry writable; fix permissions and re-run"
-                    return 1
-                }
             fi
             cp -a "$src_dir/$relative" "$dest_dir/$relative"
         done < <(
