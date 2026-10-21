@@ -351,23 +351,46 @@ cmd_probe() {
   printf '%s\n' "$CHROME_OUT"
 }
 
+profile_is_idle() {
+  local dir="$1"
+  [[ -e "$dir/SingletonLock" ]] && return 1
+  ! pgrep -f "user-data-dir=$dir" >/dev/null 2>&1
+}
+
 cmd_restore_session() {
   local dir="${DOT_CHROME_USER_DATA:-}"
   [[ -z "$dir" ]] && { echo "dot.sh: profile directory not resolved" >&2; exit 2; }
   local prof="${PROFILE_DIRECTORY:-Default}"
   local db="$dir/$prof/Cookies" snap="$dir/$prof/Cookies.snapshot"
   [[ -f "$snap" ]] || { echo "dot.sh: no session snapshot for this profile. Canonical recovery: dot.sh --account $ACCOUNT login" >&2; exit 2; }
-  pgrep -f "user-data-dir=$dir" >/dev/null 2>&1 && { echo "dot.sh: a Chrome process is using this profile; close it before restoring" >&2; exit 2; }
+  profile_is_idle "$dir" || { echo "dot.sh: a Chrome process or its SingletonLock owns this profile; close it before restoring" >&2; exit 2; }
+  local ts tmp
+  ts="$(date +%Y%m%d%H%M%S)"
+  tmp="$db.restore-tmp.$$"
+  cp "$snap" "$tmp" || { echo "dot.sh: could not stage the snapshot; nothing changed" >&2; exit 2; }
+  chmod 600 "$tmp"
+  # Re-check immediately before mutating: a launch during staging aborts with
+  # nothing changed, so this path does not need the removed profile lock.
+  profile_is_idle "$dir" || { rm -f "$tmp"; echo "dot.sh: a Chrome launch started during restore; aborted with nothing changed" >&2; exit 2; }
   if [[ -f "$db" ]]; then
-    cp "$db" "$db.pre-restore" || { echo "dot.sh: could not keep a pre-restore copy; aborting" >&2; exit 2; }
+    cp "$db" "$db.pre-restore" || { rm -f "$tmp"; echo "dot.sh: could not keep a pre-restore copy; nothing changed" >&2; exit 2; }
   fi
-  if cp "$snap" "$db"; then
-    rm -f "$db-journal" "$db-wal" "$db-shm"
-    chmod 600 "$db"
-  else
-    echo "dot.sh: restore copy failed" >&2; exit 2
+  # Move the old journal files aside rather than deleting them: a concurrent
+  # reader keeps its own inode, and no stale journal is left at the path the
+  # restored store is opened from.
+  local ext failed=0
+  for ext in journal wal shm; do
+    if [[ -e "$db-$ext" ]]; then mv -f "$db-$ext" "$db-$ext.pre-restore-$ts" || failed=1; fi
+  done
+  if [[ "$failed" -eq 1 ]]; then
+    rm -f "$tmp"
+    echo "dot.sh: could not move a sidecar journal aside; aborted before touching the store (nothing changed)" >&2
+    exit 2
   fi
-  echo "dot.sh: session snapshot restored (pre-restore copy kept at $db.pre-restore). Verify with 'dot.sh --account $ACCOUNT read'; if not signed in, recover with 'dot.sh --account $ACCOUNT login' (never resync from another profile)." >&2
+  mv -f "$tmp" "$db" || { rm -f "$tmp"; echo "dot.sh: atomic swap failed; the previous store and $db.pre-restore are unchanged" >&2; exit 2; }
+  chmod 600 "$db"
+  profile_is_idle "$dir" || echo "dot.sh: WARNING a Chrome launch raced this restore, so it is not verified. Close Chrome and re-run, or use 'dot.sh --account $ACCOUNT login'." >&2
+  echo "dot.sh: session snapshot restored atomically (pre-restore copy kept at $db.pre-restore). Verify with 'dot.sh --account $ACCOUNT read'; if not signed in, recover with 'dot.sh --account $ACCOUNT login' (never resync from another profile)." >&2
 }
 
 if [[ "${DOT_SKIP_DISPATCH:-0}" != "1" ]]; then
