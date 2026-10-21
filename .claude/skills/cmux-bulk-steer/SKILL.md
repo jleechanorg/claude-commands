@@ -10,7 +10,7 @@ Three phases, strictly in order:
 
 Never steer from a short tail, never use regex/keyword classifiers to guess terminal state, and never skip cross-surface deduplication.
 
-> **Headless only.** **Never select, focus, switch, or reorder a workspace/surface** (`select-workspace`, `workspace-action --action focus`, `focus-window`, `workspace.select`, `surface.focus`). Reads use **`cmux capture-pane --workspace <ws> --surface <sf> --scrollback --lines <n>` exclusively** and steers (`cmux send` + `cmux send-key`, or the socket `surface.send_text` call) do **not** change the operator's selected workspace. **Never use `cmux read-screen`** — it can return the focused surface's content and can steal focus; `capture-pane` is the only read path this skill uses (`scripts/scan.py` already does this). Read-only listings (`cmux tree --all --json`, `cmux list-workspaces`) never select. Always pass `--focus false` to `new-surface` / `new-workspace`. Do **not** create or close workspaces/surfaces on the operator's live desktop without asking first (the only operation that disturbed the view). Never `select-workspace` / `focus` / `workspace-action --action focus`. The same rule is stated in `~/.claude/skills/cmux-steer/SKILL.md`.
+> **Headless only (measured, 2026-10-18; evidence `/tmp/spicy-search/cmux/focus-test.md`).** **Never select, focus, switch, or reorder a workspace/surface** (`select-workspace`, `workspace-action --action focus`, `focus-window`, `workspace.select`, `surface.focus`). Reads use **`cmux capture-pane --workspace <ws> --surface <sf> --scrollback --lines <n>` exclusively** and steers (`cmux send` + `cmux send-key`, or the socket `surface.send_text` call) do **not** change the operator's selected workspace. **Never use `cmux read-screen` as a read path** — the 2026-10-18 measurement shows it does not move the selection, and the installed build accepts `--workspace/--surface`, but cross-workspace read routing was historically unreliable; `capture-pane` is the only read path this skill uses (`scripts/scan.py` already does this). Read-only listings (`cmux tree --all --json`, `cmux list-workspaces`) never select. Always pass `--focus false` to `new-surface` / `new-workspace`. Do **not** create or close workspaces/surfaces on the operator's live desktop without asking first (the only operation that disturbed the view). Never `select-workspace` / `focus` / `workspace-action --action focus`. Canonical rule + evidence: `~/.claude/skills/cmux-steer/SKILL.md` § "Headless only".
 
 **Always `/parallel`. `/parallel` is the default execution mode for every phase, not an optimization.** If two items do not depend on each other, they MUST run concurrently — never as `item N` then `item N+1`. Concretely: assessment fans out across disjoint subagents (Phase 2), dedupe reads every shard concurrently, and steering dispatches to all owners at once (Phase 3). Before any sequential loop over surfaces/shards/lines, ask "can `/parallel` run these at the same time?" and if yes, fan out. The only serialization allowed is a genuine data dependency (a later step needs an earlier step's output) or a bounded resource cap — see `~/.claude/skills/parallelize-to-ceiling/SKILL.md`. Report the degree of parallelism achieved (e.g. "6 shards, 6 subagents") in the final report.
 
@@ -38,13 +38,32 @@ A recurring failure pattern: a Claude Code or Codex surface has **finished its t
 - An `AskUserQuestion` / plan-approval block: a question followed by 2–4 options, one marked recommended/default.
 - A single free-text prompt asking `Should I ...?` / `Which ...?` where the agent states its own recommendation.
 
-**Unblock rule — choose the recommended option:**
-1. If the recommended/default is visible (the `❯` highlighted line, an option labelled `Recommended` / `(Recommended)` / `Yes`, or the agent's own stated recommendation), send it via the headless steer path:
-   - Select menu → send `"\n"` (Enter) to accept the highlighted option.
-   - Yes/no → send `y` (when Yes is recommended) then Enter.
-   - Numbered options → send the recommended option's number/text + Enter.
-2. If the agent asked a free-text question and stated its recommendation, reply with a one-line approval naming that recommendation (e.g. `Yes, do <recommended>.`).
-3. Send via the socket `surface.send_text` / `cmux send` call, then verify with `capture-pane` that the dialog cleared and the agent resumed working.
+**Unblock rule — choose the recommended option (one procedure, no alternatives):**
+1. Read the dialog and identify the recommended/default choice — the highlighted `❯` line,
+   an option labelled `Recommended` / `(Recommended)` / `Yes`, or the agent's own stated
+   recommendation. If the dialog offers no defensible default, stop: it is
+   `PARKED_OPERATOR`, not an unblock.
+2. Answer it with a **guarded key action** — one key for a highlighted menu, key-then-Enter
+   for a yes/no or a navigated list (that Enter is what confirms the dialog, not a second
+   unplanned keystroke). A dialog blocks ordinary sends, so every key command must carry
+   `--force` (`cmux send-key --help`: `--force  Send even into an open dialog`):
+   ```bash
+   cmux send-key --force --workspace <ws> --surface <sf> enter   # accept highlighted option
+   cmux send-key --force --workspace <ws> --surface <sf> y       # yes/no: then send enter
+   cmux send-key --force --workspace <ws> --surface <sf> down    # numbered list: move, then enter
+   ```
+   `--force` here is decision authority over a dialog you have already judged safe (step 1),
+   not permission to bypass one unread.
+3. For a **free-text** question where the agent stated its recommendation, type that
+   one-line approval and submit it with exactly one Enter, using the dialog-safe key form:
+   `cmux send --workspace <ws> --surface <sf> "Yes, do <recommended>." && cmux send-key --force --workspace <ws> --surface <sf> enter`.
+   If a question/permission **dialog** (not a free-text prompt) is what is open, `cmux send`
+   refuses unless `--force`; in that case use the key procedure in step 2 instead of typing.
+4. Verify with `cmux capture-pane` that the dialog cleared and the agent resumed working.
+   If the build rejects a key name, the only documented alternative is the socket
+   `surface.send_text` call, whose dialog behaviour is **not documented** — use it and apply
+   the same `capture-pane` verification, reporting the steer as unverified if the dialog is
+   still there.
 
 **Never auto-answer a genuine human decision** — destructive/irreversible actions, production `MERGE APPROVED`, scope/product choices, credential changes, or spend authorizations. Those are `PARKED_OPERATOR`: report them, don't guess.
 
@@ -144,17 +163,20 @@ The same line means different things per CLI, so each subagent names the surface
 
 ---
 
-## Phase 3 — STEER DEDUPED SOLE OWNERS (4-Step Ritual + Narrow-Screen Cards)
+## Phase 3 — STEER DEDUPED SOLE OWNERS (3-Step Ritual + Narrow-Screen Cards)
 
-For every surface that needs action after deduplication, execute the mandatory 3-step ritual (the socket `text` must end in `\n`, which is Enter). **Dispatch every surface's ritual concurrently** (`/parallel`): send to all owners in one fan-out, then do a single parallel verify pass — never send→sleep→verify one surface at a time.
+For every surface that needs action after deduplication, execute the mandatory 3-step ritual (the socket `text` must end in the literal `\n`, or the CLI form follows with an explicit `send-key enter`). The heading said "4-Step" until 2026-10-20, when step 1 was rewritten to issue type and Enter together (chained or socket); it is the same keystroke contract, with one fewer decision point — canonical owner: `~/.claude/skills/cmux-steer/SKILL.md` § "Submit Discipline". **Dispatch every surface's ritual concurrently** (`/parallel`): send to all owners in one fan-out, then do a single parallel verify pass — never send→sleep→verify one surface at a time.
 
 ```bash
 printf '{"method":"surface.send_text","params":{"surface_id":"<SURFACE-UUID>","text":"<message>\\n"}}\n' | nc -U -w 3 "${CMUX_SOCKET_PATH:-$HOME/.local/state/cmux/cmux.sock}"
+# or, preferred CLI form (route both commands):
+#   cmux send --workspace <ws> --surface <sf> "<message>" && cmux send-key --workspace <ws> --surface <sf> enter
 sleep 10
 cmux capture-pane --workspace <ws_ref> --surface <sf_ref> --scrollback --lines 120
 ```
 
-- **DIALOG_BLOCKED**: a bare `"\\n"` via the same socket `send_text` call selects the highlighted option ONLY when the option text proves it is the agent's own recommended safe choice.
+- **DIALOG_BLOCKED**: use the guarded key procedure in "Unblock rule" above (`cmux send-key --force --workspace <ws> --surface <sf> enter|y|down` — route both ids: an omitted `--workspace` falls back to the caller's workspace). A bare socket `"\n"` is the undocumented-behaviour fallback, allowed ONLY when the option text proves it is the agent's own recommended safe choice, and it must be verified with `capture-pane`.
+- **Submit rule (`cmux send`)**: send one single-line message and submit it explicitly with `cmux send-key --workspace <ws> --surface <sf> enter` (or a **literal** `\n` escape on builds whose send interprets escapes). A real newline in the argument put the text in the composer unsent in both 2026-10-20 operator-caught incidents. Repair with one bare Enter — never re-send the text. Verify the composer cleared before reporting "sent" — canonical: `~/.claude/skills/cmux-steer/SKILL.md` § `cmux send` newline rule.
 - **MALFORMED_TOOL_CALL**: Nudge the surface to re-invoke the tool properly instead of printing raw XML/text.
 - **Long briefs (>200 chars)**: Write the brief to `/tmp/<task>_brief.md` and send a one-line pointer.
 - **Spawning a dedicated surface** (when no related terminal exists):
