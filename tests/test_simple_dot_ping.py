@@ -160,7 +160,7 @@ class LauncherExecutionTests(unittest.TestCase):
         self.assertEqual(browser['exposure'], 'direct')
         self.assertEqual(browser['command'], str(self.node_home / 'bin/node'))
         self.assertIn(str(self.mcp), browser['args'])
-        self.assertIn('--userDataDir=' + str(self.profile.resolve()), browser['args'])
+        self.assertIn('--userDataDir=' + str(self.profile.absolute()), browser['args'])
         self.assertFalse({'--provider', '--model'} & set(spawned['command']))
 
     def test_attempt_receipt_survives_cleanup_and_new_invocation_gets_new_path(self):
@@ -213,7 +213,7 @@ class LauncherExecutionTests(unittest.TestCase):
             with self.assertRaisesRegex(PING.Blocked, 'coordinator lock'):
                 self.invoke(on_spawn=lambda *args, **kwargs: spawned.append(args))
             self.assertEqual(spawned, [])
-        path = self.lock_base / 'dot-profile-locks' / (hashlib.sha256(str(self.profile.resolve()).encode()).hexdigest()[:16] + '.lock')
+        path = self.lock_base / 'dot-profile-locks' / (hashlib.sha256(str(self.profile.absolute()).encode()).hexdigest()[:16] + '.lock')
         path.parent.mkdir(parents=True)
         with path.open('a') as held:
             fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -221,6 +221,24 @@ class LauncherExecutionTests(unittest.TestCase):
             with self.assertRaisesRegex(PING.Blocked, 'shared Dot profile lock'):
                 self.invoke(on_spawn=lambda *args, **kwargs: spawned.append(args))
             self.assertEqual(spawned, [])
+
+    def test_profile_lock_matches_dot_resolver_through_symlinked_parent(self):
+        alias = self.home / 'profile-parent-alias'
+        alias.symlink_to(self.home, target_is_directory=True)
+        configured = alias / 'profile'
+        data = json.loads(self.config.read_text())
+        data['accounts']['alpha']['user_data_dir'] = str(configured)
+        self.config.write_text(json.dumps(data))
+        resolved = json.loads(subprocess.check_output(
+            ['node', str(ROOT / '.claude/skills/dot/scripts/dot_chrome.mjs'), 'resolve-profile'],
+            env={**os.environ, 'HOME': str(self.home), 'DOT_CONFIG_FILE': str(self.config),
+                 'DOT_ACCOUNT': 'alpha', 'DOT_CHROME_USER_DATA': '', 'DOT_PROFILE_DIRECTORY': 'Default'}, text=True))['profileDir']
+        path = self.lock_base / 'dot-profile-locks' / (hashlib.sha256(resolved.encode()).hexdigest()[:16] + '.lock')
+        path.parent.mkdir(parents=True)
+        with path.open('a') as held:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with self.assertRaisesRegex(PING.Blocked, 'shared Dot profile lock'):
+                self.invoke()
 
     def test_timeout_terminates_pi_and_preserves_agent_owned_marker(self):
         class TimedOut(FakePiProcess):

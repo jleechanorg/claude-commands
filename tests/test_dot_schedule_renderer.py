@@ -146,6 +146,15 @@ class ScheduleRendererTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "under /tmp"):
             renderer.render(self.config, Path.home() / "not-a-stage", "macos")
 
+    def test_staging_rejects_parent_symlink_outside_tmp_before_writing(self):
+        with tempfile.TemporaryDirectory(dir="/var/tmp") as outside:
+            target = Path(outside).resolve()
+            link = self.root / 'outside-link'
+            link.symlink_to(target, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, 'under /tmp'):
+                renderer.render(self.config, link / 'new-parent' / 'stage', 'macos')
+            self.assertFalse((target / 'new-parent').exists())
+
     def test_systemd_environment_escapes_shell_metacharacters(self):
         encoded = renderer.systemd_value('a"b$PATH`x\\y')
         self.assertEqual(encoded, '"a\\"b\\$PATH\\`x\\\\y"')

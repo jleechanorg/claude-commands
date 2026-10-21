@@ -29,4 +29,17 @@ class ReviewLock(unittest.TestCase):
    finally:
     if p.poll() is None:p.kill();p.wait(timeout=5)
     p.stdout.close()
+ def test_missing_lock_parent_is_created(self):
+  with tempfile.TemporaryDirectory(dir='/tmp') as d:
+   path=pathlib.Path(d)/'nested'/'lock'
+   r=subprocess.run([sys.executable,str(SCRIPT),'--',sys.executable,'-c','raise SystemExit(17)'],env={**os.environ,'COORDINATOR_LOCK_FILE':str(path)},capture_output=True)
+   self.assertEqual(r.returncode,17,r.stderr)
+   with path.open('a') as f:fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
+ def test_missing_command_returns_127_and_releases_lock(self):
+  with tempfile.TemporaryDirectory(dir='/tmp') as d:
+   path=pathlib.Path(d)/'lock'
+   r=subprocess.run([sys.executable,str(SCRIPT),'--',str(pathlib.Path(d)/'missing-command')],env={**os.environ,'COORDINATOR_LOCK_FILE':str(path)},capture_output=True)
+   self.assertEqual(r.returncode,127,r.stderr)
+   self.assertNotIn(b'Traceback',r.stderr)
+   with path.open('a') as f:fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
 if __name__=='__main__':unittest.main()

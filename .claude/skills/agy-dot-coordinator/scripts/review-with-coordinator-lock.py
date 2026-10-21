@@ -10,7 +10,12 @@ def main(argv):
         print('usage: review-with-coordinator-lock.py -- command [args...]', file=sys.stderr)
         return 2
     path = Path(os.environ.get('COORDINATOR_LOCK_FILE', '/tmp/ai.gemini.agy-dot-coordinator.lock'))
-    fd = os.open(path, os.O_CREAT | os.O_WRONLY | os.O_APPEND, 0o600)
+    try:
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        fd = os.open(path, os.O_CREAT | os.O_WRONLY | os.O_APPEND, 0o600)
+    except OSError as error:
+        print(f"Cannot open coordinator lock: {error}", file=sys.stderr)
+        return 2
     try:
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -18,7 +23,11 @@ def main(argv):
             print('Coordinator or review owns the global lock', file=sys.stderr)
             return 2
         os.set_inheritable(fd, True)
-        os.execvp(argv[1], argv[1:])
+        try:
+            os.execvp(argv[1], argv[1:])
+        except OSError as error:
+            print(f"Cannot exec {argv[1]}: {error}", file=sys.stderr)
+            return 127
     finally:
         os.close(fd)
 if __name__ == '__main__':

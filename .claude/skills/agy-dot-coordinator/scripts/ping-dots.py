@@ -56,9 +56,9 @@ def main():
     if not isinstance(accounts, dict) or args.account not in accounts: raise Blocked('account is not configured')
     info = accounts[args.account]
     if not isinstance(info, dict) or not info.get('user_data_dir'): raise Blocked('account profile root is not configured')
-    profile = Path(os.path.expandvars(os.path.expanduser(info['user_data_dir'])))
+    profile = Path(os.path.abspath(re.sub(r'^~', lambda _: str(Path.home()), info['user_data_dir'])))
     if profile.is_symlink(): raise Blocked('Dot profile root cannot be a symbolic link')
-    profile = profile.resolve()
+    canonical = profile.resolve()
     subprofile = info.get('profile_directory', 'Default')
     target = info.get('url') or config.get('default_url')
     if (not profile.is_dir() or not isinstance(subprofile, str) or subprofile in ('', '.', '..') or
@@ -66,8 +66,8 @@ def main():
         raise Blocked('configured profile is unavailable')
     if not isinstance(target, str) or not target.startswith(('https://', 'http://')) or any(c.isspace() for c in target):
         raise Blocked('configured target URL is unavailable')
-    chrome_root = Path.home() / ('Library/Application Support/Google/Chrome' if sys.platform == 'darwin' else '.config/google-chrome')
-    if profile == chrome_root or profile in chrome_root.parents or chrome_root in profile.parents:
+    chrome_root = (Path.home() / ('Library/Application Support/Google/Chrome' if sys.platform == 'darwin' else '.config/google-chrome')).resolve()
+    if canonical == chrome_root or canonical in chrome_root.parents or chrome_root in canonical.parents:
         raise Blocked('Dot profile overlaps system Chrome profile')
     if os.path.lexists(STOP): raise Blocked('STOP marker is present')
     STATE.mkdir(mode=0o700, parents=True, exist_ok=True)

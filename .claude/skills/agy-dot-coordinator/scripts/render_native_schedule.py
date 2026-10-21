@@ -90,8 +90,8 @@ def render(config_path, output, host):
     package = json.loads((mcp.parents[3] / "package.json").read_text())
     if package.get("version") != "1.6.0":
         fail("Chrome DevTools MCP must be version 1.6.0")
-    output = Path(output).expanduser().absolute()
-    if os.path.commonpath(("/tmp", str(output))) != "/tmp":
+    output = Path(output).expanduser().resolve()
+    if not output.is_relative_to(Path("/tmp").resolve()):
         fail("staging output must be under /tmp")
     if os.path.lexists(output):
         fail("render destination already exists; choose a new staging directory")
