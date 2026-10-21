@@ -1104,6 +1104,34 @@ class SafePathRemoveTest(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("home directory", result.stderr)
 
+    def test_open_no_follow_refuses_a_symlinked_component(self):
+        """The walk primitive itself never follows a symlinked component."""
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("safe_path_remove", self.HELPER)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        anchor = Path(self.temp.name) / "anchor"
+        anchor.mkdir()
+        outside = Path(self.temp.name) / "outside"
+        outside.mkdir()
+        (anchor / "hop").symlink_to(outside)
+
+        with self.assertRaises(SystemExit) as raised:
+            module.open_no_follow([*Path(anchor).parts[1:], "hop", "root"])
+        self.assertEqual(raised.exception.code, 2)
+
+    def test_refuses_home_as_install_root(self):
+        result = self.run_helper(Path(os.path.expanduser("~")), Path(os.path.expanduser("~")) / "x")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("home directory", result.stderr)
+
+    def test_refuses_home_as_install_root(self):
+        result = self.run_helper(Path(os.path.expanduser("~")), Path(os.path.expanduser("~")) / "x")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("home directory", result.stderr)
+
     def test_swap_to_symlink_after_validation_cannot_escape(self):
         """Removal is descriptor-relative, so a swapped ancestor cannot redirect it."""
         import subprocess as sp

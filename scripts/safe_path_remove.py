@@ -33,6 +33,7 @@ import argparse
 import os
 import stat
 import sys
+from pathlib import Path
 
 
 def refusal(message: str) -> None:
@@ -98,6 +99,25 @@ def remove_at(dir_fd: int, name: str) -> None:
         os.unlink(name, dir_fd=dir_fd)
 
 
+def open_no_follow(parts: list[str], start_fd: int | None = None) -> int:
+    """Open ``parts`` from ``/`` (or ``start_fd``) without following any symlink.
+
+    Anchoring at the filesystem root closes the remaining gap: opening an
+    absolute path such as ``/tmp/anchor/root`` follows a symlink in its *parent*
+    components, so a swap there redirected earlier versions of this helper.
+    """
+    fd = os.open(os.sep, os.O_RDONLY | os.O_DIRECTORY) if start_fd is None else os.dup(start_fd)
+    try:
+        for part in parts:
+            next_fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+            os.close(fd)
+            fd = next_fd
+    except OSError as error:
+        os.close(fd)
+        refusal(f"cannot open {os.sep.join(parts)!r} without following a symlink: {error}")
+    return fd
+
+
 def walk_and_remove(root_fd: int, components: list[str]) -> None:
     """Descend from the root descriptor, then remove the final component.
 
@@ -132,9 +152,24 @@ def main(argv: list[str] | None = None) -> int:
     if not os.path.lexists(target):
         return 0
 
-    components = os.path.relpath(target, base).split(os.sep)
-    root_fd = os.open(base, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    # Lexical relationship first: the final component may legitimately be a
+    # symlink the installer is replacing, so it must not be resolved. Every
+    # intermediate component is later opened with O_NOFOLLOW, so a symlinked
+    # ancestor is refused rather than followed.
+    relative = os.path.relpath(target, base)
+    components = [part for part in Path(relative).parts if part not in ("", os.curdir)]
+    if not components or components[0] == os.pardir:
+        refusal(f"{target!r} is not below install root {base!r}")
+
+    real_base = os.path.realpath(base)
+    root_parts = [part for part in Path(real_base).parts if part not in (os.sep, "")]
+
+    expected = os.stat(real_base)
+    root_fd = open_no_follow(root_parts)
     try:
+        opened = os.fstat(root_fd)
+        if (opened.st_dev, opened.st_ino) != (expected.st_dev, expected.st_ino):
+            refusal(f"install root changed between validation and open: {base!r}")
         walk_and_remove(root_fd, components)
     finally:
         os.close(root_fd)
