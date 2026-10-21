@@ -71,7 +71,10 @@ class CoordinatorNaming(unittest.TestCase):
         self.assertNotIn('fcntl.flock', launcher)
         self.assertNotIn('global_lock', launcher)
         self.assertIn('retired', review.lower())
-        self.assertIn('$HOME/.local/state/ai.gemini.agy-dot-coordinator/STOP', dot)
+        # dot.sh no longer creates coordinator reservations or profile locks.
+        self.assertNotIn('ai.gemini.agy-dot-coordinator/STOP', dot)
+        self.assertNotIn('DOT_PROFILE_LOCKED', dot)
+        self.assertNotIn('flock', dot)
     def test_no_activation_entrypoint(self):
         for name in ['install-launchagent.sh', 'install-systemd.sh']:
             r = subprocess.run(['bash', str(NEW / 'scripts' / name)], capture_output=True, text=True)
