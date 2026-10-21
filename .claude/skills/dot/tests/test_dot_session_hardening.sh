@@ -179,11 +179,24 @@ snapshot_cookie_store "$F/profile/Default/Cookies" >/dev/null 2>&1
 if [[ -f "$F/profile/Default/Cookies.snapshot" ]]; then
   ok "snapshot written next to the live store"
   mk_fake_cookies "$F/profile/Default/Cookies" "rebuilt"
+  touch "$F/profile/Default/Cookies-journal"
   out=$(cmd_restore_session 2>&1)
   sig=$(classify_cookie_store "$F/profile/Default/Cookies" 2>/dev/null)
   [[ "$sig" == "authenticated" ]] && ok "restore-session restored the snapshot (store now authenticated)" \
     || bad "restore-session must restore the snapshot (out: $out; sig: $sig)"
   [[ -f "$F/profile/Default/Cookies.pre-restore" ]] && ok "restore keeps a pre-restore copy" || ok "restore keeps a pre-restore copy (optional)"
+  if [[ ! -e "$F/profile/Default/Cookies-journal" ]] && compgen -G "$F/profile/Default/Cookies-journal.pre-restore-*" >/dev/null; then
+    ok "restore moves the old journal aside instead of deleting it in place"
+  else
+    bad "restore must move Cookies-journal aside, never truncate/delete a possibly-live journal"
+  fi
+  touch "$F/profile/SingletonLock"
+  if ( cmd_restore_session ) >/dev/null 2>&1; then
+    bad "restore must refuse while a SingletonLock owns the profile"
+  else
+    ok "restore refuses while a SingletonLock owns the profile"
+  fi
+  rm -f "$F/profile/SingletonLock"
 else
   bad "snapshot_cookie_store must persist a restorable snapshot"
 fi
