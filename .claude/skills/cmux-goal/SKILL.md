@@ -54,7 +54,7 @@ newline rule". This skill adds only the `/goal`-specific rules below.
    ```
 3. **Repair, never re-type.** If a capture still shows the `/goal` text at the
    `❯` composer, or shows the blank-line-with-cursor signature, send **one**
-   `cmux send-key --surface "$SURFACE" enter` and re-capture. Do not re-send the
+   `cmux send-key --workspace workspace:<N> --surface "$SURFACE" enter` and re-capture. Do not re-send the
    text: on builds where the composer already holds a draft `cmux send` refuses
    the send, and on builds where it does not the second send appends a duplicate
    `/goal` line.

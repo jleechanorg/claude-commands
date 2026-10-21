@@ -47,15 +47,15 @@ A recurring failure pattern: a Claude Code or Codex surface has **finished its t
    command must carry `--force` (`cmux send-key --help`: `--force  Send even into an open
    dialog`):
    ```bash
-   cmux send-key --force --surface <sf> enter   # accept the highlighted menu option
-   cmux send-key --force --surface <sf> y       # then: cmux send-key --force --surface <sf> enter
-   cmux send-key --force --surface <sf> down    # numbered list: move to the option, then enter
+   cmux send-key --force --workspace <ws> --surface <sf> enter   # accept highlighted option
+   cmux send-key --force --workspace <ws> --surface <sf> y       # yes/no: then send enter
+   cmux send-key --force --workspace <ws> --surface <sf> down    # numbered list: move, then enter
    ```
    `--force` here is decision authority over a dialog you have already judged safe (step 1),
    not permission to bypass one unread.
 3. For a **free-text** question where the agent stated its recommendation, type that
    one-line approval and submit it with exactly one Enter, using the dialog-safe key form:
-   `cmux send --surface <sf> "Yes, do <recommended>." && cmux send-key --force --surface <sf> enter`.
+   `cmux send --workspace <ws> --surface <sf> "Yes, do <recommended>." && cmux send-key --force --workspace <ws> --surface <sf> enter`.
    If a question/permission **dialog** (not a free-text prompt) is what is open, `cmux send`
    refuses unless `--force`; in that case use the key procedure in step 2 instead of typing.
 4. Verify with `cmux capture-pane` that the dialog cleared and the agent resumed working.
@@ -174,8 +174,8 @@ sleep 10
 cmux capture-pane --workspace <ws_ref> --surface <sf_ref> --scrollback --lines 120
 ```
 
-- **DIALOG_BLOCKED**: use the guarded key procedure in "Unblock rule" above (`cmux send-key --force --surface <sf> enter|y|down`). A bare socket `"\n"` is the undocumented-behaviour fallback, allowed ONLY when the option text proves it is the agent's own recommended safe choice, and it must be verified with `capture-pane`.
-- **Submit rule (`cmux send`)**: send one single-line message and submit it explicitly with `cmux send-key --surface <sf> enter` (or a **literal** `\n` escape on builds whose send interprets escapes). A real newline in the argument put the text in the composer unsent in both 2026-10-20 operator-caught incidents. Repair with one bare Enter — never re-send the text. Verify the composer cleared before reporting "sent" — canonical: `~/.claude/skills/cmux-steer/SKILL.md` § `cmux send` newline rule.
+- **DIALOG_BLOCKED**: use the guarded key procedure in "Unblock rule" above (`cmux send-key --force --workspace <ws> --surface <sf> enter|y|down` — route both ids: an omitted `--workspace` falls back to the caller's workspace). A bare socket `"\n"` is the undocumented-behaviour fallback, allowed ONLY when the option text proves it is the agent's own recommended safe choice, and it must be verified with `capture-pane`.
+- **Submit rule (`cmux send`)**: send one single-line message and submit it explicitly with `cmux send-key --workspace <ws> --surface <sf> enter` (or a **literal** `\n` escape on builds whose send interprets escapes). A real newline in the argument put the text in the composer unsent in both 2026-10-20 operator-caught incidents. Repair with one bare Enter — never re-send the text. Verify the composer cleared before reporting "sent" — canonical: `~/.claude/skills/cmux-steer/SKILL.md` § `cmux send` newline rule.
 - **MALFORMED_TOOL_CALL**: Nudge the surface to re-invoke the tool properly instead of printing raw XML/text.
 - **Long briefs (>200 chars)**: Write the brief to `/tmp/<task>_brief.md` and send a one-line pointer.
 - **Spawning a dedicated surface** (when no related terminal exists):

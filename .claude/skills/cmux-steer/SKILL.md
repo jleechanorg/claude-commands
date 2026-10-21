@@ -68,7 +68,7 @@ cmux send --surface surface:<sf> "$MSG
 ```
 
 Verification is mandatory — capture the bottom ~14 lines afterwards:
-- `❯ <your text>` still visible → **NOT submitted**; send one `cmux send-key --surface <sf> enter`
+- `❯ <your text>` still visible → **NOT submitted**; send one `cmux send-key --workspace <ws> --surface <sf> enter`
   and re-check.
 - A blank line with the cursor resting beneath the text → the newline-trap signature: send one
   bare Enter, never the text again.
@@ -174,7 +174,7 @@ cmux capture-pane --workspace workspace:N --surface surface:M --lines 25
 #   - "Brewed / Churned / Cooked for Xm"
 # If you see ANY active churning label → SUBMITTED.
 # If the text is still sitting at the ❯ prompt → NOT submitted. Repair with ONE bare
-#   Enter (`cmux send-key --surface <sf> enter`, or a socket send whose `text` is just
+#   Enter (`cmux send-key --workspace <ws> --surface <sf> enter`, or a socket send whose `text` is just
 #   "\n"), then re-capture. Never re-send the message.
 # If "Stopped" / "Done" / nothing → no churn: the steer may still have been accepted
 #   (see the newline rule's verdict list) — check for a queued-message line before
