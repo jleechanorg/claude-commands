@@ -1073,6 +1073,53 @@ class InstallerEntryKindsTest(unittest.TestCase):
             (target / "commands" / "cmd.md").read_text(encoding="utf-8"), "managed\n"
         )
 
+    def test_read_only_regular_file_is_replaced(self):
+        root, fixture, target = self.build()
+        (target / "commands").mkdir(parents=True)
+        stale = target / "commands" / "cmd.md"
+        stale.write_text("stale\n", encoding="utf-8")
+        stale.chmod(0o444)
+
+        result = self.run_merge(fixture, target)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(stale.read_text(encoding="utf-8"), "managed\n")
+
+    def test_failed_move_aside_stops_the_install_and_preserves_the_directory(self):
+        import tempfile as tf
+
+        temp = tf.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        fixture = root / "fixture"
+        (fixture / ".claude" / "skills" / "pkg").mkdir(parents=True)
+        (fixture / ".claude" / "skills" / "pkg" / "SKILL.md").write_text("# S\n", encoding="utf-8")
+        (fixture / "scripts").mkdir()
+        shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+        target = root / "target"
+        installed = target / "skills" / "pkg" / "SKILL.md"
+        installed.mkdir(parents=True)
+        (installed / "inner.txt").write_text("inner\n", encoding="utf-8")
+        fake_bin = root / "fakebin"
+        fake_bin.mkdir()
+        fake_mv = fake_bin / "mv"
+        fake_mv.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        fake_mv.chmod(0o755)
+
+        result = subprocess.run(
+            ["bash", str(fixture / INSTALLER.name), "--merge"],
+            cwd=fixture,
+            env=os.environ
+            | {"CLAUDE_HOME": str(target), "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"},
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Cannot replace directory", result.stdout + result.stderr)
+        self.assertTrue(installed.is_dir())
+        self.assertTrue((installed / "inner.txt").exists())
+
     def test_fifo_destination_is_replaced_without_hanging(self):
         root, fixture, target = self.build()
         (target / "commands").mkdir(parents=True)

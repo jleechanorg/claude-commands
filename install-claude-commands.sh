@@ -357,6 +357,13 @@ install_component() {
         fi
         mkdir -p "$dest_dir"
         local preserved_count=0
+        local listing_file
+        listing_file="$(mktemp "${TMPDIR:-/tmp}/claude-install-listing.XXXXXX")"
+        if ! ( cd "$src_dir" && list_installable_files "$component_name" ) > "$listing_file"; then
+            log_error "Could not enumerate $component_name source files under $src_dir"
+            rm -f -- "$listing_file"
+            return 1
+        fi
         while IFS= read -r -d '' relative; do
             relative="${relative#./}"
             local cur_dir="$dest_dir"
@@ -400,19 +407,18 @@ install_component() {
                     log_error "Refusing to move $dest_entry aside onto existing $replaced_path"
                     return 1
                 fi
-                # `mv -n` never overwrites (and with -T semantics on GNU it would
-                # still refuse a non-empty dir); combined with the existence check
-                # a pre-created symlink cannot redirect this move.
-                if mv -n "$dest_entry" "$replaced_path" 2>/dev/null || mv "$dest_entry" "$replaced_path" 2>/dev/null; then
+                # The destination was just proven absent, so this move has no
+                # existing entry to overwrite; the post-condition check catches a
+                # race that recreates it.
+                if mv -n "$dest_entry" "$replaced_path" 2>/dev/null && [ ! -e "$dest_entry" ] && [ ! -L "$dest_entry" ]; then
                     log_warning "Moved a directory of the wrong kind aside: $replaced_path"
                 else
                     log_error "Cannot replace directory $dest_entry with a non-directory; move it aside and re-run"
                     return 1
                 fi
             fi
-            if [ -d "$dest_entry" ] && [ ! -L "$dest_entry" ]; then
-                : # a directory matching a directory source is updated in place
-            elif [ -e "$dest_entry" ] || [ -L "$dest_entry" ]; then
+            if { [ -e "$dest_entry" ] || [ -L "$dest_entry" ]; } \
+                && { [ ! -d "$dest_entry" ] || [ -L "$dest_entry" ]; }; then
                 # Unlink the single entry whatever it is (symlink, read-only
                 # file, hard link, FIFO, socket, device) and let the copy create
                 # a fresh one. No chmod: chmod follows a symlink and mutates the
@@ -421,10 +427,8 @@ install_component() {
                 rm -f -- "$dest_entry"
             fi
             cp -a "$src_dir/$relative" "$dest_dir/$relative"
-        done < <(
-            cd "$src_dir"
-            list_installable_files "$component_name"
-        )
+        done < "$listing_file"
+        rm -f -- "$listing_file"
         if [ "$preserved_count" -gt 0 ]; then
             log_success "Installed recursive $component_name tree (preserved $preserved_count externally owned path(s))"
         else
@@ -656,6 +660,9 @@ main() {
 }
 
 cleanup_failed_install() {
+    # With `set -E` the ERR trap also fires inside subshells; only the top-level
+    # shell may release the lock or move the staging tree.
+    [ "$BASHPID" = "$$" ] || exit 1
     release_migration_lock
     # Never recursively delete a computed path here: the failed staging tree is
     # renamed aside for inspection instead, so a broken run always leaves a
