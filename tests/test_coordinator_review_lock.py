@@ -1,5 +1,5 @@
 import fcntl, os, pathlib, subprocess, sys, tempfile, unittest
-SCRIPT = pathlib.Path(__file__).resolve().parents[1] / '.claude/skills/agy-dot-coordinator/scripts/review-with-coordinator-lock.py'
+SCRIPT = pathlib.Path(__file__).resolve().parents[1] / '.claude/skills/dot-coordinator/scripts/review-with-coordinator-lock.py'
 class ReviewLock(unittest.TestCase):
  def test_existing_owner_blocks_review(self):
   with tempfile.TemporaryDirectory(dir='/tmp') as d:

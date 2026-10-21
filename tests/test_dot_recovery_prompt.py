@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILL = ROOT / '.claude/skills/agy-dot-coordinator/SKILL.md'
+SKILL = ROOT / '.claude/skills/dot-coordinator/SKILL.md'
 
 
 class CoordinatorWorkflowTests(unittest.TestCase):

@@ -15,7 +15,7 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / '.claude/skills/agy-dot-coordinator/scripts/ping-dots.py'
+SCRIPT = ROOT / '.claude/skills/dot-coordinator/scripts/ping-dots.py'
 SPEC = importlib.util.spec_from_file_location('dot_coordinator_launcher', SCRIPT)
 PING = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PING)
@@ -78,7 +78,7 @@ class LauncherContractTests(unittest.TestCase):
         self.assertIn('do not claim mechanical exactly-once delivery', skill)
 
     def test_scheduler_wrapper_is_thin_and_does_not_choose_account(self):
-        wrapper = (SCRIPT.parent / 'agy-dot-coordinator-wrapper.sh').read_text()
+        wrapper = (SCRIPT.parent / 'dot-coordinator-wrapper.sh').read_text()
         self.assertIn('exec python3', wrapper)
         self.assertNotIn('--account', wrapper)
         self.assertNotIn('rotation', wrapper)

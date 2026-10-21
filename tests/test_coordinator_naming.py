@@ -1,0 +1,73 @@
+"""Neutral naming and shared legacy exclusion/state contracts; no live services."""
+import importlib.util
+import os
+import fcntl
+import shutil
+import tempfile
+from pathlib import Path
+import subprocess
+import unittest
+ROOT = Path(__file__).resolve().parents[1]
+NEW = ROOT / '.claude/skills/dot-coordinator'
+OLD = ROOT / '.claude/skills/agy-dot-coordinator'
+class CoordinatorNaming(unittest.TestCase):
+    def test_neutral_canonical_skill_and_entrypoint(self):
+        self.assertIn('name: dot-coordinator', (NEW / 'SKILL.md').read_text())
+        self.assertTrue((NEW / 'scripts/dot-coordinator-wrapper.sh').is_file())
+    def test_legacy_shims_forward_to_single_implementation(self):
+        for name, target in [('agy-dot-coordinator-wrapper.sh', 'dot-coordinator-wrapper.sh'),
+                             ('pi-lunaroute-adapter.sh', 'pi-lunaroute-adapter.sh'),
+                             ('ping-dots.py', 'ping-dots.py'),
+                             ('review-with-coordinator-lock.py', 'review-with-coordinator-lock.py')]:
+            path = OLD / 'scripts' / name
+            self.assertTrue(path.is_symlink())
+            self.assertEqual(path.resolve(), (NEW / 'scripts' / target).resolve())
+        r = subprocess.run(['bash', str(OLD / 'scripts/agy-dot-coordinator-wrapper.sh'), '--help'], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('--account', r.stdout)
+    def test_old_and_new_review_share_one_held_kernel_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lock = Path(directory) / 'shared.lock'
+            with lock.open('a') as held:
+                fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                for package in (OLD, NEW):
+                    result = subprocess.run(['python3', str(package / 'scripts/review-with-coordinator-lock.py'), '--', 'true'],
+                        env={**os.environ, 'COORDINATOR_LOCK_FILE': str(lock)}, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 2, result.stderr)
+    def test_installer_preserves_aliases_and_existing_hold_ledger(self):
+        from tests.test_installer import InstallerIntegrationTest
+        helper = InstallerIntegrationTest()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture = helper.make_fixture(root)
+            for package in (OLD, NEW):
+                shutil.copytree(package, fixture / '.claude/skills' / package.name, symlinks=True,
+                    ignore=shutil.ignore_patterns('__pycache__'))
+            home = root / 'home'
+            state = home / '.local/state/ai.gemini.agy-dot-coordinator'
+            state.mkdir(parents=True)
+            stop = state / 'STOP'; stop.write_text('operator hold')
+            pending = state / 'send-fixture.pending'; pending.write_text('uncertain fixture')
+            before = [(p.stat().st_ino, p.read_bytes()) for p in (stop, pending)]
+            target = root / 'installed'
+            result = helper.run_installer(fixture, target, extra_environment={'HOME': str(home)})
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            alias = target / 'skills/agy-dot-coordinator/scripts/ping-dots.py'
+            self.assertTrue(alias.is_symlink())
+            self.assertEqual(alias.resolve(), (target / 'skills/dot-coordinator/scripts/ping-dots.py').resolve())
+            self.assertEqual(before, [(p.stat().st_ino, p.read_bytes()) for p in (stop, pending)])
+
+    def test_state_lock_and_stop_names_remain_shared(self):
+        launcher = (NEW / 'scripts/ping-dots.py').read_text()
+        review = (NEW / 'scripts/review-with-coordinator-lock.py').read_text()
+        dot = (ROOT / '.claude/skills/dot/scripts/dot.sh').read_text()
+        self.assertIn('~/.local/state/ai.gemini.agy-dot-coordinator', launcher)
+        self.assertIn('/tmp/ai.gemini.agy-dot-coordinator.lock', launcher)
+        self.assertIn('/tmp/ai.gemini.agy-dot-coordinator.lock', review)
+        self.assertIn('$HOME/.local/state/ai.gemini.agy-dot-coordinator/STOP', dot)
+    def test_no_activation_entrypoint(self):
+        for name in ['install-launchagent.sh', 'install-systemd.sh']:
+            r = subprocess.run(['bash', str(NEW / 'scripts' / name)], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 2)
+            self.assertIn('Activation is not performed', r.stderr)
+if __name__ == '__main__': unittest.main()

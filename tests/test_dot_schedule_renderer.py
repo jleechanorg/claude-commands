@@ -9,7 +9,7 @@ from unittest.mock import patch
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / ".claude/skills/agy-dot-coordinator/scripts/render_native_schedule.py"
+SCRIPT = Path(__file__).resolve().parents[1] / ".claude/skills/dot-coordinator/scripts/render_native_schedule.py"
 spec = importlib.util.spec_from_file_location("schedule_renderer", SCRIPT)
 renderer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(renderer)
@@ -103,14 +103,14 @@ class ScheduleRendererTests(unittest.TestCase):
         timers = sorted(out.glob("*.timer"))
         self.assertEqual({"10", "30", "50"}, {p.stem.rsplit("-", 1)[1] for p in timers})
         self.assertTrue(all(f"OnCalendar=*-*-* *:{p.stem.rsplit('-', 1)[1]}:00" in p.read_text() for p in timers))
-        self.assertIn("--account account-a", (out / "ai.gemini.agy-dot-coordinator-30.service").read_text())
-        service = (out / "ai.gemini.agy-dot-coordinator-30.service").read_text()
+        self.assertIn("--account account-a", (out / "ai.dot-coordinator-30.service").read_text())
+        service = (out / "ai.dot-coordinator-30.service").read_text()
         self.assertIn("TimeoutStartSec=800", service)
         self.assertIn("WorkingDirectory=%h", service)
-        self.assertIn("DOT_EXPECTED_IDENTITY_SHA256=\"", (out / "ai.gemini.agy-dot-coordinator-30.env").read_text())
-        self.assertIn('DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/1000/bus"', (out / "ai.gemini.agy-dot-coordinator-30.env").read_text())
-        self.assertIn('XDG_RUNTIME_DIR="/run/user/1000"', (out / "ai.gemini.agy-dot-coordinator-30.env").read_text())
-        path = next(line.removeprefix("PATH=") for line in (out / "ai.gemini.agy-dot-coordinator-30.env").read_text().splitlines() if line.startswith("PATH="))
+        self.assertIn("DOT_EXPECTED_IDENTITY_SHA256=\"", (out / "ai.dot-coordinator-30.env").read_text())
+        self.assertIn('DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/1000/bus"', (out / "ai.dot-coordinator-30.env").read_text())
+        self.assertIn('XDG_RUNTIME_DIR="/run/user/1000"', (out / "ai.dot-coordinator-30.env").read_text())
+        path = next(line.removeprefix("PATH=") for line in (out / "ai.dot-coordinator-30.env").read_text().splitlines() if line.startswith("PATH="))
         self.assertTrue(path.startswith(f'"{preferred}:{other}:'))
 
     def test_rejects_wrong_cadence_or_host_before_output(self):
