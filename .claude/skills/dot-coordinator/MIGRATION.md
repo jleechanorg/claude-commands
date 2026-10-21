@@ -29,7 +29,7 @@ Before activation, owners must explicitly reconcile these legacy holds; a held
 source candidate remains held. No migration bypass flag or fresh state domain.
 DOT_LOCK_BASE/TMPDIR and exact lexical profile paths must agree across transports.
 
-Old executable paths are relative aliases to one canonical implementation, not
+Old executable paths are regular forwarding files to one canonical implementation, not
 another scheduler. Install both packages together; do not update only half the
 pair. Old full installations remain live until separately reviewed migration.
 
@@ -37,10 +37,10 @@ pair. Old full installations remain live until separately reviewed migration.
 
 1. Inventory and privately back up scripts, configs, registered service/timer
    labels and hashes; identify active hold owners.
-2. Do not reuse deployment tooling that rejects source symlinks or packages only
-   the legacy directory. Review a deployment that stages BOTH packages while
-   preserving relative symlinks and validating their targets; back up the full
-   old package first. Retain the compatibility state/lock paths, and render
+2. Do not reuse deployment tooling that packages only the legacy directory.
+   Source forwarding aliases are regular files, preserving strict catalog
+   refusal of source symlinks. Stage BOTH packages and validate forwarding
+   targets; back up the full old package first. Retain the compatibility state/lock paths, and render
    new definitions to a fresh private /tmp directory. Inspect accounts, identity
    bindings, unchanged minutes and CLI argv. Linux env files belong under
    ~/.config/dot-coordinator; Mac uses the existing private log directory.

@@ -1,1 +1,3 @@
-../../dot-coordinator/scripts/dot-coordinator-wrapper.sh
+#!/bin/sh
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+exec "$SCRIPT_DIR/../../dot-coordinator/scripts/dot-coordinator-wrapper.sh" "$@"

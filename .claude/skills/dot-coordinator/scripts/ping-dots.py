@@ -9,10 +9,8 @@ UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML,
 STATE = Path(os.environ.get('COORDINATOR_STATE_DIR', '~/.local/state/ai.gemini.agy-dot-coordinator')).expanduser()
 STOP = STATE / 'STOP'
 TIMEOUT, GRACE = min(max(int(os.environ.get('COORDINATOR_TIMEOUT_SECS', '720')), 1), 720), 8
-
 class Blocked(RuntimeError):
     pass
-
 def stop(proc):
     if not proc: return
     if proc.poll() is None:

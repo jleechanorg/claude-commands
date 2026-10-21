@@ -20,8 +20,8 @@ class CoordinatorNaming(unittest.TestCase):
                              ('ping-dots.py', 'ping-dots.py'),
                              ('review-with-coordinator-lock.py', 'review-with-coordinator-lock.py')]:
             path = OLD / 'scripts' / name
-            self.assertTrue(path.is_symlink())
-            self.assertEqual(path.resolve(), (NEW / 'scripts' / target).resolve())
+            self.assertFalse(path.is_symlink())
+            self.assertIn("dot-coordinator/scripts/" + target, path.read_text())
         r = subprocess.run(['bash', str(OLD / 'scripts/agy-dot-coordinator-wrapper.sh'), '--help'], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn('--account', r.stdout)
@@ -56,8 +56,10 @@ class CoordinatorNaming(unittest.TestCase):
             result = helper.run_installer(fixture, target, extra_environment={'HOME': str(home)})
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             alias = target / 'skills/agy-dot-coordinator/scripts/ping-dots.py'
-            self.assertTrue(alias.is_symlink())
-            self.assertEqual(alias.resolve(), (target / 'skills/dot-coordinator/scripts/ping-dots.py').resolve())
+            self.assertFalse(alias.is_symlink())
+            self.assertIn('dot-coordinator/scripts/ping-dots.py', alias.read_text())
+            check = subprocess.run(['python3', str(alias), '--help'], capture_output=True, text=True)
+            self.assertEqual(check.returncode, 0, check.stderr)
             self.assertEqual(before, [(p.stat().st_ino, p.read_bytes()) for p in (stop, pending)])
 
     def test_state_lock_and_stop_names_remain_shared(self):
