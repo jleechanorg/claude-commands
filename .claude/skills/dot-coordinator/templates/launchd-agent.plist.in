@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>Label</key><string>ai.gemini.agy-dot-coordinator.@MINUTE@</string>
+  <key>Label</key><string>ai.dot-coordinator.@MINUTE@</string>
   <key>ProgramArguments</key><array>
     <string>/bin/bash</string>
-    <string>@HOME@/.claude/skills/agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh</string>
+    <string>@HOME@/.claude/skills/dot-coordinator/scripts/dot-coordinator-wrapper.sh</string>
     <string>--account</string><string>@ACCOUNT@</string>
   </array>
   <key>WorkingDirectory</key><string>@HOME@</string>

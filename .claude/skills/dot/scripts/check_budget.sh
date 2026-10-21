@@ -28,15 +28,18 @@ else
 fi
 
 check "SKILL.md" "SKILL.md" 400
-if [[ -f "../agy-dot-coordinator/scripts/ping-dots.py" ]]; then
-  combined=$(( $(wc -l < ../agy-dot-coordinator/scripts/ping-dots.py) + $(wc -l < ../agy-dot-coordinator/scripts/agy-dot-coordinator-wrapper.sh) + $(wc -l < ../agy-dot-coordinator/scripts/pi-lunaroute-adapter.sh) ))
+if [[ -f "../dot-coordinator/scripts/ping-dots.py" ]]; then
+  combined=$(( $(wc -l < ../dot-coordinator/scripts/ping-dots.py) + $(wc -l < ../dot-coordinator/scripts/dot-coordinator-wrapper.sh) + $(wc -l < ../dot-coordinator/scripts/pi-lunaroute-adapter.sh) ))
+  for alias in agy-dot-coordinator-wrapper.sh pi-lunaroute-adapter.sh ping-dots.py; do
+    [[ ! -f "../agy-dot-coordinator/scripts/$alias" ]] || combined=$(( combined + $(wc -l < "../agy-dot-coordinator/scripts/$alias") ))
+  done
   if [[ "$combined" -gt 150 ]]; then
     echo "BUDGET BREACH: coordinator launch glue = $combined LOC > cap 150" >&2
     fail=1
   else
     echo "ok: coordinator launch glue = $combined LOC (cap 150)"
   fi
-  check "agy-dot-coordinator/SKILL.md" "../agy-dot-coordinator/SKILL.md" 400
+  check "dot-coordinator/SKILL.md" "../dot-coordinator/SKILL.md" 400
 fi
 
 bash -n scripts/dot.sh

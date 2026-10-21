@@ -1,3 +1,3 @@
 #!/bin/sh
-export LUNAROUTE_API_KEY="${LUNAROUTE_API_KEY:-$(lunaroute key)}"
-exec "${PI_EXECUTABLE:-pi}" --provider lunaroute --model "${PIL_MODEL:-deepseek-4.1-flash}" "$@"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+exec "$SCRIPT_DIR/../../dot-coordinator/scripts/pi-lunaroute-adapter.sh" "$@"

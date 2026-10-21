@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILL = ROOT / '.claude/skills/agy-dot-coordinator/SKILL.md'
+SKILL = ROOT / '.claude/skills/dot-coordinator/SKILL.md'
 
 
 class CoordinatorWorkflowTests(unittest.TestCase):
@@ -36,7 +36,7 @@ class CoordinatorWorkflowTests(unittest.TestCase):
         coordinator = SKILL.read_text()
         self.assertIn('Do not manually create or remove coordinator STOP for ordinary review', dot)
         self.assertIn('Preserve pre-existing operator STOP and unresolved delivery state', dot)
-        self.assertIn('review-with-coordinator-lock.py', dot)
+        self.assertIn('coordinator global review holds are retired', dot)
         self.assertIn('Ordinary review callers must not create a global STOP marker', coordinator)
         self.assertNotIn('set the coordinator STOP marker', dot)
 

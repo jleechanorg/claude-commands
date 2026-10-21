@@ -51,10 +51,10 @@ jobs:
           echo "$install_dir" >> "$GITHUB_PATH"
       - name: Run repo contract tests
         run: python3 -m unittest discover -s tests -p "test_*.py" -v
-      - name: Run agy-dot-coordinator compliance, timeout, and LOC guardrails
+      - name: Run dot-coordinator compliance, timeout, and LOC guardrails
         run: |
-          python3 .claude/skills/agy-dot-coordinator/tests/test_reminder_compliance.py
-          python3 .claude/skills/agy-dot-coordinator/tests/test_ping_dots_timeout.py
+          python3 .claude/skills/dot-coordinator/tests/test_reminder_compliance.py
+          python3 .claude/skills/dot-coordinator/tests/test_ping_dots_timeout.py
       - name: Timeline skill rendering contracts
         run: python3 .claude/skills/timeline/scripts/test_build.py
       - name: Dot skill LOC guardrail + transport tests

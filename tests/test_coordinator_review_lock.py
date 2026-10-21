@@ -1,45 +1,12 @@
-import fcntl, os, pathlib, subprocess, sys, tempfile, unittest
-SCRIPT = pathlib.Path(__file__).resolve().parents[1] / '.claude/skills/agy-dot-coordinator/scripts/review-with-coordinator-lock.py'
-class ReviewLock(unittest.TestCase):
- def test_existing_owner_blocks_review(self):
-  with tempfile.TemporaryDirectory(dir='/tmp') as d:
+"""Deprecated review entrypoint cannot create holds or execute a command."""
+import os, pathlib, subprocess, tempfile, unittest
+SCRIPT = pathlib.Path(__file__).resolve().parents[1] / '.claude/skills/dot-coordinator/scripts/review-with-coordinator-lock.py'
+class RetiredReview(unittest.TestCase):
+ def test_review_helper_cannot_create_hold_or_run_command(self):
+  with tempfile.TemporaryDirectory() as d:
    path=pathlib.Path(d)/'lock'
-   with path.open('a') as f:
-    fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
-    r=subprocess.run([sys.executable,str(SCRIPT),'--',sys.executable,'-c','raise SystemExit(77)'],env={**os.environ,'COORDINATOR_LOCK_FILE':str(path)},capture_output=True)
-    self.assertEqual(r.returncode,2)
- def test_lock_lives_through_exec_and_releases_on_exit(self):
-  with tempfile.TemporaryDirectory(dir='/tmp') as d:
-   path=pathlib.Path(d)/'lock'; stop=pathlib.Path(d)/'STOP';stop.write_text('operator hold')
-   code='import fcntl,sys;f=open(sys.argv[1],"a");\ntry:fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)\nexcept BlockingIOError:sys.exit(19)\nsys.exit(99)'
-   r=subprocess.run([sys.executable,str(SCRIPT),'--',sys.executable,'-c',code,str(path)],env={**os.environ,'COORDINATOR_LOCK_FILE':str(path)},capture_output=True)
-   self.assertEqual(r.returncode,19)
-   with path.open('a') as f:fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
-   self.assertEqual(stop.read_text(),'operator hold')
- def test_killed_review_releases_kernel_lock(self):
-  with tempfile.TemporaryDirectory(dir='/tmp') as d:
-   path=pathlib.Path(d)/'lock'
-   p=subprocess.Popen([sys.executable,str(SCRIPT),'--',sys.executable,'-u','-c','import time;print("ready",flush=True);time.sleep(30)'],env={**os.environ,'COORDINATOR_LOCK_FILE':str(path)},stdout=subprocess.PIPE,text=True)
-   try:
-    self.assertEqual(p.stdout.readline().strip(),'ready')
-    with path.open('a') as f:
-     with self.assertRaises(BlockingIOError):fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
-    p.kill();p.wait(timeout=5)
-    with path.open('a') as f:fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
-   finally:
-    if p.poll() is None:p.kill();p.wait(timeout=5)
-    p.stdout.close()
- def test_missing_lock_parent_is_created(self):
-  with tempfile.TemporaryDirectory(dir='/tmp') as d:
-   path=pathlib.Path(d)/'nested'/'lock'
-   r=subprocess.run([sys.executable,str(SCRIPT),'--',sys.executable,'-c','raise SystemExit(17)'],env={**os.environ,'COORDINATOR_LOCK_FILE':str(path)},capture_output=True)
-   self.assertEqual(r.returncode,17,r.stderr)
-   with path.open('a') as f:fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
- def test_missing_command_returns_127_and_releases_lock(self):
-  with tempfile.TemporaryDirectory(dir='/tmp') as d:
-   path=pathlib.Path(d)/'lock'
-   r=subprocess.run([sys.executable,str(SCRIPT),'--',str(pathlib.Path(d)/'missing-command')],env={**os.environ,'COORDINATOR_LOCK_FILE':str(path)},capture_output=True)
-   self.assertEqual(r.returncode,127,r.stderr)
-   self.assertNotIn(b'Traceback',r.stderr)
-   with path.open('a') as f:fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
+   result=subprocess.run(['python3',str(SCRIPT),'--','true'],env={**os.environ,'COORDINATOR_LOCK_FILE':str(path)},capture_output=True,text=True)
+   self.assertEqual(result.returncode,2)
+   self.assertFalse(path.exists())
+   self.assertIn('retired',result.stderr)
 if __name__=='__main__':unittest.main()

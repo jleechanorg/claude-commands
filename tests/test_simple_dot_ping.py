@@ -15,7 +15,7 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / '.claude/skills/agy-dot-coordinator/scripts/ping-dots.py'
+SCRIPT = ROOT / '.claude/skills/dot-coordinator/scripts/ping-dots.py'
 SPEC = importlib.util.spec_from_file_location('dot_coordinator_launcher', SCRIPT)
 PING = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PING)
@@ -78,7 +78,7 @@ class LauncherContractTests(unittest.TestCase):
         self.assertIn('do not claim mechanical exactly-once delivery', skill)
 
     def test_scheduler_wrapper_is_thin_and_does_not_choose_account(self):
-        wrapper = (SCRIPT.parent / 'agy-dot-coordinator-wrapper.sh').read_text()
+        wrapper = (SCRIPT.parent / 'dot-coordinator-wrapper.sh').read_text()
         self.assertIn('exec python3', wrapper)
         self.assertNotIn('--account', wrapper)
         self.assertNotIn('rotation', wrapper)
@@ -142,7 +142,6 @@ class LauncherExecutionTests(unittest.TestCase):
             stack.enter_context(patch.object(PING.Path, 'home', return_value=self.home))
             stack.enter_context(patch.object(PING, 'STATE', self.state))
             stack.enter_context(patch.object(PING, 'STOP', self.state / 'STOP'))
-            stack.enter_context(patch.object(PING, 'LOCK', self.lock))
             stack.enter_context(patch.dict(os.environ, self.env, clear=False))
             stack.enter_context(patch.object(PING.subprocess, 'check_output', return_value=''))
             stack.enter_context(patch.object(PING.subprocess, 'Popen', side_effect=spawn))
@@ -163,26 +162,14 @@ class LauncherExecutionTests(unittest.TestCase):
         self.assertIn('--userDataDir=' + str(self.profile.absolute()), browser['args'])
         self.assertFalse({'--provider', '--model'} & set(spawned['command']))
 
-    def test_attempt_receipt_survives_cleanup_and_new_invocation_gets_new_path(self):
-        receipts = []
+    def test_no_attempt_ledger_or_global_review_lock_is_created(self):
         def agent(command, **options):
-            receipt = Path(options['env']['COORDINATOR_ATTEMPT_FILE'])
-            self.assertEqual(receipt.parent, self.state)
-            # Model the prescribed artifact operation, not real browser delivery.
-            fd = os.open(receipt, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            os.write(fd, b'{"payload_sha256":"test","attempted":true}')
-            os.close(fd)
-            for scenario in ('ACK arrived', 'revised payload', 'pending removed'):
-                with self.subTest(scenario=scenario):
-                    with self.assertRaises(FileExistsError):
-                        os.open(receipt, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            receipts.append(receipt)
+            self.assertNotIn('COORDINATOR_ATTEMPT_FILE', options['env'])
+            self.assertIn('COORDINATOR_PENDING_FILE', options['env'])
             return FakePiProcess()
         self.invoke(on_spawn=agent)
-        self.assertTrue(receipts[0].is_file())
-        self.invoke(on_spawn=agent)
-        self.assertNotEqual(*receipts)
-        self.assertTrue(all(path.is_file() for path in receipts))
+        self.assertFalse(self.lock.exists())
+        self.assertEqual(list(self.state.glob('attempt-*')), [])
 
     def test_configured_cli_prefix_is_literal_argv(self):
         prefix = ['--thinking', 'medium', 'literal spaces; $HOME $(never-run)']
@@ -205,14 +192,7 @@ class LauncherExecutionTests(unittest.TestCase):
             self.invoke(on_spawn=lambda *args, **kwargs: spawned.append(args))
         self.assertEqual(spawned, [])
 
-    def test_global_and_profile_locks_prevent_pi_spawn(self):
-        self.lock.parent.mkdir(parents=True, exist_ok=True)
-        with self.lock.open('a') as held:
-            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            spawned = []
-            with self.assertRaisesRegex(PING.Blocked, 'coordinator lock'):
-                self.invoke(on_spawn=lambda *args, **kwargs: spawned.append(args))
-            self.assertEqual(spawned, [])
+    def test_only_profile_transport_lock_excludes_browser_turn(self):
         path = self.lock_base / 'dot-profile-locks' / (hashlib.sha256(str(self.profile.absolute()).encode()).hexdigest()[:16] + '.lock')
         path.parent.mkdir(parents=True)
         with path.open('a') as held:
@@ -263,7 +243,7 @@ class LauncherExecutionTests(unittest.TestCase):
         child.write_text('''import fcntl, os, signal, time
 from pathlib import Path
 def cleanup(*_):
-    with open(os.environ["COORDINATOR_LOCK_FILE"], "a") as lock:
+    with open(os.environ["DOT_TEST_LOCK_FILE"], "a") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             state = "released"
@@ -283,7 +263,8 @@ Path(os.environ["DOT_CHILD_PID_FILE"]).write_text(str(child.pid))
 time.sleep(60)
 ''')
         self.pi.chmod(0o755)
-        env = dict(os.environ, **self.env, DOT_CHILD_SCRIPT=str(child),
+        profile_lock = self.lock_base / 'dot-profile-locks' / (hashlib.sha256(str(self.profile.absolute()).encode()).hexdigest()[:16] + '.lock')
+        env = dict(os.environ, **self.env, DOT_TEST_LOCK_FILE=str(profile_lock), DOT_CHILD_SCRIPT=str(child),
                    DOT_CHILD_PID_FILE=str(self.home / 'child.pid'),
                    DOT_CHILD_READY_FILE=str(ready), DOT_CHILD_CLEANED_FILE=str(cleaned))
         harness = f'''import importlib.util, sys
@@ -305,7 +286,7 @@ module.main()
             launcher.communicate(timeout=5)
             self.assertEqual(launcher.returncode, 128 + PING.signal.SIGTERM)
             self.assertEqual(cleaned.read_text(), 'held')
-            with self.lock.open('a') as contender:
+            with profile_lock.open('a') as contender:
                 fcntl.flock(contender, fcntl.LOCK_EX | fcntl.LOCK_NB)
         finally:
             if launcher.poll() is None: launcher.kill()

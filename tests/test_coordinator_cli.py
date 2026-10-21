@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
-ADAPTER = Path(__file__).resolve().parents[1] / '.claude/skills/agy-dot-coordinator/scripts/pi-lunaroute-adapter.sh'
+ADAPTER = Path(__file__).resolve().parents[1] / '.claude/skills/dot-coordinator/scripts/pi-lunaroute-adapter.sh'
 
 
 class AdapterContract(unittest.TestCase):
