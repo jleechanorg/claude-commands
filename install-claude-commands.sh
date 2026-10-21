@@ -376,14 +376,26 @@ install_component() {
             relative="${relative#./}"
             local cur_dir="$dest_dir"
             local part
-            local parent_rel; parent_rel="$(dirname "$relative")"
+            # Split the relative parent without `read` or `dirname`: both stop at a
+            # newline, and a directory name may legitimately contain one, which would
+            # hide a symlinked parent and let the copy escape the install target.
+            local parent_rel="."
+            case "$relative" in
+                */*) parent_rel="${relative%/*}" ;;
+            esac
             local skip_file=false
             local linked_owner=""
             if [ "$parent_rel" != "." ]; then
-                local old_ifs="$IFS"
-                IFS='/' read -ra PARTS <<< "$parent_rel"
-                IFS="$old_ifs"
-                for part in "${PARTS[@]}"; do
+                local part rest="$parent_rel"
+                while [ -n "$rest" ]; do
+                    if [ "${rest#*/}" = "$rest" ]; then
+                        part="$rest"
+                        rest=""
+                    else
+                        part="${rest%%/*}"
+                        rest="${rest#*/}"
+                    fi
+                    [ -n "$part" ] || continue
                     cur_dir="$cur_dir/$part"
                     if [ -L "$cur_dir" ]; then
                         skip_file=true
@@ -399,7 +411,12 @@ install_component() {
                 preserved_count=$((preserved_count + 1))
                 continue
             fi
-            local target_parent; target_parent="$(dirname "$dest_dir/$relative")"
+            local target_parent
+            if [ "$parent_rel" = "." ]; then
+                target_parent="$dest_dir"
+            else
+                target_parent="$dest_dir/$parent_rel"
+            fi
             if [ -d "$target_parent" ] && [ ! -w "$target_parent" ]; then
                 chmod u+w "$target_parent"
             fi

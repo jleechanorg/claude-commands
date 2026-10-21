@@ -1221,5 +1221,41 @@ class InstallerMovesWrongKindEntryAsideTest(unittest.TestCase):
         self.assertTrue((replaced[0] / "stale.txt").exists())
 
 
+class NewlinePathEscapeTest(unittest.TestCase):
+    """A newline inside a directory name must not hide a symlinked parent."""
+
+    def test_symlinked_parent_with_newline_cannot_escape_the_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            outside = root / "outside"
+            outside.mkdir()
+            target = root / "target"
+            linked_parent = target / "commands" / "evil\nlink"
+            linked_parent.parent.mkdir(parents=True)
+            linked_parent.symlink_to(outside)
+
+            fixture = root / "fixture"
+            src_parent = fixture / ".claude" / "commands" / "evil\nlink"
+            src_parent.mkdir(parents=True)
+            (src_parent / "pwn.md").write_text("pwned\n", encoding="utf-8")
+            (fixture / "scripts").mkdir()
+            shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+
+            result = subprocess.run(
+                ["bash", str(fixture / INSTALLER.name), "--merge"],
+                cwd=fixture,
+                env=os.environ | {"CLAUDE_HOME": str(target)},
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertFalse(
+                (outside / "pwn.md").exists(),
+                "install escaped the target through a newline-named symlinked parent\n"
+                + result.stdout
+                + result.stderr,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
