@@ -9,7 +9,7 @@ how to coordinate) lives in `SKILL.md` and the calling agent, never in code.
 
 | Surface | Current | Budget (hard cap) |
 |---|---|---|
-| `dot-coordinator/scripts/ping-dots.py` + `dot-coordinator-wrapper.sh` + `pi-lunaroute-adapter.sh` (launcher glue, combined) | 150 LOC | **≤ 150** |
+| `dot-coordinator/scripts/ping-dots.py` + `dot-coordinator-wrapper.sh` + `pi-lunaroute-adapter.sh` (launcher glue, combined) | 142 LOC | **≤ 150** |
 | `dot-coordinator/SKILL.md` (coordinator prompts & policy) | candidate | **≤ 400** |
 | `scripts/dot.sh` | 479 LOC | **≤ 520** |
 | `scripts/dot_chrome.mjs` | 843 LOC | **≤ 900** |

@@ -6,20 +6,32 @@ ai.dot-coordinator-10/-30/-50 on Linux. New private configuration lives under
 ~/.config/dot-coordinator. CLI executable/argv remain configurable; preserve the
 existing Pi/lunaroute choice and environment/credential helper.
 
-## Shared compatibility anchors
+## Minimal owner contract and compatibility transition
 
-Keep ~/.local/state/ai.gemini.agy-dot-coordinator and
-/tmp/ai.gemini.agy-dot-coordinator.lock unchanged. Both new launcher and old
-forwarders share them; Dot's STOP default stays there. Preserve every STOP,
-pending ledger, retained attempt receipt, state.json and state_<account>.json
-in place. Never initialize a second empty state domain. Explicit state/lock
-and DOT_LOCK_BASE/TMPDIR overrides must agree across every caller. Do not alter
-profile paths, SingletonLocks, credentials or account bindings.
+Each Dot owns its tasks. The scheduler only requests the fixed reminder. The
+owned-browser transport retains ONE existing per-profile kernel flock plus its
+system Chrome, keychain, SingletonLock and cleanup protections. There is no
+coordinator global lock, review exclusion, task-progress ledger or new retained
+attempt receipt. The old review helper fails closed without executing commands.
 
-The old package contains relative symlink aliases to the single canonical implementation, with no additional launcher logic or state. Installer manifests preserve these links. Existing schedule.json
-adapter paths continue working with both packages installed. Install/review the
-pair together; do not remove old paths or update only half the pair. Old full
-installations stay valid until the activation owner performs a reviewed switch.
+Only unresolved-submit information genuinely needs transport persistence: the
+existing per-account pending marker binds payload/account/target/identity so an
+unknown result is read back before retry. It is removed only after evidence
+settles delivery or absence. This cooperative guard is not destination idempotency;
+one schedule set is still required to prevent sequential duplicate reminders.
+
+For compatibility, pending/legacy unknown-delivery data remains under
+~/.local/state/ai.gemini.agy-dot-coordinator. Existing STOP is a READ-ONLY migration
+guard, not a new review lifecycle: do not create, clear or reinterpret it. Old
+state/attempt files and /tmp/ai.gemini.agy-dot-coordinator.lock remain untouched
+on live hosts. The new launcher does not acquire that coordinator global lock.
+Before activation, owners must explicitly reconcile these legacy holds; a held
+source candidate remains held. No migration bypass flag or fresh state domain.
+DOT_LOCK_BASE/TMPDIR and exact lexical profile paths must agree across transports.
+
+Old executable paths are relative aliases to one canonical implementation, not
+another scheduler. Install both packages together; do not update only half the
+pair. Old full installations remain live until separately reviewed migration.
 
 ## Separately approved operator migration
 
@@ -36,7 +48,7 @@ installations stay valid until the activation owner performs a reviewed switch.
    verify no in-flight coordinator before registering the new set. Never load
    both label sets: shared flock prevents concurrency, not two sequential sends.
 4. Preserve genuine STOP and uncertain delivery throughout. Verify exactly one
-   registered schedule set, unchanged hold/ledger inodes/content, shared lock
+   registered schedule set, unchanged hold/ledger inodes/content, profile lock
    contention and profile/cadence. A held tick must remain held. No forced send.
 5. Roll back by unloading the new set before restoring backed-up old labels.
    Retain state and forwarding entrypoints. Remove aliases only in a later

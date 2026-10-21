@@ -25,15 +25,18 @@ class CoordinatorNaming(unittest.TestCase):
         r = subprocess.run(['bash', str(OLD / 'scripts/agy-dot-coordinator-wrapper.sh'), '--help'], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn('--account', r.stdout)
-    def test_old_and_new_review_share_one_held_kernel_lock(self):
+    def test_retired_review_aliases_leave_existing_hold_untouched(self):
         with tempfile.TemporaryDirectory() as directory:
             lock = Path(directory) / 'shared.lock'
+            before = None
             with lock.open('a') as held:
+                before = lock.stat().st_ino
                 fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 for package in (OLD, NEW):
                     result = subprocess.run(['python3', str(package / 'scripts/review-with-coordinator-lock.py'), '--', 'true'],
                         env={**os.environ, 'COORDINATOR_LOCK_FILE': str(lock)}, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertEqual(lock.stat().st_ino, before)
     def test_installer_preserves_aliases_and_existing_hold_ledger(self):
         from tests.test_installer import InstallerIntegrationTest
         helper = InstallerIntegrationTest()
@@ -62,8 +65,8 @@ class CoordinatorNaming(unittest.TestCase):
         review = (NEW / 'scripts/review-with-coordinator-lock.py').read_text()
         dot = (ROOT / '.claude/skills/dot/scripts/dot.sh').read_text()
         self.assertIn('~/.local/state/ai.gemini.agy-dot-coordinator', launcher)
-        self.assertIn('/tmp/ai.gemini.agy-dot-coordinator.lock', launcher)
-        self.assertIn('/tmp/ai.gemini.agy-dot-coordinator.lock', review)
+        self.assertNotIn('global_lock', launcher)
+        self.assertIn('retired', review.lower())
         self.assertIn('$HOME/.local/state/ai.gemini.agy-dot-coordinator/STOP', dot)
     def test_no_activation_entrypoint(self):
         for name in ['install-launchagent.sh', 'install-systemd.sh']:

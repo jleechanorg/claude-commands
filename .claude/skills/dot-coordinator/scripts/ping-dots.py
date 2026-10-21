@@ -8,7 +8,6 @@ SKILL = Path(__file__).resolve().parents[1] / 'SKILL.md'
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36'
 STATE = Path(os.environ.get('COORDINATOR_STATE_DIR', '~/.local/state/ai.gemini.agy-dot-coordinator')).expanduser()
 STOP = STATE / 'STOP'
-LOCK = Path(os.environ.get('COORDINATOR_LOCK_FILE', '/tmp/ai.gemini.agy-dot-coordinator.lock'))
 TIMEOUT, GRACE = min(max(int(os.environ.get('COORDINATOR_TIMEOUT_SECS', '720')), 1), 720), 8
 
 class Blocked(RuntimeError):
@@ -70,14 +69,8 @@ def main():
         raise Blocked('Dot profile overlaps system Chrome profile')
     if os.path.lexists(STOP): raise Blocked('STOP marker is present')
     STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
-    LOCK.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    global_lock = profile_lock = proc = None
+    profile_lock = proc = None
     try:
-        global_lock = LOCK.open('a')
-        try: fcntl.flock(global_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise Blocked('coordinator lock is already held')
-        if os.path.lexists(STOP): raise Blocked('STOP marker is present')
         lock_dir = Path(os.environ.get('DOT_LOCK_BASE', tempfile.gettempdir())) / 'dot-profile-locks'
         lock_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         lock_path = lock_dir / (hashlib.sha256(str(profile).encode()).hexdigest()[:16] + '.lock')
@@ -119,7 +112,7 @@ def main():
             mcp_file.chmod(0o600)
             if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent dispatch')
             prompt = f'Account key: {args.account}\nConfigured target: {target}\nExpected identity SHA-256: {expected} (private binding; compare silently and return booleans only).\nPending-send file: {pending}\nOwner-provided task context: {args.instruction}\nRead and follow the loaded skill.'
-            env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_PENDING_FILE=str(pending), COORDINATOR_ATTEMPT_FILE=str(STATE / ('attempt-' + Path(run_dir).name + '.json')), COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
+            env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_PENDING_FILE=str(pending), COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
             cmd = [pi_bin, *cli_args, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
                 '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
             proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -134,7 +127,6 @@ def main():
     finally:
         stop(proc)
         if profile_lock: profile_lock.close()
-        if global_lock: global_lock.close()
 
 if __name__ == '__main__':
     try: raise SystemExit(main())
