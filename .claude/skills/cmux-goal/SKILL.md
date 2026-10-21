@@ -42,10 +42,13 @@ newline rule". This skill adds only the `/goal`-specific rules below.
    `surface_ref` (e.g. `surface:1000030005`) is the target, and the app exports the same
    surface as `$CMUX_SURFACE_ID` — as a **UUID** (e.g. `6605549A-…`), not a `surface:N`
    ref. `cmux send --surface` accepts either form.
+   Assign the condition to a single-quoted variable so shell metacharacters, `%`, and
+   quotes in it stay literal, then pass the quoted variable:
    ```bash
    SURFACE="${CMUX_SURFACE_ID:-surface:<N>}"
-   cmux send --surface "$SURFACE" "/goal <single-line condition>" \
-     && cmux send-key --surface "$SURFACE" enter
+   GOAL_TEXT='<single-line condition>'          # single-quote it; write '\'' for an apostrophe
+   cmux send --workspace workspace:<N> --surface "$SURFACE" "/goal $GOAL_TEXT" \
+     && cmux send-key --workspace workspace:<N> --surface "$SURFACE" enter
    # equivalent: end the same one-line argument with the literal \n escape — that IS
    # the one Enter, so do not also send `send-key`
    ```
@@ -189,7 +192,11 @@ cmux-touching skill.
    ```bash
    SURFACE_UUID="${CMUX_SURFACE_ID:?no cmux surface id in this environment}"
    SOCK="${CMUX_SOCKET_PATH:-$HOME/.local/state/cmux/cmux.sock}"
-   printf '{"method":"surface.send_text","params":{"surface_id":"%s","text":"/goal <condition text>\\n"}}\n' "$SURFACE_UUID" | nc -U -w 3 "$SOCK"
+   GOAL_TEXT='<single-line condition>'
+   # JSON-encode the payload: a '%' in the condition is a printf directive, and
+   # quotes/backslashes would otherwise produce invalid JSON.
+   python3 -c 'import json,sys; print(json.dumps({"method":"surface.send_text","params":{"surface_id":sys.argv[1],"text":"/goal "+sys.argv[2]+"\n"}}))' \
+     "$SURFACE_UUID" "$GOAL_TEXT" | nc -U -w 3 "$SOCK"
    ```
    **Submission is a separate gate from typing** — apply § "`/goal`-specific rules" above (single-line condition, explicit Enter, then repair-never-re-type); the general submit and newline rules are owned by `~/.claude/skills/cmux-steer/SKILL.md` § "Submit Discipline" and § "`cmux send` newline rule".
 4. **Verify persisted query, not tool-layer:** verify persisted state directly. For a native goal tool, query the runtime again and confirm the goal is active and its objective matches the hardened condition (not merely that the tool returned successfully). For cmux, accept exactly the three confirmations listed in § "Success criterion" (`◎ /goal active (Nm)`, `Goal set: …`, or a session-scoped Stop hook reported as active); `OK surface:N` is only the tool layer. If the CLI is unavailable and only the socket path was used, apply Step 3's "shell-level verification unavailable" wording instead of claiming a confirmed goal — the `send-key` repair below needs the CLI, so it does not apply in that mode. If no confirmation arrives and the CLI is available, check whether another prompt was mid-flight (your text may have appended to it) and retry once — one bare `send-key enter` first, per "Repair, never re-type". If setup still does not succeed, proceed with the authorized mission without halting; do not falsely claim an active goal.

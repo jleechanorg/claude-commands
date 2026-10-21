@@ -168,7 +168,8 @@ For every surface that needs action after deduplication, execute the mandatory 3
 
 ```bash
 printf '{"method":"surface.send_text","params":{"surface_id":"<SURFACE-UUID>","text":"<message>\\n"}}\n' | nc -U -w 3 "${CMUX_SOCKET_PATH:-$HOME/.local/state/cmux/cmux.sock}"
-# or, preferred CLI form: cmux send --surface <sf> "<message>" && cmux send-key --surface <sf> enter
+# or, preferred CLI form (route both commands):
+#   cmux send --workspace <ws> --surface <sf> "<message>" && cmux send-key --workspace <ws> --surface <sf> enter
 sleep 10
 cmux capture-pane --workspace <ws_ref> --surface <sf_ref> --scrollback --lines 120
 ```

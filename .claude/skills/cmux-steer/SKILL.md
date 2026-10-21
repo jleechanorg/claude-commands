@@ -54,12 +54,13 @@ at 12:10 PM (`world` `/goal`) on 2026-10-20.
 **Therefore the only safe send is a single-line text plus one explicit Enter:**
 
 ```bash
-# PREFERRED — one line, then a real key event (chained or separate, both valid)
-cmux send --surface surface:<sf> "your single-line message" \
-  && cmux send-key --surface surface:<sf> enter
+# PREFERRED — one line, then a real key event (chained or separate, both valid).
+# Route BOTH commands explicitly: --workspace/--surface on send and on send-key.
+cmux send --workspace workspace:<N> --surface surface:<sf> "your single-line message" \
+  && cmux send-key --workspace workspace:<N> --surface surface:<sf> enter
 # EQUIVALENT on builds whose send interprets escapes (checked: cmux send --help):
 # the trailing \n IS the one Enter — do not also send send-key
-cmux send --surface surface:<sf> "your single-line message\n"
+cmux send --workspace workspace:<N> --surface surface:<sf> "your single-line message\n"
 # WRONG — a real newline anywhere in the argument forms a second line that may
 # park the text unsent or submit a fragment
 cmux send --surface surface:<sf> "$MSG
