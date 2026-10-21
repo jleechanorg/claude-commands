@@ -45,37 +45,7 @@ class LauncherContractTests(unittest.TestCase):
             self.assertTrue(os.path.lexists(profile / 'SingletonLock'))
             self.assertIn("os.path.lexists(profile / 'SingletonLock')", SCRIPT.read_text())
 
-    def test_pending_send_lifecycle_is_owned_by_markdown_agent(self):
-        source = SCRIPT.read_text()
-        skill = (SCRIPT.parent.parent / 'SKILL.md').read_text()
-        self.assertIn('COORDINATOR_PENDING_FILE', source)
-        self.assertIn('COORDINATOR_PENDING_FILE', skill)
-        self.assertIn('atomically create', skill)
-        self.assertIn('sending nothing', skill)
-        self.assertNotIn('COORDINATOR_OUTCOME', source)
-        self.assertNotIn('send_unknown', source)
-        self.assertNotIn('--provider', source)
-        self.assertNotIn('--model', source)
-        self.assertIn('read-only', skill)
-        self.assertIn('Use only the directly exposed `mcp__dot_browser__*` tools', skill)
-        self.assertIn('Do not invoke nested Pi/runtime sessions, Codemode', skill)
-        self.assertIn('do not retry or send a correction', skill.lower())
 
-    def test_stop_and_legacy_delivery_holds_block_fresh_send(self):
-        skill = (SCRIPT.parent.parent / 'SKILL.md').read_text()
-        self.assertIn('Before preparing any fresh message', skill)
-        self.assertIn('os.path.lexists', skill)
-        self.assertIn('state.json', skill)
-        self.assertIn('state_<COORDINATOR_SELECTED_ACCOUNT>.json', skill)
-        self.assertIn('unresolved or unknown delivery', skill)
-        self.assertIn('unreadable, corrupt, or ambiguous', skill)
-        self.assertIn('Immediately before the submit click', skill)
-        self.assertIn('recheck `<parent>/STOP`', skill)
-        self.assertIn('exact unchanged payload', skill)
-        self.assertIn('latest user instruction', skill)
-        self.assertIn('they cannot authorize a send', skill)
-        self.assertIn('flush the file and its parent directory', skill.lower())
-        self.assertIn('do not claim mechanical exactly-once delivery', skill)
 
     def test_scheduler_wrapper_is_thin_and_does_not_choose_account(self):
         wrapper = (SCRIPT.parent / 'dot-coordinator-wrapper.sh').read_text()
@@ -140,8 +110,8 @@ class LauncherExecutionTests(unittest.TestCase):
             return fake_proc or FakePiProcess()
         with ExitStack() as stack:
             stack.enter_context(patch.object(PING.Path, 'home', return_value=self.home))
-            stack.enter_context(patch.object(PING, 'STATE', self.state))
-            stack.enter_context(patch.object(PING, 'STOP', self.state / 'STOP'))
+            stack.enter_context(patch.object(PING, 'STATE', self.state, create=True))
+            stack.enter_context(patch.object(PING, 'STOP', self.state / 'STOP', create=True))
             stack.enter_context(patch.dict(os.environ, self.env, clear=False))
             stack.enter_context(patch.object(PING.subprocess, 'check_output', return_value=''))
             stack.enter_context(patch.object(PING.subprocess, 'Popen', side_effect=spawn))
@@ -165,7 +135,7 @@ class LauncherExecutionTests(unittest.TestCase):
     def test_no_attempt_ledger_or_global_review_lock_is_created(self):
         def agent(command, **options):
             self.assertNotIn('COORDINATOR_ATTEMPT_FILE', options['env'])
-            self.assertIn('COORDINATOR_PENDING_FILE', options['env'])
+            self.assertNotIn('COORDINATOR_PENDING_FILE', options['env'])
             return FakePiProcess()
         self.invoke(on_spawn=agent)
         self.assertFalse(self.lock.exists())
@@ -184,41 +154,8 @@ class LauncherExecutionTests(unittest.TestCase):
                 with self.assertRaisesRegex(PING.Blocked, 'CLI arguments'):
                     self.invoke()
 
-    def test_stop_dangling_symlink_prevents_pi_spawn(self):
-        self.state.mkdir()
-        (self.state / 'STOP').symlink_to(self.home / 'missing-stop-target')
-        spawned = []
-        with self.assertRaisesRegex(PING.Blocked, 'STOP marker'):
-            self.invoke(on_spawn=lambda *args, **kwargs: spawned.append(args))
-        self.assertEqual(spawned, [])
 
-    def test_only_profile_transport_lock_excludes_browser_turn(self):
-        path = self.lock_base / 'dot-profile-locks' / (hashlib.sha256(str(self.profile.absolute()).encode()).hexdigest()[:16] + '.lock')
-        path.parent.mkdir(parents=True)
-        with path.open('a') as held:
-            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            spawned = []
-            with self.assertRaisesRegex(PING.Blocked, 'shared Dot profile lock'):
-                self.invoke(on_spawn=lambda *args, **kwargs: spawned.append(args))
-            self.assertEqual(spawned, [])
 
-    def test_profile_lock_matches_dot_resolver_through_symlinked_parent(self):
-        alias = self.home / 'profile-parent-alias'
-        alias.symlink_to(self.home, target_is_directory=True)
-        configured = alias / 'profile'
-        data = json.loads(self.config.read_text())
-        data['accounts']['alpha']['user_data_dir'] = str(configured)
-        self.config.write_text(json.dumps(data))
-        resolved = json.loads(subprocess.check_output(
-            ['node', str(ROOT / '.claude/skills/dot/scripts/dot_chrome.mjs'), 'resolve-profile'],
-            env={**os.environ, 'HOME': str(self.home), 'DOT_CONFIG_FILE': str(self.config),
-                 'DOT_ACCOUNT': 'alpha', 'DOT_CHROME_USER_DATA': '', 'DOT_PROFILE_DIRECTORY': 'Default'}, text=True))['profileDir']
-        path = self.lock_base / 'dot-profile-locks' / (hashlib.sha256(resolved.encode()).hexdigest()[:16] + '.lock')
-        path.parent.mkdir(parents=True)
-        with path.open('a') as held:
-            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            with self.assertRaisesRegex(PING.Blocked, 'shared Dot profile lock'):
-                self.invoke()
 
     def test_timeout_terminates_pi_and_preserves_agent_owned_marker(self):
         class TimedOut(FakePiProcess):
@@ -237,19 +174,13 @@ class LauncherExecutionTests(unittest.TestCase):
         self.assertEqual(process.returncode, -15)
         self.assertEqual(pending.read_text(), 'private send intent')
 
-    def test_sigterm_cleans_pi_process_group_before_releasing_locks(self):
+    def test_sigterm_cleans_owned_pi_process_group_without_state_lock(self):
         ready, cleaned = self.home / 'child.ready', self.home / 'child.cleaned'
         child = self.home / 'child.py'
         child.write_text('''import fcntl, os, signal, time
 from pathlib import Path
 def cleanup(*_):
-    with open(os.environ["DOT_TEST_LOCK_FILE"], "a") as lock:
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            state = "released"
-        except BlockingIOError:
-            state = "held"
-    Path(os.environ["DOT_CHILD_CLEANED_FILE"]).write_text(state)
+    Path(os.environ["DOT_CHILD_CLEANED_FILE"]).write_text("cleaned")
     raise SystemExit
 signal.signal(signal.SIGTERM, cleanup)
 Path(os.environ["DOT_CHILD_READY_FILE"]).write_text("ready")
@@ -285,9 +216,7 @@ module.main()
             launcher.terminate()
             launcher.communicate(timeout=5)
             self.assertEqual(launcher.returncode, 128 + PING.signal.SIGTERM)
-            self.assertEqual(cleaned.read_text(), 'held')
-            with profile_lock.open('a') as contender:
-                fcntl.flock(contender, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.assertEqual(cleaned.read_text(), 'cleaned')
         finally:
             if launcher.poll() is None: launcher.kill()
             launcher.wait()
@@ -298,7 +227,7 @@ module.main()
         self.state.mkdir()
         pending = self.state / ('send-' + hashlib.sha256(b'alpha').hexdigest()[:16] + '.pending')
         pending.write_text('private send intent')
-        with self.assertRaisesRegex(PING.Blocked, 'inspect pending-send state'):
+        with self.assertRaisesRegex(PING.Blocked, 'verify delivery before any retry'):
             self.invoke(FakePiProcess(returncode=7))
         self.assertEqual(pending.read_text(), 'private send intent')
 

@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """Run one scheduler-bound Dot coordinator turn using Pi and Chrome DevTools MCP."""
-import argparse, fcntl, hashlib, json, os, re, shutil, signal, subprocess, sys, tempfile, time
+import argparse, json, os, re, shutil, signal, subprocess, sys, tempfile, time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from render_native_schedule import node22_bins
 SKILL = Path(__file__).resolve().parents[1] / 'SKILL.md'
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36'
-STATE = Path(os.environ.get('COORDINATOR_STATE_DIR', '~/.local/state/ai.gemini.agy-dot-coordinator')).expanduser()
-STOP = STATE / 'STOP'
 TIMEOUT, GRACE = min(max(int(os.environ.get('COORDINATOR_TIMEOUT_SECS', '720')), 1), 720), 8
 class Blocked(RuntimeError):
     pass
@@ -65,17 +63,8 @@ def main():
     chrome_root = (Path.home() / ('Library/Application Support/Google/Chrome' if sys.platform == 'darwin' else '.config/google-chrome')).resolve()
     if canonical == chrome_root or canonical in chrome_root.parents or chrome_root in canonical.parents:
         raise Blocked('Dot profile overlaps system Chrome profile')
-    if os.path.lexists(STOP): raise Blocked('STOP marker is present')
-    STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
-    profile_lock = proc = None
+    proc = None
     try:
-        lock_dir = Path(os.environ.get('DOT_LOCK_BASE', tempfile.gettempdir())) / 'dot-profile-locks'
-        lock_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-        lock_path = lock_dir / (hashlib.sha256(str(profile).encode()).hexdigest()[:16] + '.lock')
-        profile_lock = lock_path.open('a')
-        try: fcntl.flock(profile_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise Blocked('shared Dot profile lock is already held')
         if os.path.lexists(profile / 'SingletonLock'): raise Blocked('Chrome or a stale SingletonLock already owns this Dot profile')
         if any(str(profile) in row and 'Chrome' in row for row in subprocess.check_output(['ps', '-Ao', 'args'], text=True).splitlines()):
             raise Blocked('a Chrome process already uses this Dot profile')
@@ -95,8 +84,6 @@ def main():
             if not (os.environ.get('DISPLAY') or os.environ.get('DBUS_SESSION_BUS_ADDRESS')): raise Blocked('Linux keychain session is unavailable')
             mcp_args.append('--chromeArg=--password-store=gnome-libsecret')
             if not os.environ.get('DISPLAY'): mcp_args.append('--headless')
-        pending = STATE / ('send-' + hashlib.sha256(args.account.encode()).hexdigest()[:16] + '.pending')
-        if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent start')
         with tempfile.TemporaryDirectory(prefix='dot-agent-', dir='/tmp') as run_dir:
             project = Path(run_dir) / '.pi'
             project.mkdir(mode=0o700)
@@ -108,23 +95,21 @@ def main():
             mcp_file = project / 'mcp.json'
             mcp_file.write_text(json.dumps({'mcpServers': servers}))
             mcp_file.chmod(0o600)
-            if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent dispatch')
-            prompt = f'Account key: {args.account}\nConfigured target: {target}\nExpected identity SHA-256: {expected} (private binding; compare silently and return booleans only).\nPending-send file: {pending}\nOwner-provided task context: {args.instruction}\nRead and follow the loaded skill.'
-            env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_PENDING_FILE=str(pending), COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
+            prompt = f'Account key: {args.account}\nConfigured target: {target}\nExpected identity SHA-256: {expected} (private binding; compare silently and return booleans only).\nOwner-provided task context: {args.instruction}\nRead and follow the loaded skill.'
+            env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
             cmd = [pi_bin, *cli_args, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
                 '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
             proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     text=True, start_new_session=True)
             try: out, err = proc.communicate(timeout=TIMEOUT)
             except subprocess.TimeoutExpired:
-                raise Blocked('Pi exceeded the invocation deadline; send state remains held')
+                raise Blocked('Pi exceeded the invocation deadline; verify delivery before any retry')
             sys.stdout.write(out.replace(expected, '[identity redacted]'))
             sys.stderr.write(err.replace(expected, '[identity redacted]'))
-            if proc.returncode: raise Blocked('Pi failed; inspect pending-send state before another send')
+            if proc.returncode: raise Blocked('Pi failed; verify delivery before any retry')
         return proc.returncode
     finally:
         stop(proc)
-        if profile_lock: profile_lock.close()
 
 if __name__ == '__main__':
     try: raise SystemExit(main())
