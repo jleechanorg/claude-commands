@@ -17,7 +17,7 @@ This section is the single owner of the rule; other cmux skills point here. **Me
 
 **Measured to NOT change the selected workspace** (selection safety only — it does not by
 itself authorize creating or closing anything; see the consent rule below):
-- **Reads:** `cmux capture-pane --workspace <ws> --surface <surface-uuid-or-ref> --scrollback --lines <n>`. The 2026-10-18 measurement also covered `cmux read-screen` and did not see it move the selection; the installed build (`cmux read-screen --help`, checked 2026-10-20) does accept `--workspace`/`--surface`. **This skill still reads only with `capture-pane`** — cross-workspace read routing was historically unreliable, so a targeted read comes from `capture-pane`, not `read-screen`.
+- **Reads:** `cmux capture-pane --workspace <ws> --surface <surface-uuid-or-ref> --scrollback --lines <n>`. The 2026-10-18 measurement also covered `cmux read-screen` and did not see it move the selection; the installed build (`cmux read-screen --help`, checked 2026-10-20) does accept `--workspace`/`--surface`. **This skill still reads only with `capture-pane`** — `read-screen` can return the *focused* surface rather than the one you named (the base rule, still the observed failure mode), and cross-workspace read routing was historically unreliable, so a targeted read comes from `capture-pane`, not `read-screen`.
 - **Steers:** `cmux send "<text>"` + `cmux send-key enter`, and the raw socket `surface.send_text` call (type + Enter in one call; the trailing `\n` in `text` is Enter; works cross-workspace; resolve the socket from `$CMUX_SOCKET_PATH`, default below; surface UUIDs come from `cmux surface list`):
 
   ```bash

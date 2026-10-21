@@ -43,9 +43,10 @@ A recurring failure pattern: a Claude Code or Codex surface has **finished its t
    an option labelled `Recommended` / `(Recommended)` / `Yes`, or the agent's own stated
    recommendation. If the dialog offers no defensible default, stop: it is
    `PARKED_OPERATOR`, not an unblock.
-2. Answer it with **one guarded key event**. A dialog blocks ordinary sends, so the key
-   command must carry `--force` (`cmux send-key --help`: `--force  Send even into an open
-   dialog`):
+2. Answer it with a **guarded key action** — one key for a highlighted menu, key-then-Enter
+   for a yes/no or a navigated list (that Enter is what confirms the dialog, not a second
+   unplanned keystroke). A dialog blocks ordinary sends, so every key command must carry
+   `--force` (`cmux send-key --help`: `--force  Send even into an open dialog`):
    ```bash
    cmux send-key --force --workspace <ws> --surface <sf> enter   # accept highlighted option
    cmux send-key --force --workspace <ws> --surface <sf> y       # yes/no: then send enter
