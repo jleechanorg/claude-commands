@@ -339,18 +339,6 @@ list_installable_files() {
     fi
 }
 
-# The recursive delete of a source-managed destination entry is delegated to a
-# helper that proves the target is one entry below the install root; a dynamic
-# `rm -rf` is refused by shell guardrails and by review.
-SAFE_REMOVE_HELPER="$PLUGIN_SRC_DIR/scripts/safe_path_remove.py"
-
-require_safe_remove_helper() {
-    if [ ! -f "$SAFE_REMOVE_HELPER" ]; then
-        log_error "Missing required helper: $SAFE_REMOVE_HELPER"
-        return 1
-    fi
-}
-
 # Shared recursive install function
 install_component() {
     local src_dir="$1"
@@ -401,13 +389,22 @@ install_component() {
                 chmod u+w "$target_parent"
             fi
             mkdir -p "$target_parent"
-            if [ -e "$dest_dir/$relative" ] || [ -L "$dest_dir/$relative" ]; then
-                # Recursive delete of a variable path is exactly what shell
-                # guardrails (and good practice) refuse; the helper proves the
-                # target is a single entry below the install root first.
-                require_safe_remove_helper || return 1
-                python3 "$SAFE_REMOVE_HELPER" \
-                    --under "$INSTALL_ROOT" -- "$dest_dir/$relative"
+            # No recursive delete anywhere: a directory on either side is never
+            # removed. A directory/file kind mismatch is refused, and a single
+            # non-directory entry is unlinked (or made writable) before copying.
+            if [ -d "$dest_dir/$relative" ] && [ ! -L "$dest_dir/$relative" ] \
+                && { [ ! -d "$src_dir/$relative" ] || [ -L "$src_dir/$relative" ]; }; then
+                log_error "Refusing to replace directory $dest_dir/$relative with a non-directory; move it aside and re-run"
+                return 1
+            fi
+            if { [ -e "$dest_dir/$relative" ] || [ -L "$dest_dir/$relative" ]; } \
+                && { [ ! -d "$dest_dir/$relative" ] || [ -L "$dest_dir/$relative" ]; }; then
+                if [ ! -w "$dest_dir/$relative" ] || [ -L "$dest_dir/$relative" ]; then
+                    chmod u+w "$dest_dir/$relative" 2>/dev/null || true
+                    # Single-entry unlink (never recursive): clears a read-only
+                    # file or a symlink so the copy cannot follow or collide.
+                    rm -f -- "$dest_dir/$relative"
+                fi
             fi
             cp -a "$src_dir/$relative" "$dest_dir/$relative"
         done < <(

@@ -45,10 +45,6 @@ class InstallerIntegrationTest(unittest.TestCase):
         exported_script.parent.mkdir(parents=True, exist_ok=True)
         exported_script.write_text("#!/bin/sh\necho installed-integrate\n", encoding="utf-8")
         exported_script.chmod(0o755)
-        shutil.copy2(
-            REPO_ROOT / "scripts" / "safe_path_remove.py",
-            fixture / "scripts" / "safe_path_remove.py",
-        )
         return fixture
 
     def run_installer(
@@ -1002,187 +998,8 @@ class InstallerIntegrationTest(unittest.TestCase):
             )
 
 
-class SafePathRemoveTest(unittest.TestCase):
-    """The installer's delete primitive must prove its target before removing."""
-
-    HELPER = REPO_ROOT / "scripts" / "safe_path_remove.py"
-
-    def run_helper(self, base: Path, target: Path) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["python3", str(self.HELPER), "--under", str(base), "--", str(target)],
-            text=True,
-            capture_output=True,
-        )
-
-    def setUp(self) -> None:
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.base = Path(self.temp.name) / "root"
-        self.base.mkdir()
-
-    def test_removes_directory_and_file_below_root(self):
-        directory = self.base / "skills" / "pkg"
-        directory.mkdir(parents=True)
-        (directory / "SKILL.md").write_text("x\n", encoding="utf-8")
-        file_entry = self.base / "skills" / "other" / "bin"
-        file_entry.parent.mkdir(parents=True)
-        file_entry.write_text("not a dir\n", encoding="utf-8")
-
-        self.assertEqual(self.run_helper(self.base, directory).returncode, 0)
-        self.assertFalse(directory.exists())
-
-        self.assertEqual(self.run_helper(self.base, file_entry).returncode, 0)
-        self.assertFalse(file_entry.exists())
-
-    def test_removes_symlink_without_following_it(self):
-        outside = Path(self.temp.name) / "outside"
-        outside.mkdir()
-        (outside / "keep.txt").write_text("keep\n", encoding="utf-8")
-        link = self.base / "linked"
-        link.symlink_to(outside)
-
-        self.assertEqual(self.run_helper(self.base, link).returncode, 0)
-        self.assertFalse(link.exists())
-        self.assertTrue((outside / "keep.txt").exists())
-
-    def test_missing_target_is_not_an_error(self):
-        self.assertEqual(self.run_helper(self.base, self.base / "absent").returncode, 0)
-
-    def test_refuses_target_outside_root(self):
-        outside = Path(self.temp.name) / "outside"
-        outside.mkdir()
-        result = self.run_helper(self.base, outside)
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("not below install root", result.stderr)
-        self.assertTrue(outside.exists())
-
-    def test_refuses_root_itself_and_parent_traversal(self):
-        self.assertEqual(self.run_helper(self.base, self.base).returncode, 2)
-        traversal = self.run_helper(self.base, self.base / "a" / ".." / ".." / "escape")
-        self.assertEqual(traversal.returncode, 2)
-        self.assertIn("..", traversal.stderr)
-
-    def test_refuses_root_of_filesystem(self):
-        result = self.run_helper(self.base, Path("/"))
-        self.assertEqual(result.returncode, 2)
-
-    def test_refuses_when_parent_is_a_symlink(self):
-        outside = Path(self.temp.name) / "outside"
-        outside.mkdir()
-        (outside / "victim").mkdir()
-        (self.base / "hop").symlink_to(outside)
-        result = self.run_helper(self.base, self.base / "hop" / "victim")
-        self.assertEqual(result.returncode, 2)
-        self.assertTrue((outside / "victim").exists())
-
-    def test_refuses_symlinked_install_root(self):
-        real_root = Path(self.temp.name) / "real-root"
-        real_root.mkdir()
-        (real_root / "entry").mkdir()
-        linked_root = Path(self.temp.name) / "linked-root"
-        linked_root.symlink_to(real_root)
-        result = self.run_helper(linked_root, linked_root / "entry")
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("symlink", result.stderr)
-        self.assertTrue((real_root / "entry").exists())
-
-    def test_intermediate_symlink_ancestor_cannot_redirect_delete(self):
-        """A symlinked component *inside* the root is refused, not followed."""
-        self.base = self.base / "real"
-        self.base.mkdir()
-        outside = Path(self.temp.name) / "outside"
-        (outside / "pkg").mkdir(parents=True)
-        (outside / "pkg" / "entry.txt").write_text("survive\n", encoding="utf-8")
-        (self.base / "alias").symlink_to(outside)
-        target = self.base / "alias" / "pkg"
-        result = self.run_helper(self.base, target)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertTrue((outside / "pkg" / "entry.txt").exists())
-
-    def test_refuses_home_as_install_root(self):
-        result = self.run_helper(Path(os.path.expanduser("~")), Path(os.path.expanduser("~")) / "x")
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("home directory", result.stderr)
-
-    def test_open_no_follow_refuses_a_symlinked_component(self):
-        """The walk primitive itself never follows a symlinked component."""
-        import importlib.util
-
-        spec = importlib.util.spec_from_file_location("safe_path_remove", self.HELPER)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-
-        anchor = Path(self.temp.name) / "anchor"
-        anchor.mkdir()
-        outside = Path(self.temp.name) / "outside"
-        outside.mkdir()
-        (anchor / "hop").symlink_to(outside)
-
-        with self.assertRaises(SystemExit) as raised:
-            module.open_no_follow([*Path(anchor).parts[1:], "hop", "root"])
-        self.assertEqual(raised.exception.code, 2)
-
-    def test_refuses_home_as_install_root(self):
-        result = self.run_helper(Path(os.path.expanduser("~")), Path(os.path.expanduser("~")) / "x")
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("home directory", result.stderr)
-
-    def test_refuses_home_as_install_root(self):
-        result = self.run_helper(Path(os.path.expanduser("~")), Path(os.path.expanduser("~")) / "x")
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("home directory", result.stderr)
-
-    def test_swap_to_symlink_after_validation_cannot_escape(self):
-        """Removal is descriptor-relative, so a swapped ancestor cannot redirect it."""
-        import subprocess as sp
-
-        safe_dir = self.base / "skills" / "pkg"
-        safe_dir.mkdir(parents=True)
-        (safe_dir / "inner.txt").write_text("keep me\n", encoding="utf-8")
-        outside = Path(self.temp.name) / "outside"
-        outside.mkdir()
-        (outside / "victim.txt").write_text("survive\n", encoding="utf-8")
-
-        # Race the validator: swap "skills" for a symlink to `outside` while a
-        # concurrent remover repeats the delete. Whatever the interleaving, the
-        # file outside the root must survive because deletion never re-resolves
-        # the parent path after opening it without O_NOFOLLOW.
-        racer = sp.Popen(
-            [
-                "python3",
-                "-c",
-                (
-                    "import os, shutil, sys\n"
-                    "from pathlib import Path\n"
-                    "root = Path(sys.argv[1]); outside = Path(sys.argv[2])\n"
-                    "link = root / 'skills'\n"
-                    "for _ in range(400):\n"
-                    "    try:\n"
-                    "        shutil.rmtree(link, ignore_errors=True)\n"
-                    "        if not link.exists() and not link.is_symlink():\n"
-                    "            os.symlink(outside, link)\n"
-                    "    except OSError:\n"
-                    "        pass\n"
-                ),
-                str(self.base),
-                str(outside),
-            ]
-        )
-        try:
-            for _ in range(40):
-                sp.run(
-                    ["python3", str(self.HELPER), "--under", str(self.base), "--", str(self.base / "skills" / "pkg")],
-                    capture_output=True,
-                    timeout=30,
-                )
-        finally:
-            racer.terminate()
-            racer.wait(timeout=30)
-        self.assertTrue((outside / "victim.txt").exists())
-
-
-class InstallerReplacesWrongKindEntryTest(unittest.TestCase):
-    """A directory where the source has a file must be replaced, not fail."""
+class InstallerRefusesWrongKindEntryTest(unittest.TestCase):
+    """A directory where the source has a file is refused, never deleted."""
 
     def test_merge_replaces_directory_with_source_file(self):
         temp = tempfile.TemporaryDirectory()
@@ -1195,10 +1012,6 @@ class InstallerReplacesWrongKindEntryTest(unittest.TestCase):
         )
         (fixture / "scripts").mkdir()
         shutil.copy2(INSTALLER, fixture / INSTALLER.name)
-        shutil.copy2(
-            REPO_ROOT / "scripts" / "safe_path_remove.py",
-            fixture / "scripts" / "safe_path_remove.py",
-        )
         target = root / "target"
         environment = os.environ | {"CLAUDE_HOME": str(target)}
 
@@ -1223,9 +1036,12 @@ class InstallerReplacesWrongKindEntryTest(unittest.TestCase):
             text=True,
             capture_output=True,
         )
-        self.assertEqual(second.returncode, 0, second.stderr + second.stdout)
-        self.assertTrue(installed.is_file())
-        self.assertEqual(installed.read_text(encoding="utf-8"), "# Skill\n")
+        # A directory where the source has a file is refused with a clear error
+        # instead of being recursively deleted.
+        self.assertNotEqual(second.returncode, 0)
+        self.assertIn("Refusing to replace directory", second.stdout + second.stderr)
+        self.assertTrue(installed.is_dir())
+        self.assertTrue((installed / "stale.txt").exists())
 
 
 if __name__ == "__main__":
