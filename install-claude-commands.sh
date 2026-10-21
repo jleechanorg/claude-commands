@@ -389,22 +389,29 @@ install_component() {
                 chmod u+w "$target_parent"
             fi
             mkdir -p "$target_parent"
-            # No recursive delete anywhere: a directory on either side is never
-            # removed. A directory/file kind mismatch is refused, and a single
-            # non-directory entry is unlinked (or made writable) before copying.
-            if [ -d "$dest_dir/$relative" ] && [ ! -L "$dest_dir/$relative" ] \
+            # No recursive delete anywhere: a directory is never removed, only
+            # renamed aside, and a single non-directory entry is unlinked before
+            # copying.
+            local dest_entry="$dest_dir/$relative"
+            if [ -d "$dest_entry" ] && [ ! -L "$dest_entry" ] \
                 && { [ ! -d "$src_dir/$relative" ] || [ -L "$src_dir/$relative" ]; }; then
-                log_error "Refusing to replace directory $dest_dir/$relative with a non-directory; move it aside and re-run"
-                return 1
-            fi
-            if { [ -e "$dest_dir/$relative" ] || [ -L "$dest_dir/$relative" ]; } \
-                && { [ ! -d "$dest_dir/$relative" ] || [ -L "$dest_dir/$relative" ]; }; then
-                if [ ! -w "$dest_dir/$relative" ] || [ -L "$dest_dir/$relative" ]; then
-                    chmod u+w "$dest_dir/$relative" 2>/dev/null || true
-                    # Single-entry unlink (never recursive): clears a read-only
-                    # file or a symlink so the copy cannot follow or collide.
-                    rm -f -- "$dest_dir/$relative"
+                local replaced_path="${dest_entry}.replaced-$(date +%Y%m%d%H%M%S)"
+                if mv "$dest_entry" "$replaced_path"; then
+                    log_warning "Moved a directory of the wrong kind aside: $replaced_path"
+                else
+                    log_error "Cannot replace directory $dest_entry with a non-directory; move it aside and re-run"
+                    return 1
                 fi
+            fi
+            if [ -L "$dest_entry" ]; then
+                # Unlink the link itself. Never chmod it: chmod follows the link
+                # and would change the mode of a file outside the target.
+                rm -f -- "$dest_entry"
+            elif [ -f "$dest_entry" ] && [ ! -w "$dest_entry" ]; then
+                chmod u+w "$dest_entry" || {
+                    log_error "Cannot make $dest_entry writable; fix permissions and re-run"
+                    return 1
+                }
             fi
             cp -a "$src_dir/$relative" "$dest_dir/$relative"
         done < <(

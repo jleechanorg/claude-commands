@@ -998,8 +998,41 @@ class InstallerIntegrationTest(unittest.TestCase):
             )
 
 
-class InstallerRefusesWrongKindEntryTest(unittest.TestCase):
-    """A directory where the source has a file is refused, never deleted."""
+class InstallerSymlinkModeSafetyTest(unittest.TestCase):
+    def test_replacing_a_symlink_does_not_chmod_the_external_file(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        fixture = root / "fixture"
+        (fixture / ".claude" / "commands").mkdir(parents=True)
+        (fixture / ".claude" / "commands" / "cmd.md").write_text("managed\n", encoding="utf-8")
+        (fixture / "scripts").mkdir()
+        shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+        target = root / "target"
+        (target / "commands").mkdir(parents=True)
+        external = root / "external.md"
+        external.write_text("external\n", encoding="utf-8")
+        external.chmod(0o400)
+        (target / "commands" / "cmd.md").symlink_to(external)
+
+        result = subprocess.run(
+            ["bash", str(fixture / INSTALLER.name), "--merge"],
+            cwd=fixture,
+            env=os.environ | {"CLAUDE_HOME": str(target)},
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(
+            (target / "commands" / "cmd.md").read_text(encoding="utf-8"), "managed\n"
+        )
+        self.assertEqual(external.stat().st_mode & 0o777, 0o400)
+        self.assertEqual(external.read_text(encoding="utf-8"), "external\n")
+
+
+class InstallerMovesWrongKindEntryAsideTest(unittest.TestCase):
+    """A directory where the source has a file is moved aside, never deleted."""
 
     def test_merge_replaces_directory_with_source_file(self):
         temp = tempfile.TemporaryDirectory()
@@ -1036,12 +1069,14 @@ class InstallerRefusesWrongKindEntryTest(unittest.TestCase):
             text=True,
             capture_output=True,
         )
-        # A directory where the source has a file is refused with a clear error
-        # instead of being recursively deleted.
-        self.assertNotEqual(second.returncode, 0)
-        self.assertIn("Refusing to replace directory", second.stdout + second.stderr)
-        self.assertTrue(installed.is_dir())
-        self.assertTrue((installed / "stale.txt").exists())
+        # A directory where the source has a file is moved aside (never
+        # recursively deleted) and the file is installed in its place.
+        self.assertEqual(second.returncode, 0, second.stderr + second.stdout)
+        self.assertTrue(installed.is_file())
+        self.assertEqual(installed.read_text(encoding="utf-8"), "# Skill\n")
+        replaced = list((target / "skills" / "example").glob("SKILL.md.replaced-*"))
+        self.assertEqual(len(replaced), 1)
+        self.assertTrue((replaced[0] / "stale.txt").exists())
 
 
 if __name__ == "__main__":
