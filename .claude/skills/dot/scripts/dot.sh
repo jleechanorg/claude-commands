@@ -370,7 +370,7 @@ cmd_restore_session() {
   cp "$snap" "$tmp" || { echo "dot.sh: could not stage the snapshot; nothing changed" >&2; exit 2; }
   chmod 600 "$tmp"
   # Re-check immediately before mutating: a launch during staging aborts with
-  # nothing changed, so this path never needs the deleted profile flock.
+  # nothing changed, so this path does not need the removed profile lock.
   profile_is_idle "$dir" || { rm -f "$tmp"; echo "dot.sh: a Chrome launch started during restore; aborted with nothing changed" >&2; exit 2; }
   if [[ -f "$db" ]]; then
     cp "$db" "$db.pre-restore" || { rm -f "$tmp"; echo "dot.sh: could not keep a pre-restore copy; nothing changed" >&2; exit 2; }
