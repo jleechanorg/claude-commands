@@ -12,8 +12,11 @@ instead, behind explicit proofs:
 
 * the target must be absolute, normalized, and free of `..`;
 * the target must sit strictly *below* the install root (never equal to it);
-* the install root itself must be a real directory that is not `/` or `$HOME`;
-* a symlinked parent is refused (the installer already skips those links);
+* the install root must be a real directory that is not `/` or `$HOME`, and must
+  not itself be a symlink;
+* the parent chain and the entry are opened/removed relative to an open
+  directory descriptor with ``O_NOFOLLOW``, so swapping a path component for a
+  symlink after validation cannot redirect the delete outside the root;
 * only the final path component is removed, and symlinks are unlinked rather
   than followed.
 
@@ -27,11 +30,11 @@ from __future__ import annotations
 
 import argparse
 import os
-import shutil
+import stat
 import sys
 
 
-def refusal(message: str) -> "NoReturn":  # noqa: F821 - typing nicety only
+def refusal(message: str) -> None:
     print(f"safe_path_remove: refused: {message}", file=sys.stderr)
     raise SystemExit(2)
 
@@ -46,9 +49,18 @@ def normalized(path: str) -> str:
     return os.path.normpath(path)
 
 
-def check_target(base: str, target: str) -> None:
+def check_root(base: str) -> None:
     if base == os.sep:
         refusal("install root is '/'")
+    if base == os.path.expanduser("~"):
+        refusal("install root is the home directory")
+    if os.path.islink(base):
+        refusal(f"install root is a symlink: {base!r}")
+    if not os.path.isdir(base):
+        refusal(f"install root is not a directory: {base!r}")
+
+
+def check_target(base: str, target: str) -> None:
     if target == os.sep:
         refusal("target is '/'")
     if target == base:
@@ -66,13 +78,21 @@ def check_target(base: str, target: str) -> None:
         refusal(f"{target!r} resolves outside install root {real_base!r}")
 
 
-def remove(target: str) -> None:
-    if os.path.islink(target) or os.path.isfile(target):
-        os.unlink(target)
-    elif os.path.isdir(target):
-        shutil.rmtree(target)
-    elif os.path.exists(target):
-        refusal(f"unsupported entry type: {target!r}")
+def remove_at(dir_fd: int, name: str) -> None:
+    """Delete ``name`` relative to an already-open directory descriptor."""
+    info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+    if stat.S_ISDIR(info.st_mode):
+        child_fd = os.open(
+            name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=dir_fd
+        )
+        try:
+            for child in os.listdir(child_fd):
+                remove_at(child_fd, child)
+        finally:
+            os.close(child_fd)
+        os.rmdir(name, dir_fd=dir_fd)
+    else:
+        os.unlink(name, dir_fd=dir_fd)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -83,13 +103,19 @@ def main(argv: list[str] | None = None) -> int:
 
     base = normalized(args.under)
     target = normalized(args.path)
-    if not os.path.isdir(base):
-        refusal(f"install root is not a directory: {base!r}")
+    check_root(base)
     check_target(base, target)
 
     if not os.path.lexists(target):
         return 0
-    remove(target)
+
+    parent = os.path.dirname(target)
+    name = os.path.basename(target)
+    parent_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        remove_at(parent_fd, name)
+    finally:
+        os.close(parent_fd)
     return 0
 
 

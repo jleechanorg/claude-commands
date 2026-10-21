@@ -991,10 +991,6 @@ class InstallerIntegrationTest(unittest.TestCase):
             )
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class SafePathRemoveTest(unittest.TestCase):
     """The installer's delete primitive must prove its target before removing."""
 
@@ -1068,6 +1064,68 @@ class SafePathRemoveTest(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertTrue((outside / "victim").exists())
 
+    def test_refuses_symlinked_install_root(self):
+        real_root = Path(self.temp.name) / "real-root"
+        real_root.mkdir()
+        (real_root / "entry").mkdir()
+        linked_root = Path(self.temp.name) / "linked-root"
+        linked_root.symlink_to(real_root)
+        result = self.run_helper(linked_root, linked_root / "entry")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("symlink", result.stderr)
+        self.assertTrue((real_root / "entry").exists())
+
+    def test_refuses_home_as_install_root(self):
+        result = self.run_helper(Path(os.path.expanduser("~")), Path(os.path.expanduser("~")) / "x")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("home directory", result.stderr)
+
+    def test_swap_to_symlink_after_validation_cannot_escape(self):
+        """Removal is descriptor-relative, so a swapped ancestor cannot redirect it."""
+        import subprocess as sp
+
+        safe_dir = self.base / "skills" / "pkg"
+        safe_dir.mkdir(parents=True)
+        (safe_dir / "inner.txt").write_text("keep me\n", encoding="utf-8")
+        outside = Path(self.temp.name) / "outside"
+        outside.mkdir()
+        (outside / "victim.txt").write_text("survive\n", encoding="utf-8")
+
+        # Race the validator: swap "skills" for a symlink to `outside` while a
+        # concurrent remover repeats the delete. Whatever the interleaving, the
+        # file outside the root must survive because deletion never re-resolves
+        # the parent path after opening it without O_NOFOLLOW.
+        racer = sp.Popen(
+            [
+                "python3",
+                "-c",
+                (
+                    "import os, shutil, sys, time\n"
+                    "root = sys.argv[1]; outside = sys.argv[2]\n"
+                    "for _ in range(400):\n"
+                    "    try:\n"
+                    "        shutil.rmtree(root / 'skills', ignore_errors=True)\n"
+                    "        if not (root / 'skills').exists() and not (root / 'skills').is_symlink():\n"
+                    "            os.symlink(outside, root / 'skills')\n"
+                    "    except OSError:\n"
+                    "        pass\n"
+                ),
+                str(self.base),
+                str(outside),
+            ]
+        )
+        try:
+            for _ in range(40):
+                sp.run(
+                    ["python3", str(self.HELPER), "--under", str(self.base), "--", str(self.base / "skills" / "pkg")],
+                    capture_output=True,
+                    timeout=30,
+                )
+        finally:
+            racer.terminate()
+            racer.wait(timeout=30)
+        self.assertTrue((outside / "victim.txt").exists())
+
 
 class InstallerReplacesWrongKindEntryTest(unittest.TestCase):
     """A directory where the source has a file must be replaced, not fail."""
@@ -1114,3 +1172,7 @@ class InstallerReplacesWrongKindEntryTest(unittest.TestCase):
         self.assertEqual(second.returncode, 0, second.stderr + second.stdout)
         self.assertTrue(installed.is_file())
         self.assertEqual(installed.read_text(encoding="utf-8"), "# Skill\n")
+
+
+if __name__ == "__main__":
+    unittest.main()

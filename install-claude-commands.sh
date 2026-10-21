@@ -646,10 +646,15 @@ main() {
 
 cleanup_failed_install() {
     release_migration_lock
-    if [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ] && [ -n "$(dirname "$STAGING_DIR")" ]; then
-        if [ -f "$SAFE_REMOVE_HELPER" ]; then
-            python3 "$SAFE_REMOVE_HELPER" \
-                --under "$(dirname "$STAGING_DIR")" -- "$STAGING_DIR" || true
+    # Never recursively delete a computed path here: the failed staging tree is
+    # renamed aside for inspection instead, so a broken run always leaves a
+    # recoverable artifact and no deletion has to be trusted.
+    if [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ]; then
+        local failed_path="${STAGING_DIR}.failed-$(date +%Y%m%d%H%M%S)"
+        if mv "$STAGING_DIR" "$failed_path" 2>/dev/null; then
+            log_warning "Failed staging tree kept for inspection: $failed_path"
+        else
+            log_warning "Failed staging tree left in place: $STAGING_DIR"
         fi
     fi
     log_error "Installation failed at line $LINENO. Check the output above for details."
