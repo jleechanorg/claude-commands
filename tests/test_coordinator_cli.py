@@ -10,7 +10,7 @@ ADAPTER = Path(__file__).resolve().parents[1] / '.claude/skills/agy-dot-coordina
 
 
 class AdapterContract(unittest.TestCase):
-    def invoke(self, args, *, existing=True, model=None, code=0):
+    def invoke(self, args, *, existing=True, model=None, code=0, forbid_env=False):
         with tempfile.TemporaryDirectory(dir='/tmp') as directory:
             root = Path(directory)
             pi = root / 'pi executable with spaces'
@@ -19,6 +19,10 @@ class AdapterContract(unittest.TestCase):
             helper = root / 'lunaroute'
             helper.write_text('#!/usr/bin/env python3\nimport os,pathlib\npathlib.Path(os.environ["HELPER_MARKER"]).write_text("called")\nprint("fixture-helper")\n')
             helper.chmod(0o700)
+            if forbid_env:
+                env_command = root / 'env'
+                env_command.write_text('#!/bin/sh\nexit 91\n')
+                env_command.chmod(0o700)
             marker = root / 'helper-called'
             env = {**os.environ, 'PI_EXECUTABLE': str(pi), 'PATH': str(root) + os.pathsep + os.environ['PATH'],
                    'HELPER_MARKER': str(marker), 'FAKE_EXIT': str(code),
@@ -52,6 +56,11 @@ class AdapterContract(unittest.TestCase):
         result, called = self.invoke(['task'], existing=False)
         self.assertEqual(result.returncode, 0)
         self.assertTrue(called)
+        self.assertTrue(json.loads(result.stdout)['credential_matches'])
+
+    def test_credential_is_not_passed_through_env_command_argv(self):
+        result, _ = self.invoke(['task'], forbid_env=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(json.loads(result.stdout)['credential_matches'])
 
     def test_child_failure_propagates_without_fallback(self):
