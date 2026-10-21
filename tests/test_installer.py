@@ -45,6 +45,10 @@ class InstallerIntegrationTest(unittest.TestCase):
         exported_script.parent.mkdir(parents=True, exist_ok=True)
         exported_script.write_text("#!/bin/sh\necho installed-integrate\n", encoding="utf-8")
         exported_script.chmod(0o755)
+        shutil.copy2(
+            REPO_ROOT / "scripts" / "safe_path_remove.py",
+            fixture / "scripts" / "safe_path_remove.py",
+        )
         return fixture
 
     def run_installer(
@@ -989,3 +993,124 @@ class InstallerIntegrationTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SafePathRemoveTest(unittest.TestCase):
+    """The installer's delete primitive must prove its target before removing."""
+
+    HELPER = REPO_ROOT / "scripts" / "safe_path_remove.py"
+
+    def run_helper(self, base: Path, target: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["python3", str(self.HELPER), "--under", str(base), "--", str(target)],
+            text=True,
+            capture_output=True,
+        )
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.base = Path(self.temp.name) / "root"
+        self.base.mkdir()
+
+    def test_removes_directory_and_file_below_root(self):
+        directory = self.base / "skills" / "pkg"
+        directory.mkdir(parents=True)
+        (directory / "SKILL.md").write_text("x\n", encoding="utf-8")
+        file_entry = self.base / "skills" / "other" / "bin"
+        file_entry.parent.mkdir(parents=True)
+        file_entry.write_text("not a dir\n", encoding="utf-8")
+
+        self.assertEqual(self.run_helper(self.base, directory).returncode, 0)
+        self.assertFalse(directory.exists())
+
+        self.assertEqual(self.run_helper(self.base, file_entry).returncode, 0)
+        self.assertFalse(file_entry.exists())
+
+    def test_removes_symlink_without_following_it(self):
+        outside = Path(self.temp.name) / "outside"
+        outside.mkdir()
+        (outside / "keep.txt").write_text("keep\n", encoding="utf-8")
+        link = self.base / "linked"
+        link.symlink_to(outside)
+
+        self.assertEqual(self.run_helper(self.base, link).returncode, 0)
+        self.assertFalse(link.exists())
+        self.assertTrue((outside / "keep.txt").exists())
+
+    def test_missing_target_is_not_an_error(self):
+        self.assertEqual(self.run_helper(self.base, self.base / "absent").returncode, 0)
+
+    def test_refuses_target_outside_root(self):
+        outside = Path(self.temp.name) / "outside"
+        outside.mkdir()
+        result = self.run_helper(self.base, outside)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("not below install root", result.stderr)
+        self.assertTrue(outside.exists())
+
+    def test_refuses_root_itself_and_parent_traversal(self):
+        self.assertEqual(self.run_helper(self.base, self.base).returncode, 2)
+        traversal = self.run_helper(self.base, self.base / "a" / ".." / ".." / "escape")
+        self.assertEqual(traversal.returncode, 2)
+        self.assertIn("..", traversal.stderr)
+
+    def test_refuses_root_of_filesystem(self):
+        result = self.run_helper(self.base, Path("/"))
+        self.assertEqual(result.returncode, 2)
+
+    def test_refuses_when_parent_is_a_symlink(self):
+        outside = Path(self.temp.name) / "outside"
+        outside.mkdir()
+        (outside / "victim").mkdir()
+        (self.base / "hop").symlink_to(outside)
+        result = self.run_helper(self.base, self.base / "hop" / "victim")
+        self.assertEqual(result.returncode, 2)
+        self.assertTrue((outside / "victim").exists())
+
+
+class InstallerReplacesWrongKindEntryTest(unittest.TestCase):
+    """A directory where the source has a file must be replaced, not fail."""
+
+    def test_merge_replaces_directory_with_source_file(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        fixture = root / "fixture"
+        (fixture / ".claude" / "skills" / "example").mkdir(parents=True)
+        (fixture / ".claude" / "skills" / "example" / "SKILL.md").write_text(
+            "# Skill\n", encoding="utf-8"
+        )
+        (fixture / "scripts").mkdir()
+        shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+        shutil.copy2(
+            REPO_ROOT / "scripts" / "safe_path_remove.py",
+            fixture / "scripts" / "safe_path_remove.py",
+        )
+        target = root / "target"
+        environment = os.environ | {"CLAUDE_HOME": str(target)}
+
+        first = subprocess.run(
+            ["bash", str(fixture / INSTALLER.name), "--merge"],
+            cwd=fixture,
+            env=environment,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(first.returncode, 0, first.stderr + first.stdout)
+
+        installed = target / "skills" / "example" / "SKILL.md"
+        installed.unlink()
+        installed.mkdir()
+        (installed / "stale.txt").write_text("stale\n", encoding="utf-8")
+
+        second = subprocess.run(
+            ["bash", str(fixture / INSTALLER.name), "--merge"],
+            cwd=fixture,
+            env=environment,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(second.returncode, 0, second.stderr + second.stdout)
+        self.assertTrue(installed.is_file())
+        self.assertEqual(installed.read_text(encoding="utf-8"), "# Skill\n")
