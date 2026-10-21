@@ -13,12 +13,12 @@ class CoordinatorWorkflowTests(unittest.TestCase):
                        'authenticated identity', 'stop without sending'):
             self.assertIn(phrase, text)
 
-    def test_ambiguous_send_is_held_for_read_only_reconciliation(self):
+    def test_ambiguous_send_is_reported_without_durable_hold(self):
         text = SKILL.read_text().lower()
         self.assertIn('do not retry or send a correction', text)
-        self.assertIn('read-only reconciliation', text)
-        self.assertIn('durable marker', text)
-        self.assertIn('do not send', text)
+        self.assertIn('do read-only verification and return', text)
+        self.assertIn('no durable record carries this uncertainty', text)
+        self.assertIn('send nothing', text)
 
     def test_periodic_message_is_exact_and_submission_is_terminal(self):
         text = SKILL.read_text()
@@ -26,18 +26,19 @@ class CoordinatorWorkflowTests(unittest.TestCase):
         expected = "Review everything I asked for and everything completed in the last four hours. Make sure every unfinished task has an appropriate owner and is actively being driven. Recover overlooked work, continue existing tasks, and coordinate with the relevant owners without duplicating efforts. Act on what you can, resolve blockers through available permitted approaches, and ask me only when essential information or required approval is missing. Verify actual results rather than relying on assignments or status claims. Keep older unresolved commitments until they are completed or cancelled. Give me a concise update on meaningful progress, remaining blockers, and what happens next; skip unchanged status."
         self.assertEqual([line[2:] for line in outbound.splitlines() if line.startswith('> ')], [expected])
         self.assertIn('Explicit read-only or do-not-send runs still send nothing', outbound)
-        self.assertIn('an acknowledgment does not renew', text)
-        self.assertIn('perform verification/reconciliation only and return', text)
-        self.assertIn('not a security boundary', text)
-        self.assertIn('ordinary review callers must not create', text.lower())
+        self.assertIn('An acknowledgment or changed wording does not authorize another submit', text)
+        self.assertIn('do read-only verification and return', text)
+        self.assertIn('no destination idempotency or exactly-once guarantee', text)
+        self.assertIn('does not create or consume coordinator holds', text)
 
     def test_review_guidance_does_not_reintroduce_manual_stop(self):
         dot = (ROOT / '.claude/skills/dot/SKILL.md').read_text()
         coordinator = SKILL.read_text()
-        # The coordinator STOP marker and per-profile flock were deleted 2026-10-20.
+        # The coordinator STOP marker and per-profile flock were deleted 2026-10-20;
+        # the coordinator source no longer creates or consumes either one.
         self.assertIn('there is no per-profile flock or coordinator STOP marker any more', dot)
         self.assertIn('`DOT_PROFILE_LOCKED` no longer exists', dot)
-        self.assertIn('Ordinary review callers must not create a global STOP marker', coordinator)
+        self.assertIn('does not create or consume coordinator holds', coordinator)
         self.assertNotIn('set the coordinator STOP marker', dot)
         self.assertNotIn('dot.sh login` owns its own STOP lifecycle', dot)
 

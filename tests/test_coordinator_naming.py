@@ -62,11 +62,13 @@ class CoordinatorNaming(unittest.TestCase):
             self.assertEqual(check.returncode, 0, check.stderr)
             self.assertEqual(before, [(p.stat().st_ino, p.read_bytes()) for p in (stop, pending)])
 
-    def test_state_lock_and_stop_names_are_not_coupled_to_dot_sh(self):
+    def test_shared_helpers_keep_guards_but_coordinator_does_not_consume_them(self):
         launcher = (NEW / 'scripts/ping-dots.py').read_text()
         review = (NEW / 'scripts/review-with-coordinator-lock.py').read_text()
         dot = (ROOT / '.claude/skills/dot/scripts/dot.sh').read_text()
-        self.assertIn('~/.local/state/ai.gemini.agy-dot-coordinator', launcher)
+        self.assertNotIn('COORDINATOR_STATE_DIR', launcher)
+        self.assertNotIn('COORDINATOR_PENDING_FILE', launcher)
+        self.assertNotIn('fcntl.flock', launcher)
         self.assertNotIn('global_lock', launcher)
         self.assertIn('retired', review.lower())
         # dot.sh no longer creates coordinator reservations or profile locks.
