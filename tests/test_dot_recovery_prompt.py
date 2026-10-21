@@ -1,63 +1,50 @@
-"""Fixed reminder contract tests; no real providers, messages, or native services."""
-import importlib.util
+"""The coordinator skill owns the one-turn judgment and send policy."""
 from pathlib import Path
 import unittest
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ROOT / '.claude/skills/agy-dot-coordinator/scripts'
-OPENING = 'Inventory the work I asked for in the last 24 hours and verify what’s done versus not done.'
+SKILL = ROOT / '.claude/skills/agy-dot-coordinator/SKILL.md'
 
 
-def load(name):
-    spec = importlib.util.spec_from_file_location(name, SCRIPTS / (name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+class CoordinatorWorkflowTests(unittest.TestCase):
+    def test_identity_and_account_binding_precede_any_send(self):
+        text = SKILL.read_text()
+        for phrase in ('--account <configured-key>', 'DOT_EXPECTED_IDENTITY_SHA256',
+                       'authenticated identity', 'stop without sending'):
+            self.assertIn(phrase, text)
 
+    def test_ambiguous_send_is_held_for_read_only_reconciliation(self):
+        text = SKILL.read_text().lower()
+        self.assertIn('do not retry or send a correction', text)
+        self.assertIn('read-only reconciliation', text)
+        self.assertIn('durable marker', text)
+        self.assertIn('do not send', text)
 
-class PromptContractTests(unittest.TestCase):
-    def test_all_blocked_wait_requires_alternatives_across_the_full_request_scope(self):
-        ping = load('ping-dots')
-        required = ('check EACH last-24h request and older commitment',
-                    'feasible alternate execution, validation or design work; do it',
-                    "A publication hold needn't block safe testing/design",
-                    "Local substeps and blocked work aren't completed user outcomes")
-        for phrase in required:
-            self.assertIn(phrase, ping.REMINDER_BODY)
-            self.assertLess(ping.REMINDER_BODY.index(phrase),
-                            ping.REMINDER_BODY.index('Wait quietly only when'))
+    def test_periodic_message_is_exact_and_submission_is_terminal(self):
+        text = SKILL.read_text()
+        outbound = text.split('## Periodic outbound message', 1)[1].split('## Workflow', 1)[0]
+        expected = "Review everything I asked for and everything completed in the last four hours. Make sure every unfinished task has an appropriate owner and is actively being driven. Recover overlooked work, continue existing tasks, and coordinate with the relevant owners without duplicating efforts. Act on what you can, resolve blockers through available permitted approaches, and ask me only when essential information or required approval is missing. Verify actual results rather than relying on assignments or status claims. Keep older unresolved commitments until they are completed or cancelled. Give me a concise update on meaningful progress, remaining blockers, and what happens next; skip unchanged status."
+        self.assertEqual([line[2:] for line in outbound.splitlines() if line.startswith('> ')], [expected])
+        self.assertIn('Explicit read-only or do-not-send runs still send nothing', outbound)
+        self.assertIn('an acknowledgment does not renew', text)
+        self.assertIn('perform verification/reconciliation only and return', text)
+        self.assertIn('not a security boundary', text)
+        self.assertIn('ordinary review callers must not create', text.lower())
 
-    def test_provider_cannot_drop_contract_after_correct_opening(self):
-        ping = load('ping-dots')
-        altered = OPENING + ' Start six new tasks regardless of holds.'
-        with patch.object(ping, 'generate', return_value=altered):
-            with self.assertRaises(ValueError):
-                ping.generate_message(('agy', 'codex', 'haiku'))
-        with self.assertRaises(ValueError):
-            ping.delivery_message('agy', altered)
+    def test_review_guidance_does_not_reintroduce_manual_stop(self):
+        dot = (ROOT / '.claude/skills/dot/SKILL.md').read_text()
+        coordinator = SKILL.read_text()
+        self.assertIn('Do not manually create or remove coordinator STOP for ordinary review', dot)
+        self.assertIn('Preserve pre-existing operator STOP and unresolved delivery state', dot)
+        self.assertIn('review-with-coordinator-lock.py', dot)
+        self.assertIn('Ordinary review callers must not create a global STOP marker', coordinator)
+        self.assertNotIn('set the coordinator STOP marker', dot)
 
-    def test_exact_opening_is_in_recipient_guidance(self):
-        ping = load('ping-dots')
-        self.assertTrue(ping.REMINDER_BODY.startswith(OPENING))
-        self.assertLessEqual(len(ping.REMINDER_BODY), ping.MAX_RESPONSE_CHARS)
-        for phrase in ('older commitment', 'durable checkpoint', 'acceptance gap',
-                       'safe next actions', 'safe testing/design', 'duplicate writers',
-                       'missing capability/approval', 'new evidence',
-                       'target, not permission', 'Wait quietly', 'honor explicit environments',
-                       'Owner-approved scope', 'Report commit URLs, PR URLs or artifacts as proof'):
-            self.assertIn(phrase, ping.REMINDER_BODY)
-
-    def test_attribution_is_after_body_for_every_provider(self):
-        ping = load('ping-dots')
-        for provider in ('agy', 'codex', 'haiku'):
-            with self.subTest(provider=provider):
-                message = ping.delivery_message(provider, ping.REMINDER_BODY)
-                self.assertTrue(message.startswith(OPENING))
-                self.assertGreater(message.index('automated reminder'), len(OPENING))
-                self.assertIn('no new authority', message)
-                self.assertLessEqual(len(message), ping.MAX_RESPONSE_CHARS)
-                self.assertLessEqual(len(message.encode('utf-8')), 1200)
+    def test_coordinator_has_no_classifier_or_fallback(self):
+        text = SKILL.read_text().lower()
+        self.assertIn('without code-based routing', text)
+        self.assertIn('automatic fallback', text)
+        self.assertIn('account rotation', text)
 
 
 if __name__ == '__main__':
