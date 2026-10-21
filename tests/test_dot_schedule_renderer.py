@@ -47,7 +47,12 @@ class ScheduleRendererTests(unittest.TestCase):
         self.config.chmod(0o600)
 
     def test_macos_renders_three_inactive_private_plists_with_ordered_minutes(self):
-        out = renderer.render(self.config, self.root / "mac-stage", "macos")
+        fake_home = self.root / "mac-home"
+        node_bin = fake_home / ".nvm/versions/node/v22.22.0/bin"
+        node_bin.mkdir(parents=True)
+        (node_bin / "node").write_text("node fixture")
+        with patch.object(renderer.Path, "home", return_value=fake_home):
+            out = renderer.render(self.config, self.root / "mac-stage", "macos")
         self.assertEqual(len(list(out.glob("*.plist"))), 3)
         self.assertEqual(stat.S_IMODE(out.stat().st_mode), 0o700)
         plists = [renderer.plistlib.loads(p.read_bytes()) for p in sorted(out.glob("*.plist"))]

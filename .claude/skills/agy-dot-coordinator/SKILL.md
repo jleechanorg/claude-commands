@@ -43,7 +43,7 @@ For an owner-authorized periodic coordination run, use the following outbound te
 
 ## Temporary review exclusion
 
-Ordinary review callers must not create a global STOP marker. Run the bounded Dot review command through `scripts/review-with-coordinator-lock.py -- <command> ...`, using the same machine-local `COORDINATOR_LOCK_FILE` as the scheduler. It inherits the existing kernel lock through exec and releases on command exit; it never removes a legitimate STOP or changes profile locks or pending-delivery state. This does not authorize a send or resolve an existing hold. Keep the caller command bounded; do not run a permanent process under the review lock.
+Ordinary review callers must not create a global STOP marker. Run the bounded Dot review command through `scripts/review-with-coordinator-lock.py -- <command> ...`, using the same machine-local `COORDINATOR_LOCK_FILE` as the scheduler. It inherits the existing kernel lock through exec; release occurs only when all inherited holders close their descriptors. Descendants can prolong the hold, so the direct-process cleanup test is not a guarantee about arbitrary descendants; it never removes a legitimate STOP or changes profile locks or pending-delivery state. This does not authorize a send or resolve an existing hold. Keep the caller command bounded; do not run a permanent process under the review lock.
 
 ## Completion evidence
 
