@@ -31,6 +31,15 @@ class CoordinatorWorkflowTests(unittest.TestCase):
         self.assertIn('not a security boundary', text)
         self.assertIn('ordinary review callers must not create', text.lower())
 
+    def test_review_guidance_does_not_reintroduce_manual_stop(self):
+        dot = (ROOT / '.claude/skills/dot/SKILL.md').read_text()
+        coordinator = SKILL.read_text()
+        self.assertIn('Do not manually create or remove coordinator STOP for ordinary review', dot)
+        self.assertIn('Preserve pre-existing operator STOP and unresolved delivery state', dot)
+        self.assertIn('review-with-coordinator-lock.py', dot)
+        self.assertIn('Ordinary review callers must not create a global STOP marker', coordinator)
+        self.assertNotIn('set the coordinator STOP marker', dot)
+
     def test_coordinator_has_no_classifier_or_fallback(self):
         text = SKILL.read_text().lower()
         self.assertIn('without code-based routing', text)
