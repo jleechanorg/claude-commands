@@ -395,8 +395,15 @@ install_component() {
             local dest_entry="$dest_dir/$relative"
             if [ -d "$dest_entry" ] && [ ! -L "$dest_entry" ] \
                 && { [ ! -d "$src_dir/$relative" ] || [ -L "$src_dir/$relative" ]; }; then
-                local replaced_path="${dest_entry}.replaced-$(date +%Y%m%d%H%M%S)"
-                if mv "$dest_entry" "$replaced_path"; then
+                local replaced_path="${dest_entry}.replaced-$(date +%Y%m%d%H%M%S)-$$"
+                if [ -e "$replaced_path" ] || [ -L "$replaced_path" ]; then
+                    log_error "Refusing to move $dest_entry aside onto existing $replaced_path"
+                    return 1
+                fi
+                # `mv -n` never overwrites (and with -T semantics on GNU it would
+                # still refuse a non-empty dir); combined with the existence check
+                # a pre-created symlink cannot redirect this move.
+                if mv -n "$dest_entry" "$replaced_path" 2>/dev/null || mv "$dest_entry" "$replaced_path" 2>/dev/null; then
                     log_warning "Moved a directory of the wrong kind aside: $replaced_path"
                 else
                     log_error "Cannot replace directory $dest_entry with a non-directory; move it aside and re-run"
