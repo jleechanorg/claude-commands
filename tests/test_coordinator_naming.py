@@ -62,14 +62,17 @@ class CoordinatorNaming(unittest.TestCase):
             self.assertEqual(check.returncode, 0, check.stderr)
             self.assertEqual(before, [(p.stat().st_ino, p.read_bytes()) for p in (stop, pending)])
 
-    def test_state_lock_and_stop_names_remain_shared(self):
+    def test_state_lock_and_stop_names_are_not_coupled_to_dot_sh(self):
         launcher = (NEW / 'scripts/ping-dots.py').read_text()
         review = (NEW / 'scripts/review-with-coordinator-lock.py').read_text()
         dot = (ROOT / '.claude/skills/dot/scripts/dot.sh').read_text()
         self.assertIn('~/.local/state/ai.gemini.agy-dot-coordinator', launcher)
         self.assertNotIn('global_lock', launcher)
         self.assertIn('retired', review.lower())
-        self.assertIn('$HOME/.local/state/ai.gemini.agy-dot-coordinator/STOP', dot)
+        # dot.sh no longer creates coordinator reservations or profile locks.
+        self.assertNotIn('ai.gemini.agy-dot-coordinator/STOP', dot)
+        self.assertNotIn('DOT_PROFILE_LOCKED', dot)
+        self.assertNotIn('flock', dot)
     def test_no_activation_entrypoint(self):
         for name in ['install-launchagent.sh', 'install-systemd.sh']:
             r = subprocess.run(['bash', str(NEW / 'scripts' / name)], capture_output=True, text=True)
