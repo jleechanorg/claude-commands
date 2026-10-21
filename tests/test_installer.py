@@ -1032,6 +1032,45 @@ class InstallerSymlinkModeSafetyTest(unittest.TestCase):
         self.assertEqual(external.read_text(encoding="utf-8"), "external\n")
 
 
+class InstallerShellPortabilityTest(unittest.TestCase):
+    """The installer must work under bash 3.2 (macOS /bin/bash), not just bash 5."""
+
+    def test_installs_under_bash32_when_available(self):
+        bash32 = Path("/bin/bash")
+        if not bash32.exists():
+            self.skipTest("/bin/bash not present")
+        version = subprocess.run(
+            [str(bash32), "--version"], capture_output=True, text=True
+        ).stdout.split()
+        if len(version) < 4 or not version[3].startswith("3."):
+            self.skipTest(f"/bin/bash is not 3.x ({' '.join(version[:4])})")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture = root / "fixture"
+            (fixture / ".claude" / "commands").mkdir(parents=True)
+            (fixture / ".claude" / "commands" / "cmd.md").write_text(
+                "managed\n", encoding="utf-8"
+            )
+            (fixture / "scripts").mkdir()
+            shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+            target = root / "target"
+
+            result = subprocess.run(
+                [str(bash32), str(fixture / INSTALLER.name)],
+                cwd=fixture,
+                env=os.environ | {"CLAUDE_HOME": str(target)},
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(
+                (target / "commands" / "cmd.md").read_text(encoding="utf-8"),
+                "managed\n",
+            )
+
+
 class InstallerEntryKindsTest(unittest.TestCase):
     def build(self):
         import tempfile as tf

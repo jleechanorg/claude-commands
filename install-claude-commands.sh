@@ -359,11 +359,19 @@ install_component() {
         local preserved_count=0
         local listing_file
         listing_file="$(mktemp "${TMPDIR:-/tmp}/claude-install-listing.XXXXXX")"
-        if ! ( cd "$src_dir" && list_installable_files "$component_name" ) > "$listing_file"; then
-            log_error "Could not enumerate $component_name source files under $src_dir"
+        local caller_pwd="$PWD"
+        if ! cd "$src_dir"; then
+            log_error "Cannot enter source directory $src_dir"
             rm -f -- "$listing_file"
             return 1
         fi
+        if ! list_installable_files "$component_name" > "$listing_file"; then
+            log_error "Could not enumerate $component_name source files under $src_dir"
+            cd "$caller_pwd" || true
+            rm -f -- "$listing_file"
+            return 1
+        fi
+        cd "$caller_pwd" || return 1
         while IFS= read -r -d '' relative; do
             relative="${relative#./}"
             local cur_dir="$dest_dir"
@@ -662,7 +670,8 @@ main() {
 cleanup_failed_install() {
     # With `set -E` the ERR trap also fires inside subshells; only the top-level
     # shell may release the lock or move the staging tree.
-    [ "$BASHPID" = "$$" ] || exit 1
+    # BASHPID exists in bash >= 4; on bash 3.2 fall back to "assume main shell".
+    [ "${BASHPID:-$$}" = "$$" ] || exit 1
     release_migration_lock
     # Never recursively delete a computed path here: the failed staging tree is
     # renamed aside for inspection instead, so a broken run always leaves a
