@@ -378,10 +378,15 @@ cmd_restore_session() {
   # Move the old journal files aside rather than deleting them: a concurrent
   # reader keeps its own inode, and no stale journal is left at the path the
   # restored store is opened from.
-  local ext
+  local ext failed=0
   for ext in journal wal shm; do
-    if [[ -e "$db-$ext" ]]; then mv -f "$db-$ext" "$db-$ext.pre-restore-$ts" 2>/dev/null || true; fi
+    if [[ -e "$db-$ext" ]]; then mv -f "$db-$ext" "$db-$ext.pre-restore-$ts" || failed=1; fi
   done
+  if [[ "$failed" -eq 1 ]]; then
+    rm -f "$tmp"
+    echo "dot.sh: could not move a sidecar journal aside; aborted before touching the store (nothing changed)" >&2
+    exit 2
+  fi
   mv -f "$tmp" "$db" || { rm -f "$tmp"; echo "dot.sh: atomic swap failed; the previous store and $db.pre-restore are unchanged" >&2; exit 2; }
   chmod 600 "$db"
   profile_is_idle "$dir" || echo "dot.sh: WARNING a Chrome launch raced this restore, so it is not verified. Close Chrome and re-run, or use 'dot.sh --account $ACCOUNT login'." >&2
