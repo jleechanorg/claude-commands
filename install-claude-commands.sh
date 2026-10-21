@@ -3,7 +3,7 @@
 # 🚨 Claude Commands Installation Script
 # Installs the complete Claude Code command system for development workflows
 
-set -euo pipefail
+set -eEuo pipefail   # -E: ERR trap fires inside functions, so a failed component install still cleans up
 
 # Colors for output
 RED='\033[0;31m'

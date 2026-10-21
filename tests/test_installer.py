@@ -817,7 +817,18 @@ class InstallerIntegrationTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(original.read_text(encoding="utf-8"), "preserve me\n")
             self.assertFalse(list(temp_dir.glob("claude-home.backup-*")))
-            self.assertFalse(list(temp_dir.glob("claude-home.staging-*")))
+            leftover_staging = [
+                p
+                for p in temp_dir.glob("claude-home.staging.*")
+                if ".failed-" not in p.name
+            ]
+            self.assertFalse(leftover_staging)
+            # A failed run must leave the staging tree recoverable, renamed aside
+            # instead of recursively deleted.
+            failed = list(temp_dir.glob("claude-home.staging.*.failed-*"))
+            self.assertEqual(len(failed), 1, [p.name for p in temp_dir.iterdir()])
+            self.assertTrue(failed[0].is_dir())
+            self.assertIn("kept for inspection", result.stdout + result.stderr)
 
     def test_merge_preserves_symlinked_skill_directory_and_does_not_write_target(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1075,6 +1086,19 @@ class SafePathRemoveTest(unittest.TestCase):
         self.assertIn("symlink", result.stderr)
         self.assertTrue((real_root / "entry").exists())
 
+    def test_intermediate_symlink_ancestor_cannot_redirect_delete(self):
+        """A symlinked component *inside* the root is refused, not followed."""
+        self.base = self.base / "real"
+        self.base.mkdir()
+        outside = Path(self.temp.name) / "outside"
+        (outside / "pkg").mkdir(parents=True)
+        (outside / "pkg" / "entry.txt").write_text("survive\n", encoding="utf-8")
+        (self.base / "alias").symlink_to(outside)
+        target = self.base / "alias" / "pkg"
+        result = self.run_helper(self.base, target)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue((outside / "pkg" / "entry.txt").exists())
+
     def test_refuses_home_as_install_root(self):
         result = self.run_helper(Path(os.path.expanduser("~")), Path(os.path.expanduser("~")) / "x")
         self.assertEqual(result.returncode, 2)
@@ -1100,13 +1124,15 @@ class SafePathRemoveTest(unittest.TestCase):
                 "python3",
                 "-c",
                 (
-                    "import os, shutil, sys, time\n"
-                    "root = sys.argv[1]; outside = sys.argv[2]\n"
+                    "import os, shutil, sys\n"
+                    "from pathlib import Path\n"
+                    "root = Path(sys.argv[1]); outside = Path(sys.argv[2])\n"
+                    "link = root / 'skills'\n"
                     "for _ in range(400):\n"
                     "    try:\n"
-                    "        shutil.rmtree(root / 'skills', ignore_errors=True)\n"
-                    "        if not (root / 'skills').exists() and not (root / 'skills').is_symlink():\n"
-                    "            os.symlink(outside, root / 'skills')\n"
+                    "        shutil.rmtree(link, ignore_errors=True)\n"
+                    "        if not link.exists() and not link.is_symlink():\n"
+                    "            os.symlink(outside, link)\n"
                     "    except OSError:\n"
                     "        pass\n"
                 ),

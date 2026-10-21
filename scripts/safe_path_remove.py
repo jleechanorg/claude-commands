@@ -14,9 +14,10 @@ instead, behind explicit proofs:
 * the target must sit strictly *below* the install root (never equal to it);
 * the install root must be a real directory that is not `/` or `$HOME`, and must
   not itself be a symlink;
-* the parent chain and the entry are opened/removed relative to an open
-  directory descriptor with ``O_NOFOLLOW``, so swapping a path component for a
-  symlink after validation cannot redirect the delete outside the root;
+* deletion is anchored to an ``O_NOFOLLOW`` descriptor for the root: every path
+  component is opened relative to its already-open parent with ``O_NOFOLLOW``, so
+  swapping any component (including an intermediate one, or an alias of the root)
+  for a symlink cannot redirect the delete outside the root;
 * only the final path component is removed, and symlinks are unlinked rather
   than followed.
 
@@ -52,7 +53,9 @@ def normalized(path: str) -> str:
 def check_root(base: str) -> None:
     if base == os.sep:
         refusal("install root is '/'")
-    if base == os.path.expanduser("~"):
+    if base == os.path.expanduser("~") or os.path.realpath(base) == os.path.realpath(
+        os.path.expanduser("~")
+    ):
         refusal("install root is the home directory")
     if os.path.islink(base):
         refusal(f"install root is a symlink: {base!r}")
@@ -95,6 +98,26 @@ def remove_at(dir_fd: int, name: str) -> None:
         os.unlink(name, dir_fd=dir_fd)
 
 
+def walk_and_remove(root_fd: int, components: list[str]) -> None:
+    """Descend from the root descriptor, then remove the final component.
+
+    Every intermediate directory is opened relative to its already-open parent
+    with O_NOFOLLOW, so no path component can be swapped for a symlink between
+    validation and deletion.
+    """
+    dir_fd = os.dup(root_fd)
+    try:
+        for component in components[:-1]:
+            next_fd = os.open(
+                component, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=dir_fd
+            )
+            os.close(dir_fd)
+            dir_fd = next_fd
+        remove_at(dir_fd, components[-1])
+    finally:
+        os.close(dir_fd)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--under", required=True, help="install root the target must sit below")
@@ -109,13 +132,12 @@ def main(argv: list[str] | None = None) -> int:
     if not os.path.lexists(target):
         return 0
 
-    parent = os.path.dirname(target)
-    name = os.path.basename(target)
-    parent_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    components = os.path.relpath(target, base).split(os.sep)
+    root_fd = os.open(base, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
-        remove_at(parent_fd, name)
+        walk_and_remove(root_fd, components)
     finally:
-        os.close(parent_fd)
+        os.close(root_fd)
     return 0
 
 
