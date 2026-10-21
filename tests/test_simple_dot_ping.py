@@ -163,6 +163,27 @@ class LauncherExecutionTests(unittest.TestCase):
         self.assertIn('--userDataDir=' + str(self.profile.resolve()), browser['args'])
         self.assertFalse({'--provider', '--model'} & set(spawned['command']))
 
+    def test_attempt_receipt_survives_cleanup_and_new_invocation_gets_new_path(self):
+        receipts = []
+        def agent(command, **options):
+            receipt = Path(options['env']['COORDINATOR_ATTEMPT_FILE'])
+            self.assertEqual(receipt.parent, self.state)
+            # Model the prescribed artifact operation, not real browser delivery.
+            fd = os.open(receipt, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            os.write(fd, b'{"payload_sha256":"test","attempted":true}')
+            os.close(fd)
+            for scenario in ('ACK arrived', 'revised payload', 'pending removed'):
+                with self.subTest(scenario=scenario):
+                    with self.assertRaises(FileExistsError):
+                        os.open(receipt, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            receipts.append(receipt)
+            return FakePiProcess()
+        self.invoke(on_spawn=agent)
+        self.assertTrue(receipts[0].is_file())
+        self.invoke(on_spawn=agent)
+        self.assertNotEqual(*receipts)
+        self.assertTrue(all(path.is_file() for path in receipts))
+
     def test_stop_dangling_symlink_prevents_pi_spawn(self):
         self.state.mkdir()
         (self.state / 'STOP').symlink_to(self.home / 'missing-stop-target')

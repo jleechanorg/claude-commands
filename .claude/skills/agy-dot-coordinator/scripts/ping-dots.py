@@ -120,7 +120,7 @@ def main():
             mcp_file.chmod(0o600)
             if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent dispatch')
             prompt = f'Account key: {args.account}\nConfigured target: {target}\nExpected identity SHA-256: {expected} (private binding; compare silently and return booleans only).\nPending-send file: {pending}\nOwner-provided task context: {args.instruction}\nRead and follow the loaded skill.'
-            env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_PENDING_FILE=str(pending), COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
+            env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_PENDING_FILE=str(pending), COORDINATOR_ATTEMPT_FILE=str(STATE / ('attempt-' + Path(run_dir).name + '.json')), COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
             cmd = [pi_bin, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
                 '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
             proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
