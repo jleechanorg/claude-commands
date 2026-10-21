@@ -583,14 +583,25 @@ validate_installation() {
             relative="${relative#./}"
             local cur_dir="$INSTALL_ROOT/$component"
             local part
-            local parent_rel; parent_rel="$(dirname "$relative")"
+            # Same newline-safe parent split as the install path: `read` and
+            # `dirname` stop at a newline and would hide a symlinked parent here.
+            local parent_rel="."
+            case "$relative" in
+                */*) parent_rel="${relative%/*}" ;;
+            esac
             local is_linked=false
             local linked_owner=""
             if [ "$parent_rel" != "." ]; then
-                local old_ifs="$IFS"
-                IFS='/' read -ra PARTS <<< "$parent_rel"
-                IFS="$old_ifs"
-                for part in "${PARTS[@]}"; do
+                local part rest="$parent_rel"
+                while [ -n "$rest" ]; do
+                    if [ "${rest#*/}" = "$rest" ]; then
+                        part="$rest"
+                        rest=""
+                    else
+                        part="${rest%%/*}"
+                        rest="${rest#*/}"
+                    fi
+                    [ -n "$part" ] || continue
                     cur_dir="$cur_dir/$part"
                     if [ -L "$cur_dir" ]; then
                         is_linked=true
