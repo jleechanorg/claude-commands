@@ -339,18 +339,6 @@ list_installable_files() {
     fi
 }
 
-# The recursive delete of a source-managed destination entry is delegated to a
-# helper that proves the target is one entry below the install root; a dynamic
-# `rm -rf` is refused by shell guardrails and by review.
-SAFE_REMOVE_HELPER="$PLUGIN_SRC_DIR/scripts/safe_path_remove.py"
-
-require_safe_remove_helper() {
-    if [ ! -f "$SAFE_REMOVE_HELPER" ]; then
-        log_error "Missing required helper: $SAFE_REMOVE_HELPER"
-        return 1
-    fi
-}
-
 # Shared recursive install function
 install_component() {
     local src_dir="$1"
@@ -369,18 +357,45 @@ install_component() {
         fi
         mkdir -p "$dest_dir"
         local preserved_count=0
+        local listing_file
+        listing_file="$(mktemp "${TMPDIR:-/tmp}/claude-install-listing.XXXXXX")"
+        local caller_pwd="$PWD"
+        if ! cd "$src_dir"; then
+            log_error "Cannot enter source directory $src_dir"
+            rm -f -- "$listing_file"
+            return 1
+        fi
+        if ! list_installable_files "$component_name" > "$listing_file"; then
+            log_error "Could not enumerate $component_name source files under $src_dir"
+            cd "$caller_pwd" || true
+            rm -f -- "$listing_file"
+            return 1
+        fi
+        cd "$caller_pwd" || return 1
         while IFS= read -r -d '' relative; do
             relative="${relative#./}"
             local cur_dir="$dest_dir"
             local part
-            local parent_rel; parent_rel="$(dirname "$relative")"
+            # Split the relative parent without `read` or `dirname`: both stop at a
+            # newline, and a directory name may legitimately contain one, which would
+            # hide a symlinked parent and let the copy escape the install target.
+            local parent_rel="."
+            case "$relative" in
+                */*) parent_rel="${relative%/*}" ;;
+            esac
             local skip_file=false
             local linked_owner=""
             if [ "$parent_rel" != "." ]; then
-                local old_ifs="$IFS"
-                IFS='/' read -ra PARTS <<< "$parent_rel"
-                IFS="$old_ifs"
-                for part in "${PARTS[@]}"; do
+                local part rest="$parent_rel"
+                while [ -n "$rest" ]; do
+                    if [ "${rest#*/}" = "$rest" ]; then
+                        part="$rest"
+                        rest=""
+                    else
+                        part="${rest%%/*}"
+                        rest="${rest#*/}"
+                    fi
+                    [ -n "$part" ] || continue
                     cur_dir="$cur_dir/$part"
                     if [ -L "$cur_dir" ]; then
                         skip_file=true
@@ -396,24 +411,49 @@ install_component() {
                 preserved_count=$((preserved_count + 1))
                 continue
             fi
-            local target_parent; target_parent="$(dirname "$dest_dir/$relative")"
+            local target_parent
+            if [ "$parent_rel" = "." ]; then
+                target_parent="$dest_dir"
+            else
+                target_parent="$dest_dir/$parent_rel"
+            fi
             if [ -d "$target_parent" ] && [ ! -w "$target_parent" ]; then
                 chmod u+w "$target_parent"
             fi
             mkdir -p "$target_parent"
-            if [ -e "$dest_dir/$relative" ] || [ -L "$dest_dir/$relative" ]; then
-                # Recursive delete of a variable path is exactly what shell
-                # guardrails (and good practice) refuse; the helper proves the
-                # target is a single entry below the install root first.
-                require_safe_remove_helper || return 1
-                python3 "$SAFE_REMOVE_HELPER" \
-                    --under "$INSTALL_ROOT" -- "$dest_dir/$relative"
+            # No recursive delete anywhere: a directory is never removed, only
+            # renamed aside, and a single non-directory entry is unlinked before
+            # copying.
+            local dest_entry="$dest_dir/$relative"
+            if [ -d "$dest_entry" ] && [ ! -L "$dest_entry" ] \
+                && { [ ! -d "$src_dir/$relative" ] || [ -L "$src_dir/$relative" ]; }; then
+                local replaced_path="${dest_entry}.replaced-$(date +%Y%m%d%H%M%S)-$$"
+                if [ -e "$replaced_path" ] || [ -L "$replaced_path" ]; then
+                    log_error "Refusing to move $dest_entry aside onto existing $replaced_path"
+                    return 1
+                fi
+                # The destination was just proven absent, so this move has no
+                # existing entry to overwrite; the post-condition check catches a
+                # race that recreates it.
+                if mv -n "$dest_entry" "$replaced_path" 2>/dev/null && [ ! -e "$dest_entry" ] && [ ! -L "$dest_entry" ]; then
+                    log_warning "Moved a directory of the wrong kind aside: $replaced_path"
+                else
+                    log_error "Cannot replace directory $dest_entry with a non-directory; move it aside and re-run"
+                    return 1
+                fi
+            fi
+            if { [ -e "$dest_entry" ] || [ -L "$dest_entry" ]; } \
+                && { [ ! -d "$dest_entry" ] || [ -L "$dest_entry" ]; }; then
+                # Unlink the single entry whatever it is (symlink, read-only
+                # file, hard link, FIFO, socket, device) and let the copy create
+                # a fresh one. No chmod: chmod follows a symlink and mutates the
+                # shared inode of a hard link, both of which reach outside the
+                # target. No recursion: a directory is never removed here.
+                rm -f -- "$dest_entry"
             fi
             cp -a "$src_dir/$relative" "$dest_dir/$relative"
-        done < <(
-            cd "$src_dir"
-            list_installable_files "$component_name"
-        )
+        done < "$listing_file"
+        rm -f -- "$listing_file"
         if [ "$preserved_count" -gt 0 ]; then
             log_success "Installed recursive $component_name tree (preserved $preserved_count externally owned path(s))"
         else
@@ -543,14 +583,25 @@ validate_installation() {
             relative="${relative#./}"
             local cur_dir="$INSTALL_ROOT/$component"
             local part
-            local parent_rel; parent_rel="$(dirname "$relative")"
+            # Same newline-safe parent split as the install path: `read` and
+            # `dirname` stop at a newline and would hide a symlinked parent here.
+            local parent_rel="."
+            case "$relative" in
+                */*) parent_rel="${relative%/*}" ;;
+            esac
             local is_linked=false
             local linked_owner=""
             if [ "$parent_rel" != "." ]; then
-                local old_ifs="$IFS"
-                IFS='/' read -ra PARTS <<< "$parent_rel"
-                IFS="$old_ifs"
-                for part in "${PARTS[@]}"; do
+                local part rest="$parent_rel"
+                while [ -n "$rest" ]; do
+                    if [ "${rest#*/}" = "$rest" ]; then
+                        part="$rest"
+                        rest=""
+                    else
+                        part="${rest%%/*}"
+                        rest="${rest#*/}"
+                    fi
+                    [ -n "$part" ] || continue
                     cur_dir="$cur_dir/$part"
                     if [ -L "$cur_dir" ]; then
                         is_linked=true
@@ -644,20 +695,28 @@ main() {
     log_success "Installation complete!"
 }
 
-cleanup_failed_install() {
+on_exit() {
+    local rc=$?
     release_migration_lock
-    if [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ] && [ -n "$(dirname "$STAGING_DIR")" ]; then
-        if [ -f "$SAFE_REMOVE_HELPER" ]; then
-            python3 "$SAFE_REMOVE_HELPER" \
-                --under "$(dirname "$STAGING_DIR")" -- "$STAGING_DIR" || true
+    # Failures are handled from the EXIT trap, not from an inherited ERR trap:
+    # bash 3.2 has no BASHPID, so a child shell can neither be detected nor
+    # trusted not to release the lock or move the staging tree. Only the shell
+    # that owns this trap reaches here.
+    if [ "$rc" -ne 0 ] && [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ]; then
+        local failed_path="${STAGING_DIR}.failed-$(date +%Y%m%d%H%M%S)"
+        if [ ! -e "$failed_path" ] && mv -n "$STAGING_DIR" "$failed_path" 2>/dev/null; then
+            log_warning "Failed staging tree kept for inspection: $failed_path"
+        else
+            log_warning "Failed staging tree left in place: $STAGING_DIR"
         fi
     fi
-    log_error "Installation failed at line $LINENO. Check the output above for details."
-    exit 1
+    if [ "$rc" -ne 0 ]; then
+        log_error "Installation failed (exit $rc). Check the output above for details."
+    fi
+    return "$rc"
 }
 
-trap cleanup_failed_install ERR
-trap release_migration_lock EXIT
+trap on_exit EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 

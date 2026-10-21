@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import stat
 import subprocess
 import tempfile
 import unittest
@@ -45,10 +46,6 @@ class InstallerIntegrationTest(unittest.TestCase):
         exported_script.parent.mkdir(parents=True, exist_ok=True)
         exported_script.write_text("#!/bin/sh\necho installed-integrate\n", encoding="utf-8")
         exported_script.chmod(0o755)
-        shutil.copy2(
-            REPO_ROOT / "scripts" / "safe_path_remove.py",
-            fixture / "scripts" / "safe_path_remove.py",
-        )
         return fixture
 
     def run_installer(
@@ -817,7 +814,18 @@ class InstallerIntegrationTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(original.read_text(encoding="utf-8"), "preserve me\n")
             self.assertFalse(list(temp_dir.glob("claude-home.backup-*")))
-            self.assertFalse(list(temp_dir.glob("claude-home.staging-*")))
+            leftover_staging = [
+                p
+                for p in temp_dir.glob("claude-home.staging.*")
+                if ".failed-" not in p.name
+            ]
+            self.assertFalse(leftover_staging)
+            # A failed run must leave the staging tree recoverable, renamed aside
+            # instead of recursively deleted.
+            failed = list(temp_dir.glob("claude-home.staging.*.failed-*"))
+            self.assertEqual(len(failed), 1, [p.name for p in temp_dir.iterdir()])
+            self.assertTrue(failed[0].is_dir())
+            self.assertIn("kept for inspection", result.stdout + result.stderr)
 
     def test_merge_preserves_symlinked_skill_directory_and_does_not_write_target(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -991,86 +999,182 @@ class InstallerIntegrationTest(unittest.TestCase):
             )
 
 
-if __name__ == "__main__":
-    unittest.main()
+class InstallerSymlinkModeSafetyTest(unittest.TestCase):
+    def test_replacing_a_symlink_does_not_chmod_the_external_file(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        fixture = root / "fixture"
+        (fixture / ".claude" / "commands").mkdir(parents=True)
+        (fixture / ".claude" / "commands" / "cmd.md").write_text("managed\n", encoding="utf-8")
+        (fixture / "scripts").mkdir()
+        shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+        target = root / "target"
+        (target / "commands").mkdir(parents=True)
+        external = root / "external.md"
+        external.write_text("external\n", encoding="utf-8")
+        external.chmod(0o400)
+        (target / "commands" / "cmd.md").symlink_to(external)
 
-
-class SafePathRemoveTest(unittest.TestCase):
-    """The installer's delete primitive must prove its target before removing."""
-
-    HELPER = REPO_ROOT / "scripts" / "safe_path_remove.py"
-
-    def run_helper(self, base: Path, target: Path) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["python3", str(self.HELPER), "--under", str(base), "--", str(target)],
+        result = subprocess.run(
+            ["bash", str(fixture / INSTALLER.name), "--merge"],
+            cwd=fixture,
+            env=os.environ | {"CLAUDE_HOME": str(target)},
             text=True,
             capture_output=True,
         )
 
-    def setUp(self) -> None:
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.base = Path(self.temp.name) / "root"
-        self.base.mkdir()
-
-    def test_removes_directory_and_file_below_root(self):
-        directory = self.base / "skills" / "pkg"
-        directory.mkdir(parents=True)
-        (directory / "SKILL.md").write_text("x\n", encoding="utf-8")
-        file_entry = self.base / "skills" / "other" / "bin"
-        file_entry.parent.mkdir(parents=True)
-        file_entry.write_text("not a dir\n", encoding="utf-8")
-
-        self.assertEqual(self.run_helper(self.base, directory).returncode, 0)
-        self.assertFalse(directory.exists())
-
-        self.assertEqual(self.run_helper(self.base, file_entry).returncode, 0)
-        self.assertFalse(file_entry.exists())
-
-    def test_removes_symlink_without_following_it(self):
-        outside = Path(self.temp.name) / "outside"
-        outside.mkdir()
-        (outside / "keep.txt").write_text("keep\n", encoding="utf-8")
-        link = self.base / "linked"
-        link.symlink_to(outside)
-
-        self.assertEqual(self.run_helper(self.base, link).returncode, 0)
-        self.assertFalse(link.exists())
-        self.assertTrue((outside / "keep.txt").exists())
-
-    def test_missing_target_is_not_an_error(self):
-        self.assertEqual(self.run_helper(self.base, self.base / "absent").returncode, 0)
-
-    def test_refuses_target_outside_root(self):
-        outside = Path(self.temp.name) / "outside"
-        outside.mkdir()
-        result = self.run_helper(self.base, outside)
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("not below install root", result.stderr)
-        self.assertTrue(outside.exists())
-
-    def test_refuses_root_itself_and_parent_traversal(self):
-        self.assertEqual(self.run_helper(self.base, self.base).returncode, 2)
-        traversal = self.run_helper(self.base, self.base / "a" / ".." / ".." / "escape")
-        self.assertEqual(traversal.returncode, 2)
-        self.assertIn("..", traversal.stderr)
-
-    def test_refuses_root_of_filesystem(self):
-        result = self.run_helper(self.base, Path("/"))
-        self.assertEqual(result.returncode, 2)
-
-    def test_refuses_when_parent_is_a_symlink(self):
-        outside = Path(self.temp.name) / "outside"
-        outside.mkdir()
-        (outside / "victim").mkdir()
-        (self.base / "hop").symlink_to(outside)
-        result = self.run_helper(self.base, self.base / "hop" / "victim")
-        self.assertEqual(result.returncode, 2)
-        self.assertTrue((outside / "victim").exists())
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(
+            (target / "commands" / "cmd.md").read_text(encoding="utf-8"), "managed\n"
+        )
+        self.assertEqual(external.stat().st_mode & 0o777, 0o400)
+        self.assertEqual(external.read_text(encoding="utf-8"), "external\n")
 
 
-class InstallerReplacesWrongKindEntryTest(unittest.TestCase):
-    """A directory where the source has a file must be replaced, not fail."""
+class InstallerShellPortabilityTest(unittest.TestCase):
+    """The installer must work under bash 3.2 (macOS /bin/bash), not just bash 5."""
+
+    def test_installs_under_bash32_when_available(self):
+        bash32 = Path("/bin/bash")
+        if not bash32.exists():
+            self.skipTest("/bin/bash not present")
+        version = subprocess.run(
+            [str(bash32), "--version"], capture_output=True, text=True
+        ).stdout.split()
+        if len(version) < 4 or not version[3].startswith("3."):
+            self.skipTest(f"/bin/bash is not 3.x ({' '.join(version[:4])})")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture = root / "fixture"
+            (fixture / ".claude" / "commands").mkdir(parents=True)
+            (fixture / ".claude" / "commands" / "cmd.md").write_text(
+                "managed\n", encoding="utf-8"
+            )
+            (fixture / "scripts").mkdir()
+            shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+            target = root / "target"
+
+            result = subprocess.run(
+                [str(bash32), str(fixture / INSTALLER.name)],
+                cwd=fixture,
+                env=os.environ | {"CLAUDE_HOME": str(target)},
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(
+                (target / "commands" / "cmd.md").read_text(encoding="utf-8"),
+                "managed\n",
+            )
+
+
+class InstallerEntryKindsTest(unittest.TestCase):
+    def build(self):
+        import tempfile as tf
+
+        temp = tf.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        fixture = root / "fixture"
+        (fixture / ".claude" / "commands").mkdir(parents=True)
+        (fixture / ".claude" / "commands" / "cmd.md").write_text("managed\n", encoding="utf-8")
+        (fixture / "scripts").mkdir()
+        shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+        return root, fixture, root / "target"
+
+    def run_merge(self, fixture, target, timeout=120):
+        return subprocess.run(
+            ["bash", str(fixture / INSTALLER.name), "--merge"],
+            cwd=fixture,
+            env=os.environ | {"CLAUDE_HOME": str(target)},
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+
+    def test_read_only_hard_link_keeps_outside_mode_and_content(self):
+        root, fixture, target = self.build()
+        (target / "commands").mkdir(parents=True)
+        external = root / "external.md"
+        external.write_text("external\n", encoding="utf-8")
+        external.chmod(0o400)
+        os.link(external, target / "commands" / "cmd.md")
+
+        result = self.run_merge(fixture, target)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(external.stat().st_mode & 0o777, 0o400)
+        self.assertEqual(external.read_text(encoding="utf-8"), "external\n")
+        self.assertEqual(
+            (target / "commands" / "cmd.md").read_text(encoding="utf-8"), "managed\n"
+        )
+
+    def test_read_only_regular_file_is_replaced(self):
+        root, fixture, target = self.build()
+        (target / "commands").mkdir(parents=True)
+        stale = target / "commands" / "cmd.md"
+        stale.write_text("stale\n", encoding="utf-8")
+        stale.chmod(0o444)
+
+        result = self.run_merge(fixture, target)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(stale.read_text(encoding="utf-8"), "managed\n")
+
+    def test_failed_move_aside_stops_the_install_and_preserves_the_directory(self):
+        import tempfile as tf
+
+        temp = tf.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        fixture = root / "fixture"
+        (fixture / ".claude" / "skills" / "pkg").mkdir(parents=True)
+        (fixture / ".claude" / "skills" / "pkg" / "SKILL.md").write_text("# S\n", encoding="utf-8")
+        (fixture / "scripts").mkdir()
+        shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+        target = root / "target"
+        installed = target / "skills" / "pkg" / "SKILL.md"
+        installed.mkdir(parents=True)
+        (installed / "inner.txt").write_text("inner\n", encoding="utf-8")
+        fake_bin = root / "fakebin"
+        fake_bin.mkdir()
+        fake_mv = fake_bin / "mv"
+        fake_mv.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        fake_mv.chmod(0o755)
+
+        result = subprocess.run(
+            ["bash", str(fixture / INSTALLER.name), "--merge"],
+            cwd=fixture,
+            env=os.environ
+            | {"CLAUDE_HOME": str(target), "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}"},
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Cannot replace directory", result.stdout + result.stderr)
+        self.assertTrue(installed.is_dir())
+        self.assertTrue((installed / "inner.txt").exists())
+
+    def test_fifo_destination_is_replaced_without_hanging(self):
+        root, fixture, target = self.build()
+        (target / "commands").mkdir(parents=True)
+        fifo = target / "commands" / "cmd.md"
+        os.mkfifo(fifo)
+
+        result = self.run_merge(fixture, target, timeout=60)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(fifo.is_file())
+        self.assertFalse(stat.S_ISFIFO(fifo.stat().st_mode))
+        self.assertEqual(fifo.read_text(encoding="utf-8"), "managed\n")
+
+
+class InstallerMovesWrongKindEntryAsideTest(unittest.TestCase):
+    """A directory where the source has a file is moved aside, never deleted."""
 
     def test_merge_replaces_directory_with_source_file(self):
         temp = tempfile.TemporaryDirectory()
@@ -1083,10 +1187,6 @@ class InstallerReplacesWrongKindEntryTest(unittest.TestCase):
         )
         (fixture / "scripts").mkdir()
         shutil.copy2(INSTALLER, fixture / INSTALLER.name)
-        shutil.copy2(
-            REPO_ROOT / "scripts" / "safe_path_remove.py",
-            fixture / "scripts" / "safe_path_remove.py",
-        )
         target = root / "target"
         environment = os.environ | {"CLAUDE_HOME": str(target)}
 
@@ -1111,6 +1211,51 @@ class InstallerReplacesWrongKindEntryTest(unittest.TestCase):
             text=True,
             capture_output=True,
         )
+        # A directory where the source has a file is moved aside (never
+        # recursively deleted) and the file is installed in its place.
         self.assertEqual(second.returncode, 0, second.stderr + second.stdout)
         self.assertTrue(installed.is_file())
         self.assertEqual(installed.read_text(encoding="utf-8"), "# Skill\n")
+        replaced = list((target / "skills" / "example").glob("SKILL.md.replaced-*"))
+        self.assertEqual(len(replaced), 1)
+        self.assertTrue((replaced[0] / "stale.txt").exists())
+
+
+class NewlinePathEscapeTest(unittest.TestCase):
+    """A newline inside a directory name must not hide a symlinked parent."""
+
+    def test_symlinked_parent_with_newline_cannot_escape_the_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            outside = root / "outside"
+            outside.mkdir()
+            target = root / "target"
+            linked_parent = target / "commands" / "evil\nlink"
+            linked_parent.parent.mkdir(parents=True)
+            linked_parent.symlink_to(outside)
+
+            fixture = root / "fixture"
+            src_parent = fixture / ".claude" / "commands" / "evil\nlink"
+            src_parent.mkdir(parents=True)
+            (src_parent / "pwn.md").write_text("pwned\n", encoding="utf-8")
+            (fixture / "scripts").mkdir()
+            shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+
+            result = subprocess.run(
+                ["bash", str(fixture / INSTALLER.name), "--merge"],
+                cwd=fixture,
+                env=os.environ | {"CLAUDE_HOME": str(target)},
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertFalse(
+                (outside / "pwn.md").exists(),
+                "install escaped the target through a newline-named symlinked parent\n"
+                + result.stdout
+                + result.stderr,
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()
