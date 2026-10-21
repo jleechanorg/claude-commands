@@ -3,7 +3,7 @@
 # 🚨 Claude Commands Installation Script
 # Installs the complete Claude Code command system for development workflows
 
-set -eEuo pipefail   # -E: ERR trap fires inside functions, so a failed component install still cleans up
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -667,29 +667,28 @@ main() {
     log_success "Installation complete!"
 }
 
-cleanup_failed_install() {
-    # With `set -E` the ERR trap also fires inside subshells; only the top-level
-    # shell may release the lock or move the staging tree.
-    # BASHPID exists in bash >= 4; on bash 3.2 fall back to "assume main shell".
-    [ "${BASHPID:-$$}" = "$$" ] || exit 1
+on_exit() {
+    local rc=$?
     release_migration_lock
-    # Never recursively delete a computed path here: the failed staging tree is
-    # renamed aside for inspection instead, so a broken run always leaves a
-    # recoverable artifact and no deletion has to be trusted.
-    if [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ]; then
+    # Failures are handled from the EXIT trap, not from an inherited ERR trap:
+    # bash 3.2 has no BASHPID, so a child shell can neither be detected nor
+    # trusted not to release the lock or move the staging tree. Only the shell
+    # that owns this trap reaches here.
+    if [ "$rc" -ne 0 ] && [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ]; then
         local failed_path="${STAGING_DIR}.failed-$(date +%Y%m%d%H%M%S)"
-        if mv "$STAGING_DIR" "$failed_path" 2>/dev/null; then
+        if [ ! -e "$failed_path" ] && mv -n "$STAGING_DIR" "$failed_path" 2>/dev/null; then
             log_warning "Failed staging tree kept for inspection: $failed_path"
         else
             log_warning "Failed staging tree left in place: $STAGING_DIR"
         fi
     fi
-    log_error "Installation failed at line $LINENO. Check the output above for details."
-    exit 1
+    if [ "$rc" -ne 0 ]; then
+        log_error "Installation failed (exit $rc). Check the output above for details."
+    fi
+    return "$rc"
 }
 
-trap cleanup_failed_install ERR
-trap release_migration_lock EXIT
+trap on_exit EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
