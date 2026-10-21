@@ -339,6 +339,18 @@ list_installable_files() {
     fi
 }
 
+# The recursive delete of a source-managed destination entry is delegated to a
+# helper that proves the target is one entry below the install root; a dynamic
+# `rm -rf` is refused by shell guardrails and by review.
+SAFE_REMOVE_HELPER="$PLUGIN_SRC_DIR/scripts/safe_path_remove.py"
+
+require_safe_remove_helper() {
+    if [ ! -f "$SAFE_REMOVE_HELPER" ]; then
+        log_error "Missing required helper: $SAFE_REMOVE_HELPER"
+        return 1
+    fi
+}
+
 # Shared recursive install function
 install_component() {
     local src_dir="$1"
@@ -390,7 +402,12 @@ install_component() {
             fi
             mkdir -p "$target_parent"
             if [ -e "$dest_dir/$relative" ] || [ -L "$dest_dir/$relative" ]; then
-                rm -rf "$dest_dir/$relative"
+                # Recursive delete of a variable path is exactly what shell
+                # guardrails (and good practice) refuse; the helper proves the
+                # target is a single entry below the install root first.
+                require_safe_remove_helper || return 1
+                python3 "$SAFE_REMOVE_HELPER" \
+                    --under "$INSTALL_ROOT" -- "$dest_dir/$relative"
             fi
             cp -a "$src_dir/$relative" "$dest_dir/$relative"
         done < <(
@@ -629,8 +646,11 @@ main() {
 
 cleanup_failed_install() {
     release_migration_lock
-    if [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ]; then
-        rm -rf "$STAGING_DIR"
+    if [ -n "$STAGING_DIR" ] && [ -d "$STAGING_DIR" ] && [ -n "$(dirname "$STAGING_DIR")" ]; then
+        if [ -f "$SAFE_REMOVE_HELPER" ]; then
+            python3 "$SAFE_REMOVE_HELPER" \
+                --under "$(dirname "$STAGING_DIR")" -- "$STAGING_DIR" || true
+        fi
     fi
     log_error "Installation failed at line $LINENO. Check the output above for details."
     exit 1
