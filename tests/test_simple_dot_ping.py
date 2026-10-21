@@ -184,6 +184,19 @@ class LauncherExecutionTests(unittest.TestCase):
         self.assertNotEqual(*receipts)
         self.assertTrue(all(path.is_file() for path in receipts))
 
+    def test_configured_cli_prefix_is_literal_argv(self):
+        prefix = ['--thinking', 'medium', 'literal spaces; $HOME $(never-run)']
+        self.env['COORDINATOR_CLI_ARGS'] = json.dumps(prefix)
+        _, spawned = self.invoke()
+        self.assertEqual(spawned['command'][:1 + len(prefix)], [str(self.pi), *prefix])
+
+    def test_invalid_cli_prefix_is_rejected_before_spawn(self):
+        for value in ('"--thinking medium"', '{}', '[4]', '["bad\\u0000arg"]'):
+            with self.subTest(value=value):
+                self.env['COORDINATOR_CLI_ARGS'] = value
+                with self.assertRaisesRegex(PING.Blocked, 'CLI arguments'):
+                    self.invoke()
+
     def test_stop_dangling_symlink_prevents_pi_spawn(self):
         self.state.mkdir()
         (self.state / 'STOP').symlink_to(self.home / 'missing-stop-target')

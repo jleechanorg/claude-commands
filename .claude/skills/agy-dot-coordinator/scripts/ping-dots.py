@@ -2,6 +2,8 @@
 """Run one scheduler-bound Dot coordinator turn using Pi and Chrome DevTools MCP."""
 import argparse, fcntl, hashlib, json, os, re, shutil, signal, subprocess, sys, tempfile, time
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from render_native_schedule import node22_bins
 
 SKILL = Path(__file__).resolve().parents[1] / 'SKILL.md'
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36'
@@ -41,15 +43,13 @@ def main():
     p.add_argument('--instruction', default=os.environ.get('COORDINATOR_TASK', ''), help='Owner-provided task context or mode')
     args = p.parse_args()
     if not re.fullmatch(r'[A-Za-z0-9._@+-]{1,160}', args.account): raise Blocked('invalid account key')
+    cli_args = json.loads(os.environ.get('COORDINATOR_CLI_ARGS', '[]'))
+    if not isinstance(cli_args, list) or any(not isinstance(arg, str) or any(ord(c) < 32 or ord(c) == 127 for c in arg) for arg in cli_args): raise Blocked('CLI arguments must be a JSON array of strings without control characters')
     expected = os.environ.get('DOT_EXPECTED_IDENTITY_SHA256', '').lower()
     if not re.fullmatch(r'[0-9a-f]{64}', expected): raise Blocked('expected identity binding is missing or invalid')
-    nvm = Path.home() / '.nvm/versions/node'
-    versions = list(nvm.glob('v22.*')) if nvm.is_dir() else []
-    versions.sort(key=lambda path: tuple(map(int, path.name[1:].split('.'))))
-    if (nvm / 'v22.22.0').is_dir(): versions = [nvm / 'v22.22.0']
-    if not versions: raise Blocked('Node 22 from nvm is unavailable')
-    node_dir = versions[-1] / 'bin'
-    if not (node_dir / 'node').is_file(): raise Blocked('Node 22 executable is unavailable')
+    node_bins = node22_bins(Path.home())
+    if not node_bins: raise Blocked('Node 22 executable is unavailable')
+    node_dir = node_bins[0]
     os.environ['PATH'] = str(node_dir) + os.pathsep + str(Path.home() / '.local/bin') + os.pathsep + os.environ.get('PATH', '')
     config = json.loads(Path(os.environ.get('DOT_CONFIG_FILE', '~/.config/dot/config.json')).expanduser().read_text())
     accounts = config.get('accounts', {})
@@ -121,7 +121,7 @@ def main():
             if os.path.lexists(STOP): raise Blocked('STOP marker is present before agent dispatch')
             prompt = f'Account key: {args.account}\nConfigured target: {target}\nExpected identity SHA-256: {expected} (private binding; compare silently and return booleans only).\nPending-send file: {pending}\nOwner-provided task context: {args.instruction}\nRead and follow the loaded skill.'
             env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_PENDING_FILE=str(pending), COORDINATOR_ATTEMPT_FILE=str(STATE / ('attempt-' + Path(run_dir).name + '.json')), COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
-            cmd = [pi_bin, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
+            cmd = [pi_bin, *cli_args, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
                 '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
             proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     text=True, start_new_session=True)

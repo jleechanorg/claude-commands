@@ -34,6 +34,18 @@ def systemd_value(value):
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$").replace("`", "\\`") + '"'
 
 
+def configured_cli(config):
+    if "cli" in config and "pi_bin" in config:
+        fail("configure either cli or pi_bin, not both")
+    cli = config.get("cli", {"executable": config.get("pi_bin", ""), "args": []})
+    if not isinstance(cli, dict) or not isinstance(cli.get("executable"), str):
+        fail("cli must name an executable and optional arguments")
+    args = cli.get("args", [])
+    if not isinstance(args, list) or any(not isinstance(arg, str) or any(ord(c) < 32 or ord(c) == 127 for c in arg) for arg in args):
+        fail("CLI arguments must be an array of strings without control characters")
+    return Path(cli["executable"]).expanduser(), args
+
+
 def node22_bins(home):
     nvm = Path(home) / ".nvm/versions/node"
     versions = [p for p in nvm.glob("v22.*") if (p / "bin/node").is_file()] if nvm.is_dir() else []
@@ -69,7 +81,7 @@ def render(config_path, output, host):
         details = dot_accounts.get(row["key"])
         if not isinstance(details, dict) or not details.get("user_data_dir"):
             fail("a scheduled account is missing from Dot configuration")
-    pi = Path(config.get("pi_bin", "")).expanduser()
+    pi, cli_args = configured_cli(config)
     mcp = Path(config.get("chrome_devtools_mcp_js", "")).expanduser()
     if not pi.is_absolute() or not pi.is_file() or not os.access(pi, os.X_OK):
         fail("configured PI_BIN must be an executable file")
@@ -98,6 +110,7 @@ def render(config_path, output, host):
             "DOT_EXPECTED_IDENTITY_SHA256": row["identity_sha256"],
             "COORDINATOR_TASK": row["task"],
             "PI_BIN": str(pi),
+            "COORDINATOR_CLI_ARGS": json.dumps(cli_args),
             "CHROME_DEVTOOLS_MCP_JS": str(mcp),
             "PATH": path,
         }

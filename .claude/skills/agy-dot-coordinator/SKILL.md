@@ -5,7 +5,7 @@ description: Review current authorized work and coordinate through the account-b
 
 # Dot coordinator
 
-This file is the executable workflow for one scheduler-bound Pi agent turn. The Python launcher supplies one explicit configured account and starts pinned Chrome DevTools MCP 1.6 in owned-browser mode with that account's existing system Chrome profile. MCP owns browser shutdown; Pi's graceful shutdown closes MCP stdin, and the MCP closes the browser. The agent owns context recovery, judgment, message content, and browser actions. The configured Pi adapter selects its provider and model without an automatic fallback, account rotation, time-slot calculation, or escalation ladder.
+This file is the executable workflow for one scheduler-bound Pi agent turn. The Python launcher supplies one explicit configured account and starts pinned Chrome DevTools MCP 1.6 in owned-browser mode with that account's existing system Chrome profile. MCP owns browser shutdown; Pi's graceful shutdown closes MCP stdin, and the MCP closes the browser. The agent owns context recovery, judgment, message content, and browser actions. The configured CLI/adapter selects its provider and model without an automatic fallback, account rotation, time-slot calculation, or escalation ladder.
 
 Use only the directly exposed `mcp__dot_browser__*` tools for browser transport. Do not invoke nested Pi/runtime sessions, Codemode, or shell-based browser automation, and do not try another transport if these tools are unavailable. Report missing direct browser tools as a blocker. Shell access may be used for local task artifacts such as the pending-send marker; it is not a browser transport.
 
@@ -16,6 +16,10 @@ The caller must provide `--account <configured-key>` and `DOT_EXPECTED_IDENTITY_
 The launcher serializes coordinator runs with the existing global lock, uses the same per-profile SHA-256/flock path as `dot.sh`, observes the existing `STOP` marker, and bounds the Pi process. MCP launches only system Google Chrome against the configured profile with the matching platform keychain, user agent, and profile arguments; it ignores mock/basic keychain defaults. A unique temporary Pi project disables unrelated global MCP servers and is removed at exit. Pi uses `--no-session`; no browser or model transcript is intentionally persisted by the launcher. The scheduler/runtime may pass `CHROME_DEVTOOLS_MCP_JS` when the pinned 1.6.0 package is in a task-scoped cache; the launcher validates its package version and never selects a stale Homebrew MCP.
 
 Native schedule definitions are generated per account by `scripts/render_native_schedule.py`; see `RENDERING.md` for the private machine-local config and render-only workflow. The renderer writes inactive files to a new staging directory and never changes a service. Legacy single-service installers do not provide this interface. Shared `dot.sh` and `dot_chrome.mjs` remain available to other Dot callers; they are not copied into this coordinator path.
+
+## Configurable CLI contract
+
+Machine-local schedule configuration selects `cli.executable` plus a JSON `cli.args` array. Arguments are passed literally, without shell parsing, eval, or sourcing startup files. Legacy `pi_bin`/`PI_BIN` remains compatible; do not configure both schemas. The executable must implement the existing Pi-compatible invocation and direct MCP tool contract; a different CLI needs a compatible adapter, not guessed flag translation. The portable lunaroute adapter preserves the existing credential helper and honors optional `PI_EXECUTABLE` and `PIL_MODEL`; no secret or machine-specific alias is copied into the repository. New configuration is rendered inactive and requires separate host activation.
 
 ## Periodic outbound message
 

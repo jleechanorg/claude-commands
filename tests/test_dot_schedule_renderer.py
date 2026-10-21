@@ -60,6 +60,35 @@ class ScheduleRendererTests(unittest.TestCase):
         self.assertTrue(all(p["ProgramArguments"][-2:] == ["--account", p["ProgramArguments"][-1]] for p in plists))
         self.assertTrue(all(stat.S_IMODE(p.stat().st_mode) == 0o600 for p in out.iterdir()))
 
+    def test_configurable_cli_and_arguments_round_trip_without_shell(self):
+        data = json.loads(self.config.read_text())
+        data.pop('pi_bin')
+        args = ['--thinking', 'medium', 'literal spaces; $HOME $(never-run)']
+        data['cli'] = {'executable': str(self.pi), 'args': args}
+        self.config.write_text(json.dumps(data))
+        with patch.object(renderer, 'node22_bins', return_value=[self.root / 'node-bin']):
+            out = renderer.render(self.config, self.root / 'cli-stage', 'macos')
+        env = renderer.plistlib.loads(next(out.glob('*.plist')).read_bytes())['EnvironmentVariables']
+        self.assertEqual(env['PI_BIN'], str(self.pi))
+        self.assertEqual(json.loads(env['COORDINATOR_CLI_ARGS']), args)
+
+    def test_cli_schema_rejects_ambiguous_or_non_array_arguments(self):
+        original = json.loads(self.config.read_text())
+        for cli in ({'executable': str(self.pi), 'args': '--thinking medium'},
+                    {'executable': str(self.pi), 'args': [4]},
+                    {'executable': str(self.pi), 'args': ['bad\x00arg']}):
+            data = dict(original)
+            data.pop('pi_bin')
+            data['cli'] = cli
+            self.config.write_text(json.dumps(data))
+            with self.assertRaisesRegex(ValueError, 'CLI arguments'):
+                renderer.render(self.config, self.root / 'invalid-cli-stage', 'macos')
+        data = dict(original)
+        data['cli'] = {'executable': str(self.pi), 'args': []}
+        self.config.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, 'either cli or pi_bin'):
+            renderer.render(self.config, self.root / 'ambiguous-stage', 'macos')
+
     def test_linux_renders_ordered_timer_service_and_private_env(self):
         self.write_config("linux")
         fake_home = self.root / "home"
