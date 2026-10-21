@@ -1,5 +1,5 @@
 """Offline behavior of the explicitly approved stateless coordinator."""
-import fcntl, hashlib, os
+import fcntl, hashlib
 from pathlib import Path
 from unittest.mock import patch
 import unittest
@@ -13,14 +13,17 @@ class StatelessCoordinatorTests(unittest.TestCase):
     def invoke(self):
         # Old fixture names are retained solely to exercise legacy inputs.
         with patch.object(harness.PING, 'STATE', self.f.state, create=True), patch.object(harness.PING, 'STOP', self.f.state / 'STOP', create=True):
-            return self.f.invoke()
+            def spawn(command, **options):
+                self.child_env = options["env"]
+                return harness.FakePiProcess()
+            return self.f.invoke(on_spawn=spawn)
     def test_old_stop_pending_and_corrupt_ledger_are_not_consumed_or_changed(self):
         self.f.state.mkdir()
         artifacts = {'STOP':b'operator', 'send-old.pending':b'unknown', 'state.json':b'corrupt'}
         for name,data in artifacts.items(): (self.f.state/name).write_bytes(data)
         result,spawned=self.invoke()
         self.assertEqual(result,0)
-        self.assertNotIn('COORDINATOR_PENDING_FILE',spawned['command'][-1])
+        self.assertNotIn('COORDINATOR_PENDING_FILE',self.child_env)
         for name,data in artifacts.items(): self.assertEqual((self.f.state/name).read_bytes(),data)
     def test_shared_flock_is_not_acquired_or_replaced(self):
         lockdir=self.f.lock_base/'dot-profile-locks';lockdir.mkdir(parents=True)
