@@ -34,8 +34,8 @@ class CoordinatorWorkflowTests(unittest.TestCase):
     def test_review_guidance_does_not_reintroduce_manual_stop(self):
         dot = (ROOT / '.claude/skills/dot/SKILL.md').read_text()
         coordinator = SKILL.read_text()
-        # The coordinator STOP marker and per-profile flock were deleted 2026-10-20;
-        # the coordinator source no longer creates or consumes either one.
+        # The coordinator STOP marker and per-profile flock were deleted 2026-10-20,
+        # in the coordinator source and in the shared dot.sh transport.
         self.assertIn('there is no per-profile flock or coordinator STOP marker any more', dot)
         self.assertIn('`DOT_PROFILE_LOCKED` no longer exists', dot)
         self.assertIn('does not create or consume coordinator holds', coordinator)
