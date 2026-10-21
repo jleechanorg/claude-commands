@@ -25,7 +25,10 @@ installations stay valid until the activation owner performs a reviewed switch.
 
 1. Inventory and privately back up scripts, configs, registered service/timer
    labels and hashes; identify active hold owners.
-2. Stage both packages, retain the compatibility state/lock paths, and render
+2. Do not reuse deployment tooling that rejects source symlinks or packages only
+   the legacy directory. Review a deployment that stages BOTH packages while
+   preserving relative symlinks and validating their targets; back up the full
+   old package first. Retain the compatibility state/lock paths, and render
    new definitions to a fresh private /tmp directory. Inspect accounts, identity
    bindings, unchanged minutes and CLI argv. Linux env files belong under
    ~/.config/dot-coordinator; Mac uses the existing private log directory.
