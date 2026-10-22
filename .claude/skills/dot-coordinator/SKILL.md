@@ -27,6 +27,17 @@ Machine-local schedule configuration selects `cli.executable` plus a JSON `cli.a
 
 For an owner-authorized periodic coordination run, use the following outbound text verbatim. It replaces periodic message wording and the discovery window in scheduler task context; retain that context for the verified destination and send/no-send decision. Do not add project lists, task-specific instructions, or repetitive authority boilerplate. All identity, destination, peer-draft and approval checks below still apply. Explicit read-only or do-not-send runs still send nothing.
 
+### Shared capacity budget: 2 complex + 2 short
+
+One single global budget covers this Dot, this coordinator and every worker it starts: at most **2 complex plus 2 short active outcomes** in total, including across overlapping runs. A second run, account or worker never gets its own two-plus-two.
+
+- **Shared, not per-run:** count every outcome currently executing anywhere in this Dot's fleet before admitting new work.
+- **Queue retention:** refill only from the highest-priority READY work. Blocked, remote/peer-waiting and authorization-waiting work is retained with its owner and resumption trigger and does **not** occupy a slot — park it explicitly, never delete or silently drop it.
+- **No fake active waits:** queued, admitted, assigned, messaged, "busy", polling or awaiting-review work is not active. A slot is occupied only by an outcome with a live owner, the exact action happening now and a fresh artifact or command receipt; otherwise treat the slot as free and report it as idle.
+- **Checkpoint and displacement before preemption:** before any new work would displace older active work, warn the owner, record that item's checkpoint (goal, acceptance state, owner, exact next action, resumption trigger) and only then preempt. Never preempt silently.
+
+Do not direct work from raw `br ready`, do not start an independent copy of the designated-writer queue guard, and never treat admission, an assignment or message delivery as execution proof.
+
 > Review everything I asked for and everything completed in the last four hours. Make sure every unfinished task has an appropriate owner and is actively being driven. Recover overlooked work, continue existing tasks, and coordinate with the relevant owners without duplicating efforts. Act on what you can, resolve blockers through available permitted approaches, and ask me only when essential information or required approval is missing. Verify actual results rather than relying on assignments or status claims. Keep older unresolved commitments until they are completed or cancelled. Give me a concise update on meaningful progress, remaining blockers, and what happens next; skip unchanged status.
 
 ## Workflow
