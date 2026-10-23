@@ -65,7 +65,7 @@ For an owner-authorized periodic coordination run without a private payload, use
 This budget and admission guidance apply to the receiving Dot and designated
 queue owner, not the reminder sender. The numeric predicate does not validate
 receipt age, reserve capacity atomically or observe remote execution. Never
-treat its ADMIT output alone as global dispatch authorization.
+treat its BELOW_CAP output alone as global dispatch authorization.
 
 One single global budget covers this Dot, this coordinator and every worker it starts: at most **2 complex plus 2 short active outcomes** in total, including across overlapping runs. A second run, account or worker never gets its own two-plus-two.
 
@@ -73,20 +73,25 @@ Caps are exactly: complex ≤ 2, short ≤ 2. Those are the only two lanes and t
 
 - **Shared, not per-run:** count every outcome currently executing anywhere in this Dot's fleet before admitting new work.
 - **Queue retention:** refill only from the highest-priority READY work. Blocked, remote/peer-waiting and authorization-waiting work is retained with its owner and resumption trigger and does **not** occupy a slot — park it explicitly, never delete or silently drop it.
-- **No fake active waits:** queued, admitted, assigned, messaged, "busy", polling or awaiting-review work is not active. A slot is occupied only by an outcome with a live owner, the exact action happening now and a fresh artifact or command receipt; known nonexecuting work frees a slot, while an uncertain launch or previously executing owner with missing proof remains UNKNOWN until reconciled. Do not count UNKNOWN as proven activity or a demonstrated vacancy. After this test, if a class is below its cap the new work of that class is admitted immediately — a "busy" label alone is never a reason to refuse.
+- **No fake active waits:** queued, admitted, assigned, messaged, "busy", polling or awaiting-review work is not active. A slot is occupied only by an outcome with a live owner, the exact action happening now and a fresh artifact or command receipt; known nonexecuting work frees a slot, while an uncertain launch or previously executing owner with missing proof remains UNKNOWN until reconciled. Do not count UNKNOWN as proven activity or a demonstrated vacancy. After occupancy and UNKNOWN states are reconciled, below-cap work may proceed through the designated owner's existing serialized admission; a "busy" label alone is never a reason to refuse.
 - **Hard cap — refuse the third:** with 2 complex already active, admit no additional complex outcome; with 2 short already active, admit no additional short outcome. This holds even when the new work is higher priority, and even when an apparent slot holder looks idle. A slot is released only after its owner or the operator confirms it is not executing; the coordinator never frees a slot by its own judgment.
 - **Checkpoint and displacement before preemption:** displacement is an exception that needs the owner's decision, never a silent swap. Warn the owner, record the displaced item's checkpoint (goal, acceptance state, owner, exact next action, resumption trigger), state the trade-off, and wait for that decision. Never admit first and justify after.
 
 Do not direct work from raw `br ready`, do not start an independent copy of the designated-writer queue guard, and never treat admission, an assignment or message delivery as execution proof.
 
-The numeric cap is enforced by a read-only predicate you run before admitting anything:
+The receiving Dot or designated queue owner may run this read-only numeric predicate only after reconciling actual occupancy, UNKNOWNs and retained ownership:
 
 ```bash
 python3 ~/.claude/skills/dot-coordinator/scripts/capacity_guard.py --state <state.json> --class complex --id <task-id>
 python3 ~/.claude/skills/dot-coordinator/scripts/capacity_guard.py --state <state.json> --class short --id <task-id>
 ```
 
-Exit `0` = `ADMIT`, exit `3` = `REJECT` (class already at its cap), exit `2` = malformed state. On `REJECT`, park the candidate at the head of the ready queue with its owner and resumption trigger and say so; do not admit it, do not widen the cap and do not preempt without the owner's decision. The guard is a predicate only: it writes no state and dispatches nothing.
+Exit `0` = `BELOW_CAP` (confirmed numeric count only; never admission authority), exit `3` = `REJECT` (class already at its cap), exit `2` = malformed state or candidate ID already present in the active input. On `REJECT`, park the candidate at the head of the ready queue with its owner and resumption trigger and say so; do not admit it, do not widen the cap and do not preempt without the owner's decision. The guard is a predicate only: it writes no state and dispatches nothing. Mark unresolved occupancy `state: "UNKNOWN"`, which returns error until reconciled. `parked: true` excludes a known nonexecuting record even with a historical receipt; never mark an uncertain or advancing command parked. Receipt strings are not parsed for age: the designated receiving writer must validate freshness, owner, head and global occupancy before admission. Its independently installed owner instructions or exact private payload enforce the shared capacity policy; the fallback transports only the blockquote below.
+
+### Exact fallback payload
+
+Only the text in the following blockquote is the fallback outbound message.
+Headings, capacity guidance and command examples above are not outbound text.
 
 > Review everything I asked for and everything completed in the last four hours. Make sure every unfinished task has an appropriate owner and is actively being driven. Recover overlooked work, continue existing tasks, and coordinate with the relevant owners without duplicating efforts. Act on what you can, resolve blockers through available permitted approaches, and ask me only when essential information or required approval is missing. Verify actual results rather than relying on assignments or status claims. Keep older unresolved commitments until they are completed or cancelled. Give me a concise update on meaningful progress, remaining blockers, and what happens next; skip unchanged status.
 

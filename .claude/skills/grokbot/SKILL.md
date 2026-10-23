@@ -42,7 +42,11 @@ Never assume a locator or selector from an old run still exists.
 3. Keep one writer for this conversation/composer through the existing owner
    checkpoint. Preserve active peer drafts and edits; do not clear, submit or
    overwrite a peer's text. If ownership is uncertain, inspect read-only and
-   return the conflicting scope. Do not install another lock service or sender.
+   return the conflicting scope. Sending requires positive evidence that the existing
+   ownership mechanism establishes the sole current conversation writer, across
+   request IDs and senders; an empty composer or request-scoped receipt alone
+   cannot establish exclusion. If that mechanism or checkpoint is unavailable
+   or unproved, HOLD without typing. Do not install another lock service or sender.
 4. Do not copy cookies, browser profiles, local storage, tokens or credentials.
    Never launch a second browser against an occupied profile, delete locks or
    resync sessions. If the existing authorized browser is unavailable, name the
@@ -66,7 +70,13 @@ For an authorized send:
    An unresolved prior attempt is UNCERTAIN: inspect read-only and do not resend.
    Preserve that state in the existing owner checkpoint across interruptions;
    a fresh invocation or new marker is not permission to duplicate the action.
-3. Revalidate identity, target, one writer and send authority. Inspect the composer
+3. Persist the stable marker, exact payload hash, target, writer and pending-attempt
+   state in the existing durable owner checkpoint before typing. Verify that
+   state can be recovered across interruption; unavailable persistence means HOLD.
+   Immediately before submit persist UNCERTAIN and verify that write succeeded.
+   Only positive delivery readback may transition it to DELIVERED; a crash leaves
+   the uncertainty hold intact. This uses the existing checkpoint, not a new ledger.
+   Revalidate identity, target, one writer and send authority. Inspect the composer
    for a peer draft. Fill through the supported UI only, read back the complete
    text and compare it to the exact payload before submitting. If a supported
    control cannot preserve the text, stop before submission.

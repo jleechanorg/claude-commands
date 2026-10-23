@@ -53,7 +53,7 @@ class GuardTest(unittest.TestCase):
         state = {"active": [entry("a", "complex")]}
         code, out, _ = self.run_guard(state, "complex", "b")
         self.assertEqual(code, 0, out)
-        self.assertTrue(out.startswith("ADMIT complex:b"), out)
+        self.assertTrue(out.startswith("BELOW_CAP complex:b"), out)
 
     def test_second_short_admitted_with_full_complex_lane(self):
         state = {"active": [entry("a", "complex"), entry("b", "complex"), entry("d", "short")]}
@@ -94,6 +94,39 @@ class GuardTest(unittest.TestCase):
     def test_duplicate_id_is_error(self):
         state = {"active": [entry("a", "complex"), entry("a", "short")]}
         self.assertEqual(self.run_guard(state, "short")[0], 2)
+
+    def test_existing_candidate_is_not_admitted_again(self):
+        state = {"active": [entry("existing", "complex")]}
+        code, out, error = self.run_guard(state, "complex", "existing")
+        self.assertEqual(code, 2)
+        self.assertNotIn("ADMIT", out)
+        self.assertIn("candidate id already present", error)
+
+    def test_unknown_occupancy_is_error(self):
+        state = {"active": [entry("unknown", "complex", FAKE, state="UNKNOWN")]}
+        self.assertEqual(self.run_guard(state, "complex", "new")[0], 2)
+
+    def test_parked_historical_receipt_is_not_current_execution(self):
+        state = {"active": [entry("parked", "complex", parked=True)]}
+        code, out, _ = self.run_guard(state, "complex", "new")
+        self.assertEqual(code, 0)
+        self.assertIn("active=0", out)
+        self.assertTrue(out.startswith("BELOW_CAP"))
+
+    def test_stale_string_is_only_shape_checked_and_never_authority(self):
+        old = {"owner": "owner", "action": "past action", "receipt": "2000-01-01T00:00:00Z"}
+        code, out, _ = self.run_guard({"active": [entry("old", "complex", old)]}, "complex", "new")
+        self.assertEqual(code, 0)
+        self.assertTrue(out.startswith("BELOW_CAP"))
+        self.assertNotIn("ADMIT", out)
+
+    def test_invalid_utf8_is_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "state.json"
+            path.write_bytes(b"\xff")
+            result = subprocess.run([sys.executable, str(HERE.parent / "scripts" / "capacity_guard.py"), "--state", str(path)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("ERROR", result.stderr)
 
     def test_malformed_state_is_error(self):
         self.assertEqual(self.run_guard({"active": "nope"}, "complex")[0], 2)

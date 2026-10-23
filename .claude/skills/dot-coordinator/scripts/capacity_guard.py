@@ -4,12 +4,13 @@
 This is a read-only predicate, not a queue writer: it never mutates state, never
 dispatches work and never replaces the designated-writer queue guard. Exit codes:
 
-    0  ADMIT   the requested class is below its cap
+    0  BELOW_CAP   confirmed count below cap; not dispatch authority
     2  ERROR   bad input (unknown class, malformed state, duplicate id)
     3  REJECT  the requested class is already at its cap
 
-Only outcomes with real evidence occupy a slot: a non-empty owner, a non-empty
-current action and a non-empty fresh receipt. Queued, assigned, "busy",
+Only entries with non-empty owner, current action and receipt strings are
+counted. The caller must independently validate freshness, ownership and UNKNOWN
+occupancy; this predicate cannot establish global admission. Queued, assigned, "busy",
 messaged or awaiting-review entries never consume capacity.
 """
 
@@ -31,7 +32,7 @@ class InputError(ValueError):
 def load_state(path: Path) -> dict:
     try:
         state = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as error:
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise InputError(f"cannot read state: {error}") from error
     if not isinstance(state, dict) or not isinstance(state.get("active"), list):
         raise InputError("state must be an object with an 'active' list")
@@ -39,11 +40,15 @@ def load_state(path: Path) -> dict:
 
 
 def is_executing(item: object) -> bool:
-    """An outcome occupies a slot only with owner + current action + fresh receipt."""
+    """Check evidence string shape; freshness and actual activity are caller checks."""
     if not isinstance(item, dict):
         raise InputError("each active entry must be an object")
     if item.get("class") not in CAPS:
         raise InputError(f"unknown class: {item.get('class')!r}")
+    if item.get("state") == "UNKNOWN":
+        raise InputError("UNKNOWN occupancy must be reconciled before this check")
+    if item.get("parked") is True:
+        return False
     evidence = item.get("evidence")
     if not isinstance(evidence, dict):
         return False
@@ -67,10 +72,12 @@ def counts(state: dict) -> dict:
     return tally
 
 
-def decide(state: dict, wanted: str) -> tuple[bool, dict, int]:
+def decide(state: dict, wanted: str, candidate_id: str | None = None) -> tuple[bool, dict, int]:
     if wanted not in CAPS:
         raise InputError(f"unknown class: {wanted!r}")
     tally = counts(state)
+    if candidate_id is not None and any(item["id"] == candidate_id for item in state["active"]):
+        raise InputError(f"candidate id already present in active state: {candidate_id}")
     return tally[wanted] < CAPS[wanted], tally, CAPS[wanted]
 
 
@@ -85,9 +92,9 @@ def main(argv: list[str] | None = None) -> int:
         if not args.wanted:
             print("COUNTS " + json.dumps(counts(state), sort_keys=True))
             return 0
-        admit, tally, cap = decide(state, args.wanted)
+        admit, tally, cap = decide(state, args.wanted, args.id)
         label = args.wanted if not args.id else f"{args.wanted}:{args.id}"
-        verdict = "ADMIT" if admit else "REJECT"
+        verdict = "BELOW_CAP" if admit else "REJECT"
         print(f"{verdict} {label} active={tally[args.wanted]} cap={cap}")
         return 0 if admit else 3
     except InputError as error:
