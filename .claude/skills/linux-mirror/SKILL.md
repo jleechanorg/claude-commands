@@ -115,7 +115,7 @@ once the first turn completes and are only for single queries run outside a mirr
 | --- | --- | --- |
 | `pi` | `pi -- "$CONTEXT"` | `pi -p "$CONTEXT"` |
 | `claude` | `claude --dangerously-skip-permissions -- "$CONTEXT"` | `claude -p "$CONTEXT"` |
-| `codex` | `codex --yolo "$CONTEXT"` | `codex exec --yolo "$CONTEXT"` |
+| `codex` | `codex --yolo -- "$CONTEXT"` | `codex exec --yolo -- "$CONTEXT"` |
 | `agy` | `agy --model "${AGY_MODEL:-…}" --prompt-interactive "$CONTEXT"` | `agy --model "…" --print="$CONTEXT"` |
 
 Also prepare `$CONTEXT`: a short, self-contained summary (1-3 sentences) of what should actually continue on the Linux machine — the real next action, not just "resume work." This isn't optional bookkeeping: step 4 types it as the first message to a freshly-launched coding agent on the target machine, which has no access to this conversation. Write it as if briefing a colleague who just walked in cold.
@@ -201,7 +201,9 @@ fi
 # sha256sum/shasum which aren't guaranteed on both.
 BRANCH_SAFE=$(printf '%s' "$BRANCH" | tr -c 'a-zA-Z0-9_-' '-')
 BRANCH_HASH=$(printf '%s' "$BRANCH" | cksum | cut -d' ' -f1)
-SESSION="mirror-${BRANCH_SAFE}-${BRANCH_HASH}"
+# The agent is part of the identity: a session created for one CLI must not be
+# resumed as if it were another.
+SESSION="mirror-${BRANCH_SAFE}-${BRANCH_HASH}-${AGENT}"
 # tmux has-session prefix-matches by default (checking for "mirror-feat"
 # would incorrectly succeed against an existing "mirror-feature-x") — the
 # leading "=" forces an exact match.
@@ -255,7 +257,7 @@ else
   case "$AGENT" in
     claude) AGENT_CMD=(claude --dangerously-skip-permissions -- "$CONTEXT") ;;
     pi)     AGENT_CMD=(pi -- "$CONTEXT") ;;
-    codex)  AGENT_CMD=(codex --yolo "$CONTEXT") ;;
+    codex)  AGENT_CMD=(codex --yolo -- "$CONTEXT") ;;
     agy)    AGENT_CMD=(agy --model "${AGY_MODEL:-gemini-4-argon-high}" --prompt-interactive "$CONTEXT") ;;
     *)
       echo "FAILED:$TARGET — unsupported agent '$AGENT' (expected pi, claude, codex, or agy)" >&2
@@ -368,7 +370,7 @@ If a PR is already open for `$BRANCH`, pushes update that PR's head automaticall
 
 - Committed-state-only mirror (see "What this carries over" above) — this is the chosen tradeoff over rsyncing the dirty working tree.
 - Source repo must live under `$HOME` (see Setup) — step 1 fails loudly rather than silently mirroring to the wrong place. The target-side checkout always lands under `$HOME/mirror/`, not at the identical path as the source.
-- Step 4 launches **the same CLI that is driving the source session** (`pi`, `claude`, `codex`, or `agy`, detected in step 1, overridable with `MIRROR_AGENT`) with `$CONTEXT` passed as an argv element (never typed via `send-keys`), and only on a freshly created session. Each CLI gets its own argv shape because their prompt flags differ — `pi --`, `claude --dangerously-skip-permissions --`, `codex --yolo`, `agy --prompt-interactive`. Detection fails closed: with no session marker and no `MIRROR_AGENT`, step 1 errors out rather than defaulting to a CLI, and `agy` (which has no session marker) must be named explicitly. Never assume a `RESUMED` session is idle just because this skill didn't launch anything into it.
+- Step 4 launches **the same CLI that is driving the source session** (`pi`, `claude`, `codex`, or `agy`, detected in step 1, overridable with `MIRROR_AGENT`) with `$CONTEXT` passed as an argv element (never typed via `send-keys`), and only on a freshly created session. Each CLI gets its own argv shape because their prompt flags differ — `pi --`, `claude --dangerously-skip-permissions --`, `codex --yolo --`, `agy --prompt-interactive`. Detection fails closed: with no session marker and no `MIRROR_AGENT`, step 1 errors out rather than defaulting to a CLI, and `agy` (which has no session marker) must be named explicitly. Never assume a `RESUMED` session is idle just because this skill didn't launch anything into it.
 - **Interactive, not one-shot.** The launched command must stay resident so the pane keeps accepting input across turns. `codex exec …` and `agy --print=…` (and `pi -p`, `claude -p`) run one turn and exit; under `remain-on-exit` they leave a readable-but-dead pane that can never be steered again. Use them only for single queries run outside a mirror session.
 - A bare host alias is typically LAN-only; off-LAN (traveling), target the Tailscale IP + explicit `-i` per Tier 2 — and make sure step 4 actually uses the resolved `$SSH_ARGS`/`$SSH_TARGET` from step 3, not a re-hardcoded alias, or the whole point of the fallback is lost.
 - Never pass unencoded user-controlled values (repo path, branch name, remote URL) as literal SSH command arguments — a branch name is attacker-controllable shell input the moment someone else can push to your fork, and SSH doesn't preserve argv separation across the wire. Base64-encode first (see step 4).
