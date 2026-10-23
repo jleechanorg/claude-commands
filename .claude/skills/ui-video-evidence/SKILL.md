@@ -9,19 +9,22 @@ description: Record captioned browser/UI evidence videos and link sanitized arti
 
 Prove user-visible behavior in a way reviewers and agents can verify quickly from the PR conversation.
 
-## When UI Video Is Mandatory
+## When UI Video Is Required
 
-UI/browser video is mandatory whenever work is user-facing, including:
-- Visual/UI layout or styling changes
-- Click flows, form submit flows, navigation, or modal behavior
-- New/changed browser interactions
-- Any claim of visual correctness or lack of visual regression
+Follow `~/.claude/skills/evidence-standards/SKILL.md` § "UI changes require a
+genuine implementation BEFORE/AFTER comparison": compare the actual pre-change
+and candidate implementations, not just two states within a candidate-only run.
 
-If a PR touches user-facing behavior, missing UI video is an evidence failure.
+Prefer captioned video for UI changes. Video is required for click/form flows,
+navigation, modal behavior, streaming, animation, timing, and multi-step claims.
+Paired screenshots may replace video only for simple static visual changes
+whose claim does not depend on motion or sequence; explain that exception.
+Missing the required comparison is an evidence failure, not a video exemption.
 
 ## Required Outputs
 
-Each UI evidence run must provide:
+Each video run must provide the following; the simple-static screenshot exception
+retains the canonical paired-capture, provenance, and visual-review requirements:
 - UI video (`.mp4` preferred)
 - UI fallback media (`.gif` recommended when player embed is not required)
 - Captions (burned-in preferred; `.vtt`/`.srt` acceptable)
@@ -44,12 +47,16 @@ documented as blocked.
 
 ## Mandatory Frames
 
+Capture this journey on each compared implementation. The pre-action frame below
+is not by itself the pre-change-code baseline; preserve both revisions and their
+original capture provenance under the canonical BEFORE/AFTER rule.
+
 | # | Frame | Must show |
 |---|-------|-----------|
 | 1 | URL + Page Load | Full native browser URL bar with route under test, OR — when the scoped owner mandates headless capture — a genuine route/URL provenance marker (printed navigation URL/log line, on-page route text, or window title) captured from the same automated session and tied to the frame timestamp |
-| 2 | Before State | Initial state before action |
+| 2 | Pre-action State | Initial state before action on this revision |
 | 3 | Action | Click/input/navigation action |
-| 4 | After State | Resulting state after action |
+| 4 | Post-action State | Resulting state after action on this revision |
 | 5 | Git Linkage | Terminal split, devtools log, or on-page SHA marker |
 
 ## Recording Options
@@ -89,6 +96,10 @@ Use `~/.claude/skills/video-caption/SKILL.md` for reliable burned-in captions.
 Follow `~/.claude/skills/evidence-standards/SKILL.md` for publication authority, audience, and destination. A PR, checked-in document, access-controlled receipt/store, or authorized gist may link the evidence. A gist or GitHub upload is not an independent acceptance requirement. Preserve real media, captions, exact source provenance, and reviewer access; publish only within the current authorization.
 
 The following GitHub release example applies only when that destination is authorized. Verify the intended PR exists via `gh pr view` before creating any release or upload. Caller must provide non-empty `VIDEO_FILE` and `PREVIEW_FILE` artifacts, an explicit non-empty `RUN_ID`, an explicit non-empty `CAPTURED_SHA` matching the PR head SHA, and declare an explicit caption choice: set `CAPTION_FILE` to the actual .vtt or .srt sidecar path, or set `CAPTION_MODE=burned` when captions are burned into the video. All media and subtitle formats are verified with ffprobe prior to archive creation and publication. Packaging creates a new archive in a private temporary directory so existing user archives are never overwritten or updated with stale entries. Each run publishes to an immutable unique release tag combining the PR number, commit SHA, and run identifier without overwriting or clobbering existing releases.
+
+This example publishes a current-candidate capture only. Retain baseline media at
+its actual source SHA through an authorized artifact route; never relabel it as
+the PR head to satisfy this example's head-equality guard.
 
 ```bash
 (
@@ -447,9 +458,9 @@ Rules:
 1. Video is linked from the review receipt at an authorized, reviewer-accessible destination
 2. Any publication follows the authorized destination and applicable automation workflow
 3. Captions are present
-4. Before/action/after flow is visible
+4. Pre-action/action/post-action flow is visible on both compared implementations
 5. URL and route match claim
-6. Git SHA linkage is visible
+6. Actual baseline and candidate source linkage is verified, not inferred from captions
 7. The reviewed evidence receipt includes matching metadata/caption artifacts
 
 ## First-frame verification (MANDATORY)
