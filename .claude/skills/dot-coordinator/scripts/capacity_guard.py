@@ -31,7 +31,7 @@ class InputError(ValueError):
 
 def load_state(path: Path) -> dict:
     try:
-        state = json.loads(path.read_text())
+        state = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise InputError(f"cannot read state: {error}") from error
     if not isinstance(state, dict) or not isinstance(state.get("active"), list):
@@ -43,7 +43,7 @@ def is_executing(item: object) -> bool:
     """Check evidence string shape; freshness and actual activity are caller checks."""
     if not isinstance(item, dict):
         raise InputError("each active entry must be an object")
-    if item.get("class") not in CAPS:
+    if not isinstance(item.get("class"), str) or item.get("class") not in CAPS:
         raise InputError(f"unknown class: {item.get('class')!r}")
     if item.get("state") == "UNKNOWN":
         raise InputError("UNKNOWN occupancy must be reconciled before this check")

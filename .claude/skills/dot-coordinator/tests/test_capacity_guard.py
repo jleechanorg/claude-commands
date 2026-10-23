@@ -37,17 +37,17 @@ class GuardTest(unittest.TestCase):
             return done.returncode, done.stdout.strip(), done.stderr.strip()
 
     def test_third_complex_rejected(self):
-        state = {"active": [entry("a", "complex"), entry("b", "complex"), entry("c", "complex")]}
+        state = {"active": [entry("a", "complex"), entry("b", "complex")]}
         code, out, _ = self.run_guard(state, "complex", "e")
         self.assertEqual(code, 3, out)
         self.assertTrue(out.startswith("REJECT complex:e"), out)
-        self.assertIn("active=3 cap=2", out)
+        self.assertIn("active=2 cap=2", out)
 
     def test_third_short_rejected(self):
-        state = {"active": [entry("a", "complex"), entry("d", "short"), entry("e", "short"), entry("f", "short")]}
+        state = {"active": [entry("a", "complex"), entry("d", "short"), entry("e", "short")]}
         code, out, _ = self.run_guard(state, "short", "g")
         self.assertEqual(code, 3, out)
-        self.assertIn("active=3 cap=2", out)
+        self.assertIn("active=2 cap=2", out)
 
     def test_second_complex_admitted(self):
         state = {"active": [entry("a", "complex")]}
@@ -127,6 +127,14 @@ class GuardTest(unittest.TestCase):
             result = subprocess.run([sys.executable, str(HERE.parent / "scripts" / "capacity_guard.py"), "--state", str(path)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 2)
             self.assertIn("ERROR", result.stderr)
+
+    def test_non_string_class_is_input_error(self):
+        for invalid in [["complex"], {"class": "complex"}, None]:
+            with self.subTest(invalid=invalid):
+                state = {"active": [{"id": "bad", "class": invalid}]}
+                code, _, error = self.run_guard(state, "complex", "new")
+                self.assertEqual(code, 2)
+                self.assertIn("ERROR", error)
 
     def test_malformed_state_is_error(self):
         self.assertEqual(self.run_guard({"active": "nope"}, "complex")[0], 2)
