@@ -16,9 +16,9 @@ def stop(proc):
         except ProcessLookupError: pass
     deadline = time.monotonic() + GRACE
     while time.monotonic() < deadline:
-        if proc.poll() is None: time.sleep(.1); continue
-        try: os.killpg(proc.pid, 0)
-        except ProcessLookupError: return
+        if proc.poll() is not None:
+            try: os.killpg(proc.pid, 0)
+            except ProcessLookupError: return
         time.sleep(.1)
     for sig, pause in ((signal.SIGTERM, True), (signal.SIGKILL, False)):
         try: os.killpg(proc.pid, sig)

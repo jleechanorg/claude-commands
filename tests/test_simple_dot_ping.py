@@ -310,5 +310,49 @@ class PiLogInterruptTests(unittest.TestCase):
         self.assertNotIn(expected, logs[-1].read_text())
 
 
+
+
+
+
+
+class PinnedMcpSelectionTests(unittest.TestCase):
+    """The launcher must pick the Node 22 tree that actually carries the pinned MCP."""
+
+    def _node_tree(self, root, version, mcp_version=None):
+        bin_dir = root / f'node-{version}' / 'bin'
+        bin_dir.mkdir(parents=True)
+        if mcp_version is None:
+            return bin_dir
+        mcp_js = bin_dir.parent / 'lib/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js'
+        mcp_js.parent.mkdir(parents=True)
+        mcp_js.write_text('#!/usr/bin/env node\n', encoding='utf-8')
+        pkg = bin_dir.parent / 'lib/node_modules/chrome-devtools-mcp/package.json'
+        pkg.write_text(json.dumps({'version': mcp_version}), encoding='utf-8')
+        return bin_dir
+
+    def test_later_node_tree_with_the_pinned_mcp_wins(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bare = self._node_tree(root, 'v22.22.0')
+            with_mcp = self._node_tree(root, 'v22.23.1', '1.6.0')
+            bin_dir, mcp_js = PING.pinned_mcp([bare, with_mcp])
+            self.assertEqual(bin_dir, with_mcp)
+            self.assertTrue(str(mcp_js).endswith('chrome-devtools-mcp.js'))
+
+    def test_wrong_version_is_not_accepted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stale = self._node_tree(root, 'v22.22.0', '1.5.0')
+            good = self._node_tree(root, 'v22.23.1', '1.6.0')
+            self.assertEqual(PING.pinned_mcp([stale, good])[0], good)
+
+    def test_no_qualifying_tree_fails_closed_with_the_searched_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bare = self._node_tree(root, 'v22.22.0')
+            with self.assertRaisesRegex(PING.Blocked, 'searched'):
+                PING.pinned_mcp([bare])
+
+
 if __name__ == '__main__':
     unittest.main()
