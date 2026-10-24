@@ -30,6 +30,20 @@ def stop(proc):
     try: os.killpg(proc.pid, signal.SIGKILL)
     except ProcessLookupError: pass
 
+def open_pi_log(account):
+    """Exclusively create the retained Pi log (0600) with an unpredictable name."""
+    fd, name = tempfile.mkstemp(prefix=f'dot-coordinator-pi-{account}-', suffix='.log', dir=tempfile.gettempdir())
+    os.fchmod(fd, 0o600)
+    return fd, Path(name)
+
+
+def finalize_pi_log(pi_log, expected):
+    """Redact the private identity binding and return the retained transcript."""
+    text = pi_log.read_text(errors='replace').replace(expected, '[identity redacted]')
+    pi_log.write_text(text)
+    return text
+
+
 def main():
     signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(128 + signum))
     p = argparse.ArgumentParser(description=__doc__)
@@ -99,21 +113,28 @@ def main():
             env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
             cmd = [pi_bin, *cli_args, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
                 '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
-            # Stream Pi straight to a durable log: a deadline kill must still leave
+            # Stream Pi straight to a retained log: a deadline kill must still leave
             # the evidence of how far the agent got (a piped capture discards it).
-            pi_log = Path(tempfile.gettempdir()) / f'dot-coordinator-pi-{args.account}-{int(time.time())}.log'
-            os.close(os.open(pi_log, os.O_CREAT | os.O_WRONLY, 0o600))
-            with pi_log.open('w') as log_handle:
-                proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=log_handle,
-                                        stderr=subprocess.STDOUT, text=True, start_new_session=True)
-                try:
-                    proc.wait(timeout=TIMEOUT)
-                except subprocess.TimeoutExpired:
-                    raise Blocked(f'Pi exceeded the invocation deadline of {TIMEOUT}s; partial output kept at {pi_log}; verify delivery before any retry')
-            out = pi_log.read_text(errors='replace')
-            sys.stdout.write(out.replace(expected, '[identity redacted]'))
-            # The private identity binding must not persist in the retained log either.
-            pi_log.write_text(out.replace(expected, '[identity redacted]'))
+            # mkstemp creates the file exclusively with an unpredictable name, so a
+            # pre-planted file or symlink cannot be substituted for the log, and the
+            # single returned descriptor is the one Pi writes to.
+            log_fd, pi_log = open_pi_log(args.account)
+            timed_out = False
+            proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=log_fd,
+                                    stderr=subprocess.STDOUT, text=True, start_new_session=True)
+            os.close(log_fd)
+            try:
+                proc.wait(timeout=TIMEOUT)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+            # Stop the child on every path before the log is finalized, so nothing
+            # can append after the identity digest is redacted.
+            if proc.poll() is None:
+                stop(proc)
+            out = finalize_pi_log(pi_log, expected)
+            sys.stdout.write(out)
+            if timed_out:
+                raise Blocked(f'Pi exceeded the invocation deadline of {TIMEOUT}s; partial output kept at {pi_log}; verify delivery before any retry')
             if proc.returncode: raise Blocked(f'Pi failed (rc={proc.returncode}); output kept at {pi_log}; verify delivery before any retry')
         return proc.returncode
     finally:

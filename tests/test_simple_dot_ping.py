@@ -236,3 +236,36 @@ module.main()
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class PiLogRetentionTests(unittest.TestCase):
+    """The retained Pi transcript must be exclusive, private and redacted."""
+
+    def test_log_is_exclusive_private_and_unpredictable(self):
+        expected = 'a' * 64
+        fd1, path1 = PING.open_pi_log('acct')
+        fd2, path2 = PING.open_pi_log('acct')
+        try:
+            self.assertNotEqual(path1, path2)
+            for fd, path in ((fd1, path1), (fd2, path2)):
+                self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+                self.assertTrue(path.name.startswith('dot-coordinator-pi-acct-'))
+        finally:
+            os.close(fd1)
+            os.close(fd2)
+            path1.unlink(missing_ok=True)
+            path2.unlink(missing_ok=True)
+
+    def test_finalize_redacts_the_identity_binding_from_disk_and_stdout(self):
+        expected = 'b' * 64
+        fd, path = PING.open_pi_log('acct')
+        with os.fdopen(fd, 'w') as handle:
+            handle.write(f'prompt says {expected}\nagent step 1\n')
+        try:
+            text = PING.finalize_pi_log(path, expected)
+            self.assertNotIn(expected, text)
+            self.assertNotIn(expected, path.read_text())
+            self.assertIn('agent step 1', text)
+            self.assertIn('[identity redacted]', text)
+        finally:
+            path.unlink(missing_ok=True)
