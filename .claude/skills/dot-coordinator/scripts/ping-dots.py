@@ -31,29 +31,15 @@ def stop(proc):
     except ProcessLookupError: pass
 
 def pinned_mcp(node_bins):
-    """Return (node bin dir, chrome-devtools-mcp entrypoint) for the pinned MCP.
-
-    Every nvm Node 22 bin dir is a candidate: the MCP is installed per Node tree,
-    so bins[0] is not necessarily the one carrying it. The override path wins.
-    """
+    """Pick the Node 22 tree (or CHROME_DEVTOOLS_MCP_JS) that carries MCP 1.6.0."""
+    js_path = Path('lib/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js')
     override = os.environ.get('CHROME_DEVTOOLS_MCP_JS', '').strip()
-    candidates = []
-    if override:
-        candidates.append((None, Path(override).expanduser()))
-    for bin_dir in node_bins:
-        candidates.append((bin_dir, bin_dir.parent / 'lib/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js'))
-    searched = []
+    candidates = ([(None, Path(override).expanduser())] if override else []) + [(b, b.parent / js_path) for b in node_bins]
     for bin_dir, mcp_js in candidates:
-        searched.append(str(mcp_js))
-        if not mcp_js.is_file():
-            continue
-        try:
-            version = json.loads((mcp_js.parents[3] / 'package.json').read_text()).get('version')
-        except (OSError, ValueError, IndexError):
-            continue
-        if version == '1.6.0':
-            return bin_dir or node_bins[0], mcp_js
-    raise Blocked('pinned Chrome DevTools MCP 1.6.0 was not found in any Node 22 tree or CHROME_DEVTOOLS_MCP_JS; searched: ' + ', '.join(searched))
+        try: version = json.loads((mcp_js.parents[3] / 'package.json').read_text()).get('version')
+        except (OSError, ValueError, IndexError): continue
+        if mcp_js.is_file() and version == '1.6.0': return bin_dir or node_bins[0], mcp_js
+    raise Blocked('pinned Chrome DevTools MCP 1.6.0 not found; searched: ' + ', '.join(str(c) for _, c in candidates))
 
 
 def main():
