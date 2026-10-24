@@ -165,6 +165,17 @@ The same line means different things per CLI, so each subagent names the surface
 
 ## Phase 3 — STEER DEDUPED SOLE OWNERS (3-Step Ritual + Narrow-Screen Cards)
 
+### Blocker-authority check (before any steer that names a blocker)
+
+Apply the canonical rule and its loophole closers in `harness-engineering` § "Coordinator-gate variant"
+(do not restate it). Operationally: cite the governing instruction by `file:line`; a shared account has no
+cross-lane limit and only same-mutable-target mutation is a conflict; unknown occupancy proceeds to
+preflight; never relay a peer's blocker as your own conclusion.
+
+This check creates no exemptions: credential/identity bans, environment and deploy gates, active quota
+walls, explicit operator holds, `PARKED_OPERATOR`, and `STOOD_DOWN_DUPLICATE` one-writer ownership of a
+branch/PR all still block.
+
 For every surface that needs action after deduplication, execute the mandatory 3-step ritual (the socket `text` must end in the literal `\n`, or the CLI form follows with an explicit `send-key enter`). The heading said "4-Step" until 2026-10-20, when step 1 was rewritten to issue type and Enter together (chained or socket); it is the same keystroke contract, with one fewer decision point — canonical owner: `~/.claude/skills/cmux-steer/SKILL.md` § "Submit Discipline". **Dispatch every surface's ritual concurrently** (`/parallel`): send to all owners in one fan-out, then do a single parallel verify pass — never send→sleep→verify one surface at a time.
 
 ```bash
