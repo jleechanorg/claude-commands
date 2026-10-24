@@ -1264,9 +1264,11 @@ if __name__ == "__main__":
 class PathContainmentGuardTest(unittest.TestCase):
     """The installer refuses to write through a parent that resolves outside the root."""
 
-    def _call_guard(self, candidate, root):
-        script = f'source "{INSTALLER}" >/dev/null 2>&1; path_within_root "{candidate}" "{root}"'
-        return subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+    def _call_guard(self, parent, root):
+        # argv, not interpolation: a path may contain quotes or newlines.
+        script = 'source "$1" >/dev/null 2>&1; path_within_root "$2" "$3"'
+        return subprocess.run(["bash", "-c", script, "_", str(INSTALLER), str(parent), str(root)],
+                              capture_output=True, text=True)
 
     def test_symlinked_parent_outside_the_root_is_refused(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1276,7 +1278,7 @@ class PathContainmentGuardTest(unittest.TestCase):
             (target / "commands").mkdir(parents=True)
             outside.mkdir()
             (target / "commands" / "link").symlink_to(outside)
-            result = self._call_guard(str(target / "commands" / "link" / "cmd.md"), str(target))
+            result = self._call_guard(str(target / "commands" / "link"), str(target))
             self.assertNotEqual(result.returncode, 0, "a symlinked parent must fail containment")
 
     def test_ordinary_path_inside_the_root_passes(self):
@@ -1284,8 +1286,20 @@ class PathContainmentGuardTest(unittest.TestCase):
             root = Path(directory)
             target = root / "target"
             (target / "commands").mkdir(parents=True)
-            result = self._call_guard(str(target / "commands" / "cmd.md"), str(target))
+            result = self._call_guard(str(target / "commands"), str(target))
             self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_newline_ending_directory_name_is_not_mangled(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target"
+            (target / "commands" / "nl\n").mkdir(parents=True)
+            result = self._call_guard(str(target / "commands" / "nl\n"), str(target))
+            self.assertEqual(
+                result.returncode, 0,
+                "a directory whose name ends in a newline must still pass containment: "
+                + result.stderr,
+            )
 
     def test_installer_still_installs_a_normal_tree(self):
         with tempfile.TemporaryDirectory() as directory:

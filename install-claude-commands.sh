@@ -341,12 +341,18 @@ list_installable_files() {
 
 # Shared recursive install function
 path_within_root() {
-    # Resolve symlinks on the candidate's parent and prove it is still inside the
-    # install root. The bash guard-then-copy window cannot be closed atomically, so
-    # this containment assertion re-runs immediately before and after each write.
-    local candidate="$1" root="$2" root_real parent_real
-    root_real="$(cd "$root" 2>/dev/null && pwd -P)" || return 1
-    parent_real="$(cd "$(dirname "$candidate")" 2>/dev/null && pwd -P)" || return 1
+    # $1 = directory that will receive the write, $2 = install root. No command
+    # substitution anywhere: $(...) strips trailing newlines, and a directory name
+    # may legitimately end with one, so `cd -P` plus $PWD keeps the exact bytes.
+    # The bash guard-then-copy window cannot be closed atomically, so this runs
+    # immediately before and after each write.
+    local parent="$1" root="$2" start="$PWD" root_real parent_real
+    builtin cd -P -- "$root" 2>/dev/null || return 1
+    root_real="$PWD"
+    builtin cd -P -- "$parent" 2>/dev/null || { builtin cd -- "$start" 2>/dev/null; return 1; }
+    parent_real="$PWD"
+    builtin cd -- "$start" 2>/dev/null || true
+    [ "$parent_real" != "$root_real" ] || return 0
     case "$parent_real/" in
         "$root_real"/*) return 0 ;;
         *) return 1 ;;
@@ -435,7 +441,7 @@ install_component() {
             fi
             mkdir -p "$target_parent"
             local dest_entry="$dest_dir/$relative"
-            if ! path_within_root "$dest_entry" "$INSTALL_ROOT"; then
+            if ! path_within_root "$target_parent" "$INSTALL_ROOT"; then
                 log_error "Refusing to write $dest_entry: its parent resolves outside $INSTALL_ROOT"
                 return 1
             fi
@@ -469,7 +475,7 @@ install_component() {
                 rm -f -- "$dest_entry"
             fi
             cp -a "$src_dir/$relative" "$dest_dir/$relative"
-            if ! path_within_root "$dest_entry" "$INSTALL_ROOT"; then
+            if ! path_within_root "$target_parent" "$INSTALL_ROOT"; then
                 log_error "Refusing to continue: $dest_entry resolved outside $INSTALL_ROOT after the copy"
                 return 1
             fi
