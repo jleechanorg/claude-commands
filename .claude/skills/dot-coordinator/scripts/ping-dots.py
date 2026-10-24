@@ -28,14 +28,6 @@ def stop(proc):
             except subprocess.TimeoutExpired: pass
             time.sleep(GRACE)
 
-def open_pi_log(account):
-    fd, name = tempfile.mkstemp(prefix=f'dot-coordinator-pi-{account}-', suffix='.log', dir=tempfile.gettempdir())
-    os.fchmod(fd, 0o600); return fd, Path(name)
-
-def finalize_pi_log(pi_log, expected):
-    text = pi_log.read_text(errors='replace').replace(expected, '[identity redacted]')
-    pi_log.write_text(text); return text
-
 def pinned_mcp(node_bins):
     """Pick the Node 22 tree (or CHROME_DEVTOOLS_MCP_JS) that carries MCP 1.6.0."""
     js_path = Path('lib/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js')
@@ -80,62 +72,58 @@ def main():
     chrome_root = (Path.home() / ('Library/Application Support/Google/Chrome' if sys.platform == 'darwin' else '.config/google-chrome')).resolve()
     if canonical == chrome_root or canonical in chrome_root.parents or chrome_root in canonical.parents:
         raise Blocked('Dot profile overlaps system Chrome profile')
-    proc = None
-    try:
-        if os.path.lexists(profile / 'SingletonLock'): raise Blocked('Chrome or a stale SingletonLock already owns this Dot profile')
-        if any(str(profile) in row and 'Chrome' in row for row in subprocess.check_output(['ps', '-Ao', 'args'], text=True).splitlines()):
-            raise Blocked('a Chrome process already uses this Dot profile')
-        chrome_bin = os.environ.get('DOT_CHROME_BIN') or ('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' if sys.platform == 'darwin' else '/usr/bin/google-chrome')
-        pi_bin = os.environ.get('PI_BIN') or shutil.which('pi')
-        if not Path(chrome_bin).is_file() or not pi_bin: raise Blocked('system Chrome or Pi is unavailable')
-        mcp_args = [str(mcp_bin), '--executablePath=' + chrome_bin, '--userDataDir=' + str(profile),
-            '--chromeArg=--profile-directory=' + subprofile, '--chromeArg=--user-agent=' + UA,
-            '--chromeArg=--disable-blink-features=AutomationControlled',
-            '--chromeArg=--no-first-run', '--chromeArg=--no-default-browser-check',
-            '--ignoreDefaultChromeArg=--enable-automation', '--ignoreDefaultChromeArg=--password-store=basic',
-            '--ignoreDefaultChromeArg=--use-mock-keychain']
-        if sys.platform == 'darwin': mcp_args += ['--headless', '--chromeArg=--password-store=keychain']
-        else:
-            if not (os.environ.get('DISPLAY') or os.environ.get('DBUS_SESSION_BUS_ADDRESS')): raise Blocked('Linux keychain session is unavailable')
-            mcp_args.append('--chromeArg=--password-store=gnome-libsecret')
-            if not os.environ.get('DISPLAY'): mcp_args.append('--headless')
-        with tempfile.TemporaryDirectory(prefix='dot-agent-', dir='/tmp') as run_dir:
-            project = Path(run_dir) / '.pi'
-            project.mkdir(mode=0o700)
-            cfg = Path(os.environ.get('PI_CODING_AGENT_DIR', '~/.pi/agent')).expanduser() / 'mcp.json'
-            names = json.loads(cfg.read_text()).get('mcpServers', {}) if cfg.exists() else {}
-            if not isinstance(names, dict): raise Blocked('global Pi MCP config is invalid')
-            servers = {name: {'enabled': False} for name in names}
-            servers['dot_browser'] = {'command': str(node_dir / 'node'), 'args': mcp_args, 'exposure': 'direct'}
-            mcp_file = project / 'mcp.json'
-            mcp_file.write_text(json.dumps({'mcpServers': servers}))
-            mcp_file.chmod(0o600)
-            prompt = f'Account key: {args.account}\nConfigured target: {target}\nExpected identity SHA-256: {expected} (private binding; compare silently and return booleans only).\nOwner-provided task context: {args.instruction}\nRead and follow the loaded skill.'
-            env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
-            cmd = [pi_bin, *cli_args, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
-                '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
-            # Stream Pi straight to a retained log: a deadline kill must still leave
-            # the evidence of how far the agent got (a piped capture discards it).
-            # mkstemp creates the file exclusively with an unpredictable name, so a
-            # pre-planted file or symlink cannot be substituted for the log, and the
-            # single returned descriptor is the one Pi writes to.
-            # Retained log (0600, exclusive name); stop the child before finalizing.
-            log_fd, pi_log = open_pi_log(args.account)
-            timed_out = False
-            proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=log_fd,
+    if os.path.lexists(profile / 'SingletonLock'): raise Blocked('Chrome or a stale SingletonLock already owns this Dot profile')
+    if any(str(profile) in row and 'Chrome' in row for row in subprocess.check_output(['ps', '-Ao', 'args'], text=True).splitlines()):
+        raise Blocked('a Chrome process already uses this Dot profile')
+    chrome_bin = os.environ.get('DOT_CHROME_BIN') or ('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' if sys.platform == 'darwin' else '/usr/bin/google-chrome')
+    pi_bin = os.environ.get('PI_BIN') or shutil.which('pi')
+    if not Path(chrome_bin).is_file() or not pi_bin: raise Blocked('system Chrome or Pi is unavailable')
+    mcp_args = [str(mcp_bin), '--executablePath=' + chrome_bin, '--userDataDir=' + str(profile),
+        '--chromeArg=--profile-directory=' + subprofile, '--chromeArg=--user-agent=' + UA,
+        '--chromeArg=--disable-blink-features=AutomationControlled',
+        '--chromeArg=--no-first-run', '--chromeArg=--no-default-browser-check',
+        '--ignoreDefaultChromeArg=--enable-automation', '--ignoreDefaultChromeArg=--password-store=basic',
+        '--ignoreDefaultChromeArg=--use-mock-keychain']
+    if sys.platform == 'darwin': mcp_args += ['--headless', '--chromeArg=--password-store=keychain']
+    else:
+        if not (os.environ.get('DISPLAY') or os.environ.get('DBUS_SESSION_BUS_ADDRESS')): raise Blocked('Linux keychain session is unavailable')
+        mcp_args.append('--chromeArg=--password-store=gnome-libsecret')
+        if not os.environ.get('DISPLAY'): mcp_args.append('--headless')
+    with tempfile.TemporaryDirectory(prefix='dot-agent-', dir='/tmp') as run_dir:
+        project = Path(run_dir) / '.pi'
+        project.mkdir(mode=0o700)
+        cfg = Path(os.environ.get('PI_CODING_AGENT_DIR', '~/.pi/agent')).expanduser() / 'mcp.json'
+        names = json.loads(cfg.read_text()).get('mcpServers', {}) if cfg.exists() else {}
+        if not isinstance(names, dict): raise Blocked('global Pi MCP config is invalid')
+        servers = {name: {'enabled': False} for name in names}
+        servers['dot_browser'] = {'command': str(node_dir / 'node'), 'args': mcp_args, 'exposure': 'direct'}
+        mcp_file = project / 'mcp.json'
+        mcp_file.write_text(json.dumps({'mcpServers': servers}))
+        mcp_file.chmod(0o600)
+        prompt = f'Account key: {args.account}\nConfigured target: {target}\nExpected identity SHA-256: {expected} (private binding; compare silently and return booleans only).\nOwner-provided task context: {args.instruction}\nRead and follow the loaded skill.'
+        env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
+        cmd = [pi_bin, *cli_args, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
+            '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
+        timed_out = False
+        with tempfile.NamedTemporaryFile(prefix=f'dot-coordinator-pi-{args.account}-', suffix='.log',
+                                         dir=tempfile.gettempdir(), delete=False, mode='w') as log:
+            pi_log = Path(log.name)
+            os.fchmod(log.fileno(), 0o600)
+            proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=log,
                                     stderr=subprocess.STDOUT, text=True, start_new_session=True)
-            os.close(log_fd)
-            try: proc.wait(timeout=TIMEOUT)
-            except subprocess.TimeoutExpired: timed_out = True
+            try:
+                proc.wait(timeout=TIMEOUT)
+            except subprocess.TimeoutExpired:
+                timed_out = True
             finally:
-                stop(proc)  # whole group first, then redact, on every path
-                sys.stdout.write(finalize_pi_log(pi_log, expected))
-            if timed_out or proc.returncode:
-                why = 'exceeded the deadline of %ds' % TIMEOUT if timed_out else 'failed (rc=%s)' % proc.returncode
-                raise Blocked(f'Pi {why}; output kept at {pi_log}; verify delivery before any retry')
-        return proc.returncode
-    finally:
-        stop(proc)
+                stop(proc)
+                transcript = pi_log.read_text(errors='replace').replace(expected, '[identity redacted]')
+                pi_log.write_text(transcript)
+        sys.stdout.write(transcript)
+        if timed_out or proc.returncode:
+            why = 'exceeded the deadline of %ds' % TIMEOUT if timed_out else 'failed (rc=%s)' % proc.returncode
+            raise Blocked(f'Pi {why}; output kept at {pi_log}; verify delivery before any retry')
+    return proc.returncode
 
 if __name__ == '__main__':
     try: raise SystemExit(main())

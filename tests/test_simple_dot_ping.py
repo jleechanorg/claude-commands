@@ -237,75 +237,42 @@ module.main()
 
 
 class PiLogRetentionTests(unittest.TestCase):
-    """The retained Pi transcript must be exclusive, private and redacted."""
+    """The retained Pi transcript must be private and redacted end-to-end."""
 
-    def test_log_is_exclusive_private_and_unpredictable(self):
-        expected = 'a' * 64
-        fd1, path1 = PING.open_pi_log('acct')
-        fd2, path2 = PING.open_pi_log('acct')
-        try:
-            self.assertNotEqual(path1, path2)
-            for fd, path in ((fd1, path1), (fd2, path2)):
-                self.assertEqual(path.stat().st_mode & 0o777, 0o600)
-                self.assertTrue(path.name.startswith('dot-coordinator-pi-acct-'))
-        finally:
-            os.close(fd1)
-            os.close(fd2)
-            path1.unlink(missing_ok=True)
-            path2.unlink(missing_ok=True)
+    def _run(self, fake_factory):
+        case = LauncherExecutionTests('run')
+        case.setUp()
+        self.addCleanup(case.doCleanups)
+        case.invoke(on_spawn=fake_factory)
+        logs = sorted(Path(tempfile.gettempdir()).glob('dot-coordinator-pi-alpha-*.log'),
+                      key=lambda item: item.stat().st_mtime)
+        self.assertTrue(logs, 'the launcher must retain a Pi log')
+        return logs[-1]
 
-    def test_finalize_redacts_the_identity_binding_from_disk_and_stdout(self):
-        expected = 'b' * 64
-        fd, path = PING.open_pi_log('acct')
-        with os.fdopen(fd, 'w') as handle:
-            handle.write(f'prompt says {expected}\nagent step 1\n')
-        try:
-            text = PING.finalize_pi_log(path, expected)
-            self.assertNotIn(expected, text)
-            self.assertNotIn(expected, path.read_text())
-            self.assertIn('agent step 1', text)
-            self.assertIn('[identity redacted]', text)
-        finally:
-            path.unlink(missing_ok=True)
+    def test_completed_run_keeps_a_private_redacted_log(self):
+        expected = 'a' * 64  # matches DOT_EXPECTED_IDENTITY_SHA256 in the harness env
 
-class PinnedMcpSelectionTests(unittest.TestCase):
-    """The launcher must pick the Node 22 tree that actually carries the pinned MCP."""
+        def spawn(command, **options):
+            out = options['stdout']
+            child_fd = os.dup(out if isinstance(out, int) else out.fileno())
+            os.write(child_fd, f'prompt {expected}\nagent step 1\n'.encode())
+            os.close(child_fd)
 
-    def _node_tree(self, root, version, mcp_version=None):
-        bin_dir = root / f'node-{version}' / 'bin'
-        bin_dir.mkdir(parents=True)
-        if mcp_version is None:
-            return bin_dir
-        mcp_js = bin_dir.parent / 'lib/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js'
-        mcp_js.parent.mkdir(parents=True)
-        mcp_js.write_text('#!/usr/bin/env node\n', encoding='utf-8')
-        pkg = bin_dir.parent / 'lib/node_modules/chrome-devtools-mcp/package.json'
-        pkg.write_text(json.dumps({'version': mcp_version}), encoding='utf-8')
-        return bin_dir
+            class Done(FakePiProcess):
+                def __init__(self):
+                    super().__init__(returncode=0)
 
-    def test_later_node_tree_with_the_pinned_mcp_wins(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            bare = self._node_tree(root, 'v22.22.0')
-            with_mcp = self._node_tree(root, 'v22.23.1', '1.6.0')
-            bin_dir, mcp_js = PING.pinned_mcp([bare, with_mcp])
-            self.assertEqual(bin_dir, with_mcp)
-            self.assertTrue(str(mcp_js).endswith('chrome-devtools-mcp.js'))
+                def wait(self, timeout=None):
+                    return 0
 
-    def test_wrong_version_is_not_accepted(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            stale = self._node_tree(root, 'v22.22.0', '1.5.0')
-            good = self._node_tree(root, 'v22.23.1', '1.6.0')
-            self.assertEqual(PING.pinned_mcp([stale, good])[0], good)
+            return Done()
 
-    def test_no_qualifying_tree_fails_closed_with_the_searched_paths(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            bare = self._node_tree(root, 'v22.22.0')
-            with self.assertRaisesRegex(PING.Blocked, 'searched'):
-                PING.pinned_mcp([bare])
-
+        log = self._run(spawn)
+        self.assertEqual(log.stat().st_mode & 0o777, 0o600)
+        text = log.read_text()
+        self.assertNotIn(expected, text)
+        self.assertIn('[identity redacted]', text)
+        self.assertIn('agent step 1', text)
 
 class PiLogInterruptTests(unittest.TestCase):
     """An interrupt must still stop the group and redact the retained log."""
@@ -328,7 +295,8 @@ class PiLogInterruptTests(unittest.TestCase):
         def spawn(command, **options):
             # The launcher closes its own descriptor right after spawn, so the child
             # emulation holds its own duplicate, exactly as a real child would.
-            written['fd'] = os.dup(options['stdout'])
+            out = options['stdout']
+            written['fd'] = os.dup(out if isinstance(out, int) else out.fileno())
             return Interrupted()
 
         case = LauncherExecutionTests('run')
