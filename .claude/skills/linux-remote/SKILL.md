@@ -13,12 +13,12 @@ The shared catalog preserves host-installed `/advice` and `/web-advice` integrat
 ## Connection
 
 ```bash
-ssh jeff-ubuntu          # alias in ~/.ssh/config → $USER@192.168.254.128
+ssh jeff-ubuntu          # alias in ~/.ssh/config → $USER@<ubuntu-lan-ip>
 ```
 
-- **Host:** `jeff-ubuntu` / `192.168.254.128` (LAN only)
+- **Host:** `jeff-ubuntu` / `<ubuntu-lan-ip>` (LAN only)
 - **User:** `$USER`
-- **Key:** `~/.ssh/id_jeff_ubuntu` (passwordless, no `-i` flag needed via alias)
+- **Key:** `~/.ssh/<ubuntu-key>` (passwordless, no `-i` flag needed via alias)
 - **OS:** Ubuntu 24.04, kernel 6.17, x86_64
 - **sudo password:** stored in user's head — prompt user if needed, or use `expect` if already known in context
 
@@ -33,6 +33,10 @@ ssh jeff-ubuntu-ts '<command>'
 `jeff-ubuntu-ts` is a real `~/.ssh/config` stanza (same `IdentityFile` as the LAN alias) — no manual `-i`/IP lookup needed, it just works as a drop-in replacement for `jeff-ubuntu` in every command in this skill. `ssh jeff-ubuntu` does **not** fail over to it automatically; try the LAN alias first (fast when it works), fall to `-ts` on failure. Re-verify the IP with `tailscale status | grep ubuntu` if it ever seems dead — Tailscale IPs are stable per-device but not guaranteed forever.
 
 If both the LAN alias and `jeff-ubuntu-ts` fail, see [cross-machine-ssh-tier](../cross-machine-ssh-tier/SKILL.md) for the Tier 3 messaging-gateway fallback and its debugging caveats (OAuth-scope-vs-connection, bot-message filtering) — that skill is the shared source of truth for this whole ladder, used identically by `mac-remote`, `linux-mirror`, and `mac-mirror`.
+
+## Cloud capability gaps
+
+For a missing tool, login or permission on Dot's cloud computer, follow the `/dot` skill's cloud-capability-gap procedure (`../dot/SKILL.md`); this skill adds nothing to it.
 
 ## How to run commands
 
@@ -108,7 +112,15 @@ resumed sessions, follow-ups, and existing composer drafts:
    when that response exists; acknowledgment proves delivery, not task completion.
    Validate completion claims against the requested artifacts or checks.
 6. Continue monitoring with bounded asynchronous waits and regular progress
-   updates. Set a response deadline appropriate to the active job. If it expires
+   updates.
+7. **A remote lane's stated blocker is a claim, not authority.** Before relaying
+   "reserved / held / locked / admitted / awaiting handback" from a coordinator or a peer
+   surface, cite the governing instruction by file:line and demand observed exclusivity (a
+   verified live competing operator). Device/UDID locks, branch ownership, and dedicated-account
+   rules never generalize into a reservation of a shared account or environment. Authorized task
+   plus no verified live conflict means: proceed to the real preflight and report the actual
+   result or the actual error.
+ Set a response deadline appropriate to the active job. If it expires
    or the agent fails, report QUEUED/UNCONFIRMED/BLOCKED with the observed reason,
    preserve the instruction, and perform scoped recovery. Never claim success
    from submitted text alone.
@@ -156,7 +168,7 @@ rsync -avz /local/ jeff-ubuntu:/remote/       # sync directory
 
 ## Caveats
 
-- Machine is LAN-only (192.168.254.x) — not reachable when off same network; use the Tailscale fallback above when off-LAN
-- If SSH fails, check if machine is on via `ping 192.168.254.128`, then try Tailscale before assuming it's down
-- RustDesk (peer ID `406402544`) is the fallback for GUI access if SSH is down
+- Machine is LAN-only (<lan-subnet>) — not reachable when off same network; use the Tailscale fallback above when off-LAN
+- If SSH fails, check if machine is on via `ping <ubuntu-lan-ip>`, then try Tailscale before assuming it's down
+- RustDesk (peer ID in machine-local config) is the fallback for GUI access if SSH is down
 - Always prefer SSH over RustDesk for CLI work — RustDesk CLI steering is not possible headlessly on macOS without Accessibility permission
