@@ -347,8 +347,11 @@ path_within_root() {
     # The bash guard-then-copy window cannot be closed atomically, so this runs
     # immediately before and after each write.
     local parent="$1" root="$2" start="$PWD" root_real parent_real
+    # Re-anchor at $start before every relative resolution: a bare `cd` into a
+    # relative root would otherwise make the second relative path resolve inside it.
     builtin cd -P -- "$root" 2>/dev/null || return 1
     root_real="$PWD"
+    builtin cd -- "$start" 2>/dev/null || return 1
     builtin cd -P -- "$parent" 2>/dev/null || { builtin cd -- "$start" 2>/dev/null; return 1; }
     parent_real="$PWD"
     builtin cd -- "$start" 2>/dev/null || true

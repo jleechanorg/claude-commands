@@ -1270,6 +1270,27 @@ class PathContainmentGuardTest(unittest.TestCase):
         return subprocess.run(["bash", "-c", script, "_", str(INSTALLER), str(parent), str(root)],
                               capture_output=True, text=True)
 
+    def test_relative_claude_home_installs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture = root / "fixture"
+            (fixture / ".claude" / "commands").mkdir(parents=True)
+            (fixture / ".claude" / "commands" / "cmd.md").write_text("managed\n", encoding="utf-8")
+            (fixture / "scripts").mkdir()
+            shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+            result = subprocess.run(
+                ["bash", INSTALLER.name, "--merge"],
+                cwd=fixture,
+                env=os.environ | {"CLAUDE_HOME": "target"},
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(
+                (fixture / "target" / "commands" / "cmd.md").read_text(encoding="utf-8"),
+                "managed\n",
+            )
+
     def test_symlinked_parent_outside_the_root_is_refused(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
