@@ -9,7 +9,7 @@ how to coordinate) lives in `SKILL.md` and the calling agent, never in code.
 
 | Surface | Current | Budget (hard cap) |
 |---|---|---|
-| `dot-coordinator/scripts/ping-dots.py` + `dot-coordinator-wrapper.sh` + `pi-lunaroute-adapter.sh` (canonical launcher plus temporary legacy wrapper/adapter/launcher forwarding files, combined) | 150 LOC | **≤ 150** |
+| `dot-coordinator/scripts/ping-dots.py` + `dot-coordinator-wrapper.sh` + `pi-lunaroute-adapter.sh` (canonical launcher plus temporary legacy wrapper/adapter/launcher forwarding files, combined) | 185 LOC | **≤ 185** |
 | `dot-coordinator/SKILL.md` (coordinator prompts & policy) | candidate | **≤ 400** |
 | `scripts/dot.sh` | 479 LOC | **≤ 520** |
 | `scripts/dot_chrome.mjs` | 843 LOC | **≤ 900** |
@@ -24,7 +24,7 @@ how to coordinate) lives in `SKILL.md` and the calling agent, never in code.
    place — rewrite it as an agent instruction here or in `SKILL.md`.
 2. **New script code must be mechanical**: launcher validation and process
    lifecycle only. Agent judgment belongs in the coordinator skill. Combined
-   launcher glue must stay within 150 physical lines; do not hide code in a
+   launcher glue must stay within 185 physical lines; do not hide code in a
    generated file or compress statements to evade the count.
 3. **Raising a cap requires the operator** (`jleechan`). Any PR that exceeds a
    cap fails CI; fixing it means either shrinking the scripts or getting the

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run one scheduler-bound Dot coordinator turn using Pi and Chrome DevTools MCP."""
-import argparse, json, os, re, shutil, signal, subprocess, sys, tempfile, time
+import argparse, json, os, socket, re, shutil, signal, subprocess, sys, tempfile, time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from render_native_schedule import node22_bins
@@ -39,6 +39,35 @@ def pinned_mcp(node_bins):
         if mcp_js.is_file() and version == '1.6.0': return bin_dir or node_bins[0], mcp_js
     raise Blocked('pinned Chrome DevTools MCP 1.6.0 not found; searched: ' + ', '.join(str(c) for _, c in candidates))
 
+def pid_is_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+def chrome_uses_profile(profile):
+    rows = subprocess.check_output(['ps', '-Ao', 'args'], text=True).splitlines()
+    return any(str(profile) in row and 'Chrome' in row for row in rows)
+
+def clear_stale_singleton(profile):
+    """Drop a singleton left by a dead same-host owner; never touch a live one."""
+    lock = profile / 'SingletonLock'
+    if not lock.is_symlink():
+        return
+    owner_host, _, pid = os.readlink(lock).rpartition('-')
+    if owner_host != socket.gethostname() or not pid.isdigit() or pid_is_alive(int(pid)):
+        return
+    if chrome_uses_profile(profile):
+        return
+    for name in ('SingletonLock', 'SingletonCookie', 'SingletonSocket'):
+        try:
+            (profile / name).unlink()
+        except FileNotFoundError:
+            pass
+
 def main():
     signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(128 + signum))
     p = argparse.ArgumentParser(description=__doc__)
@@ -72,7 +101,10 @@ def main():
     chrome_root = (Path.home() / ('Library/Application Support/Google/Chrome' if sys.platform == 'darwin' else '.config/google-chrome')).resolve()
     if canonical == chrome_root or canonical in chrome_root.parents or chrome_root in canonical.parents:
         raise Blocked('Dot profile overlaps system Chrome profile')
-    if os.path.lexists(profile / 'SingletonLock'): raise Blocked('Chrome or a stale SingletonLock already owns this Dot profile')
+    if os.path.lexists(profile / 'SingletonLock'):
+        clear_stale_singleton(profile)  # only a same-host dead owner with no Chrome
+        if os.path.lexists(profile / 'SingletonLock'):
+            raise Blocked('Chrome or a live SingletonLock owns this Dot profile')
     if any(str(profile) in row and 'Chrome' in row for row in subprocess.check_output(['ps', '-Ao', 'args'], text=True).splitlines()):
         raise Blocked('a Chrome process already uses this Dot profile')
     chrome_bin = os.environ.get('DOT_CHROME_BIN') or ('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' if sys.platform == 'darwin' else '/usr/bin/google-chrome')
