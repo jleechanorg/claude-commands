@@ -37,7 +37,7 @@ their own gates and are never "overlapped" past them.
 Every subagent or lane launched under `/parallel` drives its unit to done:
 implement, verify, and push or produce the artifact. It does not return a
 plan or analysis for the parent to execute, unless the lane is explicitly a
-read-only review lane. Say so in the lane's prompt. **Single integration PR rule (`pr-quantity-control`)**: When parallel coding lanes implement parts of a single feature, their worktrees/branches must merge into **one shared integration branch/PR** (or at most `≤ 3` coarse stage PRs per `${CLAUDE_HOME:-$HOME/.claude}/skills/pr-quantity-control/SKILL.md`), never N separate GitHub PRs.
+read-only review lane. Say so in the lane's prompt.
 
 ## Timeline, parallel lanes, and milestones (mandatory)
 
@@ -204,7 +204,6 @@ below by this order, don't pick whichever is more convenient):**
    verifier** (a track large enough to earn its own context, where a second
    independent pass adds real value) do you reach for the AGY pair described
    next.
-5. **Parallel coding lanes for one feature merge into one shared integration branch/PR**: When multiple coding lanes execute in parallel for a single feature, integrate their commits into **one shared feature branch/PR** (or at most `≤ 3` coarse stage PRs per `${CLAUDE_HOME:-$HOME/.claude}/skills/pr-quantity-control/SKILL.md`) rather than opening N separate GitHub PRs.
 
 For implementation and review lanes that clear step 4 above, prefer the
 installed AGY CLI pair. Use the canonical profiles for the complete launch,
