@@ -15,6 +15,8 @@ description: Browser-based multi-model advice and review using ChatGPT, Gemini, 
 
 ## Real-Browser Transport Contract: Runtime-Specific
 
+**Runtime boundary:** Follow the [portable browser and sharing boundary](../../../portable/skills/web-advice/SKILL.md) in hosted/cloud runtimes. The host-specific routes and helper commands below apply only where the current runtime supports them and the task authorizes them; they grant no access. In a supported cloud browser, record the actual browser tool and observed per-seat state rather than requiring an unavailable local helper. Never classify a supported browser as unavailable solely because Aside or a local helper is absent. Preserve the authentication, packet, response, and two-provider quorum gates.
+
 > [!IMPORTANT]
 > **Zero Aside Inference Invariant (Strict Hard-Fail Rule)**:
 > `/web-advice` MUST use browser navigation and DOM automation against the real
@@ -194,17 +196,18 @@ const tabs = await listBrowserTabs();
 const gemTab = tabs.find(t => t.title === 'Google Gemini');
 const gemPage = await attachBrowserTab(gemTab.targetId);
 const gemSnap = await snapshot(gemPage);
-const geminiLoggedIn = !gemSnap.tree.includes('Sign in') && !gemSnap.tree.includes('Log in');
-console.log('gemini logged in:', geminiLoggedIn);
+// Inspect positive account identity AND a writable composer in gemSnap.
+// Absence of login text alone is not authentication proof.
+console.log('Gemini authentication evidence:', gemSnap.tree);
 ```
 
-**Repeat for ChatGPT and Perplexity.** If any model is not logged in, **stop and ask the user to log in** — do NOT try to log in for them (no credentials, no auth cookies, no OAuth flow). Login state per model:
+**Repeat for ChatGPT and Perplexity.** Require positive account identity and a writable composer; an anonymous composer or absence of login text is insufficient. Record signed-out seats as `UNAVAILABLE (login)` and do NOT try to log in for them (no credentials, no auth cookies, no OAuth flow). In an interactive run, request login only when the caller and runtime permit it. A non-interactive caller such as `/sq` records the blocker without pausing for login and continues independent authorized work. Login-state indicators to inspect (not substitutes for positive account evidence):
 
 - **Gemini**: Logged in shows "Google Account: <email>" in the sidebar
-- **ChatGPT**: Logged in shows "Log in" button HIDDEN; prompt textbox visible. **Heads up:** ChatGPT may show the marketing landing page ("Where should we begin?") with a "Log in" button even when a session cookie exists, depending on cookie state. If the textbox is missing OR the page shows "Sign up for free", the session is genuinely gone — ask the user to log in. Try navigating to `chat.openai.com` as a fallback URL.
-- **Perplexity**: Logged in shows username in the top-right corner (e.g., "jleechan77861") AND a "Sessions" sidebar with prior chats
+- **ChatGPT**: Logged in shows "Log in" button HIDDEN; prompt textbox visible. **Heads up:** ChatGPT may show the marketing landing page ("Where should we begin?") with a "Log in" button even when a session cookie exists, depending on cookie state. A visible "Sign up for free" with "Log in" indicates a signed-out page. A missing textbox alone does not prove logout; inspect loading/error state first. Follow the caller-aware login handling above.
+- **Perplexity**: Verify the signed-in account identity and writable composer. Prior chats support the observation but are not required; an empty history alone does not prove logout.
 
-If the user can't log in to one model, run /web-advice with the others as long as at least two providers remain authenticated (2-of-3 still satisfies the multi-model adversarial requirement when the two models are from different families) and note the gap in the synthesis. If fewer than two providers are authenticated, **stop and ask the user to log in** — do NOT try to log in for them (no credentials, no auth cookies, no OAuth flow).
+If the user can't log in to one model, run /web-advice with the others as long as at least two providers remain authenticated (2-of-3 still satisfies the multi-model adversarial requirement when the two models are from different families) and note the gap in the synthesis. If fewer than two providers are authenticated, stop the multi-model review and report the unmet quorum, following the caller-aware login handling above. Do NOT try to log in for them or substitute anonymous reviews, APIs, CLI models, or internal agents.
 
 ### Step 2b — Create a clean chat and prove packet attachment (MANDATORY)
 
@@ -434,10 +437,10 @@ Web chat LLM review sessions are stateful and interactive, not single-turn scrip
 ### Step 5 — Synthesize & Report Share URLs / Snippets (MANDATORY)
 
 > [!IMPORTANT]
-> **Mandatory Share URL & Verbatim Conversation Snippet Invariant (Strict Hard-Fail Rule)**:
+> **Mandatory Receipt & Verbatim Conversation Snippet Invariant (Strict Hard-Fail Rule)**:
 > Every `/web-advice` run MUST output:
 > 1. **File Upload Confirmation**: Confirm that full files, diff patches, or real video/image assets were uploaded via file chooser (`setInputFiles`) into composer chips (zero ungrounded diff-only inlining for code reviews).
-> 2. **Public Conversation Share URLs**: The exact, clickable public permalink / share URL for each evaluated model (`https://chatgpt.com/share/...` or `/c/...`, `https://gemini.google.com/share/...`, `https://www.perplexity.ai/search/...`).
+> 2. **Conversation receipts and authorized links**: Record the exact observed conversation URL and retain a private local response receipt. Creating public share links requires separate authorization under Step 6 and the portable sharing boundary; otherwise report `not published (not authorized)` without invalidating a grounded verdict. A private `/c/...` conversation URL is not a public share. Never create or test a public share merely to satisfy this receipt gate.
 > 3. **Verbatim Conversation Snippets per PR / Subject**: Exact blockquotes of the model's verdict and analysis per reviewed PR or artifact to provide undeniable proof of review execution.
 
 ```markdown
@@ -490,6 +493,10 @@ The following publication steps apply only within that authorization.
 
 ## Failure Recovery
 
+### Renderer crash or transport timeout
+
+A blank/loading page, `Runtime.addBinding` timeout, or renderer crash (for example, `Aw, Snap!` / error code 9) is not proof of logout. Inspect the visible page and, when permitted, reload once through the supported browser controls, then recheck account identity and composer readiness. If recovery fails, record `UNAVAILABLE (renderer/transport)` with the exact error and authentication state `unknown`. Do not loop, change credentials/security settings, or retry an access denial. This recovery does not repair a visibly signed-out account.
+
 ### Aside daemon disconnects
 
 Symptom: `Task failed: fetch failed: other side closed. Aside daemon is not reachable — make sure Aside Browser is running, then retry.`
@@ -518,7 +525,7 @@ Symptom: ChatGPT shows "Log in" button; Gemini shows "Sign in to continue"; Perp
 
 Recovery:
 1. **Do NOT attempt login** — no credentials, no OAuth flow
-2. Stop and ask the user to log in manually
+2. Follow Step 2 caller-aware login handling: request manual login only when permitted; `/sq` records `UNAVAILABLE (login)` without an interactive pause.
 3. Continue with the other models
 4. If only 1 model is logged in, that's a single-model review, not multi-model — note this in synthesis
 
