@@ -16,25 +16,37 @@ def stop(proc):
         except ProcessLookupError: pass
     deadline = time.monotonic() + GRACE
     while time.monotonic() < deadline:
-        if proc.poll() is None:
-            time.sleep(.1)
-            continue
+        if proc.poll() is None: time.sleep(.1); continue
         try: os.killpg(proc.pid, 0)
         except ProcessLookupError: return
         time.sleep(.1)
-    try: os.killpg(proc.pid, signal.SIGTERM)
-    except ProcessLookupError: return
-    try: proc.wait(timeout=GRACE)
-    except subprocess.TimeoutExpired: pass
-    time.sleep(GRACE)
-    try: os.killpg(proc.pid, signal.SIGKILL)
-    except ProcessLookupError: pass
+    for sig, pause in ((signal.SIGTERM, True), (signal.SIGKILL, False)):
+        try: os.killpg(proc.pid, sig)
+        except ProcessLookupError: return
+        if pause:
+            try: proc.wait(timeout=GRACE)
+            except subprocess.TimeoutExpired: pass
+            time.sleep(GRACE)
+
 def open_pi_log(account):
     fd, name = tempfile.mkstemp(prefix=f'dot-coordinator-pi-{account}-', suffix='.log', dir=tempfile.gettempdir())
     os.fchmod(fd, 0o600); return fd, Path(name)
+
 def finalize_pi_log(pi_log, expected):
     text = pi_log.read_text(errors='replace').replace(expected, '[identity redacted]')
     pi_log.write_text(text); return text
+
+def pinned_mcp(node_bins):
+    """Pick the Node 22 tree (or CHROME_DEVTOOLS_MCP_JS) that carries MCP 1.6.0."""
+    js_path = Path('lib/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js')
+    override = os.environ.get('CHROME_DEVTOOLS_MCP_JS', '').strip()
+    candidates = ([(None, Path(override).expanduser())] if override else []) + [(b, b.parent / js_path) for b in node_bins]
+    for bin_dir, mcp_js in candidates:
+        try: version = json.loads((mcp_js.parents[3] / 'package.json').read_text()).get('version')
+        except (OSError, ValueError, IndexError): continue
+        if mcp_js.is_file() and version == '1.6.0': return bin_dir or node_bins[0], mcp_js
+    raise Blocked('pinned Chrome DevTools MCP 1.6.0 not found; searched: ' + ', '.join(str(c) for _, c in candidates))
+
 def main():
     signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(128 + signum))
     p = argparse.ArgumentParser(description=__doc__)
@@ -48,7 +60,7 @@ def main():
     if not re.fullmatch(r'[0-9a-f]{64}', expected): raise Blocked('expected identity binding is missing or invalid')
     node_bins = node22_bins(Path.home())
     if not node_bins: raise Blocked('Node 22 executable is unavailable')
-    node_dir = node_bins[0]
+    node_dir, mcp_bin = pinned_mcp(node_bins)
     os.environ['PATH'] = str(node_dir) + os.pathsep + str(Path.home() / '.local/bin') + os.pathsep + os.environ.get('PATH', '')
     config = json.loads(Path(os.environ.get('DOT_CONFIG_FILE', '~/.config/dot/config.json')).expanduser().read_text())
     accounts = config.get('accounts', {})
@@ -74,10 +86,8 @@ def main():
         if any(str(profile) in row and 'Chrome' in row for row in subprocess.check_output(['ps', '-Ao', 'args'], text=True).splitlines()):
             raise Blocked('a Chrome process already uses this Dot profile')
         chrome_bin = os.environ.get('DOT_CHROME_BIN') or ('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' if sys.platform == 'darwin' else '/usr/bin/google-chrome')
-        mcp_bin = Path(os.environ.get('CHROME_DEVTOOLS_MCP_JS', node_dir.parent / 'lib/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js')).expanduser()
         pi_bin = os.environ.get('PI_BIN') or shutil.which('pi')
-        if not Path(chrome_bin).is_file() or not mcp_bin.is_file() or not pi_bin: raise Blocked('system Chrome, pinned Chrome DevTools MCP 1.6, or Pi is unavailable')
-        if json.loads((mcp_bin.parents[3] / 'package.json').read_text()).get('version') != '1.6.0': raise Blocked('Chrome DevTools MCP must be version 1.6.0')
+        if not Path(chrome_bin).is_file() or not pi_bin: raise Blocked('system Chrome or Pi is unavailable')
         mcp_args = [str(mcp_bin), '--executablePath=' + chrome_bin, '--userDataDir=' + str(profile),
             '--chromeArg=--profile-directory=' + subprofile, '--chromeArg=--user-agent=' + UA,
             '--chromeArg=--disable-blink-features=AutomationControlled',
@@ -117,8 +127,9 @@ def main():
             os.close(log_fd)
             try: proc.wait(timeout=TIMEOUT)
             except subprocess.TimeoutExpired: timed_out = True
-            if proc.poll() is None: stop(proc)
-            sys.stdout.write(finalize_pi_log(pi_log, expected))
+            finally:
+                stop(proc)  # whole group first, then redact, on every path
+                sys.stdout.write(finalize_pi_log(pi_log, expected))
             if timed_out or proc.returncode:
                 why = 'exceeded the deadline of %ds' % TIMEOUT if timed_out else 'failed (rc=%s)' % proc.returncode
                 raise Blocked(f'Pi {why}; output kept at {pi_log}; verify delivery before any retry')
