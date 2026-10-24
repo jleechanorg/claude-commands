@@ -12,17 +12,17 @@ Companion to [mac-mirror](../mac-mirror/SKILL.md) (same flow, opposite direction
 This skill assumes you've already got:
 - An SSH host alias for the Linux box in `~/.ssh/config` (LAN), e.g.:
   ```
-  Host mylinux
-      HostName 192.168.1.50
-      User myusername
-      IdentityFile ~/.ssh/id_mylinux
+  Host <peer-alias>
+      HostName <peer-lan-ip>
+      User <peer-username>
+      IdentityFile ~/.ssh/id_<peer>
   ```
-  (`ssh_config` does not expand environment variables — write your actual username literally, not `$USER`.)
+  (`ssh_config` does not expand environment variables — write your actual username literally, not `$USER`.) A key named for the peer it reaches (`~/.ssh/id_<peer>`) is the same convention [cross-machine-ssh-tier](../cross-machine-ssh-tier/SKILL.md) uses; keep it generic in docs so no machine-specific key name or LAN address is baked into this skill.
 - Your repo lives under `$HOME` on the source machine (any relative path). This skill mirrors it onto the target machine under `$HOME/mirror/<same relative path>` — a dedicated namespace so every mirrored checkout is easy to find on either machine and never collides with (or silently overwrites) a normal checkout that happens to already exist at that same path. A repo outside `$HOME` on the source side isn't supported — step 1 below checks for this and stops rather than silently producing a wrong path.
-- (Optional, for off-LAN/travel use) Both machines joined to the same Tailscale tailnet. Note: a bare SSH alias like the one above resolves its `HostName` literally — it does NOT fail over to Tailscale automatically. Off-LAN, connect via the Tailscale IP directly with the identity file explicit: `ssh -i ~/.ssh/id_mylinux myusername@<tailscale-ip>` (look it up with `tailscale status | grep <hostname>` — don't hardcode it, Tailscale IPs are stable per-device but you should still re-verify rather than assume).
+- (Optional, for off-LAN/travel use) Both machines joined to the same Tailscale tailnet. Note: a bare SSH alias like the one above resolves its `HostName` literally — it does NOT fail over to Tailscale automatically. Off-LAN, connect via the Tailscale IP directly with the identity file explicit: `ssh -i ~/.ssh/id_<peer> <peer-username>@<tailscale-ip>` (look it up with `tailscale status | grep <hostname>` — don't hardcode it, Tailscale IPs are stable per-device but you should still re-verify rather than assume).
 - (Optional, for SSH-fully-down fallback) A messaging-gateway agent (e.g. a Hermes-style gateway, or anything that runs commands on your behalf) running on the Linux box, watching a Slack channel (or similar) you can post to.
 
-Substitute your own host alias / IP / key path / username everywhere `mylinux` / `myusername` appears below.
+Substitute your own host alias / IP / key path / username for every `<peer-*>` placeholder below.
 
 ## What this carries over
 
@@ -44,6 +44,80 @@ case "$REPO_ROOT" in
 esac
 ```
 
+Detect the coding CLI that is driving *this* session, so the mirrored
+session resumes with the **same CLI** rather than a hardcoded one:
+
+```bash
+detect_agent() {
+  # An explicit override always wins; it is validated by the caller below.
+  if [[ -n "${MIRROR_AGENT:-}" ]]; then echo "$MIRROR_AGENT"; return; fi
+  # Only session-IDENTITY markers count. `command -v` is deliberately NOT used:
+  # it proves a binary is installed, never which CLI owns the current session,
+  # and several CLIs are routinely installed at once — an install probe would
+  # silently pick the first one on PATH and mirror into the wrong agent.
+  # pi sets PI_CODING_AGENT in every session it launches.
+  # CLAUDECODE is Claude Code's own marker; CLAUDE_CODE_* vars can leak into
+  # other harnesses, so they are not sufficient on their own.
+  # CODEX_HOME can be exported persistently from a shell rc, so it is the
+  # weakest marker and only counts when nothing more specific matched.
+  local found=()
+  [[ -n "${PI_CODING_AGENT:-}" ]] && found+=(pi)
+  [[ -n "${CLAUDECODE:-}" ]] && found+=(claude)
+  [[ -n "${CODEX_HOME:-}" ]] && found+=(codex)
+  # Ambiguous is not a guess: more than one marker means we do not know which
+  # CLI owns this session, so report them all and let the caller fail closed.
+  if (( ${#found[@]} > 1 )); then
+    echo "AMBIGUOUS:${found[*]}"
+    return
+  fi
+  echo "${found[0]:-}"
+}
+DETECTED=$(detect_agent)
+case "$DETECTED" in
+  AMBIGUOUS:*)
+    echo "ERROR: ambiguous CLI detection — these session markers are all set: ${DETECTED#AMBIGUOUS:}" >&2
+    echo "       Installed binaries are not evidence of session identity: \`command -v\` only proves a CLI exists." >&2
+    echo "       Re-run with the CLI named explicitly: MIRROR_AGENT=pi|claude|codex|agy" >&2
+    exit 1
+    ;;
+  "")
+    echo "ERROR: could not identify the coding CLI driving this session — no session marker found (PI_CODING_AGENT / CLAUDECODE / CODEX_HOME)." >&2
+    echo "       Installed binaries are not evidence of session identity: \`command -v\` only proves a CLI exists." >&2
+    echo "       Installed here: $(for c in pi claude codex agy; do command -v "$c" >/dev/null 2>&1 && printf '%s ' "$c"; done)" >&2
+    echo "       Re-run with the CLI named explicitly: MIRROR_AGENT=pi|claude|codex|agy" >&2
+    exit 1
+    ;;
+  pi|claude|codex|agy) AGENT="$DETECTED" ;;
+  *)
+    echo "ERROR: MIRROR_AGENT='$DETECTED' is not a supported CLI (expected pi, claude, codex, or agy)" >&2
+    exit 1
+    ;;
+esac
+echo "Mirroring with agent: $AGENT"
+```
+
+**Detection fails closed.** If no session marker is present the skill stops with an
+explicit error instead of guessing a default — a wrong guess mirrors the work into a
+different model with none of the context you were actually using. Multiple markers set
+at once is treated as *ambiguous*, not as a precedence race: it also errors. `agy` has
+no documented session-identity env marker, so it is reachable only through an explicit
+`MIRROR_AGENT=agy`. `MIRROR_AGENT` also overrides detection in the other direction, for
+the case where a persistently-exported variable (e.g. a `CODEX_HOME` in `~/.bashrc`)
+misidentifies the session. This matters because the CLIs are not interchangeable: each
+takes the initial prompt differently (see step 4), and a mirror that silently swaps
+CLIs loses the model and context you were actually using.
+
+Step 4 launches the **interactive/resumable** form of each CLI, because a mirror
+session has to keep accepting input after its first turn. The one-shot forms exit
+once the first turn completes and are only for single queries run outside a mirror:
+
+| CLI | Interactive (used for a mirror session) | One-shot (single query only) |
+| --- | --- | --- |
+| `pi` | `pi -- "$CONTEXT"` | `pi -p "$CONTEXT"` |
+| `claude` | `claude --dangerously-skip-permissions -- "$CONTEXT"` | `claude -p "$CONTEXT"` |
+| `codex` | `codex --yolo -- "$CONTEXT"` | `codex exec --yolo -- "$CONTEXT"` |
+| `agy` | `agy --model "${AGY_MODEL:-…}" --prompt-interactive "$CONTEXT"` | `agy --model "…" --print="$CONTEXT"` |
+
 Also prepare `$CONTEXT`: a short, self-contained summary (1-3 sentences) of what should actually continue on the Linux machine — the real next action, not just "resume work." This isn't optional bookkeeping: step 4 types it as the first message to a freshly-launched coding agent on the target machine, which has no access to this conversation. Write it as if briefing a colleague who just walked in cold.
 
 If `$BRANCH` is empty (detached HEAD) or `$DIRTY` is non-empty, stop and tell the user — commit/name the branch first.
@@ -60,7 +134,7 @@ Confirm with the user before pushing if the branch has no upstream yet or diverg
 
 ### 3. Pick a connectivity tier — try in order, stop at first success. Carry the resolved connection forward into `SSH_ARGS`/`SSH_TARGET` for step 4 — don't just check reachability and then reconnect a different way.
 
-See [cross-machine-ssh-tier](../cross-machine-ssh-tier/SKILL.md) for the Tier 1→2→3 connectivity ladder (LAN SSH → SSH over Tailscale → messaging-gateway fallback), its debugging caveats, and the key-naming convention. Run that skill's ladder block with `PEER_LAN_ALIAS="mylinux"` (and the matching `PEER_TS_PATTERN`/`PEER_KEY`/`PEER_USER`) to resolve `SSH_ARGS`/`SSH_TARGET` before continuing to step 4. If `$SSH_TARGET` comes back empty, both Tier 1 and Tier 2 failed — fall through to that skill's Tier 3 (messaging-gateway handoff): post the exact repo/branch/commit and the steps from §4 below, asking it to execute them locally and reply when the tmux session is ready.
+See [cross-machine-ssh-tier](../cross-machine-ssh-tier/SKILL.md) for the Tier 1→2→3 connectivity ladder (LAN SSH → SSH over Tailscale → messaging-gateway fallback), its debugging caveats, and the key-naming convention. Run that skill's ladder block with `PEER_LAN_ALIAS="<peer-alias>"` (and the matching `PEER_TS_PATTERN`/`PEER_KEY`/`PEER_USER`) to resolve `SSH_ARGS`/`SSH_TARGET` before continuing to step 4. If `$SSH_TARGET` comes back empty, both Tier 1 and Tier 2 failed — fall through to that skill's Tier 3 (messaging-gateway handoff): post the exact repo/branch/commit and the steps from §4 below, asking it to execute them locally and reply when the tmux session is ready.
 
 ### 4. Remote checkout + tmux (Tier 1/2 only — skip if `$SSH_TARGET` is empty, that means Tier 3 applies instead)
 
@@ -71,13 +145,15 @@ REL_PATH_B64=$(printf '%s' "$REL_PATH" | base64 | tr -d '\n')
 BRANCH_B64=$(printf '%s' "$BRANCH" | base64 | tr -d '\n')
 REMOTE_URL_B64=$(printf '%s' "$REMOTE_URL" | base64 | tr -d '\n')
 CONTEXT_B64=$(printf '%s' "$CONTEXT" | base64 | tr -d '\n')
+AGENT_B64=$(printf '%s' "$AGENT" | base64 | tr -d '\n')
 
-ssh "${SSH_ARGS[@]}" "$SSH_TARGET" bash -s -- "$REL_PATH_B64" "$BRANCH_B64" "$REMOTE_URL_B64" "$CONTEXT_B64" << 'EOF'
+ssh "${SSH_ARGS[@]}" "$SSH_TARGET" bash -s -- "$REL_PATH_B64" "$BRANCH_B64" "$REMOTE_URL_B64" "$CONTEXT_B64" "$AGENT_B64" << 'EOF'
 set -e
 REL_PATH=$(printf '%s' "$1" | base64 -d)
 BRANCH=$(printf '%s' "$2" | base64 -d)
 REMOTE_URL=$(printf '%s' "$3" | base64 -d)
 CONTEXT=$(printf '%s' "$4" | base64 -d)
+AGENT=$(printf '%s' "$5" | base64 -d)
 TARGET="$HOME/mirror/$REL_PATH"
 
 # $CONTEXT is a required briefing for the coding agent step 4 launches, not
@@ -125,7 +201,9 @@ fi
 # sha256sum/shasum which aren't guaranteed on both.
 BRANCH_SAFE=$(printf '%s' "$BRANCH" | tr -c 'a-zA-Z0-9_-' '-')
 BRANCH_HASH=$(printf '%s' "$BRANCH" | cksum | cut -d' ' -f1)
-SESSION="mirror-${BRANCH_SAFE}-${BRANCH_HASH}"
+# The agent is part of the identity: a session created for one CLI must not be
+# resumed as if it were another.
+SESSION="mirror-${BRANCH_SAFE}-${BRANCH_HASH}-${AGENT}"
 # tmux has-session prefix-matches by default (checking for "mirror-feat"
 # would incorrectly succeed against an existing "mirror-feature-x") — the
 # leading "=" forces an exact match.
@@ -159,16 +237,41 @@ else
   # including an unrelated Enter — accepts the default and exits `claude`.
   #
   # remain-on-exit is set in the same tmux invocation (not a separate
-  # call) so a session that dies immediately — missing `claude` binary,
+  # call) so a session that dies immediately — missing CLI binary,
   # PATH not resolving it under a non-login tmux shell, a crash — leaves a
   # dead-but-inspectable pane instead of vanishing outright.
-  tmux new-session -d -s "$SESSION" -c "$TARGET" claude --dangerously-skip-permissions -- "$CONTEXT" \; set-option -t "$SESSION" remain-on-exit on
+  # Each CLI takes the initial prompt differently, so build argv per CLI instead
+  # of assuming one. The prompt is always an argv element (never typed), which
+  # keeps the injection window closed.
+  #
+  # INTERACTIVE form only. A mirror session exists to be steered from the
+  # operator's side after it starts, so the pane's foreground process must keep
+  # running and keep accepting input. The ONE-SHOT forms (`codex exec`,
+  # `agy --print`) run a single turn and exit — with remain-on-exit on, the pane
+  # survives as a dead, readable corpse that can never take a follow-up message,
+  # which silently defeats the whole point of mirroring. One-shot forms are
+  # documented for single queries in the step-1 table; they are NOT for a mirror
+  # session. To resume an earlier turn instead, use each CLI's
+  # resume path: `pi -c`, `claude --continue`, `codex resume --last`,
+  # `agy --continue`.
+  case "$AGENT" in
+    claude) AGENT_CMD=(claude --dangerously-skip-permissions -- "$CONTEXT") ;;
+    pi)     AGENT_CMD=(pi -- "$CONTEXT") ;;
+    codex)  AGENT_CMD=(codex --yolo -- "$CONTEXT") ;;
+    agy)    AGENT_CMD=(agy --model "${AGY_MODEL:-gemini-4-argon-high}" --prompt-interactive "$CONTEXT") ;;
+    *)
+      echo "FAILED:$TARGET — unsupported agent '$AGENT' (expected pi, claude, codex, or agy)" >&2
+      exit 1
+      ;;
+  esac
+  tmux new-session -d -s "$SESSION" -c "$TARGET" "${AGENT_CMD[@]}" \; set-option -t "$SESSION" remain-on-exit on
   # Poll for the trust dialog and accept it with fixed navigation keys
   # (Down, Enter) — never $CONTEXT — so this carries none of the
   # injection risk the original send-keys-typed-$CONTEXT bug had. This
   # only fires the first time a given target directory is mirrored (the
   # dialog only appears once claude.json records the directory as
   # trusted); a no-op loop on an already-trusted directory is safe.
+  if [[ "$AGENT" == "claude" ]]; then
   for _ in $(seq 1 40); do
     PANE_PROBE=$(tmux capture-pane -p -t "$SESSION" 2>/dev/null || true)
     if echo "$PANE_PROBE" | grep -q "Yes, I trust this folder"; then
@@ -215,6 +318,7 @@ else
     echo "$PANE_PROBE" | grep -q "bypass permissions on" && break
     sleep 0.5
   done
+  fi  # trust-dialog handling is claude-specific
   # tmux new-session exits 0 even when the launched command can't be
   # exec'd, and with remain-on-exit set, has-session alone can't tell a
   # genuinely running session from a dead one either — remain-on-exit
@@ -231,7 +335,7 @@ else
      && ! tmux capture-pane -p -t "$SESSION" 2>/dev/null | grep -q "Yes, I trust this folder"; then
     echo "READY:$SESSION:$TARGET:$(git rev-parse HEAD)"
   else
-    echo "FAILED:$SESSION:$TARGET — session did not survive launch (check that \`claude\` is on the remote PATH); pane retained by remain-on-exit for inspection: tmux capture-pane -p -t $SESSION" >&2
+    echo "FAILED:$SESSION:$TARGET — session did not survive launch (check that \`$AGENT\` is on the remote PATH, or rerun with MIRROR_AGENT set); pane retained by remain-on-exit for inspection: tmux capture-pane -p -t $SESSION" >&2
     exit 1
   fi
 fi
@@ -266,7 +370,8 @@ If a PR is already open for `$BRANCH`, pushes update that PR's head automaticall
 
 - Committed-state-only mirror (see "What this carries over" above) — this is the chosen tradeoff over rsyncing the dirty working tree.
 - Source repo must live under `$HOME` (see Setup) — step 1 fails loudly rather than silently mirroring to the wrong place. The target-side checkout always lands under `$HOME/mirror/`, not at the identical path as the source.
-- Step 4 auto-launches `claude` (hardcoded) as the session's command with `$CONTEXT` passed as its argv (not typed via `send-keys`), but only on a freshly created session — edit the hardcoded command if you use a different CLI. Never assume a `RESUMED` session is idle just because this skill didn't launch anything into it.
+- Step 4 launches **the same CLI that is driving the source session** (`pi`, `claude`, `codex`, or `agy`, detected in step 1, overridable with `MIRROR_AGENT`) with `$CONTEXT` passed as an argv element (never typed via `send-keys`), and only on a freshly created session. Each CLI gets its own argv shape because their prompt flags differ — `pi --`, `claude --dangerously-skip-permissions --`, `codex --yolo --`, `agy --prompt-interactive`. Detection fails closed: with no session marker and no `MIRROR_AGENT`, step 1 errors out rather than defaulting to a CLI, and `agy` (which has no session marker) must be named explicitly. Never assume a `RESUMED` session is idle just because this skill didn't launch anything into it.
+- **Interactive, not one-shot.** The launched command must stay resident so the pane keeps accepting input across turns. `codex exec …` and `agy --print=…` (and `pi -p`, `claude -p`) run one turn and exit; under `remain-on-exit` they leave a readable-but-dead pane that can never be steered again. Use them only for single queries run outside a mirror session.
 - A bare host alias is typically LAN-only; off-LAN (traveling), target the Tailscale IP + explicit `-i` per Tier 2 — and make sure step 4 actually uses the resolved `$SSH_ARGS`/`$SSH_TARGET` from step 3, not a re-hardcoded alias, or the whole point of the fallback is lost.
 - Never pass unencoded user-controlled values (repo path, branch name, remote URL) as literal SSH command arguments — a branch name is attacker-controllable shell input the moment someone else can push to your fork, and SSH doesn't preserve argv separation across the wire. Base64-encode first (see step 4).
 - Tier 3 (messaging-gateway handoff) hands off to a *different* agent/process with no shared context — give it complete, explicit instructions, don't assume it can infer intent from this conversation. Also verify it's genuinely reactive before relying on it (see Tier 3 caveats above) — a live-looking connection isn't proof it's actually processing events, and a missing permission grant is a much likelier culprit than the connection itself.
