@@ -1,237 +1,211 @@
 ---
 name: cmux-bulk-steer
-description: "Pure Subagent-Native Zero-Framework Cognition (/zfc) fleet review, deduplication, and steering. Always `/parallel` — every phase fans out across disjoint subagents because independent work must never be serialized. Captures ~10,000 words per cmux terminal surface mechanically without regex classifiers, fans out /parallel subagents to classify and dedupe overlapping PR/worktree lanes, then steers sole owners. Use when asked to review/audit cmux surfaces, 'see what's off track', 'nudge/steer the terminals', or orchestrate across the fleet. NOT for single-surface work (see cmux-steer)."
+description: "Read ALL cmux terminal surfaces first, classify their state, dedupe overlapping work across agents, then steer everything that needs it. Use when asked to review/audit cmux surfaces, 'see what's off track', 'nudge/steer the terminals', or before orchestrating across the whole fleet. NOT for single-surface work (see cmux-steer)."
 ---
 
-# cmux-bulk-steer — Subagent-Native `/zfc` Fleet Review, Dedupe, and Steer
+# cmux-bulk-steer — Fleet-wide surface review, dedupe, and steer
 
-Three phases, strictly in order:
-**Phase 1: CAPTURE ALL (Mechanical 10,000-Word Dump) → Phase 2: PARALLEL SUBAGENT `/zfc` ASSESSMENT + STRICT DEDUPE → Phase 3: STEER DEDUPED SOLE OWNERS**.
+Three phases, strictly in order: **READ ALL → ASSESS (incl. dedupe) → STEER**.
+Never steer from a partial read, and never skip the dedupe check — parallel
+agents duplicate each other constantly.
 
-Never steer from a short tail, never use regex/keyword classifiers to guess terminal state, and never skip cross-surface deduplication.
+## Phase 1 — READ ALL (mandatory before any assessment)
 
-> **Headless only (measured, 2026-10-18; evidence `/tmp/spicy-search/cmux/focus-test.md`).** **Never select, focus, switch, or reorder a workspace/surface** (`select-workspace`, `workspace-action --action focus`, `focus-window`, `workspace.select`, `surface.focus`). Reads use **`cmux capture-pane --workspace <ws> --surface <sf> --scrollback --lines <n>` exclusively** and steers (`cmux send` + `cmux send-key`, or the socket `surface.send_text` call) do **not** change the operator's selected workspace. **Never use `cmux read-screen` as a read path** — the 2026-10-18 measurement shows it does not move the selection, and the installed build accepts `--workspace/--surface`, but cross-workspace read routing was historically unreliable; `capture-pane` is the only read path this skill uses (`scripts/scan.py` already does this). Read-only listings (`cmux tree --all --json`, `cmux list-workspaces`) never select. Always pass `--focus false` to `new-surface` / `new-workspace`. Do **not** create or close workspaces/surfaces on the operator's live desktop without asking first (the only operation that disturbed the view). Never `select-workspace` / `focus` / `workspace-action --action focus`. Canonical rule + evidence: `~/.claude/skills/cmux-steer/SKILL.md` § "Headless only".
-
-**Always `/parallel`. `/parallel` is the default execution mode for every phase, not an optimization.** If two items do not depend on each other, they MUST run concurrently — never as `item N` then `item N+1`. Concretely: assessment fans out across disjoint subagents (Phase 2), dedupe reads every shard concurrently, and steering dispatches to all owners at once (Phase 3). Before any sequential loop over surfaces/shards/lines, ask "can `/parallel` run these at the same time?" and if yes, fan out. The only serialization allowed is a genuine data dependency (a later step needs an earlier step's output) or a bounded resource cap — see `~/.claude/skills/parallelize-to-ceiling/SKILL.md`. Report the degree of parallelism achieved (e.g. "6 shards, 6 subagents") in the final report.
-
----
-
-## `/parallel` Is the Default (Never Serialize Independent Work)
-
-Apply this at every phase boundary:
-- **Capture (Phase 1)**: one mechanical pass; still parallelize per-surface reads when the collector supports it (do not capture surface-by-surface in a shell loop).
-- **Assess (Phase 2)**: partition surfaces into `min(surface_count, 10)` disjoint `/parallel` subagents — target 6–10 shards only when the fleet has enough surfaces. Spawn all shards in ONE fan-out call; never assess shard 1, wait, then shard 2.
-- **Dedupe (Phase 2)**: build the ownership map from all shard results concurrently.
-- **Steer (Phase 3)**: send to all deduped owners concurrently, then verify all of them in one parallel read pass. Do not steer+wait per surface.
-
-If you catch yourself in a sequential per-item loop, stop and convert it to a `/parallel` fan-out.
-
----
-
-## Stalled-on-question unblock (Claude / Codex) — look for it explicitly
-
-A recurring failure pattern: a Claude Code or Codex surface has **finished its turn and is stopped on a question**, waiting for an answer — so it reads as "idle" but is NOT done. During every read (Phase 2), explicitly scan each surface's tail for this pattern and unblock it.
-
-**Signatures (read the surrounding lines, never a bare keyword):**
-- A yes/no confirmation: `Do you want to proceed?`, `(y/n)`, `[y/N]`, `Allow ...?`.
-- A numbered / selectable menu: a `❯ 1. ...` highlighted line, `Enter to select`, `↑/↓ to move`.
-- An `AskUserQuestion` / plan-approval block: a question followed by 2–4 options, one marked recommended/default.
-- A single free-text prompt asking `Should I ...?` / `Which ...?` where the agent states its own recommendation.
-
-**Unblock rule — choose the recommended option (one procedure, no alternatives):**
-1. Read the dialog and identify the recommended/default choice — the highlighted `❯` line,
-   an option labelled `Recommended` / `(Recommended)` / `Yes`, or the agent's own stated
-   recommendation. If the dialog offers no defensible default, stop: it is
-   `PARKED_OPERATOR`, not an unblock.
-2. Answer it with a **guarded key action** — one key for a highlighted menu, key-then-Enter
-   for a yes/no or a navigated list (that Enter is what confirms the dialog, not a second
-   unplanned keystroke). A dialog blocks ordinary sends, so every key command must carry
-   `--force` (`cmux send-key --help`: `--force  Send even into an open dialog`):
-   ```bash
-   cmux send-key --force --workspace <ws> --surface <sf> enter   # accept highlighted option
-   cmux send-key --force --workspace <ws> --surface <sf> y       # yes/no: then send enter
-   cmux send-key --force --workspace <ws> --surface <sf> down    # numbered list: move, then enter
-   ```
-   `--force` here is decision authority over a dialog you have already judged safe (step 1),
-   not permission to bypass one unread.
-3. For a **free-text** question where the agent stated its recommendation, type that
-   one-line approval and submit it with exactly one Enter, using the dialog-safe key form:
-   `cmux send --workspace <ws> --surface <sf> "Yes, do <recommended>." && cmux send-key --force --workspace <ws> --surface <sf> enter`.
-   If a question/permission **dialog** (not a free-text prompt) is what is open, `cmux send`
-   refuses unless `--force`; in that case use the key procedure in step 2 instead of typing.
-4. Verify with `cmux capture-pane` that the dialog cleared and the agent resumed working.
-   If the build rejects a key name, the only documented alternative is the socket
-   `surface.send_text` call, whose dialog behaviour is **not documented** — use it and apply
-   the same `capture-pane` verification, reporting the steer as unverified if the dialog is
-   still there.
-
-**Never auto-answer a genuine human decision** — destructive/irreversible actions, production `MERGE APPROVED`, scope/product choices, credential changes, or spend authorizations. Those are `PARKED_OPERATOR`: report them, don't guess.
-
-This augments the `DIALOG_BLOCKED` semantic category below (a stopped coding-agent question is the same failure class).
-
-### Codex `/goal` stall — resume, don't reclassify
-
-A Codex lane whose goal is paused reads as idle but is recoverable without any human decision. Look for a goal-status line near the tail: `Goal stalled (/goal resume)`, `Goal paused`, or a `Goal hit usage limits (/goal resume)` line that has no activity after it.
-
-1. First confirm the pause was not deliberate: if the operator (or the lane's own thread) paused the goal on purpose, or a hold/stop instruction is visible in the buffer, report it and do not resume. Otherwise send `/goal resume` through the same headless steer path (it resumes the *existing* goal — it authorizes no merge, spend, or scope change).
-2. Verify the status line becomes `Pursuing goal (Ns)` / `Pursuing goal (Xh Ym)` with a growing timer before reporting it as WORKING.
-3. If it stays stalled, or immediately re-prints the quota wall, classify from the fresh evidence (see next section) — do not retry in a loop.
-
-Live evidence (2026-10-19): a single sweep resumed 8 such lanes (`iOS`, `lvl up`, `auto creation`, `knowledge`, `zfc`, plus idle `strat`/`alerts`), all confirmed `Pursuing goal`/`Working` after the steer.
-
----
-
-## Stale footer rule — verify before you classify
-
-**Footers are history, not state.** A CLI writes `Goal hit usage limits (/goal resume)` (or `Goal stalled (/goal resume)`, `Working (…)`, a spinner line) once, at the moment it happened, and it survives in the scrollback window long after the condition cleared — including after a quota reset. Reading that line out of a 10,000-word buffer and classifying `QUOTA_BLOCKED` is the single most common misclassification in this skill.
-
-Before writing `QUOTA_BLOCKED` for a surface, confirm all of:
-1. **No activity after the footer.** Look for tool-call lines, assistant text, or user input lines that appear *below* the quota footer in the buffer. Any post-footer activity means the wall is not current.
-2. **No live progress label.** A `Working (1h33m)` / `Pursuing goal (…)` label with a timer longer than the footer's age is proof the lane is running.
-3. **Not just a scrolled artifact.** The quota line must be the last substantive line, not one of several historical occurrences deeper in the buffer.
-4. **Corroborate from outside the pane.** Check `top_flat.tsv` CPU for the surface and any provider meter (weekly/5h percentage) visible on a sibling surface or the operator's quota line. A healthy meter (e.g. 49% on a fresh window) falsifies `QUOTA_BLOCKED` outright; a meter at/near 100% corroborates it.
-
-If the checks disagree, prefer the fresher signal: post-footer activity and a healthy meter beat a stale paragraph.
-
-**Real incident (2026-10-19, operator-caught).** A fleet report labelled `zfc` and `world` as `QUOTA_BLOCKED` from a `Goal hit usage limits (/goal resume)` footer that predated that day's reset. Both were actively working (`Working (1h33m)`, live `ssh`/pytest and dot ACK activity) and the weekly meter was 49% — the footer was stale. Two surfaces were wrongly written off as dead in one report. Verify first.
-
-Conversely, a quota footer with **no** post-footer activity plus a meter at/near 100% is a genuine `QUOTA_BLOCKED`, and `/goal resume` will not help until the window resets — report it, don't steer it.
-
----
-
-## Why Regex / Keyword Classifiers Are Banned (`/zfc`)
-
-Per `~/.claude/skills/zero-framework-cognition/SKILL.md` (`/zfc`), `scripts/scan.py` is strictly a **mechanical I/O collector** (`cmux tree --all --json`, `cmux top --all --flat`, `cmux capture-pane --scrollback --lines 4000`, and 10,000-word file slicing). All regex/keyword classifiers (`CHURN_RE`, `DEAD_RE`, `PARK_RE`, `QUESTION_RE`, `FOOTER_RE`) are permanently banned because static pattern matching repeatedly failed on real terminal scrollback:
-1. **Quoted bot/review text**: A terminal displaying `cursor[bot]: usage limit reached` in a PR comment was misclassified as `DEAD` by `DEAD_RE`.
-2. **Scrolled spinners and custom status bars**: Multi-line status bars or subagent tool outputs pushed spinner lines past fixed tail-line windows.
-3. **Malformed raw XML tool calls**: An agent that emitted raw `<parameter name="bash">` text instead of invoking a tool had no question mark or quota banner and was misclassified as `IDLE`.
-4. **Cross-surface PR takeovers**: After a quota reset, formerly blocked `agy` surfaces and newly spawned `pi`/`codex` surfaces worked the same PR simultaneously — something no single-pane regex can detect.
-
----
-
-## Phase 1 — CAPTURE ALL (Mechanical 10,000-Word Dump, Zero Regexes)
-
-Capture every terminal surface's deep scrollback (`~10,000` trailing words, preserving line breaks) to `/tmp` alongside `cmux top --all --flat`:
+Inventory and read every terminal. Do not pre-filter by CPU: idle surfaces
+carry finished-work context and pending questions that matter.
 
 ```bash
-OUT_DIR="/tmp/cmux_fleet_$(date +%H%M%S)"
-python3 ~/.claude/skills/cmux-bulk-steer/scripts/scan.py --out-dir "$OUT_DIR" --with-gh
+# Canonical scanner (shipped with this skill — same hardened logic every run):
+python3 ~/.claude/skills/cmux-bulk-steer/scripts/scan.py            # summary
+python3 ~/.claude/skills/cmux-bulk-steer/scripts/scan.py --json     # machine-readable
+python3 ~/.claude/skills/cmux-bulk-steer/scripts/scan.py --parked-only
+# It reads the FULL buffer (--scrollback --lines 1500) and applies the hardening
+# below (churn-first, tail-state quota, footer/question guards, shell detection).
+# Do NOT re-write this classifier inline; if it needs a fix, fix scripts/scan.py.
 ```
 
-What `scripts/scan.py` writes to `$OUT_DIR`:
-- `manifest.json`: deterministic inventory of all terminal surfaces (`workspace`, `workspace_ref`, `surface`, `surface_ref`, `surface_title`, `cpu_percent`, `file_10k`, `pi_session_jsonl`, `total_words`, `captured_words`, `lines_read`, `tail_lines`). Non-terminal browser surfaces (`Surface is not a terminal`) are skipped automatically.
-- `ws_<ws_id>_sf_<sf_id>.txt`: up to `10,000` trailing words of scrollback per terminal surface. For alternate-screen `pi` (`π`) TUI panes (where `cmux capture-pane` only sees the `35`-row TUI screen), `scan.py` automatically matches the pane's `cwd` footer to the newest session file in `~/.pi/agent/sessions/*/*.jsonl` and prepends `=== PI SESSION TRANSCRIPT (<jsonl_path>) ===` ahead of `=== LIVE TERMINAL PANE ===` so every `pi` surface also receives a full `10,000`-word capture.
-- `top_flat.tsv`: raw `cmux top --all --flat` output (`CPU%`, memory, process count per workspace/pane/surface).
-- `gh_prs.json` (when `--with-gh` is passed): live open PR metadata.
+If the script is unavailable, fall back to capturing each surface with
+`cmux capture-pane --workspace <ws> --surface <sf> --scrollback --lines 1500`
+and applying the classification cheat-sheet by hand.
 
 Rules:
-- **The full-read rule binds every substantive surface.** A surface whose whole capture is under ~`100` words has nothing to slice (a shell, or a session that just started); classify it from its complete capture and record it as `SHELL`/`IDLE_*` rather than forcing the four-slice ritual — but never use "short capture" as a reason to skip a surface that does have content.
-- **Read 100% of the 10,000-word buffer before any decision (Sequential Slice Rule)** — canonical rule in `~/.codex/AGENTS.md` § "Reading a cmux terminal before deciding (full-buffer rule)": because `view_file` / `Read` tools cap at `800` lines per call while a `10,000`-word `ws_<ws_id>_sf_<sf_id>.txt` file spans `1,000–3,500` lines, each subagent MUST read sequential line slices (`1..800`, `801..1600`, `1601..2400`, `2401..end`) until `lines_read` is 100% covered. Never rely on a single `view_file` call or a short tail!
-- Use `capture-pane` for every read.
+- **Read the FULL buffer before any decision** — canonical rule in
+  `~/.codex/AGENTS.md` § "Reading a cmux terminal before deciding (full-buffer
+  rule)": read the deepest scrollback available (~10k words when possible,
+  `--scrollback --lines 1500`), then the last ~15 lines for current state.
+  Never classify or steer from a short tail.
+- Use `capture-pane`, NOT `read-screen` — cross-workspace `read-screen` is
+  unreliable (can return the focused surface's content).
+- Never decide from a shallow capture. The Phase 1 script below uses
+  `--scrollback --lines 1500`; if a surface's buffer is shorter, read all of it,
+  and if the capture fails, mark the surface UNVERIFIED rather than guessing.
+- Always run `cmux top --all --flat` alongside: CPU per surface plus process
+  level (`top --workspace X --processes`) is the wedge detector.
 
----
+## Classification cheat-sheet
 
-## Phase 2 — PARALLEL SUBAGENT `/zfc` ASSESSMENT + STRICT DEDUPE
+| State | Signature |
+|---|---|
+| WORKING | spinner ("Working", "Running command", "Thinking", agentic workflow `◯ 1/2 · 12m · ↓ tokens`); footer "esc to cancel" (agy) |
+| IDLE-CLEAN | empty `❯`/`>` prompt, no error text, no pending question above it |
+| IDLE-PENDING | idle prompt + last message names an unfinished next step (steer: "go ahead") |
+| DIALOG-BLOCKED | interactive menu visible ("Enter to select · Esc to cancel"); cmux send/key REFUSES it ("waiting on a question or dialog") |
 
-Partition the captured `ws_*_sf_*.txt` files from `$OUT_DIR/manifest.json` across disjoint `/parallel` subagents (e.g., 6–10 surfaces per subagent). Each subagent MUST read all sequential line slices (`1..800`, `801..1600`, `1601..2400`, `2401..end`) of every `ws_*_sf_*.txt` file in its shard (covering 100% of the captured `10,000` words, including any `=== PI SESSION TRANSCRIPT ===` section) plus live GitHub PR statuses (`gh pr view <N> --json state,isDraft,mergeable,mergeStateStatus,statusCheckRollup`) and return a structured semantic assessment per surface:
+**False-positive guards** (learned 2026-10-12):
+- The agy footer `? for shortcuts` and the Codex footer `Ask Codex to do anything`
+  contain `?`/prompt-like text but are IDLE, not parked questions. Never treat a
+  footer as a question. Detect parked questions from the last few BODY lines
+  (a sentence ending in `?`, or `Want me to`/`Which?`/`awaiting`/`pending your`),
+  with footers excluded.
+- A surface whose session exited to a plain shell (`jleechan@…$`) is finished,
+  not parked — do not steer a dead shell.
+| MISSED-ENTER | operator text sitting at a shell/agent prompt with no execution after it |
+| WEDGED-CLI | CLI process (agy.real / claude) >100% CPU with FROZEN screen; agy task "running" for hours |
+| WEDGED-CHILD | one tool command "running" far too long (grep/cat for 20+ min); child process alive but 0% CPU |
+| QUOTA-DEAD | "Individual quota reached" / "weekly limit" banners **in the CURRENT state (last ~10 lines)**, not anywhere in history; check the countdown is LIVE (stale banners mislead) |
+| STALE-SHELL | plain zsh prompt; old errors in scrollback are noise, not findings |
 
-### Identify the CLI before judging the tail
+Wedge forensics (do these before interrupting anything):
+1. `ps -eo pid,ppid,etime,command | grep <pattern>` for the stuck child.
+2. `lsof -p <pid>` — dead-stdin (`fd0 ->(none)`) or unclosed pipe pairs = deadlock.
+3. `cmux top --workspace X --processes` for per-surface process trees.
+4. Escape rarely works on true wedges. **Kill the stuck child process** (the
+   specific cat/grep/zsh), not the agent. Then verify CPU drops and the
+   agent resumes. Escalate to killing the CLI itself only as last resort
+   (agy/claude relaunch with `--continue` resumes).
 
-The same line means different things per CLI, so each subagent names the surface's CLI from its capture first: **`pi` TUI** (`π` title, alternate screen — state lives in the prepended `=== PI SESSION TRANSCRIPT ===` section, not the `35`-row live pane), **Codex** (goal-status line above the composer), **Claude Code**, **`agy`**, or a **plain shell** (`SHELL`). A `Goal …` footer only ever belongs to a Codex/`pi` goal lane; a bare `❯` prompt under a shell footer is a shell, not an idle agent.
+## Phase 2 — ASSESS + DEDUPE
 
-### Semantic Categories (Model-Decided, Never Regex-Guessed)
-- `WORKING`: Actively executing a turn, tool call, test run, or subagent wait with live progress.
-- `IDLE_NEEDS_STEER`: Agent finished a turn or stopped mid-workflow while ungated next steps remain on its assigned PR/task.
-- `IDLE_COMPLETE`: Agent's assigned PR is merged or its task is genuinely 100% complete.
-- `PARKED_OPERATOR`: Agent is waiting on a genuine human product/scope/merge decision (not a routine reversible check).
-- `DIALOG_BLOCKED`: Interactive TUI confirmation/selection menu is blocking the composer (`Enter to select · Esc to cancel`).
-- `MALFORMED_TOOL_CALL`: Agent emitted raw tool-call XML/JSON (e.g. `<parameter name="bash">`) as plain text and stalled at the prompt.
-- `QUOTA_BLOCKED`: Current turn is genuinely blocked by an active, unexpired quota/rate-limit wall at the bottom of the buffer. The wall must be the *current* state — a `Goal hit usage limits (/goal resume)` footer left in scrollback after a reset is stale; apply the Stale footer rule before using this category.
-- `STOOD_DOWN_DUPLICATE`: Another active surface is the canonical owner of the same PR/branch/worktree.
-- `WEDGED_PROCESS`: Process tree (`cmux top --workspace <ws> --processes` / `ps` / `lsof -p <pid>`) shows a hung child or busy-wait loop with a frozen screen.
-- `SHELL`: Session exited to a plain shell prompt (`zsh`/`bash`).
+For every surface extract: **work item** (PR number / branch / task), **owner**,
+**state**, **next step**. Then:
 
-### Mandatory Cross-Surface Deduplication Rules
-1. **Build the global Work-Item → Surface ownership map** before sending a single steer:
-   - Group all surfaces by **PR number**, **branch**, and **worktree path**.
-   - **Never wake a formerly quota-blocked surface onto a PR that another surface took over** while it was blocked. If Surface A (`agy`) was quota-blocked on PR `#NNNN` and Surface B (`codex`/`pi`) took over PR `#NNNN`, keep Surface B as sole owner and stand down Surface A (`STOOD_DOWN_DUPLICATE`).
-   - Verify live PR state (`OPEN` vs `MERGED` vs `CLOSED`): any surface still working an already-`MERGED` PR gets an immediate stand-down citing the merge commit SHA.
-2. **Assign new work ONLY to a terminal RELATED to the task**:
-   - A candidate terminal must already own the PR/branch/worktree or same feature family in its scrollback. Never borrow an idle unrelated terminal. If no related terminal exists, spawn a dedicated one (see Phase 3).
-3. **Wedge forensics before interrupting**:
-   - Inspect `cmux top --workspace <ws> --processes`, `ps -eo pid,ppid,etime,command`, and `lsof -p <pid>`. Kill only the stuck child process (`cat`/`grep`/hung hook subshell), never `killall`, and verify CPU drops.
+1. **Dedupe map**: group surfaces by work item. Two agents on the SAME item
+   = duplicate lanes — stop the weaker one explicitly ("stand down; X owns
+   this"), keep the stronger. Known hot spots: one PR worked by a workspace
+   agent AND a `π` surface; a merged/closed PR still being worked by an
+   agent that hasn't been told (verify `gh pr view <N> --json state`).
+2. **Assign new work ONLY to a terminal RELATED to the task.** A candidate
+   terminal must have a demonstrable relationship to the work item: it owns
+   the PR/branch (agent tag, `git worktree list` match, scrollback mention),
+   works the same feature family with evidence in its scrollback, or was
+   explicitly assigned the item by the operator. Domain-matching by workspace
+   theme is NOT a relationship. Idle-but-unrelated terminals are never
+   candidates — borrowing them diverts agents off their own missions
+   (2026-10-11 lesson: the creation-latency agent was pulled off streaming
+   char creation to run #10424's gates; the work landed but the owner's real
+   lane stalled). **If no related terminal exists, spawn a new one** — see
+   Phase 3 "Spawning" — or surface the PR to the operator for assignment.
+   Never guess.
+3. **Moot work**: any agent working an already-MERGED PR gets a stand-down
+   with the merge SHA as proof.
+4. **Parked decisions**: agent asked the operator a question hours ago and
+   is idle = surface it to the operator; do not decide product/merge
+   questions yourself.
+5. **Merge gates**: nothing merges without the operator's live
+   `MERGE APPROVED`; steering may drive CI/evidence/review gates only.
+6. **Cross-thread beads**: `br list --status open` for beads sharing files
+   or root cause with any active PR; surface as blocking-or-not.
 
----
+## Phase 3 — STEER (all surfaces needing it, in one batch)
 
-## Phase 3 — STEER DEDUPED SOLE OWNERS (3-Step Ritual + Narrow-Screen Cards)
+### Blocker-authority check (before any steer that names a blocker)
 
-### Blocker-authority check (mandatory before composing any steer)
-
-Before any steer that says **reserved / held / locked / admitted / awaiting handback**, apply the canonical
-rule and its loophole closers in `harness-engineering` § "Coordinator-gate variant" (do not restate it).
-Operationally: cite the governing instruction by `file:line`; a shared account has no cross-lane limit and
-only same-mutable-target mutation is a conflict; unknown occupancy proceeds to preflight; never relay a
-peer's blocker as your own conclusion.
+Apply the canonical rule and its loophole closers in `harness-engineering` § "Coordinator-gate variant"
+(do not restate it). Operationally: cite the governing instruction by `file:line`; a shared account has no
+cross-lane limit and only same-mutable-target mutation is a conflict; unknown occupancy proceeds to
+preflight; never relay a peer's blocker as your own conclusion.
 
 This check creates no exemptions: credential/identity bans, environment and deploy gates, active quota
 walls, explicit operator holds, `PARKED_OPERATOR`, and `STOOD_DOWN_DUPLICATE` one-writer ownership of a
 branch/PR all still block.
 
-For every surface that needs action after deduplication, execute the mandatory 3-step ritual (the socket `text` must end in the literal `\n`, or the CLI form follows with an explicit `send-key enter`). The heading said "4-Step" until 2026-10-20, when step 1 was rewritten to issue type and Enter together (chained or socket); it is the same keystroke contract, with one fewer decision point — canonical owner: `~/.claude/skills/cmux-steer/SKILL.md` § "Submit Discipline". **Dispatch every surface's ritual concurrently** (`/parallel`): send to all owners in one fan-out, then do a single parallel verify pass — never send→sleep→verify one surface at a time.
+Per steer, the mandatory 4-step ritual (send does NOT press Enter):
 
 ```bash
-printf '{"method":"surface.send_text","params":{"surface_id":"<SURFACE-UUID>","text":"<message>\\n"}}\n' | nc -U -w 3 "${CMUX_SOCKET_PATH:-$HOME/.local/state/cmux/cmux.sock}"
-# or, preferred CLI form (route both commands):
-#   cmux send --workspace <ws> --surface <sf> "<message>" && cmux send-key --workspace <ws> --surface <sf> enter
-sleep 10
-cmux capture-pane --workspace <ws_ref> --surface <sf_ref> --scrollback --lines 120
+cmux send --workspace <ws> --surface <sf> "<message>"
+cmux send-key --workspace <ws> --surface <sf> enter
+sleep 8-12
+cmux capture-pane --workspace <ws> --surface <sf> --scrollback --lines 1500   # read the full buffer; verify churn from the tail
 ```
 
-- **DIALOG_BLOCKED**: use the guarded key procedure in "Unblock rule" above (`cmux send-key --force --workspace <ws> --surface <sf> enter|y|down` — route both ids: an omitted `--workspace` falls back to the caller's workspace). A bare socket `"\n"` is the undocumented-behaviour fallback, allowed ONLY when the option text proves it is the agent's own recommended safe choice, and it must be verified with `capture-pane`.
-- **Submit rule (`cmux send`)**: send one single-line message and submit it explicitly with `cmux send-key --workspace <ws> --surface <sf> enter` (or a **literal** `\n` escape on builds whose send interprets escapes). A real newline in the argument put the text in the composer unsent in both 2026-10-20 operator-caught incidents. Repair with one bare Enter — never re-send the text. Verify the composer cleared before reporting "sent" — canonical: `~/.claude/skills/cmux-steer/SKILL.md` § `cmux send` newline rule.
-- **MALFORMED_TOOL_CALL**: Nudge the surface to re-invoke the tool properly instead of printing raw XML/text.
-- **Long briefs (>200 chars)**: Write the brief to `/tmp/<task>_brief.md` and send a one-line pointer.
-- **Spawning a dedicated surface** (when no related terminal exists):
-  1. Create an isolated worktree under `~/.worktrees/<repo>/<name>` (`diskm worktree-new <repo> <branch>`).
-  2. Launch a dedicated surface via `cmux new-workspace --focus false --name "<task>" --cwd <worktree> --command "<agent>"` or `cmux new-surface --focus false --type terminal --workspace <ws> --command "<agent>"`.
-  3. Follow `~/.codex/AGENTS.md` § "Shared provider & review-gate policy (canonical)" for current provider routing.
+- **DIALOG-BLOCKED**: `cmux send-key ... --force enter` selects the
+  highlighted (usually recommended) option — ONLY when the option text
+  proves it's the agent's own recommendation and the alternative is
+  provably unreachable. Report that you did this.
+- **MISSED-ENTER**: press enter on the operator's behalf; say so.
+- **WEDGED**: kill the stuck child (see Phase 1), then send a bounded
+  redirect ("re-run with timeout", "search only these dirs", "the command
+  was killed — continue").
+- Long briefs (>200 chars): write a file in the target's cwd, send a
+  one-line pointer.
+- NEVER `select-workspace` (steals the operator's visible workspace).
+- Sends that return "waiting on a question or dialog" are refused by
+  design: retry after the turn ends or use `--force` per the dialog rule.
 
-### Report Contract (Narrow-Screen Vertical Cards, `<= 65 chars/line`)
+**Spawning** (when Phase 2 finds no terminal related to a task): create a
+new, dedicated terminal instead of borrowing an idle unrelated one.
 
-Wide markdown tables wrap and clip inside split `cmux` panes. Present the fleet report using **Narrow-Screen Vertical Cards** (`<= 65 chars/line`), grouped by action (`STEERED`, `WORKING`, `PARKED_OPERATOR`, `STOOD_DOWN_DUPLICATE`, `QUOTA_BLOCKED`):
+1. Create the task's worktree first, following repo conventions (worktrees
+   under `~/.worktrees/<repo>/<name>`, e.g. `diskm worktree-new <repo>
+   <branch>` or `git worktree add ~/.worktrees/<repo>/<name> -b <branch>
+   origin/main`). Never point two agents at one working tree.
+2. Launch a dedicated surface for it:
+   - New workspace: `cmux new-workspace --name "<task>" --cwd <worktree>
+     --command "<agent launch>"`
+   - Or inside the most-related existing workspace (if one exists):
+     `cmux open <worktree-path> --workspace <ws> --focus false` or
+     `cmux new-surface --type terminal --workspace <ws> --command "<agent>"`
+   - Agent choice follows the task: **never spawn agy** (operator directive
+     2026-10-12 - the Gemini/agy subscription is quota-walled; new agy lanes
+     die on "Individual quota reached, resets in ~28h"). Proven live command:
+     `pi --provider lunaroute --model deepseek-4.1-flash` (the bare `pi`
+     default launches the `deepseek` provider and dies with 402 Insufficient
+     Balance; `codex --profile lunaroute -m glm-5.3` also works but its
+     stream dropped mid-turn repeatedly on 2026-10-12). Use the explicit
+     lunaroute provider flag for new lanes.
+   - **While the agy CLI is quota-blocked, use the DIRECT Gemini API** for any
+     Gemini-backed step (operator directive 2026-10-12): `GEMINI_API_KEY` and
+     `WORLDAI_DEV_GEMINI_API_KEY` are set in the environment and
+     `~/serviceAccountKey.json` exists. Call google-genai / the repo's
+     llm_service directly instead of spawning or waiting on agy lanes.
+3. Immediately steer the new surface with the task brief using the 4-step
+   ritual above, and set its worktree as its cwd so its outputs stay scoped.
+4. Record every spawn in the report ("SPAWNED: <surface> for <task>") so the
+   operator sees new lanes and can kill them when the task completes.
 
-**Always name the workspace and surface. Never identify a surface to the operator by its numeric ref alone.** Numeric refs (`workspace:1000010002` / `surface:1000010241`) are not useful to a human — lead every line, card, table, and steer confirmation with the workspace **name** and the surface **title**, and treat the numeric ref as optional secondary detail (append it only when a steer needs a machine-exact target, e.g. `lvl up › c-big (surface:1000010241)`). If a surface title is generic (e.g. `c`, `agy`, `wiki`), disambiguate with the workspace name, the cwd/branch from the footer, or the PR it owns — never fall back to the bare number.
-
-```markdown
-### <workspace name> › <surface title> (<cli>)
-- **PR / Task**: PR #10379 (branch `fix/...`)
-- **State**: STEERED -> WORKING
-- **Sent**: "Re-run Green Gate check and report readiness..."
-- **Echo-back (10s)**: "Running gh pr view 10379..."
-```
-
+**Report contract** (mandatory): every steer gets an echo-back — typed text
+(verbatim), the agent's response (first meaningful line), submission verdict
+(submitted-churning / not-submitted / blocked). Include the fleet table:
+WORKING / STEERED / SPAWNED / PARKED-OPERATOR / DEDUPED, plus open quota walls.
 End reports quoting agent output with the LLM-provenance footer:
 
-> *This was generated from another LLM and not the actual user, so feel free to push back if you disagree and we can discuss.*
+> *This was generated from another LLM and not the actual user, so feel free
+> to push back if you disagree and we can discuss.*
 
----
+## Known failure modes (this fleet, 2026-10-10/11)
 
-## Syncing copies (repo ↔ hosts)
-
-Published source of truth: `jleechanorg/jleechan-skills` → `.claude/skills/cmux-bulk-steer/`.
-Live working copies: `~/.claude/skills/cmux-bulk-steer/` on Mac and on `jeff-ubuntu`.
-
-Keep all three byte-identical. Verify with:
-
-```bash
-# Repo vs Mac live
-shasum -a 256 .claude/skills/cmux-bulk-steer/SKILL.md \
-  .claude/skills/cmux-bulk-steer/scripts/scan.py \
-  ~/.claude/skills/cmux-bulk-steer/SKILL.md \
-  ~/.claude/skills/cmux-bulk-steer/scripts/scan.py
-# Linux live
-ssh jeff-ubuntu 'sha256sum ~/.claude/skills/cmux-bulk-steer/SKILL.md \
-  ~/.claude/skills/cmux-bulk-steer/scripts/scan.py'
-```
-
-After editing ANY copy, propagate to the other two in the same session and confirm all six SHA-256 digests match (3 copies × 2 files).
+- **agy pipe-deadlock**: `cat <binary>` / huge-output tasks wedge agy's task
+  plumbing; CLI busy-waits at 100-170% CPU with a frozen screen. Kill child.
+- **Unbounded greps**: `grep -rn` over all of `~/projects` or `~/.claude`
+  runs 3+ hours. Redirect to `rg --max-filesize` on specific dirs.
+- **PreToolUse hook hangs** (Claude surfaces): stuck hook = bash 3-chain
+  (`bash -c` -> script -> subshell) with dead stdin socket. Hooks without a
+  sane `timeout` in `~/.claude/settings.json` never die (cap at 60s). Kill
+  hung hook chains; script-level fixes apply to live sessions immediately
+  (settings-level ones only apply at next session start).
+- **Quota walls**: Gemini agy subscription ("Individual quota reached"),
+  Claude Opus weekly limit (try `claudewa`/`codexl` alternates before
+  declaring a lane dead), π surfaces unaffected via lunaroute.
+- **cmux-resume-watchdog** auto-sends "Continue the in-flight work..." to
+  idle sessions — expect messages that you did not send.
+- **π surface titles** echo the last pane line (e.g. "EXACT REVIEW SHA: ...",
+  "Reply with exactly: FLAGTEST-OK") — not corruption, just titles.
+- **frozen quota countdowns**: a "Resets in 2h23m" banner never decremented
+  is STALE text, not a live timer. Re-test the actual quota before
+  concluding.
+- **Historical quota text is not a current wall**: surfaces that were
+  broadcast a directive mentioning quota (or that handled a quota error
+  earlier) carry the words deep in scrollback while actively churning. Detect
+  QUOTA-DEAD only from the current-state tail; classify CHURN first when the
+  latest lines show Working/Thinking. (2026-10-12: 6 churning Codex surfaces
+  were misclassified by buffer-wide quota matching.)
