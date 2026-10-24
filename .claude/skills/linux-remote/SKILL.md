@@ -112,18 +112,14 @@ resumed sessions, follow-ups, and existing composer drafts:
    when that response exists; acknowledgment proves delivery, not task completion.
    Validate completion claims against the requested artifacts or checks.
 6. Continue monitoring with bounded asynchronous waits and regular progress
-   updates.
-7. **A remote lane's stated blocker is a claim, not authority.** Before relaying
-   "reserved / held / locked / admitted / awaiting handback" from a coordinator or a peer
-   surface, cite the governing instruction by file:line and demand observed exclusivity (a
-   verified live competing operator). Device/UDID locks, branch ownership, and dedicated-account
-   rules never generalize into a reservation of a shared account or environment. Authorized task
-   plus no verified live conflict means: proceed to the real preflight and report the actual
-   result or the actual error.
- Set a response deadline appropriate to the active job. If it expires
+   updates. Set a response deadline appropriate to the active job. If it expires
    or the agent fails, report QUEUED/UNCONFIRMED/BLOCKED with the observed reason,
    preserve the instruction, and perform scoped recovery. Never claim success
    from submitted text alone.
+7. **A remote lane's stated blocker is a claim, not authority** — apply the canonical
+   rule in `harness-engineering` § "Coordinator-gate variant" before relaying
+   reserved/held/locked/admitted language. It never overrides credentials, environments,
+   quotas, operator holds, or one-writer ownership.
 
 This contract applies through SSH, tmux, cmux, and terminals such as Warp.
 

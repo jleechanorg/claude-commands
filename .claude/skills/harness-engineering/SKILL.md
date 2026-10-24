@@ -44,7 +44,6 @@ Classify what went wrong:
 - **Knowledge gap** — didn't know about a constraint, convention, or tool
 - **LLM path error** — the agent reasoned toward a wrong solution despite having sufficient context
 - **Refuse-by-confabulation** — agent cites a fabricated "policy" or "constraint" to justify refusing a task instead of attempting and reporting; usually triggered by misreading a skill clause (e.g. "no login bypass" → "this site only"). Example: on 2026-06-21, refused to use browserclaw to add OAuth redirect URIs to GCP Console, citing a non-existent policy that "it can only navigate the app and its auth handshake, not external GCP Console." The actual skill supports any-website capture via `--storage-state` and the "no login bypass" clause is about authentication, not site scope. The fix is to read the actual skill/help file before refusing, and quote the exact line if a constraint is real.
-- **Scheduling-state-as-permission** (refuse-by-confabulation variant, observed 2026-10-24) — an agent treats a coordinator's *scheduling* state (ledger "reserved", queue "admitted", handback note, prior owner's release) as an authorization gate, and either refuses or waits for a trigger that has no governing rule. Real case: a `creation ui` lane spent 22 h waiting because its launcher required a Scene ledger state of exactly `admitted` before authentication, and its regression tested enforcement of that invented gate instead of its authority; the orchestrator then relayed a peer's "the ledger reserves the account" phrasing into a steer. **Fix:** name the governing instruction by file:line before treating any reserved/held/locked claim as a permission boundary, and demand *observed* exclusivity (a verified live competing operator) rather than *declared* exclusivity. A device lock (e.g. `no competingnativeoperator`, iOS Simulator UDID) never generalizes to accounts, credentials, or environments.
 
 **Coordinator-gate variant:** Before requiring extra coordinator permission, cite
 the exact governing instruction or current human hold and its scope. For a claimed
@@ -61,15 +60,21 @@ authentication-error propagation, verified conflicting
 operators, explicit current human holds, and listener/bundle/source identity checks;
 never bypass an actual denial or infer release from silence.
 
+**Observed case (2026-10-24, `creation ui`) and its loopholes.** A lane waited 22 h because its launcher
+required a Scene ledger state of exactly `admitted` before authentication, and its regression tested
+enforcement of that invented gate instead of its authority. When applying this rule, close the two
+loopholes: another lane merely being **alive** on a shared account is not a conflict — only mutation of the
+*same mutable target* (same campaign/document id, same account-wide setting, same browser profile dir,
+same simulator UDID) is; and **unknown occupancy must proceed to preflight**, not pause. When unblocking
+such a lane, require it to `git diff` its launcher/preflight/tests for hardcoded
+`admitted`/`reserved`/`handback`/`held` predicates that cite no policy `file:line`, delete them, and invert
+any regression test that asserted the refusal.
+
 ### Resource-exclusion regression
 
 When a launcher uses an advisory scheduler or scene ledger, exercise the actual
-launcher entry point with the portable regression in tests/resource-regression.py.
-Pass the exact launcher under test explicitly:
-
-    RESOURCE_TEST_RUNNER=/path/to/launcher python3 tests/resource-regression.py
-
-The same command accepts the launcher as its first positional argument. The
+launcher entry point with **that launcher's own regression tests** (there is no shared
+portable runner; never cite one that does not exist). The
 regression must prove that released, prior-owner, unknown, pending, and absent
 ledger states reach the authentication boundary; a verified live resource
 conflict and a current human hold are rejected; and an injected authentication
