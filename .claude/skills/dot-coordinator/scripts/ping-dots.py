@@ -30,6 +30,32 @@ def stop(proc):
     try: os.killpg(proc.pid, signal.SIGKILL)
     except ProcessLookupError: pass
 
+def pinned_mcp(node_bins):
+    """Return (node bin dir, chrome-devtools-mcp entrypoint) for the pinned MCP.
+
+    Every nvm Node 22 bin dir is a candidate: the MCP is installed per Node tree,
+    so bins[0] is not necessarily the one carrying it. The override path wins.
+    """
+    override = os.environ.get('CHROME_DEVTOOLS_MCP_JS', '').strip()
+    candidates = []
+    if override:
+        candidates.append((None, Path(override).expanduser()))
+    for bin_dir in node_bins:
+        candidates.append((bin_dir, bin_dir.parent / 'lib/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js'))
+    searched = []
+    for bin_dir, mcp_js in candidates:
+        searched.append(str(mcp_js))
+        if not mcp_js.is_file():
+            continue
+        try:
+            version = json.loads((mcp_js.parents[3] / 'package.json').read_text()).get('version')
+        except (OSError, ValueError, IndexError):
+            continue
+        if version == '1.6.0':
+            return bin_dir or node_bins[0], mcp_js
+    raise Blocked('pinned Chrome DevTools MCP 1.6.0 was not found in any Node 22 tree or CHROME_DEVTOOLS_MCP_JS; searched: ' + ', '.join(searched))
+
+
 def main():
     signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(128 + signum))
     p = argparse.ArgumentParser(description=__doc__)
@@ -43,7 +69,7 @@ def main():
     if not re.fullmatch(r'[0-9a-f]{64}', expected): raise Blocked('expected identity binding is missing or invalid')
     node_bins = node22_bins(Path.home())
     if not node_bins: raise Blocked('Node 22 executable is unavailable')
-    node_dir = node_bins[0]
+    node_dir, mcp_bin = pinned_mcp(node_bins)
     os.environ['PATH'] = str(node_dir) + os.pathsep + str(Path.home() / '.local/bin') + os.pathsep + os.environ.get('PATH', '')
     config = json.loads(Path(os.environ.get('DOT_CONFIG_FILE', '~/.config/dot/config.json')).expanduser().read_text())
     accounts = config.get('accounts', {})
@@ -69,10 +95,8 @@ def main():
         if any(str(profile) in row and 'Chrome' in row for row in subprocess.check_output(['ps', '-Ao', 'args'], text=True).splitlines()):
             raise Blocked('a Chrome process already uses this Dot profile')
         chrome_bin = os.environ.get('DOT_CHROME_BIN') or ('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' if sys.platform == 'darwin' else '/usr/bin/google-chrome')
-        mcp_bin = Path(os.environ.get('CHROME_DEVTOOLS_MCP_JS', node_dir.parent / 'lib/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js')).expanduser()
         pi_bin = os.environ.get('PI_BIN') or shutil.which('pi')
-        if not Path(chrome_bin).is_file() or not mcp_bin.is_file() or not pi_bin: raise Blocked('system Chrome, pinned Chrome DevTools MCP 1.6, or Pi is unavailable')
-        if json.loads((mcp_bin.parents[3] / 'package.json').read_text()).get('version') != '1.6.0': raise Blocked('Chrome DevTools MCP must be version 1.6.0')
+        if not Path(chrome_bin).is_file() or not pi_bin: raise Blocked('system Chrome or Pi is unavailable')
         mcp_args = [str(mcp_bin), '--executablePath=' + chrome_bin, '--userDataDir=' + str(profile),
             '--chromeArg=--profile-directory=' + subprofile, '--chromeArg=--user-agent=' + UA,
             '--chromeArg=--disable-blink-features=AutomationControlled',
