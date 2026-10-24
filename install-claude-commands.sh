@@ -340,6 +340,19 @@ list_installable_files() {
 }
 
 # Shared recursive install function
+path_within_root() {
+    # Resolve symlinks on the candidate's parent and prove it is still inside the
+    # install root. The bash guard-then-copy window cannot be closed atomically, so
+    # this containment assertion re-runs immediately before and after each write.
+    local candidate="$1" root="$2" root_real parent_real
+    root_real="$(cd "$root" 2>/dev/null && pwd -P)" || return 1
+    parent_real="$(cd "$(dirname "$candidate")" 2>/dev/null && pwd -P)" || return 1
+    case "$parent_real/" in
+        "$root_real"/*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 install_component() {
     local src_dir="$1"
     local dest_dir="$2"
@@ -421,10 +434,14 @@ install_component() {
                 chmod u+w "$target_parent"
             fi
             mkdir -p "$target_parent"
+            local dest_entry="$dest_dir/$relative"
+            if ! path_within_root "$dest_entry" "$INSTALL_ROOT"; then
+                log_error "Refusing to write $dest_entry: its parent resolves outside $INSTALL_ROOT"
+                return 1
+            fi
             # No recursive delete anywhere: a directory is never removed, only
             # renamed aside, and a single non-directory entry is unlinked before
             # copying.
-            local dest_entry="$dest_dir/$relative"
             if [ -d "$dest_entry" ] && [ ! -L "$dest_entry" ] \
                 && { [ ! -d "$src_dir/$relative" ] || [ -L "$src_dir/$relative" ]; }; then
                 local replaced_path="${dest_entry}.replaced-$(date +%Y%m%d%H%M%S)-$$"
@@ -452,6 +469,10 @@ install_component() {
                 rm -f -- "$dest_entry"
             fi
             cp -a "$src_dir/$relative" "$dest_dir/$relative"
+            if ! path_within_root "$dest_entry" "$INSTALL_ROOT"; then
+                log_error "Refusing to continue: $dest_entry resolved outside $INSTALL_ROOT after the copy"
+                return 1
+            fi
         done < "$listing_file"
         rm -f -- "$listing_file"
         if [ "$preserved_count" -gt 0 ]; then

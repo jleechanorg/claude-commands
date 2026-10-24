@@ -1259,3 +1259,49 @@ class NewlinePathEscapeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PathContainmentGuardTest(unittest.TestCase):
+    """The installer refuses to write through a parent that resolves outside the root."""
+
+    def _call_guard(self, candidate, root):
+        script = f'source "{INSTALLER}" >/dev/null 2>&1; path_within_root "{candidate}" "{root}"'
+        return subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+
+    def test_symlinked_parent_outside_the_root_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target"
+            outside = root / "outside"
+            (target / "commands").mkdir(parents=True)
+            outside.mkdir()
+            (target / "commands" / "link").symlink_to(outside)
+            result = self._call_guard(str(target / "commands" / "link" / "cmd.md"), str(target))
+            self.assertNotEqual(result.returncode, 0, "a symlinked parent must fail containment")
+
+    def test_ordinary_path_inside_the_root_passes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target"
+            (target / "commands").mkdir(parents=True)
+            result = self._call_guard(str(target / "commands" / "cmd.md"), str(target))
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_installer_still_installs_a_normal_tree(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture = root / "fixture"
+            (fixture / ".claude" / "commands").mkdir(parents=True)
+            (fixture / ".claude" / "commands" / "cmd.md").write_text("managed\n", encoding="utf-8")
+            (fixture / "scripts").mkdir()
+            shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+            target = root / "target"
+            result = subprocess.run(
+                ["bash", str(fixture / INSTALLER.name), "--merge"],
+                cwd=fixture,
+                env=os.environ | {"CLAUDE_HOME": str(target)},
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual((target / "commands" / "cmd.md").read_text(encoding="utf-8"), "managed\n")
