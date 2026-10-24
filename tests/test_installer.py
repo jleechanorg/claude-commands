@@ -1259,3 +1259,84 @@ class NewlinePathEscapeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PathContainmentGuardTest(unittest.TestCase):
+    """The installer refuses to write through a parent that resolves outside the root."""
+
+    def _call_guard(self, parent, root):
+        # argv, not interpolation: a path may contain quotes or newlines.
+        script = 'source "$1" >/dev/null 2>&1; path_within_root "$2" "$3"'
+        return subprocess.run(["bash", "-c", script, "_", str(INSTALLER), str(parent), str(root)],
+                              capture_output=True, text=True)
+
+    def test_relative_claude_home_installs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture = root / "fixture"
+            (fixture / ".claude" / "commands").mkdir(parents=True)
+            (fixture / ".claude" / "commands" / "cmd.md").write_text("managed\n", encoding="utf-8")
+            (fixture / "scripts").mkdir()
+            shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+            result = subprocess.run(
+                ["bash", INSTALLER.name, "--merge"],
+                cwd=fixture,
+                env=os.environ | {"CLAUDE_HOME": "target"},
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(
+                (fixture / "target" / "commands" / "cmd.md").read_text(encoding="utf-8"),
+                "managed\n",
+            )
+
+    def test_symlinked_parent_outside_the_root_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target"
+            outside = root / "outside"
+            (target / "commands").mkdir(parents=True)
+            outside.mkdir()
+            (target / "commands" / "link").symlink_to(outside)
+            result = self._call_guard(str(target / "commands" / "link"), str(target))
+            self.assertNotEqual(result.returncode, 0, "a symlinked parent must fail containment")
+
+    def test_ordinary_path_inside_the_root_passes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target"
+            (target / "commands").mkdir(parents=True)
+            result = self._call_guard(str(target / "commands"), str(target))
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_newline_ending_directory_name_is_not_mangled(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target"
+            (target / "commands" / "nl\n").mkdir(parents=True)
+            result = self._call_guard(str(target / "commands" / "nl\n"), str(target))
+            self.assertEqual(
+                result.returncode, 0,
+                "a directory whose name ends in a newline must still pass containment: "
+                + result.stderr,
+            )
+
+    def test_installer_still_installs_a_normal_tree(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture = root / "fixture"
+            (fixture / ".claude" / "commands").mkdir(parents=True)
+            (fixture / ".claude" / "commands" / "cmd.md").write_text("managed\n", encoding="utf-8")
+            (fixture / "scripts").mkdir()
+            shutil.copy2(INSTALLER, fixture / INSTALLER.name)
+            target = root / "target"
+            result = subprocess.run(
+                ["bash", str(fixture / INSTALLER.name), "--merge"],
+                cwd=fixture,
+                env=os.environ | {"CLAUDE_HOME": str(target)},
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual((target / "commands" / "cmd.md").read_text(encoding="utf-8"), "managed\n")

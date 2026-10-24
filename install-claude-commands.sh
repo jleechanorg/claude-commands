@@ -340,6 +340,28 @@ list_installable_files() {
 }
 
 # Shared recursive install function
+path_within_root() {
+    # $1 = directory that will receive the write, $2 = install root. No command
+    # substitution anywhere: $(...) strips trailing newlines, and a directory name
+    # may legitimately end with one, so `cd -P` plus $PWD keeps the exact bytes.
+    # The bash guard-then-copy window cannot be closed atomically, so this runs
+    # immediately before and after each write.
+    local parent="$1" root="$2" start="$PWD" root_real parent_real
+    # Re-anchor at $start before every relative resolution: a bare `cd` into a
+    # relative root would otherwise make the second relative path resolve inside it.
+    builtin cd -P -- "$root" 2>/dev/null || return 1
+    root_real="$PWD"
+    builtin cd -- "$start" 2>/dev/null || return 1
+    builtin cd -P -- "$parent" 2>/dev/null || { builtin cd -- "$start" 2>/dev/null; return 1; }
+    parent_real="$PWD"
+    builtin cd -- "$start" 2>/dev/null || true
+    [ "$parent_real" != "$root_real" ] || return 0
+    case "$parent_real/" in
+        "$root_real"/*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 install_component() {
     local src_dir="$1"
     local dest_dir="$2"
@@ -421,10 +443,14 @@ install_component() {
                 chmod u+w "$target_parent"
             fi
             mkdir -p "$target_parent"
+            local dest_entry="$dest_dir/$relative"
+            if ! path_within_root "$target_parent" "$INSTALL_ROOT"; then
+                log_error "Refusing to write $dest_entry: its parent resolves outside $INSTALL_ROOT"
+                return 1
+            fi
             # No recursive delete anywhere: a directory is never removed, only
             # renamed aside, and a single non-directory entry is unlinked before
             # copying.
-            local dest_entry="$dest_dir/$relative"
             if [ -d "$dest_entry" ] && [ ! -L "$dest_entry" ] \
                 && { [ ! -d "$src_dir/$relative" ] || [ -L "$src_dir/$relative" ]; }; then
                 local replaced_path="${dest_entry}.replaced-$(date +%Y%m%d%H%M%S)-$$"
@@ -452,6 +478,10 @@ install_component() {
                 rm -f -- "$dest_entry"
             fi
             cp -a "$src_dir/$relative" "$dest_dir/$relative"
+            if ! path_within_root "$target_parent" "$INSTALL_ROOT"; then
+                log_error "Refusing to continue: $dest_entry resolved outside $INSTALL_ROOT after the copy"
+                return 1
+            fi
         done < "$listing_file"
         rm -f -- "$listing_file"
         if [ "$preserved_count" -gt 0 ]; then
