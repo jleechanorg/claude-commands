@@ -160,7 +160,9 @@ class LauncherExecutionTests(unittest.TestCase):
     def test_timeout_terminates_pi_and_preserves_agent_owned_marker(self):
         class TimedOut(FakePiProcess):
             def __init__(self): self.returncode, self.pid = None, 2_000_000_000
-            def communicate(self, timeout): raise subprocess.TimeoutExpired('pi', timeout)
+            # The launcher streams Pi to a log file and waits on the process, so the
+            # timeout contract lives on wait() rather than communicate().
+            def wait(self, timeout=None): raise subprocess.TimeoutExpired('pi', timeout)
             def terminate(self): self.returncode = -15
         old_timeout = PING.TIMEOUT
         self.addCleanup(setattr, PING, 'TIMEOUT', old_timeout)

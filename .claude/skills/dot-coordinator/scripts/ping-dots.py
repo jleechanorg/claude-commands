@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from render_native_schedule import node22_bins
 SKILL = Path(__file__).resolve().parents[1] / 'SKILL.md'
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36'
-TIMEOUT, GRACE = min(max(int(os.environ.get('COORDINATOR_TIMEOUT_SECS', '720')), 1), 720), 8
+TIMEOUT, GRACE = max(int(os.environ.get('COORDINATOR_TIMEOUT_SECS', '720')), 1), 8
 class Blocked(RuntimeError):
     pass
 def stop(proc):
@@ -99,14 +99,22 @@ def main():
             env = dict(os.environ, DOT_EXPECTED_IDENTITY_SHA256=expected, COORDINATOR_SELECTED_ACCOUNT=args.account, COORDINATOR_TARGET_URL=target)
             cmd = [pi_bin, *cli_args, '--print', '--no-session', '--approve', '--no-extensions', '-e', 'builtin:mcp',
                 '--no-skills', '--skill', str(SKILL), '--tools', 'read,bash,edit,write,mcp__dot_browser__*', prompt]
-            proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                    text=True, start_new_session=True)
-            try: out, err = proc.communicate(timeout=TIMEOUT)
-            except subprocess.TimeoutExpired:
-                raise Blocked('Pi exceeded the invocation deadline; verify delivery before any retry')
+            # Stream Pi straight to a durable log: a deadline kill must still leave
+            # the evidence of how far the agent got (a piped capture discards it).
+            pi_log = Path(tempfile.gettempdir()) / f'dot-coordinator-pi-{args.account}-{int(time.time())}.log'
+            os.close(os.open(pi_log, os.O_CREAT | os.O_WRONLY, 0o600))
+            with pi_log.open('w') as log_handle:
+                proc = subprocess.Popen(cmd, cwd=run_dir, env=env, stdout=log_handle,
+                                        stderr=subprocess.STDOUT, text=True, start_new_session=True)
+                try:
+                    proc.wait(timeout=TIMEOUT)
+                except subprocess.TimeoutExpired:
+                    raise Blocked(f'Pi exceeded the invocation deadline of {TIMEOUT}s; partial output kept at {pi_log}; verify delivery before any retry')
+            out = pi_log.read_text(errors='replace')
             sys.stdout.write(out.replace(expected, '[identity redacted]'))
-            sys.stderr.write(err.replace(expected, '[identity redacted]'))
-            if proc.returncode: raise Blocked('Pi failed; verify delivery before any retry')
+            # The private identity binding must not persist in the retained log either.
+            pi_log.write_text(out.replace(expected, '[identity redacted]'))
+            if proc.returncode: raise Blocked(f'Pi failed (rc={proc.returncode}); output kept at {pi_log}; verify delivery before any retry')
         return proc.returncode
     finally:
         stop(proc)
