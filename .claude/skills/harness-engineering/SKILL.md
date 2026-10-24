@@ -66,9 +66,14 @@ enforcement of that invented gate instead of its authority. When applying this r
 loopholes: another lane merely being **alive** on a shared account is not a conflict — only mutation of the
 *same mutable target* (same campaign/document id, same account-wide setting, same browser profile dir,
 same simulator UDID) is; and **unknown occupancy must proceed to preflight**, not pause. When unblocking
-such a lane, require it to `git diff` its launcher/preflight/tests for hardcoded
-`admitted`/`reserved`/`handback`/`held` predicates that cite no policy `file:line`, delete them, and invert
-any regression test that asserted the refusal.
+such a lane, require a **case-by-case audit**: `git diff` its launcher/preflight/tests, list every
+scheduling-state predicate (`admitted`/`reserved`/`handback`/`held`), and for each one decide with evidence
+whether it is an *invented* gate (remove it) or a real safeguard (keep it). **A missing policy `file:line`
+is a signal to investigate, never proof that a safeguard lacks authority** — do not delete on absence of a
+citation. Preserve explicitly: a current human STOP referenced by message, real access/auth denials,
+one-writer ownership of a branch/PR/worktree, and the user's shared execution budget (quota/time-box). Only
+remove a gate after showing it was derived from coordinator scheduling language, and only change a
+regression test that encoded that invented gate.
 
 ### Resource-exclusion regression
 
