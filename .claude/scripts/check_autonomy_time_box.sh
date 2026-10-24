@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# check_autonomy_time_box.sh — enforce max 3-hour autonomy time-box
-# Policy: ~/.claude/CLAUDE.md "Autonomy time-box — max 3 hours without explicit re-approval"
-# Returns 0 if within budget, 1 if any tracked flow/worker exceeded 10,800 s.
+# check_autonomy_time_box.sh — enforce the 8-hour autonomy time-box
+# Policy: ~/.codex/AGENTS.md § "Autonomy time-box" (28,800 s per session or worker).
+# Returns 0 if within budget, 1 if any tracked flow/worker exceeded 28,800 s.
 # Sources of truth (in priority order):
 #   1. ~/.hermes/runtime/<flow>-<id>.started_at  — started_at epoch written by /converge, /eloop,
 #                                                  /goal_harness, /auton, /f, /goal, /babysit
 #   2. tmux session creation epoch for `ao-*` workers (tmux list-sessions -F '#{session_created}')
 # Each entry has a companion `.approved_until` file (epoch) that lifts the cap when present.
-# Bypass: explicit `CONTINUE N HORUS` / `EXTEND TO N HORUS` in the live user message writes
-# `approved_until` = now + N*3600.
+# Renewal: every new live human user message renews the flow for 8 hours, recorded as
+# `approved_until` = receipt + 28,800 s. An explicit `CONTINUE N HORUS` / `EXTEND TO N HORUS`
+# in the live user message writes `approved_until` = now + N*3600.
 set -euo pipefail
 
-MAX_SECONDS=${MAX_AUTONOMY_SECONDS:-10800}
+MAX_SECONDS=${MAX_AUTONOMY_SECONDS:-28800}
 RUNTIME_DIR=${RUNTIME_DIR:-$HOME/.hermes/runtime}
 NOW=$(date +%s)
 EXCEEDED=()
@@ -62,7 +63,7 @@ if [ "${#EXCEEDED[@]}" -gt 0 ]; then
     printf "  - %s\n" "$e"
   done
   printf "Detail:\n%b" "$DETAIL"
-  printf "Re-approval phrase required in live user message: CONTINUE <N> HORUS or EXTEND TO <N> HORUS\n"
+  printf "Renewal: a new live user message renews the flow for 8 hours, or state CONTINUE <N> HORUS / EXTEND TO <N> HORUS\n"
   exit 1
 fi
 
