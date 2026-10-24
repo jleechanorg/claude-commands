@@ -8,8 +8,10 @@ first positional argument so the test cannot silently test a copy.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import datetime
 import importlib.util
+import inspect
 import json
 import os
 from pathlib import Path
@@ -223,6 +225,112 @@ class ResourceRegression(unittest.TestCase):
                     resource_observer=lambda: next(observations)
                 )
             popen.assert_not_called()
+
+    def test_launch_contract_is_sibling_and_child_output_stays_empty(self):
+        self.mod.ROOT = Path(self.tmp.name)
+        ledger = self.ledger
+        ledger.write_text(json.dumps({
+            "owner": "creation-test",
+            "state": "admitted",
+            "start": self.start,
+            "end": self.end,
+        }))
+        fixture_root = Path(self.tmp.name) / "inputs"
+        fixture_root.mkdir()
+        harness = fixture_root / "harness.py"
+        harness.write_text("# synthetic harness fixture\n")
+        upload = fixture_root / "avatar.png"
+        upload.write_bytes(b"synthetic-upload")
+        profile = fixture_root / "profile"
+        profile.mkdir()
+        worktree = fixture_root / "worktree"
+        worktree.mkdir()
+        self.mod.HARNESS = harness
+        self.mod.WORKTREE = worktree
+        self.mod.UPLOAD = upload
+        self.mod.PROFILE = profile
+        self.mod.EXPECTED_HARNESS_SHA = hashlib.sha256(
+            harness.read_bytes()
+        ).hexdigest()
+
+        argv = [
+            "launcher",
+            "--admitted-at",
+            self.start,
+            "--bounded-until",
+            self.end,
+            "--scene-ledger",
+            str(ledger),
+        ]
+        seen = {}
+
+        class HealthResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return False
+
+            def read(self):
+                return json.dumps({
+                    "git_commit": self_mod.BACKEND_SHA,
+                }).encode()
+
+        class Child:
+            pid = 999999
+
+            def wait(self, timeout=None):
+                return 0
+
+        self_mod = self.mod
+
+        def fake_popen(command, **kwargs):
+            out = Path(command[command.index("--out") + 1])
+            self.assertEqual(list(out.iterdir()), [])
+            contract_path = out.parent / (out.name + ".launch-contract.json")
+            self.assertTrue(contract_path.is_file())
+            contract = json.loads(contract_path.read_text())
+            self.assertEqual(contract["scenario"], "upload")
+            seen["out"] = out
+            seen["contract_path"] = contract_path
+            seen["contract"] = contract
+            return Child()
+
+        patches = [
+            patch.object(sys, "argv", argv),
+            patch.object(self.mod, "verify_inputs", create=True),
+            patch.object(self.mod, "verify_source_bound_service",
+                         return_value={}, create=True),
+            patch.object(self.mod, "verify_served_frontend",
+                         return_value={}, create=True),
+            patch.object(self.mod, "verify_backend", return_value={}, create=True),
+            patch.object(self.mod, "assert_same_served_asset", create=True),
+            patch.object(self.mod, "same_window", return_value=True, create=True),
+            patch.object(self.mod, "require_identity",
+                         return_value=("test@example.invalid", "synthetic-uid")),
+            patch.object(self.mod.urllib.request, "urlopen",
+                         return_value=HealthResponse()),
+            patch.object(self.mod.subprocess, "Popen", side_effect=fake_popen),
+        ]
+        with contextlib.ExitStack() as stack:
+            for item in patches:
+                stack.enter_context(item)
+            kwargs = {}
+            if "resource_observer" in inspect.signature(
+                self.mod.main
+            ).parameters:
+                kwargs["resource_observer"] = lambda: []
+            with self.assertRaises(SystemExit) as raised:
+                self.mod.main(**kwargs)
+        self.assertEqual(raised.exception.code, 0)
+        self.assertIn("contract_path", seen)
+        contract_path = seen["contract_path"]
+        receipt_path = seen["out"].parent / (seen["out"].name + ".launcher.json")
+        self.assertTrue(contract_path.is_file())
+        self.assertTrue(receipt_path.is_file())
+        receipt = json.loads(receipt_path.read_text())
+        self.assertEqual(receipt["launch_contract"], contract_path.name)
+        self.assertEqual(json.loads(contract_path.read_text()), seen["contract"])
 
 
 if __name__ == "__main__":
