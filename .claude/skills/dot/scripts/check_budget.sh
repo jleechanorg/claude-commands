@@ -33,11 +33,11 @@ if [[ -f "../dot-coordinator/scripts/ping-dots.py" ]]; then
   for alias in agy-dot-coordinator-wrapper.sh pi-lunaroute-adapter.sh ping-dots.py; do
     [[ ! -f "../agy-dot-coordinator/scripts/$alias" ]] || combined=$(( combined + $(wc -l < "../agy-dot-coordinator/scripts/$alias") ))
   done
-  if [[ "$combined" -gt 185 ]]; then
-    echo "BUDGET BREACH: coordinator launch glue = $combined LOC > cap 185" >&2
+  if [[ "$combined" -gt 150 ]]; then
+    echo "BUDGET BREACH: coordinator launch glue = $combined LOC > cap 150" >&2
     fail=1
   else
-    echo "ok: coordinator launch glue = $combined LOC (cap 185)"
+    echo "ok: coordinator launch glue = $combined LOC (cap 150)"
   fi
   check "dot-coordinator/SKILL.md" "../dot-coordinator/SKILL.md" 400
 fi
