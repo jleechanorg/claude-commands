@@ -45,6 +45,36 @@ Classify what went wrong:
 - **LLM path error** — the agent reasoned toward a wrong solution despite having sufficient context
 - **Refuse-by-confabulation** — agent cites a fabricated "policy" or "constraint" to justify refusing a task instead of attempting and reporting; usually triggered by misreading a skill clause (e.g. "no login bypass" → "this site only"). Example: on 2026-06-21, refused to use browserclaw to add OAuth redirect URIs to GCP Console, citing a non-existent policy that "it can only navigate the app and its auth handshake, not external GCP Console." The actual skill supports any-website capture via `--storage-state` and the "no login bypass" clause is about authentication, not site scope. The fix is to read the actual skill/help file before refusing, and quote the exact line if a constraint is real.
 
+**Coordinator-gate variant:** Before requiring extra coordinator permission, cite
+the exact governing instruction or current human hold and its scope. For a claimed
+resource collision or execution failure, identify the concrete resource, conflicting
+operation/owner, and current evidence; a shared account alone is not a collision.
+Distinguish campaign state, global settings, browser profile, device, and evidence
+baseline overlaps. Unknown occupancy is not an authentication failure; unknown
+coordinator state alone must not block otherwise authorized work. Report uncertainty
+and inspect actual overlaps within scope, without inventing approval requirements
+or treating uncertainty as proof that the resource is free. Authorized work
+without verified live competing use proceeds to real auth preflight; reservation,
+admission, and handback labels are never prerequisites. Preserve injected
+authentication-error propagation, verified conflicting
+operators, explicit current human holds, and listener/bundle/source identity checks;
+never bypass an actual denial or infer release from silence.
+
+### Resource-exclusion regression
+
+When a launcher uses an advisory scheduler or scene ledger, exercise the actual
+launcher entry point with the portable regression in tests/resource-regression.py.
+Pass the exact launcher under test explicitly:
+
+    RESOURCE_TEST_RUNNER=/path/to/launcher python3 tests/resource-regression.py
+
+The same command accepts the launcher as its first positional argument. The
+regression must prove that released, prior-owner, unknown, pending, and absent
+ledger states reach the authentication boundary; a verified live resource
+conflict and a current human hold are rejected; and an injected authentication
+error is propagated unchanged. Synthetic authentication is only a control-flow
+test, not genuine auth or runtime acceptance.
+
 ### Step 2: 5 Whys — the technical problem
 
 Ask "Why?" five times about the technical failure, drilling into root cause:
