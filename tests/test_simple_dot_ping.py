@@ -252,6 +252,10 @@ module.main()
         for name in ('SingletonLock', 'SingletonCookie', 'SingletonSocket'):
             self.assertIn(str(self.profile / name), message)
             self.assertTrue(os.path.lexists(self.profile / name), f'{name} must survive')
+        # A dead PID alone is never sufficient reason to remove the singletons.
+        self.assertIn('verify', message)
+        self.assertIn('uncertain', message)
+        self.assertNotIn('if its process is dead', message)
 
     def test_live_singleton_blocks_without_deleting(self):
         lock = self._plant_singleton(os.getpid())
