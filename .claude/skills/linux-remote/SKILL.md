@@ -116,6 +116,10 @@ resumed sessions, follow-ups, and existing composer drafts:
    or the agent fails, report QUEUED/UNCONFIRMED/BLOCKED with the observed reason,
    preserve the instruction, and perform scoped recovery. Never claim success
    from submitted text alone.
+7. **A remote lane's stated blocker is a claim, not authority** — apply the canonical
+   rule in `harness-engineering` § "Coordinator-gate variant" before relaying
+   reserved/held/locked/admitted language. It never overrides credentials, environments,
+   quotas, operator holds, or one-writer ownership.
 
 This contract applies through SSH, tmux, cmux, and terminals such as Warp.
 
